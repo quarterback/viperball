@@ -1,0 +1,296 @@
+Great — “between A and B” means:
+	•	private sandbox first
+	•	but clean enough to share a link with a few people
+	•	zero friction for you to run sims from phone/tablet
+	•	fast iteration > polish
+
+Here’s the exact guidance you should give your AI engineer. You can paste this directly.
+
+⸻
+
+Viperball Simulation Deployment Spec
+
+Objective
+
+Deploy a browser-accessible simulation sandbox so the Viperball engine can be run, debugged, and tuned without using a local terminal.
+
+This is not a consumer app.
+This is a playtest + debugging environment.
+
+Target: usable from phone, tablet, or laptop.
+
+⸻
+
+Architecture
+
+Keep it extremely simple.
+
+Engine: existing Python simulation
+API: FastAPI
+UI: Streamlit
+Host: Fly.io or Railway
+
+No database required initially.
+JSON files are fine.
+
+engine/
+api/
+ui/
+
+
+⸻
+
+Required Capabilities
+
+1. Run a single game from browser
+
+User selects:
+	•	home team
+	•	away team
+	•	offensive styles
+	•	seed
+
+Press button → simulate game → return:
+	•	box score
+	•	full play log
+	•	team stats
+
+⸻
+
+2. Debug mode
+
+Must allow:
+	•	run single play
+	•	run single drive
+	•	run 50–100 simulations
+	•	output averages
+
+This is critical for balancing.
+
+⸻
+
+3. Deterministic seeds
+
+Every simulation must accept:
+
+seed: int
+
+So results are reproducible.
+
+⸻
+
+4. Style overrides
+
+Allow forcing styles:
+
+{
+  "vermont": "territorial",
+  "boston_university": "option_spread"
+}
+
+This is how we test forked offenses.
+
+⸻
+
+API Spec
+
+Use FastAPI.
+
+POST /simulate
+
+Runs one game.
+
+Input:
+
+{
+  "home": "vermont",
+  "away": "boston_university",
+  "seed": 42,
+  "styles": {
+    "vermont": "power_option",
+    "boston_university": "lateral_spread"
+  }
+}
+
+Returns:
+	•	box score
+	•	play log
+	•	team stats
+
+⸻
+
+POST /simulate_many
+
+Run N games.
+
+Used for balancing.
+
+⸻
+
+POST /debug/play
+
+Runs a single play.
+
+Input:
+
+{
+  "style": "power_option",
+  "field_position": 40,
+  "down": 2,
+  "yards_to_go": 8
+}
+
+Returns full play resolution.
+
+⸻
+
+GET /teams
+
+List teams + default styles.
+
+⸻
+
+UI (Streamlit)
+
+Use Streamlit for speed.
+
+Page 1: Game Simulator
+	•	select teams
+	•	choose styles
+	•	seed
+	•	run game
+	•	show box score + log
+
+Page 2: Debug Tools
+	•	run 100 sims
+	•	show averages
+	•	fatigue curves
+	•	turnover rates
+
+Page 3: Play Inspector
+	•	run single play repeatedly
+
+This gives you a full tuning environment.
+
+⸻
+
+Engine changes needed before deploy
+
+Have engineer implement:
+
+1. Style system
+
+Each team has:
+
+offense_style
+tempo
+lateral_risk
+kick_rate
+option_rate
+
+2. Play families
+
+Replace random plays with:
+	•	dive option
+	•	speed option
+	•	sweep option
+	•	lateral spread
+	•	territory kick
+
+Each style weights these differently.
+
+⸻
+
+3. Structured play log
+
+Every play must output:
+
+quarter
+down
+distance
+field_position
+play_type
+yards
+result
+fatigue
+possession
+
+Without this, box scores won’t feel real.
+
+⸻
+
+4. Fix rule mismatches
+
+Before deploy, engineer must fix:
+	•	touchdowns = 9 points
+	•	kickoff possession after scores
+	•	flip field position on turnover
+	•	reset downs correctly
+	•	net yard tracking
+
+Otherwise logs will look wrong.
+
+⸻
+
+Hosting recommendation
+
+Phase 1 (fastest)
+
+Deploy Streamlit app to Railway.
+
+You get:
+	•	URL
+	•	instant access
+	•	shareable
+
+Phase 2
+
+Move to Fly.io if needed.
+
+⸻
+
+What you’ll be able to do
+
+From phone:
+	•	simulate Vermont vs BU
+	•	force territorial offense
+	•	run 20 games
+	•	inspect logs
+	•	tweak parameters
+	•	repeat
+
+No terminal required.
+
+⸻
+
+What to tell engineer in one sentence
+
+Wrap the Viperball Python engine in a FastAPI + Streamlit deployment so I can run deterministic simulations, override team play styles, and inspect play logs from a browser for debugging and balancing.
+
+⸻
+
+One key question before they start
+
+Do you want:
+
+1. Pure Python only
+(no JS, fastest)
+
+2. Nice UI later
+
+I strongly recommend:
+
+start Streamlit, upgrade later
+
+It gets you playtesting in 24 hours.
+
+⸻
+
+If you want, next step I can write:
+	•	exact folder structure
+	•	example FastAPI file
+	•	Streamlit UI file
+	•	deployment commands
+
+Just say:
+“write the deployment scaffold.”

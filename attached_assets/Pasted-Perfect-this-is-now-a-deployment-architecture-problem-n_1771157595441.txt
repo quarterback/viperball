@@ -1,0 +1,323 @@
+Perfect — this is now a deployment architecture problem, not a rules problem.
+
+You want:
+
+run simulations
+debug engine
+playtest styles
+generate logs
+without needing a desktop terminal
+
+So your AI engineer needs a lightweight deployable sim environment you can hit from phone/tablet/browser.
+
+Below is exactly what to tell them.
+No fluff. This is the build spec.
+
+⸻
+
+🧠 Goal
+
+Deploy the Viperball simulation engine so you can:
+	•	run games from browser
+	•	tweak parameters
+	•	test play styles
+	•	generate box scores + logs
+	•	debug engine
+	•	not rely on local terminal
+
+This is NOT a production app.
+This is a simulation sandbox.
+
+⸻
+
+🏗 Recommended Architecture (simple + fast)
+
+Python sim engine stays as-is.
+We wrap it in a tiny API and web UI.
+
+Frontend: simple web UI (or even static HTML)
+Backend: FastAPI
+Engine: existing Python game_engine
+Hosting: Fly.io or Railway
+Storage: JSON files
+
+You can build this in 1–2 days.
+
+⸻
+
+🧩 Component breakdown
+
+1. Engine layer (already exists)
+
+Your repo:
+
+/engine/game_engine.py
+
+Leave it pure Python.
+
+But expose one entry point:
+
+simulate_game(home_team, away_team, seed=None, style_overrides=None)
+
+Return:
+
+{
+  box_score,
+  play_log,
+  drive_summary,
+  stats
+}
+
+This must be deterministic with seed.
+
+⸻
+
+2. API wrapper (critical)
+
+Have your engineer build:
+
+api/main.py
+
+Using FastAPI.
+
+Endpoints:
+
+POST /simulate
+
+Run a game.
+
+Body:
+
+{
+  "home": "vermont",
+  "away": "boston_university",
+  "seed": 123,
+  "styles": {
+     "vermont": "power_option",
+     "boston_university": "lateral_spread"
+  }
+}
+
+Returns:
+
+box score
+play log
+team stats
+
+POST /season
+
+Simulate week or season.
+
+GET /teams
+
+List available teams + styles.
+
+POST /debug/run_play
+
+Run single play for tuning.
+
+This endpoint will be gold for balancing.
+
+⸻
+
+3. Frontend (minimal)
+
+Do NOT overbuild.
+
+Just give yourself a control panel.
+
+Page 1: Game Sim
+	•	select teams
+	•	choose styles
+	•	seed
+	•	run game
+	•	see box score + log
+
+Page 2: Debug
+	•	run single drive
+	•	run 100 games
+	•	see averages
+
+Use:
+	•	plain HTML
+	•	or React if engineer insists
+	•	or Streamlit (fastest)
+
+If you want fastest:
+
+use Streamlit
+
+Then you literally deploy the UI with the engine in one app.
+
+⸻
+
+🚀 Deployment options
+
+Option A — fastest: Fly.io
+
+Good for:
+	•	Python
+	•	always-on
+	•	cheap
+
+Engineer does:
+
+fly launch
+
+Deploy FastAPI app.
+
+You get:
+
+viperball.fly.dev
+
+You hit it from phone.
+
+⸻
+
+Option B — Railway
+
+Even easier.
+
+Push repo → deploy → done.
+
+⸻
+
+Option C — Replit (quickest debug)
+
+If this is mostly playtesting:
+
+Put engine + UI in Replit.
+You get instant browser access.
+
+⸻
+
+🧪 Debug tooling you need
+
+Tell your engineer:
+
+Must have seed control
+
+So you can reproduce games.
+
+Must have style overrides
+
+You want to force:
+
+vermont = territorial
+bu = option_spread
+
+Must log:
+	•	play type
+	•	yards
+	•	fatigue
+	•	possession
+	•	branch decisions
+
+Readable logs > pretty UI.
+
+⸻
+
+⚙️ Engine changes required before deploy
+
+Have them implement:
+
+1. Style system
+
+Each team JSON:
+
+{
+  "offense_style": "power_option",
+  "tempo": 0.7,
+  "kick_aggression": 0.3,
+  "lateral_risk": 0.4
+}
+
+2. Deterministic RNG
+
+random.seed(seed)
+
+so you can replay games.
+
+3. Play log structure
+
+Every play should output:
+
+{
+  quarter,
+  down,
+  distance,
+  field_pos,
+  play_type,
+  yards,
+  result,
+  fatigue
+}
+
+This is what makes box scores believable.
+
+⸻
+
+📊 What you’ll be able to do after deploy
+
+From your phone:
+	•	simulate Vermont vs BU
+	•	switch to territorial offense
+	•	run 50 games
+	•	see averages
+	•	tune lateral risk
+	•	fix bugs
+	•	watch play logs
+	•	iterate rules
+
+No terminal needed.
+
+⸻
+
+🧠 Tell your engineer this exactly
+
+You can literally paste this to them:
+
+Build a lightweight FastAPI wrapper around the Viperball engine so I can run simulations from a browser.
+
+Requirements:
+	•	deterministic seed support
+	•	team style overrides
+	•	simulate single game endpoint
+	•	simulate season endpoint
+	•	debug endpoint for single play
+	•	deploy on Fly.io or Railway
+	•	simple web UI (Streamlit acceptable)
+
+Goal: I want to run games and debug engine logic from my phone without using a terminal.
+
+⸻
+
+🔥 My recommendation
+
+Use Streamlit first.
+
+It gives you:
+	•	UI
+	•	deploy
+	•	logs
+	•	sliders
+	•	buttons
+
+in one file.
+
+Your engineer could ship this in a day.
+
+Then later:
+	•	move to proper web UI if needed.
+
+⸻
+
+Question for you
+
+How serious is this deployment?
+
+A — quick sandbox for you
+B — shareable public sim
+C — full league sim site
+
+Answer with A/B/C.
