@@ -37,6 +37,7 @@ class PlayResult(Enum):
     SUCCESSFUL_KICK = "successful_kick"
     MISSED_KICK = "missed_kick"
     SAFETY = "safety"
+    PINDOWN = "pindown"  # CFL rouge/single point (1 point)
 
 
 PLAY_FAMILY_TO_TYPE = {
@@ -757,6 +758,60 @@ class ViperballEngine:
 
         new_position = 100 - min(99, self.state.field_position + distance)
 
+        # CFL ROUGE/PINDOWN LOGIC (1 point)
+        # Awarded when punt goes into end zone and receiving team can't return it out
+        if new_position <= 5:  # Punt lands in/near end zone
+            receiving_team = self.away_team if self.state.possession == "home" else self.home_team
+
+            # Can receiving team return it out? Based on speed and luck
+            return_ability = receiving_team.avg_speed / 100
+            escape_chance = return_ability * random.uniform(0.3, 0.7)
+
+            # Receiving team attempts to:
+            # - Return it out (most common)
+            # - Lateral it out (riskier)
+            # - Kick it back (rare)
+            # - Or get downed → PINDOWN
+            escape_attempt = random.random()
+
+            if escape_attempt > escape_chance:
+                # PINDOWN! Receiving team downed in end zone
+                kicking_team_before = self.state.possession
+                self.add_score(1)  # 1 point for pindown
+
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                # After pindown, kicking team kicks off to receiving team
+                self.change_possession()
+                kickoff_play = Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=kicking_team_before,  # Kicking team gets credit
+                    field_position=self.state.field_position,
+                    down=1,
+                    yards_to_go=20,
+                    play_type="punt",
+                    play_family=family.value,
+                    players_involved=[player_label(punter)],
+                    yards_gained=-distance,
+                    result=PlayResult.PINDOWN.value,
+                    description=f"{ptag} punt → {distance} yards — PINDOWN! +1",
+                    fatigue=round(stamina, 1),
+                )
+
+                # Set up kickoff for receiving team
+                self.state.field_position = 20
+                self.state.down = 1
+                self.state.yards_to_go = 20
+
+                return kickoff_play
+            else:
+                # Receiving team successfully returns/escapes
+                # Give them decent field position (5-15 yard line)
+                new_position = random.randint(5, 15)
+                chaos_description += " — RETURNED OUT!"
+
         self.change_possession()
         self.state.field_position = max(1, new_position)
         self.state.down = 1
@@ -831,6 +886,53 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
+            # MISSED DROP-KICK
+            kicking_team_before = self.state.possession
+
+            # Check for PINDOWN (missed kick lands in/past end zone)
+            # If kicking from opponent's 40 or closer, kick likely reaches end zone
+            if self.state.field_position >= 60:
+                receiving_team = self.away_team if self.state.possession == "home" else self.home_team
+
+                # Probability kick goes into end zone (higher if closer)
+                endzone_chance = (self.state.field_position - 55) / 45  # 60->11%, 90->78%
+                endzone_chance = min(0.85, max(0.10, endzone_chance))
+
+                if random.random() < endzone_chance:
+                    # Kick lands in end zone - can receiving team return it out?
+                    return_ability = receiving_team.avg_speed / 100
+                    escape_chance = return_ability * random.uniform(0.4, 0.8)  # Easier to return than punts
+
+                    if random.random() > escape_chance:
+                        # PINDOWN! Downed in end zone
+                        self.add_score(1)
+
+                        self.change_possession()
+                        pindown_play = Play(
+                            play_number=self.state.play_number,
+                            quarter=self.state.quarter,
+                            time=self.state.time_remaining,
+                            possession=kicking_team_before,
+                            field_position=self.state.field_position,
+                            down=1,
+                            yards_to_go=20,
+                            play_type="drop_kick",
+                            play_family=family.value,
+                            players_involved=[player_label(kicker)],
+                            yards_gained=0,
+                            result=PlayResult.PINDOWN.value,
+                            description=f"{ptag} drop kick {distance}yd — NO GOOD → PINDOWN! +1",
+                            fatigue=round(stamina, 1),
+                        )
+
+                        # Set up kickoff
+                        self.state.field_position = 20
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
+
+                        return pindown_play
+
+            # Normal missed kick (no pindown)
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
             self.state.down = 1
@@ -906,6 +1008,53 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
+            # MISSED PLACE-KICK
+            kicking_team_before = self.state.possession
+
+            # Check for PINDOWN (missed kick lands in/past end zone)
+            # If kicking from opponent's 40 or closer, kick likely reaches end zone
+            if self.state.field_position >= 60:
+                receiving_team = self.away_team if self.state.possession == "home" else self.home_team
+
+                # Probability kick goes into end zone (higher if closer)
+                endzone_chance = (self.state.field_position - 55) / 45  # 60->11%, 90->78%
+                endzone_chance = min(0.85, max(0.10, endzone_chance))
+
+                if random.random() < endzone_chance:
+                    # Kick lands in end zone - can receiving team return it out?
+                    return_ability = receiving_team.avg_speed / 100
+                    escape_chance = return_ability * random.uniform(0.4, 0.8)  # Easier to return than punts
+
+                    if random.random() > escape_chance:
+                        # PINDOWN! Downed in end zone
+                        self.add_score(1)
+
+                        self.change_possession()
+                        pindown_play = Play(
+                            play_number=self.state.play_number,
+                            quarter=self.state.quarter,
+                            time=self.state.time_remaining,
+                            possession=kicking_team_before,
+                            field_position=self.state.field_position,
+                            down=1,
+                            yards_to_go=20,
+                            play_type="place_kick",
+                            play_family=family.value,
+                            players_involved=[player_label(kicker)],
+                            yards_gained=0,
+                            result=PlayResult.PINDOWN.value,
+                            description=f"{ptag} place kick {distance}yd — NO GOOD → PINDOWN! +1",
+                            fatigue=round(stamina, 1),
+                        )
+
+                        # Set up kickoff
+                        self.state.field_position = 20
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
+
+                        return pindown_play
+
+            # Normal missed kick (no pindown)
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
             self.state.down = 1
@@ -1031,6 +1180,7 @@ class ViperballEngine:
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
         place_kicks = [p for p in plays if p.play_type == "place_kick" and p.result == "successful_kick"]
         touchdowns = [p for p in plays if p.result == "touchdown"]
+        pindowns = [p for p in plays if p.result == "pindown"]  # CFL rouge/single point
         fumbles_lost = [p for p in plays if p.fumble]
         turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
 
@@ -1050,6 +1200,7 @@ class ViperballEngine:
             "total_plays": total_plays,
             "yards_per_play": round(total_yards / max(1, total_plays), 2),
             "touchdowns": len(touchdowns),
+            "pindowns": len(pindowns),  # CFL rouge/single point (1 pt each)
             "lateral_chains": len(laterals),
             "successful_laterals": successful_laterals,
             "fumbles_lost": len(fumbles_lost),
