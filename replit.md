@@ -38,9 +38,23 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - **Defensive fatigue scaling**: Long drives (5/8/12+ plays) degrade defense by 1.05/1.15/1.25x
 - **Lateral chain compounding**: Each lateral in chain adds 5% explosive chance
 
-### UI Pages
-1. **Game Simulator** - Pick teams, styles, seed → get box score + play log
-2. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates
+### Position Tag System
+- Players identified by position abbreviation + jersey number (e.g. VB1, HB13, WE8, CB11)
+- Position mappings: viperback→VB, halfback→HB, wingend→WE, winglet→WI, center_back→CB, zone_end→ZE, linebacker→LI, winglock→WL, sweeper_back→SB
+
+### Drive Tracking
+- Every possession logged with: team, quarter, start yard line, plays, yards, result
+- Results: touchdown, successful_kick, fumble, turnover_on_downs, punt, missed_kick, stall (quarter end)
+- Drive yards count positive non-punt gains only
+
+### UI Pages (5 views per game)
+1. **Game Simulator**
+   - Real box score: quarter-by-quarter scoring + scoring breakdown (TD/DK/PK with point values)
+   - Play family distribution: grouped bar chart comparing team play call %
+   - Drive outcome panel: table of all drives + outcome distribution chart
+   - Play log: position-tagged descriptions with quarter filter
+   - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params
+2. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates, drive outcome aggregation
 3. **Play Inspector** - Run single plays repeatedly with situation controls
 
 ### API Endpoints
@@ -61,6 +75,9 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - Win balance: 47.5% / 47.5%
 
 ## Recent Changes
+- 2026-02-15: Added position tag system (VB1, HB13, etc.) replacing generic player names
+- 2026-02-15: Added drive summary tracking (team, quarter, start yd, plays, yards, result per possession)
+- 2026-02-15: Overhauled Game Simulator UI with 5 views: box score, play family chart, drive panel, role-tagged play log, debug panel
 - 2026-02-15: Built complete sandbox (engine styles, FastAPI, Streamlit UI)
 - 2026-02-15: Tuned game balance — breakaway system, red zone TD model, defensive fatigue, lateral compounding
 - 2026-02-15: Fixed red zone TD bug (requires yards_gained >= 2)
