@@ -98,13 +98,14 @@ class Play:
 
 class ViperballEngine:
     """Main simulation engine for Viperball games"""
-    
-    def __init__(self, home_team: Team, away_team: Team):
+
+    def __init__(self, home_team: Team, away_team: Team, tempo: str = "standard"):
         self.home_team = home_team
         self.away_team = away_team
         self.state = GameState()
         self.play_log: List[Play] = []
         self.viper_position = "free"  # "free", "left", "right", "deep"
+        self.tempo = tempo  # "standard" or "uptempo"
         
     def simulate_game(self) -> Dict:
         """Simulate a complete game and return results"""
@@ -133,21 +134,28 @@ class ViperballEngine:
         
     def simulate_drive(self):
         """Simulate a single offensive drive"""
-        max_plays = 20  # Prevent infinite loops
+        max_plays = 25 if self.tempo == "uptempo" else 20
         plays_in_drive = 0
-        
+
         while plays_in_drive < max_plays and self.state.time_remaining > 0:
             play = self.simulate_play()
             self.play_log.append(play)
-            
-            # Update time
-            time_elapsed = random.randint(15, 45)
+
+            # Uptempo burns clock faster (quick snap, less huddle time)
+            if self.tempo == "uptempo":
+                time_elapsed = random.randint(12, 30)
+            else:
+                time_elapsed = random.randint(15, 45)
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
-            
+
             # Check if drive is over
             if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick"]:
+                # After a touchdown, kick off to the other team
+                if play.result == "touchdown":
+                    receiving = "away" if self.state.possession == "home" else "home"
+                    self.kickoff(receiving)
                 break
-            
+
             plays_in_drive += 1
     
     def simulate_play(self) -> Play:
@@ -172,37 +180,62 @@ class ViperballEngine:
             return self.simulate_run()
     
     def select_play_type(self) -> PlayType:
-        """Choose play type based on game situation"""
+        """Choose play type based on game situation and tempo"""
         # Apply fatigue factor
         fatigue_factor = self.get_fatigue_factor()
-        
+
+        uptempo = self.tempo == "uptempo"
+
         # 5th down considerations
         if self.state.down == 5:
             if self.state.field_position + self.state.yards_to_go >= 50:
                 # In field goal range
-                if random.random() < 0.6:
-                    return PlayType.PLACE_KICK
+                if uptempo:
+                    # Uptempo teams favor the aggressive drop kick
+                    if random.random() < 0.45:
+                        return PlayType.DROP_KICK
+                    elif random.random() < 0.5:
+                        return PlayType.PLACE_KICK
+                    else:
+                        return PlayType.LATERAL_CHAIN
                 else:
-                    return PlayType.DROP_KICK if random.random() < 0.3 else PlayType.RUN
+                    if random.random() < 0.6:
+                        return PlayType.PLACE_KICK
+                    else:
+                        return PlayType.DROP_KICK if random.random() < 0.3 else PlayType.RUN
             else:
-                # Too far for field goal, likely punt
-                if random.random() < 0.7:
-                    return PlayType.PUNT
+                if uptempo:
+                    # Uptempo teams go for it more often on 5th down
+                    if random.random() < 0.4:
+                        return PlayType.PUNT
+                    else:
+                        return PlayType.LATERAL_CHAIN if random.random() < 0.6 else PlayType.RUN
                 else:
-                    return PlayType.RUN if random.random() < 0.6 else PlayType.LATERAL_CHAIN
-        
-        # Normal downs
-        if self.state.down <= 2:
-            # Early downs - be aggressive
-            weights = [0.5, 0.3, 0.1, 0.05, 0.05]  # run, lateral, punt, drop, place
-        elif self.state.down == 3:
-            weights = [0.4, 0.3, 0.15, 0.1, 0.05]
-        else:  # down 4
-            weights = [0.3, 0.25, 0.25, 0.15, 0.05]
-        
-        play_types = [PlayType.RUN, PlayType.LATERAL_CHAIN, PlayType.PUNT, 
+                    # Too far for field goal, likely punt
+                    if random.random() < 0.7:
+                        return PlayType.PUNT
+                    else:
+                        return PlayType.RUN if random.random() < 0.6 else PlayType.LATERAL_CHAIN
+
+        # Normal downs - uptempo favors lateral chains and runs, rarely punts
+        if uptempo:
+            if self.state.down <= 2:
+                weights = [0.40, 0.45, 0.02, 0.08, 0.05]
+            elif self.state.down == 3:
+                weights = [0.35, 0.40, 0.05, 0.12, 0.08]
+            else:  # down 4
+                weights = [0.30, 0.35, 0.10, 0.15, 0.10]
+        else:
+            if self.state.down <= 2:
+                weights = [0.5, 0.3, 0.1, 0.05, 0.05]
+            elif self.state.down == 3:
+                weights = [0.4, 0.3, 0.15, 0.1, 0.05]
+            else:  # down 4
+                weights = [0.3, 0.25, 0.25, 0.15, 0.05]
+
+        play_types = [PlayType.RUN, PlayType.LATERAL_CHAIN, PlayType.PUNT,
                      PlayType.DROP_KICK, PlayType.PLACE_KICK]
-        
+
         return random.choices(play_types, weights=weights)[0]
     
     def simulate_run(self) -> Play:
@@ -542,17 +575,20 @@ class ViperballEngine:
             self.state.away_stamina = max(40, self.state.away_stamina - amount)
     
     def calculate_viper_impact(self) -> float:
-        """Calculate the Viper positioning impact on play success"""
-        # Viper position changes dynamically (simplified model)
+        """Calculate the Viper positioning impact on play success.
+
+        The defensive Viper can disrupt plays (factor < 1.0) or be out of
+        position (factor > 1.0).  On average the factor is close to 1.0.
+        """
         positions = ["free", "left", "right", "deep"]
         self.viper_position = random.choice(positions)
-        
-        # Impact factor based on position (1.0 to 1.3)
+
+        # Balanced impact: defensive viper sometimes shuts down plays
         impacts = {
-            "free": 1.15,
-            "left": 1.1,
-            "right": 1.1,
-            "deep": 1.05
+            "free": 0.85,   # Viper in perfect position — offense suppressed
+            "left": 0.95,   # Slight advantage to defense
+            "right": 1.05,  # Slight advantage to offense
+            "deep": 1.10    # Viper out of position — offense exploits
         }
         return impacts.get(self.viper_position, 1.0)
     
@@ -561,11 +597,19 @@ class ViperballEngine:
         # Calculate advanced stats
         home_plays = [p for p in self.play_log if p.possession == "home"]
         away_plays = [p for p in self.play_log if p.possession == "away"]
-        
+
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
-        
-        return {
+
+        # Calculate per-quarter play counts for tempo tracking
+        for stats, plays in [(home_stats, home_plays), (away_stats, away_plays)]:
+            plays_by_q = {q: 0 for q in range(1, 5)}
+            for p in plays:
+                if p.quarter in plays_by_q:
+                    plays_by_q[p.quarter] += 1
+            stats["plays_per_quarter"] = plays_by_q
+
+        summary = {
             "final_score": {
                 "home": {
                     "team": self.home_team.name,
@@ -576,36 +620,45 @@ class ViperballEngine:
                     "score": self.state.away_score
                 }
             },
+            "tempo": self.tempo,
             "stats": {
                 "home": home_stats,
                 "away": away_stats
             },
             "play_by_play": [self.play_to_dict(p) for p in self.play_log]
         }
+
+        return summary
     
     def calculate_team_stats(self, plays: List[Play]) -> Dict:
         """Calculate statistics for a team"""
         total_yards = sum(p.yards_gained for p in plays if p.yards_gained > 0)
         total_plays = len(plays)
-        
+
         laterals = [p for p in plays if p.laterals > 0]
         total_laterals = sum(p.laterals for p in laterals)
         successful_laterals = sum(1 for p in laterals if not p.fumble)
-        
+
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
         place_kicks = [p for p in plays if p.play_type == "place_kick" and p.result == "successful_kick"]
-        
+        touchdowns = [p for p in plays if p.result == "touchdown"]
+        fumbles_lost = [p for p in plays if p.fumble]
+        turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
+
         # Advanced metrics
         viper_efficiency = (total_yards / max(1, total_plays)) * (1 + successful_laterals / max(1, total_laterals))
         micro_scoring_diff = len(drop_kicks) * 5 - len(place_kicks) * 3
         lateral_efficiency = (successful_laterals / max(1, len(laterals))) * 100 if laterals else 0
-        
+
         return {
             "total_yards": total_yards,
             "total_plays": total_plays,
             "yards_per_play": round(total_yards / max(1, total_plays), 2),
+            "touchdowns": len(touchdowns),
             "lateral_chains": len(laterals),
             "successful_laterals": successful_laterals,
+            "fumbles_lost": len(fumbles_lost),
+            "turnovers_on_downs": len(turnovers_on_downs),
             "drop_kicks_made": len(drop_kicks),
             "place_kicks_made": len(place_kicks),
             "viper_efficiency": round(viper_efficiency, 2),

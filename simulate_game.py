@@ -20,28 +20,30 @@ sys.path.insert(0, str(Path(__file__).parent))
 from engine import ViperballEngine, load_team_from_json, BoxScoreGenerator
 
 
-def simulate_game(home_team_file: str, away_team_file: str):
+def simulate_game(home_team_file: str, away_team_file: str, tempo: str = "standard"):
     """Simulate a game between two teams"""
-    
+
     print("=" * 60)
     print("COLLEGIATE VIPERBALL SIMULATION")
+    if tempo == "uptempo":
+        print(">> UP-TEMPO OFFENSE <<")
     print("=" * 60)
     print()
-    
+
     # Load teams
     print(f"Loading home team from: {home_team_file}")
     home_team = load_team_from_json(home_team_file)
-    
+
     print(f"Loading away team from: {away_team_file}")
     away_team = load_team_from_json(away_team_file)
-    
+
     print()
     print(f"{away_team.name} @ {home_team.name}")
     print()
-    
+
     # Initialize engine
-    engine = ViperballEngine(home_team, away_team)
-    
+    engine = ViperballEngine(home_team, away_team, tempo=tempo)
+
     # Simulate the game
     print("Simulating game...")
     game_data = engine.simulate_game()
@@ -95,30 +97,38 @@ def simulate_game(home_team_file: str, away_team_file: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python simulate_game.py <home_team> <away_team>")
+        print("Usage: python simulate_game.py <home_team> <away_team> [--tempo uptempo|standard]")
         print("\nAvailable teams:")
         print("  - nyu")
         print("  - gonzaga")
         print("  - marquette")
+        print("  - creighton")
         print("  - ut_arlington")
-        print("\nExample: python simulate_game.py nyu gonzaga")
+        print("\nExample: python simulate_game.py marquette creighton --tempo uptempo")
         sys.exit(1)
-    
+
     home = sys.argv[1]
     away = sys.argv[2]
-    
+
+    # Parse optional --tempo flag
+    tempo = "standard"
+    if "--tempo" in sys.argv:
+        tempo_idx = sys.argv.index("--tempo")
+        if tempo_idx + 1 < len(sys.argv):
+            tempo = sys.argv[tempo_idx + 1]
+
     # Construct file paths
     home_file = f"data/teams/{home}.json"
     away_file = f"data/teams/{away}.json"
-    
+
     # Check if files exist
     if not os.path.exists(home_file):
         print(f"Error: Home team file not found: {home_file}")
         sys.exit(1)
-    
+
     if not os.path.exists(away_file):
         print(f"Error: Away team file not found: {away_file}")
         sys.exit(1)
-    
+
     # Run simulation
-    simulate_game(home_file, away_file)
+    simulate_game(home_file, away_file, tempo=tempo)
