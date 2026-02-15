@@ -170,18 +170,18 @@ OFFENSE_STYLES = {
     },
     "territorial": {
         "label": "Territorial",
-        "description": "Field position game, frequent kicks and punts",
+        "description": "Field position game, FREQUENT kicks and punts (AFL-style)",
         "weights": {
-            "dive_option": 0.20,
-            "speed_option": 0.10,
-            "sweep_option": 0.15,
-            "lateral_spread": 0.15,
-            "territory_kick": 0.40,
+            "dive_option": 0.15,
+            "speed_option": 0.08,
+            "sweep_option": 0.12,
+            "lateral_spread": 0.10,
+            "territory_kick": 0.55,  # INCREASED: Territorial teams kick A LOT
         },
         "tempo": 0.3,
         "lateral_risk": 0.2,
-        "kick_rate": 0.40,
-        "option_rate": 0.25,
+        "kick_rate": 0.55,  # INCREASED: More kicking
+        "option_rate": 0.20,
     },
     "option_spread": {
         "label": "Option Spread",
@@ -316,27 +316,94 @@ class ViperballEngine:
             "result": drive_result,
         })
 
+    def should_kick(self) -> Optional[str]:
+        """
+        Determine if team should kick (ENHANCED KICKING FREQUENCY)
+        Target: 8-14 kicks per team per game
+
+        Returns kick type: 'punt', 'drop_kick', 'place_kick', or None
+        """
+        style = self._current_style()
+        down = self.state.down
+        distance = self.state.yards_to_go
+        field_pos = self.state.field_position
+
+        # Style-based kick aggression modifiers
+        style_name = self.home_team.offense_style if self.state.possession == "home" else self.away_team.offense_style
+        kick_aggression = {
+            "territorial": 0.30,
+            "power_option": 0.20,
+            "option_spread": 0.15,
+            "lateral_spread": 0.15,
+            "balanced": 0.05,
+        }.get(style_name, 0.10)
+
+        # DOWN AND DISTANCE LOGIC
+        kick_bias = 0.0
+
+        # 4th/5th down & >5 yards → 70% kick bias
+        if down >= 4 and distance > 5:
+            kick_bias = 0.70
+        # 3rd down & >15 yards → 40% kick bias
+        elif down == 3 and distance > 15:
+            kick_bias = 0.40
+        # 2nd down & >20 yards → 25% kick bias
+        elif down == 2 and distance > 20:
+            kick_bias = 0.25
+
+        # Apply style aggression
+        kick_bias += kick_aggression
+
+        # FIELD POSITION LOGIC
+        # Own 10-20 → 60% punt bias
+        if 10 <= field_pos <= 20:
+            if random.random() < 0.60:
+                return 'punt'
+
+        # Opponent 40-25 (field_pos 60-75) → 50% drop-kick bias
+        elif 60 <= field_pos <= 75:
+            if random.random() < (0.50 + kick_aggression):
+                return 'drop_kick'
+
+        # Opponent 25-10 (field_pos 75-90) → 40% place-kick bias
+        elif 75 <= field_pos <= 90:
+            if random.random() < (0.40 + kick_aggression):
+                return 'place_kick'
+
+        # Opponent 10-goal (field_pos 90+) → place kick heavily favored
+        elif field_pos >= 90:
+            if random.random() < 0.70:
+                return 'place_kick'
+
+        # General kick decision based on down/distance
+        if random.random() < kick_bias:
+            # Determine kick type based on field position
+            if field_pos < 40:
+                return 'punt'
+            elif field_pos >= 75:
+                return 'place_kick' if random.random() < 0.60 else 'drop_kick'
+            else:
+                return 'drop_kick' if random.random() < 0.65 else 'punt'
+
+        return None
+
     def simulate_play(self) -> Play:
         self.state.play_number += 1
+
+        # Check if team should kick (ENHANCED FREQUENCY)
+        kick_decision = self.should_kick()
+
+        if kick_decision:
+            if kick_decision == 'punt':
+                return self.simulate_punt(PlayFamily.TERRITORY_KICK)
+            elif kick_decision == 'drop_kick':
+                return self.simulate_drop_kick(PlayFamily.TERRITORY_KICK)
+            elif kick_decision == 'place_kick':
+                return self.simulate_place_kick(PlayFamily.TERRITORY_KICK)
+
+        # If not kicking, select normal play
         play_family = self.select_play_family()
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
-
-        if self.state.down == 5:
-            if self.state.field_position >= 55:
-                if random.random() < 0.5:
-                    play_type = PlayType.DROP_KICK
-                    play_family = PlayFamily.TERRITORY_KICK
-                else:
-                    play_type = PlayType.PLACE_KICK
-                    play_family = PlayFamily.TERRITORY_KICK
-            else:
-                style = self._current_style()
-                if random.random() < style["kick_rate"]:
-                    play_type = PlayType.PUNT
-                    play_family = PlayFamily.TERRITORY_KICK
-                else:
-                    play_family = random.choice([PlayFamily.DIVE_OPTION, PlayFamily.SPEED_OPTION, PlayFamily.LATERAL_SPREAD])
-                    play_type = PLAY_FAMILY_TO_TYPE[play_family]
 
         if play_type == PlayType.RUN:
             return self.simulate_run(play_family)
@@ -483,10 +550,33 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = 0.06
-        fumble_prob = base_fumble_prob * (1 + (chain_length - 2) * 0.12)
-        fumble_prob *= (1 + style["lateral_risk"] * 0.25)
-        fumble_prob /= (team.lateral_proficiency / 85)
+        # ENHANCED LATERAL RISK SYSTEM (Target: 65-80% efficiency)
+        # Base 5-7% failure per lateral
+        base_fumble_prob = random.uniform(0.05, 0.07)
+
+        # +4% per additional lateral in same play
+        if chain_length > 2:
+            base_fumble_prob += (chain_length - 2) * 0.04
+
+        # +8-10% if under pressure (own territory or defensive fatigue)
+        under_pressure = self.state.field_position < 35 or self._defensive_fatigue_factor() < 1.05
+        if under_pressure:
+            base_fumble_prob += random.uniform(0.08, 0.10)
+
+        # +6% for cross-field laterals (determined randomly, ~40% of laterals)
+        if random.random() < 0.40:  # Cross-field lateral
+            base_fumble_prob += 0.06
+
+        # +5% if fatigue > 70%
+        team_stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+        if team_stamina < 70:
+            base_fumble_prob += 0.05
+
+        # Style modifier (higher risk styles increase fumble chance)
+        fumble_prob = base_fumble_prob * (1 + style["lateral_risk"] * 0.15)
+
+        # Team skill reduces fumbles
+        fumble_prob /= (team.lateral_proficiency / 80)
 
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
@@ -587,6 +677,84 @@ class ViperballEngine:
         distance = int(base_distance * kicking_factor)
         distance = max(20, min(distance, 70))
 
+        # CHAOS MECHANICS (AFL DNA)
+        chaos_happened = False
+        chaos_description = ""
+
+        # 3-5% chance of tip/deflection
+        if random.random() < random.uniform(0.03, 0.05):
+            distance = int(distance * random.uniform(0.3, 0.7))  # Tipped punt goes shorter
+            chaos_description = " — TIPPED!"
+            chaos_happened = True
+
+        # 5-10% chance of chaos bounce
+        if random.random() < random.uniform(0.05, 0.10):
+            bounce_mod = random.choice([-15, -10, -5, 5, 10, 15, 20])  # Wild bounce
+            distance += bounce_mod
+            chaos_description += " — WILD BOUNCE!"
+            chaos_happened = True
+
+        # 10-15% chance of contested recovery (changes field position dramatically)
+        if random.random() < random.uniform(0.10, 0.15):
+            contest_result = random.choice(["offense_keeps", "defense_gets", "defensive_return"])
+
+            if contest_result == "offense_keeps":
+                # Offense recovers own punt! (like AFL)
+                chaos_description += " — RECOVERED BY KICKING TEAM!"
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.state.field_position = min(99, self.state.field_position + int(distance * 0.6))
+
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=1,
+                    yards_to_go=20,
+                    play_type="punt",
+                    play_family=family.value,
+                    players_involved=[player_label(punter)],
+                    yards_gained=int(distance * 0.6),
+                    result="first_down",
+                    description=f"{ptag} punt {distance}yd{chaos_description}",
+                    fatigue=round(stamina, 1),
+                )
+
+            elif contest_result == "defensive_return":
+                # Defense returns punt for big yards (broken-play TD potential)
+                return_yards = random.randint(10, 50)
+                chaos_description += f" — RETURN {return_yards} YARDS!"
+
+                # 8% chance of broken-play TD on punt return
+                if random.random() < 0.08:
+                    # PUNT RETURN TOUCHDOWN!
+                    self.change_possession()
+                    old_possession = self.state.possession
+                    self.add_score(9)
+
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=1,
+                        yards_to_go=20,
+                        play_type="punt",
+                        play_family=family.value,
+                        players_involved=[player_label(punter)],
+                        yards_gained=-distance,
+                        result="touchdown",
+                        description=f"{ptag} punt → {return_yards}yd RETURN — TOUCHDOWN!",
+                        fatigue=round(stamina, 1),
+                    )
+
+                distance -= return_yards  # Reduce net punt distance
+
         new_position = 100 - min(99, self.state.field_position + distance)
 
         self.change_possession()
@@ -610,7 +778,7 @@ class ViperballEngine:
             players_involved=[player_label(punter)],
             yards_gained=-distance,
             result="punt",
-            description=f"{ptag} punt → {distance} yards",
+            description=f"{ptag} punt → {distance} yards{chaos_description}",
             fatigue=round(stamina, 1),
         )
 
@@ -621,10 +789,25 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        base_prob = 0.6
-        distance_factor = max(0, 1 - (distance - 30) / 70)
-        skill_factor = kicker.kicking / 90
-        success_prob = base_prob * distance_factor * skill_factor
+        # ENHANCED DROP-KICK: +10-15% base accuracy, more valuable
+        base_prob = 0.70 + random.uniform(0.0, 0.05)  # Was 0.60, now 0.70-0.75
+
+        # Distance factor (drop kicks are easier from medium range)
+        distance_factor = max(0, 1 - (distance - 35) / 65)  # More forgiving distance
+
+        # Skill factor (boosted for soccer/rugby background)
+        # TODO: Add player.background trait ("soccer" or "rugby")
+        # For now, assume 20% of players have soccer/rugby background
+        has_kicking_background = random.random() < 0.30  # 30% of women's players
+        if has_kicking_background:
+            skill_factor = kicker.kicking / 80  # Easier for skilled kickers
+        else:
+            skill_factor = kicker.kicking / 88
+
+        # "Clean bounce" bonus (predictable turf bounce)
+        clean_bounce_bonus = random.uniform(1.0, 1.15) if random.random() < 0.40 else 1.0
+
+        success_prob = base_prob * distance_factor * skill_factor * clean_bounce_bonus
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -677,10 +860,29 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        base_prob = 0.75
-        distance_factor = max(0, 1 - (distance - 35) / 60)
-        skill_factor = kicker.kicking / 85
+        # ENHANCED PLACE-KICK: As common as modern FGs
+        # Default scoring inside 30, viable inside 40, desperation inside 50
+
+        # Base probability (very high for women's soccer talent)
+        if distance <= 20:  # Inside 10-yard line (chip shot)
+            base_prob = 0.95
+        elif distance <= 30:  # Inside 20 (default range)
+            base_prob = 0.88
+        elif distance <= 40:  # Inside 30 (viable)
+            base_prob = 0.78
+        elif distance <= 50:  # Inside 40 (challenging)
+            base_prob = 0.62
+        else:  # 50+ (desperation)
+            base_prob = 0.40
+
+        # Distance factor (place kicks are very reliable)
+        distance_factor = max(0.5, 1 - (distance - 40) / 55)
+
+        # Skill factor (soccer background makes this easier)
+        skill_factor = kicker.kicking / 80  # More forgiving than drop kicks
+
         success_prob = base_prob * distance_factor * skill_factor
+        success_prob = min(0.98, success_prob)  # Cap at 98% (nothing is guaranteed)
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
