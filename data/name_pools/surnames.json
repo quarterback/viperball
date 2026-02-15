@@ -1,0 +1,102 @@
+{
+  "american_general": [
+    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
+    "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
+    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
+    "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young",
+    "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
+    "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
+    "Carter", "Roberts", "Phillips", "Evans", "Turner", "Diaz", "Parker", "Cruz"
+  ],
+  "irish": [
+    "Murphy", "Kelly", "O'Brien", "Walsh", "Ryan", "O'Connor", "McCarthy",
+    "Gallagher", "O'Sullivan", "Flynn", "Doyle", "Murray", "Quinn", "Kennedy",
+    "Lynch", "Brennan", "Burke", "Collins", "Doherty", "Fitzgerald", "Hayes",
+    "Keane", "Mahony", "McLaughlin", "McNamara", "O'Donnell", "O'Leary",
+    "O'Neill", "O'Reilly", "Power", "Byrne", "Casey", "Duffy", "Maguire",
+    "McGrath", "Nolan", "O'Malley", "Sheridan", "Sweeney"
+  ],
+  "italian": [
+    "Rossi", "Russo", "Ferrari", "Romano", "Marino", "Ricci", "Conti", "DeLuca",
+    "Bianchi", "Colombo", "Esposito", "Bruno", "Leone", "Lombardi", "Moretti",
+    "Barbieri", "Fontana", "Caruso", "Ferrara", "Gallo", "Santoro", "Mariani",
+    "Rinaldi", "Benedetti", "Palmieri", "Martino", "Vitale", "Silvestri",
+    "Pellegrini", "Sanna", "Costantini", "Greco", "De Angelis", "Ferretti"
+  ],
+  "german": [
+    "Mueller", "Schmidt", "Schneider", "Fischer", "Weber", "Wagner", "Becker",
+    "Hoffmann", "Schulz", "Koch", "Richter", "Klein", "Wolf", "Schroeder",
+    "Neumann", "Schwarz", "Zimmermann", "Braun", "Krueger", "Hartmann",
+    "Lange", "Schmitt", "Werner", "Krause", "Meier", "Lehmann", "Schmid",
+    "Schulze", "Maier", "Koehler", "Herrmann", "Walter", "Huber", "Kaiser"
+  ],
+  "polish": [
+    "Kowalski", "Nowak", "Wisniewski", "Wojcik", "Kowalczyk", "Kaminski",
+    "Lewandowski", "Zielinski", "Szymanski", "Wozniak", "Dabrowski", "Kozlowski",
+    "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk", "Kaczmarek", "Piotrowski",
+    "Grabowski", "Zajac", "Pawlowski", "Michalski", "Krol", "Wieczorek",
+    "Jablonski", "Nowakowski", "Majewski", "Olszewski", "Stepien", "Malinowski"
+  ],
+  "latino_hispanic": [
+    "Garcia", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Perez",
+    "Sanchez", "Ramirez", "Torres", "Flores", "Rivera", "Gomez", "Diaz", "Cruz",
+    "Morales", "Reyes", "Gutierrez", "Ortiz", "Jimenez", "Ruiz", "Alvarez",
+    "Castillo", "Romero", "Herrera", "Medina", "Aguilar", "Guzman", "Castro",
+    "Vargas", "Ramos", "Vazquez", "Mendoza", "Rojas", "Guerrero", "Nunez",
+    "Soto", "Delgado", "Contreras", "Silva", "Espinoza", "Vega", "Fuentes"
+  ],
+  "black_american": [
+    "Washington", "Jefferson", "Jackson", "Robinson", "Thompson", "Harris",
+    "Williams", "Johnson", "Brown", "Jones", "Davis", "Thomas", "Taylor",
+    "Moore", "Martin", "Walker", "Young", "Allen", "King", "Wright", "Scott",
+    "Green", "Adams", "Nelson", "Baker", "Hall", "Campbell", "Mitchell",
+    "Carter", "Roberts", "Phillips", "Evans", "Turner", "Parker", "Collins",
+    "Edwards", "Stewart", "Morris", "Rogers", "Reed", "Cook", "Morgan", "Bell"
+  ],
+  "chinese": [
+    "Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Huang", "Zhao", "Wu", "Zhou",
+    "Xu", "Sun", "Ma", "Zhu", "Hu", "Guo", "He", "Lin", "Gao", "Luo", "Zheng",
+    "Liang", "Song", "Tang", "Xu", "Han", "Feng", "Deng", "Cao", "Peng", "Zeng"
+  ],
+  "korean": [
+    "Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Cho", "Yoon", "Jang", "Lim",
+    "Han", "Oh", "Seo", "Shin", "Kwon", "Hwang", "Ahn", "Song", "Hong", "Yoo",
+    "Moon", "Yang", "Kang", "Ryu", "Baek", "Nam", "Min", "Kwak", "Jeon"
+  ],
+  "japanese": [
+    "Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto",
+    "Nakamura", "Kobayashi", "Kato", "Yoshida", "Yamada", "Sasaki", "Yamaguchi",
+    "Matsumoto", "Inoue", "Kimura", "Hayashi", "Shimizu", "Saito", "Fujita",
+    "Nakajima", "Mori", "Hashimoto", "Ishikawa", "Maeda", "Ogawa", "Hasegawa"
+  ],
+  "vietnamese": [
+    "Nguyen", "Tran", "Le", "Pham", "Hoang", "Phan", "Vu", "Dang", "Bui", "Do",
+    "Ngo", "Duong", "Ly", "Truong", "Vo", "Dinh", "Dao", "Trinh", "Luong", "Mai"
+  ],
+  "filipino": [
+    "Santos", "Reyes", "Cruz", "Bautista", "Garcia", "Mendoza", "Torres",
+    "Gonzales", "Ramos", "Flores", "Lopez", "Castillo", "Aquino", "Dela Cruz",
+    "Rivera", "Hernandez", "Diaz", "Ramirez", "Rodriguez", "Perez", "Fernandez",
+    "Sanchez", "Martinez", "Pascual", "Santiago", "Roxas", "Alvarez", "Domingo"
+  ],
+  "australian": [
+    "Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "Anderson",
+    "Thomas", "Roberts", "Johnson", "White", "Martin", "Thompson", "Walker",
+    "Lee", "Harris", "King", "Ryan", "Robinson", "Kelly", "Davis", "Wright",
+    "Evans", "Baker", "Edwards", "Murphy", "Hall", "Moore", "Clark", "Hughes",
+    "Harrison", "Johnston", "Mitchell", "Campbell", "Stewart", "Graham", "Watson"
+  ],
+  "pacific_islander": [
+    "Taufa", "Latu", "Fonua", "Manu", "Fifita", "Kaufusi", "Tuivasa-Sheck",
+    "Fusitua", "Lolohea", "Kata", "Vunipola", "Tuilagi", "Fainga'a", "Pocock",
+    "Folau", "Talanoa", "Tamalolo", "Taukeiaho", "Papalii", "Whitehead",
+    "Tuala", "Momirovski", "Sua", "Asi", "Schuster", "Vailea", "Katoa",
+    "Harawira-Naera", "Simonsson", "Sualii", "To'o", "Turuva", "Vaega"
+  ],
+  "scandinavian": [
+    "Andersen", "Johansen", "Hansen", "Nielsen", "Jensen", "Larsen", "Olsen",
+    "Pedersen", "Christiansen", "Sorensen", "Rasmussen", "Jorgensen", "Petersen",
+    "Madsen", "Kristensen", "Nilsen", "Lindberg", "Berg", "Eriksen", "Carlson",
+    "Svensson", "Gustafsson", "Olsson", "Jonsson", "Andersson", "Karlsson"
+  ]
+}
