@@ -37,6 +37,9 @@ class PlayResult(Enum):
     SUCCESSFUL_KICK = "successful_kick"
     MISSED_KICK = "missed_kick"
     SAFETY = "safety"
+    PINDOWN = "pindown"
+    PUNT_RETURN_TD = "punt_return_td"
+    CHAOS_RECOVERY = "chaos_recovery"
 
 
 PLAY_FAMILY_TO_TYPE = {
@@ -142,75 +145,75 @@ OFFENSE_STYLES = {
         "label": "Power Option",
         "description": "Heavy run game with option reads",
         "weights": {
-            "dive_option": 0.35,
-            "speed_option": 0.15,
-            "sweep_option": 0.25,
-            "lateral_spread": 0.15,
-            "territory_kick": 0.10,
+            "dive_option": 0.25,
+            "speed_option": 0.12,
+            "sweep_option": 0.18,
+            "lateral_spread": 0.10,
+            "territory_kick": 0.35,
         },
         "tempo": 0.5,
         "lateral_risk": 0.3,
-        "kick_rate": 0.15,
+        "kick_rate": 0.35,
         "option_rate": 0.55,
     },
     "lateral_spread": {
         "label": "Lateral Spread",
         "description": "High lateral chain usage, spread the field",
         "weights": {
-            "dive_option": 0.10,
-            "speed_option": 0.15,
-            "sweep_option": 0.15,
-            "lateral_spread": 0.50,
-            "territory_kick": 0.10,
+            "dive_option": 0.08,
+            "speed_option": 0.10,
+            "sweep_option": 0.10,
+            "lateral_spread": 0.40,
+            "territory_kick": 0.32,
         },
         "tempo": 0.7,
         "lateral_risk": 0.6,
-        "kick_rate": 0.10,
+        "kick_rate": 0.32,
         "option_rate": 0.25,
     },
     "territorial": {
         "label": "Territorial",
-        "description": "Field position game, frequent kicks and punts",
+        "description": "Field position game, frequent kicks and punts — AFL-style",
         "weights": {
-            "dive_option": 0.20,
-            "speed_option": 0.10,
-            "sweep_option": 0.15,
-            "lateral_spread": 0.15,
-            "territory_kick": 0.40,
+            "dive_option": 0.10,
+            "speed_option": 0.05,
+            "sweep_option": 0.10,
+            "lateral_spread": 0.10,
+            "territory_kick": 0.65,
         },
         "tempo": 0.3,
         "lateral_risk": 0.2,
-        "kick_rate": 0.40,
+        "kick_rate": 0.55,
         "option_rate": 0.25,
     },
     "option_spread": {
         "label": "Option Spread",
         "description": "Speed-based option reads with lateral chains",
         "weights": {
-            "dive_option": 0.15,
-            "speed_option": 0.30,
-            "sweep_option": 0.20,
-            "lateral_spread": 0.30,
-            "territory_kick": 0.05,
+            "dive_option": 0.12,
+            "speed_option": 0.22,
+            "sweep_option": 0.15,
+            "lateral_spread": 0.22,
+            "territory_kick": 0.29,
         },
         "tempo": 0.8,
         "lateral_risk": 0.5,
-        "kick_rate": 0.05,
+        "kick_rate": 0.29,
         "option_rate": 0.50,
     },
     "balanced": {
         "label": "Balanced",
         "description": "No strong tendency, adapts to situation",
         "weights": {
-            "dive_option": 0.22,
-            "speed_option": 0.22,
-            "sweep_option": 0.22,
-            "lateral_spread": 0.22,
-            "territory_kick": 0.12,
+            "dive_option": 0.13,
+            "speed_option": 0.13,
+            "sweep_option": 0.13,
+            "lateral_spread": 0.13,
+            "territory_kick": 0.48,
         },
         "tempo": 0.5,
         "lateral_risk": 0.4,
-        "kick_rate": 0.12,
+        "kick_rate": 0.48,
         "option_rate": 0.40,
     },
 }
@@ -295,7 +298,7 @@ class ViperballEngine:
             time_elapsed = int(base_time * (1.2 - tempo * 0.4))
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
-            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt"]:
+            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "chaos_recovery"]:
                 drive_result = play.result
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
@@ -304,6 +307,10 @@ class ViperballEngine:
                 elif play.result == "successful_kick":
                     kicking_team = self.state.possession
                     receiving = "away" if kicking_team == "home" else "home"
+                    self.kickoff(receiving)
+                elif play.result == "punt_return_td":
+                    scoring_team = self.state.possession
+                    receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
                 break
 
@@ -323,20 +330,22 @@ class ViperballEngine:
 
         if self.state.down == 5:
             if self.state.field_position >= 55:
-                if random.random() < 0.5:
+                if random.random() < 0.6:
                     play_type = PlayType.DROP_KICK
                     play_family = PlayFamily.TERRITORY_KICK
                 else:
                     play_type = PlayType.PLACE_KICK
                     play_family = PlayFamily.TERRITORY_KICK
             else:
-                style = self._current_style()
-                if random.random() < style["kick_rate"]:
-                    play_type = PlayType.PUNT
-                    play_family = PlayFamily.TERRITORY_KICK
-                else:
-                    play_family = random.choice([PlayFamily.DIVE_OPTION, PlayFamily.SPEED_OPTION, PlayFamily.LATERAL_SPREAD])
-                    play_type = PLAY_FAMILY_TO_TYPE[play_family]
+                play_type = PlayType.PUNT
+                play_family = PlayFamily.TERRITORY_KICK
+
+        if play_type == PlayType.PUNT and self.state.down < 5:
+            style = self._current_style()
+            if self.state.field_position < 40 and random.random() < 0.3:
+                play_type = PlayType.DROP_KICK
+            elif self.state.field_position >= 60 and random.random() < 0.4:
+                play_type = PlayType.DROP_KICK
 
         if play_type == PlayType.RUN:
             return self.simulate_run(play_family)
@@ -353,7 +362,17 @@ class ViperballEngine:
 
     def select_play_family(self) -> PlayFamily:
         style = self._current_style()
-        weights = style["weights"]
+        weights = dict(style["weights"])
+
+        if self.state.down >= 3 and self.state.yards_to_go >= 15:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.25
+        if self.state.down >= 4:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.20
+        if self.state.field_position <= 30:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.15
+        if self.state.field_position >= 55:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.10
+
         families = list(PlayFamily)
         w = [weights.get(f.value, 0.2) for f in families]
         return random.choices(families, weights=w)[0]
@@ -483,9 +502,17 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = 0.06
-        fumble_prob = base_fumble_prob * (1 + (chain_length - 2) * 0.12)
-        fumble_prob *= (1 + style["lateral_risk"] * 0.25)
+        base_fumble_prob = random.uniform(0.05, 0.07)
+        fumble_prob = base_fumble_prob
+        fumble_prob += (chain_length - 1) * 0.04
+        if self.drive_play_count >= 3:
+            fumble_prob += random.uniform(0.08, 0.10)
+        if chain_length >= 3:
+            fumble_prob += 0.06
+        fatigue_factor_lat = self.get_fatigue_factor()
+        if fatigue_factor_lat < 0.9:
+            fumble_prob += 0.05
+        fumble_prob *= (1 + style["lateral_risk"] * 0.15)
         fumble_prob /= (team.lateral_proficiency / 85)
 
         if random.random() < fumble_prob:
@@ -587,6 +614,113 @@ class ViperballEngine:
         distance = int(base_distance * kicking_factor)
         distance = max(20, min(distance, 70))
 
+        if random.random() < 0.04:
+            tipped_distance = random.randint(5, 15)
+            kicking_team_pos = self.state.possession
+            self.change_possession()
+            self.state.field_position = min(99, self.state.field_position + tipped_distance)
+            self.state.down = 1
+            self.state.yards_to_go = 20
+
+            if random.random() < 0.12:
+                self.change_possession()
+                self.state.field_position = min(99, self.state.field_position)
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter)], yards_gained=tipped_distance,
+                    result=PlayResult.CHAOS_RECOVERY.value,
+                    description=f"{ptag} punt TIPPED! Kicking team recovers at {self.state.field_position}!",
+                    fatigue=round(stamina, 1),
+                )
+
+            self.apply_stamina_drain(2)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number, quarter=self.state.quarter,
+                time=self.state.time_remaining, possession=self.state.possession,
+                field_position=self.state.field_position, down=1, yards_to_go=20,
+                play_type="punt", play_family=family.value,
+                players_involved=[player_label(punter)], yards_gained=tipped_distance,
+                result="punt",
+                description=f"{ptag} punt TIPPED! {tipped_distance} yards, recovered by defense",
+                fatigue=round(stamina, 1),
+            )
+
+        if random.random() < 0.07:
+            bounce_extra = random.choice([-15, -10, 10, 15, 20, 25])
+            distance = max(10, min(distance + bounce_extra, 80))
+
+        landing_position = self.state.field_position + distance
+
+        if landing_position >= 100:
+            receiving_team = self.get_defensive_team()
+            return_speed = receiving_team.avg_speed
+            can_return_out = random.random() < (return_speed / 110)
+
+            if can_return_out:
+                self.change_possession()
+                self.state.field_position = random.randint(5, 20)
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter)], yards_gained=-distance,
+                    result="punt",
+                    description=f"{ptag} punt → {distance} yards into end zone, returned out to {self.state.field_position}",
+                    fatigue=round(stamina, 1),
+                )
+            else:
+                kicking_team = self.state.possession
+                self.add_score(1)
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
+                play = Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=kicking_team,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter)], yards_gained=-distance,
+                    result=PlayResult.PINDOWN.value,
+                    description=f"{ptag} punt → {distance} yards — PINDOWN! +1",
+                    fatigue=round(stamina, 1),
+                )
+                receiving = "away" if kicking_team == "home" else "home"
+                self.kickoff(receiving)
+                return play
+
+        if random.random() < 0.08:
+            def_team = self.get_defensive_team()
+            returner = max(def_team.players[:5], key=lambda p: p.speed)
+            rtag = player_tag(returner)
+            self.change_possession()
+            self.add_score(9)
+            new_pos = 100 - min(99, self.state.field_position + distance)
+            self.apply_stamina_drain(2)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number, quarter=self.state.quarter,
+                time=self.state.time_remaining, possession=self.state.possession,
+                field_position=self.state.field_position, down=1, yards_to_go=20,
+                play_type="punt", play_family=family.value,
+                players_involved=[player_label(punter), player_label(returner)],
+                yards_gained=new_pos,
+                result=PlayResult.PUNT_RETURN_TD.value,
+                description=f"{ptag} punt → {rtag} RETURNS IT ALL THE WAY — TOUCHDOWN! +9",
+                fatigue=round(stamina, 1),
+            )
+
         new_position = 100 - min(99, self.state.field_position + distance)
 
         self.change_possession()
@@ -614,6 +748,9 @@ class ViperballEngine:
             fatigue=round(stamina, 1),
         )
 
+    def get_defensive_team(self) -> Team:
+        return self.away_team if self.state.possession == "home" else self.home_team
+
     def simulate_drop_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
@@ -621,9 +758,18 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        base_prob = 0.6
-        distance_factor = max(0, 1 - (distance - 30) / 70)
-        skill_factor = kicker.kicking / 90
+        base_prob = 0.75
+        if distance <= 20:
+            distance_factor = 1.0
+        elif distance <= 30:
+            distance_factor = 0.92
+        elif distance <= 40:
+            distance_factor = 0.80
+        elif distance <= 50:
+            distance_factor = 0.60
+        else:
+            distance_factor = max(0.1, 1 - (distance - 30) / 60)
+        skill_factor = kicker.kicking / 85
         success_prob = base_prob * distance_factor * skill_factor
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -648,6 +794,28 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
+            if self.state.field_position >= 50:
+                def_team = self.get_defensive_team()
+                can_return = random.random() < (def_team.avg_speed / 115)
+                if not can_return:
+                    kicking_team = self.state.possession
+                    self.add_score(1)
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
+                    play = Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=kicking_team,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker)], yards_gained=0,
+                        result=PlayResult.PINDOWN.value,
+                        description=f"{ptag} drop kick {distance}yd — NO GOOD → PINDOWN! +1",
+                        fatigue=round(stamina, 1),
+                    )
+                    receiving = "away" if kicking_team == "home" else "home"
+                    self.kickoff(receiving)
+                    return play
+
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
             self.state.down = 1
@@ -677,10 +845,18 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        base_prob = 0.75
-        distance_factor = max(0, 1 - (distance - 35) / 60)
+        if distance <= 20:
+            success_prob = 0.95
+        elif distance <= 30:
+            success_prob = 0.88
+        elif distance <= 40:
+            success_prob = 0.75
+        elif distance <= 50:
+            success_prob = 0.55
+        else:
+            success_prob = max(0.10, 0.55 - (distance - 50) * 0.02)
         skill_factor = kicker.kicking / 85
-        success_prob = base_prob * distance_factor * skill_factor
+        success_prob *= skill_factor
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -704,6 +880,28 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
+            if self.state.field_position >= 50:
+                def_team = self.get_defensive_team()
+                can_return = random.random() < (def_team.avg_speed / 115)
+                if not can_return:
+                    kicking_team = self.state.possession
+                    self.add_score(1)
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
+                    play = Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=kicking_team,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="place_kick", play_family=family.value,
+                        players_involved=[player_label(kicker)], yards_gained=0,
+                        result=PlayResult.PINDOWN.value,
+                        description=f"{ptag} place kick {distance}yd — NO GOOD → PINDOWN! +1",
+                        fatigue=round(stamina, 1),
+                    )
+                    receiving = "away" if kicking_team == "home" else "home"
+                    self.kickoff(receiving)
+                    return play
+
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
             self.state.down = 1
@@ -827,10 +1025,19 @@ class ViperballEngine:
         successful_laterals = sum(1 for p in laterals if not p.fumble)
 
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
+        drop_kicks_attempted = [p for p in plays if p.play_type == "drop_kick"]
         place_kicks = [p for p in plays if p.play_type == "place_kick" and p.result == "successful_kick"]
+        place_kicks_attempted = [p for p in plays if p.play_type == "place_kick"]
         touchdowns = [p for p in plays if p.result == "touchdown"]
+        punt_return_tds = [p for p in plays if p.result == "punt_return_td"]
         fumbles_lost = [p for p in plays if p.fumble]
         turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
+        pindowns = [p for p in plays if p.result == "pindown"]
+        punts = [p for p in plays if p.play_type == "punt"]
+        chaos_recoveries = [p for p in plays if p.result == "chaos_recovery"]
+
+        kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
+        kick_percentage = round(len(kick_plays) / max(1, total_plays) * 100, 1)
 
         play_family_counts = {}
         for p in plays:
@@ -848,12 +1055,19 @@ class ViperballEngine:
             "total_plays": total_plays,
             "yards_per_play": round(total_yards / max(1, total_plays), 2),
             "touchdowns": len(touchdowns),
+            "punt_return_tds": len(punt_return_tds),
             "lateral_chains": len(laterals),
             "successful_laterals": successful_laterals,
             "fumbles_lost": len(fumbles_lost),
             "turnovers_on_downs": len(turnovers_on_downs),
             "drop_kicks_made": len(drop_kicks),
+            "drop_kicks_attempted": len(drop_kicks_attempted),
             "place_kicks_made": len(place_kicks),
+            "place_kicks_attempted": len(place_kicks_attempted),
+            "punts": len(punts),
+            "pindowns": len(pindowns),
+            "chaos_recoveries": len(chaos_recoveries),
+            "kick_percentage": kick_percentage,
             "viper_efficiency": round(viper_efficiency, 2),
             "lateral_efficiency": round(lateral_efficiency, 1),
             "play_family_breakdown": play_family_counts,

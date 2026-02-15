@@ -31,7 +31,13 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - **Style System**: 5 offense styles (power_option, lateral_spread, territorial, option_spread, balanced)
 - **Play Families**: dive_option, speed_option, sweep_option, lateral_spread, territory_kick
 - **Deterministic Seeds**: Every sim accepts a seed for reproducibility
-- **Scoring**: Touchdowns = 9pts, Drop Kicks = 5pts, Place Kicks = 3pts
+- **Scoring**: Touchdowns = 9pts, Drop Kicks = 5pts, Place Kicks = 3pts, Pindowns = 1pt
+- **AFL-style kicking**: ~52% of plays are kicks (punts, drop kicks, place kicks). Contextual kick triggers based on down/distance/field position
+- **Drop kick accuracy**: Tiered success (100%/92%/80%/60% by distance range), viable offensive weapon
+- **Place kick accuracy**: Tiered success (95%/88%/75%/55% by distance, like modern FGs)
+- **CFL Rouge/Pindown**: 1pt awarded when kick lands in end zone and receiver can't return out. Applies to punts, missed drop kicks, missed place kicks
+- **Lateral risk system**: 5-7% base fumble, +4% per additional lateral, +8-10% under pressure, +6% cross-field, +5% if fatigued
+- **Chaos mechanics**: 4% tipped punts (12% kicking team recovery), 7% chaos bounces, 8% punt return TDs, contested recoveries
 - **Fatigue tracking**: Per-play fatigue logged in play-by-play
 - **Breakaway system**: 12+ yard runs can explode into big plays based on speed/fatigue
 - **Red zone TD model**: Inside 85/93 yard line, TD probability spikes (requires 2+ yards gained)
@@ -44,7 +50,7 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 
 ### Drive Tracking
 - Every possession logged with: team, quarter, start yard line, plays, yards, result
-- Results: touchdown, successful_kick, fumble, turnover_on_downs, punt, missed_kick, stall (quarter end)
+- Results: touchdown, successful_kick, fumble, turnover_on_downs, punt, missed_kick, pindown, punt_return_td, chaos_recovery, stall (quarter end)
 - Drive yards count positive non-punt gains only
 
 ### UI Pages (5 views per game)
@@ -69,15 +75,17 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 ## Teams Available
 creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 
-## Tuning Diagnostics (200-sim, Creighton vs NYU)
-- Avg score: 22-24 per team
-- TDs/game: 4.5 combined
-- Ties: 3%
-- Fumbles: ~1.9/game
-- Longest play: 74 yards (avg longest: 44)
-- Win balance: 47.5% / 47.5%
+## Tuning Diagnostics (50-sim, Gonzaga vs Villanova)
+- Avg score: 31-36 per team
+- Kick %: 52.5% (target: ~53%)
+- Pindowns: 3.3/game (range 0-7)
+- Lateral efficiency: 75.5% (target: 65-80%)
+- Kick % range: 43.8-60.7%
 
 ## Recent Changes
+- 2026-02-15: Integrated AFL-style engine: 52% kicks, CFL rouge/pindown (1pt), chaos mechanics, enhanced lateral risk
+- 2026-02-15: Tiered kicking accuracy (drop kicks + place kicks), contextual kick triggers
+- 2026-02-15: UI updated with pindown stats, kick %, lateral efficiency, punt return TDs in box scores and batch tools
 - 2026-02-15: Added position tag system (VB1, HB13, etc.) replacing generic player names
 - 2026-02-15: Added drive summary tracking (team, quarter, start yd, plays, yards, result per possession)
 - 2026-02-15: Overhauled Game Simulator UI with 5 views: box score, play family chart, drive panel, role-tagged play log, debug panel

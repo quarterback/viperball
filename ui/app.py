@@ -83,7 +83,7 @@ def generate_box_score_markdown(result):
         q = p["quarter"]
         if q not in home_q:
             continue
-        if p["result"] == "touchdown":
+        if p["result"] == "touchdown" or p["result"] == "punt_return_td":
             if p["possession"] == "home":
                 home_q[q] += 9
             else:
@@ -94,6 +94,11 @@ def generate_box_score_markdown(result):
                 home_q[q] += pts
             else:
                 away_q[q] += pts
+        elif p["result"] == "pindown":
+            if p["possession"] == "home":
+                home_q[q] += 1
+            else:
+                away_q[q] += 1
 
     lines = []
     lines.append(f"# {home['team']} vs {away['team']}")
@@ -110,12 +115,15 @@ def generate_box_score_markdown(result):
     lines.append(f"| Stat | {home['team']} | {away['team']} |")
     lines.append(f"|------|{'---:|' * 2}")
     lines.append(f"| Touchdowns (9pts) | {hs['touchdowns']} ({hs['touchdowns']*9}pts) | {as_['touchdowns']} ({as_['touchdowns']*9}pts) |")
-    lines.append(f"| Drop Kicks (5pts) | {hs['drop_kicks_made']} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']} ({as_['drop_kicks_made']*5}pts) |")
-    lines.append(f"| Place Kicks (3pts) | {hs['place_kicks_made']} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']} ({as_['place_kicks_made']*3}pts) |")
+    lines.append(f"| Drop Kicks (5pts) | {hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made']*5}pts) |")
+    lines.append(f"| Place Kicks (3pts) | {hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made']*3}pts) |")
+    lines.append(f"| Pindowns (1pt) | {hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts) | {as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts) |")
+    lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
+    lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
     lines.append(f"| Yards/Play | {hs['yards_per_play']} | {as_['yards_per_play']} |")
     lines.append(f"| Total Plays | {hs['total_plays']} | {as_['total_plays']} |")
-    lines.append(f"| Lateral Chains | {hs['lateral_chains']} | {as_['lateral_chains']} |")
+    lines.append(f"| Lateral Chains | {hs['lateral_chains']} ({hs['lateral_efficiency']}% eff) | {as_['lateral_chains']} ({as_['lateral_efficiency']}% eff) |")
     lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
     lines.append(f"| Turnovers on Downs | {hs['turnovers_on_downs']} | {as_['turnovers_on_downs']} |")
     lines.append(f"| Avg Fatigue | {hs['avg_fatigue']}% | {as_['avg_fatigue']}% |")
@@ -184,6 +192,8 @@ def generate_batch_summary_csv(results):
     writer.writerow(["game", "seed", "home_team", "away_team", "home_score", "away_score",
                      "home_yards", "away_yards", "home_tds", "away_tds",
                      "home_fumbles", "away_fumbles", "home_plays", "away_plays",
+                     "home_kick_pct", "away_kick_pct", "home_pindowns", "away_pindowns",
+                     "home_drop_kicks", "away_drop_kicks", "home_lat_eff", "away_lat_eff",
                      "total_drives", "winner"])
     for i, r in enumerate(results):
         h = r["final_score"]["home"]
@@ -195,6 +205,10 @@ def generate_batch_summary_csv(results):
             i + 1, r.get("seed", ""), h["team"], a["team"], h["score"], a["score"],
             hs["total_yards"], as_["total_yards"], hs["touchdowns"], as_["touchdowns"],
             hs["fumbles_lost"], as_["fumbles_lost"], hs["total_plays"], as_["total_plays"],
+            hs.get("kick_percentage", 0), as_.get("kick_percentage", 0),
+            hs.get("pindowns", 0), as_.get("pindowns", 0),
+            hs.get("drop_kicks_made", 0), as_.get("drop_kicks_made", 0),
+            hs.get("lateral_efficiency", 0), as_.get("lateral_efficiency", 0),
             len(r.get("drive_summary", [])), winner
         ])
     return output.getvalue()
@@ -213,6 +227,9 @@ def drive_result_label(result):
         "punt": "PUNT",
         "missed_kick": "MISSED FG",
         "stall": "END OF QUARTER",
+        "pindown": "PINDOWN",
+        "punt_return_td": "PUNT RET TD",
+        "chaos_recovery": "CHAOS REC",
     }
     return labels.get(result, result.upper())
 
@@ -226,6 +243,9 @@ def drive_result_color(result):
         "punt": "#94a3b8",
         "missed_kick": "#f59e0b",
         "stall": "#64748b",
+        "pindown": "#a855f7",
+        "punt_return_td": "#22c55e",
+        "chaos_recovery": "#f97316",
     }
     return colors.get(result, "#94a3b8")
 
@@ -368,7 +388,7 @@ if page == "Game Simulator":
             q = p["quarter"]
             if q not in home_q:
                 continue
-            if p["result"] == "touchdown":
+            if p["result"] in ("touchdown", "punt_return_td"):
                 if p["possession"] == "home":
                     home_q[q] += 9
                 else:
@@ -379,6 +399,11 @@ if page == "Game Simulator":
                     home_q[q] += pts
                 else:
                     away_q[q] += pts
+            elif p["result"] == "pindown":
+                if p["possession"] == "home":
+                    home_q[q] += 1
+                else:
+                    away_q[q] += 1
 
         qtr_data = {
             "": [home_name, away_name],
@@ -393,14 +418,18 @@ if page == "Game Simulator":
         st.markdown("**Scoring Breakdown**")
         scoring_data = {
             "": ["Touchdowns (9pts)", "Drop Kicks (5pts)", "Place Kicks (3pts)",
+                 "Pindowns (1pt)", "Punts", "Kick %",
                  "Total Yards", "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
                  "Fumbles Lost", "Turnovers on Downs",
                  "Longest Play", "Avg Fatigue"],
             home_name: [
                 f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
-                f"{hs['drop_kicks_made']} ({hs['drop_kicks_made'] * 5}pts)",
-                f"{hs['place_kicks_made']} ({hs['place_kicks_made'] * 3}pts)",
+                f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
+                f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
+                f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
+                str(hs.get("punts", 0)),
+                f"{hs.get('kick_percentage', 0)}%",
                 str(hs["total_yards"]), str(hs["yards_per_play"]), str(hs["total_plays"]),
                 str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
                 str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
@@ -409,8 +438,11 @@ if page == "Game Simulator":
             ],
             away_name: [
                 f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
-                f"{as_['drop_kicks_made']} ({as_['drop_kicks_made'] * 5}pts)",
-                f"{as_['place_kicks_made']} ({as_['place_kicks_made'] * 3}pts)",
+                f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
+                f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
+                f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
+                str(as_.get("punts", 0)),
+                f"{as_.get('kick_percentage', 0)}%",
                 str(as_["total_yards"]), str(as_["yards_per_play"]), str(as_["total_plays"]),
                 str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
                 str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
@@ -471,7 +503,8 @@ if page == "Game Simulator":
                          color_discrete_map={
                              "TD": "#22c55e", "FG": "#3b82f6", "FUMBLE": "#ef4444",
                              "DOWNS": "#f59e0b", "PUNT": "#94a3b8", "MISSED FG": "#f59e0b",
-                             "END OF QUARTER": "#64748b",
+                             "END OF QUARTER": "#64748b", "PINDOWN": "#a855f7",
+                             "PUNT RET TD": "#22c55e", "CHAOS REC": "#f97316",
                          })
             fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome", yaxis_title="Count")
             st.plotly_chart(fig, use_container_width=True)
@@ -703,6 +736,25 @@ elif page == "Debug Tools":
         avg7.metric("Avg Longest Play", round(sum(longest_plays) / n, 1))
         avg8.metric("Max Longest Play", max(longest_plays))
 
+        k1, k2, k3, k4 = st.columns(4)
+        home_kick_pct = [r["stats"]["home"].get("kick_percentage", 0) for r in results]
+        away_kick_pct = [r["stats"]["away"].get("kick_percentage", 0) for r in results]
+        avg_kick_pct = round((sum(home_kick_pct) + sum(away_kick_pct)) / (2 * n), 1)
+        k1.metric("Avg Kick %", f"{avg_kick_pct}%")
+
+        home_pindowns = [r["stats"]["home"].get("pindowns", 0) for r in results]
+        away_pindowns = [r["stats"]["away"].get("pindowns", 0) for r in results]
+        k2.metric("Avg Pindowns/game", round((sum(home_pindowns) + sum(away_pindowns)) / n, 2))
+
+        home_lat_eff = [r["stats"]["home"].get("lateral_efficiency", 0) for r in results]
+        away_lat_eff = [r["stats"]["away"].get("lateral_efficiency", 0) for r in results]
+        avg_lat_eff = round((sum(home_lat_eff) + sum(away_lat_eff)) / (2 * n), 1)
+        k3.metric("Avg Lateral Eff", f"{avg_lat_eff}%")
+
+        home_dk = [r["stats"]["home"].get("drop_kicks_made", 0) for r in results]
+        away_dk = [r["stats"]["away"].get("drop_kicks_made", 0) for r in results]
+        k4.metric("Avg Drop Kicks/game", round((sum(home_dk) + sum(away_dk)) / n, 2))
+
         st.subheader("Score Distribution")
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=home_scores, name=home_name, opacity=0.7))
@@ -730,7 +782,8 @@ elif page == "Debug Tools":
                 color_discrete_map={
                     "TD": "#22c55e", "FG": "#3b82f6", "FUMBLE": "#ef4444",
                     "DOWNS": "#f59e0b", "PUNT": "#94a3b8", "MISSED FG": "#f59e0b",
-                    "END OF QUARTER": "#64748b",
+                    "END OF QUARTER": "#64748b", "PINDOWN": "#a855f7",
+                    "PUNT RET TD": "#22c55e", "CHAOS REC": "#f97316",
                 })
             fig.update_layout(showlegend=False, height=350, yaxis_ticksuffix="%")
             st.plotly_chart(fig, use_container_width=True)
