@@ -48,7 +48,7 @@ Original thread: [What if the entire 1894 Yale team came back to life?](https://
 
 The discussion raised a key question: if early teams played under rules closer to their own era—no forward pass, heavier kicking, fewer specialized roles—what would a modern version of that game look like? Viperball is the answer to that question, creating a modern tactical sport that honors the historical roots of football while developing its own strategic depth.
 
-## Design Philosophy
+### Design Philosophy
 
 Viperball assumes a timeline where:
 
@@ -480,13 +480,11 @@ One Keeper must be present at the snap. The Keeper is the deepest defender and f
                     Viper (V) - alignment-exempt, anywhere on field
                     
                     
-                           Keeper (K)
-                      
                       LW              RW
                     
                            HB
                     
-                      SB        ZB
+                       SB        ZB
                     
            LT    LG    C    RG    RT
     ================================================  LINE OF SCRIMMAGE
