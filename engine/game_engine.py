@@ -1070,6 +1070,45 @@ class ViperballEngine:
                     plays_by_q[p.quarter] += 1
             stats["plays_per_quarter"] = plays_by_q
 
+        from .epa import calculate_ep, calculate_epa, calculate_game_epa
+
+        play_dicts = []
+        for i, p in enumerate(self.play_log):
+            pd = self.play_to_dict(p)
+            ep_before = calculate_ep(p.field_position, p.down)
+
+            if i + 1 < len(self.play_log):
+                next_p = self.play_log[i + 1]
+                if next_p.possession == p.possession:
+                    ep_after = calculate_ep(next_p.field_position, next_p.down)
+                else:
+                    opp_yard = 100 - next_p.field_position
+                    ep_after = -calculate_ep(opp_yard, 1)
+            else:
+                ep_after = 0
+
+            is_chaos = p.result in ("chaos_recovery", "punt_return_td")
+            fp_after = self.play_log[i + 1].field_position if i + 1 < len(self.play_log) else p.field_position
+            epa_data = {
+                "ep_before": ep_before,
+                "ep_after": ep_after,
+                "result": p.result,
+                "play_type": p.play_type,
+                "laterals": p.laterals,
+                "chaos_event": is_chaos,
+                "field_position_after": fp_after,
+            }
+            epa_val = calculate_epa(epa_data)
+            pd["ep_before"] = ep_before
+            pd["epa"] = epa_val
+            pd["chaos_event"] = is_chaos
+            play_dicts.append(pd)
+
+        home_epa = calculate_game_epa(play_dicts, "home")
+        away_epa = calculate_game_epa(play_dicts, "away")
+        home_stats["epa"] = home_epa
+        away_stats["epa"] = away_epa
+
         summary = {
             "final_score": {
                 "home": {
@@ -1089,7 +1128,7 @@ class ViperballEngine:
                 "away": away_stats,
             },
             "drive_summary": self.drive_log,
-            "play_by_play": [self.play_to_dict(p) for p in self.play_log],
+            "play_by_play": play_dicts,
         }
 
         return summary

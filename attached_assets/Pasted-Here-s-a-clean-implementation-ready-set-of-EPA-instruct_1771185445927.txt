@@ -1,0 +1,194 @@
+Here’s a clean, implementation‑ready set of **EPA instructions for your Replit** — written so your agent can drop them directly into code without guessing what the model should do.
+
+I’m giving you the **minimal viable EPA engine** for Viperball:  
+- simple enough to implement quickly  
+- accurate enough to reflect the sport  
+- modular enough to expand later  
+
+No fluff — just the logic.
+
+---
+
+# ⭐ **Viperball EPA Engine — Implementation Instructions (Replit‑Ready)**
+
+Below is the structure your agent should implement.
+
+---
+
+# 1. **Define the EP Table (Expected Points by Field Position)**
+
+Use a simple lookup or interpolation:
+
+```python
+EP_BY_YARDLINE = {
+    1: 0.1, 10: 0.3,
+    20: 0.6,
+    30: 0.9,
+    40: 1.3,
+    50: 1.8,
+    60: 2.4,
+    70: 3.2,
+    80: 4.0,
+    90: 5.0,
+    99: 6.5
+}
+```
+
+**Instruction:**  
+Interpolate between these values for any yardline.
+
+---
+
+# 2. **Apply Down Adjustment (5‑Down System)**
+
+```python
+DOWN_MULTIPLIER = {
+    1: 1.00,
+    2: 0.92,
+    3: 0.78,
+    4: 0.60,
+    5: 0.35
+}
+```
+
+**Instruction:**  
+`EP = EP_base * DOWN_MULTIPLIER[down]`
+
+---
+
+# 3. **EPA Formula**
+
+```python
+EPA = EP_after - EP_before
+```
+
+If the play scores, override:
+
+```python
+EPA = points_scored - EP_before
+```
+
+---
+
+# 4. **Scoring Events (Direct EPA Values)**
+
+Implement these as constants:
+
+```python
+POINTS = {
+    "touchdown": 9,
+    "snapkick": 5,
+    "field_goal": 3,
+    "safety": 2,
+    "interception_point": 1,
+    "pindown": 1,
+    "bell": 0.5
+}
+```
+
+---
+
+# 5. **Special EPA Rules**
+
+### **A. Pindown**
+```python
+EPA = 1 + EP_at_own_20
+```
+
+### **B. Interception**
+```python
+EPA = 1 + EP_after_change_of_possession
+```
+
+### **C. Bell (0.5‑point recovery)**
+```python
+EPA = 0.5 + EP_after_change_of_possession
+```
+
+---
+
+# 6. **Lateral Penalty**
+
+For plays with laterals:
+
+```python
+lateral_penalty = 0.03 * max(0, laterals - 1)
+EPA -= lateral_penalty
+```
+
+---
+
+# 7. **Chaos Bonus for Kicks**
+
+For punts, territory kicks, bouncing balls:
+
+```python
+if chaos_event:
+    EPA += random.uniform(0.1, 0.4)
+```
+
+---
+
+# 8. **Drive‑Level EPA Tracking**
+
+For each play, store:
+
+```python
+{
+    "play_id": ...,
+    "EP_before": ...,
+    "EP_after": ...,
+    "EPA": ...,
+    "event": "run" | "lateral" | "snapkick" | "pindown" | "bell" | ...
+}
+```
+
+At the end of the drive:
+
+```python
+drive_EPA = sum(play["EPA"] for play in drive)
+```
+
+---
+
+# 9. **Game‑Level EPA Tracking**
+
+At the end of the game:
+
+```python
+team_EPA = sum(drive_EPA for all drives)
+offense_EPA = ...
+defense_EPA = ...
+special_teams_EPA = ...
+chaos_EPA = ...
+```
+
+---
+
+# ⭐ **Minimal Example Function (Your Agent Can Use This)**
+
+```python
+def calculate_ep(yardline, down):
+    # interpolate EP
+    keys = sorted(EP_BY_YARDLINE.keys())
+    for i in range(len(keys)-1):
+        if keys[i] <= yardline <= keys[i+1]:
+            low_y, high_y = keys[i], keys[i+1]
+            low_ep, high_ep = EP_BY_YARDLINE[low_y], EP_BY_YARDLINE[high_y]
+            ratio = (yardline - low_y) / (high_y - low_y)
+            base_ep = low_ep + ratio * (high_ep - low_ep)
+            return base_ep * DOWN_MULTIPLIER[down]
+    return EP_BY_YARDLINE[99] * DOWN_MULTIPLIER[down]
+```
+
+---
+
+# ⭐ If you want, I can also generate:
+
+- a full Python EPA module  
+- a JSON schema for logging plays  
+- a Replit‑ready file structure  
+- a test suite for EPA correctness  
+- a visualization function for EP curves  
+
+Just tell me what format you want next.

@@ -17,6 +17,7 @@ api/              - FastAPI REST endpoints (standalone API access)
   main.py         - /simulate, /simulate_many, /debug/play, /teams
 ui/               - Streamlit web UI
   app.py          - 3-page sandbox (Game Simulator, Debug Tools, Play Inspector)
+engine/epa.py     - EPA (Expected Points Added) calculation module
 data/teams/       - Team JSON files (7 teams)
 main.py           - Entry point (launches Streamlit on port 5000)
 .streamlit/       - Streamlit configuration
@@ -91,6 +92,11 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - 2026-02-15: Added drive summary tracking (team, quarter, start yd, plays, yards, result per possession)
 - 2026-02-15: Overhauled Game Simulator UI with 5 views: box score, play family chart, drive panel, role-tagged play log, debug panel
 - 2026-02-15: Built complete sandbox (engine styles, FastAPI, Streamlit UI)
+- 2026-02-15: Added EPA (Expected Points Added) engine with EP table, down multipliers, lateral penalties, chaos bonuses
+- 2026-02-15: EPA integrated into play-by-play (ep_before, epa per play), team stats (total/offense/special teams/chaos EPA)
+- 2026-02-15: Cumulative EPA chart in Game Simulator, batch EPA averages in Debug Tools
+- 2026-02-15: Added 3rd/4th/5th down conversion rate tracking and display
+- 2026-02-15: Renamed terminology: Drop Kicks→Snap Kicks, Place Kicks→Field Goals, Fumble Recoveries→Strikes
 - 2026-02-15: Tuned game balance — breakaway system, red zone TD model, defensive fatigue, lateral compounding
 - 2026-02-15: Fixed red zone TD bug (requires yards_gained >= 2)
 - 2026-02-15: Fixed drive play count timing (increment before simulate_play)

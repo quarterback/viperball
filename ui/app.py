@@ -553,6 +553,58 @@ if page == "Game Simulator":
             dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
             dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
 
+        # ====== EPA SUMMARY ======
+        st.subheader("Expected Points Added (EPA)")
+        h_epa = hs.get("epa", {})
+        a_epa = as_.get("epa", {})
+
+        epa1, epa2 = st.columns(2)
+        epa1.metric(f"{home_name} Total EPA", h_epa.get("total_epa", 0))
+        epa2.metric(f"{away_name} Total EPA", a_epa.get("total_epa", 0))
+
+        epa3, epa4, epa5, epa6 = st.columns(4)
+        epa3.metric(f"{home_name} EPA/Play", h_epa.get("epa_per_play", 0))
+        epa4.metric(f"{away_name} EPA/Play", a_epa.get("epa_per_play", 0))
+        epa5.metric(f"{home_name} Off EPA", h_epa.get("offense_epa", 0))
+        epa6.metric(f"{away_name} Off EPA", a_epa.get("offense_epa", 0))
+
+        epa7, epa8 = st.columns(2)
+        epa7.metric(f"{home_name} Special Teams EPA", h_epa.get("special_teams_epa", 0))
+        epa8.metric(f"{away_name} Special Teams EPA", a_epa.get("special_teams_epa", 0))
+
+        epa_plays = [p for p in plays if "epa" in p]
+        if epa_plays:
+            home_epa_plays = [p for p in epa_plays if p["possession"] == "home"]
+            away_epa_plays = [p for p in epa_plays if p["possession"] == "away"]
+
+            fig_epa = go.Figure()
+            if home_epa_plays:
+                home_cum = []
+                running = 0
+                for p in home_epa_plays:
+                    running += p["epa"]
+                    home_cum.append(round(running, 2))
+                fig_epa.add_trace(go.Scatter(
+                    y=home_cum, mode="lines", name=home_name,
+                    line=dict(color="#3b82f6", width=2)
+                ))
+            if away_epa_plays:
+                away_cum = []
+                running = 0
+                for p in away_epa_plays:
+                    running += p["epa"]
+                    away_cum.append(round(running, 2))
+                fig_epa.add_trace(go.Scatter(
+                    y=away_cum, mode="lines", name=away_name,
+                    line=dict(color="#ef4444", width=2)
+                ))
+            fig_epa.update_layout(
+                title="Cumulative EPA Over Game",
+                xaxis_title="Play #", yaxis_title="Cumulative EPA",
+                height=350, template="plotly_white"
+            )
+            st.plotly_chart(fig_epa, use_container_width=True)
+
         # ====== 2. PLAY FAMILY DISTRIBUTION ======
         st.subheader("Play Family Distribution")
         home_fam = hs.get("play_family_breakdown", {})
@@ -868,6 +920,17 @@ elif page == "Debug Tools":
             avg_rate = round(sum(rates) / max(1, len(rates)), 1)
             label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down Conv %"
             dc_cols[idx].metric(label, f"{avg_rate}%")
+
+        st.markdown("**Avg EPA**")
+        epa_cols = st.columns(4)
+        home_total_epa = [r["stats"]["home"].get("epa", {}).get("total_epa", 0) for r in results]
+        away_total_epa = [r["stats"]["away"].get("epa", {}).get("total_epa", 0) for r in results]
+        home_epa_pp = [r["stats"]["home"].get("epa", {}).get("epa_per_play", 0) for r in results]
+        away_epa_pp = [r["stats"]["away"].get("epa", {}).get("epa_per_play", 0) for r in results]
+        epa_cols[0].metric(f"Avg {home_name} EPA", round(sum(home_total_epa) / n, 2))
+        epa_cols[1].metric(f"Avg {away_name} EPA", round(sum(away_total_epa) / n, 2))
+        epa_cols[2].metric(f"Avg {home_name} EPA/Play", round(sum(home_epa_pp) / n, 3))
+        epa_cols[3].metric(f"Avg {away_name} EPA/Play", round(sum(away_epa_pp) / n, 3))
 
         st.subheader("Score Distribution")
         fig = go.Figure()
