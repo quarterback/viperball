@@ -33,6 +33,10 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - **Deterministic Seeds**: Every sim accepts a seed for reproducibility
 - **Scoring**: Touchdowns = 9pts, Drop Kicks = 5pts, Place Kicks = 3pts
 - **Fatigue tracking**: Per-play fatigue logged in play-by-play
+- **Breakaway system**: 12+ yard runs can explode into big plays based on speed/fatigue
+- **Red zone TD model**: Inside 85/93 yard line, TD probability spikes (requires 2+ yards gained)
+- **Defensive fatigue scaling**: Long drives (5/8/12+ plays) degrade defense by 1.05/1.15/1.25x
+- **Lateral chain compounding**: Each lateral in chain adds 5% explosive chance
 
 ### UI Pages
 1. **Game Simulator** - Pick teams, styles, seed → get box score + play log
@@ -48,8 +52,20 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 ## Teams Available
 creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 
+## Tuning Diagnostics (200-sim, Creighton vs NYU)
+- Avg score: 22-24 per team
+- TDs/game: 4.5 combined
+- Ties: 3%
+- Fumbles: ~1.9/game
+- Longest play: 74 yards (avg longest: 44)
+- Win balance: 47.5% / 47.5%
+
 ## Recent Changes
 - 2026-02-15: Built complete sandbox (engine styles, FastAPI, Streamlit UI)
+- 2026-02-15: Tuned game balance — breakaway system, red zone TD model, defensive fatigue, lateral compounding
+- 2026-02-15: Fixed red zone TD bug (requires yards_gained >= 2)
+- 2026-02-15: Fixed drive play count timing (increment before simulate_play)
+- 2026-02-15: Reduced territory_kick weights across all styles to prevent excessive kicking
 - Touchdowns changed from 6pts to 9pts
 - Added play family system replacing random play selection
 - Added field position flip on turnovers

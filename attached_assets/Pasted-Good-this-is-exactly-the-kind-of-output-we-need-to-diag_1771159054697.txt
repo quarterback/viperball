@@ -1,0 +1,252 @@
+Good — this is exactly the kind of output we need to diagnose the engine.
+
+Here’s the straight read:
+
+What these sims are telling us
+
+Scores are extremely low
+	•	4.4 vs 5.2 average
+	•	That’s basically all field goals / safeties
+	•	TD generation is too rare
+
+Yards are reasonable
+	•	~200 per game per team
+So movement exists.
+But drives aren’t converting to scoring.
+
+Too many ties
+	•	12 ties out of 50 = 24%
+That’s way too high unless intentional.
+
+Win distribution is fine
+	•	16 / 22 split looks normal
+So balance isn’t broken.
+
+⸻
+
+Core problem
+
+The engine currently behaves like:
+
+territorial rugby with no finishing phase
+
+Drives move
+then stall
+then kick
+then repeat
+
+So you’re getting:
+	•	realistic field position movement
+	•	unrealistic scoring conversion
+
+This is a red zone + breakaway probability issue.
+
+⸻
+
+What needs tuning (priority order)
+
+1. Explosive play generation
+
+Right now:
+	•	long runs probably too rare
+	•	lateral chains not producing breakthroughs
+	•	Viper not creating chaos
+
+We need:
+
+10–15% of drives produce a scoring break
+
+Not:
+
+2–3%
+
+Fix
+
+Increase:
+	•	breakaway multiplier once past midfield
+	•	lateral success compounding effect
+	•	defensive fatigue impact late drive
+
+⸻
+
+2. Red zone conversion model
+
+You likely don’t have a separate model for:
+
+inside 20
+inside 10
+goal line
+
+Without that, drives stall forever.
+
+Add:
+
+Inside 20:
+	•	tighter defense
+	•	higher turnover risk
+	•	higher TD probability
+
+Inside 10:
+	•	power run bonus
+	•	fumble spike
+	•	TD spike
+
+⸻
+
+3. Kicking equilibrium
+
+If teams are kicking too often:
+scores stay low.
+
+Check:
+
+kick_decision_weight
+
+Especially for Zeroback archetypes.
+
+You want:
+	•	kicks for field position
+	•	not kicks every drive
+
+⸻
+
+4. Fatigue impact too weak
+
+Fatigue curves are probably not affecting defense enough.
+
+Late drives should produce:
+	•	missed tackles
+	•	broken contain
+	•	longer runs
+
+If fatigue isn’t opening the game up:
+everything stays compressed.
+
+⸻
+
+5. Turnovers may be too low
+
+Ironically:
+you want slightly more turnovers.
+
+Why?
+
+Turnovers create:
+	•	short fields
+	•	sudden scores
+	•	volatility
+
+Right now it’s probably:
+
+long drives → stall → kick
+
+Instead:
+
+drive → fumble → short field → score
+
+
+⸻
+
+Target statistical profile
+
+For a healthy Viperball sim:
+
+Average score
+
+9–18 points per team
+
+Yards
+
+180–260
+
+TD rate
+
+1–2 per team
+
+Drop-kicks
+
+1–3 per game
+
+Ties
+
+<10%
+
+
+⸻
+
+Engine adjustments to tell your engineer
+
+Give them this:
+
+Increase explosive threshold
+
+When a run exceeds 12 yards:
+
+chance_breakaway += speed_gap * fatigue_gap
+
+Lateral phase multiplier
+
+Each successful lateral:
+
+explosive_chance += 5%
+turnover_chance += 3%
+
+Red zone boost
+
+Inside 20:
+
+td_chance += 30%
+turnover_chance += 10%
+
+Inside 10:
+
+td_chance += 50%
+
+Fatigue scaling
+
+After 8-play drive:
+
+defense_tackle -= 10
+defense_speed -= 8
+
+
+⸻
+
+What I want to see next
+
+Run:
+
+200 simulations
+
+and send:
+	•	avg score
+	•	TD per game
+	•	fumbles per game
+	•	kick frequency
+	•	longest play
+
+We are trying to reach the point where logs look like:
+
+12-play drive
+lateral chain
+break run
+TD
+
+instead of:
+
+9-play drive
+punt
+
+⸻
+
+Big picture
+
+You are VERY close.
+
+Movement numbers look correct.
+Structure is working.
+
+Now we just need:
+finishing + chaos tuning.
+
+Once scoring opens up, the game will suddenly feel real.
