@@ -1,0 +1,55 @@
+{
+  "templates": [
+    "{City} High School",
+    "{City} Central High School",
+    "{City} North High School",
+    "{City} South High School",
+    "{City} East High School",
+    "{City} West High School",
+    "{Name} Academy",
+    "St. {Name} Preparatory",
+    "{City} {Mascot} High School"
+  ],
+  "real_schools": {
+    "atlanta": ["Marist School", "Lovett School", "Pace Academy", "Woodward Academy", "Westminster Schools", "Holy Innocents"],
+    "chicago": ["Whitney Young", "Lane Tech", "Walter Payton", "Jones College Prep", "Northside Prep", "Latin School"],
+    "boston": ["Boston Latin", "Brookline High", "Newton North", "Belmont High", "Lexington High", "Winchester High"],
+    "new_york": ["Stuyvesant", "Bronx Science", "Brooklyn Tech", "Dalton School", "Horace Mann", "Trinity School"],
+    "los_angeles": ["Harvard-Westlake", "Crossroads", "Windward", "Marlborough", "Archer School", "Polytechnic"],
+    "san_francisco": ["Lowell High", "Lincoln High", "Sacred Heart Prep", "Crystal Springs Uplands"],
+    "seattle": ["Lakeside School", "Roosevelt High", "Garfield High", "Ballard High"],
+    "portland": ["Lincoln High", "Grant High", "Cleveland High", "Jesuit High School"],
+    "dallas": ["Highland Park", "St. Mark's", "Hockaday School", "Greenhill School"],
+    "houston": ["Bellaire High", "Kinkaid School", "St. John's School", "Lamar High School"],
+    "philadelphia": ["Central High", "Masterman", "Friends Select", "Penn Charter"],
+    "washington": ["Sidwell Friends", "National Cathedral", "Georgetown Day", "St. Albans"],
+    "minneapolis": ["Southwest High", "Edina High", "Blake School", "Breck School"],
+    "miami": ["Ransom Everglades", "Gulliver Prep", "Palmer Trinity", "Miami Country Day"]
+  },
+  "australian_schools": [
+    "{City} Grammar School",
+    "{City} Girls' High School",
+    "{City} Secondary College",
+    "St. {Name}'s College",
+    "{City} Anglican School"
+  ],
+  "australian_real_schools": {
+    "melbourne": ["Melbourne Grammar", "Wesley College", "Scotch College", "Methodist Ladies College", "Lauriston Girls' School", "Firbank Grammar"],
+    "sydney": ["Sydney Grammar", "North Sydney Girls High", "Fort Street High", "James Ruse Agricultural High", "Ascham School", "SCEGGS Darlinghurst"],
+    "brisbane": ["Brisbane Grammar", "Brisbane Girls Grammar", "Somerville House", "Brisbane State High"],
+    "perth": ["Perth Modern School", "Hale School", "Christ Church Grammar", "Presbyterian Ladies' College"],
+    "adelaide": ["Adelaide High School", "Pembroke School", "Wilderness School", "Seymour College"]
+  },
+  "aflw_academies": [
+    "Melbourne FC - AFLW Academy",
+    "Sydney Swans - AFLW Academy",
+    "Brisbane Lions - AFLW Academy",
+    "Adelaide Crows - AFLW Academy",
+    "Fremantle - AFLW Academy",
+    "Carlton - AFLW Academy",
+    "Collingwood - AFLW Academy",
+    "Western Bulldogs - AFLW Academy",
+    "GWS Giants - AFLW Academy",
+    "Gold Coast Suns - AFLW Academy"
+  ]
+}

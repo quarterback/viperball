@@ -1,0 +1,42 @@
+{
+  "northeast": {
+    "major": ["New York NY", "Boston MA", "Philadelphia PA", "Providence RI"],
+    "secondary": ["Worcester MA", "Manchester NH", "Albany NY", "New Haven CT", "Hartford CT", "Burlington VT", "Portland ME", "Syracuse NY", "Rochester NY"],
+    "small": ["Nashua NH", "Lowell MA", "Cambridge MA", "Springfield MA", "Stamford CT", "Bridgeport CT", "Bangor ME", "Concord NH"]
+  },
+  "mid_atlantic": {
+    "major": ["Washington DC", "Baltimore MD", "Richmond VA", "Virginia Beach VA"],
+    "secondary": ["Arlington VA", "Norfolk VA", "Chesapeake VA", "Alexandria VA", "Annapolis MD", "Frederick MD", "Charlottesville VA", "Roanoke VA"],
+    "small": ["Hampton VA", "Newport News VA", "Silver Spring MD", "Bethesda MD", "Rockville MD", "Fairfax VA", "Winchester VA"]
+  },
+  "south": {
+    "major": ["Atlanta GA", "Charlotte NC", "Nashville TN", "Memphis TN", "Birmingham AL", "Jacksonville FL", "Tampa FL", "Orlando FL", "Miami FL"],
+    "secondary": ["Chattanooga TN", "Knoxville TN", "Asheville NC", "Raleigh NC", "Durham NC", "Greensboro NC", "Charleston SC", "Columbia SC", "Savannah GA", "Augusta GA"],
+    "small": ["Greenville SC", "Winston-Salem NC", "Fayetteville NC", "Wilmington NC", "Mobile AL", "Montgomery AL", "Pensacola FL", "Tallahassee FL"]
+  },
+  "midwest": {
+    "major": ["Chicago IL", "Milwaukee WI", "Minneapolis MN", "Detroit MI", "St. Louis MO", "Kansas City MO", "Indianapolis IN", "Columbus OH", "Cleveland OH"],
+    "secondary": ["Madison WI", "Des Moines IA", "Omaha NE", "Cincinnati OH", "Dayton OH", "Toledo OH", "Green Bay WI", "Duluth MN", "Grand Rapids MI"],
+    "small": ["Eau Claire WI", "La Crosse WI", "Cedar Rapids IA", "Sioux City IA", "Lincoln NE", "Springfield IL", "Rockford IL", "Ann Arbor MI", "Lansing MI"]
+  },
+  "west_coast_california": [
+    "Los Angeles CA", "San Diego CA", "San Francisco CA", "Sacramento CA", "Fresno CA", "Oakland CA", "San Jose CA", "Long Beach CA", "Bakersfield CA", "Anaheim CA", "Santa Ana CA", "Riverside CA", "Irvine CA", "Santa Barbara CA", "Stockton CA", "Modesto CA", "San Bernardino CA"
+  ],
+  "west_coast_northwest": [
+    "Seattle WA", "Portland OR", "Spokane WA", "Eugene OR", "Boise ID", "Tacoma WA", "Salem OR", "Bellevue WA", "Bend OR", "Olympia WA", "Vancouver WA", "Corvallis OR"
+  ],
+  "texas_southwest": {
+    "major": ["Dallas TX", "Houston TX", "Austin TX", "San Antonio TX", "Fort Worth TX", "Phoenix AZ", "Albuquerque NM", "Las Vegas NV"],
+    "secondary": ["El Paso TX", "Arlington TX", "Plano TX", "Lubbock TX", "Waco TX", "Corpus Christi TX", "Tucson AZ", "Mesa AZ", "Scottsdale AZ", "Santa Fe NM", "Reno NV"],
+    "small": ["Amarillo TX", "Abilene TX", "Midland TX", "Odessa TX", "Beaumont TX", "Brownsville TX", "Flagstaff AZ", "Tempe AZ", "Las Cruces NM"]
+  },
+  "mountain_west": [
+    "Denver CO", "Colorado Springs CO", "Boulder CO", "Salt Lake City UT", "Provo UT", "Billings MT", "Missoula MT", "Bozeman MT", "Cheyenne WY", "Casper WY", "Jackson WY"
+  ],
+  "australia": {
+    "major": ["Melbourne VIC", "Sydney NSW", "Brisbane QLD", "Perth WA", "Adelaide SA"],
+    "secondary": ["Gold Coast QLD", "Canberra ACT", "Newcastle NSW", "Wollongong NSW", "Hobart TAS", "Geelong VIC", "Townsville QLD", "Cairns QLD", "Darwin NT"]
+  },
+  "new_zealand": ["Auckland", "Wellington", "Christchurch", "Hamilton", "Dunedin"],
+  "pacific_islands": ["Honolulu HI", "Hilo HI", "Pago Pago", "Apia", "Nuku'alofa", "Suva"]
+}

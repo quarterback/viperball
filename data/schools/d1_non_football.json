@@ -1,0 +1,3085 @@
+{
+  "total_schools": 102,
+  "conferences_planned": 8,
+  "schools": [
+    {
+      "school_id": "vermont",
+      "school_name": "University of Vermont",
+      "abbreviation": "UVM",
+      "city": "Burlington",
+      "state": "VT",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Catamounts",
+      "colors": [
+        "Green",
+        "Gold"
+      ],
+      "enrollment": 11723,
+      "private_public": "public",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "maine",
+      "school_name": "University of Maine",
+      "abbreviation": "UME",
+      "city": "Orono",
+      "state": "ME",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Black Bears",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 11741,
+      "private_public": "public",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "new_hampshire",
+      "school_name": "University of New Hampshire",
+      "abbreviation": "UNH",
+      "city": "Durham",
+      "state": "NH",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Wildcats",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 15270,
+      "private_public": "public",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "umass_lowell",
+      "school_name": "University of Massachusetts Lowell",
+      "abbreviation": "UML",
+      "city": "Lowell",
+      "state": "MA",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "River Hawks",
+      "colors": [
+        "Blue",
+        "Red",
+        "Gray"
+      ],
+      "enrollment": 18316,
+      "private_public": "public",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "albany",
+      "school_name": "University at Albany",
+      "abbreviation": "ALB",
+      "city": "Albany",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Great Danes",
+      "colors": [
+        "Purple",
+        "Gold"
+      ],
+      "enrollment": 17555,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "ground_and_pound",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "stony_brook",
+      "school_name": "Stony Brook University",
+      "abbreviation": "SBU",
+      "city": "Stony Brook",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Seawolves",
+      "colors": [
+        "Red",
+        "Gray"
+      ],
+      "enrollment": 26814,
+      "private_public": "public",
+      "athletic_culture": "lacrosse_strong",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "ground_and_pound",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "binghamton",
+      "school_name": "Binghamton University",
+      "abbreviation": "BING",
+      "city": "Binghamton",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Bearcats",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 18126,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "hartford",
+      "school_name": "University of Hartford",
+      "abbreviation": "UHA",
+      "city": "West Hartford",
+      "state": "CT",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Hawks",
+      "colors": [
+        "Red",
+        "White"
+      ],
+      "enrollment": 6872,
+      "private_public": "private",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "kick_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "umbc",
+      "school_name": "University of Maryland, Baltimore County",
+      "abbreviation": "UMBC",
+      "city": "Baltimore",
+      "state": "MD",
+      "region": "mid_atlantic",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Retrievers",
+      "colors": [
+        "Black",
+        "Gold"
+      ],
+      "enrollment": 13991,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "njit",
+      "school_name": "New Jersey Institute of Technology",
+      "abbreviation": "NJIT",
+      "city": "Newark",
+      "state": "NJ",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Highlanders",
+      "colors": [
+        "Red",
+        "Blue"
+      ],
+      "enrollment": 11925,
+      "private_public": "public",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "boston_university",
+      "school_name": "Boston University",
+      "abbreviation": "BU",
+      "city": "Boston",
+      "state": "MA",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Terriers",
+      "colors": [
+        "Scarlet",
+        "White"
+      ],
+      "enrollment": 34262,
+      "private_public": "private",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "northeastern",
+      "school_name": "Northeastern University",
+      "abbreviation": "NEU",
+      "city": "Boston",
+      "state": "MA",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Huskies",
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "enrollment": 22202,
+      "private_public": "private",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "quinnipiac",
+      "school_name": "Quinnipiac University",
+      "abbreviation": "QU",
+      "city": "Hamden",
+      "state": "CT",
+      "region": "northeast",
+      "conference_planned": "Yankee Conference",
+      "mascot": "Bobcats",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 10062,
+      "private_public": "private",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "st_johns",
+      "school_name": "St. John's University",
+      "abbreviation": "SJU",
+      "city": "Queens",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Red Storm",
+      "colors": [
+        "Red",
+        "White"
+      ],
+      "enrollment": 21346,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "seton_hall",
+      "school_name": "Seton Hall University",
+      "abbreviation": "SHU",
+      "city": "South Orange",
+      "state": "NJ",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Pirates",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 10658,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "providence",
+      "school_name": "Providence College",
+      "abbreviation": "PC",
+      "city": "Providence",
+      "state": "RI",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Friars",
+      "colors": [
+        "Black",
+        "White"
+      ],
+      "enrollment": 4747,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "georgetown",
+      "school_name": "Georgetown University",
+      "abbreviation": "GTWN",
+      "city": "Washington",
+      "state": "DC",
+      "region": "mid_atlantic",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Hoyas",
+      "colors": [
+        "Blue",
+        "Gray"
+      ],
+      "enrollment": 19593,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "villanova",
+      "school_name": "Villanova University",
+      "abbreviation": "NOVA",
+      "city": "Villanova",
+      "state": "PA",
+      "region": "mid_atlantic",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Wildcats",
+      "colors": [
+        "Navy",
+        "White"
+      ],
+      "enrollment": 10842,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "fordham",
+      "school_name": "Fordham University",
+      "abbreviation": "FOR",
+      "city": "Bronx",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Rams",
+      "colors": [
+        "Maroon",
+        "White"
+      ],
+      "enrollment": 16556,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "hofstra",
+      "school_name": "Hofstra University",
+      "abbreviation": "HOF",
+      "city": "Hempstead",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Pride",
+      "colors": [
+        "Blue",
+        "Gold",
+        "White"
+      ],
+      "enrollment": 10856,
+      "private_public": "private",
+      "athletic_culture": "lacrosse_strong",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "fairfield",
+      "school_name": "Fairfield University",
+      "abbreviation": "FAIR",
+      "city": "Fairfield",
+      "state": "CT",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Stags",
+      "colors": [
+        "Cardinal Red"
+      ],
+      "enrollment": 5128,
+      "private_public": "private",
+      "athletic_culture": "lacrosse_strong",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "loyola_md",
+      "school_name": "Loyola University Maryland",
+      "abbreviation": "LUM",
+      "city": "Baltimore",
+      "state": "MD",
+      "region": "mid_atlantic",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Greyhounds",
+      "colors": [
+        "Green",
+        "Gray"
+      ],
+      "enrollment": 6017,
+      "private_public": "private",
+      "athletic_culture": "lacrosse_strong",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "american",
+      "school_name": "American University",
+      "abbreviation": "AU",
+      "city": "Washington",
+      "state": "DC",
+      "region": "mid_atlantic",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Eagles",
+      "colors": [
+        "Red",
+        "Blue"
+      ],
+      "enrollment": 13972,
+      "private_public": "private",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "manhattan",
+      "school_name": "Manhattan College",
+      "abbreviation": "MAN",
+      "city": "Bronx",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Jaspers",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 4131,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "iona",
+      "school_name": "Iona University",
+      "abbreviation": "IONA",
+      "city": "New Rochelle",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Gaels",
+      "colors": [
+        "Maroon",
+        "Gold"
+      ],
+      "enrollment": 4090,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "nyu",
+      "school_name": "New York University",
+      "abbreviation": "NYU",
+      "city": "New York",
+      "state": "NY",
+      "region": "northeast",
+      "conference_planned": "Metro Atlantic",
+      "mascot": "Violets",
+      "colors": [
+        "Purple",
+        "White"
+      ],
+      "enrollment": 51848,
+      "private_public": "private",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "northeast": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "marquette",
+      "school_name": "Marquette University",
+      "abbreviation": "MU",
+      "city": "Milwaukee",
+      "state": "WI",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Golden Eagles",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 11167,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "depaul",
+      "school_name": "DePaul University",
+      "abbreviation": "DPU",
+      "city": "Chicago",
+      "state": "IL",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Blue Demons",
+      "colors": [
+        "Blue",
+        "Red"
+      ],
+      "enrollment": 22437,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "loyola_chicago",
+      "school_name": "Loyola University Chicago",
+      "abbreviation": "LUC",
+      "city": "Chicago",
+      "state": "IL",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Ramblers",
+      "colors": [
+        "Maroon",
+        "Gold"
+      ],
+      "enrollment": 17007,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "xavier",
+      "school_name": "Xavier University",
+      "abbreviation": "XU",
+      "city": "Cincinnati",
+      "state": "OH",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Musketeers",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 6775,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "butler",
+      "school_name": "Butler University",
+      "abbreviation": "BUT",
+      "city": "Indianapolis",
+      "state": "IN",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Bulldogs",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 5982,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "creighton",
+      "school_name": "Creighton University",
+      "abbreviation": "CU",
+      "city": "Omaha",
+      "state": "NE",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Bluejays",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 8393,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "detroit_mercy",
+      "school_name": "University of Detroit Mercy",
+      "abbreviation": "UDM",
+      "city": "Detroit",
+      "state": "MI",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Titans",
+      "colors": [
+        "Red",
+        "White",
+        "Blue"
+      ],
+      "enrollment": 5158,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "cleveland_state",
+      "school_name": "Cleveland State University",
+      "abbreviation": "CSU",
+      "city": "Cleveland",
+      "state": "OH",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Vikings",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 15371,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "uic",
+      "school_name": "University of Illinois Chicago",
+      "abbreviation": "UIC",
+      "city": "Chicago",
+      "state": "IL",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Flames",
+      "colors": [
+        "Navy",
+        "Fire Engine Red"
+      ],
+      "enrollment": 33518,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "milwaukee",
+      "school_name": "University of Wisconsin-Milwaukee",
+      "abbreviation": "UWM",
+      "city": "Milwaukee",
+      "state": "WI",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Panthers",
+      "colors": [
+        "Black",
+        "Gold"
+      ],
+      "enrollment": 25070,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "wright_state",
+      "school_name": "Wright State University",
+      "abbreviation": "WSU",
+      "city": "Dayton",
+      "state": "OH",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Raiders",
+      "colors": [
+        "Green",
+        "Gold"
+      ],
+      "enrollment": 12303,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "green_bay",
+      "school_name": "University of Wisconsin-Green Bay",
+      "abbreviation": "UWGB",
+      "city": "Green Bay",
+      "state": "WI",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Phoenix",
+      "colors": [
+        "Green",
+        "Red",
+        "White"
+      ],
+      "enrollment": 7164,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "northern_kentucky",
+      "school_name": "Northern Kentucky University",
+      "abbreviation": "NKU",
+      "city": "Highland Heights",
+      "state": "KY",
+      "region": "midwest",
+      "conference_planned": "Great Lakes Union",
+      "mascot": "Norse",
+      "colors": [
+        "Gold",
+        "Black",
+        "White"
+      ],
+      "enrollment": 14795,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "vcu",
+      "school_name": "Virginia Commonwealth University",
+      "abbreviation": "VCU",
+      "city": "Richmond",
+      "state": "VA",
+      "region": "mid_atlantic",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Rams",
+      "colors": [
+        "Black",
+        "Gold"
+      ],
+      "enrollment": 28082,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "george_mason",
+      "school_name": "George Mason University",
+      "abbreviation": "GMU",
+      "city": "Fairfax",
+      "state": "VA",
+      "region": "mid_atlantic",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Patriots",
+      "colors": [
+        "Green",
+        "Gold"
+      ],
+      "enrollment": 38542,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "dayton",
+      "school_name": "University of Dayton",
+      "abbreviation": "UD",
+      "city": "Dayton",
+      "state": "OH",
+      "region": "midwest",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Flyers",
+      "colors": [
+        "Red",
+        "Blue"
+      ],
+      "enrollment": 11674,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "saint_louis",
+      "school_name": "Saint Louis University",
+      "abbreviation": "SLU",
+      "city": "St. Louis",
+      "state": "MO",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Billikens",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 12919,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "richmond",
+      "school_name": "University of Richmond",
+      "abbreviation": "UR",
+      "city": "Richmond",
+      "state": "VA",
+      "region": "mid_atlantic",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Spiders",
+      "colors": [
+        "Blue",
+        "Red"
+      ],
+      "enrollment": 4350,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "la_salle",
+      "school_name": "La Salle University",
+      "abbreviation": "LS",
+      "city": "Philadelphia",
+      "state": "PA",
+      "region": "mid_atlantic",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Explorers",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 5194,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "duquesne",
+      "school_name": "Duquesne University",
+      "abbreviation": "DUQ",
+      "city": "Pittsburgh",
+      "state": "PA",
+      "region": "mid_atlantic",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Dukes",
+      "colors": [
+        "Red",
+        "Blue"
+      ],
+      "enrollment": 9188,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "mid_atlantic": 0.5,
+        "northeast": 0.15,
+        "south": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "charleston",
+      "school_name": "College of Charleston",
+      "abbreviation": "CofC",
+      "city": "Charleston",
+      "state": "SC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Cougars",
+      "colors": [
+        "Maroon",
+        "White"
+      ],
+      "enrollment": 10885,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "davidson",
+      "school_name": "Davidson College",
+      "abbreviation": "DAV",
+      "city": "Davidson",
+      "state": "NC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Wildcats",
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "enrollment": 1983,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "unc_asheville",
+      "school_name": "University of North Carolina at Asheville",
+      "abbreviation": "UNCA",
+      "city": "Asheville",
+      "state": "NC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Bulldogs",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 3401,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "high_point",
+      "school_name": "High Point University",
+      "abbreviation": "HPU",
+      "city": "High Point",
+      "state": "NC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Panthers",
+      "colors": [
+        "Purple",
+        "White"
+      ],
+      "enrollment": 5690,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "winthrop",
+      "school_name": "Winthrop University",
+      "abbreviation": "WIN",
+      "city": "Rock Hill",
+      "state": "SC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Eagles",
+      "colors": [
+        "Garnet",
+        "Gold"
+      ],
+      "enrollment": 5730,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "uncg",
+      "school_name": "University of North Carolina at Greensboro",
+      "abbreviation": "UNCG",
+      "city": "Greensboro",
+      "state": "NC",
+      "region": "south",
+      "conference_planned": "Colonial Athletic",
+      "mascot": "Spartans",
+      "colors": [
+        "Navy",
+        "Gold",
+        "White"
+      ],
+      "enrollment": 19647,
+      "private_public": "public",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "wichita_state",
+      "school_name": "Wichita State University",
+      "abbreviation": "WSU",
+      "city": "Wichita",
+      "state": "KS",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Shockers",
+      "colors": [
+        "Black",
+        "Yellow"
+      ],
+      "enrollment": 23000,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "drake",
+      "school_name": "Drake University",
+      "abbreviation": "DU",
+      "city": "Des Moines",
+      "state": "IA",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Bulldogs",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 4685,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "hybrid",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "bradley",
+      "school_name": "Bradley University",
+      "abbreviation": "BU",
+      "city": "Peoria",
+      "state": "IL",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Braves",
+      "colors": [
+        "Red",
+        "White"
+      ],
+      "enrollment": 5400,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "ground_and_pound",
+        "tempo": "slow",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "valparaiso",
+      "school_name": "Valparaiso University",
+      "abbreviation": "VALPO",
+      "city": "Valparaiso",
+      "state": "IN",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Beacons",
+      "colors": [
+        "Brown",
+        "Gold"
+      ],
+      "enrollment": 3776,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "belmont",
+      "school_name": "Belmont University",
+      "abbreviation": "BEL",
+      "city": "Nashville",
+      "state": "TN",
+      "region": "south",
+      "conference_planned": "Gateway League",
+      "mascot": "Bruins",
+      "colors": [
+        "Navy",
+        "Red"
+      ],
+      "enrollment": 8900,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "ground_and_pound",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "lipscomb",
+      "school_name": "Lipscomb University",
+      "abbreviation": "LIP",
+      "city": "Nashville",
+      "state": "TN",
+      "region": "south",
+      "conference_planned": "Gateway League",
+      "mascot": "Bisons",
+      "colors": [
+        "Purple",
+        "Gold"
+      ],
+      "enrollment": 4704,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "northern_iowa",
+      "school_name": "University of Northern Iowa",
+      "abbreviation": "UNI",
+      "city": "Cedar Falls",
+      "state": "IA",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Panthers",
+      "colors": [
+        "Purple",
+        "Old Gold"
+      ],
+      "enrollment": 10497,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "indiana_state",
+      "school_name": "Indiana State University",
+      "abbreviation": "ISU",
+      "city": "Terre Haute",
+      "state": "IN",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Sycamores",
+      "colors": [
+        "Blue",
+        "White"
+      ],
+      "enrollment": 10600,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "missouri_state",
+      "school_name": "Missouri State University",
+      "abbreviation": "MSU",
+      "city": "Springfield",
+      "state": "MO",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Bears",
+      "colors": [
+        "Maroon",
+        "White"
+      ],
+      "enrollment": 22685,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "southern_illinois",
+      "school_name": "Southern Illinois University",
+      "abbreviation": "SIU",
+      "city": "Carbondale",
+      "state": "IL",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Salukis",
+      "colors": [
+        "Maroon",
+        "White"
+      ],
+      "enrollment": 11504,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "evansville",
+      "school_name": "University of Evansville",
+      "abbreviation": "UE",
+      "city": "Evansville",
+      "state": "IN",
+      "region": "midwest",
+      "conference_planned": "Gateway League",
+      "mascot": "Purple Aces",
+      "colors": [
+        "Purple",
+        "Orange",
+        "White"
+      ],
+      "enrollment": 2301,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "murray_state",
+      "school_name": "Murray State University",
+      "abbreviation": "MUR",
+      "city": "Murray",
+      "state": "KY",
+      "region": "south",
+      "conference_planned": "Gateway League",
+      "mascot": "Racers",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 10024,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "oral_roberts",
+      "school_name": "Oral Roberts University",
+      "abbreviation": "ORU",
+      "city": "Tulsa",
+      "state": "OK",
+      "region": "south",
+      "conference_planned": "Sun Country",
+      "mascot": "Golden Eagles",
+      "colors": [
+        "Navy",
+        "Gold"
+      ],
+      "enrollment": 4000,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "ut_arlington",
+      "school_name": "University of Texas at Arlington",
+      "abbreviation": "UTA",
+      "city": "Arlington",
+      "state": "TX",
+      "region": "texas_southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Mavericks",
+      "colors": [
+        "Blue",
+        "Orange"
+      ],
+      "enrollment": 42151,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "texas_southwest": 0.5,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "little_rock",
+      "school_name": "University of Arkansas at Little Rock",
+      "abbreviation": "UALR",
+      "city": "Little Rock",
+      "state": "AR",
+      "region": "south",
+      "conference_planned": "Sun Country",
+      "mascot": "Trojans",
+      "colors": [
+        "Maroon",
+        "Silver"
+      ],
+      "enrollment": 8730,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "south": 0.5,
+        "mid_atlantic": 0.15,
+        "midwest": 0.1,
+        "australian": 0.15,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "nmsu",
+      "school_name": "New Mexico State University",
+      "abbreviation": "NMSU",
+      "city": "Las Cruces",
+      "state": "NM",
+      "region": "southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Aggies",
+      "colors": [
+        "Crimson",
+        "White"
+      ],
+      "enrollment": 14269,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.3,
+        "northeast": 0.2,
+        "australian": 0.2,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "grand_canyon",
+      "school_name": "Grand Canyon University",
+      "abbreviation": "GCU",
+      "city": "Phoenix",
+      "state": "AZ",
+      "region": "southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Antelopes",
+      "colors": [
+        "Purple",
+        "White"
+      ],
+      "enrollment": 25629,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.3,
+        "northeast": 0.2,
+        "australian": 0.2,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "seattle",
+      "school_name": "Seattle University",
+      "abbreviation": "SU",
+      "city": "Seattle",
+      "state": "WA",
+      "region": "west_coast",
+      "conference_planned": "Sun Country",
+      "mascot": "Redhawks",
+      "colors": [
+        "Scarlet",
+        "White"
+      ],
+      "enrollment": 7515,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "utep",
+      "school_name": "University of Texas at El Paso",
+      "abbreviation": "UTEP",
+      "city": "El Paso",
+      "state": "TX",
+      "region": "texas_southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Miners",
+      "colors": [
+        "Orange",
+        "Blue",
+        "Silver"
+      ],
+      "enrollment": 25151,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "texas_southwest": 0.5,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "texas_state",
+      "school_name": "Texas State University",
+      "abbreviation": "TXST",
+      "city": "San Marcos",
+      "state": "TX",
+      "region": "texas_southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Bobcats",
+      "colors": [
+        "Maroon",
+        "Gold"
+      ],
+      "enrollment": 38808,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "texas_southwest": 0.5,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "ut_san_antonio",
+      "school_name": "University of Texas at San Antonio",
+      "abbreviation": "UTSA",
+      "city": "San Antonio",
+      "state": "TX",
+      "region": "texas_southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Roadrunners",
+      "colors": [
+        "Orange",
+        "Navy",
+        "Silver"
+      ],
+      "enrollment": 34723,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "texas_southwest": 0.5,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "north_texas",
+      "school_name": "University of North Texas",
+      "abbreviation": "UNT",
+      "city": "Denton",
+      "state": "TX",
+      "region": "texas_southwest",
+      "conference_planned": "Sun Country",
+      "mascot": "Mean Green",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 42762,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "texas_southwest": 0.5,
+        "south": 0.15,
+        "west_coast": 0.1,
+        "australian": 0.15,
+        "midwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "denver",
+      "school_name": "University of Denver",
+      "abbreviation": "DU",
+      "city": "Denver",
+      "state": "CO",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Pioneers",
+      "colors": [
+        "Crimson",
+        "Gold"
+      ],
+      "enrollment": 11883,
+      "private_public": "private",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "air_force",
+      "school_name": "United States Air Force Academy",
+      "abbreviation": "AFA",
+      "city": "Colorado Springs",
+      "state": "CO",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Falcons",
+      "colors": [
+        "Blue",
+        "Silver"
+      ],
+      "enrollment": 4181,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "northern_colorado",
+      "school_name": "University of Northern Colorado",
+      "abbreviation": "UNC",
+      "city": "Greeley",
+      "state": "CO",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Bears",
+      "colors": [
+        "Navy",
+        "Gold"
+      ],
+      "enrollment": 10770,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "utah_valley",
+      "school_name": "Utah Valley University",
+      "abbreviation": "UVU",
+      "city": "Orem",
+      "state": "UT",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Wolverines",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 41652,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "idaho_state",
+      "school_name": "Idaho State University",
+      "abbreviation": "ISU",
+      "city": "Pocatello",
+      "state": "ID",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Bengals",
+      "colors": [
+        "Orange",
+        "Black"
+      ],
+      "enrollment": 12301,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "weber_state",
+      "school_name": "Weber State University",
+      "abbreviation": "WSU",
+      "city": "Ogden",
+      "state": "UT",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Wildcats",
+      "colors": [
+        "Purple",
+        "White"
+      ],
+      "enrollment": 30124,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "montana_state",
+      "school_name": "Montana State University",
+      "abbreviation": "MSU",
+      "city": "Bozeman",
+      "state": "MT",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Bobcats",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 16988,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "montana",
+      "school_name": "University of Montana",
+      "abbreviation": "UM",
+      "city": "Missoula",
+      "state": "MT",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Grizzlies",
+      "colors": [
+        "Maroon",
+        "Silver"
+      ],
+      "enrollment": 10275,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "wyoming",
+      "school_name": "University of Wyoming",
+      "abbreviation": "WYO",
+      "city": "Laramie",
+      "state": "WY",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Cowboys",
+      "colors": [
+        "Brown",
+        "Gold"
+      ],
+      "enrollment": 12450,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "northern_arizona",
+      "school_name": "Northern Arizona University",
+      "abbreviation": "NAU",
+      "city": "Flagstaff",
+      "state": "AZ",
+      "region": "mountain_west",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Lumberjacks",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 30128,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "hybrid",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "mountain_west": 0.4,
+        "west_coast": 0.2,
+        "australian": 0.2,
+        "midwest": 0.1,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "south_dakota",
+      "school_name": "University of South Dakota",
+      "abbreviation": "USD",
+      "city": "Vermillion",
+      "state": "SD",
+      "region": "midwest",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Coyotes",
+      "colors": [
+        "Vermillion",
+        "White"
+      ],
+      "enrollment": 9804,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "north_dakota",
+      "school_name": "University of North Dakota",
+      "abbreviation": "UND",
+      "city": "Grand Forks",
+      "state": "ND",
+      "region": "midwest",
+      "conference_planned": "Skyline Conference",
+      "mascot": "Fighting Hawks",
+      "colors": [
+        "Green",
+        "White"
+      ],
+      "enrollment": 13634,
+      "private_public": "public",
+      "athletic_culture": "hockey_first",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "lateral_heavy",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "midwest": 0.5,
+        "northeast": 0.1,
+        "south": 0.1,
+        "australian": 0.2,
+        "pacific_islander": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "gonzaga",
+      "school_name": "Gonzaga University",
+      "abbreviation": "GU",
+      "city": "Spokane",
+      "state": "WA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Bulldogs",
+      "colors": [
+        "Blue",
+        "Red",
+        "White"
+      ],
+      "enrollment": 7500,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "pepperdine",
+      "school_name": "Pepperdine University",
+      "abbreviation": "PU",
+      "city": "Malibu",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Waves",
+      "colors": [
+        "Blue",
+        "Orange"
+      ],
+      "enrollment": 8300,
+      "private_public": "private",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "santa_clara",
+      "school_name": "Santa Clara University",
+      "abbreviation": "SCU",
+      "city": "Santa Clara",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Broncos",
+      "colors": [
+        "Red",
+        "White"
+      ],
+      "enrollment": 9015,
+      "private_public": "private",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "san_francisco",
+      "school_name": "University of San Francisco",
+      "abbreviation": "USF",
+      "city": "San Francisco",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Dons",
+      "colors": [
+        "Green",
+        "Gold"
+      ],
+      "enrollment": 11080,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "low"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "loyola_marymount",
+      "school_name": "Loyola Marymount University",
+      "abbreviation": "LMU",
+      "city": "Los Angeles",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Lions",
+      "colors": [
+        "Crimson",
+        "Steel Blue"
+      ],
+      "enrollment": 9600,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "ground_and_pound",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "san_diego",
+      "school_name": "University of San Diego",
+      "abbreviation": "USD",
+      "city": "San Diego",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Toreros",
+      "colors": [
+        "Navy",
+        "Columbia Blue"
+      ],
+      "enrollment": 9073,
+      "private_public": "private",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "pacific",
+      "school_name": "University of the Pacific",
+      "abbreviation": "UOP",
+      "city": "Stockton",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Tigers",
+      "colors": [
+        "Orange",
+        "Black"
+      ],
+      "enrollment": 6225,
+      "private_public": "private",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "ground_and_pound",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "portland",
+      "school_name": "University of Portland",
+      "abbreviation": "UP",
+      "city": "Portland",
+      "state": "OR",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Pilots",
+      "colors": [
+        "Purple",
+        "White"
+      ],
+      "enrollment": 4275,
+      "private_public": "private",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "ground_and_pound",
+        "tempo": "fast",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "uci",
+      "school_name": "University of California, Irvine",
+      "abbreviation": "UCI",
+      "city": "Irvine",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Anteaters",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 36032,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "ucsb",
+      "school_name": "University of California, Santa Barbara",
+      "abbreviation": "UCSB",
+      "city": "Santa Barbara",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Gauchos",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 26179,
+      "private_public": "public",
+      "athletic_culture": "soccer_strong",
+      "identity": {
+        "style": "balanced",
+        "philosophy": "hybrid",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "csuf",
+      "school_name": "California State University, Fullerton",
+      "abbreviation": "CSUF",
+      "city": "Fullerton",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Titans",
+      "colors": [
+        "Blue",
+        "Orange",
+        "White"
+      ],
+      "enrollment": 41435,
+      "private_public": "public",
+      "athletic_culture": "basketball_first",
+      "identity": {
+        "style": "conservative",
+        "philosophy": "lateral_heavy",
+        "tempo": "slow",
+        "two_way_emphasis": "moderate"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "long_beach_state",
+      "school_name": "California State University, Long Beach",
+      "abbreviation": "LBSU",
+      "city": "Long Beach",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Beach",
+      "colors": [
+        "Black",
+        "Gold"
+      ],
+      "enrollment": 39435,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "kick_heavy",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    },
+    {
+      "school_id": "uc_riverside",
+      "school_name": "University of California, Riverside",
+      "abbreviation": "UCR",
+      "city": "Riverside",
+      "state": "CA",
+      "region": "west_coast",
+      "conference_planned": "Pacific Rim",
+      "mascot": "Highlanders",
+      "colors": [
+        "Blue",
+        "Gold"
+      ],
+      "enrollment": 26847,
+      "private_public": "public",
+      "athletic_culture": "multi_sport",
+      "identity": {
+        "style": "aggressive",
+        "philosophy": "ground_and_pound",
+        "tempo": "variable",
+        "two_way_emphasis": "high"
+      },
+      "recruiting_pipeline": {
+        "west_coast": 0.45,
+        "australian": 0.25,
+        "pacific_islander": 0.15,
+        "midwest": 0.05,
+        "texas_southwest": 0.05,
+        "other": 0.05
+      }
+    }
+  ]
+}

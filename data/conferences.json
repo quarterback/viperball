@@ -1,222 +1,64 @@
 {
   "league": "Collegiate Viperball League (CVL)",
-  "season": "2026",
+  "season": "2027",
+  "total_schools": 102,
+  "total_conferences": 8,
   "conferences": [
     {
-      "name": "Empire Elite",
-      "region": "East",
-      "teams": [
-        {
-          "school": "New York University",
-          "abbreviation": "NYU",
-          "city": "New York",
-          "state": "NY",
-          "mascot": "Violets",
-          "colors": ["Purple", "White"]
-        },
-        {
-          "school": "St. John's University",
-          "abbreviation": "SJU",
-          "city": "Queens",
-          "state": "NY",
-          "mascot": "Red Storm",
-          "colors": ["Red", "White"]
-        },
-        {
-          "school": "George Mason University",
-          "abbreviation": "GMU",
-          "city": "Fairfax",
-          "state": "VA",
-          "mascot": "Patriots",
-          "colors": ["Green", "Gold"]
-        },
-        {
-          "school": "Virginia Commonwealth University",
-          "abbreviation": "VCU",
-          "city": "Richmond",
-          "state": "VA",
-          "mascot": "Rams",
-          "colors": ["Black", "Gold"]
-        },
-        {
-          "school": "American University",
-          "abbreviation": "AU",
-          "city": "Washington",
-          "state": "DC",
-          "mascot": "Eagles",
-          "colors": ["Red", "Blue"]
-        },
-        {
-          "school": "University of Vermont",
-          "abbreviation": "UVM",
-          "city": "Burlington",
-          "state": "VT",
-          "mascot": "Catamounts",
-          "colors": ["Green", "Gold"]
-        }
-      ]
+      "conference_id": "yankee",
+      "name": "Yankee Conference",
+      "region": "Northeast / New England",
+      "teams": 13,
+      "schools": ["vermont", "maine", "new_hampshire", "umass_lowell", "albany", "stony_brook", "binghamton", "hartford", "umbc", "njit", "boston_university", "northeastern", "quinnipiac"]
     },
     {
-      "name": "Heartland Union",
-      "region": "Midwest",
-      "teams": [
-        {
-          "school": "Marquette University",
-          "abbreviation": "MU",
-          "city": "Milwaukee",
-          "state": "WI",
-          "mascot": "Golden Eagles",
-          "colors": ["Blue", "Gold"]
-        },
-        {
-          "school": "DePaul University",
-          "abbreviation": "DPU",
-          "city": "Chicago",
-          "state": "IL",
-          "mascot": "Blue Demons",
-          "colors": ["Blue", "Red"]
-        },
-        {
-          "school": "Loyola University Chicago",
-          "abbreviation": "LUC",
-          "city": "Chicago",
-          "state": "IL",
-          "mascot": "Ramblers",
-          "colors": ["Maroon", "Gold"]
-        },
-        {
-          "school": "Xavier University",
-          "abbreviation": "XU",
-          "city": "Cincinnati",
-          "state": "OH",
-          "mascot": "Musketeers",
-          "colors": ["Blue", "White"]
-        },
-        {
-          "school": "Creighton University",
-          "abbreviation": "CU",
-          "city": "Omaha",
-          "state": "NE",
-          "mascot": "Bluejays",
-          "colors": ["Blue", "White"]
-        },
-        {
-          "school": "Wichita State University",
-          "abbreviation": "WSU",
-          "city": "Wichita",
-          "state": "KS",
-          "mascot": "Shockers",
-          "colors": ["Black", "Yellow"]
-        }
-      ]
+      "conference_id": "metro_atlantic",
+      "name": "Metro Atlantic",
+      "region": "Mid-Atlantic / Northeast Corridor",
+      "teams": 13,
+      "schools": ["st_johns", "seton_hall", "providence", "georgetown", "villanova", "fordham", "hofstra", "fairfield", "loyola_md", "american", "manhattan", "iona", "nyu"]
     },
     {
-      "name": "Coastal Vanguard",
-      "region": "West",
-      "teams": [
-        {
-          "school": "Gonzaga University",
-          "abbreviation": "GU",
-          "city": "Spokane",
-          "state": "WA",
-          "mascot": "Bulldogs",
-          "colors": ["Blue", "Red", "White"]
-        },
-        {
-          "school": "Pepperdine University",
-          "abbreviation": "PU",
-          "city": "Malibu",
-          "state": "CA",
-          "mascot": "Waves",
-          "colors": ["Blue", "Orange"]
-        },
-        {
-          "school": "University of California, Irvine",
-          "abbreviation": "UCI",
-          "city": "Irvine",
-          "state": "CA",
-          "mascot": "Anteaters",
-          "colors": ["Blue", "Gold"]
-        },
-        {
-          "school": "University of California, Santa Barbara",
-          "abbreviation": "UCSB",
-          "city": "Santa Barbara",
-          "state": "CA",
-          "mascot": "Gauchos",
-          "colors": ["Blue", "Gold"]
-        },
-        {
-          "school": "California State University, Fullerton",
-          "abbreviation": "CSUF",
-          "city": "Fullerton",
-          "state": "CA",
-          "mascot": "Titans",
-          "colors": ["Blue", "Orange", "White"]
-        },
-        {
-          "school": "California State University, Long Beach",
-          "abbreviation": "LBSU",
-          "city": "Long Beach",
-          "state": "CA",
-          "mascot": "Beach",
-          "colors": ["Black", "Gold"]
-        }
-      ]
+      "conference_id": "great_lakes",
+      "name": "Great Lakes Union",
+      "region": "Midwest / Great Lakes",
+      "teams": 13,
+      "schools": ["marquette", "depaul", "loyola_chicago", "xavier", "butler", "creighton", "detroit_mercy", "cleveland_state", "uic", "milwaukee", "wright_state", "green_bay", "northern_kentucky"]
     },
     {
-      "name": "Southern Heritage",
-      "region": "South",
-      "teams": [
-        {
-          "school": "University of Texas at Arlington",
-          "abbreviation": "UTA",
-          "city": "Arlington",
-          "state": "TX",
-          "mascot": "Mavericks",
-          "colors": ["Blue", "Orange"]
-        },
-        {
-          "school": "High Point University",
-          "abbreviation": "HPU",
-          "city": "High Point",
-          "state": "NC",
-          "mascot": "Panthers",
-          "colors": ["Purple", "White"]
-        },
-        {
-          "school": "University of North Carolina at Asheville",
-          "abbreviation": "UNCA",
-          "city": "Asheville",
-          "state": "NC",
-          "mascot": "Bulldogs",
-          "colors": ["Blue", "White"]
-        },
-        {
-          "school": "College of Charleston",
-          "abbreviation": "CofC",
-          "city": "Charleston",
-          "state": "SC",
-          "mascot": "Cougars",
-          "colors": ["Maroon", "White"]
-        },
-        {
-          "school": "Oral Roberts University",
-          "abbreviation": "ORU",
-          "city": "Tulsa",
-          "state": "OK",
-          "mascot": "Golden Eagles",
-          "colors": ["Navy", "Gold"]
-        },
-        {
-          "school": "University of Arkansas at Little Rock",
-          "abbreviation": "UALR",
-          "city": "Little Rock",
-          "state": "AR",
-          "mascot": "Trojans",
-          "colors": ["Maroon", "Silver"]
-        }
-      ]
+      "conference_id": "colonial",
+      "name": "Colonial Athletic",
+      "region": "South Atlantic",
+      "teams": 13,
+      "schools": ["vcu", "george_mason", "dayton", "richmond", "la_salle", "duquesne", "charleston", "davidson", "unc_asheville", "high_point", "winthrop", "uncg", "saint_louis"]
+    },
+    {
+      "conference_id": "gateway",
+      "name": "Gateway League",
+      "region": "Missouri Valley / Interior",
+      "teams": 13,
+      "schools": ["wichita_state", "drake", "bradley", "valparaiso", "belmont", "lipscomb", "northern_iowa", "indiana_state", "missouri_state", "southern_illinois", "evansville", "murray_state", "oral_roberts"]
+    },
+    {
+      "conference_id": "sun_country",
+      "name": "Sun Country",
+      "region": "Southwest / Texas",
+      "teams": 11,
+      "schools": ["ut_arlington", "little_rock", "nmsu", "grand_canyon", "seattle", "utep", "texas_state", "ut_san_antonio", "north_texas", "air_force", "denver"]
+    },
+    {
+      "conference_id": "skyline",
+      "name": "Skyline Conference",
+      "region": "Mountain West / Northern Plains",
+      "teams": 12,
+      "schools": ["northern_colorado", "utah_valley", "idaho_state", "weber_state", "montana_state", "montana", "wyoming", "northern_arizona", "south_dakota", "north_dakota"]
+    },
+    {
+      "conference_id": "pacific_rim",
+      "name": "Pacific Rim",
+      "region": "West Coast",
+      "teams": 13,
+      "schools": ["gonzaga", "pepperdine", "santa_clara", "san_francisco", "loyola_marymount", "san_diego", "pacific", "portland", "uci", "ucsb", "csuf", "long_beach_state", "uc_riverside"]
     }
   ]
 }

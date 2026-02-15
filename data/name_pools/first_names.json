@@ -1,0 +1,86 @@
+{
+  "american_northeast": [
+    "Emma", "Olivia", "Ava", "Sophia", "Isabella", "Mia", "Charlotte", "Amelia",
+    "Harper", "Evelyn", "Abigail", "Emily", "Elizabeth", "Sofia", "Avery",
+    "Ella", "Scarlett", "Grace", "Chloe", "Victoria", "Riley", "Aria", "Lily",
+    "Aubrey", "Zoey", "Penelope", "Lillian", "Addison", "Layla", "Natalie",
+    "Camila", "Hannah", "Brooklyn", "Zoe", "Nora", "Leah", "Savannah", "Audrey",
+    "Claire", "Eleanor", "Skylar", "Ellie", "Samantha", "Stella", "Paisley"
+  ],
+  "american_south": [
+    "Madison", "Abigail", "Emily", "Elizabeth", "Mia", "Ella", "Avery", "Sofia",
+    "Camila", "Aria", "Scarlett", "Victoria", "Madison", "Luna", "Grace",
+    "Chloe", "Aubrey", "Hazel", "Penelope", "Layla", "Riley", "Zoey", "Nora",
+    "Lily", "Eleanor", "Hannah", "Lillian", "Addison", "Evelyn", "Natalie",
+    "Charlotte", "Savannah", "Brooklyn", "Leah", "Claire", "Skylar", "Paisley",
+    "Kennedy", "Aaliyah", "Kinsley", "Naomi", "Gabriella", "Maya", "Sarah"
+  ],
+  "american_midwest": [
+    "Emma", "Olivia", "Ava", "Sophia", "Isabella", "Charlotte", "Mia", "Amelia",
+    "Harper", "Abigail", "Emily", "Ella", "Avery", "Scarlett", "Grace",
+    "Chloe", "Victoria", "Riley", "Aria", "Lily", "Aubrey", "Zoey", "Penelope",
+    "Lillian", "Addison", "Layla", "Natalie", "Hannah", "Brooklyn", "Evelyn",
+    "Nora", "Leah", "Claire", "Savannah", "Audrey", "Eleanor", "Skylar",
+    "Ellie", "Samantha", "Stella", "Paisley", "Anna", "Caroline", "Violet"
+  ],
+  "american_west": [
+    "Emma", "Mia", "Isabella", "Sophia", "Charlotte", "Amelia", "Evelyn",
+    "Abigail", "Harper", "Emily", "Ella", "Avery", "Scarlett", "Grace",
+    "Chloe", "Victoria", "Aria", "Lily", "Aubrey", "Zoey", "Penelope",
+    "Layla", "Nora", "Riley", "Hannah", "Lillian", "Addison", "Brooklyn",
+    "Natalie", "Leah", "Savannah", "Audrey", "Claire", "Eleanor", "Skylar",
+    "Ellie", "Luna", "Stella", "Hazel", "Violet", "Aurora", "Nova", "Willow"
+  ],
+  "american_texas_southwest": [
+    "Sofia", "Isabella", "Mia", "Emma", "Camila", "Valentina", "Valeria",
+    "Olivia", "Victoria", "Gabriella", "Natalia", "Elena", "Maya", "Luna",
+    "Aria", "Amelia", "Charlotte", "Avery", "Ella", "Grace", "Scarlett",
+    "Emily", "Abigail", "Madison", "Harper", "Evelyn", "Elizabeth", "Layla",
+    "Aaliyah", "Savannah", "Brooklyn", "Kennedy", "Skylar", "Aubrey", "Chloe"
+  ],
+  "black_american": [
+    "Aaliyah", "Imani", "Zuri", "Amara", "Nia", "Layla", "Jasmine", "Jada",
+    "Kiara", "Amaya", "Janae", "Aliyah", "Sanaa", "Zara", "Kyla", "Mya",
+    "Aniya", "Taniyah", "Kamari", "Ayanna", "Makenna", "Amani", "Nyla",
+    "Saniyah", "Zion", "Kendra", "Jamila", "Ayana", "Amira", "Tiana",
+    "Kamryn", "Maliyah", "Naomi", "Aaliya", "Kennedy", "Trinity", "Destiny",
+    "Diamond", "India", "Angel", "Asia", "Serenity", "Heaven", "Nevaeh"
+  ],
+  "latino_hispanic": [
+    "Sofia", "Isabella", "Camila", "Valentina", "Valeria", "Gabriela",
+    "Mariana", "Daniela", "Victoria", "Ximena", "Natalia", "Elena", "Maria",
+    "Lucia", "Sara", "Julia", "Renata", "Fernanda", "Andrea", "Paula",
+    "Carolina", "Catalina", "Ana", "Isabela", "Alejandra", "Angelina",
+    "Adriana", "Juliana", "Mia", "Emma", "Luna", "Maya", "Ariana", "Martina",
+    "Emilia", "Regina", "Bianca", "Miranda", "Carmen", "Alicia", "Rosa"
+  ],
+  "asian_american": [
+    "Emily", "Jessica", "Michelle", "Jennifer", "Amy", "Angela", "Stephanie",
+    "Christina", "Ashley", "Nicole", "Sarah", "Rachel", "Hannah", "Grace",
+    "Sophia", "Olivia", "Emma", "Ava", "Mia", "Madison", "Chloe", "Lily",
+    "Victoria", "Audrey", "Claire", "Natalie", "Sophie", "Maya", "Anna",
+    "Elena", "Julia", "Alyssa", "Samantha", "Katherine", "Lauren", "Rebecca"
+  ],
+  "australian": [
+    "Charlotte", "Olivia", "Ava", "Mia", "Amelia", "Isla", "Ella", "Sophie",
+    "Grace", "Chloe", "Emily", "Ruby", "Lily", "Zoe", "Lucy", "Hannah",
+    "Sienna", "Sophia", "Matilda", "Layla", "Evie", "Indiana", "Harper",
+    "Abigail", "Madison", "Willow", "Ivy", "Poppy", "Scarlett", "Jasmine",
+    "Zara", "Imogen", "Stella", "Maya", "Georgia", "Isabella", "Piper",
+    "Mackenzie", "Emma", "Erin", "Holly", "Tessa", "Freya", "Tahlia"
+  ],
+  "pacific_islander": [
+    "Leilani", "Makenna", "Kailani", "Moana", "Talia", "Lia", "Malia", "Kayla",
+    "Kiana", "Alana", "Laila", "Nani", "Keani", "Mahina", "Kaila", "Leila",
+    "Kalani", "Noelani", "Kaia", "Mele", "Anela", "Keala", "Nalani", "Makana",
+    "Aroha", "Anahera", "Kiri", "Ataahua", "Mere", "Hine", "Wai", "Marama",
+    "Tui", "Hana", "Moana", "Aria", "Maia", "Tiana", "Vai", "Sina"
+  ],
+  "irish_european": [
+    "Aoife", "Saoirse", "Niamh", "Ciara", "Aisling", "Maeve", "Roisin",
+    "Caoimhe", "Siobhan", "Fiona", "Orla", "Sinead", "Cara", "Erin",
+    "Bridget", "Maureen", "Keira", "Molly", "Nora", "Kate", "Mary",
+    "Grace", "Catherine", "Margaret", "Elizabeth", "Sarah", "Emma",
+    "Olivia", "Sophie", "Lucy", "Charlotte", "Amelia", "Ella", "Emily"
+  ]
+}
