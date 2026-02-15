@@ -11,7 +11,6 @@ https://www.reddit.com/r/CFB/comments/1r4qgd3/what_if_the_entire_1894_yale_team_
 The discussion raised a key question:
 If early teams played under rules closer to their own era—no forward pass, heavier kicking, fewer specialized roles—what would a modern version of that game look like?
 
-This repository is an attempt to answer that question by defining a coherent, playable ruleset for a version of football that evolved differently.
 
 ---
 
