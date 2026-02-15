@@ -1,0 +1,62 @@
+# Viperball Simulation Sandbox
+
+## Overview
+Browser-accessible simulation sandbox for the Collegiate Viperball League (CVL) engine. Designed for playtesting, debugging, and tuning game mechanics from phone, tablet, or laptop.
+
+This is NOT a consumer app — it's a playtest + debugging environment.
+
+## Architecture
+
+```
+engine/           - Core Python simulation engine
+  game_engine.py  - Main simulation logic (ViperballEngine, styles, play families)
+  box_score.py    - Box score generation
+  poll_system.py  - Poll/ranking system
+  __init__.py     - Package exports
+api/              - FastAPI REST endpoints (standalone API access)
+  main.py         - /simulate, /simulate_many, /debug/play, /teams
+ui/               - Streamlit web UI
+  app.py          - 3-page sandbox (Game Simulator, Debug Tools, Play Inspector)
+data/teams/       - Team JSON files (7 teams)
+main.py           - Entry point (launches Streamlit on port 5000)
+.streamlit/       - Streamlit configuration
+```
+
+## Running
+The app runs via `python main.py` which launches Streamlit on port 5000.
+
+## Key Features
+
+### Engine
+- **Style System**: 5 offense styles (power_option, lateral_spread, territorial, option_spread, balanced)
+- **Play Families**: dive_option, speed_option, sweep_option, lateral_spread, territory_kick
+- **Deterministic Seeds**: Every sim accepts a seed for reproducibility
+- **Scoring**: Touchdowns = 9pts, Drop Kicks = 5pts, Place Kicks = 3pts
+- **Fatigue tracking**: Per-play fatigue logged in play-by-play
+
+### UI Pages
+1. **Game Simulator** - Pick teams, styles, seed → get box score + play log
+2. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates
+3. **Play Inspector** - Run single plays repeatedly with situation controls
+
+### API Endpoints
+- `POST /simulate` - Single game
+- `POST /simulate_many` - Batch games with averages
+- `POST /debug/play` - Single play resolution
+- `GET /teams` - List teams + styles
+
+## Teams Available
+creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
+
+## Recent Changes
+- 2026-02-15: Built complete sandbox (engine styles, FastAPI, Streamlit UI)
+- Touchdowns changed from 6pts to 9pts
+- Added play family system replacing random play selection
+- Added field position flip on turnovers
+- Fixed kickoff possession after scoring plays
+
+## Tech Stack
+- Python 3.11
+- Streamlit (UI)
+- FastAPI (API)
+- Plotly + Pandas (charts/data)
