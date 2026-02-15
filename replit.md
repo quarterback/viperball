@@ -54,8 +54,11 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
    - Drive outcome panel: table of all drives + outcome distribution chart
    - Play log: position-tagged descriptions with quarter filter
    - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params
+   - Export: download box score (.md), play log (.csv), drives (.csv), full JSON
 2. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates, drive outcome aggregation
+   - Export: batch summary (.csv), all games (.json), full data + plays (.json)
 3. **Play Inspector** - Run single plays repeatedly with situation controls
+   - Export: play results (.csv)
 
 ### API Endpoints
 - `POST /simulate` - Single game

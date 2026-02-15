@@ -2,6 +2,9 @@ import sys
 import os
 import random
 import json
+import io
+import csv
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -65,6 +68,140 @@ def format_time(seconds):
     m = seconds // 60
     s = seconds % 60
     return f"{m:02d}:{s:02d}"
+
+
+def generate_box_score_markdown(result):
+    home = result["final_score"]["home"]
+    away = result["final_score"]["away"]
+    hs = result["stats"]["home"]
+    as_ = result["stats"]["away"]
+    plays = result["play_by_play"]
+
+    home_q = {1: 0, 2: 0, 3: 0, 4: 0}
+    away_q = {1: 0, 2: 0, 3: 0, 4: 0}
+    for p in plays:
+        q = p["quarter"]
+        if q not in home_q:
+            continue
+        if p["result"] == "touchdown":
+            if p["possession"] == "home":
+                home_q[q] += 9
+            else:
+                away_q[q] += 9
+        elif p["result"] == "successful_kick":
+            pts = 5 if p["play_type"] == "drop_kick" else 3
+            if p["possession"] == "home":
+                home_q[q] += pts
+            else:
+                away_q[q] += pts
+
+    lines = []
+    lines.append(f"# {home['team']} vs {away['team']}")
+    lines.append(f"**Seed:** {result.get('seed', 'N/A')}")
+    lines.append("")
+    lines.append("## Score")
+    lines.append(f"| Team | Q1 | Q2 | Q3 | Q4 | Final |")
+    lines.append(f"|------|----|----|----|----|-------|")
+    lines.append(f"| {home['team']} | {home_q[1]} | {home_q[2]} | {home_q[3]} | {home_q[4]} | **{home['score']}** |")
+    lines.append(f"| {away['team']} | {away_q[1]} | {away_q[2]} | {away_q[3]} | {away_q[4]} | **{away['score']}** |")
+    lines.append("")
+
+    lines.append("## Team Stats")
+    lines.append(f"| Stat | {home['team']} | {away['team']} |")
+    lines.append(f"|------|{'---:|' * 2}")
+    lines.append(f"| Touchdowns (9pts) | {hs['touchdowns']} ({hs['touchdowns']*9}pts) | {as_['touchdowns']} ({as_['touchdowns']*9}pts) |")
+    lines.append(f"| Drop Kicks (5pts) | {hs['drop_kicks_made']} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']} ({as_['drop_kicks_made']*5}pts) |")
+    lines.append(f"| Place Kicks (3pts) | {hs['place_kicks_made']} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']} ({as_['place_kicks_made']*3}pts) |")
+    lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
+    lines.append(f"| Yards/Play | {hs['yards_per_play']} | {as_['yards_per_play']} |")
+    lines.append(f"| Total Plays | {hs['total_plays']} | {as_['total_plays']} |")
+    lines.append(f"| Lateral Chains | {hs['lateral_chains']} | {as_['lateral_chains']} |")
+    lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
+    lines.append(f"| Turnovers on Downs | {hs['turnovers_on_downs']} | {as_['turnovers_on_downs']} |")
+    lines.append(f"| Avg Fatigue | {hs['avg_fatigue']}% | {as_['avg_fatigue']}% |")
+    lines.append("")
+
+    drives = result.get("drive_summary", [])
+    if drives:
+        lines.append("## Drive Summary")
+        lines.append("| # | Team | Qtr | Start | Plays | Yards | Result |")
+        lines.append("|---|------|-----|-------|-------|-------|--------|")
+        for i, d in enumerate(drives):
+            team_label = home['team'] if d['team'] == 'home' else away['team']
+            lines.append(f"| {i+1} | {team_label} | Q{d['quarter']} | {d['start_yard_line']}yd | {d['plays']} | {d['yards']} | {drive_result_label(d['result'])} |")
+        lines.append("")
+
+    lines.append("## Play-by-Play")
+    lines.append("| # | Team | Qtr | Time | Down | Pos | Family | Description | Yds | Result |")
+    lines.append("|---|------|-----|------|------|-----|--------|-------------|-----|--------|")
+    for p in plays:
+        team_label = home['team'] if p['possession'] == 'home' else away['team']
+        time_str = format_time(p['time_remaining'])
+        lines.append(f"| {p['play_number']} | {team_label} | Q{p['quarter']} | {time_str} | {p['down']}&{p.get('yards_to_go','')} | {p['field_position']}yd | {p.get('play_family','')} | {p['description']} | {p['yards']} | {p['result']} |")
+
+    return "\n".join(lines)
+
+
+def generate_play_log_csv(result):
+    plays = result["play_by_play"]
+    home_name = result["final_score"]["home"]["team"]
+    away_name = result["final_score"]["away"]["team"]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["play_number", "team", "quarter", "time", "down", "yards_to_go",
+                     "field_position", "play_family", "play_type", "description",
+                     "yards", "result", "fatigue", "laterals"])
+    for p in plays:
+        team_label = home_name if p["possession"] == "home" else away_name
+        writer.writerow([
+            p["play_number"], team_label, p["quarter"], format_time(p["time_remaining"]),
+            p["down"], p.get("yards_to_go", ""), p["field_position"],
+            p.get("play_family", ""), p.get("play_type", ""), p["description"],
+            p["yards"], p["result"], p.get("fatigue", ""), p.get("laterals", 0)
+        ])
+    return output.getvalue()
+
+
+def generate_drives_csv(result):
+    drives = result.get("drive_summary", [])
+    home_name = result["final_score"]["home"]["team"]
+    away_name = result["final_score"]["away"]["team"]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["drive_number", "team", "quarter", "start_yard_line", "plays", "yards", "result"])
+    for i, d in enumerate(drives):
+        team_label = home_name if d["team"] == "home" else away_name
+        writer.writerow([i + 1, team_label, d["quarter"], d["start_yard_line"],
+                         d["plays"], d["yards"], d["result"]])
+    return output.getvalue()
+
+
+def generate_batch_summary_csv(results):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["game", "seed", "home_team", "away_team", "home_score", "away_score",
+                     "home_yards", "away_yards", "home_tds", "away_tds",
+                     "home_fumbles", "away_fumbles", "home_plays", "away_plays",
+                     "total_drives", "winner"])
+    for i, r in enumerate(results):
+        h = r["final_score"]["home"]
+        a = r["final_score"]["away"]
+        hs = r["stats"]["home"]
+        as_ = r["stats"]["away"]
+        winner = h["team"] if h["score"] > a["score"] else (a["team"] if a["score"] > h["score"] else "TIE")
+        writer.writerow([
+            i + 1, r.get("seed", ""), h["team"], a["team"], h["score"], a["score"],
+            hs["total_yards"], as_["total_yards"], hs["touchdowns"], as_["touchdowns"],
+            hs["fumbles_lost"], as_["fumbles_lost"], hs["total_plays"], as_["total_plays"],
+            len(r.get("drive_summary", [])), winner
+        ])
+    return output.getvalue()
+
+
+def safe_filename(name):
+    return name.lower().replace(" ", "_").replace("'", "")
 
 
 def drive_result_label(result):
@@ -176,6 +313,50 @@ if page == "Game Simulator":
             st.success(f"{away_name} wins by {away_score - home_score}")
         else:
             st.info("Game ended in a tie")
+
+        # ====== EXPORT SECTION ======
+        st.subheader("Export Game Data")
+        home_safe = safe_filename(home_name)
+        away_safe = safe_filename(away_name)
+        game_tag = f"{home_safe}_vs_{away_safe}_s{actual_seed}"
+
+        ex1, ex2, ex3, ex4 = st.columns(4)
+        with ex1:
+            md_content = generate_box_score_markdown(result)
+            st.download_button(
+                "Box Score (.md)",
+                data=md_content,
+                file_name=f"{game_tag}_box_score.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        with ex2:
+            csv_plays = generate_play_log_csv(result)
+            st.download_button(
+                "Play Log (.csv)",
+                data=csv_plays,
+                file_name=f"{game_tag}_plays.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        with ex3:
+            csv_drives = generate_drives_csv(result)
+            st.download_button(
+                "Drives (.csv)",
+                data=csv_drives,
+                file_name=f"{game_tag}_drives.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        with ex4:
+            json_str = json.dumps(result, indent=2, default=str)
+            st.download_button(
+                "Full JSON",
+                data=json_str,
+                file_name=f"{game_tag}_full.json",
+                mime="application/json",
+                use_container_width=True,
+            )
 
         # ====== 1. REAL BOX SCORE ======
         st.subheader("Box Score")
@@ -452,6 +633,44 @@ elif page == "Debug Tools":
         st.divider()
         st.subheader(f"Results: {n} Simulations")
 
+        home_safe = safe_filename(home_name)
+        away_safe = safe_filename(away_name)
+        batch_tag = f"batch_{home_safe}_vs_{away_safe}_{n}sims"
+
+        bex1, bex2, bex3 = st.columns(3)
+        with bex1:
+            batch_csv = generate_batch_summary_csv(results)
+            st.download_button(
+                "Batch Summary (.csv)",
+                data=batch_csv,
+                file_name=f"{batch_tag}_summary.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        with bex2:
+            all_batch_json = json.dumps([{
+                "game": i + 1,
+                "final_score": r["final_score"],
+                "stats": r["stats"],
+                "drive_summary": r.get("drive_summary", []),
+            } for i, r in enumerate(results)], indent=2, default=str)
+            st.download_button(
+                "All Games (.json)",
+                data=all_batch_json,
+                file_name=f"{batch_tag}_all.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+        with bex3:
+            full_batch_json = json.dumps(results, indent=2, default=str)
+            st.download_button(
+                "Full Data + Plays (.json)",
+                data=full_batch_json,
+                file_name=f"{batch_tag}_full.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+
         m1, m2, m3, m4 = st.columns(4)
         m1.metric(f"{home_name} Wins", home_wins)
         m2.metric(f"{away_name} Wins", away_wins)
@@ -610,6 +829,23 @@ elif page == "Play Inspector":
 
         st.divider()
         st.subheader(f"Results: {n} Plays")
+
+        pi_output = io.StringIO()
+        pi_writer = csv.writer(pi_output)
+        pi_writer.writerow(["run", "play_family", "play_type", "yards", "result",
+                            "description", "fatigue", "field_position"])
+        for pr in play_results:
+            pi_writer.writerow([
+                pr.get("run_number", ""), pr.get("play_family", ""), pr.get("play_type", ""),
+                pr["yards"], pr["result"], pr.get("description", ""),
+                pr.get("fatigue", ""), pr.get("field_position", "")
+            ])
+        st.download_button(
+            "Export Plays (.csv)",
+            data=pi_output.getvalue(),
+            file_name=f"play_inspector_{n}plays.csv",
+            mime="text/csv",
+        )
 
         yards_list = [p["yards"] for p in play_results]
         results_list = [p["result"] for p in play_results]
