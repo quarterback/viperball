@@ -157,9 +157,16 @@ OFFENSE_STYLES = {
             "territory_kick": 0.35,
         },
         "tempo": 0.5,
-        "lateral_risk": 0.3,
+        "lateral_risk": 0.8,
         "kick_rate": 0.35,
         "option_rate": 0.55,
+        "run_bonus": 0.10,
+        "fatigue_resistance": 0.05,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.0,
+        "pindown_bonus": 0.0,
     },
     "lateral_spread": {
         "label": "Lateral Spread",
@@ -172,9 +179,18 @@ OFFENSE_STYLES = {
             "territory_kick": 0.32,
         },
         "tempo": 0.7,
-        "lateral_risk": 0.6,
+        "lateral_risk": 1.4,
         "kick_rate": 0.32,
         "option_rate": 0.25,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.20,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.0,
+        "pindown_bonus": 0.0,
+        "lateral_success_bonus": 0.10,
+        "tired_def_yardage_bonus": 0.05,
     },
     "territorial": {
         "label": "Territorial",
@@ -187,9 +203,16 @@ OFFENSE_STYLES = {
             "territory_kick": 0.65,
         },
         "tempo": 0.3,
-        "lateral_risk": 0.2,
+        "lateral_risk": 0.8,
         "kick_rate": 0.55,
         "option_rate": 0.25,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.10,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.0,
+        "pindown_bonus": 0.15,
     },
     "option_spread": {
         "label": "Option Spread",
@@ -202,9 +225,17 @@ OFFENSE_STYLES = {
             "territory_kick": 0.29,
         },
         "tempo": 0.8,
-        "lateral_risk": 0.5,
+        "lateral_risk": 1.25,
         "kick_rate": 0.29,
         "option_rate": 0.50,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.15,
+        "broken_play_bonus": 0.10,
+        "pindown_bonus": 0.0,
+        "tired_def_broken_play_bonus": 0.10,
     },
     "balanced": {
         "label": "Balanced",
@@ -217,9 +248,16 @@ OFFENSE_STYLES = {
             "territory_kick": 0.48,
         },
         "tempo": 0.5,
-        "lateral_risk": 0.4,
+        "lateral_risk": 1.0,
         "kick_rate": 0.48,
         "option_rate": 0.40,
+        "run_bonus": 0.05,
+        "fatigue_resistance": 0.025,
+        "kick_accuracy_bonus": 0.05,
+        "explosive_lateral_bonus": 0.05,
+        "option_read_bonus": 0.05,
+        "broken_play_bonus": 0.05,
+        "pindown_bonus": 0.05,
     },
 }
 
@@ -406,13 +444,13 @@ class ViperballEngine:
         weights = dict(style["weights"])
 
         if self.state.down >= 3 and self.state.yards_to_go >= 15:
-            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.25
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.12
         if self.state.down >= 4:
-            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.20
-        if self.state.field_position <= 30:
-            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.15
-        if self.state.field_position >= 55:
             weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.10
+        if self.state.field_position <= 30:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.08
+        if self.state.field_position >= 55:
+            weights["territory_kick"] = weights.get("territory_kick", 0.3) + 0.05
 
         families = list(PlayFamily)
         w = [weights.get(f.value, 0.2) for f in families]
@@ -478,13 +516,34 @@ class ViperballEngine:
             base_yards = random.gauss(4.5, 3.5)
             action = "run"
 
+        style = self._current_style()
         strength_factor = team.avg_speed / 90
         fatigue_factor = self.get_fatigue_factor()
+        fatigue_resistance = style.get("fatigue_resistance", 0.0)
+        fatigue_factor = min(1.0, fatigue_factor + fatigue_resistance)
         viper_factor = self.calculate_viper_impact()
         def_fatigue = self._defensive_fatigue_factor()
 
-        yards_gained = int(base_yards * strength_factor * fatigue_factor * viper_factor * def_fatigue)
+        run_bonus = style.get("run_bonus", 0.0)
+        if family in (PlayFamily.DIVE_OPTION, PlayFamily.SWEEP_OPTION):
+            run_bonus_factor = 1.0 + run_bonus
+        else:
+            run_bonus_factor = 1.0
+
+        option_read_bonus = style.get("option_read_bonus", 0.0)
+        if family in (PlayFamily.SPEED_OPTION, PlayFamily.DIVE_OPTION) and option_read_bonus > 0:
+            run_bonus_factor *= (1.0 + option_read_bonus)
+
+        yards_gained = int(base_yards * strength_factor * fatigue_factor * viper_factor * def_fatigue * run_bonus_factor)
         yards_gained = max(-5, min(yards_gained, 30))
+
+        broken_play_bonus = style.get("broken_play_bonus", 0.0)
+        tired_def_broken = style.get("tired_def_broken_play_bonus", 0.0)
+        if def_fatigue > 1.0 and tired_def_broken > 0:
+            broken_play_bonus += tired_def_broken
+        if broken_play_bonus > 0 and yards_gained >= 8:
+            if random.random() < broken_play_bonus:
+                yards_gained += random.randint(5, 15)
 
         yards_gained = self._breakaway_check(yards_gained, team)
 
@@ -571,17 +630,24 @@ class ViperballEngine:
 
         base_fumble_prob = random.uniform(0.08, 0.12)
         fumble_prob = base_fumble_prob
-        fumble_prob += (chain_length - 1) * 0.06
+        fumble_prob += (chain_length - 1) * 0.03
         if self.drive_play_count >= 3:
-            fumble_prob += random.uniform(0.08, 0.10)
+            fumble_prob += random.uniform(0.04, 0.06)
         if chain_length >= 3:
-            fumble_prob += 0.08
+            fumble_prob += 0.04
         if chain_length >= 4:
-            fumble_prob += 0.06
+            fumble_prob += 0.04
         fatigue_factor_lat = self.get_fatigue_factor()
         if fatigue_factor_lat < 0.9:
-            fumble_prob += 0.07
-        fumble_prob *= (1 + style["lateral_risk"] * 0.25)
+            fumble_prob += 0.05
+
+        tempo = style.get("tempo", 0.5)
+        fumble_prob *= (1 + (tempo - 0.5) * 0.10)
+
+        lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
+        fumble_prob *= (1 - lateral_success_bonus)
+
+        fumble_prob *= style.get("lateral_risk", 1.0)
         prof_reduction = max(0.85, team.lateral_proficiency / 100)
         fumble_prob /= prof_reduction
 
@@ -620,10 +686,15 @@ class ViperballEngine:
         viper_factor = self.calculate_viper_impact()
         def_fatigue = self._defensive_fatigue_factor()
 
+        tired_def_yardage = style.get("tired_def_yardage_bonus", 0.0)
+        if def_fatigue > 1.0 and tired_def_yardage > 0:
+            def_fatigue += tired_def_yardage
+
         yards_gained = int((base_yards + lateral_bonus) * fatigue_factor * viper_factor * def_fatigue)
         yards_gained = max(-3, min(yards_gained, 40))
 
-        explosive_chance = chain_length * 0.05
+        explosive_lateral_bonus = style.get("explosive_lateral_bonus", 0.0)
+        explosive_chance = chain_length * 0.05 + explosive_lateral_bonus
         if yards_gained >= 10 and random.random() < explosive_chance:
             extra = random.randint(8, 30)
             yards_gained += extra
@@ -733,7 +804,8 @@ class ViperballEngine:
         if landing_position >= 100:
             receiving_team = self.get_defensive_team()
             return_speed = receiving_team.avg_speed
-            can_return_out = random.random() < (return_speed / 110)
+            pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
+            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus)
 
             if can_return_out:
                 self.change_possession()
@@ -841,7 +913,8 @@ class ViperballEngine:
         else:
             distance_factor = max(0.1, 1 - (distance - 30) / 60)
         skill_factor = kicker.kicking / 85
-        success_prob = base_prob * distance_factor * skill_factor
+        kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
+        success_prob = base_prob * distance_factor * skill_factor * (1.0 + kick_acc)
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -867,7 +940,8 @@ class ViperballEngine:
         else:
             if self.state.field_position >= 50:
                 def_team = self.get_defensive_team()
-                can_return = random.random() < (def_team.avg_speed / 115)
+                pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
+                can_return = random.random() < (def_team.avg_speed / 115) * (1.0 - pindown_bonus)
                 if not can_return:
                     kicking_team = self.state.possession
                     self.add_score(1)
@@ -927,7 +1001,8 @@ class ViperballEngine:
         else:
             success_prob = max(0.10, 0.55 - (distance - 50) * 0.02)
         skill_factor = kicker.kicking / 85
-        success_prob *= skill_factor
+        kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
+        success_prob *= skill_factor * (1.0 + kick_acc)
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -953,7 +1028,8 @@ class ViperballEngine:
         else:
             if self.state.field_position >= 50:
                 def_team = self.get_defensive_team()
-                can_return = random.random() < (def_team.avg_speed / 115)
+                pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
+                can_return = random.random() < (def_team.avg_speed / 115) * (1.0 - pindown_bonus)
                 if not can_return:
                     kicking_team = self.state.possession
                     self.add_score(1)
