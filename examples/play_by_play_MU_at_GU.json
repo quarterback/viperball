@@ -1,0 +1,2331 @@
+{
+  "final_score": {
+    "home": {
+      "team": "Gonzaga University",
+      "score": 6
+    },
+    "away": {
+      "team": "Marquette University",
+      "score": 3
+    }
+  },
+  "stats": {
+    "home": {
+      "total_yards": 261,
+      "total_plays": 54,
+      "yards_per_play": 4.83,
+      "lateral_chains": 16,
+      "successful_laterals": 15,
+      "drop_kicks_made": 0,
+      "place_kicks_made": 2,
+      "viper_efficiency": 6.02,
+      "micro_scoring_differential": -6,
+      "lateral_efficiency": 93.8
+    },
+    "away": {
+      "total_yards": 314,
+      "total_plays": 68,
+      "yards_per_play": 4.62,
+      "lateral_chains": 22,
+      "successful_laterals": 22,
+      "drop_kicks_made": 0,
+      "place_kicks_made": 1,
+      "viper_efficiency": 6.03,
+      "micro_scoring_differential": -3,
+      "lateral_efficiency": 100.0
+    }
+  },
+  "play_by_play": [
+    {
+      "play_number": 1,
+      "quarter": 1,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 25,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 2,
+      "quarter": 1,
+      "time_remaining": 879,
+      "possession": "away",
+      "field_position": 25,
+      "down": 3,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Brett Schultz rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 3,
+      "quarter": 1,
+      "time_remaining": 850,
+      "possession": "away",
+      "field_position": 29,
+      "down": 4,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 4,
+      "quarter": 1,
+      "time_remaining": 833,
+      "possession": "away",
+      "field_position": 39,
+      "down": 5,
+      "yards_to_go": 1,
+      "play_type": "lateral_chain",
+      "players": [
+        "Darnell Harris",
+        "Jake Mueller",
+        "Malik Johnson"
+      ],
+      "yards": 10,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 10 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 5,
+      "quarter": 1,
+      "time_remaining": 792,
+      "possession": "home",
+      "field_position": 17,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -44,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 44 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 6,
+      "quarter": 1,
+      "time_remaining": 777,
+      "possession": "away",
+      "field_position": 30,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -53,
+      "result": "punt",
+      "description": "Connor Walsh punts 53 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 7,
+      "quarter": 1,
+      "time_remaining": 734,
+      "possession": "away",
+      "field_position": 35,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 8,
+      "quarter": 1,
+      "time_remaining": 691,
+      "possession": "away",
+      "field_position": 37,
+      "down": 3,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Brett Schultz rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 9,
+      "quarter": 1,
+      "time_remaining": 648,
+      "possession": "away",
+      "field_position": 40,
+      "down": 4,
+      "yards_to_go": 10,
+      "play_type": "lateral_chain",
+      "players": [
+        "Malik Johnson",
+        "Brett Schultz"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 3 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 10,
+      "quarter": 1,
+      "time_remaining": 607,
+      "possession": "away",
+      "field_position": 55,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Antonio Martinez",
+        "Brett Schultz",
+        "Luke Kowalski",
+        "Darnell Harris",
+        "Malik Johnson"
+      ],
+      "yards": 15,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 15 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 11,
+      "quarter": 1,
+      "time_remaining": 590,
+      "possession": "away",
+      "field_position": 61,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Luke Kowalski"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Luke Kowalski rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 12,
+      "quarter": 1,
+      "time_remaining": 570,
+      "possession": "home",
+      "field_position": 39,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Kevin O'Donnell PLACE KICK is NO GOOD from 49 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 13,
+      "quarter": 1,
+      "time_remaining": 551,
+      "possession": "away",
+      "field_position": 61,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh PLACE KICK is NO GOOD from 71 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 14,
+      "quarter": 1,
+      "time_remaining": 522,
+      "possession": "away",
+      "field_position": 65,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brett Schultz",
+        "Luke Kowalski",
+        "Darnell Harris"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 4 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 15,
+      "quarter": 1,
+      "time_remaining": 488,
+      "possession": "away",
+      "field_position": 76,
+      "down": 3,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Antonio Martinez",
+        "Brett Schultz",
+        "Luke Kowalski"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 11 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 16,
+      "quarter": 1,
+      "time_remaining": 457,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -37,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 37 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 17,
+      "quarter": 1,
+      "time_remaining": 430,
+      "possession": "home",
+      "field_position": 2,
+      "down": 2,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 18,
+      "quarter": 1,
+      "time_remaining": 387,
+      "possession": "home",
+      "field_position": 17,
+      "down": 3,
+      "yards_to_go": 4,
+      "play_type": "lateral_chain",
+      "players": [
+        "Andre Davis",
+        "Liam O'Connor",
+        "Noah Peterson",
+        "Blake Anderson",
+        "Connor Walsh"
+      ],
+      "yards": 15,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 15 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 19,
+      "quarter": 1,
+      "time_remaining": 357,
+      "possession": "home",
+      "field_position": 26,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Blake Anderson",
+        "Noah Peterson",
+        "Terrell Jackson",
+        "Liam O'Connor"
+      ],
+      "yards": 9,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 9 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 20,
+      "quarter": 1,
+      "time_remaining": 328,
+      "possession": "home",
+      "field_position": 33,
+      "down": 2,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 21,
+      "quarter": 1,
+      "time_remaining": 283,
+      "possession": "home",
+      "field_position": 38,
+      "down": 3,
+      "yards_to_go": 8,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 22,
+      "quarter": 1,
+      "time_remaining": 260,
+      "possession": "home",
+      "field_position": 44,
+      "down": 4,
+      "yards_to_go": 2,
+      "play_type": "run",
+      "players": [
+        "Liam O'Connor"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Liam O'Connor rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 23,
+      "quarter": 1,
+      "time_remaining": 229,
+      "possession": "home",
+      "field_position": 51,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 7,
+      "result": "first_down",
+      "description": "Isaiah Brown rushes for 7 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 24,
+      "quarter": 1,
+      "time_remaining": 206,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Connor Walsh PLACE KICK is GOOD from 59 yards! +3 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 25,
+      "quarter": 1,
+      "time_remaining": 168,
+      "possession": "home",
+      "field_position": 22,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Blake Anderson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 26,
+      "quarter": 1,
+      "time_remaining": 138,
+      "possession": "home",
+      "field_position": 26,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 27,
+      "quarter": 1,
+      "time_remaining": 110,
+      "possession": "home",
+      "field_position": 28,
+      "down": 4,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Terrell Jackson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 28,
+      "quarter": 1,
+      "time_remaining": 94,
+      "possession": "home",
+      "field_position": 35,
+      "down": 5,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Andre Davis",
+        "Isaiah Brown",
+        "Connor Walsh"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 7 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 29,
+      "quarter": 1,
+      "time_remaining": 76,
+      "possession": "away",
+      "field_position": 12,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -53,
+      "result": "punt",
+      "description": "Connor Walsh punts 53 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 30,
+      "quarter": 1,
+      "time_remaining": 55,
+      "possession": "away",
+      "field_position": 25,
+      "down": 2,
+      "yards_to_go": 7,
+      "play_type": "lateral_chain",
+      "players": [
+        "Luke Kowalski",
+        "Antonio Martinez"
+      ],
+      "yards": 13,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 13 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 31,
+      "quarter": 1,
+      "time_remaining": 18,
+      "possession": "away",
+      "field_position": 25,
+      "down": 3,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 32,
+      "quarter": 2,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 27,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 33,
+      "quarter": 2,
+      "time_remaining": 872,
+      "possession": "home",
+      "field_position": 73,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Kevin O'Donnell DROP KICK is NO GOOD from 83 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 34,
+      "quarter": 2,
+      "time_remaining": 840,
+      "possession": "home",
+      "field_position": 79,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 35,
+      "quarter": 2,
+      "time_remaining": 805,
+      "possession": "home",
+      "field_position": 96,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Andre Davis",
+        "Blake Anderson",
+        "Marcus Lee",
+        "Isaiah Brown",
+        "Liam O'Connor"
+      ],
+      "yards": 17,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 17 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 36,
+      "quarter": 2,
+      "time_remaining": 765,
+      "possession": "away",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -62,
+      "result": "punt",
+      "description": "Connor Walsh punts 62 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 37,
+      "quarter": 2,
+      "time_remaining": 740,
+      "possession": "away",
+      "field_position": 12,
+      "down": 2,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Darnell Harris",
+        "Malik Johnson",
+        "Luke Kowalski"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 11 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 38,
+      "quarter": 2,
+      "time_remaining": 714,
+      "possession": "away",
+      "field_position": 14,
+      "down": 3,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 39,
+      "quarter": 2,
+      "time_remaining": 696,
+      "possession": "away",
+      "field_position": 28,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Antonio Martinez",
+        "Darnell Harris"
+      ],
+      "yards": 14,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 14 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 40,
+      "quarter": 2,
+      "time_remaining": 672,
+      "possession": "away",
+      "field_position": 32,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Brett Schultz rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 41,
+      "quarter": 2,
+      "time_remaining": 644,
+      "possession": "away",
+      "field_position": 46,
+      "down": 3,
+      "yards_to_go": 2,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brett Schultz",
+        "Darnell Harris",
+        "Jake Mueller",
+        "Kevin O'Donnell"
+      ],
+      "yards": 14,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 14 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 42,
+      "quarter": 2,
+      "time_remaining": 613,
+      "possession": "away",
+      "field_position": 46,
+      "down": 4,
+      "yards_to_go": 2,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 43,
+      "quarter": 2,
+      "time_remaining": 597,
+      "possession": "away",
+      "field_position": 47,
+      "down": 5,
+      "yards_to_go": 1,
+      "play_type": "lateral_chain",
+      "players": [
+        "Kevin O'Donnell",
+        "Luke Kowalski"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 1 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 44,
+      "quarter": 2,
+      "time_remaining": 582,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 45,
+      "quarter": 2,
+      "time_remaining": 537,
+      "possession": "home",
+      "field_position": 7,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Liam O'Connor"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Liam O'Connor rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 46,
+      "quarter": 2,
+      "time_remaining": 508,
+      "possession": "home",
+      "field_position": 12,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 47,
+      "quarter": 2,
+      "time_remaining": 474,
+      "possession": "home",
+      "field_position": 29,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Isaiah Brown",
+        "Marcus Lee",
+        "Liam O'Connor",
+        "Connor Walsh",
+        "Noah Peterson"
+      ],
+      "yards": 17,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 17 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 48,
+      "quarter": 2,
+      "time_remaining": 456,
+      "possession": "home",
+      "field_position": 37,
+      "down": 2,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Terrell Jackson rushes for 8 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 49,
+      "quarter": 2,
+      "time_remaining": 412,
+      "possession": "home",
+      "field_position": 41,
+      "down": 3,
+      "yards_to_go": 8,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 50,
+      "quarter": 2,
+      "time_remaining": 367,
+      "possession": "home",
+      "field_position": 46,
+      "down": 4,
+      "yards_to_go": 3,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Terrell Jackson rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 51,
+      "quarter": 2,
+      "time_remaining": 337,
+      "possession": "away",
+      "field_position": 54,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh DROP KICK is NO GOOD from 64 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 52,
+      "quarter": 2,
+      "time_remaining": 306,
+      "possession": "away",
+      "field_position": 54,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Luke Kowalski"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Luke Kowalski rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 53,
+      "quarter": 2,
+      "time_remaining": 289,
+      "possession": "away",
+      "field_position": 57,
+      "down": 3,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 54,
+      "quarter": 2,
+      "time_remaining": 244,
+      "possession": "away",
+      "field_position": 75,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Malik Johnson",
+        "Jake Mueller",
+        "Luke Kowalski",
+        "Darnell Harris"
+      ],
+      "yards": 18,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 18 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 55,
+      "quarter": 2,
+      "time_remaining": 206,
+      "possession": "away",
+      "field_position": 79,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 56,
+      "quarter": 2,
+      "time_remaining": 162,
+      "possession": "away",
+      "field_position": 81,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 57,
+      "quarter": 2,
+      "time_remaining": 139,
+      "possession": "away",
+      "field_position": 94,
+      "down": 4,
+      "yards_to_go": 1,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brett Schultz",
+        "Darnell Harris",
+        "Luke Kowalski",
+        "Kevin O'Donnell"
+      ],
+      "yards": 13,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 13 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 58,
+      "quarter": 2,
+      "time_remaining": 107,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -51,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 51 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 59,
+      "quarter": 2,
+      "time_remaining": 85,
+      "possession": "away",
+      "field_position": 31,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -68,
+      "result": "punt",
+      "description": "Connor Walsh punts 68 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 60,
+      "quarter": 2,
+      "time_remaining": 54,
+      "possession": "away",
+      "field_position": 40,
+      "down": 2,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 9 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 61,
+      "quarter": 2,
+      "time_remaining": 39,
+      "possession": "away",
+      "field_position": 40,
+      "down": 3,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 62,
+      "quarter": 3,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 43,
+      "down": 4,
+      "yards_to_go": 8,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 63,
+      "quarter": 3,
+      "time_remaining": 884,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -58,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 58 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 64,
+      "quarter": 3,
+      "time_remaining": 847,
+      "possession": "home",
+      "field_position": 11,
+      "down": 2,
+      "yards_to_go": 10,
+      "play_type": "lateral_chain",
+      "players": [
+        "Isaiah Brown",
+        "Liam O'Connor",
+        "Terrell Jackson",
+        "Noah Peterson"
+      ],
+      "yards": 10,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 10 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 65,
+      "quarter": 3,
+      "time_remaining": 830,
+      "possession": "home",
+      "field_position": 9,
+      "down": 3,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": -2,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for -2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 66,
+      "quarter": 3,
+      "time_remaining": 785,
+      "possession": "home",
+      "field_position": 13,
+      "down": 4,
+      "yards_to_go": 8,
+      "play_type": "lateral_chain",
+      "players": [
+        "Terrell Jackson",
+        "Andre Davis",
+        "Marcus Lee"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 4 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 67,
+      "quarter": 3,
+      "time_remaining": 746,
+      "possession": "home",
+      "field_position": 17,
+      "down": 5,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 68,
+      "quarter": 3,
+      "time_remaining": 722,
+      "possession": "away",
+      "field_position": 17,
+      "down": 6,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 0,
+      "result": "turnover_on_downs",
+      "description": "Terrell Jackson rushes for 0 yards - TURNOVER ON DOWNS!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 69,
+      "quarter": 3,
+      "time_remaining": 706,
+      "possession": "home",
+      "field_position": 20,
+      "down": 7,
+      "yards_to_go": 1,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 3,
+      "result": "turnover_on_downs",
+      "description": "Brett Schultz rushes for 3 yards - TURNOVER ON DOWNS!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 70,
+      "quarter": 3,
+      "time_remaining": 665,
+      "possession": "home",
+      "field_position": 25,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 5,
+      "result": "first_down",
+      "description": "Connor Walsh rushes for 5 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 71,
+      "quarter": 3,
+      "time_remaining": 621,
+      "possession": "home",
+      "field_position": 36,
+      "down": 2,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Liam O'Connor",
+        "Noah Peterson",
+        "Terrell Jackson",
+        "Blake Anderson"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 11 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 72,
+      "quarter": 3,
+      "time_remaining": 601,
+      "possession": "home",
+      "field_position": 43,
+      "down": 3,
+      "yards_to_go": 2,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Blake Anderson rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 73,
+      "quarter": 3,
+      "time_remaining": 578,
+      "possession": "away",
+      "field_position": 19,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -38,
+      "result": "punt",
+      "description": "Connor Walsh punts 38 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 74,
+      "quarter": 3,
+      "time_remaining": 541,
+      "possession": "away",
+      "field_position": 19,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Brett Schultz rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 75,
+      "quarter": 3,
+      "time_remaining": 516,
+      "possession": "away",
+      "field_position": 25,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Luke Kowalski"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Luke Kowalski rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 76,
+      "quarter": 3,
+      "time_remaining": 498,
+      "possession": "away",
+      "field_position": 34,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Malik Johnson",
+        "Luke Kowalski"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 9 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 77,
+      "quarter": 3,
+      "time_remaining": 480,
+      "possession": "home",
+      "field_position": 25,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -41,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 41 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 78,
+      "quarter": 3,
+      "time_remaining": 454,
+      "possession": "home",
+      "field_position": 23,
+      "down": 2,
+      "yards_to_go": 22,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": -2,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for -2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 79,
+      "quarter": 3,
+      "time_remaining": 413,
+      "possession": "home",
+      "field_position": 40,
+      "down": 3,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Blake Anderson",
+        "Connor Walsh",
+        "Noah Peterson",
+        "Marcus Lee",
+        "Andre Davis"
+      ],
+      "yards": 17,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 17 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 80,
+      "quarter": 3,
+      "time_remaining": 387,
+      "possession": "home",
+      "field_position": 41,
+      "down": 4,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Liam O'Connor"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Liam O'Connor rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 81,
+      "quarter": 3,
+      "time_remaining": 361,
+      "possession": "away",
+      "field_position": 22,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -37,
+      "result": "punt",
+      "description": "Connor Walsh punts 37 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 82,
+      "quarter": 3,
+      "time_remaining": 335,
+      "possession": "away",
+      "field_position": 24,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 83,
+      "quarter": 3,
+      "time_remaining": 313,
+      "possession": "home",
+      "field_position": 28,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -48,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 48 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 84,
+      "quarter": 3,
+      "time_remaining": 278,
+      "possession": "away",
+      "field_position": 72,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh DROP KICK is NO GOOD from 82 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 85,
+      "quarter": 3,
+      "time_remaining": 257,
+      "possession": "away",
+      "field_position": 72,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 86,
+      "quarter": 3,
+      "time_remaining": 225,
+      "possession": "away",
+      "field_position": 83,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brett Schultz",
+        "Darnell Harris"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 11 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 87,
+      "quarter": 3,
+      "time_remaining": 199,
+      "possession": "away",
+      "field_position": 87,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "run",
+      "players": [
+        "Brett Schultz"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Brett Schultz rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 88,
+      "quarter": 3,
+      "time_remaining": 158,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Kevin O'Donnell PLACE KICK is GOOD from 23 yards! +3 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 89,
+      "quarter": 3,
+      "time_remaining": 135,
+      "possession": "away",
+      "field_position": 24,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 90,
+      "quarter": 3,
+      "time_remaining": 95,
+      "possession": "away",
+      "field_position": 28,
+      "down": 3,
+      "yards_to_go": 12,
+      "play_type": "lateral_chain",
+      "players": [
+        "Kevin O'Donnell",
+        "Tyrone Washington"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 4 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 91,
+      "quarter": 3,
+      "time_remaining": 63,
+      "possession": "home",
+      "field_position": 72,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Kevin O'Donnell DROP KICK is NO GOOD from 82 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 92,
+      "quarter": 3,
+      "time_remaining": 30,
+      "possession": "home",
+      "field_position": 80,
+      "down": 2,
+      "yards_to_go": 12,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Terrell Jackson",
+        "Liam O'Connor",
+        "Isaiah Brown"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 8 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 93,
+      "quarter": 3,
+      "time_remaining": 7,
+      "possession": "home",
+      "field_position": 89,
+      "down": 3,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Terrell Jackson",
+        "Connor Walsh",
+        "Andre Davis"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 9 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 94,
+      "quarter": 4,
+      "time_remaining": 900,
+      "possession": "home",
+      "field_position": 97,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Blake Anderson"
+      ],
+      "yards": 8,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 8 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 95,
+      "quarter": 4,
+      "time_remaining": 863,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Connor Walsh PLACE KICK is GOOD from 13 yards! +3 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 96,
+      "quarter": 4,
+      "time_remaining": 822,
+      "possession": "away",
+      "field_position": 27,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -53,
+      "result": "punt",
+      "description": "Connor Walsh punts 53 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 97,
+      "quarter": 4,
+      "time_remaining": 785,
+      "possession": "away",
+      "field_position": 41,
+      "down": 2,
+      "yards_to_go": 6,
+      "play_type": "lateral_chain",
+      "players": [
+        "Jake Mueller",
+        "Malik Johnson",
+        "Luke Kowalski",
+        "Darnell Harris",
+        "Kevin O'Donnell"
+      ],
+      "yards": 14,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 14 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 98,
+      "quarter": 4,
+      "time_remaining": 763,
+      "possession": "away",
+      "field_position": 41,
+      "down": 3,
+      "yards_to_go": 6,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 99,
+      "quarter": 4,
+      "time_remaining": 733,
+      "possession": "away",
+      "field_position": 53,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Kevin O'Donnell",
+        "Antonio Martinez",
+        "Tyrone Washington",
+        "Darnell Harris",
+        "Jake Mueller"
+      ],
+      "yards": 12,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 12 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 100,
+      "quarter": 4,
+      "time_remaining": 702,
+      "possession": "home",
+      "field_position": 47,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Kevin O'Donnell DROP KICK is NO GOOD from 57 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 101,
+      "quarter": 4,
+      "time_remaining": 686,
+      "possession": "away",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -66,
+      "result": "punt",
+      "description": "Connor Walsh punts 66 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 102,
+      "quarter": 4,
+      "time_remaining": 663,
+      "possession": "away",
+      "field_position": 5,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 103,
+      "quarter": 4,
+      "time_remaining": 635,
+      "possession": "away",
+      "field_position": 24,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Darnell Harris",
+        "Jake Mueller",
+        "Antonio Martinez"
+      ],
+      "yards": 19,
+      "result": "first_down",
+      "description": "Lateral chain with 3 players for 19 yards - FIRST DOWN!",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 104,
+      "quarter": 4,
+      "time_remaining": 598,
+      "possession": "away",
+      "field_position": 28,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Darnell Harris"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Darnell Harris rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 105,
+      "quarter": 4,
+      "time_remaining": 555,
+      "possession": "away",
+      "field_position": 33,
+      "down": 3,
+      "yards_to_go": 11,
+      "play_type": "lateral_chain",
+      "players": [
+        "Antonio Martinez",
+        "Kevin O'Donnell",
+        "Jake Mueller",
+        "Darnell Harris"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 5 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 106,
+      "quarter": 4,
+      "time_remaining": 518,
+      "possession": "away",
+      "field_position": 39,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Kevin O'Donnell",
+        "Luke Kowalski",
+        "Malik Johnson",
+        "Antonio Martinez"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 6 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 107,
+      "quarter": 4,
+      "time_remaining": 475,
+      "possession": "away",
+      "field_position": 50,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Darnell Harris",
+        "Kevin O'Donnell",
+        "Luke Kowalski"
+      ],
+      "yards": 11,
+      "result": "first_down",
+      "description": "Lateral chain with 3 players for 11 yards - FIRST DOWN!",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 108,
+      "quarter": 4,
+      "time_remaining": 431,
+      "possession": "away",
+      "field_position": 52,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Malik Johnson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Malik Johnson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 109,
+      "quarter": 4,
+      "time_remaining": 408,
+      "possession": "away",
+      "field_position": 59,
+      "down": 3,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Luke Kowalski"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Luke Kowalski rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 110,
+      "quarter": 4,
+      "time_remaining": 382,
+      "possession": "home",
+      "field_position": 54,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Antonio Martinez",
+        "Darnell Harris"
+      ],
+      "yards": 5,
+      "result": "fumble",
+      "description": "Lateral chain with 2 players - FUMBLE! Recovered by defense",
+      "laterals": 2,
+      "fumble": true
+    },
+    {
+      "play_number": 111,
+      "quarter": 4,
+      "time_remaining": 338,
+      "possession": "home",
+      "field_position": 57,
+      "down": 4,
+      "yards_to_go": 8,
+      "play_type": "lateral_chain",
+      "players": [
+        "Liam O'Connor",
+        "Noah Peterson",
+        "Andre Davis"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 3 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 112,
+      "quarter": 4,
+      "time_remaining": 307,
+      "possession": "home",
+      "field_position": 58,
+      "down": 5,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Blake Anderson rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 113,
+      "quarter": 4,
+      "time_remaining": 279,
+      "possession": "away",
+      "field_position": 62,
+      "down": 6,
+      "yards_to_go": 3,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 4,
+      "result": "turnover_on_downs",
+      "description": "Blake Anderson rushes for 4 yards - TURNOVER ON DOWNS!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 114,
+      "quarter": 4,
+      "time_remaining": 260,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -42,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 42 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 115,
+      "quarter": 4,
+      "time_remaining": 233,
+      "possession": "home",
+      "field_position": 18,
+      "down": 2,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Connor Walsh",
+        "Noah Peterson",
+        "Andre Davis",
+        "Terrell Jackson",
+        "Marcus Lee"
+      ],
+      "yards": 17,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 17 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 116,
+      "quarter": 4,
+      "time_remaining": 216,
+      "possession": "away",
+      "field_position": 44,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -38,
+      "result": "punt",
+      "description": "Connor Walsh punts 38 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 117,
+      "quarter": 4,
+      "time_remaining": 195,
+      "possession": "away",
+      "field_position": 52,
+      "down": 2,
+      "yards_to_go": 12,
+      "play_type": "lateral_chain",
+      "players": [
+        "Malik Johnson",
+        "Tyrone Washington",
+        "Antonio Martinez",
+        "Brett Schultz",
+        "Darnell Harris"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 8 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 118,
+      "quarter": 4,
+      "time_remaining": 158,
+      "possession": "away",
+      "field_position": 52,
+      "down": 3,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Jake Mueller"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jake Mueller rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 119,
+      "quarter": 4,
+      "time_remaining": 115,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Kevin O'Donnell"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Kevin O'Donnell punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 120,
+      "quarter": 4,
+      "time_remaining": 76,
+      "possession": "home",
+      "field_position": 5,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 121,
+      "quarter": 4,
+      "time_remaining": 32,
+      "possession": "home",
+      "field_position": 16,
+      "down": 3,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Connor Walsh",
+        "Blake Anderson",
+        "Terrell Jackson"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 11 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 122,
+      "quarter": 4,
+      "time_remaining": 8,
+      "possession": "away",
+      "field_position": 38,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -46,
+      "result": "punt",
+      "description": "Connor Walsh punts 46 yards",
+      "laterals": null,
+      "fumble": null
+    }
+  ]
+}

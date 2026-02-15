@@ -1,0 +1,179 @@
+{
+  "team_info": {
+    "school": "Gonzaga University",
+    "abbreviation": "GU",
+    "mascot": "Bulldogs",
+    "conference": "Coastal Vanguard",
+    "city": "Spokane",
+    "state": "WA",
+    "colors": ["Blue", "Red", "White"]
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 3,
+        "name": "Connor Walsh",
+        "position": "Viper/Back",
+        "height": "6-0",
+        "weight": 188,
+        "year": "Senior",
+        "stats": {
+          "speed": 93,
+          "stamina": 91,
+          "kicking": 90,
+          "lateral_skill": 89,
+          "tackling": 77
+        }
+      },
+      {
+        "number": 4,
+        "name": "Terrell Jackson",
+        "position": "Back/Safety",
+        "height": "5-11",
+        "weight": 186,
+        "year": "Junior",
+        "stats": {
+          "speed": 94,
+          "stamina": 87,
+          "kicking": 81,
+          "lateral_skill": 91,
+          "tackling": 79
+        }
+      },
+      {
+        "number": 6,
+        "name": "Blake Anderson",
+        "position": "Wing/End",
+        "height": "6-2",
+        "weight": 198,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 86,
+          "stamina": 89,
+          "kicking": 74,
+          "lateral_skill": 80,
+          "tackling": 85
+        }
+      },
+      {
+        "number": 8,
+        "name": "Isaiah Brown",
+        "position": "Back/Corner",
+        "height": "5-10",
+        "weight": 181,
+        "year": "Senior",
+        "stats": {
+          "speed": 97,
+          "stamina": 83,
+          "kicking": 76,
+          "lateral_skill": 93,
+          "tackling": 72
+        }
+      },
+      {
+        "number": 11,
+        "name": "Liam O'Connor",
+        "position": "Wedge/Line",
+        "height": "6-1",
+        "weight": 203,
+        "year": "Junior",
+        "stats": {
+          "speed": 79,
+          "stamina": 94,
+          "kicking": 67,
+          "lateral_skill": 71,
+          "tackling": 91
+        }
+      },
+      {
+        "number": 14,
+        "name": "Andre Davis",
+        "position": "Back/Safety",
+        "height": "6-0",
+        "weight": 190,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 92,
+          "stamina": 88,
+          "kicking": 83,
+          "lateral_skill": 87,
+          "tackling": 81
+        }
+      },
+      {
+        "number": 17,
+        "name": "Noah Peterson",
+        "position": "Wing/End",
+        "height": "6-1",
+        "weight": 196,
+        "year": "Senior",
+        "stats": {
+          "speed": 85,
+          "stamina": 90,
+          "kicking": 73,
+          "lateral_skill": 82,
+          "tackling": 86
+        }
+      },
+      {
+        "number": 19,
+        "name": "Marcus Lee",
+        "position": "Viper/Back",
+        "height": "5-11",
+        "weight": 184,
+        "year": "Junior",
+        "stats": {
+          "speed": 95,
+          "stamina": 85,
+          "kicking": 87,
+          "lateral_skill": 90,
+          "tackling": 75
+        }
+      },
+      {
+        "number": 22,
+        "name": "Caleb Wright",
+        "position": "Wedge/Line",
+        "height": "6-2",
+        "weight": 207,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 77,
+          "stamina": 93,
+          "kicking": 66,
+          "lateral_skill": 69,
+          "tackling": 89
+        }
+      },
+      {
+        "number": 25,
+        "name": "Darius Green",
+        "position": "Back/Corner",
+        "height": "5-10",
+        "weight": 179,
+        "year": "Senior",
+        "stats": {
+          "speed": 96,
+          "stamina": 84,
+          "kicking": 79,
+          "lateral_skill": 94,
+          "tackling": 74
+        }
+      }
+    ]
+  },
+  "team_stats": {
+    "avg_speed": 89,
+    "avg_weight": 191,
+    "avg_stamina": 88,
+    "kicking_strength": 78,
+    "lateral_proficiency": 85,
+    "defensive_strength": 81
+  },
+  "coaching": {
+    "head_coach": "Mike Thompson",
+    "philosophy": "Balanced attack with emphasis on drop-kick execution",
+    "experience": "12 years"
+  }
+}

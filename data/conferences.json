@@ -1,0 +1,222 @@
+{
+  "league": "Collegiate Viperball League (CVL)",
+  "season": "2026",
+  "conferences": [
+    {
+      "name": "Empire Elite",
+      "region": "East",
+      "teams": [
+        {
+          "school": "New York University",
+          "abbreviation": "NYU",
+          "city": "New York",
+          "state": "NY",
+          "mascot": "Violets",
+          "colors": ["Purple", "White"]
+        },
+        {
+          "school": "St. John's University",
+          "abbreviation": "SJU",
+          "city": "Queens",
+          "state": "NY",
+          "mascot": "Red Storm",
+          "colors": ["Red", "White"]
+        },
+        {
+          "school": "George Mason University",
+          "abbreviation": "GMU",
+          "city": "Fairfax",
+          "state": "VA",
+          "mascot": "Patriots",
+          "colors": ["Green", "Gold"]
+        },
+        {
+          "school": "Virginia Commonwealth University",
+          "abbreviation": "VCU",
+          "city": "Richmond",
+          "state": "VA",
+          "mascot": "Rams",
+          "colors": ["Black", "Gold"]
+        },
+        {
+          "school": "American University",
+          "abbreviation": "AU",
+          "city": "Washington",
+          "state": "DC",
+          "mascot": "Eagles",
+          "colors": ["Red", "Blue"]
+        },
+        {
+          "school": "University of Vermont",
+          "abbreviation": "UVM",
+          "city": "Burlington",
+          "state": "VT",
+          "mascot": "Catamounts",
+          "colors": ["Green", "Gold"]
+        }
+      ]
+    },
+    {
+      "name": "Heartland Union",
+      "region": "Midwest",
+      "teams": [
+        {
+          "school": "Marquette University",
+          "abbreviation": "MU",
+          "city": "Milwaukee",
+          "state": "WI",
+          "mascot": "Golden Eagles",
+          "colors": ["Blue", "Gold"]
+        },
+        {
+          "school": "DePaul University",
+          "abbreviation": "DPU",
+          "city": "Chicago",
+          "state": "IL",
+          "mascot": "Blue Demons",
+          "colors": ["Blue", "Red"]
+        },
+        {
+          "school": "Loyola University Chicago",
+          "abbreviation": "LUC",
+          "city": "Chicago",
+          "state": "IL",
+          "mascot": "Ramblers",
+          "colors": ["Maroon", "Gold"]
+        },
+        {
+          "school": "Xavier University",
+          "abbreviation": "XU",
+          "city": "Cincinnati",
+          "state": "OH",
+          "mascot": "Musketeers",
+          "colors": ["Blue", "White"]
+        },
+        {
+          "school": "Creighton University",
+          "abbreviation": "CU",
+          "city": "Omaha",
+          "state": "NE",
+          "mascot": "Bluejays",
+          "colors": ["Blue", "White"]
+        },
+        {
+          "school": "Wichita State University",
+          "abbreviation": "WSU",
+          "city": "Wichita",
+          "state": "KS",
+          "mascot": "Shockers",
+          "colors": ["Black", "Yellow"]
+        }
+      ]
+    },
+    {
+      "name": "Coastal Vanguard",
+      "region": "West",
+      "teams": [
+        {
+          "school": "Gonzaga University",
+          "abbreviation": "GU",
+          "city": "Spokane",
+          "state": "WA",
+          "mascot": "Bulldogs",
+          "colors": ["Blue", "Red", "White"]
+        },
+        {
+          "school": "Pepperdine University",
+          "abbreviation": "PU",
+          "city": "Malibu",
+          "state": "CA",
+          "mascot": "Waves",
+          "colors": ["Blue", "Orange"]
+        },
+        {
+          "school": "University of California, Irvine",
+          "abbreviation": "UCI",
+          "city": "Irvine",
+          "state": "CA",
+          "mascot": "Anteaters",
+          "colors": ["Blue", "Gold"]
+        },
+        {
+          "school": "University of California, Santa Barbara",
+          "abbreviation": "UCSB",
+          "city": "Santa Barbara",
+          "state": "CA",
+          "mascot": "Gauchos",
+          "colors": ["Blue", "Gold"]
+        },
+        {
+          "school": "California State University, Fullerton",
+          "abbreviation": "CSUF",
+          "city": "Fullerton",
+          "state": "CA",
+          "mascot": "Titans",
+          "colors": ["Blue", "Orange", "White"]
+        },
+        {
+          "school": "California State University, Long Beach",
+          "abbreviation": "LBSU",
+          "city": "Long Beach",
+          "state": "CA",
+          "mascot": "Beach",
+          "colors": ["Black", "Gold"]
+        }
+      ]
+    },
+    {
+      "name": "Southern Heritage",
+      "region": "South",
+      "teams": [
+        {
+          "school": "University of Texas at Arlington",
+          "abbreviation": "UTA",
+          "city": "Arlington",
+          "state": "TX",
+          "mascot": "Mavericks",
+          "colors": ["Blue", "Orange"]
+        },
+        {
+          "school": "High Point University",
+          "abbreviation": "HPU",
+          "city": "High Point",
+          "state": "NC",
+          "mascot": "Panthers",
+          "colors": ["Purple", "White"]
+        },
+        {
+          "school": "University of North Carolina at Asheville",
+          "abbreviation": "UNCA",
+          "city": "Asheville",
+          "state": "NC",
+          "mascot": "Bulldogs",
+          "colors": ["Blue", "White"]
+        },
+        {
+          "school": "College of Charleston",
+          "abbreviation": "CofC",
+          "city": "Charleston",
+          "state": "SC",
+          "mascot": "Cougars",
+          "colors": ["Maroon", "White"]
+        },
+        {
+          "school": "Oral Roberts University",
+          "abbreviation": "ORU",
+          "city": "Tulsa",
+          "state": "OK",
+          "mascot": "Golden Eagles",
+          "colors": ["Navy", "Gold"]
+        },
+        {
+          "school": "University of Arkansas at Little Rock",
+          "abbreviation": "UALR",
+          "city": "Little Rock",
+          "state": "AR",
+          "mascot": "Trojans",
+          "colors": ["Maroon", "Silver"]
+        }
+      ]
+    }
+  ]
+}
