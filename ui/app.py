@@ -179,6 +179,18 @@ def generate_box_score_markdown(result):
     lines.append(f"| Avg Fatigue | {hs['avg_fatigue']}% | {as_['avg_fatigue']}% |")
     lines.append("")
 
+    h_dc = hs.get("down_conversions", {})
+    a_dc = as_.get("down_conversions", {})
+    lines.append("## Down Conversions")
+    lines.append("| Down | " + home['team'] + " | " + away['team'] + " |")
+    lines.append("|------|---:|---:|")
+    for d in [3, 4, 5]:
+        hd = h_dc.get(d, h_dc.get(str(d), {"converted": 0, "attempts": 0, "rate": 0}))
+        ad = a_dc.get(d, a_dc.get(str(d), {"converted": 0, "attempts": 0, "rate": 0}))
+        label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'}"
+        lines.append(f"| {label} | {hd['converted']}/{hd['attempts']} ({hd['rate']}%) | {ad['converted']}/{ad['attempts']} ({ad['rate']}%) |")
+    lines.append("")
+
     drives = result.get("drive_summary", [])
     if drives:
         lines.append("## Drive Summary")
@@ -530,6 +542,19 @@ if page == "Game Simulator":
         }
         st.dataframe(pd.DataFrame(scoring_data), hide_index=True, use_container_width=True)
 
+        st.markdown("**Down Conversions**")
+        h_dc = hs.get("down_conversions", {})
+        a_dc = as_.get("down_conversions", {})
+        conv_data = {"": [], home_name: [], away_name: []}
+        for d in [3, 4, 5]:
+            hd = h_dc.get(d, h_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
+            ad = a_dc.get(d, a_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
+            label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down"
+            conv_data[""].append(label)
+            conv_data[home_name].append(f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
+            conv_data[away_name].append(f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
+        st.dataframe(pd.DataFrame(conv_data), hide_index=True, use_container_width=True)
+
         # ====== 2. PLAY FAMILY DISTRIBUTION ======
         st.subheader("Play Family Distribution")
         home_fam = hs.get("play_family_breakdown", {})
@@ -832,6 +857,19 @@ elif page == "Debug Tools":
         home_dk = [r["stats"]["home"].get("drop_kicks_made", 0) for r in results]
         away_dk = [r["stats"]["away"].get("drop_kicks_made", 0) for r in results]
         k4.metric("Avg Snap Kicks/game", round((sum(home_dk) + sum(away_dk)) / n, 2))
+
+        st.markdown("**Avg Down Conversions**")
+        dc_cols = st.columns(3)
+        for idx, d in enumerate([3, 4, 5]):
+            rates = []
+            for r in results:
+                for side in ["home", "away"]:
+                    dc = r["stats"][side].get("down_conversions", {})
+                    dd = dc.get(d, dc.get(str(d), {"rate": 0}))
+                    rates.append(dd["rate"])
+            avg_rate = round(sum(rates) / max(1, len(rates)), 1)
+            label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down Conv %"
+            dc_cols[idx].metric(label, f"{avg_rate}%")
 
         st.subheader("Score Distribution")
         fig = go.Figure()

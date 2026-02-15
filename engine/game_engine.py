@@ -1128,6 +1128,16 @@ class ViperballEngine:
         fatigue_values = [p.fatigue for p in plays if p.fatigue is not None]
         avg_fatigue = round(sum(fatigue_values) / max(1, len(fatigue_values)), 1) if fatigue_values else 100.0
 
+        down_conversions = {}
+        for d in [3, 4, 5]:
+            down_plays = [p for p in plays if p.down == d and p.play_type not in ["punt", "drop_kick", "place_kick"]]
+            converted = [p for p in down_plays if p.yards_gained >= p.yards_to_go or p.result in ("touchdown", "punt_return_td")]
+            down_conversions[d] = {
+                "attempts": len(down_plays),
+                "converted": len(converted),
+                "rate": round(len(converted) / max(1, len(down_plays)) * 100, 1) if down_plays else 0.0,
+            }
+
         return {
             "total_yards": total_yards,
             "total_plays": total_plays,
@@ -1151,6 +1161,7 @@ class ViperballEngine:
             "play_family_breakdown": play_family_counts,
             "avg_fatigue": avg_fatigue,
             "safeties_conceded": len([p for p in plays if p.result == "safety"]),
+            "down_conversions": down_conversions,
         }
 
     def play_to_dict(self, play: Play) -> Dict:
