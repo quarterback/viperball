@@ -1,0 +1,179 @@
+{
+  "team_info": {
+    "school": "Marquette University",
+    "abbreviation": "MU",
+    "mascot": "Golden Eagles",
+    "conference": "Heartland Union",
+    "city": "Milwaukee",
+    "state": "WI",
+    "colors": ["Blue", "Gold"]
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Jake Mueller",
+        "position": "Viper/Back",
+        "height": "6-0",
+        "weight": 187,
+        "year": "Junior",
+        "stats": {
+          "speed": 91,
+          "stamina": 89,
+          "kicking": 84,
+          "lateral_skill": 88,
+          "tackling": 76
+        }
+      },
+      {
+        "number": 5,
+        "name": "Darnell Harris",
+        "position": "Back/Safety",
+        "height": "5-11",
+        "weight": 189,
+        "year": "Senior",
+        "stats": {
+          "speed": 93,
+          "stamina": 88,
+          "kicking": 80,
+          "lateral_skill": 86,
+          "tackling": 80
+        }
+      },
+      {
+        "number": 7,
+        "name": "Luke Kowalski",
+        "position": "Wedge/Line",
+        "height": "6-2",
+        "weight": 208,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 76,
+          "stamina": 92,
+          "kicking": 64,
+          "lateral_skill": 68,
+          "tackling": 92
+        }
+      },
+      {
+        "number": 9,
+        "name": "Malik Johnson",
+        "position": "Back/Corner",
+        "height": "5-10",
+        "weight": 183,
+        "year": "Junior",
+        "stats": {
+          "speed": 95,
+          "stamina": 86,
+          "kicking": 77,
+          "lateral_skill": 90,
+          "tackling": 71
+        }
+      },
+      {
+        "number": 12,
+        "name": "Brett Schultz",
+        "position": "Wing/End",
+        "height": "6-1",
+        "weight": 194,
+        "year": "Senior",
+        "stats": {
+          "speed": 87,
+          "stamina": 90,
+          "kicking": 71,
+          "lateral_skill": 81,
+          "tackling": 83
+        }
+      },
+      {
+        "number": 16,
+        "name": "Antonio Martinez",
+        "position": "Back/Safety",
+        "height": "6-0",
+        "weight": 191,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 90,
+          "stamina": 87,
+          "kicking": 82,
+          "lateral_skill": 85,
+          "tackling": 79
+        }
+      },
+      {
+        "number": 20,
+        "name": "Kevin O'Donnell",
+        "position": "Viper/Back",
+        "height": "5-11",
+        "weight": 186,
+        "year": "Junior",
+        "stats": {
+          "speed": 92,
+          "stamina": 88,
+          "kicking": 86,
+          "lateral_skill": 89,
+          "tackling": 77
+        }
+      },
+      {
+        "number": 24,
+        "name": "Tyrone Washington",
+        "position": "Wing/End",
+        "height": "6-1",
+        "weight": 197,
+        "year": "Senior",
+        "stats": {
+          "speed": 84,
+          "stamina": 91,
+          "kicking": 69,
+          "lateral_skill": 79,
+          "tackling": 87
+        }
+      },
+      {
+        "number": 28,
+        "name": "Chris Jensen",
+        "position": "Wedge/Line",
+        "height": "6-2",
+        "weight": 205,
+        "year": "Sophomore",
+        "stats": {
+          "speed": 78,
+          "stamina": 93,
+          "kicking": 65,
+          "lateral_skill": 70,
+          "tackling": 90
+        }
+      },
+      {
+        "number": 31,
+        "name": "Jamal Robinson",
+        "position": "Back/Corner",
+        "height": "5-10",
+        "weight": 180,
+        "year": "Junior",
+        "stats": {
+          "speed": 96,
+          "stamina": 85,
+          "kicking": 75,
+          "lateral_skill": 91,
+          "tackling": 73
+        }
+      }
+    ]
+  },
+  "team_stats": {
+    "avg_speed": 88,
+    "avg_weight": 192,
+    "avg_stamina": 89,
+    "kicking_strength": 75,
+    "lateral_proficiency": 83,
+    "defensive_strength": 81
+  },
+  "coaching": {
+    "head_coach": "Tom Brennan",
+    "philosophy": "Ground-oriented lateral game with strong defensive pressure",
+    "experience": "10 years"
+  }
+}
