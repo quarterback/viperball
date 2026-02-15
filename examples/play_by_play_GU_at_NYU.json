@@ -2,37 +2,56 @@
   "final_score": {
     "home": {
       "team": "New York University",
-      "score": 22
+      "score": 23
     },
     "away": {
       "team": "Gonzaga University",
-      "score": 6
+      "score": 32
     }
   },
+  "tempo": "standard",
   "stats": {
     "home": {
-      "total_yards": 405,
-      "total_plays": 71,
-      "yards_per_play": 5.7,
-      "lateral_chains": 26,
-      "successful_laterals": 25,
-      "drop_kicks_made": 2,
-      "place_kicks_made": 2,
-      "viper_efficiency": 7.22,
-      "micro_scoring_differential": 4,
-      "lateral_efficiency": 96.2
+      "total_yards": 225,
+      "total_plays": 64,
+      "yards_per_play": 3.52,
+      "touchdowns": 3,
+      "lateral_chains": 17,
+      "successful_laterals": 15,
+      "fumbles_lost": 2,
+      "turnovers_on_downs": 1,
+      "drop_kicks_made": 1,
+      "place_kicks_made": 0,
+      "viper_efficiency": 4.53,
+      "micro_scoring_differential": 5,
+      "lateral_efficiency": 88.2,
+      "plays_per_quarter": {
+        "1": 15,
+        "2": 14,
+        "3": 18,
+        "4": 17
+      }
     },
     "away": {
-      "total_yards": 263,
-      "total_plays": 55,
-      "yards_per_play": 4.78,
-      "lateral_chains": 16,
-      "successful_laterals": 16,
-      "drop_kicks_made": 0,
-      "place_kicks_made": 2,
-      "viper_efficiency": 6.1,
-      "micro_scoring_differential": -6,
-      "lateral_efficiency": 100.0
+      "total_yards": 239,
+      "total_plays": 57,
+      "yards_per_play": 4.19,
+      "touchdowns": 3,
+      "lateral_chains": 17,
+      "successful_laterals": 17,
+      "fumbles_lost": 0,
+      "turnovers_on_downs": 1,
+      "drop_kicks_made": 1,
+      "place_kicks_made": 3,
+      "viper_efficiency": 5.42,
+      "micro_scoring_differential": -4,
+      "lateral_efficiency": 100.0,
+      "plays_per_quarter": {
+        "1": 16,
+        "2": 18,
+        "3": 12,
+        "4": 11
+      }
     }
   },
   "play_by_play": [
@@ -41,184 +60,14 @@
       "quarter": 1,
       "time_remaining": 900,
       "possession": "away",
-      "field_position": 21,
-      "down": 2,
-      "yards_to_go": 19,
-      "play_type": "run",
-      "players": [
-        "Isaiah Brown"
-      ],
-      "yards": 1,
-      "result": "gain",
-      "description": "Isaiah Brown rushes for 1 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 2,
-      "quarter": 1,
-      "time_remaining": 862,
-      "possession": "home",
-      "field_position": 23,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -56,
-      "result": "punt",
-      "description": "Connor Walsh punts 56 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 3,
-      "quarter": 1,
-      "time_remaining": 831,
-      "possession": "home",
-      "field_position": 30,
-      "down": 2,
-      "yards_to_go": 13,
-      "play_type": "run",
-      "players": [
-        "Marcus Chen"
-      ],
-      "yards": 7,
-      "result": "gain",
-      "description": "Marcus Chen rushes for 7 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 4,
-      "quarter": 1,
-      "time_remaining": 789,
-      "possession": "home",
-      "field_position": 30,
-      "down": 3,
-      "yards_to_go": 13,
-      "play_type": "run",
-      "players": [
-        "Tyler O'Brien"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "Tyler O'Brien rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 5,
-      "quarter": 1,
-      "time_remaining": 749,
-      "possession": "home",
-      "field_position": 51,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Carlos Rodriguez",
-        "Tyler O'Brien",
-        "Alex Zhang",
-        "Ryan Mitchell"
-      ],
-      "yards": 21,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 21 yards - FIRST DOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 6,
-      "quarter": 1,
-      "time_remaining": 711,
-      "possession": "away",
-      "field_position": 49,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Ethan Park DROP KICK is NO GOOD from 59 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 7,
-      "quarter": 1,
-      "time_remaining": 693,
-      "possession": "away",
-      "field_position": 57,
-      "down": 2,
-      "yards_to_go": 12,
-      "play_type": "lateral_chain",
-      "players": [
-        "Blake Anderson",
-        "Liam O'Connor",
-        "Terrell Jackson"
-      ],
-      "yards": 8,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 8 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 8,
-      "quarter": 1,
-      "time_remaining": 668,
-      "possession": "away",
-      "field_position": 66,
-      "down": 3,
-      "yards_to_go": 3,
-      "play_type": "lateral_chain",
-      "players": [
-        "Connor Walsh",
-        "Liam O'Connor",
-        "Marcus Lee",
-        "Isaiah Brown"
-      ],
-      "yards": 9,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 9 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 9,
-      "quarter": 1,
-      "time_remaining": 651,
-      "possession": "away",
-      "field_position": 20,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "place_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "successful_kick",
-      "description": "Connor Walsh PLACE KICK is GOOD from 44 yards! +3 points",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 10,
-      "quarter": 1,
-      "time_remaining": 623,
-      "possession": "away",
       "field_position": 31,
       "down": 2,
       "yards_to_go": 9,
       "play_type": "lateral_chain",
       "players": [
-        "Marcus Lee",
-        "Isaiah Brown",
-        "Andre Davis"
+        "Noah Peterson",
+        "Andre Davis",
+        "Terrell Jackson"
       ],
       "yards": 11,
       "result": "gain",
@@ -227,531 +76,35 @@
       "fumble": null
     },
     {
-      "play_number": 11,
+      "play_number": 2,
       "quarter": 1,
-      "time_remaining": 579,
-      "possession": "away",
-      "field_position": 35,
-      "down": 3,
-      "yards_to_go": 5,
-      "play_type": "run",
-      "players": [
-        "Blake Anderson"
-      ],
-      "yards": 4,
-      "result": "gain",
-      "description": "Blake Anderson rushes for 4 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 12,
-      "quarter": 1,
-      "time_remaining": 557,
+      "time_remaining": 863,
       "possession": "home",
-      "field_position": 9,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -56,
-      "result": "punt",
-      "description": "Connor Walsh punts 56 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 13,
-      "quarter": 1,
-      "time_remaining": 513,
-      "possession": "home",
-      "field_position": 21,
-      "down": 2,
-      "yards_to_go": 8,
-      "play_type": "lateral_chain",
-      "players": [
-        "Carlos Rodriguez",
-        "Ethan Park"
-      ],
-      "yards": 12,
-      "result": "gain",
-      "description": "Lateral chain with 2 players for 12 yards",
-      "laterals": 2,
-      "fumble": null
-    },
-    {
-      "play_number": 14,
-      "quarter": 1,
-      "time_remaining": 494,
-      "possession": "home",
-      "field_position": 28,
-      "down": 3,
-      "yards_to_go": 1,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 7,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 7 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 15,
-      "quarter": 1,
-      "time_remaining": 474,
-      "possession": "home",
-      "field_position": 40,
+      "field_position": 30,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "lateral_chain",
       "players": [
-        "Ryan Mitchell",
-        "Tyler O'Brien",
-        "Carlos Rodriguez",
-        "Alex Zhang",
-        "Jamal Thompson"
-      ],
-      "yards": 12,
-      "result": "first_down",
-      "description": "Lateral chain with 5 players for 12 yards - FIRST DOWN!",
-      "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 16,
-      "quarter": 1,
-      "time_remaining": 444,
-      "possession": "home",
-      "field_position": 65,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Ryan Mitchell",
-        "Alex Zhang",
-        "Ethan Park",
-        "Carlos Rodriguez",
-        "Marcus Chen"
-      ],
-      "yards": 25,
-      "result": "first_down",
-      "description": "Lateral chain with 5 players for 25 yards - FIRST DOWN!",
-      "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 17,
-      "quarter": 1,
-      "time_remaining": 415,
-      "possession": "home",
-      "field_position": 78,
-      "down": 2,
-      "yards_to_go": 7,
-      "play_type": "lateral_chain",
-      "players": [
-        "Carlos Rodriguez",
-        "Tyler O'Brien",
-        "Jamal Thompson"
-      ],
-      "yards": 13,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 13 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 18,
-      "quarter": 1,
-      "time_remaining": 381,
-      "possession": "away",
-      "field_position": 1,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -61,
-      "result": "punt",
-      "description": "Ethan Park punts 61 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 19,
-      "quarter": 1,
-      "time_remaining": 359,
-      "possession": "away",
-      "field_position": -2,
-      "down": 2,
-      "yards_to_go": 23,
-      "play_type": "run",
-      "players": [
-        "Blake Anderson"
-      ],
-      "yards": -3,
-      "result": "gain",
-      "description": "Blake Anderson rushes for -3 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 20,
-      "quarter": 1,
-      "time_remaining": 333,
-      "possession": "away",
-      "field_position": -2,
-      "down": 3,
-      "yards_to_go": 23,
-      "play_type": "run",
-      "players": [
-        "Isaiah Brown"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "Isaiah Brown rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 21,
-      "quarter": 1,
-      "time_remaining": 298,
-      "possession": "home",
-      "field_position": 102,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 112 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 22,
-      "quarter": 1,
-      "time_remaining": 280,
-      "possession": "home",
-      "field_position": 102,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Tyler O'Brien",
-        "Carlos Rodriguez",
-        "Jamal Thompson",
-        "Ethan Park"
-      ],
-      "yards": 13,
-      "result": "touchdown",
-      "description": "Lateral chain with 4 players for 13 yards - TOUCHDOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 23,
-      "quarter": 1,
-      "time_remaining": 254,
-      "possession": "home",
-      "field_position": 20,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "successful_kick",
-      "description": "Ethan Park DROP KICK is GOOD from 8 yards! +5 points",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 24,
-      "quarter": 1,
-      "time_remaining": 228,
-      "possession": "away",
-      "field_position": 27,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -53,
-      "result": "punt",
-      "description": "Ethan Park punts 53 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 25,
-      "quarter": 1,
-      "time_remaining": 202,
-      "possession": "away",
-      "field_position": 43,
-      "down": 2,
-      "yards_to_go": 4,
-      "play_type": "lateral_chain",
-      "players": [
-        "Noah Peterson",
-        "Marcus Lee",
-        "Blake Anderson",
+        "Connor Walsh",
         "Terrell Jackson",
-        "Isaiah Brown"
-      ],
-      "yards": 16,
-      "result": "gain",
-      "description": "Lateral chain with 5 players for 16 yards",
-      "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 26,
-      "quarter": 1,
-      "time_remaining": 183,
-      "possession": "away",
-      "field_position": 60,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
+        "Isaiah Brown",
         "Liam O'Connor",
-        "Andre Davis",
-        "Noah Peterson",
-        "Blake Anderson",
-        "Terrell Jackson"
+        "Blake Anderson"
       ],
-      "yards": 17,
-      "result": "first_down",
-      "description": "Lateral chain with 5 players for 17 yards - FIRST DOWN!",
+      "yards": 1,
+      "result": "fumble",
+      "description": "Lateral chain with 5 players - FUMBLE! Recovered by defense",
       "laterals": 5,
-      "fumble": null
+      "fumble": true
     },
     {
-      "play_number": 27,
+      "play_number": 3,
       "quarter": 1,
-      "time_remaining": 149,
-      "possession": "home",
-      "field_position": 40,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 50 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 28,
-      "quarter": 1,
-      "time_remaining": 127,
-      "possession": "home",
-      "field_position": 44,
-      "down": 2,
-      "yards_to_go": 16,
-      "play_type": "run",
-      "players": [
-        "Tyler O'Brien"
-      ],
-      "yards": 4,
-      "result": "gain",
-      "description": "Tyler O'Brien rushes for 4 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 29,
-      "quarter": 1,
-      "time_remaining": 106,
-      "possession": "home",
-      "field_position": 44,
-      "down": 3,
-      "yards_to_go": 16,
-      "play_type": "lateral_chain",
-      "players": [
-        "Tyler O'Brien",
-        "Carlos Rodriguez",
-        "Alex Zhang"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 0 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 30,
-      "quarter": 1,
-      "time_remaining": 79,
-      "possession": "home",
-      "field_position": 59,
-      "down": 4,
-      "yards_to_go": 1,
-      "play_type": "lateral_chain",
-      "players": [
-        "Tyler O'Brien",
-        "Alex Zhang",
-        "Ryan Mitchell",
-        "Carlos Rodriguez"
-      ],
-      "yards": 15,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 15 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 31,
-      "quarter": 1,
-      "time_remaining": 55,
-      "possession": "home",
-      "field_position": 58,
-      "down": 5,
-      "yards_to_go": 2,
-      "play_type": "run",
-      "players": [
-        "Marcus Chen"
-      ],
-      "yards": -1,
-      "result": "gain",
-      "description": "Marcus Chen rushes for -1 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 32,
-      "quarter": 1,
-      "time_remaining": 23,
-      "possession": "home",
-      "field_position": 20,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "place_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "successful_kick",
-      "description": "Ethan Park PLACE KICK is GOOD from 52 yards! +3 points",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 33,
-      "quarter": 2,
-      "time_remaining": 900,
-      "possession": "home",
-      "field_position": 33,
-      "down": 2,
-      "yards_to_go": 7,
-      "play_type": "lateral_chain",
-      "players": [
-        "DeShawn Williams",
-        "Alex Zhang",
-        "Jamal Thompson",
-        "Marcus Chen"
-      ],
-      "yards": 13,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 13 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 34,
-      "quarter": 2,
-      "time_remaining": 882,
+      "time_remaining": 830,
       "possession": "home",
       "field_position": 33,
       "down": 3,
-      "yards_to_go": 7,
-      "play_type": "run",
-      "players": [
-        "Carlos Rodriguez"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "Carlos Rodriguez rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 35,
-      "quarter": 2,
-      "time_remaining": 866,
-      "possession": "home",
-      "field_position": 45,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Ethan Park",
-        "Ryan Mitchell",
-        "Marcus Chen"
-      ],
-      "yards": 12,
-      "result": "first_down",
-      "description": "Lateral chain with 3 players for 12 yards - FIRST DOWN!",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 36,
-      "quarter": 2,
-      "time_remaining": 829,
-      "possession": "home",
-      "field_position": 45,
-      "down": 2,
-      "yards_to_go": 20,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 37,
-      "quarter": 2,
-      "time_remaining": 808,
-      "possession": "home",
-      "field_position": 53,
-      "down": 3,
-      "yards_to_go": 12,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 8,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 8 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 38,
-      "quarter": 2,
-      "time_remaining": 764,
-      "possession": "home",
-      "field_position": 56,
-      "down": 4,
-      "yards_to_go": 9,
+      "yards_to_go": 6,
       "play_type": "run",
       "players": [
         "Jamal Thompson"
@@ -763,163 +116,47 @@
       "fumble": null
     },
     {
-      "play_number": 39,
-      "quarter": 2,
-      "time_remaining": 732,
+      "play_number": 4,
+      "quarter": 1,
+      "time_remaining": 815,
       "possession": "away",
-      "field_position": 44,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "place_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Ethan Park PLACE KICK is NO GOOD from 54 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 40,
-      "quarter": 2,
-      "time_remaining": 696,
-      "possession": "home",
-      "field_position": 1,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -68,
-      "result": "punt",
-      "description": "Connor Walsh punts 68 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 41,
-      "quarter": 2,
-      "time_remaining": 674,
-      "possession": "away",
-      "field_position": 50,
+      "field_position": 22,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
       "players": [
         "Ethan Park"
       ],
-      "yards": -49,
+      "yards": -45,
       "result": "punt",
-      "description": "Ethan Park punts 49 yards",
+      "description": "Ethan Park punts 45 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 42,
-      "quarter": 2,
-      "time_remaining": 636,
+      "play_number": 5,
+      "quarter": 1,
+      "time_remaining": 793,
       "possession": "home",
-      "field_position": 1,
+      "field_position": 22,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
       "players": [
         "Connor Walsh"
       ],
-      "yards": -68,
+      "yards": -56,
       "result": "punt",
-      "description": "Connor Walsh punts 68 yards",
+      "description": "Connor Walsh punts 56 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 43,
-      "quarter": 2,
-      "time_remaining": 596,
-      "possession": "home",
-      "field_position": 17,
-      "down": 2,
-      "yards_to_go": 4,
-      "play_type": "lateral_chain",
-      "players": [
-        "DeShawn Williams",
-        "Jamal Thompson",
-        "Carlos Rodriguez",
-        "Alex Zhang"
-      ],
-      "yards": 16,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 16 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 44,
-      "quarter": 2,
-      "time_remaining": 580,
+      "play_number": 6,
+      "quarter": 1,
+      "time_remaining": 759,
       "possession": "home",
       "field_position": 25,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Ryan Mitchell",
-        "Jamal Thompson",
-        "Carlos Rodriguez"
-      ],
-      "yards": 8,
-      "result": "first_down",
-      "description": "Lateral chain with 3 players for 8 yards - FIRST DOWN!",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 45,
-      "quarter": 2,
-      "time_remaining": 543,
-      "possession": "home",
-      "field_position": 20,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "place_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "successful_kick",
-      "description": "Ethan Park PLACE KICK is GOOD from 85 yards! +3 points",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 46,
-      "quarter": 2,
-      "time_remaining": 523,
-      "possession": "home",
-      "field_position": 40,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Ryan Mitchell",
-        "Ethan Park",
-        "Tyler O'Brien",
-        "Carlos Rodriguez"
-      ],
-      "yards": 20,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 20 yards - FIRST DOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 47,
-      "quarter": 2,
-      "time_remaining": 482,
-      "possession": "home",
-      "field_position": 43,
       "down": 2,
       "yards_to_go": 17,
       "play_type": "run",
@@ -933,50 +170,128 @@
       "fumble": null
     },
     {
-      "play_number": 48,
-      "quarter": 2,
-      "time_remaining": 459,
+      "play_number": 7,
+      "quarter": 1,
+      "time_remaining": 744,
       "possession": "home",
-      "field_position": 56,
+      "field_position": 32,
       "down": 3,
-      "yards_to_go": 4,
+      "yards_to_go": 10,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 8,
+      "quarter": 1,
+      "time_remaining": 728,
+      "possession": "home",
+      "field_position": 40,
+      "down": 4,
+      "yards_to_go": 2,
       "play_type": "lateral_chain",
       "players": [
-        "Jamal Thompson",
-        "DeShawn Williams"
+        "Ethan Park",
+        "Carlos Rodriguez"
       ],
-      "yards": 13,
+      "yards": 8,
       "result": "gain",
-      "description": "Lateral chain with 2 players for 13 yards",
+      "description": "Lateral chain with 2 players for 8 yards",
       "laterals": 2,
       "fumble": null
     },
     {
-      "play_number": 49,
-      "quarter": 2,
-      "time_remaining": 425,
+      "play_number": 9,
+      "quarter": 1,
+      "time_remaining": 700,
       "possession": "away",
-      "field_position": 5,
+      "field_position": 13,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
       "players": [
         "Ethan Park"
       ],
-      "yards": -39,
+      "yards": -47,
       "result": "punt",
-      "description": "Ethan Park punts 39 yards",
+      "description": "Ethan Park punts 47 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 50,
-      "quarter": 2,
-      "time_remaining": 388,
+      "play_number": 10,
+      "quarter": 1,
+      "time_remaining": 684,
       "possession": "away",
-      "field_position": 9,
+      "field_position": 29,
       "down": 2,
-      "yards_to_go": 16,
+      "yards_to_go": 4,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Marcus Lee",
+        "Blake Anderson"
+      ],
+      "yards": 16,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 16 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 11,
+      "quarter": 1,
+      "time_remaining": 661,
+      "possession": "away",
+      "field_position": 44,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Liam O'Connor",
+        "Connor Walsh",
+        "Isaiah Brown",
+        "Andre Davis"
+      ],
+      "yards": 15,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 15 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 12,
+      "quarter": 1,
+      "time_remaining": 628,
+      "possession": "away",
+      "field_position": 46,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Connor Walsh rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 13,
+      "quarter": 1,
+      "time_remaining": 590,
+      "possession": "away",
+      "field_position": 50,
+      "down": 3,
+      "yards_to_go": 14,
       "play_type": "run",
       "players": [
         "Terrell Jackson"
@@ -988,501 +303,103 @@
       "fumble": null
     },
     {
-      "play_number": 51,
-      "quarter": 2,
-      "time_remaining": 369,
+      "play_number": 14,
+      "quarter": 1,
+      "time_remaining": 552,
       "possession": "away",
-      "field_position": 22,
-      "down": 3,
-      "yards_to_go": 3,
+      "field_position": 60,
+      "down": 4,
+      "yards_to_go": 4,
       "play_type": "lateral_chain",
       "players": [
-        "Terrell Jackson",
-        "Marcus Lee"
+        "Liam O'Connor",
+        "Blake Anderson",
+        "Terrell Jackson"
       ],
-      "yards": 13,
+      "yards": 10,
       "result": "gain",
-      "description": "Lateral chain with 2 players for 13 yards",
-      "laterals": 2,
+      "description": "Lateral chain with 3 players for 10 yards",
+      "laterals": 3,
       "fumble": null
     },
     {
-      "play_number": 52,
-      "quarter": 2,
-      "time_remaining": 354,
+      "play_number": 15,
+      "quarter": 1,
+      "time_remaining": 519,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -49,
+      "result": "punt",
+      "description": "Connor Walsh punts 49 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 16,
+      "quarter": 1,
+      "time_remaining": 494,
       "possession": "away",
-      "field_position": 28,
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park PLACE KICK is NO GOOD from 109 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 17,
+      "quarter": 1,
+      "time_remaining": 472,
+      "possession": "away",
+      "field_position": 99,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "run",
       "players": [
         "Isaiah Brown"
       ],
-      "yards": 6,
-      "result": "first_down",
-      "description": "Isaiah Brown rushes for 6 yards - FIRST DOWN!",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 53,
-      "quarter": 2,
-      "time_remaining": 324,
-      "possession": "away",
-      "field_position": 46,
-      "down": 2,
-      "yards_to_go": 2,
-      "play_type": "lateral_chain",
-      "players": [
-        "Marcus Lee",
-        "Noah Peterson",
-        "Liam O'Connor",
-        "Blake Anderson"
-      ],
-      "yards": 18,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 18 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 54,
-      "quarter": 2,
-      "time_remaining": 304,
-      "possession": "away",
-      "field_position": 59,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Liam O'Connor",
-        "Noah Peterson",
-        "Marcus Lee",
-        "Connor Walsh"
-      ],
-      "yards": 13,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 13 yards - FIRST DOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 55,
-      "quarter": 2,
-      "time_remaining": 289,
-      "possession": "away",
-      "field_position": 60,
-      "down": 2,
-      "yards_to_go": 19,
-      "play_type": "run",
-      "players": [
-        "Blake Anderson"
-      ],
-      "yards": 1,
-      "result": "gain",
-      "description": "Blake Anderson rushes for 1 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 56,
-      "quarter": 2,
-      "time_remaining": 250,
-      "possession": "home",
-      "field_position": 40,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 50 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 57,
-      "quarter": 2,
-      "time_remaining": 225,
-      "possession": "home",
-      "field_position": 51,
-      "down": 2,
-      "yards_to_go": 9,
-      "play_type": "lateral_chain",
-      "players": [
-        "Ryan Mitchell",
-        "Alex Zhang"
-      ],
-      "yards": 11,
-      "result": "gain",
-      "description": "Lateral chain with 2 players for 11 yards",
-      "laterals": 2,
-      "fumble": null
-    },
-    {
-      "play_number": 58,
-      "quarter": 2,
-      "time_remaining": 194,
-      "possession": "home",
-      "field_position": 53,
-      "down": 3,
-      "yards_to_go": 7,
-      "play_type": "run",
-      "players": [
-        "Tyler O'Brien"
-      ],
-      "yards": 2,
-      "result": "gain",
-      "description": "Tyler O'Brien rushes for 2 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 59,
-      "quarter": 2,
-      "time_remaining": 172,
-      "possession": "away",
-      "field_position": 1,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -51,
-      "result": "punt",
-      "description": "Ethan Park punts 51 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 60,
-      "quarter": 2,
-      "time_remaining": 143,
-      "possession": "away",
-      "field_position": 4,
-      "down": 2,
-      "yards_to_go": 17,
-      "play_type": "run",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 3,
-      "result": "gain",
-      "description": "Connor Walsh rushes for 3 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 61,
-      "quarter": 2,
-      "time_remaining": 102,
-      "possession": "away",
-      "field_position": 15,
-      "down": 3,
-      "yards_to_go": 6,
-      "play_type": "lateral_chain",
-      "players": [
-        "Noah Peterson",
-        "Liam O'Connor",
-        "Andre Davis",
-        "Terrell Jackson"
-      ],
-      "yards": 11,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 11 yards",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 62,
-      "quarter": 2,
-      "time_remaining": 87,
-      "possession": "away",
-      "field_position": 17,
-      "down": 4,
-      "yards_to_go": 4,
-      "play_type": "run",
-      "players": [
-        "Terrell Jackson"
-      ],
-      "yards": 2,
-      "result": "gain",
-      "description": "Terrell Jackson rushes for 2 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 63,
-      "quarter": 2,
-      "time_remaining": 65,
-      "possession": "home",
-      "field_position": 83,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 93 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 64,
-      "quarter": 2,
-      "time_remaining": 29,
-      "possession": "home",
-      "field_position": 84,
-      "down": 2,
-      "yards_to_go": 19,
-      "play_type": "run",
-      "players": [
-        "Carlos Rodriguez"
-      ],
-      "yards": 1,
-      "result": "gain",
-      "description": "Carlos Rodriguez rushes for 1 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 65,
-      "quarter": 3,
-      "time_remaining": 900,
-      "possession": "home",
-      "field_position": 84,
-      "down": 3,
-      "yards_to_go": 19,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 66,
-      "quarter": 3,
-      "time_remaining": 857,
-      "possession": "away",
-      "field_position": 1,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -44,
-      "result": "punt",
-      "description": "Ethan Park punts 44 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 67,
-      "quarter": 3,
-      "time_remaining": 838,
-      "possession": "home",
-      "field_position": 59,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -40,
-      "result": "punt",
-      "description": "Connor Walsh punts 40 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 68,
-      "quarter": 3,
-      "time_remaining": 815,
-      "possession": "home",
-      "field_position": 66,
-      "down": 2,
-      "yards_to_go": 13,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
       "yards": 7,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 7 yards",
+      "result": "touchdown",
+      "description": "Isaiah Brown rushes for 7 yards - TOUCHDOWN!",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 69,
-      "quarter": 3,
-      "time_remaining": 786,
+      "play_number": 18,
+      "quarter": 1,
+      "time_remaining": 452,
       "possession": "away",
-      "field_position": 1,
+      "field_position": 32,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
       "players": [
         "Ethan Park"
       ],
-      "yards": -56,
+      "yards": -48,
       "result": "punt",
-      "description": "Ethan Park punts 56 yards",
+      "description": "Ethan Park punts 48 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 70,
-      "quarter": 3,
-      "time_remaining": 760,
+      "play_number": 19,
+      "quarter": 1,
+      "time_remaining": 414,
       "possession": "away",
-      "field_position": 15,
-      "down": 2,
-      "yards_to_go": 6,
-      "play_type": "lateral_chain",
-      "players": [
-        "Liam O'Connor",
-        "Terrell Jackson",
-        "Marcus Lee",
-        "Connor Walsh",
-        "Noah Peterson"
-      ],
-      "yards": 14,
-      "result": "gain",
-      "description": "Lateral chain with 5 players for 14 yards",
-      "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 71,
-      "quarter": 3,
-      "time_remaining": 745,
-      "possession": "away",
-      "field_position": 28,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Liam O'Connor",
-        "Connor Walsh",
-        "Isaiah Brown",
-        "Noah Peterson",
-        "Terrell Jackson"
-      ],
-      "yards": 13,
-      "result": "first_down",
-      "description": "Lateral chain with 5 players for 13 yards - FIRST DOWN!",
-      "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 72,
-      "quarter": 3,
-      "time_remaining": 713,
-      "possession": "away",
-      "field_position": 33,
-      "down": 2,
-      "yards_to_go": 15,
-      "play_type": "run",
-      "players": [
-        "Liam O'Connor"
-      ],
-      "yards": 5,
-      "result": "gain",
-      "description": "Liam O'Connor rushes for 5 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 73,
-      "quarter": 3,
-      "time_remaining": 678,
-      "possession": "home",
-      "field_position": 34,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Isaiah Brown",
-        "Marcus Lee"
-      ],
-      "yards": -1,
-      "result": "fumble",
-      "description": "Lateral chain with 2 players - FUMBLE! Recovered by defense",
-      "laterals": 2,
-      "fumble": true
-    },
-    {
-      "play_number": 74,
-      "quarter": 3,
-      "time_remaining": 650,
-      "possession": "home",
-      "field_position": 39,
-      "down": 3,
-      "yards_to_go": 10,
-      "play_type": "run",
-      "players": [
-        "Carlos Rodriguez"
-      ],
-      "yards": 5,
-      "result": "gain",
-      "description": "Carlos Rodriguez rushes for 5 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 75,
-      "quarter": 3,
-      "time_remaining": 610,
-      "possession": "home",
-      "field_position": 47,
-      "down": 4,
-      "yards_to_go": 2,
-      "play_type": "lateral_chain",
-      "players": [
-        "Marcus Chen",
-        "Jamal Thompson",
-        "Ethan Park"
-      ],
-      "yards": 8,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 8 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 76,
-      "quarter": 3,
-      "time_remaining": 569,
-      "possession": "away",
-      "field_position": 10,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -43,
-      "result": "punt",
-      "description": "Ethan Park punts 43 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 77,
-      "quarter": 3,
-      "time_remaining": 526,
-      "possession": "away",
-      "field_position": 18,
+      "field_position": 40,
       "down": 2,
       "yards_to_go": 12,
       "play_type": "run",
@@ -1496,108 +413,355 @@
       "fumble": null
     },
     {
-      "play_number": 78,
-      "quarter": 3,
-      "time_remaining": 508,
+      "play_number": 20,
+      "quarter": 1,
+      "time_remaining": 384,
       "possession": "away",
-      "field_position": 26,
-      "down": 3,
-      "yards_to_go": 4,
-      "play_type": "run",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 8,
-      "result": "gain",
-      "description": "Connor Walsh rushes for 8 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 79,
-      "quarter": 3,
-      "time_remaining": 486,
-      "possession": "away",
-      "field_position": 38,
+      "field_position": 52,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "lateral_chain",
       "players": [
+        "Connor Walsh",
+        "Isaiah Brown",
+        "Liam O'Connor",
         "Marcus Lee",
-        "Blake Anderson"
+        "Terrell Jackson"
       ],
       "yards": 12,
       "result": "first_down",
-      "description": "Lateral chain with 2 players for 12 yards - FIRST DOWN!",
-      "laterals": 2,
+      "description": "Lateral chain with 5 players for 12 yards - FIRST DOWN!",
+      "laterals": 5,
       "fumble": null
     },
     {
-      "play_number": 80,
-      "quarter": 3,
-      "time_remaining": 468,
+      "play_number": 21,
+      "quarter": 1,
+      "time_remaining": 345,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Connor Walsh DROP KICK is GOOD from 58 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 22,
+      "quarter": 1,
+      "time_remaining": 321,
+      "possession": "away",
+      "field_position": 27,
+      "down": 2,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Liam O'Connor"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Liam O'Connor rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 23,
+      "quarter": 1,
+      "time_remaining": 292,
       "possession": "home",
-      "field_position": 6,
+      "field_position": 73,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh PLACE KICK is NO GOOD from 83 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 24,
+      "quarter": 1,
+      "time_remaining": 247,
+      "possession": "home",
+      "field_position": 83,
+      "down": 2,
+      "yards_to_go": 10,
+      "play_type": "lateral_chain",
+      "players": [
+        "Carlos Rodriguez",
+        "Ethan Park",
+        "Marcus Chen",
+        "Jamal Thompson",
+        "Ryan Mitchell"
+      ],
+      "yards": 10,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 10 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 25,
+      "quarter": 1,
+      "time_remaining": 208,
+      "possession": "home",
+      "field_position": 86,
+      "down": 3,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 26,
+      "quarter": 1,
+      "time_remaining": 187,
+      "possession": "home",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Chen",
+        "Jamal Thompson",
+        "DeShawn Williams",
+        "Ethan Park"
+      ],
+      "yards": 13,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 13 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 27,
+      "quarter": 1,
+      "time_remaining": 161,
+      "possession": "home",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 6,
+      "result": "touchdown",
+      "description": "DeShawn Williams rushes for 6 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 28,
+      "quarter": 1,
+      "time_remaining": 118,
+      "possession": "home",
+      "field_position": 18,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Terrell Jackson",
+        "Andre Davis",
+        "Marcus Lee",
+        "Noah Peterson"
+      ],
+      "yards": 2,
+      "result": "fumble",
+      "description": "Lateral chain with 4 players - FUMBLE! Recovered by defense",
+      "laterals": 4,
+      "fumble": true
+    },
+    {
+      "play_number": 29,
+      "quarter": 1,
+      "time_remaining": 93,
+      "possession": "home",
+      "field_position": 18,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 30,
+      "quarter": 1,
+      "time_remaining": 52,
+      "possession": "home",
+      "field_position": 18,
+      "down": 3,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 31,
+      "quarter": 1,
+      "time_remaining": 18,
+      "possession": "away",
+      "field_position": 35,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
       "players": [
-        "Connor Walsh"
+        "Ethan Park"
       ],
-      "yards": -56,
+      "yards": -47,
       "result": "punt",
-      "description": "Connor Walsh punts 56 yards",
+      "description": "Ethan Park punts 47 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 81,
-      "quarter": 3,
-      "time_remaining": 428,
-      "possession": "home",
-      "field_position": 14,
+      "play_number": 32,
+      "quarter": 2,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 38,
       "down": 2,
-      "yards_to_go": 12,
-      "play_type": "lateral_chain",
+      "yards_to_go": 17,
+      "play_type": "run",
       "players": [
-        "Alex Zhang",
-        "Jamal Thompson",
-        "Marcus Chen",
-        "Ethan Park"
+        "Liam O'Connor"
       ],
-      "yards": 8,
+      "yards": 3,
       "result": "gain",
-      "description": "Lateral chain with 4 players for 8 yards",
-      "laterals": 4,
+      "description": "Liam O'Connor rushes for 3 yards",
+      "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 82,
-      "quarter": 3,
-      "time_remaining": 404,
-      "possession": "home",
-      "field_position": 28,
+      "play_number": 33,
+      "quarter": 2,
+      "time_remaining": 858,
+      "possession": "away",
+      "field_position": 52,
+      "down": 3,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Isaiah Brown",
+        "Liam O'Connor",
+        "Connor Walsh"
+      ],
+      "yards": 14,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 14 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 34,
+      "quarter": 2,
+      "time_remaining": 828,
+      "possession": "away",
+      "field_position": 69,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "lateral_chain",
       "players": [
-        "Ethan Park",
-        "Marcus Chen",
-        "Alex Zhang",
-        "Carlos Rodriguez"
+        "Noah Peterson",
+        "Blake Anderson",
+        "Terrell Jackson"
       ],
-      "yards": 14,
+      "yards": 17,
       "result": "first_down",
-      "description": "Lateral chain with 4 players for 14 yards - FIRST DOWN!",
-      "laterals": 4,
+      "description": "Lateral chain with 3 players for 17 yards - FIRST DOWN!",
+      "laterals": 3,
       "fumble": null
     },
     {
-      "play_number": 83,
-      "quarter": 3,
-      "time_remaining": 385,
+      "play_number": 35,
+      "quarter": 2,
+      "time_remaining": 784,
+      "possession": "away",
+      "field_position": 83,
+      "down": 2,
+      "yards_to_go": 6,
+      "play_type": "lateral_chain",
+      "players": [
+        "Andre Davis",
+        "Isaiah Brown",
+        "Noah Peterson"
+      ],
+      "yards": 14,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 14 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 36,
+      "quarter": 2,
+      "time_remaining": 767,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Connor Walsh PLACE KICK is GOOD from 27 yards! +3 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 37,
+      "quarter": 2,
+      "time_remaining": 742,
       "possession": "home",
-      "field_position": 29,
+      "field_position": 80,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh DROP KICK is NO GOOD from 90 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 38,
+      "quarter": 2,
+      "time_remaining": 701,
+      "possession": "home",
+      "field_position": 81,
       "down": 2,
       "yards_to_go": 19,
       "play_type": "run",
@@ -1611,13 +775,372 @@
       "fumble": null
     },
     {
-      "play_number": 84,
-      "quarter": 3,
-      "time_remaining": 344,
+      "play_number": 39,
+      "quarter": 2,
+      "time_remaining": 680,
       "possession": "home",
-      "field_position": 29,
+      "field_position": 81,
       "down": 3,
       "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 40,
+      "quarter": 2,
+      "time_remaining": 659,
+      "possession": "home",
+      "field_position": 89,
+      "down": 4,
+      "yards_to_go": 11,
+      "play_type": "lateral_chain",
+      "players": [
+        "Carlos Rodriguez",
+        "Ethan Park",
+        "DeShawn Williams"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 8 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 41,
+      "quarter": 2,
+      "time_remaining": 629,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Ethan Park DROP KICK is GOOD from 21 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 42,
+      "quarter": 2,
+      "time_remaining": 603,
+      "possession": "home",
+      "field_position": 26,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "lateral_chain",
+      "players": [
+        "DeShawn Williams",
+        "Alex Zhang"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 6 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 43,
+      "quarter": 2,
+      "time_remaining": 579,
+      "possession": "home",
+      "field_position": 38,
+      "down": 3,
+      "yards_to_go": 2,
+      "play_type": "lateral_chain",
+      "players": [
+        "DeShawn Williams",
+        "Jamal Thompson",
+        "Ryan Mitchell"
+      ],
+      "yards": 12,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 12 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 44,
+      "quarter": 2,
+      "time_remaining": 547,
+      "possession": "home",
+      "field_position": 43,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 5,
+      "result": "first_down",
+      "description": "Jamal Thompson rushes for 5 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 45,
+      "quarter": 2,
+      "time_remaining": 518,
+      "possession": "away",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Ethan Park punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 46,
+      "quarter": 2,
+      "time_remaining": 499,
+      "possession": "home",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh DROP KICK is NO GOOD from 109 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 47,
+      "quarter": 2,
+      "time_remaining": 469,
+      "possession": "home",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Tyler O'Brien",
+        "Ethan Park",
+        "Marcus Chen"
+      ],
+      "yards": 7,
+      "result": "touchdown",
+      "description": "Lateral chain with 3 players for 7 yards - TOUCHDOWN!",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 48,
+      "quarter": 2,
+      "time_remaining": 447,
+      "possession": "away",
+      "field_position": 31,
+      "down": 2,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Terrell Jackson",
+        "Connor Walsh",
+        "Isaiah Brown",
+        "Marcus Lee",
+        "Liam O'Connor"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 11 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 49,
+      "quarter": 2,
+      "time_remaining": 418,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Connor Walsh punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 50,
+      "quarter": 2,
+      "time_remaining": 384,
+      "possession": "away",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park PLACE KICK is NO GOOD from 109 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 51,
+      "quarter": 2,
+      "time_remaining": 361,
+      "possession": "away",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 8,
+      "result": "touchdown",
+      "description": "Terrell Jackson rushes for 8 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 52,
+      "quarter": 2,
+      "time_remaining": 317,
+      "possession": "away",
+      "field_position": 28,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -52,
+      "result": "punt",
+      "description": "Ethan Park punts 52 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 53,
+      "quarter": 2,
+      "time_remaining": 296,
+      "possession": "away",
+      "field_position": 34,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Lee",
+        "Connor Walsh",
+        "Isaiah Brown"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 6 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 54,
+      "quarter": 2,
+      "time_remaining": 272,
+      "possession": "away",
+      "field_position": 38,
+      "down": 3,
+      "yards_to_go": 10,
+      "play_type": "lateral_chain",
+      "players": [
+        "Connor Walsh",
+        "Marcus Lee",
+        "Noah Peterson",
+        "Isaiah Brown"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 4 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 55,
+      "quarter": 2,
+      "time_remaining": 253,
+      "possession": "away",
+      "field_position": 44,
+      "down": 4,
+      "yards_to_go": 4,
+      "play_type": "lateral_chain",
+      "players": [
+        "Liam O'Connor",
+        "Marcus Lee"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 6 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 56,
+      "quarter": 2,
+      "time_remaining": 229,
+      "possession": "away",
+      "field_position": 45,
+      "down": 5,
+      "yards_to_go": 3,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Blake Anderson rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 57,
+      "quarter": 2,
+      "time_remaining": 197,
+      "possession": "home",
+      "field_position": 4,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -51,
+      "result": "punt",
+      "description": "Connor Walsh punts 51 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 58,
+      "quarter": 2,
+      "time_remaining": 153,
+      "possession": "home",
+      "field_position": 4,
+      "down": 2,
+      "yards_to_go": 20,
       "play_type": "run",
       "players": [
         "DeShawn Williams"
@@ -1629,85 +1152,215 @@
       "fumble": null
     },
     {
-      "play_number": 85,
-      "quarter": 3,
-      "time_remaining": 315,
+      "play_number": 59,
+      "quarter": 2,
+      "time_remaining": 116,
       "possession": "home",
-      "field_position": 36,
-      "down": 4,
-      "yards_to_go": 12,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 7,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 7 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 86,
-      "quarter": 3,
-      "time_remaining": 288,
-      "possession": "home",
-      "field_position": 41,
-      "down": 5,
-      "yards_to_go": 7,
-      "play_type": "run",
-      "players": [
-        "Jamal Thompson"
-      ],
-      "yards": 5,
-      "result": "gain",
-      "description": "Jamal Thompson rushes for 5 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 87,
-      "quarter": 3,
-      "time_remaining": 270,
-      "possession": "away",
-      "field_position": 44,
-      "down": 6,
-      "yards_to_go": 4,
+      "field_position": 6,
+      "down": 3,
+      "yards_to_go": 18,
       "play_type": "run",
       "players": [
         "Marcus Chen"
       ],
-      "yards": 3,
-      "result": "turnover_on_downs",
-      "description": "Marcus Chen rushes for 3 yards - TURNOVER ON DOWNS!",
+      "yards": 2,
+      "result": "gain",
+      "description": "Marcus Chen rushes for 2 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 88,
-      "quarter": 3,
-      "time_remaining": 244,
-      "possession": "home",
-      "field_position": 56,
+      "play_number": 60,
+      "quarter": 2,
+      "time_remaining": 98,
+      "possession": "away",
+      "field_position": 94,
       "down": 1,
       "yards_to_go": 20,
-      "play_type": "drop_kick",
+      "play_type": "place_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park PLACE KICK is NO GOOD from 104 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 61,
+      "quarter": 2,
+      "time_remaining": 73,
+      "possession": "away",
+      "field_position": 94,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 6,
+      "result": "touchdown",
+      "description": "Terrell Jackson rushes for 6 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 62,
+      "quarter": 2,
+      "time_remaining": 51,
+      "possession": "away",
+      "field_position": 80,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park PLACE KICK is NO GOOD from 90 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 63,
+      "quarter": 2,
+      "time_remaining": 11,
+      "possession": "away",
+      "field_position": 80,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 64,
+      "quarter": 3,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 85,
+      "down": 3,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 65,
+      "quarter": 3,
+      "time_remaining": 861,
+      "possession": "away",
+      "field_position": 92,
+      "down": 4,
+      "yards_to_go": 8,
+      "play_type": "lateral_chain",
+      "players": [
+        "Liam O'Connor",
+        "Connor Walsh",
+        "Blake Anderson"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 7 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 66,
+      "quarter": 3,
+      "time_remaining": 830,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Connor Walsh PLACE KICK is GOOD from 18 yards! +3 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 67,
+      "quarter": 3,
+      "time_remaining": 786,
+      "possession": "home",
+      "field_position": 80,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
       "players": [
         "Connor Walsh"
       ],
       "yards": 0,
       "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 66 yards",
+      "description": "Connor Walsh PLACE KICK is NO GOOD from 90 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 89,
+      "play_number": 68,
       "quarter": 3,
-      "time_remaining": 229,
+      "time_remaining": 746,
       "possession": "home",
-      "field_position": 59,
+      "field_position": 83,
       "down": 2,
       "yards_to_go": 17,
+      "play_type": "lateral_chain",
+      "players": [
+        "Alex Zhang",
+        "Ethan Park",
+        "Carlos Rodriguez"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 3 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 69,
+      "quarter": 3,
+      "time_remaining": 724,
+      "possession": "home",
+      "field_position": 83,
+      "down": 3,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 70,
+      "quarter": 3,
+      "time_remaining": 705,
+      "possession": "home",
+      "field_position": 86,
+      "down": 4,
+      "yards_to_go": 14,
       "play_type": "run",
       "players": [
         "Carlos Rodriguez"
@@ -1719,56 +1372,235 @@
       "fumble": null
     },
     {
-      "play_number": 90,
+      "play_number": 71,
       "quarter": 3,
-      "time_remaining": 210,
-      "possession": "home",
-      "field_position": 79,
+      "time_remaining": 666,
+      "possession": "away",
+      "field_position": 1,
       "down": 1,
       "yards_to_go": 20,
-      "play_type": "lateral_chain",
+      "play_type": "punt",
       "players": [
-        "Ethan Park",
-        "Jamal Thompson",
-        "Ryan Mitchell",
-        "Tyler O'Brien",
-        "DeShawn Williams"
+        "Ethan Park"
       ],
-      "yards": 20,
-      "result": "first_down",
-      "description": "Lateral chain with 5 players for 20 yards - FIRST DOWN!",
-      "laterals": 5,
+      "yards": -49,
+      "result": "punt",
+      "description": "Ethan Park punts 49 yards",
+      "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 91,
+      "play_number": 72,
       "quarter": 3,
-      "time_remaining": 187,
+      "time_remaining": 636,
       "possession": "home",
-      "field_position": 93,
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh PLACE KICK is NO GOOD from 109 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 73,
+      "quarter": 3,
+      "time_remaining": 608,
+      "possession": "home",
+      "field_position": 99,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 7,
+      "result": "touchdown",
+      "description": "Carlos Rodriguez rushes for 7 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 74,
+      "quarter": 3,
+      "time_remaining": 578,
+      "possession": "away",
+      "field_position": 21,
       "down": 2,
-      "yards_to_go": 6,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Terrell Jackson rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 75,
+      "quarter": 3,
+      "time_remaining": 546,
+      "possession": "home",
+      "field_position": 35,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -44,
+      "result": "punt",
+      "description": "Connor Walsh punts 44 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 76,
+      "quarter": 3,
+      "time_remaining": 525,
+      "possession": "home",
+      "field_position": 40,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 77,
+      "quarter": 3,
+      "time_remaining": 492,
+      "possession": "home",
+      "field_position": 42,
+      "down": 3,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 78,
+      "quarter": 3,
+      "time_remaining": 451,
+      "possession": "home",
+      "field_position": 50,
+      "down": 4,
+      "yards_to_go": 5,
       "play_type": "lateral_chain",
       "players": [
-        "DeShawn Williams",
-        "Alex Zhang",
-        "Carlos Rodriguez",
+        "Jamal Thompson",
+        "Alex Zhang"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 8 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 79,
+      "quarter": 3,
+      "time_remaining": 417,
+      "possession": "away",
+      "field_position": 50,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
         "Ethan Park"
       ],
-      "yards": 14,
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park DROP KICK is NO GOOD from 60 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 80,
+      "quarter": 3,
+      "time_remaining": 381,
+      "possession": "away",
+      "field_position": 52,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "lateral_chain",
+      "players": [
+        "Andre Davis",
+        "Terrell Jackson",
+        "Connor Walsh",
+        "Blake Anderson"
+      ],
+      "yards": 2,
       "result": "gain",
-      "description": "Lateral chain with 4 players for 14 yards",
+      "description": "Lateral chain with 4 players for 2 yards",
       "laterals": 4,
       "fumble": null
     },
     {
-      "play_number": 92,
+      "play_number": 81,
       "quarter": 3,
-      "time_remaining": 163,
+      "time_remaining": 354,
       "possession": "home",
-      "field_position": 95,
-      "down": 3,
+      "field_position": 48,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Connor Walsh PLACE KICK is NO GOOD from 58 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 82,
+      "quarter": 3,
+      "time_remaining": 332,
+      "possession": "home",
+      "field_position": 64,
+      "down": 2,
       "yards_to_go": 4,
+      "play_type": "lateral_chain",
+      "players": [
+        "Tyler O'Brien",
+        "Ryan Mitchell",
+        "Carlos Rodriguez"
+      ],
+      "yards": 16,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 16 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 83,
+      "quarter": 3,
+      "time_remaining": 290,
+      "possession": "home",
+      "field_position": 66,
+      "down": 3,
+      "yards_to_go": 2,
       "play_type": "run",
       "players": [
         "DeShawn Williams"
@@ -1780,9 +1612,82 @@
       "fumble": null
     },
     {
-      "play_number": 93,
+      "play_number": 84,
       "quarter": 3,
-      "time_remaining": 146,
+      "time_remaining": 258,
+      "possession": "home",
+      "field_position": 73,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Tyler O'Brien",
+        "Ethan Park"
+      ],
+      "yards": 7,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 7 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 85,
+      "quarter": 3,
+      "time_remaining": 241,
+      "possession": "home",
+      "field_position": 73,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Tyler O'Brien"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Tyler O'Brien rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 86,
+      "quarter": 3,
+      "time_remaining": 223,
+      "possession": "home",
+      "field_position": 77,
+      "down": 3,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 87,
+      "quarter": 3,
+      "time_remaining": 188,
+      "possession": "home",
+      "field_position": 85,
+      "down": 4,
+      "yards_to_go": 8,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 8 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 88,
+      "quarter": 3,
+      "time_remaining": 172,
       "possession": "away",
       "field_position": 1,
       "down": 1,
@@ -1791,16 +1696,16 @@
       "players": [
         "Ethan Park"
       ],
-      "yards": -56,
+      "yards": -70,
       "result": "punt",
-      "description": "Ethan Park punts 56 yards",
+      "description": "Ethan Park punts 70 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 94,
+      "play_number": 89,
       "quarter": 3,
-      "time_remaining": 114,
+      "time_remaining": 147,
       "possession": "away",
       "field_position": 3,
       "down": 2,
@@ -1816,67 +1721,247 @@
       "fumble": null
     },
     {
-      "play_number": 95,
+      "play_number": 90,
       "quarter": 3,
-      "time_remaining": 79,
+      "time_remaining": 125,
       "possession": "away",
-      "field_position": 5,
+      "field_position": 6,
+      "down": 3,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Terrell Jackson"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Terrell Jackson rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 91,
+      "quarter": 3,
+      "time_remaining": 89,
+      "possession": "away",
+      "field_position": 6,
+      "down": 4,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 92,
+      "quarter": 3,
+      "time_remaining": 61,
+      "possession": "away",
+      "field_position": 11,
+      "down": 5,
+      "yards_to_go": 10,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 93,
+      "quarter": 3,
+      "time_remaining": 26,
+      "possession": "home",
+      "field_position": 38,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -51,
+      "result": "punt",
+      "description": "Connor Walsh punts 51 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 94,
+      "quarter": 4,
+      "time_remaining": 900,
+      "possession": "home",
+      "field_position": 41,
+      "down": 2,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Marcus Chen"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Marcus Chen rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 95,
+      "quarter": 4,
+      "time_remaining": 860,
+      "possession": "home",
+      "field_position": 42,
       "down": 3,
       "yards_to_go": 16,
-      "play_type": "lateral_chain",
+      "play_type": "run",
       "players": [
-        "Noah Peterson",
-        "Connor Walsh",
-        "Blake Anderson"
+        "Tyler O'Brien"
       ],
-      "yards": 2,
+      "yards": 1,
       "result": "gain",
-      "description": "Lateral chain with 3 players for 2 yards",
-      "laterals": 3,
+      "description": "Tyler O'Brien rushes for 1 yards",
+      "laterals": null,
       "fumble": null
     },
     {
       "play_number": 96,
-      "quarter": 3,
-      "time_remaining": 64,
-      "possession": "away",
-      "field_position": 12,
+      "quarter": 4,
+      "time_remaining": 817,
+      "possession": "home",
+      "field_position": 42,
       "down": 4,
-      "yards_to_go": 9,
+      "yards_to_go": 16,
       "play_type": "run",
       "players": [
-        "Connor Walsh"
+        "Tyler O'Brien"
       ],
-      "yards": 7,
+      "yards": 0,
       "result": "gain",
-      "description": "Connor Walsh rushes for 7 yards",
+      "description": "Tyler O'Brien rushes for 0 yards",
       "laterals": null,
       "fumble": null
     },
     {
       "play_number": 97,
-      "quarter": 3,
-      "time_remaining": 34,
-      "possession": "away",
-      "field_position": 15,
+      "quarter": 4,
+      "time_remaining": 773,
+      "possession": "home",
+      "field_position": 49,
       "down": 5,
-      "yards_to_go": 6,
+      "yards_to_go": 9,
       "play_type": "run",
       "players": [
-        "Liam O'Connor"
+        "Carlos Rodriguez"
       ],
-      "yards": 3,
+      "yards": 7,
       "result": "gain",
-      "description": "Liam O'Connor rushes for 3 yards",
+      "description": "Carlos Rodriguez rushes for 7 yards",
       "laterals": null,
       "fumble": null
     },
     {
       "play_number": 98,
-      "quarter": 3,
-      "time_remaining": 12,
+      "quarter": 4,
+      "time_remaining": 736,
+      "possession": "away",
+      "field_position": 53,
+      "down": 6,
+      "yards_to_go": 5,
+      "play_type": "run",
+      "players": [
+        "Tyler O'Brien"
+      ],
+      "yards": 4,
+      "result": "turnover_on_downs",
+      "description": "Tyler O'Brien rushes for 4 yards - TURNOVER ON DOWNS!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 99,
+      "quarter": 4,
+      "time_remaining": 695,
       "possession": "home",
-      "field_position": 46,
+      "field_position": 56,
+      "down": 7,
+      "yards_to_go": 2,
+      "play_type": "lateral_chain",
+      "players": [
+        "Blake Anderson",
+        "Terrell Jackson"
+      ],
+      "yards": 3,
+      "result": "turnover_on_downs",
+      "description": "Lateral chain with 2 players for 3 yards - TURNOVER ON DOWNS!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 100,
+      "quarter": 4,
+      "time_remaining": 665,
+      "possession": "away",
+      "field_position": 44,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park DROP KICK is NO GOOD from 54 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 101,
+      "quarter": 4,
+      "time_remaining": 624,
+      "possession": "away",
+      "field_position": 48,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Isaiah Brown"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Isaiah Brown rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 102,
+      "quarter": 4,
+      "time_remaining": 584,
+      "possession": "away",
+      "field_position": 55,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Connor Walsh",
+        "Marcus Lee"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 7 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 103,
+      "quarter": 4,
+      "time_remaining": 546,
+      "possession": "home",
+      "field_position": 6,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "punt",
@@ -1890,83 +1975,268 @@
       "fumble": null
     },
     {
-      "play_number": 99,
+      "play_number": 104,
       "quarter": 4,
-      "time_remaining": 900,
+      "time_remaining": 527,
       "possession": "home",
-      "field_position": 51,
+      "field_position": 14,
       "down": 2,
-      "yards_to_go": 15,
+      "yards_to_go": 12,
+      "play_type": "lateral_chain",
+      "players": [
+        "Ethan Park",
+        "Jamal Thompson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 8 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 105,
+      "quarter": 4,
+      "time_remaining": 482,
+      "possession": "home",
+      "field_position": 22,
+      "down": 3,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 8 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 106,
+      "quarter": 4,
+      "time_remaining": 439,
+      "possession": "home",
+      "field_position": 24,
+      "down": 4,
+      "yards_to_go": 2,
+      "play_type": "run",
+      "players": [
+        "Tyler O'Brien"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Tyler O'Brien rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 107,
+      "quarter": 4,
+      "time_remaining": 405,
+      "possession": "away",
+      "field_position": 26,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -50,
+      "result": "punt",
+      "description": "Ethan Park punts 50 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 108,
+      "quarter": 4,
+      "time_remaining": 388,
+      "possession": "away",
+      "field_position": 27,
+      "down": 2,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Blake Anderson"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Blake Anderson rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 109,
+      "quarter": 4,
+      "time_remaining": 365,
+      "possession": "away",
+      "field_position": 33,
+      "down": 3,
+      "yards_to_go": 13,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Lee",
+        "Isaiah Brown"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 6 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 110,
+      "quarter": 4,
+      "time_remaining": 332,
+      "possession": "away",
+      "field_position": 41,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Noah Peterson",
+        "Terrell Jackson",
+        "Marcus Lee",
+        "Liam O'Connor",
+        "Isaiah Brown"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 8 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 111,
+      "quarter": 4,
+      "time_remaining": 313,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Connor Walsh"
+      ],
+      "yards": -59,
+      "result": "punt",
+      "description": "Connor Walsh punts 59 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 112,
+      "quarter": 4,
+      "time_remaining": 291,
+      "possession": "home",
+      "field_position": 5,
+      "down": 2,
+      "yards_to_go": 16,
       "play_type": "run",
       "players": [
         "DeShawn Williams"
       ],
-      "yards": 5,
+      "yards": 4,
       "result": "gain",
-      "description": "DeShawn Williams rushes for 5 yards",
+      "description": "DeShawn Williams rushes for 4 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 100,
+      "play_number": 113,
       "quarter": 4,
-      "time_remaining": 859,
-      "possession": "away",
-      "field_position": 49,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Ethan Park DROP KICK is NO GOOD from 59 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 101,
-      "quarter": 4,
-      "time_remaining": 830,
-      "possession": "away",
-      "field_position": 56,
-      "down": 2,
-      "yards_to_go": 13,
-      "play_type": "lateral_chain",
-      "players": [
-        "Andre Davis",
-        "Terrell Jackson",
-        "Noah Peterson"
-      ],
-      "yards": 7,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 7 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 102,
-      "quarter": 4,
-      "time_remaining": 795,
-      "possession": "away",
-      "field_position": 58,
+      "time_remaining": 275,
+      "possession": "home",
+      "field_position": 6,
       "down": 3,
-      "yards_to_go": 11,
+      "yards_to_go": 15,
       "play_type": "run",
       "players": [
-        "Isaiah Brown"
+        "Carlos Rodriguez"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 114,
+      "quarter": 4,
+      "time_remaining": 238,
+      "possession": "home",
+      "field_position": 8,
+      "down": 4,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
       ],
       "yards": 2,
       "result": "gain",
-      "description": "Isaiah Brown rushes for 2 yards",
+      "description": "Jamal Thompson rushes for 2 yards",
       "laterals": null,
       "fumble": null
     },
     {
-      "play_number": 103,
+      "play_number": 115,
       "quarter": 4,
-      "time_remaining": 759,
+      "time_remaining": 206,
+      "possession": "home",
+      "field_position": 18,
+      "down": 5,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Tyler O'Brien",
+        "Jamal Thompson"
+      ],
+      "yards": 10,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 10 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 116,
+      "quarter": 4,
+      "time_remaining": 178,
+      "possession": "away",
+      "field_position": 27,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -55,
+      "result": "punt",
+      "description": "Ethan Park punts 55 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 117,
+      "quarter": 4,
+      "time_remaining": 150,
+      "possession": "away",
+      "field_position": 29,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Liam O'Connor"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Liam O'Connor rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 118,
+      "quarter": 4,
+      "time_remaining": 111,
       "possession": "away",
       "field_position": 20,
       "down": 1,
@@ -1977,441 +2247,66 @@
       ],
       "yards": 0,
       "result": "successful_kick",
-      "description": "Connor Walsh PLACE KICK is GOOD from 52 yards! +3 points",
+      "description": "Connor Walsh PLACE KICK is GOOD from 81 yards! +3 points",
       "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 104,
-      "quarter": 4,
-      "time_remaining": 740,
-      "possession": "away",
-      "field_position": 27,
-      "down": 2,
-      "yards_to_go": 13,
-      "play_type": "run",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 7,
-      "result": "gain",
-      "description": "Connor Walsh rushes for 7 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 105,
-      "quarter": 4,
-      "time_remaining": 697,
-      "possession": "away",
-      "field_position": 33,
-      "down": 3,
-      "yards_to_go": 7,
-      "play_type": "run",
-      "players": [
-        "Isaiah Brown"
-      ],
-      "yards": 6,
-      "result": "gain",
-      "description": "Isaiah Brown rushes for 6 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 106,
-      "quarter": 4,
-      "time_remaining": 671,
-      "possession": "away",
-      "field_position": 38,
-      "down": 4,
-      "yards_to_go": 2,
-      "play_type": "run",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 5,
-      "result": "gain",
-      "description": "Connor Walsh rushes for 5 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 107,
-      "quarter": 4,
-      "time_remaining": 635,
-      "possession": "home",
-      "field_position": 62,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": 0,
-      "result": "missed_kick",
-      "description": "Connor Walsh DROP KICK is NO GOOD from 72 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 108,
-      "quarter": 4,
-      "time_remaining": 612,
-      "possession": "home",
-      "field_position": 20,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "drop_kick",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": 0,
-      "result": "successful_kick",
-      "description": "Ethan Park DROP KICK is GOOD from 48 yards! +5 points",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 109,
-      "quarter": 4,
-      "time_remaining": 582,
-      "possession": "home",
-      "field_position": 24,
-      "down": 2,
-      "yards_to_go": 16,
-      "play_type": "run",
-      "players": [
-        "Tyler O'Brien"
-      ],
-      "yards": 4,
-      "result": "gain",
-      "description": "Tyler O'Brien rushes for 4 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 110,
-      "quarter": 4,
-      "time_remaining": 543,
-      "possession": "home",
-      "field_position": 26,
-      "down": 3,
-      "yards_to_go": 14,
-      "play_type": "run",
-      "players": [
-        "Carlos Rodriguez"
-      ],
-      "yards": 2,
-      "result": "gain",
-      "description": "Carlos Rodriguez rushes for 2 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 111,
-      "quarter": 4,
-      "time_remaining": 516,
-      "possession": "away",
-      "field_position": 4,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Ethan Park"
-      ],
-      "yards": -70,
-      "result": "punt",
-      "description": "Ethan Park punts 70 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 112,
-      "quarter": 4,
-      "time_remaining": 500,
-      "possession": "away",
-      "field_position": 9,
-      "down": 2,
-      "yards_to_go": 15,
-      "play_type": "lateral_chain",
-      "players": [
-        "Noah Peterson",
-        "Blake Anderson"
-      ],
-      "yards": 5,
-      "result": "gain",
-      "description": "Lateral chain with 2 players for 5 yards",
-      "laterals": 2,
-      "fumble": null
-    },
-    {
-      "play_number": 113,
-      "quarter": 4,
-      "time_remaining": 466,
-      "possession": "away",
-      "field_position": 24,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Isaiah Brown",
-        "Noah Peterson",
-        "Blake Anderson",
-        "Marcus Lee"
-      ],
-      "yards": 15,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 15 yards - FIRST DOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 114,
-      "quarter": 4,
-      "time_remaining": 430,
-      "possession": "away",
-      "field_position": 24,
-      "down": 2,
-      "yards_to_go": 20,
-      "play_type": "run",
-      "players": [
-        "Liam O'Connor"
-      ],
-      "yards": 0,
-      "result": "gain",
-      "description": "Liam O'Connor rushes for 0 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 115,
-      "quarter": 4,
-      "time_remaining": 402,
-      "possession": "away",
-      "field_position": 25,
-      "down": 3,
-      "yards_to_go": 19,
-      "play_type": "run",
-      "players": [
-        "Liam O'Connor"
-      ],
-      "yards": 1,
-      "result": "gain",
-      "description": "Liam O'Connor rushes for 1 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 116,
-      "quarter": 4,
-      "time_remaining": 359,
-      "possession": "home",
-      "field_position": 17,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -58,
-      "result": "punt",
-      "description": "Connor Walsh punts 58 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 117,
-      "quarter": 4,
-      "time_remaining": 343,
-      "possession": "home",
-      "field_position": 26,
-      "down": 2,
-      "yards_to_go": 11,
-      "play_type": "lateral_chain",
-      "players": [
-        "Tyler O'Brien",
-        "DeShawn Williams",
-        "Alex Zhang"
-      ],
-      "yards": 9,
-      "result": "gain",
-      "description": "Lateral chain with 3 players for 9 yards",
-      "laterals": 3,
-      "fumble": null
-    },
-    {
-      "play_number": 118,
-      "quarter": 4,
-      "time_remaining": 308,
-      "possession": "home",
-      "field_position": 30,
-      "down": 3,
-      "yards_to_go": 7,
-      "play_type": "lateral_chain",
-      "players": [
-        "Marcus Chen",
-        "Tyler O'Brien",
-        "Alex Zhang",
-        "Ethan Park"
-      ],
-      "yards": 4,
-      "result": "gain",
-      "description": "Lateral chain with 4 players for 4 yards",
-      "laterals": 4,
       "fumble": null
     },
     {
       "play_number": 119,
       "quarter": 4,
-      "time_remaining": 271,
-      "possession": "away",
-      "field_position": 70,
+      "time_remaining": 85,
+      "possession": "home",
+      "field_position": 80,
       "down": 1,
       "yards_to_go": 20,
       "play_type": "drop_kick",
       "players": [
-        "Ethan Park"
+        "Connor Walsh"
       ],
       "yards": 0,
       "result": "missed_kick",
-      "description": "Ethan Park DROP KICK is NO GOOD from 80 yards",
+      "description": "Connor Walsh DROP KICK is NO GOOD from 90 yards",
       "laterals": null,
       "fumble": null
     },
     {
       "play_number": 120,
       "quarter": 4,
-      "time_remaining": 234,
-      "possession": "away",
-      "field_position": 71,
+      "time_remaining": 45,
+      "possession": "home",
+      "field_position": 83,
       "down": 2,
-      "yards_to_go": 19,
+      "yards_to_go": 17,
       "play_type": "run",
       "players": [
-        "Connor Walsh"
+        "Carlos Rodriguez"
       ],
-      "yards": 1,
+      "yards": 3,
       "result": "gain",
-      "description": "Connor Walsh rushes for 1 yards",
+      "description": "Carlos Rodriguez rushes for 3 yards",
       "laterals": null,
       "fumble": null
     },
     {
       "play_number": 121,
       "quarter": 4,
-      "time_remaining": 199,
+      "time_remaining": 10,
       "possession": "home",
-      "field_position": 1,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "punt",
-      "players": [
-        "Connor Walsh"
-      ],
-      "yards": -65,
-      "result": "punt",
-      "description": "Connor Walsh punts 65 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 122,
-      "quarter": 4,
-      "time_remaining": 155,
-      "possession": "home",
-      "field_position": 12,
-      "down": 2,
-      "yards_to_go": 9,
+      "field_position": 94,
+      "down": 3,
+      "yards_to_go": 6,
       "play_type": "lateral_chain",
       "players": [
+        "DeShawn Williams",
         "Alex Zhang",
-        "Jamal Thompson",
-        "Marcus Chen",
         "Tyler O'Brien",
+        "Ryan Mitchell",
         "Ethan Park"
       ],
       "yards": 11,
       "result": "gain",
       "description": "Lateral chain with 5 players for 11 yards",
       "laterals": 5,
-      "fumble": null
-    },
-    {
-      "play_number": 123,
-      "quarter": 4,
-      "time_remaining": 140,
-      "possession": "home",
-      "field_position": 16,
-      "down": 3,
-      "yards_to_go": 5,
-      "play_type": "run",
-      "players": [
-        "Marcus Chen"
-      ],
-      "yards": 4,
-      "result": "gain",
-      "description": "Marcus Chen rushes for 4 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 124,
-      "quarter": 4,
-      "time_remaining": 105,
-      "possession": "home",
-      "field_position": 26,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "Marcus Chen",
-        "Ethan Park",
-        "Alex Zhang",
-        "Ryan Mitchell"
-      ],
-      "yards": 10,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 10 yards - FIRST DOWN!",
-      "laterals": 4,
-      "fumble": null
-    },
-    {
-      "play_number": 125,
-      "quarter": 4,
-      "time_remaining": 74,
-      "possession": "home",
-      "field_position": 35,
-      "down": 2,
-      "yards_to_go": 11,
-      "play_type": "run",
-      "players": [
-        "DeShawn Williams"
-      ],
-      "yards": 9,
-      "result": "gain",
-      "description": "DeShawn Williams rushes for 9 yards",
-      "laterals": null,
-      "fumble": null
-    },
-    {
-      "play_number": 126,
-      "quarter": 4,
-      "time_remaining": 32,
-      "possession": "home",
-      "field_position": 49,
-      "down": 1,
-      "yards_to_go": 20,
-      "play_type": "lateral_chain",
-      "players": [
-        "DeShawn Williams",
-        "Tyler O'Brien",
-        "Marcus Chen",
-        "Ethan Park"
-      ],
-      "yards": 14,
-      "result": "first_down",
-      "description": "Lateral chain with 4 players for 14 yards - FIRST DOWN!",
-      "laterals": 4,
       "fumble": null
     }
   ]
