@@ -51,19 +51,24 @@ PLAY_FAMILY_TO_TYPE = {
 }
 
 POSITION_TAGS = {
-    "Viper/Back": "VB",
-    "Back/Safety": "HB",
-    "Wing/End": "WE",
+    "Lineman": "LM",
+    "Zeroback/Back": "ZB",
+    "Halfback/Back": "HB",
+    "Wingback/End": "WB",
+    "Wing/End": "WB",
+    "Shiftback/Back": "SB",
+    "Viper/Back": "VP",
+    "Back/Safety": "LB",
     "Back/Corner": "CB",
-    "Wedge/Line": "WL",
+    "Wedge/Line": "LA",
     "Viper": "VP",
     "Back": "BK",
-    "Wing": "WG",
-    "Wedge": "WD",
-    "Safety": "SF",
-    "End": "EN",
-    "Line": "LN",
-    "Corner": "CN",
+    "Wing": "WB",
+    "Wedge": "LA",
+    "Safety": "KP",
+    "End": "ED",
+    "Line": "LA",
+    "Corner": "CB",
 }
 
 
@@ -82,8 +87,8 @@ def player_label(player) -> str:
 class GameState:
     quarter: int = 1
     time_remaining: int = 900
-    home_score: int = 0
-    away_score: int = 0
+    home_score: float = 0.0
+    away_score: float = 0.0
     possession: str = "home"
     field_position: int = 20
     down: int = 1
@@ -269,7 +274,10 @@ class ViperballEngine:
 
     def kickoff(self, receiving_team: str):
         self.state.possession = receiving_team
-        self.state.field_position = 20
+        kick_distance = random.randint(40, 65)
+        return_yards = random.randint(10, 30)
+        start_position = max(10, min(40, return_yards))
+        self.state.field_position = start_position
         self.state.down = 1
         self.state.yards_to_go = 20
 
@@ -298,7 +306,7 @@ class ViperballEngine:
             time_elapsed = int(base_time * (1.2 - tempo * 0.4))
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
-            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "chaos_recovery"]:
+            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "chaos_recovery", "safety"]:
                 drive_result = play.result
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
@@ -312,6 +320,12 @@ class ViperballEngine:
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
+                elif play.result == "safety":
+                    scored_team = "away" if drive_team == "home" else "home"
+                    self.state.possession = drive_team
+                    self.state.field_position = 20
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
                 break
 
         self.drive_log.append({
@@ -476,6 +490,32 @@ class ViperballEngine:
 
         new_position = min(100, self.state.field_position + yards_gained)
 
+        if new_position <= 0:
+            self.change_possession()
+            self.add_score(2)
+            self.change_possession()
+            self.apply_stamina_drain(3)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            self.state.field_position = 20
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=self.state.down,
+                yards_to_go=self.state.yards_to_go,
+                play_type="run",
+                play_family=family.value,
+                players_involved=[plabel],
+                yards_gained=yards_gained,
+                result=PlayResult.SAFETY.value,
+                description=f"{ptag} {action} → tackled in end zone — SAFETY! (+2 defensive)",
+                fatigue=round(stamina, 1),
+            )
+
         if new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team):
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - self.state.field_position
@@ -552,6 +592,7 @@ class ViperballEngine:
             self.state.field_position = max(1, 100 - old_pos)
             self.state.down = 1
             self.state.yards_to_go = 20
+            self.add_score(0.5)
 
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
             return Play(
@@ -567,7 +608,7 @@ class ViperballEngine:
                 players_involved=chain_labels,
                 yards_gained=yards_gained,
                 result=PlayResult.FUMBLE.value,
-                description=f"{chain_tags} lateral → FUMBLE! Defense recovers",
+                description=f"{chain_tags} lateral → FUMBLE! Defense recovers (+0.5)",
                 fatigue=round(stamina, 1),
                 laterals=chain_length,
                 fumble=True,
@@ -975,7 +1016,7 @@ class ViperballEngine:
     def get_offensive_team(self) -> Team:
         return self.home_team if self.state.possession == "home" else self.away_team
 
-    def add_score(self, points: int):
+    def add_score(self, points: float):
         if self.state.possession == "home":
             self.state.home_score += points
         else:
@@ -1014,6 +1055,13 @@ class ViperballEngine:
 
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
+
+        away_fumbles = len([p for p in away_plays if p.fumble])
+        home_fumbles = len([p for p in home_plays if p.fumble])
+        home_stats["fumble_recoveries"] = away_fumbles
+        away_stats["fumble_recoveries"] = home_fumbles
+        home_stats["fumble_recovery_points"] = away_fumbles * 0.5
+        away_stats["fumble_recovery_points"] = home_fumbles * 0.5
 
         for stats, plays in [(home_stats, home_plays), (away_stats, away_plays)]:
             plays_by_q = {q: 0 for q in range(1, 5)}
@@ -1102,6 +1150,7 @@ class ViperballEngine:
             "lateral_efficiency": round(lateral_efficiency, 1),
             "play_family_breakdown": play_family_counts,
             "avg_fatigue": avg_fatigue,
+            "safeties_conceded": len([p for p in plays if p.result == "safety"]),
         }
 
     def play_to_dict(self, play: Play) -> Dict:

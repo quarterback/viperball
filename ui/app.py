@@ -106,8 +106,8 @@ def generate_box_score_markdown(result):
     as_ = result["stats"]["away"]
     plays = result["play_by_play"]
 
-    home_q = {1: 0, 2: 0, 3: 0, 4: 0}
-    away_q = {1: 0, 2: 0, 3: 0, 4: 0}
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
     for p in plays:
         q = p["quarter"]
         if q not in home_q:
@@ -128,6 +128,19 @@ def generate_box_score_markdown(result):
                 home_q[q] += 1
             else:
                 away_q[q] += 1
+        elif p["result"] == "safety":
+            if p["possession"] == "home":
+                home_q[q] += 2
+            else:
+                away_q[q] += 2
+        elif p["result"] == "fumble":
+            if p["possession"] == "home":
+                home_q[q] += 0.5
+            else:
+                away_q[q] += 0.5
+
+    def _fq(v):
+        return f"{v:g}" if v == int(v) else f"{v:.1f}"
 
     lines = []
     lines.append(f"# {home['team']} vs {away['team']}")
@@ -136,17 +149,25 @@ def generate_box_score_markdown(result):
     lines.append("## Score")
     lines.append(f"| Team | Q1 | Q2 | Q3 | Q4 | Final |")
     lines.append(f"|------|----|----|----|----|-------|")
-    lines.append(f"| {home['team']} | {home_q[1]} | {home_q[2]} | {home_q[3]} | {home_q[4]} | **{home['score']}** |")
-    lines.append(f"| {away['team']} | {away_q[1]} | {away_q[2]} | {away_q[3]} | {away_q[4]} | **{away['score']}** |")
+    lines.append(f"| {home['team']} | {_fq(home_q[1])} | {_fq(home_q[2])} | {_fq(home_q[3])} | {_fq(home_q[4])} | **{_fq(home['score'])}** |")
+    lines.append(f"| {away['team']} | {_fq(away_q[1])} | {_fq(away_q[2])} | {_fq(away_q[3])} | {_fq(away_q[4])} | **{_fq(away['score'])}** |")
     lines.append("")
 
     lines.append("## Team Stats")
     lines.append(f"| Stat | {home['team']} | {away['team']} |")
     lines.append(f"|------|{'---:|' * 2}")
+    h_fr = hs.get('fumble_recoveries', 0)
+    a_fr = as_.get('fumble_recoveries', 0)
+    h_frp = hs.get('fumble_recovery_points', 0)
+    a_frp = as_.get('fumble_recovery_points', 0)
+    h_saf = hs.get('safeties_conceded', 0)
+    a_saf = as_.get('safeties_conceded', 0)
     lines.append(f"| Touchdowns (9pts) | {hs['touchdowns']} ({hs['touchdowns']*9}pts) | {as_['touchdowns']} ({as_['touchdowns']*9}pts) |")
     lines.append(f"| Drop Kicks (5pts) | {hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made']*5}pts) |")
     lines.append(f"| Place Kicks (3pts) | {hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made']*3}pts) |")
+    lines.append(f"| Safeties (2pts) | {a_saf} ({a_saf*2}pts) | {h_saf} ({h_saf*2}pts) |")
     lines.append(f"| Pindowns (1pt) | {hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts) | {as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts) |")
+    lines.append(f"| Fumble Recoveries (0.5pts) | {h_fr} ({h_frp:g}pts) | {a_fr} ({a_frp:g}pts) |")
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
@@ -251,7 +272,7 @@ def drive_result_label(result):
     labels = {
         "touchdown": "TD",
         "successful_kick": "FG",
-        "fumble": "FUMBLE",
+        "fumble": "FUMBLE (+0.5)",
         "turnover_on_downs": "DOWNS",
         "punt": "PUNT",
         "missed_kick": "MISSED FG",
@@ -259,6 +280,7 @@ def drive_result_label(result):
         "pindown": "PINDOWN",
         "punt_return_td": "PUNT RET TD",
         "chaos_recovery": "CHAOS REC",
+        "safety": "SAFETY",
     }
     return labels.get(result, result.upper())
 
@@ -275,6 +297,7 @@ def drive_result_color(result):
         "pindown": "#a855f7",
         "punt_return_td": "#22c55e",
         "chaos_recovery": "#f97316",
+        "safety": "#dc2626",
     }
     return colors.get(result, "#94a3b8")
 
@@ -345,21 +368,26 @@ if page == "Game Simulator":
 
         st.divider()
 
+        def fmt_score(s):
+            return f"{s:g}" if s == int(s) else f"{s:.1f}"
+
         sc1, sc2, sc3 = st.columns([2, 1, 2])
         with sc1:
             st.markdown(f'<p class="team-name">{home_name}</p>', unsafe_allow_html=True)
-            st.markdown(f'<p class="score-big">{home_score}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{fmt_score(home_score)}</p>', unsafe_allow_html=True)
         with sc2:
             st.markdown("<p style='text-align:center; padding-top:10px; font-size:1.2rem; opacity:0.5;'>vs</p>", unsafe_allow_html=True)
             st.caption(f"Seed: {actual_seed}")
         with sc3:
             st.markdown(f'<p class="team-name">{away_name}</p>', unsafe_allow_html=True)
-            st.markdown(f'<p class="score-big">{away_score}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{fmt_score(away_score)}</p>', unsafe_allow_html=True)
 
+        margin = abs(home_score - away_score)
+        margin_str = fmt_score(margin)
         if home_score > away_score:
-            st.success(f"{home_name} wins by {home_score - away_score}")
+            st.success(f"{home_name} wins by {margin_str}")
         elif away_score > home_score:
-            st.success(f"{away_name} wins by {away_score - home_score}")
+            st.success(f"{away_name} wins by {margin_str}")
         else:
             st.info("Game ended in a tie")
 
@@ -411,8 +439,8 @@ if page == "Game Simulator":
         st.subheader("Box Score")
 
         plays = result["play_by_play"]
-        home_q = {1: 0, 2: 0, 3: 0, 4: 0}
-        away_q = {1: 0, 2: 0, 3: 0, 4: 0}
+        home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+        away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
         for p in plays:
             q = p["quarter"]
             if q not in home_q:
@@ -433,6 +461,16 @@ if page == "Game Simulator":
                     home_q[q] += 1
                 else:
                     away_q[q] += 1
+            elif p["result"] == "safety":
+                if p["possession"] == "home":
+                    home_q[q] += 2
+                else:
+                    away_q[q] += 2
+            elif p["result"] == "fumble":
+                if p["possession"] == "home":
+                    home_q[q] += 0.5
+                else:
+                    away_q[q] += 0.5
 
         qtr_data = {
             "": [home_name, away_name],
@@ -445,9 +483,16 @@ if page == "Game Simulator":
         st.dataframe(pd.DataFrame(qtr_data), hide_index=True, use_container_width=True)
 
         st.markdown("**Scoring Breakdown**")
+        h_frp = hs.get('fumble_recovery_points', 0)
+        a_frp = as_.get('fumble_recovery_points', 0)
+        h_fr = hs.get('fumble_recoveries', 0)
+        a_fr = as_.get('fumble_recoveries', 0)
+        h_saf = hs.get('safeties_conceded', 0)
+        a_saf = as_.get('safeties_conceded', 0)
         scoring_data = {
             "": ["Touchdowns (9pts)", "Drop Kicks (5pts)", "Place Kicks (3pts)",
-                 "Pindowns (1pt)", "Punts", "Kick %",
+                 "Safeties (2pts)", "Pindowns (1pt)", "Fumble Recoveries (0.5pts)",
+                 "Punts", "Kick %",
                  "Total Yards", "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
                  "Fumbles Lost", "Turnovers on Downs",
@@ -456,7 +501,9 @@ if page == "Game Simulator":
                 f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
                 f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
                 f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
+                f"{a_saf} ({a_saf * 2}pts)",
                 f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
+                f"{h_fr} ({h_frp:g}pts)",
                 str(hs.get("punts", 0)),
                 f"{hs.get('kick_percentage', 0)}%",
                 str(hs["total_yards"]), str(hs["yards_per_play"]), str(hs["total_plays"]),
@@ -469,7 +516,9 @@ if page == "Game Simulator":
                 f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
                 f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
                 f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
+                f"{h_saf} ({h_saf * 2}pts)",
                 f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
+                f"{a_fr} ({a_frp:g}pts)",
                 str(as_.get("punts", 0)),
                 f"{as_.get('kick_percentage', 0)}%",
                 str(as_["total_yards"]), str(as_["yards_per_play"]), str(as_["total_plays"]),
