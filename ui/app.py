@@ -545,15 +545,13 @@ if page == "Game Simulator":
         st.markdown("**Down Conversions**")
         h_dc = hs.get("down_conversions", {})
         a_dc = as_.get("down_conversions", {})
-        conv_data = {"": [], home_name: [], away_name: []}
         for d in [3, 4, 5]:
             hd = h_dc.get(d, h_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
             ad = a_dc.get(d, a_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
             label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down"
-            conv_data[""].append(label)
-            conv_data[home_name].append(f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
-            conv_data[away_name].append(f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
-        st.dataframe(pd.DataFrame(conv_data), hide_index=True, use_container_width=True)
+            dc1, dc2 = st.columns(2)
+            dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
+            dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
 
         # ====== 2. PLAY FAMILY DISTRIBUTION ======
         st.subheader("Play Family Distribution")
