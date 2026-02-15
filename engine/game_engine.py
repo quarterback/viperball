@@ -323,29 +323,56 @@ class ViperballEngine:
             "result": drive_result,
         })
 
+    def _resolve_kick_type(self) -> PlayType:
+        fp = self.state.field_position
+        down = self.state.down
+
+        if down == 5:
+            if fp >= 70:
+                return random.choices(
+                    [PlayType.PLACE_KICK, PlayType.DROP_KICK],
+                    weights=[0.65, 0.35]
+                )[0]
+            elif fp >= 50:
+                return random.choices(
+                    [PlayType.DROP_KICK, PlayType.PLACE_KICK, PlayType.PUNT],
+                    weights=[0.45, 0.25, 0.30]
+                )[0]
+            else:
+                return random.choices(
+                    [PlayType.PUNT, PlayType.DROP_KICK],
+                    weights=[0.80, 0.20]
+                )[0]
+
+        if fp >= 65:
+            return random.choices(
+                [PlayType.DROP_KICK, PlayType.PLACE_KICK, PlayType.PUNT],
+                weights=[0.45, 0.30, 0.25]
+            )[0]
+        elif fp >= 50:
+            return random.choices(
+                [PlayType.DROP_KICK, PlayType.PUNT],
+                weights=[0.40, 0.60]
+            )[0]
+        elif fp >= 35:
+            return random.choices(
+                [PlayType.DROP_KICK, PlayType.PUNT],
+                weights=[0.20, 0.80]
+            )[0]
+        else:
+            return random.choices(
+                [PlayType.PUNT, PlayType.DROP_KICK],
+                weights=[0.90, 0.10]
+            )[0]
+
     def simulate_play(self) -> Play:
         self.state.play_number += 1
         play_family = self.select_play_family()
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
-        if self.state.down == 5:
-            if self.state.field_position >= 55:
-                if random.random() < 0.6:
-                    play_type = PlayType.DROP_KICK
-                    play_family = PlayFamily.TERRITORY_KICK
-                else:
-                    play_type = PlayType.PLACE_KICK
-                    play_family = PlayFamily.TERRITORY_KICK
-            else:
-                play_type = PlayType.PUNT
-                play_family = PlayFamily.TERRITORY_KICK
-
-        if play_type == PlayType.PUNT and self.state.down < 5:
-            style = self._current_style()
-            if self.state.field_position < 40 and random.random() < 0.3:
-                play_type = PlayType.DROP_KICK
-            elif self.state.field_position >= 60 and random.random() < 0.4:
-                play_type = PlayType.DROP_KICK
+        if play_type == PlayType.PUNT:
+            play_type = self._resolve_kick_type()
+            play_family = PlayFamily.TERRITORY_KICK
 
         if play_type == PlayType.RUN:
             return self.simulate_run(play_family)
@@ -502,18 +529,21 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = random.uniform(0.05, 0.07)
+        base_fumble_prob = random.uniform(0.08, 0.12)
         fumble_prob = base_fumble_prob
-        fumble_prob += (chain_length - 1) * 0.04
+        fumble_prob += (chain_length - 1) * 0.06
         if self.drive_play_count >= 3:
             fumble_prob += random.uniform(0.08, 0.10)
         if chain_length >= 3:
+            fumble_prob += 0.08
+        if chain_length >= 4:
             fumble_prob += 0.06
         fatigue_factor_lat = self.get_fatigue_factor()
         if fatigue_factor_lat < 0.9:
-            fumble_prob += 0.05
-        fumble_prob *= (1 + style["lateral_risk"] * 0.15)
-        fumble_prob /= (team.lateral_proficiency / 85)
+            fumble_prob += 0.07
+        fumble_prob *= (1 + style["lateral_risk"] * 0.25)
+        prof_reduction = max(0.85, team.lateral_proficiency / 100)
+        fumble_prob /= prof_reduction
 
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
