@@ -1,4 +1,4 @@
-# VIPERBALL — Official Rulebook (v1.1)
+# VIPERBALL — Official Rulebook (v1.2)
 
 ## Table of Contents
 
@@ -18,6 +18,7 @@
 10. [Fumbles & Possession](#10-fumbles--possession)
 11. [Turnover Mechanics](#11-turnover-mechanics)
 12. [Out of Bounds](#12-out-of-bounds)
+12A. [Dead Ball and Live Ball Edge Cases](#12a-dead-ball-and-live-ball-edge-cases)
 13. [Field Dimensions & Markings](#13-field-dimensions--markings)
 14. [Clock Management](#14-clock-management)
 15. [Players on the Field](#15-players-on-the-field)
@@ -33,8 +34,10 @@
 25. [Player Safety](#25-player-safety)
 26. [Overtime Rules](#26-overtime-rules)
 27. [Optional Variations](#27-optional-variations)
-28. [Glossary](#28-glossary)
-29. [Version History](#29-version-history)
+29. [Weather & Game Suspension](#29-weather--game-suspension)
+30. [Roster Rules](#30-roster-rules)
+31. [Glossary](#31-glossary)
+32. [Version History](#32-version-history)
 
 ---
 
@@ -60,12 +63,48 @@ Viperball assumes a timeline where:
 ### Players
 
 - 11 players per side
-- Substitutions permitted (league may define limits)
+
+#### Substitution Rules
+
+**Substitution Type:**
+- Unlimited substitutions are permitted
+- Substitutions may only occur during dead-ball stoppages (after the play is ruled dead and before the next snap)
+- On-the-fly substitutions during live play are prohibited
+
+**Active Roster:**
+- Teams maintain a 36-player active game-day roster
+- All active players are eligible to play
+
+**Substitution Procedure:**
+- A player exiting the field must fully leave the playing surface before their replacement enters
+- Substituting players must enter and exit from the team's designated sideline area
+- Failure to follow proper procedure results in an **Illegal Substitution** penalty (5 yards, enforced at snap)
+
+**Injury Substitutions:**
+- A player removed from the game due to injury may not return for a minimum of one play
+- If the injury occurs during the final two minutes of a half, the injured player's team is charged a timeout (see §14 Clock Management for full injury timeout protocol)
+- Players removed under concussion protocol may not return to the same game (see §25 Player Safety)
 
 ### Equipment
 
 - Pads optional depending on league level
 - Helmets recommended for competitive play
+
+#### Ball Specifications
+
+**The official game ball is a Canadian football (CFL-spec).**
+
+- **Circumference:** 12⅞ to 13⅛ inches (short axis); 27¾ to 28¼ inches (long axis)
+- **Weight:** 14 to 15 ounces
+- **Material:** Leather or approved composite
+- **Inflation:** 12.5 to 13.5 psi
+
+**Rationale:** The Canadian football's slightly rounder shape compared to an American football supports drop-kick accuracy and bounce predictability, which are central to Viperball strategy.
+
+**Ball Provision:**
+- Each team must provide a set of game balls
+- Officials inspect and approve all balls before the game
+- Balls found to be improperly inflated or damaged during play will be replaced
 
 ---
 
@@ -121,6 +160,46 @@ Players may:
 - Kick ahead and pursue
 
 The ball remains live after a kick unless it passes through the uprights for a scoring play or goes out of bounds.
+
+### Drop-Kick Requirements
+
+A drop kick is defined as a kick where the ball visibly contacts the ground before being kicked. A kick that does not touch the ground is a punt, not a drop kick.
+
+### Blocked and Deflected Kicks
+
+**Blocked Kick:**
+- A blocked kick remains live and may be recovered by either team
+- A blocked field goal attempt that does not cross the line of scrimmage may only be recovered by the kicking team
+- The ball is live from the spot where it was blocked
+
+**Tipped/Deflected Kick:**
+- A kick deflected or tipped by a player remains live
+- A drop kick that is tipped or deflected but still passes through the uprights counts as a successful field goal (5 points)
+
+### Illegal Kick
+
+An **illegal kick** is a kick that violates the rules of play. The following constitute illegal kicks:
+
+1. **Kick by a downed player:** A kick made by a player who is down (on the ground) with any part of their body other than hands or feet touching
+2. **Kick after change of possession:** A kick made after a change of possession on the same play (e.g., a defensive player kicks after recovering a fumble before establishing possession and advancing — the ball must be possessed and controlled first)
+3. **Second kick behind the line:** A second kick by the same team on the same play behind the line of scrimmage (only one kick from behind the line of scrimmage is permitted per play; open-field kicks beyond the line of scrimmage are unrestricted)
+4. **Place kick during open play:** A place kick attempted during live open-field play (place kicks must originate from scrimmage, not during live play advancement)
+5. **Kick to avoid safety:** A kick made in the end zone by the offense to avoid a safety
+
+**Penalty for illegal kick:** 5 yards from the spot of the kick (see §23 Penalties)
+
+### Ball Spotting After Kicks
+
+**Partially Blocked Kick:**
+- Spotted at the point where the ball is recovered or goes dead
+
+**Kick Traveling Backward:**
+- Spotted at the point where the ball is recovered
+- If untouched and out of bounds, spotted at the out-of-bounds point
+
+**Kick Hitting a Player Unintentionally:**
+- Ball remains live; no re-spot
+- If the ball subsequently goes out of bounds, spotted at the exit point
 
 ---
 
@@ -271,6 +350,42 @@ Clear rules govern how possession changes, particularly involving kicks, fumbles
 
 ---
 
+## 12A. Dead Ball and Live Ball Edge Cases
+
+### Intent
+
+Edge cases define how unusual situations are handled to ensure consistent rulings and fair play.
+
+### Ball Hitting Overhead Structures
+
+If the ball strikes the scoreboard, overhead structure, roof (in domed stadiums), or any non-field object suspended above the playing surface:
+- The ball is immediately **dead**
+- The down is **replayed from the previous spot**
+- No yardage is gained or lost
+
+### Ball Hitting an Official
+
+If the ball strikes an official during live play:
+- The ball **remains live**
+- The official is considered part of the field
+- Play continues as normal
+
+### Inadvertent Whistle
+
+If an official inadvertently blows the whistle during a live play:
+- The ball is **dead immediately** at the spot when the whistle sounds
+- The offensive team (team in possession before the play began) may choose to:
+  1. **Replay the down** from the original spot, or
+  2. **Accept the result** at the time of the whistle (yardage gained/lost up to the whistle)
+
+### Simultaneous Possession
+
+If two opposing players gain simultaneous possession of a live ball (not a kick):
+- Possession is awarded to the **offense** (the team that had possession before the play began)
+- On a loose ball or fumble, the team that last had clear possession is considered the offense
+
+---
+
 ## 13. Field Dimensions & Markings
 
 ### Field Length and Width
@@ -313,6 +428,28 @@ Clear rules govern how possession changes, particularly involving kicks, fumbles
 - Team benches positioned outside the playing surface between the 25-yard lines
 - Officials' restraining area marked along sidelines
 
+### Coaching Box and Sideline Rules
+
+**Coaching Box Dimensions:**
+- Extends from the **25-yard line to the 25-yard line** on each team's sideline
+- Positioned **6 feet from the sideline** boundary
+
+**Coaching Box Restrictions:**
+- No more than **3 coaches** may stand in the coaching box during play
+- All other coaches and staff must be seated on the bench
+
+**Bench Area:**
+- Players not participating in the game must remain in the **bench area** between the **25-yard lines**
+- Players may not wander beyond the designated bench area during play
+
+**Sideline Interference:**
+- Any **non-player** (coach, staff, medical personnel) entering the field of play results in an **Unsportsmanlike Conduct** penalty (15 yards)
+- Exception: Medical personnel may enter with referee permission for injured players
+
+**Media and Personnel:**
+- Media, team staff, and other personnel must remain behind the designated media line
+- Typically positioned 10-15 feet behind the team bench area
+
 ---
 
 ## 14. Clock Management
@@ -344,7 +481,26 @@ The clock stops for:
 - Each team receives 3 timeouts per half
 - Timeouts do not carry over between halves
 - Each timeout lasts 90 seconds
-- Officials may grant additional timeouts for injuries
+- A timeout may be used to prevent an imminent delay of game penalty
+- Timeouts may not be called after a scoring play (the clock is already stopped)
+- Timeouts used for coach's challenges are consumed if the challenge fails; returned if it succeeds (see §24 Review System)
+
+### Injury Timeout Protocol
+
+**Clock Stoppage:**
+- The clock stops immediately when an official identifies an injured player on the field
+- Play is halted to allow medical personnel to attend to the player
+
+**Player Removal Requirement:**
+- An injured player must leave the field for at least **one play** before returning
+- Exception: If the injury occurs during the **final two minutes of a half**, the injured player's team is **charged a timeout**
+
+**Timeout Charges:**
+- The team is **not charged a timeout** for injury stoppages that occur outside the final two minutes of either half
+- If a team has **no remaining timeouts** and an injury occurs in the final two minutes, the **opposing team is awarded a free timeout** as compensation for the stoppage
+
+**Concussion Protocol:**
+- Players removed under concussion protocol may not return to the same game (see §25 Player Safety for full protocol)
 
 ### Two-Minute Warning
 
@@ -564,11 +720,29 @@ A false start occurs when:
 - **Encroachment:** A defensive player makes contact with an offensive player before the snap. Penalty: 5 yards, automatic first down.
 - **Offside:** A player is on the wrong side of the line of scrimmage when the ball is snapped. Penalty: 5 yards.
 
+### Neutral Zone Infractions
+
+**Neutral Zone Infraction:**
+- A defensive player enters the neutral zone (the space between the two lines of scrimmage defined by the length of the ball) before the snap **and causes an offensive player to react** (move, flinch, or commit a false start)
+- This is a **dead ball foul** — the play is immediately stopped
+- **Penalty:** 5 yards, enforced against the defense
+
+**Disconcerting Signals:**
+- Defensive players may not use **signals, words, or cadences** designed to simulate the offense's snap count or cadence
+- This includes mimicking the Zeroback's voice or using fake snap counts to draw the offense offside
+- **Penalty:** 5 yards, dead ball foul, enforced against the defense
+
+**Distinction from Encroachment:**
+- Encroachment requires physical contact with an offensive player
+- Neutral zone infraction requires entering the neutral zone and causing a reaction, but not necessarily contact
+
 ### Dead Ball Fouls Before Snap
 
 Any foul committed before the snap results in a dead ball foul:
 - False start (offense)
 - Encroachment (defense)
+- Neutral zone infraction (defense)
+- Disconcerting signals (defense)
 - Illegal formation
 - Delay of game
 
@@ -614,8 +788,11 @@ Penalties maintain fair play, player safety, and game integrity. Officials enfor
 | **False Start** | 5 yards | Enforced at line of scrimmage |
 | **Offside** | 5 yards | Enforced at line of scrimmage |
 | **Encroachment** | 5 yards + automatic first down | Enforced at line of scrimmage |
+| **Neutral Zone Infraction** | 5 yards | Dead ball foul, enforced at line of scrimmage |
+| **Disconcerting Signals** | 5 yards | Dead ball foul, enforced at line of scrimmage |
 | **Delay of Game** | 5 yards | Enforced at line of scrimmage |
 | **Unsportsmanlike Conduct** | 15 yards | From spot of foul or previous spot |
+| **Sideline Interference** | 15 yards (unsportsmanlike) | From previous spot |
 | **Illegal Motion** | 5 yards | Enforced at snap |
 | **Offensive Holding** | 10 yards | From spot of foul |
 | **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
@@ -674,8 +851,75 @@ A complete officiating crew consists of **seven officials**:
 
 - **Coach's Challenges:** Each team receives two challenges per game. A third challenge is awarded if the first two are successful. Challenges require a timeout.
 - **Reviewable Plays:** Scoring plays, turnovers, spot of the ball, player down by contact, out-of-bounds, and certain penalties.
-- **Automatic Reviews:** All scoring plays and turnovers are automatically reviewed in the final two minutes of each half.
+- **Automatic Reviews:** All scoring plays and turnovers are automatically reviewed regardless of game time (upgraded from final two minutes only).
 - The Referee consults video replay and makes the final determination.
+
+#### Replay Scope and Non-Reviewable Plays
+
+**Reviewable:**
+- Whether the ball crossed the goal line for a touchdown
+- Whether a kick passed inside the uprights and above the crossbar (field goal attempts)
+- Spot of the ball at the end of a play
+- Whether a player was down by contact before a fumble
+- Whether a player stepped out of bounds
+- Whether a fumble occurred (but not who recovered it from a pile — see below)
+- Targeting penalties (reviewable to confirm or overturn ejection)
+
+**Non-Reviewable:**
+- Penalties (except targeting)
+- Player conduct and unsportsmanlike behavior
+- Clock management decisions by officials
+- Play clock expiration
+- Whether an official's whistle blew before a turnover
+- Fumble recovery: reviewable only to determine whether the ball was fumbled; the recovery itself (who emerged from a pile with possession) is not reviewable
+
+### Chain Crew & Measurement Procedures
+
+**Chain Crew Composition:**
+
+The chain crew consists of three assistants managed by the Head Linesman:
+1. **Box Operator:** Holds the down indicator showing the current down
+2. **Rear Rod Holder:** Marks the beginning of the 20-yard requirement
+3. **Forward Rod Holder:** Marks the end of the 20-yard requirement (first down line)
+
+**Measurement Requests:**
+
+- Either team's captain may request a measurement
+- Officials may initiate measurements at their discretion
+- The clock does not stop for measurements unless the measurement occurs in the final two minutes of a half
+
+**Measurement Procedure:**
+
+1. The chains are brought onto the field to the ball's position
+2. The rear rod is placed at the original spot (marked by the chain crew)
+3. The chain is extended toward the ball
+4. If the ball reaches or passes the forward rod when fully extended, a new set of downs is awarded
+5. If the ball does not reach the forward rod, the down count continues
+
+### Officiating Mechanics for Kicks
+
+**Judging Field Goal Attempts:**
+
+- The **Field Judge (FJ)** and **Back Judge (BJ)** are jointly responsible for field goal rulings
+- The ball must pass **entirely inside the uprights** and **above the crossbar** to be successful
+- If the officials disagree, the Referee makes the final determination after consultation
+
+**Simultaneous Recovery:**
+
+- If two opposing players gain possession of a kicked ball simultaneously:
+  - On punts and kickoffs: possession awarded to the **receiving team**
+  - On failed field goal attempts: possession awarded to the **kicking team**
+
+**Blocked Kick Procedures:**
+
+- Officials rule the kick blocked at the point of contact with the blocking player
+- The ball is live from the spot where it was blocked
+- A blocked kick that does not cross the line of scrimmage on a field goal attempt may only be advanced by the kicking team
+
+**Tipped Drop-Kicks:**
+
+- A drop kick that is tipped or deflected by any player but still passes through the uprights counts as a successful field goal (5 points)
+- The tip or deflection does not invalidate the score
 
 ---
 
@@ -768,6 +1012,18 @@ Overtime provides a fair method to determine a winner when regulation ends in a 
 - Each team receives one timeout per overtime period
 - Timeouts do not carry over between overtime periods
 
+### Tie-Breaker Rules for League Standings
+
+**Note:** This is a league operations guideline for determining standings when teams have identical win-loss records. These rules do not apply to individual game outcomes.
+
+When multiple teams have identical records at the end of the regular season, standings are determined by the following tie-breakers in order:
+
+1. **Head-to-head record:** Result of games played directly between the tied teams
+2. **Division/conference record:** Win-loss record within the division or conference
+3. **Point differential:** Total points scored minus total points allowed, **capped at ±25 per game** to prevent running up scores
+4. **Micro-scoring differential:** Drop-kick field goals (5 points) minus place-kick field goals (3 points) — a secondary metric unique to Viperball that rewards kicking skill
+5. **Coin toss:** Conducted by the league commissioner or designated official
+
 ---
 
 ## 27. Optional Variations
@@ -781,15 +1037,108 @@ Leagues may experiment with:
 
 ---
 
-## 28. Glossary
+## 29. Weather & Game Suspension
+
+### Intent
+
+Weather and safety protocols ensure player and spectator safety during adverse conditions while providing clear guidelines for game suspension and resumption.
+
+### Lightning Protocol
+
+**Detection and Suspension:**
+- If lightning is detected within **8 miles** of the venue, play is suspended immediately
+- Play may not resume until at least **30 minutes** have passed since the last detected lightning strike within the 8-mile radius
+- Each subsequent strike within 8 miles resets the 30-minute countdown
+
+**Shelter Requirements:**
+- Players, coaches, officials, and staff must seek appropriate shelter (enclosed buildings or vehicles)
+- Spectators are strongly encouraged to seek shelter
+
+### Game Suspension Authority
+
+The **Referee** has sole authority to suspend play for unsafe conditions, including but not limited to:
+- Severe weather (lightning, heavy rain, high winds, snow, hail)
+- Dangerous field conditions (flooding, ice, structural damage)
+- Power failure affecting lighting or critical stadium systems
+- Any condition deemed hazardous to player or spectator safety
+
+### Game Resumption
+
+**Resumption Procedure:**
+- A suspended game resumes from the **exact point of suspension**
+- The down, distance, field position, score, time remaining, and timeouts are preserved
+- Teams return to their respective sidelines as they were at the time of suspension
+
+**Timeline:**
+- The Referee determines when conditions are safe to resume play
+- Teams are given a reasonable warm-up period (typically 10-15 minutes) before resumption
+
+### Incomplete Games
+
+If a game cannot be completed due to weather or other factors:
+- **League rules govern** whether the game is:
+  1. **Replayed** in its entirety at a later date
+  2. **Resumed** from the point of suspension at a later date
+  3. **Decided** by the score at the time of suspension (if sufficient game time has elapsed)
+  4. **Forfeited** under specific league-defined circumstances
+- The decision is made by the league commissioner or governing body, not game officials
+
+---
+
+## 30. Roster Rules
+
+### Intent
+
+Roster rules establish team composition requirements and ensure fair play through standardized roster management. These rules balance competitive depth with the two-way player philosophy central to Viperball.
+
+### Active Game-Day Roster
+
+- **Active roster size:** 36 players
+- All active players are eligible to participate in the game
+- The roster must be submitted to officials 60 minutes before kickoff
+
+### Inactive List
+
+- Teams may designate up to **8 players as inactive** before each game
+- Inactive players may not dress or participate in any capacity
+- Inactive designations must be communicated to officials before the pre-game roster submission deadline
+
+### Emergency Substitutions
+
+- If a team falls below **11 active players** due to injury or ejection during the game, they may activate **one inactive player** with referee approval
+- Only one emergency activation is permitted per game
+- The activated player must be ready to play within a reasonable time as determined by the Referee
+
+### Player Designations
+
+- **No designated specialists:** All players are expected to contribute in multiple roles and play both offense and defense as needed
+- **Viper designation:** The Viper role may be assigned to any active player and may change during the game at dead-ball stoppages
+- **Keeper designation:** The Keeper role may be assigned to any active player and may change during the game at dead-ball stoppages
+
+### Roster Compliance
+
+- Teams failing to submit rosters on time may face administrative penalties as determined by league rules
+- Playing an ineligible or inactive player results in forfeiture of the game
+
+---
+
+## 31. Glossary
+
+**Canadian Football (Ball):** The official game ball for Viperball. A Canadian football (CFL-spec) with specific dimensions: 12⅞ to 13⅛ inches (short axis circumference), 27¾ to 28¼ inches (long axis circumference), 14 to 15 ounces weight, leather or approved composite material, inflated to 12.5 to 13.5 psi. The slightly rounder shape compared to an American football supports drop-kick accuracy and bounce predictability.
+
+**Coaching Box:** The designated area extending from the 25-yard line to the 25-yard line on each team's sideline, positioned 6 feet from the sideline boundary. No more than 3 coaches may stand in the coaching box during play.
 
 **Cornerback:** One of two defensive players positioned wide to cover the perimeter and defend against sweeps and outside runs.
+
+**Disconcerting Signals:** An illegal defensive tactic where players use signals, words, or cadences designed to simulate the offense's snap count. Results in a 5-yard penalty (dead ball foul).
 
 **Drop Kick:** A kick executed by dropping the ball and kicking it immediately after it bounces off the ground. Worth 5 points when successfully kicked through the uprights.
 
 **Edge Defender:** One of two defensive players positioned outside the Line Anchors, responsible for containing the edge and pursuing ball carriers.
 
 **Halfback:** An offensive player who serves as a primary ball carrier. Must be present in every offensive formation.
+
+**Inadvertent Whistle:** An official's whistle blown during a live play by mistake. The ball is dead immediately; the offense may choose to replay the down or accept the result at the time of the whistle.
 
 **Keeper:** The deepest defensive player, responsible for fielding missed field goals, serving as the last line of defense, and defending against deep kicks.
 
@@ -798,6 +1147,10 @@ Leagues may experiment with:
 **Lateral:** A backward or sideways pass. Laterals may be thrown at any time and remain live if they touch the ground.
 
 **Line Anchor:** One of three defensive linemen (Left Guard, Nose, Right Guard) who must align within one yard of the line of scrimmage and provide the foundation of the defensive front.
+
+**Neutral Zone:** The space between the two lines of scrimmage, defined by the length of the football. Only the center (snapper) may be in the neutral zone before the snap.
+
+**Neutral Zone Infraction:** A defensive player enters the neutral zone before the snap and causes an offensive player to react. Results in a 5-yard penalty (dead ball foul).
 
 **Shiftback:** An offensive player who aligns between the interior and perimeter and may shift position before the snap to create tactical advantages.
 
@@ -813,7 +1166,56 @@ Leagues may experiment with:
 
 ---
 
-## 29. Version History
+## 32. Version History
+
+### v1.2 — February 15, 2026
+
+**Major Operational Rules Added:**
+- Added Ball Specifications to §1 Equipment (Canadian football CFL-spec)
+- Expanded Substitution Rules in §1 Players (unlimited substitutions, dead-ball only, injury protocols)
+- Expanded §5 Kicking with illegal kick definitions, drop-kick requirements, blocked/deflected kick rules, and ball spotting after kicks
+- Added §30 Roster Rules (36-player active roster, inactive list, emergency substitutions)
+- Added §29 Weather & Game Suspension Rules (lightning protocol, game suspension authority, resumption procedures)
+- Added §12A Dead Ball and Live Ball Edge Cases (overhead structures, inadvertent whistle, simultaneous possession)
+
+**Officiating & Enforcement Enhancements:**
+- Expanded §24 with Chain Crew & Measurement Procedures
+- Expanded §24 with Officiating Mechanics for Kicks (field goal judging, simultaneous recovery, blocked kicks)
+- Expanded §24 Review System with comprehensive replay scope clarification and non-reviewable plays
+- Upgraded automatic reviews to all scoring plays and turnovers regardless of game time
+
+**Clock & Timeout Rules:**
+- Expanded §14 with comprehensive Injury Timeout Protocol
+- Added timeout edge cases (preventing delay of game, post-scoring restrictions)
+
+**Field & Sideline Management:**
+- Added Coaching Box & Sideline Rules to §13 (coaching box dimensions, bench area restrictions, sideline interference)
+
+**Formation & Snap Refinements:**
+- Expanded §19 with Neutral Zone Refinements (neutral zone infraction, disconcerting signals)
+
+**Tie-Breaker & Standings:**
+- Added Tie-Breaker Rules for League Standings to §26 (head-to-head, division record, point differential, micro-scoring differential)
+
+**Penalty Table Updates:**
+- Added Neutral Zone Infraction (5 yards, dead ball foul)
+- Added Disconcerting Signals (5 yards, dead ball foul)
+- Added Sideline Interference (15 yards, unsportsmanlike conduct)
+
+**Glossary Additions:**
+- Canadian Football (Ball)
+- Coaching Box
+- Disconcerting Signals
+- Inadvertent Whistle
+- Neutral Zone
+- Neutral Zone Infraction
+
+**Section Renumbering:**
+- Glossary renumbered from §28 to §31
+- Version History renumbered from §29 to §32
+- Added new §29 Weather & Game Suspension
+- Added new §30 Roster Rules
+- Added new §12A Dead Ball and Live Ball Edge Cases
 
 ### v1.1 — February 15, 2026
 
