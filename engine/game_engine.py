@@ -861,7 +861,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{ptag} drop kick {distance}yd — GOOD! +5",
+                description=f"{ptag} snap kick {distance}yd — GOOD! +5",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -880,7 +880,7 @@ class ViperballEngine:
                         play_type="drop_kick", play_family=family.value,
                         players_involved=[player_label(kicker)], yards_gained=0,
                         result=PlayResult.PINDOWN.value,
-                        description=f"{ptag} drop kick {distance}yd — NO GOOD → PINDOWN! +1",
+                        description=f"{ptag} snap kick {distance}yd — NO GOOD → PINDOWN! +1",
                         fatigue=round(stamina, 1),
                     )
                     receiving = "away" if kicking_team == "home" else "home"
@@ -905,7 +905,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.MISSED_KICK.value,
-                description=f"{ptag} drop kick {distance}yd — NO GOOD",
+                description=f"{ptag} snap kick {distance}yd — NO GOOD",
                 fatigue=round(stamina, 1),
             )
 
@@ -947,7 +947,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{ptag} place kick {distance}yd — GOOD! +3",
+                description=f"{ptag} field goal {distance}yd — GOOD! +3",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -966,7 +966,7 @@ class ViperballEngine:
                         play_type="place_kick", play_family=family.value,
                         players_involved=[player_label(kicker)], yards_gained=0,
                         result=PlayResult.PINDOWN.value,
-                        description=f"{ptag} place kick {distance}yd — NO GOOD → PINDOWN! +1",
+                        description=f"{ptag} field goal {distance}yd — NO GOOD → PINDOWN! +1",
                         fatigue=round(stamina, 1),
                     )
                     receiving = "away" if kicking_team == "home" else "home"
@@ -991,7 +991,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.MISSED_KICK.value,
-                description=f"{ptag} place kick {distance}yd — NO GOOD",
+                description=f"{ptag} field goal {distance}yd — NO GOOD",
                 fatigue=round(stamina, 1),
             )
 

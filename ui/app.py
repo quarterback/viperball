@@ -163,11 +163,11 @@ def generate_box_score_markdown(result):
     h_saf = hs.get('safeties_conceded', 0)
     a_saf = as_.get('safeties_conceded', 0)
     lines.append(f"| Touchdowns (9pts) | {hs['touchdowns']} ({hs['touchdowns']*9}pts) | {as_['touchdowns']} ({as_['touchdowns']*9}pts) |")
-    lines.append(f"| Drop Kicks (5pts) | {hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made']*5}pts) |")
-    lines.append(f"| Place Kicks (3pts) | {hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made']*3}pts) |")
+    lines.append(f"| Snap Kicks (5pts) | {hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made']*5}pts) | {as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made']*5}pts) |")
+    lines.append(f"| Field Goals (3pts) | {hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made']*3}pts) |")
     lines.append(f"| Safeties (2pts) | {a_saf} ({a_saf*2}pts) | {h_saf} ({h_saf*2}pts) |")
     lines.append(f"| Pindowns (1pt) | {hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts) | {as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts) |")
-    lines.append(f"| Fumble Recoveries (0.5pts) | {h_fr} ({h_frp:g}pts) | {a_fr} ({a_frp:g}pts) |")
+    lines.append(f"| Strikes (0.5pts) | {h_fr} ({h_frp:g}pts) | {a_fr} ({a_frp:g}pts) |")
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
@@ -243,7 +243,7 @@ def generate_batch_summary_csv(results):
                      "home_yards", "away_yards", "home_tds", "away_tds",
                      "home_fumbles", "away_fumbles", "home_plays", "away_plays",
                      "home_kick_pct", "away_kick_pct", "home_pindowns", "away_pindowns",
-                     "home_drop_kicks", "away_drop_kicks", "home_lat_eff", "away_lat_eff",
+                     "home_snap_kicks", "away_snap_kicks", "home_lat_eff", "away_lat_eff",
                      "total_drives", "winner"])
     for i, r in enumerate(results):
         h = r["final_score"]["home"]
@@ -271,11 +271,11 @@ def safe_filename(name):
 def drive_result_label(result):
     labels = {
         "touchdown": "TD",
-        "successful_kick": "FG",
-        "fumble": "FUMBLE (+0.5)",
+        "successful_kick": "SK/FG",
+        "fumble": "STRIKE (+0.5)",
         "turnover_on_downs": "DOWNS",
         "punt": "PUNT",
-        "missed_kick": "MISSED FG",
+        "missed_kick": "MISSED KICK",
         "stall": "END OF QUARTER",
         "pindown": "PINDOWN",
         "punt_return_td": "PUNT RET TD",
@@ -490,8 +490,8 @@ if page == "Game Simulator":
         h_saf = hs.get('safeties_conceded', 0)
         a_saf = as_.get('safeties_conceded', 0)
         scoring_data = {
-            "": ["Touchdowns (9pts)", "Drop Kicks (5pts)", "Place Kicks (3pts)",
-                 "Safeties (2pts)", "Pindowns (1pt)", "Fumble Recoveries (0.5pts)",
+            "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
+                 "Safeties (2pts)", "Pindowns (1pt)", "Strikes (0.5pts)",
                  "Punts", "Kick %",
                  "Total Yards", "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
@@ -659,8 +659,8 @@ if page == "Game Simulator":
             drops = [p for p in kick_plays if p["play_type"] == "drop_kick"]
             places = [p for p in kick_plays if p["play_type"] == "place_kick"]
             kc1.metric("Punts", len(punts))
-            kc2.metric("Drop Kick Attempts", len(drops))
-            kc3.metric("Place Kick Attempts", len(places))
+            kc2.metric("Snap Kick Attempts", len(drops))
+            kc3.metric("Field Goal Attempts", len(places))
 
             st.markdown("**Style Parameters**")
             sc1, sc2 = st.columns(2)
@@ -831,7 +831,7 @@ elif page == "Debug Tools":
 
         home_dk = [r["stats"]["home"].get("drop_kicks_made", 0) for r in results]
         away_dk = [r["stats"]["away"].get("drop_kicks_made", 0) for r in results]
-        k4.metric("Avg Drop Kicks/game", round((sum(home_dk) + sum(away_dk)) / n, 2))
+        k4.metric("Avg Snap Kicks/game", round((sum(home_dk) + sum(away_dk)) / n, 2))
 
         st.subheader("Score Distribution")
         fig = go.Figure()

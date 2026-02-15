@@ -31,11 +31,12 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - **Style System**: 5 offense styles (power_option, lateral_spread, territorial, option_spread, balanced)
 - **Play Families**: dive_option, speed_option, sweep_option, lateral_spread, territory_kick
 - **Deterministic Seeds**: Every sim accepts a seed for reproducibility
-- **Scoring**: Touchdowns = 9pts, Drop Kicks = 5pts, Place Kicks = 3pts, Pindowns = 1pt
-- **AFL-style kicking**: ~52% of plays are kicks (punts, drop kicks, place kicks). Contextual kick triggers based on down/distance/field position
-- **Drop kick accuracy**: Tiered success (100%/92%/80%/60% by distance range), viable offensive weapon
-- **Place kick accuracy**: Tiered success (95%/88%/75%/55% by distance, like modern FGs)
-- **CFL Rouge/Pindown**: 1pt awarded when kick lands in end zone and receiver can't return out. Applies to punts, missed drop kicks, missed place kicks
+- **Scoring**: Touchdowns = 9pts, Snap Kicks = 5pts, Field Goals = 3pts, Safeties = 2pts, Pindowns = 1pt, Strikes = 0.5pts
+- **AFL-style kicking**: ~52% of plays are kicks (punts, snap kicks, field goals). Contextual kick triggers based on down/distance/field position
+- **Snap kick accuracy**: Tiered success (100%/92%/80%/60% by distance range), viable offensive weapon
+- **Field goal accuracy**: Tiered success (95%/88%/75%/55% by distance)
+- **CFL Rouge/Pindown**: 1pt awarded when kick lands in end zone and receiver can't return out. Applies to punts, missed snap kicks, missed field goals
+- **Strikes**: Fumble recovery by opposing team awards 0.5pts (fractional scoring supported)
 - **Lateral risk system**: 5-7% base fumble, +4% per additional lateral, +8-10% under pressure, +6% cross-field, +5% if fatigued
 - **Chaos mechanics**: 4% tipped punts (12% kicking team recovery), 7% chaos bounces, 8% punt return TDs, contested recoveries
 - **Fatigue tracking**: Per-play fatigue logged in play-by-play
