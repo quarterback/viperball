@@ -8,3 +8,10 @@ enableXsrfProtection = false
 [browser]
 gatherUsageStats = false
 serverAddress = "0.0.0.0"
+
+[theme]
+base = "light"
+primaryColor = "#ef4444"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#111827"

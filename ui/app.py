@@ -27,10 +27,38 @@ st.markdown("""
     .stApp { max-width: 100%; }
     .block-container { padding-top: 1rem; }
     div[data-testid="stMetric"] {
-        background-color: #1e1e2e;
-        border: 1px solid #333;
+        background-color: #f0f2f6;
+        border: 1px solid #d1d5db;
         padding: 12px;
         border-radius: 8px;
+    }
+    div[data-testid="stMetric"] label {
+        color: #6b7280 !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #111827 !important;
+        font-weight: 700 !important;
+        font-size: 1.6rem !important;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+        color: #6b7280 !important;
+    }
+    @media (prefers-color-scheme: dark) {
+        div[data-testid="stMetric"] {
+            background-color: #1e1e2e;
+            border: 1px solid #444;
+        }
+        div[data-testid="stMetric"] label {
+            color: #a0aec0 !important;
+        }
+        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+            color: #ffffff !important;
+        }
+        div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+            color: #a0aec0 !important;
+        }
     }
     .score-big {
         font-size: 2.5rem;
@@ -38,12 +66,13 @@ st.markdown("""
         text-align: center;
         line-height: 1;
         margin: 0;
+        color: #111827;
     }
     .team-name {
         font-size: 1.1rem;
         font-weight: 600;
         text-align: center;
-        opacity: 0.8;
+        color: #4b5563;
         margin-bottom: 4px;
     }
     .drive-td { color: #22c55e; font-weight: 700; }
