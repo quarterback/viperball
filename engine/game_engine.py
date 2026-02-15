@@ -47,6 +47,33 @@ PLAY_FAMILY_TO_TYPE = {
     PlayFamily.TERRITORY_KICK: PlayType.PUNT,
 }
 
+POSITION_TAGS = {
+    "Viper/Back": "VB",
+    "Back/Safety": "HB",
+    "Wing/End": "WE",
+    "Back/Corner": "CB",
+    "Wedge/Line": "WL",
+    "Viper": "VP",
+    "Back": "BK",
+    "Wing": "WG",
+    "Wedge": "WD",
+    "Safety": "SF",
+    "End": "EN",
+    "Line": "LN",
+    "Corner": "CN",
+}
+
+
+def player_tag(player) -> str:
+    pos = player.position
+    tag = POSITION_TAGS.get(pos, pos[:2].upper())
+    return f"{tag}{player.number}"
+
+
+def player_label(player) -> str:
+    tag = player_tag(player)
+    return f"{tag} {player.name}"
+
 
 @dataclass
 class GameState:
@@ -197,6 +224,7 @@ class ViperballEngine:
         self.away_team = deepcopy(away_team)
         self.state = GameState()
         self.play_log: List[Play] = []
+        self.drive_log: List[Dict] = []
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
@@ -248,16 +276,27 @@ class ViperballEngine:
         max_plays = int(15 + tempo * 15)
         self.drive_play_count = 0
 
+        drive_team = self.state.possession
+        drive_start = self.state.field_position
+        drive_quarter = self.state.quarter
+        drive_plays = 0
+        drive_yards = 0
+        drive_result = "stall"
+
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
             play = self.simulate_play()
             self.play_log.append(play)
+            drive_plays += 1
+            if play.yards_gained > 0 and play.play_type not in ["punt"]:
+                drive_yards += play.yards_gained
 
             base_time = random.randint(15, 45)
             time_elapsed = int(base_time * (1.2 - tempo * 0.4))
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
-            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick"]:
+            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt"]:
+                drive_result = play.result
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
@@ -267,6 +306,15 @@ class ViperballEngine:
                     receiving = "away" if kicking_team == "home" else "home"
                     self.kickoff(receiving)
                 break
+
+        self.drive_log.append({
+            "team": drive_team,
+            "quarter": drive_quarter,
+            "start_yard_line": drive_start,
+            "plays": drive_plays,
+            "yards": drive_yards,
+            "result": drive_result,
+        })
 
     def simulate_play(self) -> Play:
         self.state.play_number += 1
@@ -354,19 +402,21 @@ class ViperballEngine:
     def simulate_run(self, family: PlayFamily = PlayFamily.DIVE_OPTION) -> Play:
         team = self.get_offensive_team()
         player = random.choice(team.players[:5])
+        plabel = player_label(player)
+        ptag = player_tag(player)
 
         if family == PlayFamily.DIVE_OPTION:
             base_yards = random.gauss(4.5, 3)
-            desc_prefix = "Dive option"
+            action = "keep"
         elif family == PlayFamily.SPEED_OPTION:
             base_yards = random.gauss(5.5, 4.5)
-            desc_prefix = "Speed option"
+            action = "pitch"
         elif family == PlayFamily.SWEEP_OPTION:
             base_yards = random.gauss(4, 5.5)
-            desc_prefix = "Sweep option"
+            action = "sweep"
         else:
             base_yards = random.gauss(4.5, 3.5)
-            desc_prefix = "Run"
+            action = "run"
 
         strength_factor = team.avg_speed / 90
         fatigue_factor = self.get_fatigue_factor()
@@ -384,25 +434,25 @@ class ViperballEngine:
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - self.state.field_position
             self.add_score(9)
-            description = f"{desc_prefix}: {player.name} rushes for {yards_gained} yards - TOUCHDOWN!"
+            description = f"{ptag} {action} → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
-            description = f"{desc_prefix}: {player.name} rushes for {yards_gained} yards - FIRST DOWN!"
+            description = f"{ptag} {action} → {yards_gained} — FIRST DOWN"
         else:
             result = PlayResult.GAIN
             self.state.field_position = new_position
             self.state.down += 1
             self.state.yards_to_go -= yards_gained
-            description = f"{desc_prefix}: {player.name} rushes for {yards_gained} yards"
+            description = f"{ptag} {action} → {yards_gained}"
 
             if self.state.down > 5:
                 result = PlayResult.TURNOVER_ON_DOWNS
                 self.change_possession()
                 self.state.field_position = 100 - self.state.field_position
-                description += " - TURNOVER ON DOWNS!"
+                description += " — TURNOVER ON DOWNS"
 
         self.apply_stamina_drain(3)
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -417,7 +467,7 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go,
             play_type="run",
             play_family=family.value,
-            players_involved=[player.name],
+            players_involved=[plabel],
             yards_gained=yards_gained,
             result=result.value,
             description=description,
@@ -430,6 +480,8 @@ class ViperballEngine:
 
         chain_length = random.randint(2, 5)
         players_involved = random.sample(team.players[:8], min(chain_length, len(team.players[:8])))
+        chain_tags = " → ".join(player_tag(p) for p in players_involved)
+        chain_labels = [player_label(p) for p in players_involved]
 
         base_fumble_prob = 0.06
         fumble_prob = base_fumble_prob * (1 + (chain_length - 2) * 0.12)
@@ -455,10 +507,10 @@ class ViperballEngine:
                 yards_to_go=20,
                 play_type="lateral_chain",
                 play_family=family.value,
-                players_involved=[p.name for p in players_involved],
+                players_involved=chain_labels,
                 yards_gained=yards_gained,
                 result=PlayResult.FUMBLE.value,
-                description=f"Lateral chain with {chain_length} players - FUMBLE! Recovered by defense",
+                description=f"{chain_tags} lateral → FUMBLE! Defense recovers",
                 fatigue=round(stamina, 1),
                 laterals=chain_length,
                 fumble=True,
@@ -484,25 +536,25 @@ class ViperballEngine:
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - self.state.field_position
             self.add_score(9)
-            description = f"Lateral chain with {chain_length} players for {yards_gained} yards - TOUCHDOWN!"
+            description = f"{chain_tags} lateral → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
-            description = f"Lateral chain with {chain_length} players for {yards_gained} yards - FIRST DOWN!"
+            description = f"{chain_tags} lateral → {yards_gained} — FIRST DOWN"
         else:
             result = PlayResult.GAIN
             self.state.field_position = new_position
             self.state.down += 1
             self.state.yards_to_go -= yards_gained
-            description = f"Lateral chain with {chain_length} players for {yards_gained} yards"
+            description = f"{chain_tags} lateral → {yards_gained}"
 
             if self.state.down > 5:
                 result = PlayResult.TURNOVER_ON_DOWNS
                 self.change_possession()
                 self.state.field_position = 100 - self.state.field_position
-                description += " - TURNOVER ON DOWNS!"
+                description += " — TURNOVER ON DOWNS"
 
         self.apply_stamina_drain(5)
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -517,7 +569,7 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go,
             play_type="lateral_chain",
             play_family=family.value,
-            players_involved=[p.name for p in players_involved],
+            players_involved=chain_labels,
             yards_gained=yards_gained,
             result=result.value,
             description=description,
@@ -528,6 +580,7 @@ class ViperballEngine:
     def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
         punter = max(team.players[:8], key=lambda p: p.kicking)
+        ptag = player_tag(punter)
 
         base_distance = random.gauss(45, 10)
         kicking_factor = punter.kicking / 80
@@ -554,16 +607,17 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go,
             play_type="punt",
             play_family=family.value,
-            players_involved=[punter.name],
+            players_involved=[player_label(punter)],
             yards_gained=-distance,
             result="punt",
-            description=f"{punter.name} punts {distance} yards",
+            description=f"{ptag} punt → {distance} yards",
             fatigue=round(stamina, 1),
         )
 
     def simulate_drop_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
+        ptag = player_tag(kicker)
 
         distance = 100 - self.state.field_position + 10
 
@@ -587,10 +641,10 @@ class ViperballEngine:
                 yards_to_go=20,
                 play_type="drop_kick",
                 play_family=family.value,
-                players_involved=[kicker.name],
+                players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{kicker.name} DROP KICK is GOOD from {distance} yards! +5 points",
+                description=f"{ptag} drop kick {distance}yd — GOOD! +5",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -609,16 +663,17 @@ class ViperballEngine:
                 yards_to_go=20,
                 play_type="drop_kick",
                 play_family=family.value,
-                players_involved=[kicker.name],
+                players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.MISSED_KICK.value,
-                description=f"{kicker.name} DROP KICK is NO GOOD from {distance} yards",
+                description=f"{ptag} drop kick {distance}yd — NO GOOD",
                 fatigue=round(stamina, 1),
             )
 
     def simulate_place_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
+        ptag = player_tag(kicker)
 
         distance = 100 - self.state.field_position + 10
 
@@ -642,10 +697,10 @@ class ViperballEngine:
                 yards_to_go=20,
                 play_type="place_kick",
                 play_family=family.value,
-                players_involved=[kicker.name],
+                players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{kicker.name} PLACE KICK is GOOD from {distance} yards! +3 points",
+                description=f"{ptag} place kick {distance}yd — GOOD! +3",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -664,10 +719,10 @@ class ViperballEngine:
                 yards_to_go=20,
                 play_type="place_kick",
                 play_family=family.value,
-                players_involved=[kicker.name],
+                players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.MISSED_KICK.value,
-                description=f"{kicker.name} PLACE KICK is NO GOOD from {distance} yards",
+                description=f"{ptag} place kick {distance}yd — NO GOOD",
                 fatigue=round(stamina, 1),
             )
 
@@ -757,6 +812,7 @@ class ViperballEngine:
                 "home": home_stats,
                 "away": away_stats,
             },
+            "drive_summary": self.drive_log,
             "play_by_play": [self.play_to_dict(p) for p in self.play_log],
         }
 

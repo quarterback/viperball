@@ -35,5 +35,5 @@ localPort = 5000
 externalPort = 80
 
 [deployment]
-run = ["sh", "-c", "/nix/store/s4ckxp77ljlikarkka88ba7qr5mlka97-python3-wrapper/bin/python3 $file"]
+run = ["sh", "-c", "streamlit run ui/app.py --server.port 3000 --server.address 0.0.0.0"]
 deploymentTarget = "cloudrun"

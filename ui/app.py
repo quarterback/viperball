@@ -1,8 +1,3 @@
-"""
-Viperball Simulation Sandbox
-Streamlit UI for running, debugging, and tuning Viperball simulations
-"""
-
 import sys
 import os
 import random
@@ -34,6 +29,25 @@ st.markdown("""
         padding: 12px;
         border-radius: 8px;
     }
+    .score-big {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-align: center;
+        line-height: 1;
+        margin: 0;
+    }
+    .team-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-align: center;
+        opacity: 0.8;
+        margin-bottom: 4px;
+    }
+    .drive-td { color: #22c55e; font-weight: 700; }
+    .drive-kick { color: #3b82f6; font-weight: 700; }
+    .drive-fumble { color: #ef4444; font-weight: 700; }
+    .drive-downs { color: #f59e0b; font-weight: 700; }
+    .drive-punt { color: #94a3b8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,6 +59,38 @@ style_keys = list(styles.keys())
 
 def load_team(key):
     return load_team_from_json(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams", f"{key}.json"))
+
+
+def format_time(seconds):
+    m = seconds // 60
+    s = seconds % 60
+    return f"{m:02d}:{s:02d}"
+
+
+def drive_result_label(result):
+    labels = {
+        "touchdown": "TD",
+        "successful_kick": "FG",
+        "fumble": "FUMBLE",
+        "turnover_on_downs": "DOWNS",
+        "punt": "PUNT",
+        "missed_kick": "MISSED FG",
+        "stall": "END OF QUARTER",
+    }
+    return labels.get(result, result.upper())
+
+
+def drive_result_color(result):
+    colors = {
+        "touchdown": "#22c55e",
+        "successful_kick": "#3b82f6",
+        "fumble": "#ef4444",
+        "turnover_on_downs": "#f59e0b",
+        "punt": "#94a3b8",
+        "missed_kick": "#f59e0b",
+        "stall": "#64748b",
+    }
+    return colors.get(result, "#94a3b8")
 
 
 page = st.sidebar.radio("Navigation", ["Game Simulator", "Debug Tools", "Play Inspector"], index=0)
@@ -104,68 +150,153 @@ if page == "Game Simulator":
         result = st.session_state["last_result"]
         actual_seed = st.session_state["last_seed"]
 
-        st.divider()
-
         home_name = result["final_score"]["home"]["team"]
         away_name = result["final_score"]["away"]["team"]
         home_score = result["final_score"]["home"]["score"]
         away_score = result["final_score"]["away"]["score"]
-
-        st.subheader(f"Final Score  |  Seed: {actual_seed}")
-        sc1, sc2, sc3 = st.columns([2, 1, 2])
-        with sc1:
-            st.metric(home_name, home_score)
-        with sc2:
-            st.markdown("<h2 style='text-align:center; padding-top:20px;'>vs</h2>", unsafe_allow_html=True)
-        with sc3:
-            st.metric(away_name, away_score)
-
-        if home_score > away_score:
-            st.success(f"{home_name} wins by {home_score - away_score}!")
-        elif away_score > home_score:
-            st.success(f"{away_name} wins by {away_score - home_score}!")
-        else:
-            st.info("Game ended in a tie!")
-
-        st.subheader("Box Score")
         hs = result["stats"]["home"]
         as_ = result["stats"]["away"]
 
-        box_data = {
-            "Stat": ["Total Yards", "Yards/Play", "Total Plays", "Touchdowns (9pts)",
-                     "Drop Kicks (5pts)", "Place Kicks (3pts)", "Lateral Chains",
-                     "Lateral Efficiency", "Fumbles Lost", "Turnovers on Downs",
-                     "Avg Fatigue"],
-            home_name: [hs["total_yards"], hs["yards_per_play"], hs["total_plays"],
-                        hs["touchdowns"], hs["drop_kicks_made"], hs["place_kicks_made"],
-                        hs["lateral_chains"], f'{hs["lateral_efficiency"]}%',
-                        hs["fumbles_lost"], hs["turnovers_on_downs"],
-                        f'{hs["avg_fatigue"]}%'],
-            away_name: [as_["total_yards"], as_["yards_per_play"], as_["total_plays"],
-                        as_["touchdowns"], as_["drop_kicks_made"], as_["place_kicks_made"],
-                        as_["lateral_chains"], f'{as_["lateral_efficiency"]}%',
-                        as_["fumbles_lost"], as_["turnovers_on_downs"],
-                        f'{as_["avg_fatigue"]}%'],
-        }
-        st.dataframe(pd.DataFrame(box_data), hide_index=True, use_container_width=True)
+        st.divider()
 
-        st.subheader("Play Family Breakdown")
-        pfb_col1, pfb_col2 = st.columns(2)
-        with pfb_col1:
-            home_fam = hs.get("play_family_breakdown", {})
-            if home_fam:
-                fig = px.pie(values=list(home_fam.values()), names=list(home_fam.keys()),
-                             title=f"{home_name} Play Families")
-                st.plotly_chart(fig, use_container_width=True)
-        with pfb_col2:
-            away_fam = as_.get("play_family_breakdown", {})
-            if away_fam:
-                fig = px.pie(values=list(away_fam.values()), names=list(away_fam.keys()),
-                             title=f"{away_name} Play Families")
-                st.plotly_chart(fig, use_container_width=True)
+        sc1, sc2, sc3 = st.columns([2, 1, 2])
+        with sc1:
+            st.markdown(f'<p class="team-name">{home_name}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{home_score}</p>', unsafe_allow_html=True)
+        with sc2:
+            st.markdown("<p style='text-align:center; padding-top:10px; font-size:1.2rem; opacity:0.5;'>vs</p>", unsafe_allow_html=True)
+            st.caption(f"Seed: {actual_seed}")
+        with sc3:
+            st.markdown(f'<p class="team-name">{away_name}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{away_score}</p>', unsafe_allow_html=True)
 
-        st.subheader("Play-by-Play Log")
+        if home_score > away_score:
+            st.success(f"{home_name} wins by {home_score - away_score}")
+        elif away_score > home_score:
+            st.success(f"{away_name} wins by {away_score - home_score}")
+        else:
+            st.info("Game ended in a tie")
+
+        # ====== 1. REAL BOX SCORE ======
+        st.subheader("Box Score")
+
         plays = result["play_by_play"]
+        home_q = {1: 0, 2: 0, 3: 0, 4: 0}
+        away_q = {1: 0, 2: 0, 3: 0, 4: 0}
+        for p in plays:
+            q = p["quarter"]
+            if q not in home_q:
+                continue
+            if p["result"] == "touchdown":
+                if p["possession"] == "home":
+                    home_q[q] += 9
+                else:
+                    away_q[q] += 9
+            elif p["result"] == "successful_kick":
+                pts = 5 if p["play_type"] == "drop_kick" else 3
+                if p["possession"] == "home":
+                    home_q[q] += pts
+                else:
+                    away_q[q] += pts
+
+        qtr_data = {
+            "": [home_name, away_name],
+            "Q1": [home_q[1], away_q[1]],
+            "Q2": [home_q[2], away_q[2]],
+            "Q3": [home_q[3], away_q[3]],
+            "Q4": [home_q[4], away_q[4]],
+            "Final": [home_score, away_score],
+        }
+        st.dataframe(pd.DataFrame(qtr_data), hide_index=True, use_container_width=True)
+
+        st.markdown("**Scoring Breakdown**")
+        scoring_data = {
+            "": ["Touchdowns (9pts)", "Drop Kicks (5pts)", "Place Kicks (3pts)",
+                 "Total Yards", "Yards/Play", "Total Plays",
+                 "Lateral Chains", "Lateral Efficiency",
+                 "Fumbles Lost", "Turnovers on Downs",
+                 "Longest Play", "Avg Fatigue"],
+            home_name: [
+                f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
+                f"{hs['drop_kicks_made']} ({hs['drop_kicks_made'] * 5}pts)",
+                f"{hs['place_kicks_made']} ({hs['place_kicks_made'] * 3}pts)",
+                hs["total_yards"], hs["yards_per_play"], hs["total_plays"],
+                hs["lateral_chains"], f'{hs["lateral_efficiency"]}%',
+                hs["fumbles_lost"], hs["turnovers_on_downs"],
+                max((p["yards"] for p in plays if p["possession"] == "home"), default=0),
+                f'{hs["avg_fatigue"]}%',
+            ],
+            away_name: [
+                f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
+                f"{as_['drop_kicks_made']} ({as_['drop_kicks_made'] * 5}pts)",
+                f"{as_['place_kicks_made']} ({as_['place_kicks_made'] * 3}pts)",
+                as_["total_yards"], as_["yards_per_play"], as_["total_plays"],
+                as_["lateral_chains"], f'{as_["lateral_efficiency"]}%',
+                as_["fumbles_lost"], as_["turnovers_on_downs"],
+                max((p["yards"] for p in plays if p["possession"] == "away"), default=0),
+                f'{as_["avg_fatigue"]}%',
+            ],
+        }
+        st.dataframe(pd.DataFrame(scoring_data), hide_index=True, use_container_width=True)
+
+        # ====== 2. PLAY FAMILY DISTRIBUTION ======
+        st.subheader("Play Family Distribution")
+        home_fam = hs.get("play_family_breakdown", {})
+        away_fam = as_.get("play_family_breakdown", {})
+
+        all_families = sorted(set(list(home_fam.keys()) + list(away_fam.keys())))
+        home_total = sum(home_fam.values()) or 1
+        away_total = sum(away_fam.values()) or 1
+
+        fam_chart_data = []
+        for f in all_families:
+            fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": home_name,
+                                   "Pct": round(home_fam.get(f, 0) / home_total * 100, 1)})
+            fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": away_name,
+                                   "Pct": round(away_fam.get(f, 0) / away_total * 100, 1)})
+
+        fig = px.bar(pd.DataFrame(fam_chart_data), x="Family", y="Pct", color="Team",
+                     barmode="group", title="Play Call Distribution (%)",
+                     labels={"Pct": "Percentage", "Family": "Play Family"})
+        fig.update_layout(yaxis_ticksuffix="%", height=350)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ====== 3. DRIVE OUTCOME PANEL ======
+        st.subheader("Drive Summary")
+        drives = result.get("drive_summary", [])
+        if drives:
+            drive_rows = []
+            for i, d in enumerate(drives):
+                team_label = home_name if d["team"] == "home" else away_name
+                drive_rows.append({
+                    "#": i + 1,
+                    "Team": team_label,
+                    "Qtr": f"Q{d['quarter']}",
+                    "Start": f"{d['start_yard_line']}yd",
+                    "Plays": d["plays"],
+                    "Yards": d["yards"],
+                    "Result": drive_result_label(d["result"]),
+                })
+            st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True, height=350)
+
+            drive_outcomes = {}
+            for d in drives:
+                r = drive_result_label(d["result"])
+                drive_outcomes[r] = drive_outcomes.get(r, 0) + 1
+
+            fig = px.bar(x=list(drive_outcomes.keys()), y=list(drive_outcomes.values()),
+                         title="Drive Outcomes",
+                         color=list(drive_outcomes.keys()),
+                         color_discrete_map={
+                             "TD": "#22c55e", "FG": "#3b82f6", "FUMBLE": "#ef4444",
+                             "DOWNS": "#f59e0b", "PUNT": "#94a3b8", "MISSED FG": "#f59e0b",
+                             "END OF QUARTER": "#64748b",
+                         })
+            fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome", yaxis_title="Count")
+            st.plotly_chart(fig, use_container_width=True)
+
+        # ====== 4. PLAY LOG WITH ROLE TAGS ======
+        st.subheader("Play-by-Play")
         play_df = pd.DataFrame(plays)
 
         quarter_filter = st.selectbox("Filter by Quarter", ["All", "Q1", "Q2", "Q3", "Q4"])
@@ -173,11 +304,90 @@ if page == "Game Simulator":
             q = int(quarter_filter[1])
             play_df = play_df[play_df["quarter"] == q]
 
-        display_cols = ["play_number", "quarter", "possession", "down", "yards_to_go",
-                        "field_position", "play_family", "play_type", "yards", "result",
-                        "description", "fatigue"]
-        available_cols = [c for c in display_cols if c in play_df.columns]
-        st.dataframe(play_df[available_cols], hide_index=True, use_container_width=True, height=400)
+        if not play_df.empty:
+            display_df = play_df.copy()
+            if "time_remaining" in display_df.columns:
+                display_df["time"] = display_df["time_remaining"].apply(format_time)
+            if "possession" in display_df.columns:
+                display_df["team"] = display_df["possession"].apply(
+                    lambda x: home_name if x == "home" else away_name)
+
+            show_cols = ["play_number", "team", "time", "down", "field_position",
+                         "play_family", "description", "yards", "result", "fatigue"]
+            available = [c for c in show_cols if c in display_df.columns]
+            st.dataframe(display_df[available], hide_index=True, use_container_width=True, height=400)
+
+        # ====== 5. DEBUG PANEL ======
+        with st.expander("Debug Panel"):
+            st.markdown("**Fatigue Over Time**")
+            home_fat = []
+            away_fat = []
+            for p in plays:
+                if p.get("fatigue") is not None:
+                    entry = {"play": p["play_number"], "fatigue": p["fatigue"]}
+                    if p["possession"] == "home":
+                        home_fat.append({**entry, "team": home_name})
+                    else:
+                        away_fat.append({**entry, "team": away_name})
+
+            if home_fat or away_fat:
+                fat_df = pd.DataFrame(home_fat + away_fat)
+                fig = px.line(fat_df, x="play", y="fatigue", color="team",
+                              title="Fatigue Curve")
+                fig.update_yaxes(range=[30, 105])
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+
+            st.markdown("**Turnover Triggers**")
+            fumble_plays = [p for p in plays if p.get("fumble")]
+            tod_plays = [p for p in plays if p["result"] == "turnover_on_downs"]
+            tc1, tc2 = st.columns(2)
+            tc1.metric("Fumbles", len(fumble_plays))
+            tc2.metric("Turnovers on Downs", len(tod_plays))
+
+            if fumble_plays:
+                st.markdown("*Fumble locations:*")
+                for fp in fumble_plays:
+                    team_label = home_name if fp["possession"] == "home" else away_name
+                    st.text(f"  Q{fp['quarter']} {format_time(fp['time_remaining'])} | {team_label} at {fp['field_position']}yd | {fp['description']}")
+
+            st.markdown("**Explosive Plays (15+ yards)**")
+            big_plays = [p for p in plays if p["yards"] >= 15 and p["play_type"] not in ["punt"]]
+            if big_plays:
+                for bp in big_plays:
+                    team_label = home_name if bp["possession"] == "home" else away_name
+                    st.text(f"  Q{bp['quarter']} | {team_label} | {bp['yards']}yds | {bp['description']}")
+            else:
+                st.text("  No explosive plays")
+
+            st.markdown("**Kick Decision Summary**")
+            kick_plays = [p for p in plays if p["play_type"] in ["drop_kick", "place_kick", "punt"]]
+            kc1, kc2, kc3 = st.columns(3)
+            punts = [p for p in kick_plays if p["play_type"] == "punt"]
+            drops = [p for p in kick_plays if p["play_type"] == "drop_kick"]
+            places = [p for p in kick_plays if p["play_type"] == "place_kick"]
+            kc1.metric("Punts", len(punts))
+            kc2.metric("Drop Kick Attempts", len(drops))
+            kc3.metric("Place Kick Attempts", len(places))
+
+            st.markdown("**Style Parameters**")
+            sc1, sc2 = st.columns(2)
+            h_style_key = result.get("home_style", "balanced")
+            a_style_key = result.get("away_style", "balanced")
+            h_style = OFFENSE_STYLES.get(h_style_key, OFFENSE_STYLES["balanced"])
+            a_style = OFFENSE_STYLES.get(a_style_key, OFFENSE_STYLES["balanced"])
+            with sc1:
+                st.markdown(f"**{home_name}** ({h_style['label']})")
+                st.text(f"  Tempo: {h_style['tempo']}")
+                st.text(f"  Lateral Risk: {h_style['lateral_risk']}")
+                st.text(f"  Kick Rate: {h_style['kick_rate']}")
+                st.text(f"  Option Rate: {h_style['option_rate']}")
+            with sc2:
+                st.markdown(f"**{away_name}** ({a_style['label']})")
+                st.text(f"  Tempo: {a_style['tempo']}")
+                st.text(f"  Lateral Risk: {a_style['lateral_risk']}")
+                st.text(f"  Kick Rate: {a_style['kick_rate']}")
+                st.text(f"  Option Rate: {a_style['option_rate']}")
 
         with st.expander("Raw JSON"):
             st.json(result)
@@ -246,7 +456,7 @@ elif page == "Debug Tools":
         m1.metric(f"{home_name} Wins", home_wins)
         m2.metric(f"{away_name} Wins", away_wins)
         m3.metric("Ties", ties)
-        m4.metric("Win %", f"{round(home_wins / n * 100, 1)}%")
+        m4.metric("Tie %", f"{round(ties / n * 100, 1)}%")
 
         st.subheader("Score Averages")
         avg1, avg2, avg3, avg4 = st.columns(4)
@@ -258,14 +468,53 @@ elif page == "Debug Tools":
         avg3.metric(f"Avg {home_name} Yards", round(sum(home_yards) / n, 1))
         avg4.metric(f"Avg {away_name} Yards", round(sum(away_yards) / n, 1))
 
+        st.subheader("Scoring Breakdown")
+        avg5, avg6, avg7, avg8 = st.columns(4)
+        home_tds = [r["stats"]["home"]["touchdowns"] for r in results]
+        away_tds = [r["stats"]["away"]["touchdowns"] for r in results]
+        avg5.metric("Avg TDs/game", round((sum(home_tds) + sum(away_tds)) / n, 2))
+        home_fumbles = [r["stats"]["home"]["fumbles_lost"] for r in results]
+        away_fumbles = [r["stats"]["away"]["fumbles_lost"] for r in results]
+        avg6.metric("Avg Fumbles/game", round((sum(home_fumbles) + sum(away_fumbles)) / n, 2))
+
+        longest_plays = []
+        for r in results:
+            max_play = max((p["yards"] for p in r["play_by_play"] if p["play_type"] not in ["punt"]), default=0)
+            longest_plays.append(max_play)
+        avg7.metric("Avg Longest Play", round(sum(longest_plays) / n, 1))
+        avg8.metric("Max Longest Play", max(longest_plays))
+
         st.subheader("Score Distribution")
-        score_df = pd.DataFrame({"Game": list(range(1, n + 1)),
-                                 home_name: home_scores, away_name: away_scores})
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=home_scores, name=home_name, opacity=0.7))
         fig.add_trace(go.Histogram(x=away_scores, name=away_name, opacity=0.7))
-        fig.update_layout(barmode="overlay", xaxis_title="Score", yaxis_title="Frequency")
+        fig.update_layout(barmode="overlay", xaxis_title="Score", yaxis_title="Frequency", height=350)
         st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Drive Outcomes (aggregate)")
+        all_drives = []
+        for r in results:
+            for d in r.get("drive_summary", []):
+                all_drives.append(d)
+        if all_drives:
+            outcome_counts = {}
+            for d in all_drives:
+                r_label = drive_result_label(d["result"])
+                outcome_counts[r_label] = outcome_counts.get(r_label, 0) + 1
+            total_drives = len(all_drives)
+            fig = px.bar(
+                x=list(outcome_counts.keys()),
+                y=[round(v / total_drives * 100, 1) for v in outcome_counts.values()],
+                title=f"Drive Outcome Distribution ({total_drives} drives across {n} games)",
+                labels={"x": "Outcome", "y": "Percentage"},
+                color=list(outcome_counts.keys()),
+                color_discrete_map={
+                    "TD": "#22c55e", "FG": "#3b82f6", "FUMBLE": "#ef4444",
+                    "DOWNS": "#f59e0b", "PUNT": "#94a3b8", "MISSED FG": "#f59e0b",
+                    "END OF QUARTER": "#64748b",
+                })
+            fig.update_layout(showlegend=False, height=350, yaxis_ticksuffix="%")
+            st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Fatigue Curves")
         home_fatigue = []
@@ -282,13 +531,12 @@ elif page == "Debug Tools":
             fat_df = pd.DataFrame(home_fatigue + away_fatigue)
             avg_fat = fat_df.groupby(["play", "team"])["fatigue"].mean().reset_index()
             fig = px.line(avg_fat, x="play", y="fatigue", color="team",
-                          title="Average Fatigue Over Play Number (across all sims)")
+                          title="Average Fatigue Over Play Number")
             fig.update_yaxes(range=[30, 105])
+            fig.update_layout(height=350)
             st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Turnover Rates")
-        home_fumbles = [r["stats"]["home"]["fumbles_lost"] for r in results]
-        away_fumbles = [r["stats"]["away"]["fumbles_lost"] for r in results]
         home_tod = [r["stats"]["home"]["turnovers_on_downs"] for r in results]
         away_tod = [r["stats"]["away"]["turnovers_on_downs"] for r in results]
 
@@ -306,24 +554,6 @@ elif page == "Debug Tools":
             ],
         }
         st.dataframe(pd.DataFrame(to_data), hide_index=True, use_container_width=True)
-
-        st.subheader("Detailed Stats Per Game")
-        detail_rows = []
-        for i, r in enumerate(results):
-            row = {
-                "Game": i + 1,
-                "Seed": r.get("seed", "N/A"),
-                f"{home_name} Score": r["final_score"]["home"]["score"],
-                f"{away_name} Score": r["final_score"]["away"]["score"],
-                f"{home_name} Yards": r["stats"]["home"]["total_yards"],
-                f"{away_name} Yards": r["stats"]["away"]["total_yards"],
-                f"{home_name} TDs": r["stats"]["home"]["touchdowns"],
-                f"{away_name} TDs": r["stats"]["away"]["touchdowns"],
-                f"{home_name} Fumbles": r["stats"]["home"]["fumbles_lost"],
-                f"{away_name} Fumbles": r["stats"]["away"]["fumbles_lost"],
-            }
-            detail_rows.append(row)
-        st.dataframe(pd.DataFrame(detail_rows), hide_index=True, use_container_width=True, height=300)
 
 
 elif page == "Play Inspector":

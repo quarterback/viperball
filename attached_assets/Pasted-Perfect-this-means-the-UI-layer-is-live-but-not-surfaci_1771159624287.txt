@@ -1,0 +1,187 @@
+Perfect — this means the UI layer is live but not surfacing meaning yet.
+
+Right now your sandbox is producing:
+	•	box score
+	•	play family breakdown
+	•	play-by-play
+	•	JSON
+
+but the screen you pasted shows empty rendering, which tells me:
+
+the engine is generating data
+but the UI isn’t mapping it into readable structures
+
+So this is not a tuning problem anymore.
+It’s a presentation + debugging visibility problem.
+
+Good place to be.
+
+⸻
+
+What we need now
+
+You don’t need new mechanics.
+You need to see the sport clearly.
+
+Tell your engineer to implement these 4 views.
+
+⸻
+
+1. REAL BOX SCORE (non-negotiable)
+
+The current output should render like this:
+
+CREIGHTON 24
+GONZAGA 21
+
+TD
+FG (drop)
+FG (place)
+Safeties
+
+Yards
+Rush yards
+Kick yards
+Turnovers
+Longest play
+Drives
+
+Right now you’re likely just dumping JSON.
+
+Have the API return:
+
+{
+  "box_score": {...},
+  "team_stats": {...},
+  "drive_summary": [...],
+  "play_log": [...]
+}
+
+And force UI to render those explicitly.
+
+If box score is blank, the problem is:
+
+field names mismatch
+
+Not engine logic.
+
+⸻
+
+2. PLAY FAMILY DISTRIBUTION
+
+This is where identity shows up.
+
+You want a chart like:
+
+Option: 42%
+Sweep: 18%
+Lateral chain: 12%
+Territory kick: 14%
+Trick: 6%
+
+If every team shows the same distribution,
+your archetypes aren’t distinct enough.
+
+If distributions vary by team:
+you’ve succeeded.
+
+⸻
+
+3. DRIVE OUTCOME PANEL
+
+Add this immediately.
+
+For each drive:
+
+Start yard line
+Plays
+Yards gained
+Result:
+  TD
+  Drop kick
+  Punt
+  Fumble
+  Downs
+
+This tells you if the game feels real.
+
+You want drives like:
+
+6 plays → TD
+9 plays → drop kick
+3 plays → fumble
+
+Not:
+
+9 plays → punt
+8 plays → punt
+10 plays → punt
+
+
+⸻
+
+4. PLAY LOG WITH ROLE TAGS
+
+Right now your logs likely say:
+
+Run for 6 yards
+Lateral
+Run for 3
+
+Instead show:
+
+ZB keep → 6
+HB pitch → 4
+SB lateral → Viper → 22
+Tackle by SP1
+
+You want to see positions acting.
+
+Otherwise everything feels anonymous.
+
+⸻
+
+5. CRITICAL DEBUG PANEL
+
+Add a hidden debug toggle showing:
+
+fatigue curves
+explosive trigger %
+turnover triggers
+kick decision %
+
+This lets you tune without guessing.
+
+⸻
+
+What I want you to do next
+
+Run one sim and paste:
+
+1. full box score
+
+2. drive summary
+
+3. 10 plays of log
+
+Not screenshots of empty UI —
+actual JSON or text.
+
+Then I can confirm:
+	•	are roles visible
+	•	do drives feel real
+	•	does the sport have identity
+
+⸻
+
+Big picture
+
+You are no longer building mechanics.
+
+You are now in the phase where:
+
+the sport exists
+now we make it legible
+
+Once the logs read like a real game,
+Viperball will suddenly feel like something people can watch.
