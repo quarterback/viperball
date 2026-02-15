@@ -1,0 +1,2315 @@
+{
+  "final_score": {
+    "home": {
+      "team": "New York University",
+      "score": 15
+    },
+    "away": {
+      "team": "University of Texas at Arlington",
+      "score": 27
+    }
+  },
+  "stats": {
+    "home": {
+      "total_yards": 149,
+      "total_plays": 40,
+      "yards_per_play": 3.73,
+      "lateral_chains": 8,
+      "successful_laterals": 8,
+      "drop_kicks_made": 3,
+      "place_kicks_made": 0,
+      "viper_efficiency": 4.92,
+      "micro_scoring_differential": 15,
+      "lateral_efficiency": 100.0
+    },
+    "away": {
+      "total_yards": 377,
+      "total_plays": 83,
+      "yards_per_play": 4.54,
+      "lateral_chains": 18,
+      "successful_laterals": 17,
+      "drop_kicks_made": 3,
+      "place_kicks_made": 0,
+      "viper_efficiency": 5.79,
+      "micro_scoring_differential": 15,
+      "lateral_efficiency": 94.4
+    }
+  },
+  "play_by_play": [
+    {
+      "play_number": 1,
+      "quarter": 1,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 34,
+      "down": 2,
+      "yards_to_go": 6,
+      "play_type": "lateral_chain",
+      "players": [
+        "DeAndre Williams",
+        "Miguel Sanchez",
+        "Ryan Patterson",
+        "Jermaine Scott"
+      ],
+      "yards": 14,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 14 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 2,
+      "quarter": 1,
+      "time_remaining": 869,
+      "possession": "away",
+      "field_position": 31,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": -3,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for -3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 3,
+      "quarter": 1,
+      "time_remaining": 851,
+      "possession": "away",
+      "field_position": 29,
+      "down": 4,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": -2,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for -2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 4,
+      "quarter": 1,
+      "time_remaining": 819,
+      "possession": "home",
+      "field_position": 14,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -57,
+      "result": "punt",
+      "description": "Caleb Johnson punts 57 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 5,
+      "quarter": 1,
+      "time_remaining": 777,
+      "possession": "away",
+      "field_position": 86,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park DROP KICK is NO GOOD from 96 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 6,
+      "quarter": 1,
+      "time_remaining": 752,
+      "possession": "away",
+      "field_position": 90,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 7,
+      "quarter": 1,
+      "time_remaining": 717,
+      "possession": "away",
+      "field_position": 93,
+      "down": 3,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Brandon Hayes rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 8,
+      "quarter": 1,
+      "time_remaining": 674,
+      "possession": "away",
+      "field_position": 94,
+      "down": 4,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 9,
+      "quarter": 1,
+      "time_remaining": 655,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Caleb Johnson DROP KICK is GOOD from 16 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 10,
+      "quarter": 1,
+      "time_remaining": 617,
+      "possession": "away",
+      "field_position": 20,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Brandon Hayes rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 11,
+      "quarter": 1,
+      "time_remaining": 589,
+      "possession": "away",
+      "field_position": 26,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Brandon Hayes rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 12,
+      "quarter": 1,
+      "time_remaining": 544,
+      "possession": "home",
+      "field_position": 18,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -56,
+      "result": "punt",
+      "description": "Caleb Johnson punts 56 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 13,
+      "quarter": 1,
+      "time_remaining": 508,
+      "possession": "away",
+      "field_position": 37,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -45,
+      "result": "punt",
+      "description": "Ethan Park punts 45 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 14,
+      "quarter": 1,
+      "time_remaining": 476,
+      "possession": "away",
+      "field_position": 43,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 15,
+      "quarter": 1,
+      "time_remaining": 456,
+      "possession": "away",
+      "field_position": 43,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 16,
+      "quarter": 1,
+      "time_remaining": 437,
+      "possession": "away",
+      "field_position": 47,
+      "down": 4,
+      "yards_to_go": 10,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 17,
+      "quarter": 1,
+      "time_remaining": 410,
+      "possession": "away",
+      "field_position": 65,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "DeAndre Williams",
+        "Travis Henderson",
+        "Caleb Johnson",
+        "Brandon Hayes"
+      ],
+      "yards": 18,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 18 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 18,
+      "quarter": 1,
+      "time_remaining": 369,
+      "possession": "away",
+      "field_position": 72,
+      "down": 2,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 7,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 7 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 19,
+      "quarter": 1,
+      "time_remaining": 353,
+      "possession": "away",
+      "field_position": 83,
+      "down": 3,
+      "yards_to_go": 2,
+      "play_type": "lateral_chain",
+      "players": [
+        "Miguel Sanchez",
+        "DeAndre Williams",
+        "James Foster",
+        "Jermaine Scott"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 11 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 20,
+      "quarter": 1,
+      "time_remaining": 321,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -32,
+      "result": "punt",
+      "description": "Caleb Johnson punts 32 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 21,
+      "quarter": 1,
+      "time_remaining": 277,
+      "possession": "home",
+      "field_position": 5,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 22,
+      "quarter": 1,
+      "time_remaining": 239,
+      "possession": "home",
+      "field_position": 10,
+      "down": 3,
+      "yards_to_go": 11,
+      "play_type": "lateral_chain",
+      "players": [
+        "Jamal Thompson",
+        "Alex Zhang"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 5 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 23,
+      "quarter": 1,
+      "time_remaining": 199,
+      "possession": "home",
+      "field_position": 28,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Chen",
+        "Ryan Mitchell",
+        "Jamal Thompson"
+      ],
+      "yards": 18,
+      "result": "first_down",
+      "description": "Lateral chain with 3 players for 18 yards - FIRST DOWN!",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 24,
+      "quarter": 1,
+      "time_remaining": 169,
+      "possession": "home",
+      "field_position": 39,
+      "down": 2,
+      "yards_to_go": 9,
+      "play_type": "lateral_chain",
+      "players": [
+        "Alex Zhang",
+        "Tyler O'Brien"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 11 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 25,
+      "quarter": 1,
+      "time_remaining": 143,
+      "possession": "home",
+      "field_position": 44,
+      "down": 3,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Marcus Chen"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Marcus Chen rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 26,
+      "quarter": 1,
+      "time_remaining": 121,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -36,
+      "result": "punt",
+      "description": "Ethan Park punts 36 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 27,
+      "quarter": 1,
+      "time_remaining": 98,
+      "possession": "away",
+      "field_position": 24,
+      "down": 2,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 28,
+      "quarter": 1,
+      "time_remaining": 73,
+      "possession": "away",
+      "field_position": 27,
+      "down": 3,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 29,
+      "quarter": 1,
+      "time_remaining": 44,
+      "possession": "away",
+      "field_position": 29,
+      "down": 4,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 30,
+      "quarter": 1,
+      "time_remaining": 13,
+      "possession": "away",
+      "field_position": 27,
+      "down": 5,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": -2,
+      "result": "gain",
+      "description": "Brandon Hayes rushes for -2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 31,
+      "quarter": 2,
+      "time_remaining": 900,
+      "possession": "home",
+      "field_position": 16,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -57,
+      "result": "punt",
+      "description": "Caleb Johnson punts 57 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 32,
+      "quarter": 2,
+      "time_remaining": 867,
+      "possession": "home",
+      "field_position": 18,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Marcus Chen"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Marcus Chen rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 33,
+      "quarter": 2,
+      "time_remaining": 832,
+      "possession": "away",
+      "field_position": 22,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -60,
+      "result": "punt",
+      "description": "Ethan Park punts 60 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 34,
+      "quarter": 2,
+      "time_remaining": 807,
+      "possession": "away",
+      "field_position": 24,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 35,
+      "quarter": 2,
+      "time_remaining": 781,
+      "possession": "away",
+      "field_position": 28,
+      "down": 3,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 36,
+      "quarter": 2,
+      "time_remaining": 752,
+      "possession": "away",
+      "field_position": 31,
+      "down": 4,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 37,
+      "quarter": 2,
+      "time_remaining": 734,
+      "possession": "home",
+      "field_position": 69,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Caleb Johnson DROP KICK is NO GOOD from 79 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 38,
+      "quarter": 2,
+      "time_remaining": 698,
+      "possession": "away",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -48,
+      "result": "punt",
+      "description": "Ethan Park punts 48 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 39,
+      "quarter": 2,
+      "time_remaining": 683,
+      "possession": "away",
+      "field_position": 4,
+      "down": 2,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 40,
+      "quarter": 2,
+      "time_remaining": 650,
+      "possession": "away",
+      "field_position": 10,
+      "down": 3,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 41,
+      "quarter": 2,
+      "time_remaining": 623,
+      "possession": "away",
+      "field_position": 7,
+      "down": 4,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": -3,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for -3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 42,
+      "quarter": 2,
+      "time_remaining": 594,
+      "possession": "away",
+      "field_position": 18,
+      "down": 5,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Caleb Johnson",
+        "Miguel Sanchez",
+        "DeAndre Williams",
+        "James Foster"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 11 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 43,
+      "quarter": 2,
+      "time_remaining": 559,
+      "possession": "home",
+      "field_position": 25,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -57,
+      "result": "punt",
+      "description": "Caleb Johnson punts 57 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 44,
+      "quarter": 2,
+      "time_remaining": 533,
+      "possession": "home",
+      "field_position": 46,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Chen",
+        "Jamal Thompson",
+        "Carlos Rodriguez",
+        "Alex Zhang",
+        "Tyler O'Brien"
+      ],
+      "yards": 21,
+      "result": "first_down",
+      "description": "Lateral chain with 5 players for 21 yards - FIRST DOWN!",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 45,
+      "quarter": 2,
+      "time_remaining": 488,
+      "possession": "away",
+      "field_position": 54,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park PLACE KICK is NO GOOD from 64 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 46,
+      "quarter": 2,
+      "time_remaining": 469,
+      "possession": "away",
+      "field_position": 59,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 47,
+      "quarter": 2,
+      "time_remaining": 428,
+      "possession": "away",
+      "field_position": 67,
+      "down": 3,
+      "yards_to_go": 7,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brandon Hayes",
+        "James Foster",
+        "Caleb Johnson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 8 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 48,
+      "quarter": 2,
+      "time_remaining": 411,
+      "possession": "away",
+      "field_position": 73,
+      "down": 4,
+      "yards_to_go": 1,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 49,
+      "quarter": 2,
+      "time_remaining": 371,
+      "possession": "away",
+      "field_position": 75,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "James Foster",
+        "Brandon Hayes",
+        "Travis Henderson",
+        "Ryan Patterson"
+      ],
+      "yards": 2,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 2 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 50,
+      "quarter": 2,
+      "time_remaining": 347,
+      "possession": "away",
+      "field_position": 78,
+      "down": 2,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 51,
+      "quarter": 2,
+      "time_remaining": 329,
+      "possession": "away",
+      "field_position": 87,
+      "down": 3,
+      "yards_to_go": 8,
+      "play_type": "lateral_chain",
+      "players": [
+        "Caleb Johnson",
+        "Ryan Patterson"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 9 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 52,
+      "quarter": 2,
+      "time_remaining": 287,
+      "possession": "away",
+      "field_position": 91,
+      "down": 4,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 53,
+      "quarter": 2,
+      "time_remaining": 266,
+      "possession": "away",
+      "field_position": 96,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 5,
+      "result": "first_down",
+      "description": "Brandon Hayes rushes for 5 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 54,
+      "quarter": 2,
+      "time_remaining": 224,
+      "possession": "away",
+      "field_position": 96,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 55,
+      "quarter": 2,
+      "time_remaining": 197,
+      "possession": "away",
+      "field_position": 97,
+      "down": 3,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 56,
+      "quarter": 2,
+      "time_remaining": 166,
+      "possession": "away",
+      "field_position": 97,
+      "down": 3,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 6,
+      "result": "touchdown",
+      "description": "DeAndre Williams rushes for 6 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 57,
+      "quarter": 2,
+      "time_remaining": 121,
+      "possession": "away",
+      "field_position": 97,
+      "down": 3,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 3,
+      "result": "touchdown",
+      "description": "Caleb Johnson rushes for 3 yards - TOUCHDOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 58,
+      "quarter": 2,
+      "time_remaining": 93,
+      "possession": "home",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -30,
+      "result": "punt",
+      "description": "Caleb Johnson punts 30 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 59,
+      "quarter": 2,
+      "time_remaining": 49,
+      "possession": "home",
+      "field_position": 10,
+      "down": 2,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 9 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 60,
+      "quarter": 2,
+      "time_remaining": 25,
+      "possession": "away",
+      "field_position": 5,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Chen",
+        "DeShawn Williams"
+      ],
+      "yards": 5,
+      "result": "fumble",
+      "description": "Lateral chain with 2 players - FUMBLE! Recovered by defense",
+      "laterals": 2,
+      "fumble": true
+    },
+    {
+      "play_number": 61,
+      "quarter": 3,
+      "time_remaining": 900,
+      "possession": "home",
+      "field_position": 25,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Caleb Johnson punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 62,
+      "quarter": 3,
+      "time_remaining": 861,
+      "possession": "home",
+      "field_position": 42,
+      "down": 2,
+      "yards_to_go": 3,
+      "play_type": "lateral_chain",
+      "players": [
+        "Carlos Rodriguez",
+        "Ryan Mitchell",
+        "Jamal Thompson",
+        "Tyler O'Brien",
+        "Alex Zhang"
+      ],
+      "yards": 17,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 17 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 63,
+      "quarter": 3,
+      "time_remaining": 828,
+      "possession": "home",
+      "field_position": 45,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Marcus Chen"
+      ],
+      "yards": 3,
+      "result": "first_down",
+      "description": "Marcus Chen rushes for 3 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 64,
+      "quarter": 3,
+      "time_remaining": 797,
+      "possession": "home",
+      "field_position": 45,
+      "down": 2,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 65,
+      "quarter": 3,
+      "time_remaining": 782,
+      "possession": "home",
+      "field_position": 48,
+      "down": 3,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 66,
+      "quarter": 3,
+      "time_remaining": 739,
+      "possession": "home",
+      "field_position": 49,
+      "down": 4,
+      "yards_to_go": 16,
+      "play_type": "run",
+      "players": [
+        "Marcus Chen"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Marcus Chen rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 67,
+      "quarter": 3,
+      "time_remaining": 714,
+      "possession": "away",
+      "field_position": 3,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -48,
+      "result": "punt",
+      "description": "Ethan Park punts 48 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 68,
+      "quarter": 3,
+      "time_remaining": 697,
+      "possession": "away",
+      "field_position": 11,
+      "down": 2,
+      "yards_to_go": 12,
+      "play_type": "lateral_chain",
+      "players": [
+        "Jermaine Scott",
+        "James Foster",
+        "Travis Henderson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 8 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 69,
+      "quarter": 3,
+      "time_remaining": 665,
+      "possession": "away",
+      "field_position": 16,
+      "down": 3,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 70,
+      "quarter": 3,
+      "time_remaining": 628,
+      "possession": "away",
+      "field_position": 16,
+      "down": 4,
+      "yards_to_go": 7,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 0,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 0 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 71,
+      "quarter": 3,
+      "time_remaining": 612,
+      "possession": "away",
+      "field_position": 19,
+      "down": 5,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Brandon Hayes rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 72,
+      "quarter": 3,
+      "time_remaining": 580,
+      "possession": "home",
+      "field_position": 19,
+      "down": 6,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 0,
+      "result": "turnover_on_downs",
+      "description": "Travis Henderson rushes for 0 yards - TURNOVER ON DOWNS!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 73,
+      "quarter": 3,
+      "time_remaining": 562,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Ethan Park DROP KICK is GOOD from 91 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 74,
+      "quarter": 3,
+      "time_remaining": 526,
+      "possession": "home",
+      "field_position": 23,
+      "down": 2,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 75,
+      "quarter": 3,
+      "time_remaining": 494,
+      "possession": "home",
+      "field_position": 34,
+      "down": 3,
+      "yards_to_go": 6,
+      "play_type": "lateral_chain",
+      "players": [
+        "Ryan Mitchell",
+        "Alex Zhang",
+        "DeShawn Williams"
+      ],
+      "yards": 11,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 11 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 76,
+      "quarter": 3,
+      "time_remaining": 468,
+      "possession": "home",
+      "field_position": 45,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Marcus Chen",
+        "Alex Zhang"
+      ],
+      "yards": 11,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 11 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 77,
+      "quarter": 3,
+      "time_remaining": 433,
+      "possession": "home",
+      "field_position": 51,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "lateral_chain",
+      "players": [
+        "DeShawn Williams",
+        "Ethan Park",
+        "Tyler O'Brien"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Lateral chain with 3 players for 6 yards",
+      "laterals": 3,
+      "fumble": null
+    },
+    {
+      "play_number": 78,
+      "quarter": 3,
+      "time_remaining": 410,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Ethan Park DROP KICK is GOOD from 59 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 79,
+      "quarter": 3,
+      "time_remaining": 373,
+      "possession": "away",
+      "field_position": 80,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park DROP KICK is NO GOOD from 90 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 80,
+      "quarter": 3,
+      "time_remaining": 341,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Caleb Johnson DROP KICK is GOOD from 30 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 81,
+      "quarter": 3,
+      "time_remaining": 315,
+      "possession": "away",
+      "field_position": 29,
+      "down": 2,
+      "yards_to_go": 11,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 9 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 82,
+      "quarter": 3,
+      "time_remaining": 289,
+      "possession": "home",
+      "field_position": 22,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -49,
+      "result": "punt",
+      "description": "Caleb Johnson punts 49 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 83,
+      "quarter": 3,
+      "time_remaining": 272,
+      "possession": "home",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Ethan Park DROP KICK is GOOD from 88 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 84,
+      "quarter": 3,
+      "time_remaining": 245,
+      "possession": "away",
+      "field_position": 16,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -64,
+      "result": "punt",
+      "description": "Ethan Park punts 64 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 85,
+      "quarter": 3,
+      "time_remaining": 208,
+      "possession": "away",
+      "field_position": 24,
+      "down": 2,
+      "yards_to_go": 12,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 8,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 8 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 86,
+      "quarter": 3,
+      "time_remaining": 182,
+      "possession": "away",
+      "field_position": 26,
+      "down": 3,
+      "yards_to_go": 10,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 87,
+      "quarter": 3,
+      "time_remaining": 140,
+      "possession": "home",
+      "field_position": 15,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -59,
+      "result": "punt",
+      "description": "Caleb Johnson punts 59 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 88,
+      "quarter": 3,
+      "time_remaining": 119,
+      "possession": "home",
+      "field_position": 16,
+      "down": 2,
+      "yards_to_go": 19,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 89,
+      "quarter": 3,
+      "time_remaining": 104,
+      "possession": "home",
+      "field_position": 17,
+      "down": 3,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 1,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 1 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 90,
+      "quarter": 3,
+      "time_remaining": 84,
+      "possession": "home",
+      "field_position": 22,
+      "down": 4,
+      "yards_to_go": 13,
+      "play_type": "run",
+      "players": [
+        "DeShawn Williams"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "DeShawn Williams rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 91,
+      "quarter": 3,
+      "time_remaining": 56,
+      "possession": "home",
+      "field_position": 31,
+      "down": 5,
+      "yards_to_go": 4,
+      "play_type": "run",
+      "players": [
+        "Jamal Thompson"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Jamal Thompson rushes for 9 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 92,
+      "quarter": 3,
+      "time_remaining": 13,
+      "possession": "away",
+      "field_position": 17,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -52,
+      "result": "punt",
+      "description": "Ethan Park punts 52 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 93,
+      "quarter": 4,
+      "time_remaining": 900,
+      "possession": "away",
+      "field_position": 29,
+      "down": 2,
+      "yards_to_go": 8,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brandon Hayes",
+        "Miguel Sanchez",
+        "James Foster",
+        "Jermaine Scott",
+        "Caleb Johnson"
+      ],
+      "yards": 12,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 12 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 94,
+      "quarter": 4,
+      "time_remaining": 871,
+      "possession": "away",
+      "field_position": 39,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Ryan Patterson",
+        "Travis Henderson",
+        "Jermaine Scott",
+        "James Foster"
+      ],
+      "yards": 10,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 10 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 95,
+      "quarter": 4,
+      "time_remaining": 846,
+      "possession": "away",
+      "field_position": 58,
+      "down": 2,
+      "yards_to_go": 1,
+      "play_type": "lateral_chain",
+      "players": [
+        "Jermaine Scott",
+        "Caleb Johnson",
+        "Brandon Hayes",
+        "Miguel Sanchez",
+        "DeAndre Williams"
+      ],
+      "yards": 19,
+      "result": "gain",
+      "description": "Lateral chain with 5 players for 19 yards",
+      "laterals": 5,
+      "fumble": null
+    },
+    {
+      "play_number": 96,
+      "quarter": 4,
+      "time_remaining": 806,
+      "possession": "away",
+      "field_position": 65,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Brandon Hayes"
+      ],
+      "yards": 7,
+      "result": "first_down",
+      "description": "Brandon Hayes rushes for 7 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 97,
+      "quarter": 4,
+      "time_remaining": 782,
+      "possession": "home",
+      "field_position": 35,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Caleb Johnson DROP KICK is NO GOOD from 45 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 98,
+      "quarter": 4,
+      "time_remaining": 749,
+      "possession": "away",
+      "field_position": 22,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -43,
+      "result": "punt",
+      "description": "Ethan Park punts 43 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 99,
+      "quarter": 4,
+      "time_remaining": 734,
+      "possession": "home",
+      "field_position": 78,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "place_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Caleb Johnson PLACE KICK is NO GOOD from 88 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 100,
+      "quarter": 4,
+      "time_remaining": 698,
+      "possession": "away",
+      "field_position": 1,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -70,
+      "result": "punt",
+      "description": "Ethan Park punts 70 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 101,
+      "quarter": 4,
+      "time_remaining": 664,
+      "possession": "away",
+      "field_position": 7,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 102,
+      "quarter": 4,
+      "time_remaining": 633,
+      "possession": "away",
+      "field_position": 21,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "James Foster",
+        "Caleb Johnson"
+      ],
+      "yards": 14,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 14 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 103,
+      "quarter": 4,
+      "time_remaining": 612,
+      "possession": "away",
+      "field_position": 27,
+      "down": 2,
+      "yards_to_go": 14,
+      "play_type": "run",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Caleb Johnson rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 104,
+      "quarter": 4,
+      "time_remaining": 588,
+      "possession": "away",
+      "field_position": 36,
+      "down": 3,
+      "yards_to_go": 5,
+      "play_type": "lateral_chain",
+      "players": [
+        "Caleb Johnson",
+        "Jermaine Scott",
+        "Ryan Patterson",
+        "Brandon Hayes"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 9 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 105,
+      "quarter": 4,
+      "time_remaining": 555,
+      "possession": "away",
+      "field_position": 49,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Brandon Hayes",
+        "Jermaine Scott"
+      ],
+      "yards": 13,
+      "result": "first_down",
+      "description": "Lateral chain with 2 players for 13 yards - FIRST DOWN!",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 106,
+      "quarter": 4,
+      "time_remaining": 525,
+      "possession": "away",
+      "field_position": 51,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 107,
+      "quarter": 4,
+      "time_remaining": 506,
+      "possession": "home",
+      "field_position": 7,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": -42,
+      "result": "punt",
+      "description": "Caleb Johnson punts 42 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 108,
+      "quarter": 4,
+      "time_remaining": 468,
+      "possession": "home",
+      "field_position": 10,
+      "down": 2,
+      "yards_to_go": 17,
+      "play_type": "run",
+      "players": [
+        "Carlos Rodriguez"
+      ],
+      "yards": 3,
+      "result": "gain",
+      "description": "Carlos Rodriguez rushes for 3 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 109,
+      "quarter": 4,
+      "time_remaining": 442,
+      "possession": "away",
+      "field_position": 38,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "punt",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": -52,
+      "result": "punt",
+      "description": "Ethan Park punts 52 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 110,
+      "quarter": 4,
+      "time_remaining": 410,
+      "possession": "away",
+      "field_position": 43,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 111,
+      "quarter": 4,
+      "time_remaining": 383,
+      "possession": "away",
+      "field_position": 52,
+      "down": 3,
+      "yards_to_go": 6,
+      "play_type": "lateral_chain",
+      "players": [
+        "Caleb Johnson",
+        "James Foster"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Lateral chain with 2 players for 9 yards",
+      "laterals": 2,
+      "fumble": null
+    },
+    {
+      "play_number": 112,
+      "quarter": 4,
+      "time_remaining": 350,
+      "possession": "away",
+      "field_position": 57,
+      "down": 4,
+      "yards_to_go": 1,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 113,
+      "quarter": 4,
+      "time_remaining": 334,
+      "possession": "away",
+      "field_position": 58,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 1,
+      "result": "first_down",
+      "description": "Travis Henderson rushes for 1 yards - FIRST DOWN!",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 114,
+      "quarter": 4,
+      "time_remaining": 311,
+      "possession": "away",
+      "field_position": 74,
+      "down": 2,
+      "yards_to_go": 4,
+      "play_type": "lateral_chain",
+      "players": [
+        "Jermaine Scott",
+        "DeAndre Williams",
+        "Miguel Sanchez",
+        "James Foster"
+      ],
+      "yards": 16,
+      "result": "gain",
+      "description": "Lateral chain with 4 players for 16 yards",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 115,
+      "quarter": 4,
+      "time_remaining": 287,
+      "possession": "away",
+      "field_position": 20,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "successful_kick",
+      "description": "Caleb Johnson DROP KICK is GOOD from 36 yards! +5 points",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 116,
+      "quarter": 4,
+      "time_remaining": 260,
+      "possession": "away",
+      "field_position": 25,
+      "down": 2,
+      "yards_to_go": 15,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 5,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 5 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 117,
+      "quarter": 4,
+      "time_remaining": 228,
+      "possession": "away",
+      "field_position": 31,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 6,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 6 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 118,
+      "quarter": 4,
+      "time_remaining": 206,
+      "possession": "away",
+      "field_position": 44,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "lateral_chain",
+      "players": [
+        "Ryan Patterson",
+        "Brandon Hayes",
+        "Travis Henderson",
+        "Caleb Johnson"
+      ],
+      "yards": 13,
+      "result": "first_down",
+      "description": "Lateral chain with 4 players for 13 yards - FIRST DOWN!",
+      "laterals": 4,
+      "fumble": null
+    },
+    {
+      "play_number": 119,
+      "quarter": 4,
+      "time_remaining": 163,
+      "possession": "away",
+      "field_position": 46,
+      "down": 2,
+      "yards_to_go": 18,
+      "play_type": "run",
+      "players": [
+        "Travis Henderson"
+      ],
+      "yards": 2,
+      "result": "gain",
+      "description": "Travis Henderson rushes for 2 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 120,
+      "quarter": 4,
+      "time_remaining": 123,
+      "possession": "away",
+      "field_position": 55,
+      "down": 3,
+      "yards_to_go": 9,
+      "play_type": "run",
+      "players": [
+        "Miguel Sanchez"
+      ],
+      "yards": 9,
+      "result": "gain",
+      "description": "Miguel Sanchez rushes for 9 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 121,
+      "quarter": 4,
+      "time_remaining": 82,
+      "possession": "away",
+      "field_position": 59,
+      "down": 4,
+      "yards_to_go": 5,
+      "play_type": "run",
+      "players": [
+        "DeAndre Williams"
+      ],
+      "yards": 4,
+      "result": "gain",
+      "description": "DeAndre Williams rushes for 4 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 122,
+      "quarter": 4,
+      "time_remaining": 67,
+      "possession": "home",
+      "field_position": 41,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Caleb Johnson"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Caleb Johnson DROP KICK is NO GOOD from 51 yards",
+      "laterals": null,
+      "fumble": null
+    },
+    {
+      "play_number": 123,
+      "quarter": 4,
+      "time_remaining": 28,
+      "possession": "away",
+      "field_position": 59,
+      "down": 1,
+      "yards_to_go": 20,
+      "play_type": "drop_kick",
+      "players": [
+        "Ethan Park"
+      ],
+      "yards": 0,
+      "result": "missed_kick",
+      "description": "Ethan Park DROP KICK is NO GOOD from 69 yards",
+      "laterals": null,
+      "fumble": null
+    }
+  ]
+}
