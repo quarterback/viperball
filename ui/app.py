@@ -93,6 +93,22 @@ style_keys = list(styles.keys())
 defense_style_keys = list(DEFENSE_STYLES.keys())
 defense_styles = DEFENSE_STYLES
 
+OFFENSE_TOOLTIPS = {
+    "power_option": "Heavy inside runs with option reads. Low kick attempts, high TD rate. Best against soft defenses.",
+    "lateral_spread": "Spreads the field with lateral chains. High-variance, explosive plays. Risky but devastating when it works.",
+    "territorial": "Prioritizes snap kicks and field goals. Plays for field position and pindowns. Patient, grinding style.",
+    "option_spread": "Speed-based option reads mixed with lateral chains. Exploits tired defenses. High tempo.",
+    "balanced": "No strong tendency — mixes run, chain, and kick based on game state. Jack of all trades.",
+}
+
+DEFENSE_TOOLTIPS = {
+    "base_defense": "Solid fundamentals, no major weaknesses. Balanced approach to all play types.",
+    "pressure_defense": "Aggressive blitzing and disruption. Forces fumbles but vulnerable to explosive lateral plays.",
+    "contain_defense": "Gap discipline prevents big plays. Forces runs inside. Patient but can be methodically attacked.",
+    "run_stop_defense": "Stacks the box to stuff the run. Elite vs ground game but weak against lateral chains and kicks.",
+    "coverage_defense": "Anti-kick specialist. Prevents pindowns and covers punt returns. Slightly weaker vs dive plays.",
+}
+
 
 def load_team(key):
     return load_team_from_json(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams", f"{key}.json"))
@@ -334,11 +350,11 @@ if page == "Game Simulator":
                                   format_func=lambda x: styles[x]["label"],
                                   index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == home_key), "balanced")),
                                   key="home_style")
-        st.caption(styles[home_style]["description"])
+        st.caption(OFFENSE_TOOLTIPS.get(home_style, styles[home_style]["description"]))
         home_def_style = st.selectbox("Home Defense Style", defense_style_keys,
                                        format_func=lambda x: defense_styles[x]["label"],
                                        key="home_def_style")
-        st.caption(defense_styles[home_def_style]["description"])
+        st.caption(DEFENSE_TOOLTIPS.get(home_def_style, defense_styles[home_def_style]["description"]))
 
     with col2:
         st.subheader("Away Team")
@@ -349,11 +365,11 @@ if page == "Game Simulator":
                                   format_func=lambda x: styles[x]["label"],
                                   index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == away_key), "balanced")),
                                   key="away_style")
-        st.caption(styles[away_style]["description"])
+        st.caption(OFFENSE_TOOLTIPS.get(away_style, styles[away_style]["description"]))
         away_def_style = st.selectbox("Away Defense Style", defense_style_keys,
                                        format_func=lambda x: defense_styles[x]["label"],
                                        key="away_def_style")
-        st.caption(defense_styles[away_def_style]["description"])
+        st.caption(DEFENSE_TOOLTIPS.get(away_def_style, defense_styles[away_def_style]["description"]))
 
     col_seed, col_btn = st.columns([1, 2])
     with col_seed:
@@ -1190,22 +1206,81 @@ elif page == "Season Simulator":
     if len(selected_teams) < 2:
         st.warning("Select at least 2 teams to run a season.")
     else:
-        st.subheader("Team Style Configuration")
+        human_teams = st.multiselect(
+            "Human-Controlled Teams (configure manually)", 
+            selected_teams,
+            default=[],
+            max_selections=4,
+            key="season_human_teams",
+            help="Select teams you want to configure manually. All others get AI-assigned schemes."
+        )
+        
+        ai_seed_col, reroll_col = st.columns([3, 1])
+        with ai_seed_col:
+            ai_seed = st.number_input("AI Coaching Seed (0 = random)", min_value=0, max_value=999999, value=0, key="season_ai_seed")
+        with reroll_col:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Re-roll AI", key="reroll_ai_season"):
+                st.session_state["season_ai_seed"] = random.randint(1, 999999)
+                st.rerun()
+        
+        actual_seed = ai_seed if ai_seed > 0 else hash(season_name) % 999999
+        
+        from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
+        teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        team_identities = load_team_identity(teams_dir_path)
+        
         style_configs = {}
-        cols_per_row = 3
-        team_chunks = [selected_teams[i:i + cols_per_row] for i in range(0, len(selected_teams), cols_per_row)]
-        for chunk in team_chunks:
-            cols = st.columns(len(chunk))
-            for col, tname in zip(cols, chunk):
-                with col:
-                    st.markdown(f"**{tname}**")
-                    off_style = st.selectbox("Offense", style_keys,
-                                              format_func=lambda x: styles[x]["label"],
-                                              key=f"season_off_{tname}")
-                    def_style = st.selectbox("Defense", defense_style_keys,
-                                              format_func=lambda x: defense_styles[x]["label"],
-                                              key=f"season_def_{tname}")
-                    style_configs[tname] = {"offense_style": off_style, "defense_style": def_style}
+        
+        if human_teams:
+            st.subheader("Your Team Configuration")
+            h_cols_per_row = min(len(human_teams), 3)
+            h_chunks = [human_teams[i:i + h_cols_per_row] for i in range(0, len(human_teams), h_cols_per_row)]
+            for chunk in h_chunks:
+                cols = st.columns(len(chunk))
+                for col, tname in zip(cols, chunk):
+                    with col:
+                        identity = team_identities.get(tname, {})
+                        mascot = identity.get("mascot", "")
+                        conf = identity.get("conference", "")
+                        colors = identity.get("colors", [])
+                        color_str = " / ".join(colors[:2]) if colors else ""
+                        
+                        st.markdown(f"**{tname}**")
+                        if mascot or conf:
+                            st.caption(f"{mascot} | {conf}" + (f" | {color_str}" if color_str else ""))
+                        
+                        off_style = st.selectbox("Offense", style_keys,
+                                                  format_func=lambda x: styles[x]["label"],
+                                                  key=f"season_off_{tname}")
+                        def_style = st.selectbox("Defense", defense_style_keys,
+                                                  format_func=lambda x: defense_styles[x]["label"],
+                                                  key=f"season_def_{tname}")
+                        style_configs[tname] = {"offense_style": off_style, "defense_style": def_style}
+        
+        ai_teams = [t for t in selected_teams if t not in human_teams]
+        if ai_teams:
+            ai_configs = auto_assign_all_teams(teams_dir_path, human_teams=human_teams, seed=actual_seed)
+            
+            with st.expander(f"AI Coach Assignments ({len(ai_teams)} teams)", expanded=False):
+                ai_data = []
+                for tname in sorted(ai_teams):
+                    cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
+                    style_configs[tname] = cfg
+                    identity = team_identities.get(tname, {})
+                    mascot = identity.get("mascot", "")
+                    ai_data.append({
+                        "Team": tname,
+                        "Mascot": mascot,
+                        "Offense": styles.get(cfg["offense_style"], {}).get("label", cfg["offense_style"]),
+                        "Defense": defense_styles.get(cfg["defense_style"], {}).get("label", cfg["defense_style"]),
+                        "Scheme": get_scheme_label(cfg["offense_style"], cfg["defense_style"]),
+                    })
+                st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
+        
+        for tname in selected_teams:
+            if tname not in style_configs:
+                style_configs[tname] = {"offense_style": "balanced", "defense_style": "base_defense"}
 
         playoff_size = st.radio("Playoff Format", [4, "All Teams (Round Robin Only)"], index=0, key="playoff_size", horizontal=True)
 
@@ -1492,31 +1567,58 @@ elif page == "Dynasty Mode":
                 playoff_format = st.radio("Playoff Format", [4, 8], index=0, horizontal=True,
                                           key=f"dyn_playoff_{dynasty.current_year}")
 
-            dyn_style_configs = {tname: {"offense_style": "balanced", "defense_style": "base_defense"}
-                                  for tname in all_dynasty_teams}
-            team_list = sorted(all_dynasty_teams.keys())
-
-            with st.expander("Style Configuration", expanded=False):
-                cols_per_row = 4
-                team_chunks = [team_list[i:i + cols_per_row] for i in range(0, len(team_list), cols_per_row)]
-                for chunk in team_chunks:
-                    cols = st.columns(len(chunk))
-                    for col, tname in zip(cols, chunk):
-                        with col:
-                            is_user = tname == dynasty.coach.team_name
-                            conf_label = dynasty.get_team_conference(tname)
-                            label_parts = [f"**{tname}**"]
-                            if is_user:
-                                label_parts.append("(YOU)")
-                            if conf_label:
-                                label_parts.append(f"[{conf_label}]")
-                            st.markdown(" ".join(label_parts))
-                            off = st.selectbox("Off", style_keys, format_func=lambda x: styles[x]["label"],
-                                               key=f"dyn_off_{tname}_{dynasty.current_year}")
-                            defs = st.selectbox("Def", defense_style_keys,
-                                                format_func=lambda x: defense_styles[x]["label"],
-                                                key=f"dyn_def_{tname}_{dynasty.current_year}")
-                            dyn_style_configs[tname] = {"offense_style": off, "defense_style": defs}
+            from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
+            teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+            team_identities = load_team_identity(teams_dir_path)
+            
+            st.markdown("**Your Team**")
+            user_team = dynasty.coach.team_name
+            user_identity = team_identities.get(user_team, {})
+            user_mascot = user_identity.get("mascot", "")
+            user_conf = user_identity.get("conference", "")
+            user_colors = user_identity.get("colors", [])
+            user_color_str = " / ".join(user_colors[:2]) if user_colors else ""
+            
+            if user_mascot or user_conf:
+                st.caption(f"{user_mascot} | {user_conf}" + (f" | {user_color_str}" if user_color_str else ""))
+            
+            user_off_col, user_def_col = st.columns(2)
+            with user_off_col:
+                user_off = st.selectbox("Offense Style", style_keys, format_func=lambda x: styles[x]["label"],
+                                         key=f"dyn_user_off_{dynasty.current_year}")
+            with user_def_col:
+                user_def = st.selectbox("Defense Style", defense_style_keys,
+                                         format_func=lambda x: defense_styles[x]["label"],
+                                         key=f"dyn_user_def_{dynasty.current_year}")
+            
+            ai_seed = hash(f"{dynasty.dynasty_name}_{dynasty.current_year}") % 999999
+            ai_configs = auto_assign_all_teams(
+                teams_dir_path,
+                human_teams=[user_team],
+                human_configs={user_team: {"offense_style": user_off, "defense_style": user_def}},
+                seed=ai_seed,
+            )
+            
+            dyn_style_configs = {}
+            dyn_style_configs[user_team] = {"offense_style": user_off, "defense_style": user_def}
+            for tname in all_dynasty_teams:
+                if tname != user_team:
+                    dyn_style_configs[tname] = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
+            
+            ai_opponent_teams = sorted([t for t in all_dynasty_teams if t != user_team])
+            with st.expander(f"AI Coach Assignments ({len(ai_opponent_teams)} teams)", expanded=False):
+                ai_data = []
+                for tname in ai_opponent_teams:
+                    cfg = dyn_style_configs[tname]
+                    identity = team_identities.get(tname, {})
+                    mascot = identity.get("mascot", "")
+                    ai_data.append({
+                        "Team": tname,
+                        "Mascot": mascot,
+                        "Offense": styles.get(cfg["offense_style"], {}).get("label", cfg["offense_style"]),
+                        "Defense": defense_styles.get(cfg["defense_style"], {}).get("label", cfg["defense_style"]),
+                    })
+                st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
 
             if st.button(f"Simulate {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
                 conf_dict = dynasty.get_conferences_dict()

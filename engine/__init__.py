@@ -18,6 +18,7 @@ from .epa import calculate_ep, calculate_epa, calculate_drive_epa, calculate_gam
 from .season import Season, Game, TeamRecord as SeasonTeamRecord, WeeklyPoll, PollRanking, load_teams_from_directory, create_season
 from .dynasty import Dynasty, Coach, create_dynasty
 from .viperball_metrics import calculate_viperball_metrics
+from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label, load_team_identity
 
 __all__ = [
     "ViperballEngine",
@@ -45,4 +46,8 @@ __all__ = [
     "Coach",
     "create_dynasty",
     "calculate_viperball_metrics",
+    "assign_ai_scheme",
+    "auto_assign_all_teams",
+    "get_scheme_label",
+    "load_team_identity",
 ]
