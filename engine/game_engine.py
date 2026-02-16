@@ -123,6 +123,7 @@ class Team:
     lateral_proficiency: int
     defensive_strength: int
     offense_style: str = "balanced"
+    defense_style: str = "base_defense"  # New: defensive archetype
 
 
 @dataclass
@@ -261,6 +262,146 @@ OFFENSE_STYLES = {
     },
 }
 
+# ========================================
+# DEFENSIVE ARCHETYPES
+# ========================================
+# Each defensive style modifies play outcomes through:
+# - Run yardage multipliers
+# - Lateral success rates
+# - Fumble probability
+# - Explosive play suppression
+# - Kick accuracy effects
+# - Turnover generation
+
+DEFENSE_STYLES = {
+    "base_defense": {
+        "label": "Base Defense",
+        "description": "Balanced defensive approach, solid fundamentals",
+        "play_family_modifiers": {
+            # Multipliers applied to yards gained for each play family
+            "dive_option": 0.95,      # Slight advantage vs dive
+            "speed_option": 0.95,     # Slight advantage vs speed
+            "sweep_option": 0.95,     # Slight advantage vs sweep
+            "lateral_spread": 0.95,   # Slight advantage vs laterals
+            "territory_kick": 0.95,   # Slight advantage vs kicks
+        },
+        "read_success_rate": 0.35,    # Chance to "read" the play (reduces effectiveness)
+        "pressure_factor": 0.50,      # Defensive pressure on lateral chains (fumble increase)
+        "turnover_bonus": 0.10,       # +10% fumble/interception chance
+        "explosive_suppression": 0.90, # Reduces explosive play chance by 10%
+        "kick_suppression": 0.97,     # Reduces kick accuracy by 3%
+        "pindown_defense": 1.00,      # No effect on pindown chance
+        "fatigue_resistance": 0.025,  # Slower defensive fatigue
+        "gameplan_bias": {            # Extra read success vs specific play types
+            "dive_option": 0.05,
+            "speed_option": 0.05,
+            "sweep_option": 0.05,
+            "lateral_spread": 0.05,
+            "territory_kick": 0.05,
+        }
+    },
+    "pressure_defense": {
+        "label": "Pressure Defense",
+        "description": "Aggressive blitzing, high risk/high reward",
+        "play_family_modifiers": {
+            "dive_option": 0.95,      # Good vs dive (aggressive pursuit)
+            "speed_option": 0.80,     # Excellent vs speed option (disrupts timing)
+            "sweep_option": 0.90,     # Good vs sweep
+            "lateral_spread": 1.20,   # WEAK vs laterals (over-pursues)
+            "territory_kick": 0.95,   # Pressure affects kicker
+        },
+        "read_success_rate": 0.40,    # High chance to read option/lateral plays
+        "pressure_factor": 1.00,      # Maximum pressure on lateral chains
+        "turnover_bonus": 0.20,       # +20% fumble chance (aggressive hits)
+        "explosive_suppression": 1.10, # ALLOWS more explosive plays (gaps in coverage)
+        "kick_suppression": 1.05,     # Kick pressure makes kicks HARDER
+        "pindown_defense": 0.95,      # Slightly better at preventing pindowns
+        "fatigue_resistance": -0.05,  # Fatigues FASTER (high energy)
+        "gameplan_bias": {
+            "dive_option": 0.05,
+            "speed_option": 0.10,     # +10% read vs speed option
+            "sweep_option": 0.05,
+            "lateral_spread": 0.10,   # +10% read vs laterals
+            "territory_kick": 0.00,
+        }
+    },
+    "contain_defense": {
+        "label": "Contain Defense",
+        "description": "Anti-chaos, prevents lateral chains and explosive plays",
+        "play_family_modifiers": {
+            "dive_option": 1.00,      # Neutral vs dive
+            "speed_option": 0.90,     # Good vs speed option (stay in lanes)
+            "sweep_option": 0.95,     # Good vs sweep (contain edges)
+            "lateral_spread": 0.80,   # EXCELLENT vs laterals (disciplined pursuit)
+            "territory_kick": 1.00,   # Neutral vs kicks
+        },
+        "read_success_rate": 0.35,    # Moderate read rate
+        "pressure_factor": 0.20,      # Low pressure (disciplined)
+        "turnover_bonus": 0.05,       # +5% turnover chance
+        "explosive_suppression": 0.75, # EXCELLENT at preventing explosive plays
+        "kick_suppression": 1.00,     # No effect on kicks
+        "pindown_defense": 1.00,      # Neutral on pindowns
+        "fatigue_resistance": 0.05,   # Better endurance (controlled pace)
+        "gameplan_bias": {
+            "dive_option": 0.00,
+            "speed_option": 0.05,
+            "sweep_option": 0.05,
+            "lateral_spread": 0.10,   # +10% read vs laterals
+            "territory_kick": 0.00,
+        }
+    },
+    "run_stop_defense": {
+        "label": "Run-Stop Defense",
+        "description": "Stacks the box, elite vs run game",
+        "play_family_modifiers": {
+            "dive_option": 0.75,      # EXCELLENT vs dive
+            "speed_option": 0.85,     # Very good vs speed option
+            "sweep_option": 0.80,     # Very good vs sweep
+            "lateral_spread": 1.10,   # WEAK vs laterals (committed to line)
+            "territory_kick": 1.00,   # Neutral vs kicks
+        },
+        "read_success_rate": 0.40,    # High read rate vs run plays
+        "pressure_factor": 0.30,      # Moderate pressure
+        "turnover_bonus": 0.05,       # +5% turnover chance
+        "explosive_suppression": 0.85, # Good at preventing explosive runs
+        "kick_suppression": 1.00,     # No effect on kicks
+        "pindown_defense": 1.00,      # Neutral on pindowns
+        "fatigue_resistance": 0.00,   # Average endurance
+        "gameplan_bias": {
+            "dive_option": 0.10,      # +10% read vs dive
+            "speed_option": 0.10,     # +10% read vs speed option
+            "sweep_option": 0.10,     # +10% read vs sweep
+            "lateral_spread": 0.00,
+            "territory_kick": 0.00,
+        }
+    },
+    "coverage_defense": {
+        "label": "Coverage Defense",
+        "description": "Anti-kick, prevents pindowns and punt returns",
+        "play_family_modifiers": {
+            "dive_option": 1.05,      # Slightly weak vs dive (lighter box)
+            "speed_option": 1.00,     # Neutral vs speed option
+            "sweep_option": 1.00,     # Neutral vs sweep
+            "lateral_spread": 1.00,   # Neutral vs laterals
+            "territory_kick": 0.85,   # EXCELLENT vs kicks
+        },
+        "read_success_rate": 0.30,    # Lower read rate (focused on coverage)
+        "pressure_factor": 0.40,      # Moderate pressure
+        "turnover_bonus": 0.15,       # +15% turnover chance (good ball skills)
+        "explosive_suppression": 0.95, # Slight explosive suppression
+        "kick_suppression": 0.85,     # EXCELLENT at reducing kick accuracy
+        "pindown_defense": 0.80,      # EXCELLENT at preventing pindowns
+        "fatigue_resistance": 0.025,  # Slightly better endurance
+        "gameplan_bias": {
+            "dive_option": 0.00,
+            "speed_option": 0.00,
+            "sweep_option": 0.00,
+            "lateral_spread": 0.00,
+            "territory_kick": 0.10,   # +10% read vs kicks
+        }
+    },
+}
+
 
 class ViperballEngine:
 
@@ -280,7 +421,25 @@ class ViperballEngine:
 
         if style_overrides:
             for team_key, style in style_overrides.items():
-                if style in OFFENSE_STYLES:
+                # Check if this is a defense style override (e.g., "gonzaga_defense")
+                is_defense = "_defense" in team_key.lower() or "_def" in team_key.lower()
+                base_key = team_key.lower().replace("_defense", "").replace("_def", "")
+
+                if is_defense and style in DEFENSE_STYLES:
+                    # Apply defensive style
+                    if base_key in [self.home_team.name.lower(), self.home_team.abbreviation.lower()]:
+                        self.home_team.defense_style = style
+                    elif base_key in [self.away_team.name.lower(), self.away_team.abbreviation.lower()]:
+                        self.away_team.defense_style = style
+                    else:
+                        for t in [self.home_team, self.away_team]:
+                            clean_key = base_key.replace(" ", "_").replace("-", "_")
+                            clean_name = t.name.lower().replace(" ", "_").replace("-", "_")
+                            if clean_key in clean_name or clean_name in clean_key:
+                                t.defense_style = style
+                                break
+                elif style in OFFENSE_STYLES:
+                    # Apply offensive style (existing logic)
                     if team_key.lower() in [self.home_team.name.lower(), self.home_team.abbreviation.lower()]:
                         self.home_team.offense_style = style
                     elif team_key.lower() in [self.away_team.name.lower(), self.away_team.abbreviation.lower()]:
@@ -295,6 +454,8 @@ class ViperballEngine:
 
         self.home_style = OFFENSE_STYLES.get(self.home_team.offense_style, OFFENSE_STYLES["balanced"])
         self.away_style = OFFENSE_STYLES.get(self.away_team.offense_style, OFFENSE_STYLES["balanced"])
+        self.home_defense = DEFENSE_STYLES.get(self.home_team.defense_style, DEFENSE_STYLES["base_defense"])
+        self.away_defense = DEFENSE_STYLES.get(self.away_team.defense_style, DEFENSE_STYLES["base_defense"])
 
     def simulate_game(self) -> Dict:
         self.kickoff("away")
@@ -461,14 +622,82 @@ class ViperballEngine:
             return self.home_style
         return self.away_style
 
+    def _current_defense(self) -> Dict:
+        """Returns the defensive style of the team currently on defense"""
+        if self.state.possession == "home":
+            return self.away_defense  # Away is on defense when home has ball
+        return self.home_defense      # Home is on defense when away has ball
+
+    def get_defensive_read(self, play_family: PlayFamily) -> bool:
+        """
+        Determines if the defense successfully 'reads' the play.
+        A successful read reduces play effectiveness.
+        Returns True if defense reads the play correctly.
+        """
+        defense = self._current_defense()
+        base_read_rate = defense.get("read_success_rate", 0.35)
+
+        # Add gameplan bias for specific play families
+        gameplan_bias = defense.get("gameplan_bias", {}).get(play_family.value, 0.0)
+        total_read_rate = base_read_rate + gameplan_bias
+
+        return random.random() < total_read_rate
+
+    def apply_defensive_modifiers(self, yards_gained: int, play_family: PlayFamily,
+                                   is_explosive: bool = False) -> int:
+        """
+        Applies all defensive modifiers to yards gained.
+        This is the core of the defensive system.
+        """
+        defense = self._current_defense()
+
+        # 1. Check if defense read the play
+        defense_read = self.get_defensive_read(play_family)
+
+        # 2. Apply play family modifier
+        family_modifier = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+        yards_gained = int(yards_gained * family_modifier)
+
+        # 3. If defense read the play, reduce yards by 20-40%
+        if defense_read:
+            read_reduction = random.uniform(0.60, 0.80)  # Reduces to 60-80% of original
+            yards_gained = int(yards_gained * read_reduction)
+
+        # 4. Apply explosive play suppression (if play is explosive)
+        if is_explosive:
+            explosive_suppression = defense.get("explosive_suppression", 1.0)
+            # If suppression is 0.75, reduce explosive plays by 25%
+            if random.random() > explosive_suppression:
+                # Explosive play was suppressed, reduce yards
+                yards_gained = int(yards_gained * 0.70)
+
+        return yards_gained
+
     def _defensive_fatigue_factor(self) -> float:
+        """
+        Returns defensive fatigue multiplier (>1.0 = tired defense, helps offense)
+        Defensive style's fatigue_resistance slows down fatigue accumulation
+        """
+        # Base fatigue levels
         if self.drive_play_count >= 12:
-            return 1.25
+            base_fatigue = 1.25
         elif self.drive_play_count >= 8:
-            return 1.15
+            base_fatigue = 1.15
         elif self.drive_play_count >= 5:
-            return 1.05
-        return 1.0
+            base_fatigue = 1.05
+        else:
+            base_fatigue = 1.0
+
+        # DEFENSIVE SYSTEM: Apply defensive fatigue resistance
+        defense = self._current_defense()
+        fatigue_resistance = defense.get("fatigue_resistance", 0.0)
+
+        # Fatigue resistance reduces the fatigue penalty
+        # fatigue_resistance of 0.05 reduces fatigue bonus by 5%
+        # fatigue_resistance of -0.05 INCREASES fatigue penalty by 5%
+        adjusted_fatigue = 1.0 + (base_fatigue - 1.0) * (1.0 - fatigue_resistance)
+
+        return max(1.0, adjusted_fatigue)
 
     def _red_zone_td_check(self, new_position: int, yards_gained: int, team: Team) -> bool:
         if yards_gained < 2:
@@ -541,11 +770,18 @@ class ViperballEngine:
         tired_def_broken = style.get("tired_def_broken_play_bonus", 0.0)
         if def_fatigue > 1.0 and tired_def_broken > 0:
             broken_play_bonus += tired_def_broken
+
+        # Check for explosive play (before defensive modifiers)
+        is_explosive = False
         if broken_play_bonus > 0 and yards_gained >= 8:
             if random.random() < broken_play_bonus:
                 yards_gained += random.randint(5, 15)
+                is_explosive = True
 
         yards_gained = self._breakaway_check(yards_gained, team)
+
+        # DEFENSIVE SYSTEM: Apply all defensive modifiers
+        yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
 
         new_position = min(100, self.state.field_position + yards_gained)
 
@@ -651,6 +887,15 @@ class ViperballEngine:
         prof_reduction = max(0.85, team.lateral_proficiency / 100)
         fumble_prob /= prof_reduction
 
+        # DEFENSIVE SYSTEM: Apply defensive pressure to lateral chains
+        defense = self._current_defense()
+        defensive_pressure = defense.get("pressure_factor", 0.50)
+        fumble_prob *= (1 + defensive_pressure * 0.15)  # Pressure increases fumble chance
+
+        # DEFENSIVE SYSTEM: Apply turnover bonus
+        turnover_bonus = defense.get("turnover_bonus", 0.0)
+        fumble_prob *= (1 + turnover_bonus)
+
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
             old_pos = self.state.field_position
@@ -693,11 +938,17 @@ class ViperballEngine:
         yards_gained = int((base_yards + lateral_bonus) * fatigue_factor * viper_factor * def_fatigue)
         yards_gained = max(-3, min(yards_gained, 40))
 
+        # Check for explosive lateral play
+        is_explosive = False
         explosive_lateral_bonus = style.get("explosive_lateral_bonus", 0.0)
         explosive_chance = chain_length * 0.05 + explosive_lateral_bonus
         if yards_gained >= 10 and random.random() < explosive_chance:
             extra = random.randint(8, 30)
             yards_gained += extra
+            is_explosive = True
+
+        # DEFENSIVE SYSTEM: Apply all defensive modifiers
+        yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
 
         new_position = min(100, self.state.field_position + yards_gained)
 
@@ -753,7 +1004,13 @@ class ViperballEngine:
 
         base_distance = random.gauss(45, 10)
         kicking_factor = punter.kicking / 80
-        distance = int(base_distance * kicking_factor)
+
+        # DEFENSIVE SYSTEM: Defensive kick suppression
+        # The defensive team's coverage affects kick effectiveness
+        defense = self._current_defense()
+        kick_suppression = defense.get("kick_suppression", 1.0)
+
+        distance = int(base_distance * kicking_factor * kick_suppression)
         distance = max(20, min(distance, 70))
 
         if random.random() < 0.04:
@@ -805,7 +1062,18 @@ class ViperballEngine:
             receiving_team = self.get_defensive_team()
             return_speed = receiving_team.avg_speed
             pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
-            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus)
+
+            # DEFENSIVE SYSTEM: Defensive pindown prevention
+            # The RECEIVING team's defensive style affects their special teams coverage
+            # Get the receiving team's defensive style
+            receiving_defense = self.away_defense if self.state.possession == "home" else self.home_defense
+            pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
+
+            # Apply defensive pindown prevention
+            # - pindown_defense of 0.80 means receiving team is 20% MORE LIKELY to return out (prevents pindown)
+            # - pindown_defense of 1.20 means receiving team is LESS LIKELY to return out (allows pindown)
+            # Formula: lower pindown_defense = better at preventing pindowns
+            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus) / pindown_defense_factor
 
             if can_return_out:
                 self.change_possession()
@@ -1320,6 +1588,7 @@ def load_team_from_json(filepath: str) -> Team:
         )
 
     style = data.get("style", {}).get("offense_style", "balanced")
+    defense_style = data.get("style", {}).get("defense_style", "base_defense")
 
     team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
 
@@ -1334,6 +1603,7 @@ def load_team_from_json(filepath: str) -> Team:
         lateral_proficiency=data["team_stats"]["lateral_proficiency"],
         defensive_strength=data["team_stats"]["defensive_strength"],
         offense_style=style,
+        defense_style=defense_style,
     )
 
 
