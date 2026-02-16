@@ -1415,6 +1415,11 @@ class ViperballEngine:
             stats["plays_per_quarter"] = plays_by_q
 
         from .epa import calculate_ep, calculate_epa, calculate_game_epa
+        from .viperball_metrics import (
+            calculate_comprehensive_rating,
+            calculate_overall_performance_index,
+            calculate_fpv
+        )
 
         play_dicts = []
         for i, p in enumerate(self.play_log):
@@ -1452,6 +1457,17 @@ class ViperballEngine:
         away_epa = calculate_game_epa(play_dicts, "away")
         home_stats["epa"] = home_epa
         away_stats["epa"] = away_epa
+
+        # VIPERBALL SABERMETRICS (Positive metrics, no negative numbers)
+        home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home")
+        away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away")
+        home_opi = calculate_overall_performance_index(home_metrics)
+        away_opi = calculate_overall_performance_index(away_metrics)
+
+        home_stats["viperball_metrics"] = home_metrics
+        home_stats["viperball_metrics"]["overall_performance_index"] = home_opi
+        away_stats["viperball_metrics"] = away_metrics
+        away_stats["viperball_metrics"]["overall_performance_index"] = away_opi
 
         summary = {
             "final_score": {
