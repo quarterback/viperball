@@ -860,6 +860,9 @@ class ViperballEngine:
             if random.random() < broken_play_bonus:
                 yards_gained += random.randint(5, 15)
                 is_explosive = True
+        if broken_play_bonus > 0 and yards_gained >= 8:
+            if random.random() < broken_play_bonus:
+                yards_gained += random.randint(5, 15)
 
         yards_gained = self._breakaway_check(yards_gained, team)
 
@@ -1238,6 +1241,7 @@ class ViperballEngine:
             # - pindown_defense of 1.20 means receiving team is LESS LIKELY to return out (allows pindown)
             # Formula: lower pindown_defense = better at preventing pindowns
             can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus) / pindown_defense_factor
+            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus)
 
             if can_return_out:
                 self.change_possession()

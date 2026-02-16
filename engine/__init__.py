@@ -13,6 +13,7 @@ from .game_engine import (
 )
 from .box_score import BoxScoreGenerator
 from .poll_system import PollSystem, TeamRecord, calculate_strength_of_schedule
+from .epa import calculate_ep, calculate_epa, calculate_drive_epa, calculate_game_epa
 
 __all__ = [
     "ViperballEngine",
@@ -26,4 +27,8 @@ __all__ = [
     "PollSystem",
     "TeamRecord",
     "calculate_strength_of_schedule",
+    "calculate_ep",
+    "calculate_epa",
+    "calculate_drive_epa",
+    "calculate_game_epa",
 ]
