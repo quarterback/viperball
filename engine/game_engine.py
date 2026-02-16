@@ -580,33 +580,13 @@ class ViperballEngine:
         down = self.state.down
         distance_to_goal = 100 - fp + 10
 
-        if down >= 6:
+        if down >= 5:
             if fp >= 65:
-                return random.choices(
-                    [PlayType.PLACE_KICK, PlayType.DROP_KICK],
-                    weights=[0.70, 0.30]
-                )[0]
+                return PlayType.PLACE_KICK
             elif fp >= 50:
                 return random.choices(
                     [PlayType.PLACE_KICK, PlayType.DROP_KICK, PlayType.PUNT],
-                    weights=[0.35, 0.30, 0.35]
-                )[0]
-            else:
-                return random.choices(
-                    [PlayType.PUNT, PlayType.DROP_KICK],
-                    weights=[0.85, 0.15]
-                )[0]
-
-        if down == 5:
-            if fp >= 70:
-                return random.choices(
-                    [PlayType.PLACE_KICK, PlayType.DROP_KICK],
-                    weights=[0.60, 0.40]
-                )[0]
-            elif fp >= 50:
-                return random.choices(
-                    [PlayType.DROP_KICK, PlayType.PLACE_KICK, PlayType.PUNT],
-                    weights=[0.40, 0.25, 0.35]
+                    weights=[0.45, 0.25, 0.30]
                 )[0]
             else:
                 return random.choices(
@@ -616,8 +596,8 @@ class ViperballEngine:
 
         if fp >= 65:
             return random.choices(
-                [PlayType.DROP_KICK, PlayType.PLACE_KICK],
-                weights=[0.55, 0.45]
+                [PlayType.PLACE_KICK, PlayType.DROP_KICK],
+                weights=[0.60, 0.40]
             )[0]
         elif fp >= 50:
             return random.choices(
@@ -977,18 +957,18 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = random.uniform(0.06, 0.09)
+        base_fumble_prob = random.uniform(0.025, 0.04)
         fumble_prob = base_fumble_prob
-        fumble_prob += (chain_length - 1) * 0.02
+        fumble_prob += (chain_length - 1) * 0.008
         if self.drive_play_count >= 5:
-            fumble_prob += random.uniform(0.04, 0.06)
+            fumble_prob += random.uniform(0.015, 0.025)
         if chain_length >= 3:
-            fumble_prob += 0.03
+            fumble_prob += 0.012
         if chain_length >= 4:
-            fumble_prob += 0.03
+            fumble_prob += 0.012
         fatigue_factor_lat = self.get_fatigue_factor()
         if fatigue_factor_lat < 0.9:
-            fumble_prob += 0.05
+            fumble_prob += 0.02
 
         tempo = style.get("tempo", 0.5)
         fumble_prob *= (1 + (tempo - 0.5) * 0.10)

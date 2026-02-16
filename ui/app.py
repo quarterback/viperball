@@ -1291,6 +1291,10 @@ elif page == "Season Simulator":
                 playoff_options = [len(selected_teams)]
             playoff_size = st.radio("Playoff Format", playoff_options, index=0, key="playoff_size", horizontal=True)
 
+        from engine.season import get_recommended_bowl_count, BOWL_NAMES
+        rec_bowls = get_recommended_bowl_count(len(selected_teams), playoff_size)
+        bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, (len(selected_teams) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
+
         run_season = st.button("Simulate Season", type="primary", use_container_width=True, key="run_season")
 
         if run_season:
@@ -1304,6 +1308,10 @@ elif page == "Season Simulator":
             if num_playoff > 0 and len(selected_teams) >= num_playoff:
                 with st.spinner("Running playoffs..."):
                     season.simulate_playoff(num_teams=min(num_playoff, len(selected_teams)))
+
+            if bowl_count > 0:
+                with st.spinner("Running bowl games..."):
+                    season.simulate_bowls(bowl_count=bowl_count, playoff_size=num_playoff)
 
             st.session_state["last_season"] = season
 
@@ -1392,6 +1400,26 @@ elif page == "Season Simulator":
                     w_score = max(hs, aws)
                     l_score = min(hs, aws)
                     st.success(f"**CHAMPION: {winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+
+            if season.bowl_games:
+                st.subheader("Bowl Games")
+                from engine.season import BOWL_TIERS
+                current_tier = 0
+                for bowl in season.bowl_games:
+                    if bowl.tier != current_tier:
+                        current_tier = bowl.tier
+                        tier_label = BOWL_TIERS.get(bowl.tier, "Standard")
+                        st.markdown(f"**{tier_label} Bowls**")
+                    g = bowl.game
+                    hs = g.home_score or 0
+                    aws = g.away_score or 0
+                    winner = g.home_team if hs > aws else g.away_team
+                    loser = g.away_team if hs > aws else g.home_team
+                    w_score = max(hs, aws)
+                    l_score = min(hs, aws)
+                    w_rec = bowl.team_1_record if winner == g.home_team else bowl.team_2_record
+                    l_rec = bowl.team_2_record if winner == g.home_team else bowl.team_1_record
+                    st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {w_score:.1f} def. {loser} ({l_rec}) {l_score:.1f}")
 
             st.subheader("Full Schedule Results")
             schedule_data = []
@@ -1572,6 +1600,12 @@ elif page == "Dynasty Mode":
                 playoff_format = st.radio("Playoff Format", dyn_playoff_options, index=0, horizontal=True,
                                           key=f"dyn_playoff_{dynasty.current_year}")
 
+            from engine.season import get_recommended_bowl_count as dyn_rec_bowls
+            dyn_rec = dyn_rec_bowls(total_teams, playoff_format)
+            dyn_max_bowls = max(0, (total_teams - playoff_format) // 2)
+            dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, dyn_max_bowls), value=min(dyn_rec, min(12, dyn_max_bowls)),
+                                        key=f"dyn_bowls_{dynasty.current_year}")
+
             from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
             teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
             team_identities = load_team_identity(teams_dir_path)
@@ -1644,6 +1678,10 @@ elif page == "Dynasty Mode":
                     with st.spinner("Running playoffs..."):
                         season.simulate_playoff(num_teams=playoff_count)
 
+                if dyn_bowl_count > 0:
+                    with st.spinner("Running bowl games..."):
+                        season.simulate_bowls(bowl_count=dyn_bowl_count, playoff_size=playoff_count)
+
                 dynasty.advance_season(season)
                 st.session_state["dynasty"] = dynasty
                 st.session_state["last_dynasty_season"] = season
@@ -1680,6 +1718,28 @@ elif page == "Dynasty Mode":
                         "OPI": f"{record.avg_opi:.1f}",
                     })
                 st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=400)
+
+                if season.bowl_games:
+                    st.subheader("Bowl Games")
+                    from engine.season import BOWL_TIERS as DYN_BOWL_TIERS
+                    dyn_current_tier = 0
+                    for bowl in season.bowl_games:
+                        if bowl.tier != dyn_current_tier:
+                            dyn_current_tier = bowl.tier
+                            tier_label = DYN_BOWL_TIERS.get(bowl.tier, "Standard")
+                            st.markdown(f"**{tier_label} Bowls**")
+                        g = bowl.game
+                        hs = g.home_score or 0
+                        aws = g.away_score or 0
+                        winner = g.home_team if hs > aws else g.away_team
+                        loser = g.away_team if hs > aws else g.home_team
+                        w_score = max(hs, aws)
+                        l_score = min(hs, aws)
+                        w_rec = bowl.team_1_record if winner == g.home_team else bowl.team_2_record
+                        l_rec = bowl.team_2_record if winner == g.home_team else bowl.team_1_record
+                        is_user_bowl = dynasty.coach.team_name in (g.home_team, g.away_team)
+                        prefix = ">>> " if is_user_bowl else ""
+                        st.markdown(f"{prefix}**{bowl.name}**: **{winner}** ({w_rec}) {w_score:.1f} def. {loser} ({l_rec}) {l_score:.1f}")
 
         with tab2:
             st.subheader("Standings & Weekly Poll")

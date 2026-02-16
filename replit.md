@@ -82,11 +82,11 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
    - Play log: position-tagged descriptions with quarter filter
    - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params, Viperball Metrics
    - Export: download box score (.md), play log (.csv), drives (.csv), full JSON
-2. **Season Simulator** - Full round-robin season with team selection, style configs, standings, radar charts, score distributions, playoffs, CSV export
+2. **Season Simulator** - 8-12 game regular season, conference round-robin + non-conference fill scheduling, 4/8/12/16-team playoffs, bowl system (tiered matchups for non-playoff teams), standings, radar charts, score distributions, CSV export
 3. **Dynasty Mode** - Multi-season career mode with configurable features:
    - Conference setup: 1-4 conferences with custom names and team assignment
-   - Configurable season length: games-per-team slider (6-20 or full round-robin)
-   - Conference-weighted scheduling: prioritizes conference matchups (60% default)
+   - Configurable season length: 8-12 games per team
+   - Schedule ordering: non-conference games first, then conference round-robin
    - 5 tabs: Simulate Season, Standings & Polls, Coach Dashboard, Team History, Record Book
    - Standings & Polls tab: conference standings with conf W-L, weekly Top 25 poll with movement tracking
    - Weekly poll system: rankings based on win% (40%), OPI (20%), point differential (15%), SOS (25%)
@@ -130,6 +130,10 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - 2026-02-16: Added defensive archetypes system: 5 defense styles (Base, Pressure, Contain, Run-Stop, Coverage) with play modifiers, special teams chaos probabilities
 - 2026-02-16: Defense style selectors added to Game Simulator UI for both teams
 - 2026-02-16: Viperball Metrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact) displayed in Game Simulator debug panel
+- 2026-02-16: Bowl system: tiered postseason bowls for non-playoff teams, .500+ eligibility, auto-recommended count, 16 named bowls, conference-avoidance matchup logic
+- 2026-02-16: Schedule ordering: non-conference games scheduled first (early weeks), conference round-robin fills remaining weeks
+- 2026-02-16: Fumble probability cut ~55%: base 2.5-4% (was 6-9%), reduced chain/fatigue/compounding penalties
+- 2026-02-16: Place kick preference: field goal is default on 5th-6th down inside opponent's 35
 - 2026-02-16: Season Simulator: 8-12 games per team slider, conference round-robin + non-conference fill scheduling, 4/8/12/16-team playoff brackets
 - 2026-02-16: Dynasty Mode: 8-12 games per team, 4/8/12/16-team playoff brackets, multi-conference setup (1-4 conferences)
 - 2026-02-16: Scheduling model: full round-robin within conference first, remaining slots filled with non-conference games; oversized conferences get subset scheduling

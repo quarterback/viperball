@@ -1,0 +1,349 @@
+Here's the updated spec:
+
+---
+
+# Viperball Bowl System Specification
+
+## Overview
+
+The postseason consists of two components: a **configurable playoff** (4, 8, 12, or 16 teams) for the championship and a **bowl system** for remaining eligible teams. Bowls reward regular season success and ensure competitive teams get a postseason game even if they miss the playoff.
+
+---
+
+## Playoff and Bowl Relationship
+
+The playoff and bowl system are separate but connected:
+
+1. **Playoff teams are selected first** (top 4, 8, 12, or 16 teams)
+2. **Playoff teams are excluded from bowls** — they're competing for the championship
+3. **Remaining eligible teams fill the bowl pool**
+
+This means larger playoffs leave fewer teams for bowls, and smaller playoffs create a deeper bowl field.
+
+---
+
+## Bowl Eligibility
+
+### Primary Rule
+Teams with a **.500 or better record** are bowl-eligible.
+
+| Regular Season Games | Bowl-Eligible Record |
+|---------------------|---------------------|
+| 8 games | 4-4 or better |
+| 10 games | 5-5 or better |
+| 12 games | 6-6 or better |
+
+### Pool Filling Rule
+If there aren't enough .500+ teams to fill all bowl slots after removing playoff teams, add sub-.500 teams in order of record until all bowls are filled.
+
+**Example:** 6 bowls (12 teams needed), 8-team playoff removes top 8
+- 10 remaining teams are .500+
+- Add the 2 best sub-.500 teams to reach 12
+
+### Minimum Threshold
+If even after adding sub-.500 teams there aren't enough to fill bowls, reduce bowl count to match available teams. A bowl requires 2 teams.
+
+---
+
+## Bowl Count Configuration
+
+### Recommended Defaults by League Size and Playoff Size
+
+| League Size | 4-Team Playoff | 8-Team Playoff | 12-Team Playoff | 16-Team Playoff |
+|-------------|----------------|----------------|-----------------|-----------------|
+| 16–24 teams | 4 bowls (8) | 2 bowls (4) | 1 bowl (2) | 0 bowls |
+| 25–40 teams | 6 bowls (12) | 4 bowls (8) | 3 bowls (6) | 2 bowls (4) |
+| 41–60 teams | 8 bowls (16) | 6 bowls (12) | 5 bowls (10) | 4 bowls (8) |
+| 61–80 teams | 10 bowls (20) | 8 bowls (16) | 6 bowls (12) | 5 bowls (10) |
+| 81–100 teams | 12 bowls (24) | 10 bowls (20) | 8 bowls (16) | 6 bowls (12) |
+
+*(Numbers in parentheses = teams in bowls)*
+
+### User Override
+Allow manual bowl count setting (0–16 range). The system should warn if:
+- Bowl count exceeds available eligible teams
+- Bowl count + playoff teams exceeds league size
+
+---
+
+## Bowl Tiering and Matchup Logic
+
+### Core Principle
+**Bowls match similar teams together.** An 11-1 team should not play a 5-7 team.
+
+### Matchup Algorithm
+
+```
+1. Select playoff teams (4, 8, 12, or 16)
+2. Remove playoff teams from bowl pool
+3. Rank remaining teams by:
+   a. Win percentage (primary)
+   b. Point differential (tiebreaker)
+   c. Head-to-head if applicable
+4. Check eligibility:
+   a. Count .500+ teams
+   b. If count < (bowl_count × 2), add best sub-.500 teams
+5. Pair teams by rank:
+   - Bowl 1 (Tier 1): #1 vs #2
+   - Bowl 2 (Tier 1): #3 vs #4
+   - Bowl 3 (Tier 2): #5 vs #6
+   - Continue until all bowls filled
+6. Optional: Apply conference balancing (avoid same-conference matchups)
+```
+
+### Matchup Quality Guardrails
+
+| Rule | Implementation |
+|------|----------------|
+| Max win differential | 3 games (e.g., 9-3 can play 7-5, but not 5-7) |
+| Same conference | Avoid if possible; swap with next-closest team |
+| Regular season rematch | Allowed but deprioritized |
+
+If guardrails can't be satisfied (small league, limited pool), override and create best available matchup.
+
+### Tiering
+
+| Tier | Bowl Position | Typical Records |
+|------|---------------|-----------------|
+| Tier 1 (Premier) | Bowls 1–2 | 8+ wins |
+| Tier 2 (Major) | Bowls 3–4 | 6–8 wins |
+| Tier 3 (Standard) | Bowls 5+ | 5–7 wins |
+
+---
+
+## Example Scenarios
+
+### Scenario A: 32-Team League, 4-Team Playoff, 6 Bowls
+
+```
+Regular Season Results:
+- 4 teams: 10-2 or better → PLAYOFF
+- 8 teams: 7-5 to 9-3 → Bowl eligible (Tier 1-2)
+- 6 teams: 5-7 to 6-6 → Bowl eligible (Tier 3)
+- 14 teams: Below 5-7 → Not eligible
+
+Bowl Pool (after removing playoff teams): 14 eligible
+Need: 12 teams for 6 bowls
+
+Bowl 1: #1 (9-3) vs #2 (9-3)
+Bowl 2: #3 (8-4) vs #4 (8-4)
+Bowl 3: #5 (7-5) vs #6 (7-5)
+Bowl 4: #7 (7-5) vs #8 (6-6)
+Bowl 5: #9 (6-6) vs #10 (6-6)
+Bowl 6: #11 (5-7) vs #12 (5-7)
+```
+
+### Scenario B: 24-Team League, 12-Team Playoff, 2 Bowls
+
+```
+Regular Season Results:
+- 12 teams selected for playoff
+- Remaining: 12 teams
+
+Bowl Pool: 12 teams (but many may be sub-.500)
+- 4 teams: 5-7 or better → Bowl eligible
+- 8 teams: Below .500 → Added to fill if needed
+
+Bowl 1: #1 (6-6) vs #2 (6-6)
+Bowl 2: #3 (5-7) vs #4 (5-7)
+```
+
+### Scenario C: 40-Team League, 16-Team Playoff, 4 Bowls
+
+```
+Regular Season Results:
+- 16 teams in playoff
+- Remaining: 24 teams
+
+Bowl Pool after playoff exclusion:
+- 10 teams: .500+ 
+- Need 8 for 4 bowls → Top 8 selected
+
+Bowl 1: #1 (7-5) vs #2 (7-5)
+Bowl 2: #3 (6-6) vs #4 (6-6)
+Bowl 3: #5 (6-6) vs #6 (6-6)
+Bowl 4: #7 (5-7) vs #8 (5-7)
+```
+
+---
+
+## Data Model
+
+### Postseason Configuration
+
+```json
+{
+  "postseason": {
+    "playoff_size": 8,
+    "bowl_count": 4,
+    "bowl_eligibility_threshold": 0.500,
+    "allow_sub_500_fill": true,
+    "max_win_differential": 3,
+    "conference_balancing": true,
+    "bowl_names": [
+      "Viper Bowl",
+      "Snapkick Classic", 
+      "Lateral Challenge",
+      "Territory Bowl"
+    ]
+  }
+}
+```
+
+### Postseason Results
+
+```json
+{
+  "postseason": {
+    "bowls": [
+      {
+        "name": "Viper Bowl",
+        "tier": 1,
+        "matchup": {
+          "team_1": { "name": "Boston University", "record": "9-3", "seed": 9 },
+          "team_2": { "name": "Gonzaga", "record": "8-4", "seed": 10 }
+        },
+        "result": {
+          "winner": "Boston University",
+          "score": { "team_1": 41, "team_2": 34 }
+        }
+      }
+    ],
+    "playoff": {
+      "format": 8,
+      "rounds": [
+        {
+          "name": "Quarterfinals",
+          "games": [ ... ]
+        },
+        {
+          "name": "Semifinals", 
+          "games": [ ... ]
+        },
+        {
+          "name": "Championship",
+          "games": [ ... ]
+        }
+      ],
+      "champion": "Villanova"
+    }
+  }
+}
+```
+
+---
+
+## UI Configuration
+
+### Season Setup Panel
+
+```
+Postseason Settings
+─────────────────────────────
+Playoff Size:     ○ 4   ○ 8   ● 12   ○ 16
+
+Number of Bowls:  [4 ▼]
+                  (Recommended: 3-6 for your league size)
+
+Bowl Eligibility: [.500 or better ▼]
+                  Options: .500, .417 (5-7), .333 (4-8)
+
+☑ Fill bowls with sub-.500 teams if needed
+☑ Avoid same-conference bowl matchups
+```
+
+### Postseason Results Display
+
+```
+═══════════════════════════════════════
+           2026 CVL POSTSEASON
+═══════════════════════════════════════
+
+BOWL GAMES
+───────────────────────────────────────
+Viper Bowl (Tier 1)
+  #9 Boston University (9-3) vs #10 Gonzaga (8-4)
+  Final: Boston University 41, Gonzaga 34
+
+Snapkick Classic (Tier 1)
+  #11 Marquette (8-4) vs #12 Butler (8-4)
+  Final: Butler 38, Marquette 31
+
+Lateral Challenge (Tier 2)
+  #13 DePaul (7-5) vs #14 Creighton (7-5)
+  Final: Creighton 29, DePaul 27
+
+Territory Bowl (Tier 2)
+  #15 Drake (6-6) vs #16 Bradley (6-6)
+  Final: Drake 33, Bradley 28
+
+8-TEAM PLAYOFF
+───────────────────────────────────────
+Quarterfinals
+  #1 Villanova (12-0) vs #8 Xavier (8-4)
+  Final: Villanova 45, Xavier 31
+  
+  #4 St. John's (10-2) vs #5 Georgetown (9-3)
+  Final: Georgetown 38, St. John's 35
+  
+  #2 Providence (11-1) vs #7 UConn (9-3)
+  Final: Providence 42, UConn 28
+  
+  #3 Seton Hall (10-2) vs #6 Creighton (9-3)
+  Final: Seton Hall 39, Creighton 33
+
+Semifinals
+  #1 Villanova vs #5 Georgetown
+  Final: Villanova 48, Georgetown 41
+  
+  #2 Providence vs #3 Seton Hall
+  Final: Seton Hall 35, Providence 31
+
+CHAMPIONSHIP
+  #1 Villanova vs #3 Seton Hall
+  Final: Villanova 52, Seton Hall 44
+
+  🏆 VILLANOVA WILDCATS 🏆
+     2026 CVL CHAMPIONS
+═══════════════════════════════════════
+```
+
+---
+
+## Edge Cases
+
+| Scenario | Handling |
+|----------|----------|
+| League size ≤ playoff size | No bowls possible; playoff only |
+| All remaining teams sub-.500 | Fill bowls with best available; tier as "Consolation" |
+| Odd number of eligible teams | Last team out misses bowl (or add one more sub-.500) |
+| Not enough teams for configured bowls | Reduce bowl count automatically; notify user |
+| 16-team playoff in 20-team league | Only 4 teams remain; max 2 bowls possible |
+| User sets 0 bowls | Valid; playoff only, no bowl games |
+
+---
+
+## Bowl Name Defaults
+
+Provide a default set that scales with bowl count:
+
+| Bowl # | Default Name |
+|--------|--------------|
+| 1 | Viper Bowl |
+| 2 | Snapkick Classic |
+| 3 | Lateral Challenge |
+| 4 | Territory Bowl |
+| 5 | Chain Reaction Bowl |
+| 6 | Keeper's Cup |
+| 7 | Zeroback Showdown |
+| 8 | Flanker Bowl |
+| 9 | Gridiron Classic |
+| 10 | Endzone Invitational |
+| 11 | Pindown Bowl |
+| 12 | Bell Bowl |
+
+Allow user renaming in Dynasty Mode.
+
+---
+
+This gives the engineer a complete spec for integrating bowls alongside the existing 4/8/12/16-team playoff system.

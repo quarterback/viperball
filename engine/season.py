@@ -152,6 +152,48 @@ class Game:
     away_metrics: Optional[Dict] = None
 
 
+BOWL_NAMES = [
+    "Viper Bowl", "Snapkick Classic", "Lateral Challenge", "Territory Bowl",
+    "Chain Reaction Bowl", "Keeper's Cup", "Zeroback Showdown", "Flanker Bowl",
+    "Gridiron Classic", "Endzone Invitational", "Pindown Bowl", "Bell Bowl",
+    "Heritage Bowl", "Frontier Bowl", "Summit Classic", "Heartland Bowl",
+]
+
+BOWL_TIERS = {1: "Premier", 2: "Major", 3: "Standard"}
+
+
+def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
+    if league_size <= 15:
+        return 0
+    remaining = league_size - playoff_size
+    if remaining < 4:
+        return 0
+    table = {
+        (24, 4): 4, (24, 8): 2, (24, 12): 1, (24, 16): 0,
+        (40, 4): 6, (40, 8): 4, (40, 12): 3, (40, 16): 2,
+        (60, 4): 8, (60, 8): 6, (60, 12): 5, (60, 16): 4,
+        (80, 4): 10, (80, 8): 8, (80, 12): 6, (80, 16): 5,
+        (100, 4): 12, (100, 8): 10, (100, 12): 8, (100, 16): 6,
+    }
+    best = 2
+    for (sz, ps), bc in sorted(table.items()):
+        if league_size <= sz and playoff_size <= ps:
+            best = bc
+            break
+    return min(best, remaining // 2)
+
+
+@dataclass
+class BowlGame:
+    name: str
+    tier: int
+    game: Game
+    team_1_seed: int = 0
+    team_2_seed: int = 0
+    team_1_record: str = ""
+    team_2_record: str = ""
+
+
 @dataclass
 class Season:
     """Complete season simulation"""
@@ -169,6 +211,7 @@ class Season:
 
     playoff_bracket: List[Game] = field(default_factory=list)
     champion: Optional[str] = None
+    bowl_games: List[BowlGame] = field(default_factory=list)
 
     def __post_init__(self):
         for team_name, team in self.teams.items():
@@ -184,7 +227,7 @@ class Season:
                 conference=conf
             )
 
-    def generate_schedule(self, games_per_team: int = 0, conference_weight: float = 0.6):
+    def generate_schedule(self, games_per_team: int = 0, conference_weight: float = 0.6, non_conf_weeks: int = 3):
         """
         Generate a season schedule with configurable game count.
 
@@ -192,6 +235,7 @@ class Season:
             games_per_team: Number of games each team plays. 0 = full round-robin.
             conference_weight: Proportion of games that should be conference games (0.0-1.0).
                              Only applies when conferences exist and games_per_team > 0.
+            non_conf_weeks: Number of early weeks reserved for non-conference games (1-4).
         """
         team_names = list(self.teams.keys())
         num_teams = len(team_names)
@@ -200,6 +244,31 @@ class Season:
             self._generate_round_robin(team_names)
         else:
             self._generate_partial_schedule(team_names, games_per_team, conference_weight)
+
+        self._assign_weeks_by_type(non_conf_weeks)
+
+    def _assign_weeks_by_type(self, non_conf_weeks: int = 3):
+        """Assign week numbers: non-conference games fill early weeks, conference games fill later weeks."""
+        if not self.schedule:
+            return
+
+        non_conf = [g for g in self.schedule if not g.is_conference_game]
+        conf = [g for g in self.schedule if g.is_conference_game]
+        random.shuffle(non_conf)
+        random.shuffle(conf)
+
+        team_names = list(self.teams.keys())
+        games_per_slot = max(1, len(team_names) // 2)
+
+        max_early_games = non_conf_weeks * games_per_slot
+        early_non_conf = non_conf[:max_early_games]
+        overflow_non_conf = non_conf[max_early_games:]
+
+        ordered = early_non_conf + conf + overflow_non_conf
+
+        for i, game in enumerate(ordered):
+            game.week = (i // games_per_slot) + 1
+        self.schedule = ordered
 
     def _generate_round_robin(self, team_names: List[str]):
         """Full round-robin: each team plays each other once"""
@@ -215,10 +284,6 @@ class Season:
                            and self.team_conferences.get(home, "") != "")
                 games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
 
-        random.shuffle(games)
-        games_per_slot = max(1, len(team_names) // 2)
-        for i, game in enumerate(games):
-            game.week = (i // games_per_slot) + 1
         self.schedule = games
 
     def _generate_partial_schedule(self, team_names: List[str], games_per_team: int,
@@ -310,10 +375,6 @@ class Season:
                 )
                 _add_game(home, away, is_conf)
 
-        random.shuffle(games)
-        games_per_slot = max(1, len(team_names) // 2)
-        for i, game in enumerate(games):
-            game.week = (i // games_per_slot) + 1
         self.schedule = games
 
     def generate_round_robin_schedule(self):
@@ -563,6 +624,104 @@ class Season:
                 [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
             )
             self.champion = self._get_winner(finals[0])
+
+    def simulate_bowls(self, bowl_count: int = 0, playoff_size: int = 4,
+                       bowl_names: Optional[List[str]] = None, verbose: bool = False):
+        """Simulate bowl games for non-playoff teams.
+
+        Args:
+            bowl_count: Number of bowls (0 = auto-recommend based on league/playoff size)
+            playoff_size: Number of teams in playoff (to exclude from bowls)
+            bowl_names: Custom bowl names (optional, uses defaults if not provided)
+            verbose: Whether to log verbose output
+        """
+        standings = self.get_standings_sorted()
+        league_size = len(standings)
+
+        if bowl_count <= 0:
+            bowl_count = get_recommended_bowl_count(league_size, playoff_size)
+        if bowl_count == 0:
+            return
+
+        playoff_team_names = {t.team_name for t in standings[:playoff_size]}
+
+        non_playoff = [t for t in standings if t.team_name not in playoff_team_names]
+
+        total_games = max((t.wins + t.losses) for t in standings) if standings else 0
+        threshold = total_games / 2 if total_games > 0 else 0
+
+        eligible = [t for t in non_playoff if t.wins >= threshold]
+        sub_500 = [t for t in non_playoff if t.wins < threshold]
+
+        teams_needed = bowl_count * 2
+        pool = list(eligible)
+        if len(pool) < teams_needed:
+            for t in sub_500:
+                if len(pool) >= teams_needed:
+                    break
+                pool.append(t)
+
+        if len(pool) < 2:
+            return
+        bowl_count = min(bowl_count, len(pool) // 2)
+
+        names = list(bowl_names or BOWL_NAMES)
+        while len(names) < bowl_count:
+            names.append(f"Bowl {len(names) + 1}")
+
+        max_win_diff = 3
+        used = set()
+        matchups = []
+
+        for i in range(bowl_count):
+            best_pair = None
+            best_diff = 999
+
+            for a_idx in range(len(pool)):
+                if a_idx in used:
+                    continue
+                for b_idx in range(a_idx + 1, len(pool)):
+                    if b_idx in used:
+                        continue
+                    a, b = pool[a_idx], pool[b_idx]
+                    win_diff = abs(a.wins - b.wins)
+                    same_conf = (a.conference == b.conference and a.conference != "")
+                    penalty = 2 if same_conf else 0
+                    score = win_diff + penalty
+                    if score < best_diff:
+                        best_diff = score
+                        best_pair = (a_idx, b_idx)
+
+            if best_pair is None:
+                break
+
+            ai, bi = best_pair
+            used.add(ai)
+            used.add(bi)
+            matchups.append((pool[ai], pool[bi]))
+
+        for i, (team_a, team_b) in enumerate(matchups):
+            tier = 1 if i < 2 else (2 if i < 4 else 3)
+            game = Game(
+                week=1001 + i,
+                home_team=team_a.team_name,
+                away_team=team_b.team_name,
+            )
+            self.simulate_game(game, verbose=verbose)
+
+            a_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_a.team_name), 0)
+            b_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_b.team_name), 0)
+
+            bowl = BowlGame(
+                name=names[i],
+                tier=tier,
+                game=game,
+                team_1_seed=a_seed,
+                team_2_seed=b_seed,
+                team_1_record=f"{team_a.wins}-{team_a.losses}",
+                team_2_record=f"{team_b.wins}-{team_b.losses}",
+            )
+            self.bowl_games.append(bowl)
 
 
 def load_teams_from_directory(directory: str) -> Dict[str, Team]:
