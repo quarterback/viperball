@@ -18,6 +18,7 @@ from engine.game_engine import WEATHER_CONDITIONS, POSITION_ARCHETYPES, get_arch
 from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
 from engine.viperball_metrics import calculate_viperball_metrics
+from engine.conference_names import generate_conference_names
 
 st.set_page_config(
     page_title="Viperball Sandbox",
@@ -1639,12 +1640,23 @@ elif page == "Dynasty Mode":
 
         num_conferences = st.radio("Number of Conferences", [1, 2, 3, 4], index=1, horizontal=True, key="num_conf")
 
-        default_conf_names = ["CVL East", "CVL West", "CVL North", "CVL South"]
+        if "conf_name_seed" not in st.session_state:
+            st.session_state["conf_name_seed"] = random.randint(0, 999999)
+
+        generated_names = generate_conference_names(count=num_conferences, seed=st.session_state["conf_name_seed"])
+
         conf_assignments = {}
         conf_names_list = []
 
+        name_col, btn_col = st.columns([5, 1])
+        with btn_col:
+            if st.button("🎲 New Names", key="regen_conf_names", use_container_width=True):
+                st.session_state["conf_name_seed"] = random.randint(0, 999999)
+                st.rerun()
+
         if num_conferences == 1:
-            conf_name_single = st.text_input("Conference Name", value="CVL", key="conf_name_0")
+            with name_col:
+                conf_name_single = st.text_input("Conference Name", value=generated_names[0], key="conf_name_0")
             conf_names_list = [conf_name_single]
             for tname in all_team_names_sorted:
                 conf_assignments[tname] = conf_name_single
@@ -1652,7 +1664,7 @@ elif page == "Dynasty Mode":
             conf_cols = st.columns(num_conferences)
             for ci in range(num_conferences):
                 with conf_cols[ci]:
-                    cname = st.text_input(f"Conference {ci+1}", value=default_conf_names[ci], key=f"conf_name_{ci}")
+                    cname = st.text_input(f"Conference {ci+1}", value=generated_names[ci], key=f"conf_name_{ci}")
                     conf_names_list.append(cname)
 
             chunk_size = len(all_team_names_sorted) // num_conferences
