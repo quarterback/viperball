@@ -173,28 +173,28 @@ def display_playoff_bracket(season: Season):
         print(f"\n{'QUARTERFINALS':^70}")
         print(f"{'-' * 70}")
         for i, game in enumerate(quarterfinals, start=1):
-            winner = game.home_team if game.home_score > game.away_score else game.away_team
-            loser = game.away_team if game.home_score > game.away_score else game.home_team
-            winner_score = max(game.home_score, game.away_score)
-            loser_score = min(game.home_score, game.away_score)
+            winner = game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
+            loser = game.away_team if (game.home_score or 0) > (game.away_score or 0) else game.home_team
+            winner_score = max((game.home_score or 0), (game.away_score or 0))
+            loser_score = min((game.home_score or 0), (game.away_score or 0))
             print(f"  Game {i}: {winner} {winner_score:.1f} def. {loser} {loser_score:.1f}")
 
     if semifinals:
         print(f"\n{'SEMIFINALS':^70}")
         print(f"{'-' * 70}")
         for i, game in enumerate(semifinals, start=1):
-            winner = game.home_team if game.home_score > game.away_score else game.away_team
-            loser = game.away_team if game.home_score > game.away_score else game.home_team
-            winner_score = max(game.home_score, game.away_score)
-            loser_score = min(game.home_score, game.away_score)
+            winner = game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
+            loser = game.away_team if (game.home_score or 0) > (game.away_score or 0) else game.home_team
+            winner_score = max((game.home_score or 0), (game.away_score or 0))
+            loser_score = min((game.home_score or 0), (game.away_score or 0))
             print(f"  Game {i}: {winner} {winner_score:.1f} def. {loser} {loser_score:.1f}")
 
     if championship:
         game = championship[0]
-        winner = game.home_team if game.home_score > game.away_score else game.away_team
-        loser = game.away_team if game.home_score > game.away_score else game.home_team
-        winner_score = max(game.home_score, game.away_score)
-        loser_score = min(game.home_score, game.away_score)
+        winner = game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
+        loser = game.away_team if (game.home_score or 0) > (game.away_score or 0) else game.home_team
+        winner_score = max((game.home_score or 0), (game.away_score or 0))
+        loser_score = min((game.home_score or 0), (game.away_score or 0))
 
         print(f"\n{'🏆 CHAMPIONSHIP 🏆':^70}")
         print(f"{'-' * 70}")
@@ -271,10 +271,10 @@ def display_week_scoreboard(season: Season, week: int):
     print(f"{'=' * 70}\n")
 
     for game in week_games:
-        winner = game.home_team if game.home_score > game.away_score else game.away_team
-        loser = game.away_team if game.home_score > game.away_score else game.home_team
-        winner_score = max(game.home_score, game.away_score)
-        loser_score = min(game.home_score, game.away_score)
+        winner = game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
+        loser = game.away_team if (game.home_score or 0) > (game.away_score or 0) else game.home_team
+        winner_score = max((game.home_score or 0), (game.away_score or 0))
+        loser_score = min((game.home_score or 0), (game.away_score or 0))
 
         print(f"  {winner} {winner_score:.1f} def. {loser} {loser_score:.1f}")
         if game.home_metrics and game.away_metrics:

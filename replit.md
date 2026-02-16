@@ -8,19 +8,22 @@ This is NOT a consumer app — it's a playtest + debugging environment.
 ## Architecture
 
 ```
-engine/           - Core Python simulation engine
-  game_engine.py  - Main simulation logic (ViperballEngine, styles, play families)
-  box_score.py    - Box score generation
-  poll_system.py  - Poll/ranking system
-  __init__.py     - Package exports
-api/              - FastAPI REST endpoints (standalone API access)
-  main.py         - /simulate, /simulate_many, /debug/play, /teams
-ui/               - Streamlit web UI
-  app.py          - 3-page sandbox (Game Simulator, Debug Tools, Play Inspector)
-engine/epa.py     - EPA (Expected Points Added) calculation module
-data/teams/       - Team JSON files (7 teams)
-main.py           - Entry point (launches Streamlit on port 5000)
-.streamlit/       - Streamlit configuration
+engine/                  - Core Python simulation engine
+  game_engine.py         - Main simulation logic (ViperballEngine, offense/defense styles, play families)
+  box_score.py           - Box score generation
+  poll_system.py         - Poll/ranking system
+  epa.py                 - EPA (Expected Points Added) calculation module
+  season.py              - Season simulation (round-robin, standings, playoffs)
+  dynasty.py             - Multi-season dynasty mode (career tracking, records, awards)
+  viperball_metrics.py   - Custom sabermetrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact)
+  __init__.py            - Package exports
+api/                     - FastAPI REST endpoints (standalone API access)
+  main.py                - /simulate, /simulate_many, /debug/play, /teams
+ui/                      - Streamlit web UI
+  app.py                 - 5-page sandbox (Game Simulator, Season Simulator, Dynasty Mode, Debug Tools, Play Inspector)
+data/teams/              - Team JSON files
+main.py                  - Entry point (launches Streamlit on port 5000)
+.streamlit/              - Streamlit configuration
 ```
 
 ## Running
@@ -61,17 +64,27 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - Results: touchdown, successful_kick, fumble, turnover_on_downs, punt, missed_kick, pindown, punt_return_td, chaos_recovery, stall (quarter end)
 - Drive yards count positive non-punt gains only
 
-### UI Pages (5 views per game)
+### Defense Style System
+- **Base Defense**: Balanced approach, solid fundamentals, no modifiers
+- **Pressure Defense**: Aggressive blitzing, +10% fumble forcing, -10% yards allowed, vulnerable to explosive plays +15%, elite kick blocking (1.5x)
+- **Contain Defense**: Limits explosives -20%, reduces breakaway chance 0.85x, slightly worse at preventing yards +5%
+- **Run-Stop Defense**: Stuffs the run (-15% yards), very weak against kicks (+10% accuracy), vulnerable to laterals +5%
+- **Coverage Defense**: Excellent pindown prevention (0.8x), reduces lateral success -10%, slightly better kick coverage (1.3x muff rate)
+
+### UI Pages (5 pages)
 1. **Game Simulator**
+   - Offense + Defense style selectors for both teams
    - Real box score: quarter-by-quarter scoring + scoring breakdown (TD/DK/PK with point values)
    - Play family distribution: grouped bar chart comparing team play call %
    - Drive outcome panel: table of all drives + outcome distribution chart
    - Play log: position-tagged descriptions with quarter filter
-   - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params
+   - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params, Viperball Metrics
    - Export: download box score (.md), play log (.csv), drives (.csv), full JSON
-2. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates, drive outcome aggregation
+2. **Season Simulator** - Full round-robin season with team selection, style configs, standings, radar charts, score distributions, playoffs, CSV export
+3. **Dynasty Mode** - Multi-season career mode with coach dashboard, team history, record book, awards, JSON save/load
+4. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates, drive outcome aggregation
    - Export: batch summary (.csv), all games (.json), full data + plays (.json)
-3. **Play Inspector** - Run single plays repeatedly with situation controls
+5. **Play Inspector** - Run single plays repeatedly with situation controls
    - Export: play results (.csv)
 
 ### API Endpoints
@@ -91,6 +104,12 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - Kick % range: 43.8-60.7%
 
 ## Recent Changes
+- 2026-02-16: Added defensive archetypes system: 5 defense styles (Base, Pressure, Contain, Run-Stop, Coverage) with play modifiers, special teams chaos probabilities
+- 2026-02-16: Defense style selectors added to Game Simulator UI for both teams
+- 2026-02-16: Viperball Metrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact) displayed in Game Simulator debug panel
+- 2026-02-16: Season Simulator page: round-robin scheduling, standings with metrics, radar charts, score distributions, playoff brackets, CSV export
+- 2026-02-16: Dynasty Mode page: multi-season career tracking, coach dashboard, team history, record book, awards, JSON save/load
+- 2026-02-16: Season/Dynasty integration with viperball_metrics module for OPI, Territory, Pressure, Chaos, Kicking averages in standings
 - 2026-02-15: Integrated AFL-style engine: 52% kicks, CFL rouge/pindown (1pt), chaos mechanics, enhanced lateral risk
 - 2026-02-15: Tiered kicking accuracy (drop kicks + place kicks), contextual kick triggers
 - 2026-02-15: UI updated with pindown stats, kick %, lateral efficiency, punt return TDs in box scores and batch tools

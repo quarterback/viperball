@@ -13,7 +13,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES
+from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES, DEFENSE_STYLES
+from engine.season import load_teams_from_directory, create_season
+from engine.dynasty import create_dynasty, Dynasty
+from engine.viperball_metrics import calculate_viperball_metrics
 
 st.set_page_config(
     page_title="Viperball Sandbox",
@@ -87,6 +90,8 @@ teams = get_available_teams()
 styles = get_available_styles()
 team_names = {t["key"]: t["name"] for t in teams}
 style_keys = list(styles.keys())
+defense_style_keys = list(DEFENSE_STYLES.keys())
+defense_styles = DEFENSE_STYLES
 
 
 def load_team(key):
@@ -314,7 +319,7 @@ def drive_result_color(result):
     return colors.get(result, "#94a3b8")
 
 
-page = st.sidebar.radio("Navigation", ["Game Simulator", "Debug Tools", "Play Inspector"], index=0)
+page = st.sidebar.radio("Navigation", ["Game Simulator", "Season Simulator", "Dynasty Mode", "Debug Tools", "Play Inspector"], index=0)
 
 
 if page == "Game Simulator":
@@ -330,6 +335,10 @@ if page == "Game Simulator":
                                   index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == home_key), "balanced")),
                                   key="home_style")
         st.caption(styles[home_style]["description"])
+        home_def_style = st.selectbox("Home Defense Style", defense_style_keys,
+                                       format_func=lambda x: defense_styles[x]["label"],
+                                       key="home_def_style")
+        st.caption(defense_styles[home_def_style]["description"])
 
     with col2:
         st.subheader("Away Team")
@@ -341,6 +350,10 @@ if page == "Game Simulator":
                                   index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == away_key), "balanced")),
                                   key="away_style")
         st.caption(styles[away_style]["description"])
+        away_def_style = st.selectbox("Away Defense Style", defense_style_keys,
+                                       format_func=lambda x: defense_styles[x]["label"],
+                                       key="away_def_style")
+        st.caption(defense_styles[away_def_style]["description"])
 
     col_seed, col_btn = st.columns([1, 2])
     with col_seed:
@@ -358,6 +371,8 @@ if page == "Game Simulator":
         style_overrides = {}
         style_overrides[home_team.name] = home_style
         style_overrides[away_team.name] = away_style
+        style_overrides[f"{home_team.name}_defense"] = home_def_style
+        style_overrides[f"{away_team.name}_defense"] = away_def_style
 
         engine = ViperballEngine(home_team, away_team, seed=actual_seed, style_overrides=style_overrides)
 
@@ -756,6 +771,35 @@ if page == "Game Simulator":
                 st.text(f"  Kick Rate: {a_style['kick_rate']}")
                 st.text(f"  Option Rate: {a_style['option_rate']}")
 
+            st.markdown("**Viperball Metrics (0-100)**")
+            try:
+                home_metrics = calculate_viperball_metrics(result, "home")
+                away_metrics = calculate_viperball_metrics(result, "away")
+                mc1, mc2 = st.columns(2)
+                metric_labels = {
+                    "opi": "OPI (Overall)",
+                    "territory_rating": "Territory Rating",
+                    "pressure_index": "Pressure Index",
+                    "chaos_factor": "Chaos Factor",
+                    "kicking_efficiency": "Kicking Efficiency",
+                    "drive_quality": "Drive Quality",
+                    "turnover_impact": "Turnover Impact",
+                }
+                with mc1:
+                    st.markdown(f"*{home_name}*")
+                    for k, label in metric_labels.items():
+                        v = home_metrics.get(k, 0)
+                        display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
+                        st.text(f"  {label}: {display}")
+                with mc2:
+                    st.markdown(f"*{away_name}*")
+                    for k, label in metric_labels.items():
+                        v = away_metrics.get(k, 0)
+                        display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
+                        st.text(f"  {label}: {display}")
+            except Exception:
+                st.caption("Metrics unavailable for this game result")
+
         with st.expander("Raw JSON"):
             st.json(result)
 
@@ -1128,3 +1172,454 @@ elif page == "Play Inspector":
                         "description", "fatigue", "field_position"]
         available = [c for c in display_cols if c in df.columns]
         st.dataframe(df[available], hide_index=True, use_container_width=True, height=400)
+
+
+elif page == "Season Simulator":
+    st.title("Season Simulator")
+    st.caption("Simulate a full round-robin season with standings, metrics, and playoffs")
+
+    teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+    all_teams = load_teams_from_directory(teams_dir)
+    all_team_names = sorted(all_teams.keys())
+
+    st.subheader("Season Setup")
+    season_name = st.text_input("Season Name", value="2026 CVL Season", key="season_name")
+
+    selected_teams = st.multiselect("Select Teams", all_team_names, default=all_team_names, key="season_teams")
+
+    if len(selected_teams) < 2:
+        st.warning("Select at least 2 teams to run a season.")
+    else:
+        st.subheader("Team Style Configuration")
+        style_configs = {}
+        cols_per_row = 3
+        team_chunks = [selected_teams[i:i + cols_per_row] for i in range(0, len(selected_teams), cols_per_row)]
+        for chunk in team_chunks:
+            cols = st.columns(len(chunk))
+            for col, tname in zip(cols, chunk):
+                with col:
+                    st.markdown(f"**{tname}**")
+                    off_style = st.selectbox("Offense", style_keys,
+                                              format_func=lambda x: styles[x]["label"],
+                                              key=f"season_off_{tname}")
+                    def_style = st.selectbox("Defense", defense_style_keys,
+                                              format_func=lambda x: defense_styles[x]["label"],
+                                              key=f"season_def_{tname}")
+                    style_configs[tname] = {"offense_style": off_style, "defense_style": def_style}
+
+        playoff_size = st.radio("Playoff Format", [4, "All Teams (Round Robin Only)"], index=0, key="playoff_size", horizontal=True)
+
+        run_season = st.button("Simulate Season", type="primary", use_container_width=True, key="run_season")
+
+        if run_season:
+            filtered_teams = {name: team for name, team in all_teams.items() if name in selected_teams}
+            season = create_season(season_name, filtered_teams, style_configs)
+            season.generate_round_robin_schedule()
+
+            with st.spinner(f"Simulating {len(season.schedule)} games..."):
+                season.simulate_season()
+
+            num_playoff = 4 if playoff_size == 4 else 0
+            if num_playoff > 0 and len(selected_teams) >= num_playoff:
+                with st.spinner("Running playoffs..."):
+                    season.simulate_playoff(num_teams=min(num_playoff, len(selected_teams)))
+
+            st.session_state["last_season"] = season
+
+        if "last_season" in st.session_state:
+            season = st.session_state["last_season"]
+
+            st.divider()
+            st.subheader("Standings")
+            standings = season.get_standings_sorted()
+            standings_data = []
+            for i, record in enumerate(standings, 1):
+                standings_data.append({
+                    "Rank": i,
+                    "Team": record.team_name,
+                    "W": record.wins,
+                    "L": record.losses,
+                    "Win%": f"{record.win_percentage:.3f}",
+                    "PF": f"{record.points_for:.1f}",
+                    "PA": f"{record.points_against:.1f}",
+                    "Diff": f"{record.point_differential:+.1f}",
+                    "OPI": f"{record.avg_opi:.1f}",
+                    "Territory": f"{record.avg_territory:.1f}",
+                    "Pressure": f"{record.avg_pressure:.1f}",
+                    "Chaos": f"{record.avg_chaos:.1f}",
+                    "Kicking": f"{record.avg_kicking:.1f}",
+                })
+            st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True)
+
+            st.subheader("Season Metrics Radar")
+            radar_teams = st.multiselect("Compare Teams", [r.team_name for r in standings],
+                                          default=[standings[0].team_name, standings[-1].team_name] if len(standings) > 1 else [standings[0].team_name],
+                                          key="radar_teams")
+            if radar_teams:
+                categories = ["OPI", "Territory", "Pressure", "Chaos", "Kicking", "Drive Quality", "Turnover Impact"]
+                fig = go.Figure()
+                for tname in radar_teams:
+                    record = season.standings[tname]
+                    values = [record.avg_opi, record.avg_territory, record.avg_pressure,
+                              record.avg_chaos, record.avg_kicking, record.avg_drive_quality * 10,
+                              record.avg_turnover_impact]
+                    fig.add_trace(go.Scatterpolar(r=values + [values[0]], theta=categories + [categories[0]],
+                                                   fill='toself', name=tname))
+                fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                                  title="Team Metrics Comparison", height=500)
+                st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Scoring Distribution")
+            score_data = []
+            for game in season.schedule:
+                if game.completed:
+                    score_data.append({"Team": game.home_team, "Score": game.home_score or 0, "Location": "Home"})
+                    score_data.append({"Team": game.away_team, "Score": game.away_score or 0, "Location": "Away"})
+            if score_data:
+                fig = px.box(pd.DataFrame(score_data), x="Team", y="Score", color="Team",
+                             title="Score Distribution by Team")
+                fig.update_layout(showlegend=False, height=400)
+                st.plotly_chart(fig, use_container_width=True)
+
+            if season.playoff_bracket:
+                st.subheader("Playoff Bracket")
+
+                semis = [g for g in season.playoff_bracket if g.week == 999]
+                championship = [g for g in season.playoff_bracket if g.week == 1000]
+
+                if semis:
+                    st.markdown("**Semifinals**")
+                    for i, game in enumerate(semis, 1):
+                        hs = game.home_score or 0
+                        aws = game.away_score or 0
+                        winner = game.home_team if hs > aws else game.away_team
+                        loser = game.away_team if hs > aws else game.home_team
+                        w_score = max(hs, aws)
+                        l_score = min(hs, aws)
+                        st.markdown(f"Game {i}: **{winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+
+                if championship:
+                    game = championship[0]
+                    hs = game.home_score or 0
+                    aws = game.away_score or 0
+                    winner = game.home_team if hs > aws else game.away_team
+                    loser = game.away_team if hs > aws else game.home_team
+                    w_score = max(hs, aws)
+                    l_score = min(hs, aws)
+                    st.success(f"**CHAMPION: {winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+
+            st.subheader("Full Schedule Results")
+            schedule_data = []
+            for game in season.schedule:
+                if game.completed:
+                    hs = game.home_score or 0
+                    aws = game.away_score or 0
+                    winner = game.home_team if hs > aws else game.away_team
+                    schedule_data.append({
+                        "Week": game.week,
+                        "Home": game.home_team,
+                        "Away": game.away_team,
+                        "Home Score": f"{hs:.1f}",
+                        "Away Score": f"{aws:.1f}",
+                        "Winner": winner,
+                    })
+            if schedule_data:
+                st.dataframe(pd.DataFrame(schedule_data), hide_index=True, use_container_width=True, height=400)
+
+            st.subheader("Export Season Data")
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                standings_csv = io.StringIO()
+                writer = csv.writer(standings_csv)
+                writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "OPI"])
+                for i, r in enumerate(standings, 1):
+                    writer.writerow([i, r.team_name, r.wins, r.losses, f"{r.win_percentage:.3f}",
+                                     f"{r.points_for:.1f}", f"{r.points_against:.1f}",
+                                     f"{r.point_differential:+.1f}", f"{r.avg_opi:.1f}"])
+                st.download_button("Download Standings (CSV)", standings_csv.getvalue(),
+                                   file_name="season_standings.csv", mime="text/csv")
+            with exp_col2:
+                schedule_csv = io.StringIO()
+                writer = csv.writer(schedule_csv)
+                writer.writerow(["Week", "Home", "Away", "Home Score", "Away Score", "Winner"])
+                for game in season.schedule:
+                    if game.completed:
+                        hs = game.home_score or 0
+                        aws = game.away_score or 0
+                        winner = game.home_team if hs > aws else game.away_team
+                        writer.writerow([game.week, game.home_team, game.away_team,
+                                         f"{hs:.1f}", f"{aws:.1f}", winner])
+                st.download_button("Download Schedule (CSV)", schedule_csv.getvalue(),
+                                   file_name="season_schedule.csv", mime="text/csv")
+
+
+elif page == "Dynasty Mode":
+    st.title("Dynasty Mode")
+    st.caption("Multi-season career mode with historical tracking, awards, and record books")
+
+    if "dynasty" not in st.session_state:
+        st.subheader("Create New Dynasty")
+
+        dynasty_col1, dynasty_col2 = st.columns(2)
+        with dynasty_col1:
+            dynasty_name = st.text_input("Dynasty Name", value="My Viperball Dynasty", key="dyn_name")
+            coach_name = st.text_input("Coach Name", value="Coach", key="coach_name")
+        with dynasty_col2:
+            coach_team = st.selectbox("Your Team", [t["name"] for t in teams], key="coach_team")
+            start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
+
+        st.divider()
+        load_col1, load_col2 = st.columns(2)
+        with load_col1:
+            create_btn = st.button("Create Dynasty", type="primary", use_container_width=True, key="create_dynasty")
+        with load_col2:
+            uploaded = st.file_uploader("Load Saved Dynasty", type=["json"], key="load_dynasty")
+
+        if create_btn:
+            teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+            all_teams_loaded = load_teams_from_directory(teams_dir)
+            dynasty = create_dynasty(dynasty_name, coach_name, coach_team, start_year)
+            dynasty.add_conference("CVL", list(all_teams_loaded.keys()))
+            st.session_state["dynasty"] = dynasty
+            st.session_state["dynasty_teams"] = all_teams_loaded
+            st.rerun()
+
+        if uploaded:
+            try:
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
+                    tmp.write(uploaded.read().decode())
+                    tmp_path = tmp.name
+                dynasty = Dynasty.load(tmp_path)
+                teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+                all_teams_loaded = load_teams_from_directory(teams_dir)
+                st.session_state["dynasty"] = dynasty
+                st.session_state["dynasty_teams"] = all_teams_loaded
+                os.unlink(tmp_path)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to load dynasty: {e}")
+
+    else:
+        dynasty = st.session_state["dynasty"]
+        all_dynasty_teams = st.session_state["dynasty_teams"]
+
+        st.sidebar.divider()
+        st.sidebar.markdown(f"**Dynasty:** {dynasty.dynasty_name}")
+        st.sidebar.markdown(f"**Coach:** {dynasty.coach.name}")
+        st.sidebar.markdown(f"**Team:** {dynasty.coach.team_name}")
+        st.sidebar.markdown(f"**Year:** {dynasty.current_year}")
+        st.sidebar.markdown(f"**Record:** {dynasty.coach.career_wins}-{dynasty.coach.career_losses}")
+        st.sidebar.markdown(f"**Titles:** {dynasty.coach.championships}")
+
+        if st.sidebar.button("End Dynasty", key="end_dynasty"):
+            del st.session_state["dynasty"]
+            del st.session_state["dynasty_teams"]
+            st.rerun()
+
+        tab1, tab2, tab3, tab4 = st.tabs(["Simulate Season", "Coach Dashboard", "Team History", "Record Book"])
+
+        with tab1:
+            st.subheader(f"Season {dynasty.current_year}")
+
+            st.markdown("**Style Configuration**")
+            dyn_style_configs = {}
+            team_list = sorted(all_dynasty_teams.keys())
+            cols_per_row = 3
+            team_chunks = [team_list[i:i + cols_per_row] for i in range(0, len(team_list), cols_per_row)]
+            for chunk in team_chunks:
+                cols = st.columns(len(chunk))
+                for col, tname in zip(cols, chunk):
+                    with col:
+                        is_user = tname == dynasty.coach.team_name
+                        label = f"**{tname}** (YOU)" if is_user else f"**{tname}**"
+                        st.markdown(label)
+                        off = st.selectbox("Off", style_keys, format_func=lambda x: styles[x]["label"],
+                                           key=f"dyn_off_{tname}_{dynasty.current_year}")
+                        defs = st.selectbox("Def", defense_style_keys,
+                                            format_func=lambda x: defense_styles[x]["label"],
+                                            key=f"dyn_def_{tname}_{dynasty.current_year}")
+                        dyn_style_configs[tname] = {"offense_style": off, "defense_style": defs}
+
+            if st.button(f"Simulate {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
+                season = create_season(f"{dynasty.current_year} CVL Season", all_dynasty_teams, dyn_style_configs)
+                season.generate_round_robin_schedule()
+
+                with st.spinner(f"Simulating {dynasty.current_year} season ({len(season.schedule)} games)..."):
+                    season.simulate_season()
+
+                playoff_count = min(4, len(team_list))
+                if playoff_count >= 4:
+                    with st.spinner("Running playoffs..."):
+                        season.simulate_playoff(num_teams=playoff_count)
+
+                dynasty.advance_season(season)
+                st.session_state["dynasty"] = dynasty
+                st.session_state["last_dynasty_season"] = season
+                st.rerun()
+
+            if "last_dynasty_season" in st.session_state:
+                season = st.session_state["last_dynasty_season"]
+                prev_year = dynasty.current_year - 1
+
+                st.divider()
+                st.subheader(f"{prev_year} Season Results")
+
+                standings = season.get_standings_sorted()
+                standings_data = []
+                for i, record in enumerate(standings, 1):
+                    is_user = record.team_name == dynasty.coach.team_name
+                    standings_data.append({
+                        "Rank": i,
+                        "Team": f"{'> ' if is_user else ''}{record.team_name}",
+                        "W": record.wins,
+                        "L": record.losses,
+                        "Win%": f"{record.win_percentage:.3f}",
+                        "PF": f"{record.points_for:.1f}",
+                        "PA": f"{record.points_against:.1f}",
+                        "OPI": f"{record.avg_opi:.1f}",
+                    })
+                st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True)
+
+                if season.champion:
+                    if season.champion == dynasty.coach.team_name:
+                        st.balloons()
+                        st.success(f"YOUR TEAM {season.champion} WON THE CHAMPIONSHIP!")
+                    else:
+                        st.info(f"Champion: {season.champion}")
+
+        with tab2:
+            st.subheader("Coach Career Dashboard")
+            coach = dynasty.coach
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Career Record", f"{coach.career_wins}-{coach.career_losses}")
+            c2.metric("Win%", f"{coach.win_percentage * 100:.1f}%")
+            c3.metric("Championships", str(coach.championships))
+            c4.metric("Seasons", str(coach.years_experience))
+
+            if coach.season_records:
+                st.subheader("Season-by-Season")
+                season_hist = []
+                for year in sorted(coach.season_records.keys()):
+                    rec = coach.season_records[year]
+                    season_hist.append({
+                        "Year": year,
+                        "W-L": f"{rec['wins']}-{rec['losses']}",
+                        "PF": f"{rec['points_for']:.1f}",
+                        "PA": f"{rec['points_against']:.1f}",
+                        "Playoff": "Yes" if rec.get("playoff") else "No",
+                        "Champion": "Yes" if rec.get("champion") else "No",
+                    })
+                st.dataframe(pd.DataFrame(season_hist), hide_index=True, use_container_width=True)
+
+                years = sorted(coach.season_records.keys())
+                wins = [coach.season_records[y]["wins"] for y in years]
+                fig = px.bar(x=years, y=wins, title="Wins Per Season", labels={"x": "Year", "y": "Wins"})
+                st.plotly_chart(fig, use_container_width=True)
+
+        with tab3:
+            st.subheader("Team History")
+            selected_history_team = st.selectbox("Select Team", sorted(dynasty.team_histories.keys()), key="history_team")
+
+            if selected_history_team in dynasty.team_histories:
+                hist = dynasty.team_histories[selected_history_team]
+
+                h1, h2, h3, h4 = st.columns(4)
+                h1.metric("All-Time Record", f"{hist.total_wins}-{hist.total_losses}")
+                h2.metric("Win%", f"{hist.win_percentage * 100:.1f}%")
+                h3.metric("Championships", str(hist.total_championships))
+                h4.metric("Playoff Apps", str(hist.total_playoff_appearances))
+
+                if hist.championship_years:
+                    st.markdown(f"**Championship Years:** {', '.join(str(y) for y in hist.championship_years)}")
+
+                if hist.season_records:
+                    st.subheader("Season Records")
+                    hist_data = []
+                    for year in sorted(hist.season_records.keys()):
+                        rec = hist.season_records[year]
+                        hist_data.append({
+                            "Year": year,
+                            "W-L": f"{rec['wins']}-{rec['losses']}",
+                            "PF": f"{rec['points_for']:.1f}",
+                            "PA": f"{rec['points_against']:.1f}",
+                            "OPI": f"{rec.get('avg_opi', 0):.1f}",
+                            "Champion": "Yes" if rec.get("champion") else "No",
+                        })
+                    st.dataframe(pd.DataFrame(hist_data), hide_index=True, use_container_width=True)
+
+        with tab4:
+            st.subheader("Record Book")
+            rb = dynasty.record_book
+
+            st.markdown("**Single-Season Records**")
+            rec_data = []
+            if rb.most_wins_season.get("team"):
+                rec_data.append({"Record": "Most Wins", "Team": rb.most_wins_season["team"],
+                                 "Value": str(rb.most_wins_season["wins"]), "Year": str(rb.most_wins_season.get("year", ""))})
+            if rb.most_points_season.get("team"):
+                rec_data.append({"Record": "Most Points", "Team": rb.most_points_season["team"],
+                                 "Value": f"{rb.most_points_season['points']:.1f}", "Year": str(rb.most_points_season.get("year", ""))})
+            if rb.best_defense_season.get("team"):
+                rec_data.append({"Record": "Best Defense (PPG)", "Team": rb.best_defense_season["team"],
+                                 "Value": f"{rb.best_defense_season['ppg_allowed']:.1f}", "Year": str(rb.best_defense_season.get("year", ""))})
+            if rb.highest_opi_season.get("team"):
+                rec_data.append({"Record": "Highest OPI", "Team": rb.highest_opi_season["team"],
+                                 "Value": f"{rb.highest_opi_season['opi']:.1f}", "Year": str(rb.highest_opi_season.get("year", ""))})
+            if rb.most_chaos_season.get("team"):
+                rec_data.append({"Record": "Most Chaos", "Team": rb.most_chaos_season["team"],
+                                 "Value": f"{rb.most_chaos_season['chaos']:.1f}", "Year": str(rb.most_chaos_season.get("year", ""))})
+            if rec_data:
+                st.dataframe(pd.DataFrame(rec_data), hide_index=True, use_container_width=True)
+            else:
+                st.caption("No records yet — simulate some seasons!")
+
+            st.markdown("**All-Time Records**")
+            alltime_data = []
+            if rb.most_championships.get("team"):
+                alltime_data.append({"Record": "Most Championships", "Team/Coach": rb.most_championships["team"],
+                                     "Value": str(rb.most_championships["championships"])})
+            if rb.highest_win_percentage.get("team"):
+                alltime_data.append({"Record": "Highest Win%", "Team/Coach": rb.highest_win_percentage["team"],
+                                     "Value": f"{rb.highest_win_percentage['win_pct']:.3f}"})
+            if rb.most_coaching_wins.get("coach"):
+                alltime_data.append({"Record": "Most Coaching Wins", "Team/Coach": rb.most_coaching_wins["coach"],
+                                     "Value": str(rb.most_coaching_wins["wins"])})
+            if rb.most_coaching_championships.get("coach"):
+                alltime_data.append({"Record": "Most Coaching Titles", "Team/Coach": rb.most_coaching_championships["coach"],
+                                     "Value": str(rb.most_coaching_championships["championships"])})
+            if alltime_data:
+                st.dataframe(pd.DataFrame(alltime_data), hide_index=True, use_container_width=True)
+            else:
+                st.caption("Play more seasons to build records!")
+
+            if dynasty.awards_history:
+                st.markdown("**Awards History**")
+                awards_data = []
+                for year in sorted(dynasty.awards_history.keys()):
+                    awards = dynasty.awards_history[year]
+                    awards_data.append({
+                        "Year": year,
+                        "Champion": awards.champion,
+                        "Best Record": awards.best_record,
+                        "Top Scoring": awards.highest_scoring,
+                        "Best Defense": awards.best_defense,
+                        "Highest OPI": awards.highest_opi,
+                    })
+                st.dataframe(pd.DataFrame(awards_data), hide_index=True, use_container_width=True)
+
+            st.divider()
+            save_col1, save_col2 = st.columns(2)
+            with save_col1:
+                if st.button("Save Dynasty", use_container_width=True, key="save_dynasty"):
+                    save_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dynasty_save.json")
+                    dynasty.save(save_path)
+                    st.success(f"Dynasty saved!")
+            with save_col2:
+                save_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dynasty_save.json")
+                if os.path.exists(save_path):
+                    with open(save_path, 'r') as f:
+                        st.download_button("Download Save File", f.read(),
+                                           file_name=f"{dynasty.dynasty_name.replace(' ', '_')}.json",
+                                           mime="application/json")

@@ -291,8 +291,8 @@ class Season:
             self.simulate_game(semi2, verbose=verbose)
 
             # Championship
-            semi1_winner = semi1.home_team if semi1.home_score > semi1.away_score else semi1.away_team
-            semi2_winner = semi2.home_team if semi2.home_score > semi2.away_score else semi2.away_team
+            semi1_winner = semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team
+            semi2_winner = semi2.home_team if (semi2.home_score or 0) > (semi2.away_score or 0) else semi2.away_team
 
             championship = Game(
                 week=1000,  # Championship week
@@ -308,7 +308,7 @@ class Season:
 
             self.simulate_game(championship, verbose=verbose)
 
-            self.champion = championship.home_team if championship.home_score > championship.away_score else championship.away_team
+            self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
 
         elif num_teams == 8:
             # Quarterfinals: 1v8, 2v7, 3v6, 4v5
@@ -332,13 +332,13 @@ class Season:
             # Semifinals
             semi1 = Game(
                 week=999,
-                home_team=quarters[0].home_team if quarters[0].home_score > quarters[0].away_score else quarters[0].away_team,
-                away_team=quarters[3].home_team if quarters[3].home_score > quarters[3].away_score else quarters[3].away_team
+                home_team=quarters[0].home_team if (quarters[0].home_score or 0) > (quarters[0].away_score or 0) else quarters[0].away_team,
+                away_team=quarters[3].home_team if (quarters[3].home_score or 0) > (quarters[3].away_score or 0) else quarters[3].away_team
             )
             semi2 = Game(
                 week=999,
-                home_team=quarters[1].home_team if quarters[1].home_score > quarters[1].away_score else quarters[1].away_team,
-                away_team=quarters[2].home_team if quarters[2].home_score > quarters[2].away_score else quarters[2].away_team
+                home_team=quarters[1].home_team if (quarters[1].home_score or 0) > (quarters[1].away_score or 0) else quarters[1].away_team,
+                away_team=quarters[2].home_team if (quarters[2].home_score or 0) > (quarters[2].away_score or 0) else quarters[2].away_team
             )
 
             self.playoff_bracket.append(semi1)
@@ -354,8 +354,8 @@ class Season:
             # Championship
             championship = Game(
                 week=1000,
-                home_team=semi1.home_team if semi1.home_score > semi1.away_score else semi1.away_team,
-                away_team=semi2.home_team if semi2.home_score > semi2.away_score else semi2.away_team
+                home_team=semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team,
+                away_team=semi2.home_team if (semi2.home_score or 0) > (semi2.away_score or 0) else semi2.away_team
             )
 
             self.playoff_bracket.append(championship)
@@ -366,7 +366,7 @@ class Season:
 
             self.simulate_game(championship, verbose=verbose)
 
-            self.champion = championship.home_team if championship.home_score > championship.away_score else championship.away_team
+            self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
 
 
 def load_teams_from_directory(directory: str) -> Dict[str, Team]:
