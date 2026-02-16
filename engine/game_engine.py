@@ -40,6 +40,9 @@ class PlayResult(Enum):
     PINDOWN = "pindown"
     PUNT_RETURN_TD = "punt_return_td"
     CHAOS_RECOVERY = "chaos_recovery"
+    BLOCKED_PUNT = "blocked_punt"
+    MUFFED_PUNT = "muffed_punt"
+    BLOCKED_KICK = "blocked_kick"
 
 
 PLAY_FAMILY_TO_TYPE = {
@@ -402,6 +405,42 @@ DEFENSE_STYLES = {
     },
 }
 
+# ========================================
+# SPECIAL TEAMS CHAOS PROBABILITIES
+# ========================================
+# Base probabilities for blocked/muffed kicks
+# These are modulated by offensive and defensive styles
+
+BASE_BLOCK_PUNT = 0.03   # 3% base chance of blocked punt
+BASE_BLOCK_KICK = 0.04   # 4% base chance of blocked FG/snapkick
+BASE_MUFF_PUNT = 0.05    # 5% base chance of muffed punt return
+
+# Offensive style modifiers for blocks (lower = better special teams)
+OFFENSE_BLOCK_MODIFIERS = {
+    "territorial": 0.8,       # Built to kick, good protection
+    "balanced": 1.0,          # Average
+    "power_option": 1.1,      # Slightly weak special teams
+    "option_spread": 1.2,     # Less focus on kicking
+    "lateral_spread": 1.2,    # Less focus on kicking
+}
+
+# Defensive style modifiers for blocks/muffs (higher = better special teams pressure)
+DEFENSE_BLOCK_MODIFIERS = {
+    "pressure_defense": 1.5,   # Elite at blocking kicks
+    "coverage_defense": 1.0,   # Average at blocking
+    "contain_defense": 1.0,    # Average at blocking
+    "run_stop_defense": 1.0,   # Average at blocking
+    "base_defense": 1.0,       # Average at blocking
+}
+
+DEFENSE_MUFF_MODIFIERS = {
+    "coverage_defense": 1.3,   # Better gunners/coverage = more muffs
+    "pressure_defense": 1.1,   # Aggressive coverage
+    "contain_defense": 1.0,    # Average
+    "run_stop_defense": 1.0,   # Average
+    "base_defense": 1.0,       # Average
+}
+
 
 class ViperballEngine:
 
@@ -627,6 +666,50 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.away_defense  # Away is on defense when home has ball
         return self.home_defense      # Home is on defense when away has ball
+
+    def calculate_block_probability(self, kick_type: str = "punt") -> float:
+        """
+        Calculate probability of blocked kick based on offensive/defensive styles.
+
+        Args:
+            kick_type: "punt" or "kick" (FG/snapkick)
+
+        Returns:
+            Probability of block (0.0 to 1.0)
+        """
+        base_prob = BASE_BLOCK_PUNT if kick_type == "punt" else BASE_BLOCK_KICK
+
+        # Get offensive style modifier (kicking team)
+        offense_style_name = self.home_team.offense_style if self.state.possession == "home" else self.away_team.offense_style
+        offense_modifier = OFFENSE_BLOCK_MODIFIERS.get(offense_style_name, 1.0)
+
+        # Get defensive style modifier (rush team)
+        defense_style_name = self.away_team.defense_style if self.state.possession == "home" else self.home_team.defense_style
+        defense_modifier = DEFENSE_BLOCK_MODIFIERS.get(defense_style_name, 1.0)
+
+        # Apply modifiers
+        block_prob = base_prob * offense_modifier * defense_modifier
+
+        return min(0.20, max(0.01, block_prob))  # Cap at 20%, floor at 1%
+
+    def calculate_muff_probability(self) -> float:
+        """
+        Calculate probability of muffed punt return based on defensive style.
+
+        Returns:
+            Probability of muff (0.0 to 1.0)
+        """
+        # Get receiving team's defensive style (their special teams quality)
+        receiving_defense_name = self.away_team.defense_style if self.state.possession == "home" else self.home_team.defense_style
+
+        # Kicking team's defensive style (their coverage quality)
+        kicking_defense_name = self.home_team.defense_style if self.state.possession == "home" else self.away_team.defense_style
+        coverage_modifier = DEFENSE_MUFF_MODIFIERS.get(kicking_defense_name, 1.0)
+
+        # Base probability modified by kicking team's coverage
+        muff_prob = BASE_MUFF_PUNT * coverage_modifier
+
+        return min(0.15, max(0.02, muff_prob))  # Cap at 15%, floor at 2%
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
         """
@@ -1002,6 +1085,87 @@ class ViperballEngine:
         punter = max(team.players[:8], key=lambda p: p.kicking)
         ptag = player_tag(punter)
 
+        # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
+        block_prob = self.calculate_block_probability(kick_type="punt")
+        if random.random() < block_prob:
+            # BLOCKED PUNT!
+            kicking_team = self.state.possession
+            block_distance = random.randint(-8, -2)  # Negative = loss
+
+            # 60% dead at spot, 40% live ball
+            if random.random() < 0.60:
+                # Dead at spot - defense takes over
+                self.change_possession()
+                self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                def_team = self.get_defensive_team()
+                blocker = max(def_team.players[:5], key=lambda p: p.speed)
+                btag = player_tag(blocker)
+
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter), player_label(blocker)],
+                    yards_gained=block_distance,
+                    result=PlayResult.BLOCKED_PUNT.value,
+                    description=f"{ptag} punt BLOCKED by {btag}! Dead at {self.state.field_position}",
+                    fatigue=round(stamina, 1),
+                )
+            else:
+                # Live ball - 60% defense, 40% offense recovery
+                if random.random() < 0.60:
+                    # Defense recovers + bell
+                    self.change_possession()
+                    self.add_score(0.5)  # Bell for recovery
+                    self.state.field_position = max(1, min(99, self.state.field_position + block_distance + random.randint(0, 5)))
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                    def_team = self.get_defensive_team()
+                    blocker = max(def_team.players[:5], key=lambda p: p.speed)
+                    btag = player_tag(blocker)
+
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="punt", play_family=family.value,
+                        players_involved=[player_label(punter), player_label(blocker)],
+                        yards_gained=block_distance,
+                        result=PlayResult.BLOCKED_PUNT.value,
+                        description=f"{ptag} punt BLOCKED by {btag}! Defense recovers at {self.state.field_position}! (+0.5)",
+                        fatigue=round(stamina, 1),
+                    )
+                else:
+                    # Offense recovers (disaster - terrible field position, no conversion)
+                    self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
+                    self.change_possession()  # Turnover on downs
+                    self.state.field_position = 100 - self.state.field_position  # Flip field
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="punt", play_family=family.value,
+                        players_involved=[player_label(punter)],
+                        yards_gained=block_distance,
+                        result=PlayResult.BLOCKED_PUNT.value,
+                        description=f"{ptag} punt BLOCKED! Kicking team recovers but turnover on downs!",
+                        fatigue=round(stamina, 1),
+                    )
+
         base_distance = random.gauss(45, 10)
         kicking_factor = punter.kicking / 80
 
@@ -1111,6 +1275,69 @@ class ViperballEngine:
                 self.kickoff(receiving)
                 return play
 
+        # SPECIAL TEAMS CHAOS: Check for muffed punt return
+        muff_prob = self.calculate_muff_probability()
+        if random.random() < muff_prob:
+            # MUFFED PUNT!
+            kicking_team = self.state.possession
+            def_team = self.get_defensive_team()
+            returner = max(def_team.players[:5], key=lambda p: p.speed)
+            rtag = player_tag(returner)
+
+            # Calculate where the punt landed
+            landing_spot = min(99, self.state.field_position + distance)
+
+            # 55% return team recovers (bad field position)
+            # 45% kicking team recovers (bell + short field)
+            if random.random() < 0.55:
+                # Return team recovers but bad field position
+                self.change_possession()
+                recover_spot = 100 - max(1, landing_spot - random.randint(5, 15))  # Lose yards on muff
+                self.state.field_position = max(1, min(99, recover_spot))
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter), player_label(returner)],
+                    yards_gained=-distance,
+                    result=PlayResult.MUFFED_PUNT.value,
+                    description=f"{ptag} punt → {rtag} MUFFED! Returner recovers at {self.state.field_position}",
+                    fatigue=round(stamina, 1),
+                )
+            else:
+                # Kicking team recovers! Bell + short field
+                # Kicking team gets the ball back
+                self.add_score(0.5)  # Bell for recovery
+                # Keep possession (don't change), set field position to landing spot
+                recover_spot = max(1, min(99, landing_spot + random.randint(0, 5)))
+                self.state.field_position = recover_spot
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                # Get kicking team player
+                kicker_recoverer = max(team.players[:8], key=lambda p: p.speed)
+                ktag = player_tag(kicker_recoverer)
+
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="punt", play_family=family.value,
+                    players_involved=[player_label(punter), player_label(kicker_recoverer)],
+                    yards_gained=distance,
+                    result=PlayResult.MUFFED_PUNT.value,
+                    description=f"{ptag} punt → MUFFED! {ktag} recovers for kicking team at {self.state.field_position}! (+0.5)",
+                    fatigue=round(stamina, 1),
+                )
+
         if random.random() < 0.08:
             def_team = self.get_defensive_team()
             returner = max(def_team.players[:5], key=lambda p: p.speed)
@@ -1166,6 +1393,73 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
         ptag = player_tag(kicker)
+
+        # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
+        block_prob = self.calculate_block_probability(kick_type="kick")
+        if random.random() < block_prob:
+            # BLOCKED KICK!
+            def_team = self.get_defensive_team()
+            blocker = max(def_team.players[:5], key=lambda p: p.speed)
+            btag = player_tag(blocker)
+
+            # 70% defense recovers, 30% offense recovers
+            if random.random() < 0.70:
+                # Defense recovers - chance for return TD or short field
+                self.change_possession()
+                # Ball is behind LOS
+                block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
+                self.state.field_position = 100 - block_spot  # Flip for receiving team
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                # 15% chance of return TD
+                if random.random() < 0.15:
+                    self.add_score(9)
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} snap kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        fatigue=round(stamina, 1),
+                    )
+                else:
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} snap kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        fatigue=round(stamina, 1),
+                    )
+            else:
+                # Offense recovers - treated like failed 4th down
+                self.change_possession()
+                self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="drop_kick", play_family=family.value,
+                    players_involved=[player_label(kicker)],
+                    yards_gained=0,
+                    result=PlayResult.BLOCKED_KICK.value,
+                    description=f"{ptag} snap kick BLOCKED! Kicking team recovers but turnover on downs!",
+                    fatigue=round(stamina, 1),
+                )
 
         distance = 100 - self.state.field_position + 10
 
@@ -1255,6 +1549,73 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
         ptag = player_tag(kicker)
+
+        # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
+        block_prob = self.calculate_block_probability(kick_type="kick")
+        if random.random() < block_prob:
+            # BLOCKED KICK!
+            def_team = self.get_defensive_team()
+            blocker = max(def_team.players[:5], key=lambda p: p.speed)
+            btag = player_tag(blocker)
+
+            # 70% defense recovers, 30% offense recovers
+            if random.random() < 0.70:
+                # Defense recovers - chance for return TD or short field
+                self.change_possession()
+                # Ball is behind LOS
+                block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
+                self.state.field_position = 100 - block_spot  # Flip for receiving team
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                # 15% chance of return TD
+                if random.random() < 0.15:
+                    self.add_score(9)
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="place_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} place kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        fatigue=round(stamina, 1),
+                    )
+                else:
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="place_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} place kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        fatigue=round(stamina, 1),
+                    )
+            else:
+                # Offense recovers - treated like failed 4th down
+                self.change_possession()
+                self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="place_kick", play_family=family.value,
+                    players_involved=[player_label(kicker)],
+                    yards_gained=0,
+                    result=PlayResult.BLOCKED_KICK.value,
+                    description=f"{ptag} place kick BLOCKED! Kicking team recovers but turnover on downs!",
+                    fatigue=round(stamina, 1),
+                )
 
         distance = 100 - self.state.field_position + 10
 
