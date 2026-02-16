@@ -215,10 +215,20 @@ class Dynasty:
         """Add a conference to the dynasty"""
         self.conferences[name] = Conference(name=name, teams=teams)
 
-        # Initialize team histories
         for team_name in teams:
             if team_name not in self.team_histories:
                 self.team_histories[team_name] = TeamHistory(team_name=team_name)
+
+    def get_conferences_dict(self) -> Dict[str, List[str]]:
+        """Get conferences as a simple dict for passing to Season"""
+        return {name: conf.teams for name, conf in self.conferences.items()}
+
+    def get_team_conference(self, team_name: str) -> str:
+        """Get the conference a team belongs to"""
+        for conf_name, conf in self.conferences.items():
+            if team_name in conf.teams:
+                return conf_name
+        return ""
 
     def advance_season(self, season: Season):
         """

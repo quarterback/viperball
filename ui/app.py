@@ -1214,10 +1214,9 @@ elif page == "Season Simulator":
         if run_season:
             filtered_teams = {name: team for name, team in all_teams.items() if name in selected_teams}
             season = create_season(season_name, filtered_teams, style_configs)
-            season.generate_round_robin_schedule()
 
             with st.spinner(f"Simulating {len(season.schedule)} games..."):
-                season.simulate_season()
+                season.simulate_season(generate_polls=False)
 
             num_playoff = 4 if playoff_size == 4 else 0
             if num_playoff > 0 and len(selected_teams) >= num_playoff:
@@ -1369,6 +1368,51 @@ elif page == "Dynasty Mode":
             start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
 
         st.divider()
+        st.subheader("Conference Setup")
+        teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        setup_teams = load_teams_from_directory(teams_dir)
+        all_team_names_sorted = sorted(setup_teams.keys())
+
+        num_conferences = st.radio("Number of Conferences", [1, 2, 3, 4], index=1, horizontal=True, key="num_conf")
+
+        default_conf_names = ["CVL East", "CVL West", "CVL North", "CVL South"]
+        conf_assignments = {}
+        conf_names_list = []
+
+        if num_conferences == 1:
+            conf_name_single = st.text_input("Conference Name", value="CVL", key="conf_name_0")
+            conf_names_list = [conf_name_single]
+            for tname in all_team_names_sorted:
+                conf_assignments[tname] = conf_name_single
+        else:
+            conf_cols = st.columns(num_conferences)
+            for ci in range(num_conferences):
+                with conf_cols[ci]:
+                    cname = st.text_input(f"Conference {ci+1}", value=default_conf_names[ci], key=f"conf_name_{ci}")
+                    conf_names_list.append(cname)
+
+            chunk_size = len(all_team_names_sorted) // num_conferences
+            default_splits = {}
+            for ci in range(num_conferences):
+                start_idx = ci * chunk_size
+                end_idx = start_idx + chunk_size if ci < num_conferences - 1 else len(all_team_names_sorted)
+                for tname in all_team_names_sorted[start_idx:end_idx]:
+                    default_splits[tname] = conf_names_list[ci]
+
+            with st.expander("Assign Teams to Conferences", expanded=False):
+                assign_cols_per_row = 4
+                assign_chunks = [all_team_names_sorted[i:i+assign_cols_per_row]
+                                 for i in range(0, len(all_team_names_sorted), assign_cols_per_row)]
+                for achunk in assign_chunks:
+                    acols = st.columns(len(achunk))
+                    for acol, tname in zip(acols, achunk):
+                        with acol:
+                            default_idx = conf_names_list.index(default_splits.get(tname, conf_names_list[0]))
+                            assigned = st.selectbox(tname[:20], conf_names_list, index=default_idx,
+                                                     key=f"conf_assign_{tname}")
+                            conf_assignments[tname] = assigned
+
+        st.divider()
         load_col1, load_col2 = st.columns(2)
         with load_col1:
             create_btn = st.button("Create Dynasty", type="primary", use_container_width=True, key="create_dynasty")
@@ -1376,12 +1420,16 @@ elif page == "Dynasty Mode":
             uploaded = st.file_uploader("Load Saved Dynasty", type=["json"], key="load_dynasty")
 
         if create_btn:
-            teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
-            all_teams_loaded = load_teams_from_directory(teams_dir)
             dynasty = create_dynasty(dynasty_name, coach_name, coach_team, start_year)
-            dynasty.add_conference("CVL", list(all_teams_loaded.keys()))
+            conf_team_lists = {}
+            for tname, cname in conf_assignments.items():
+                if cname not in conf_team_lists:
+                    conf_team_lists[cname] = []
+                conf_team_lists[cname].append(tname)
+            for cname, cteams in conf_team_lists.items():
+                dynasty.add_conference(cname, cteams)
             st.session_state["dynasty"] = dynasty
-            st.session_state["dynasty_teams"] = all_teams_loaded
+            st.session_state["dynasty_teams"] = setup_teams
             st.rerun()
 
         if uploaded:
@@ -1391,7 +1439,6 @@ elif page == "Dynasty Mode":
                     tmp.write(uploaded.read().decode())
                     tmp_path = tmp.name
                 dynasty = Dynasty.load(tmp_path)
-                teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
                 all_teams_loaded = load_teams_from_directory(teams_dir)
                 st.session_state["dynasty"] = dynasty
                 st.session_state["dynasty_teams"] = all_teams_loaded
@@ -1415,40 +1462,77 @@ elif page == "Dynasty Mode":
         if st.sidebar.button("End Dynasty", key="end_dynasty"):
             del st.session_state["dynasty"]
             del st.session_state["dynasty_teams"]
+            if "last_dynasty_season" in st.session_state:
+                del st.session_state["last_dynasty_season"]
             st.rerun()
 
-        tab1, tab2, tab3, tab4 = st.tabs(["Simulate Season", "Coach Dashboard", "Team History", "Record Book"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Simulate Season", "Standings & Polls", "Coach Dashboard", "Team History", "Record Book"])
 
         with tab1:
             st.subheader(f"Season {dynasty.current_year}")
 
-            st.markdown("**Style Configuration**")
-            dyn_style_configs = {}
+            setup_col1, setup_col2 = st.columns(2)
+            with setup_col1:
+                total_teams = len(all_dynasty_teams)
+                max_rr = total_teams - 1
+                games_options = [6, 8, 10, 12, 14, 16, 20, max_rr]
+                games_options = sorted(set(g for g in games_options if g <= max_rr))
+                if max_rr not in games_options:
+                    games_options.append(max_rr)
+                games_options = sorted(set(games_options))
+                games_labels = {g: f"{g} games" + (" (full round-robin)" if g == max_rr else "") for g in games_options}
+                games_per_team = st.select_slider(
+                    "Regular Season Games Per Team",
+                    options=games_options,
+                    value=min(12, max_rr),
+                    format_func=lambda x: games_labels.get(x, f"{x} games"),
+                    key=f"dyn_games_{dynasty.current_year}"
+                )
+            with setup_col2:
+                playoff_format = st.radio("Playoff Format", [4, 8], index=0, horizontal=True,
+                                          key=f"dyn_playoff_{dynasty.current_year}")
+
+            dyn_style_configs = {tname: {"offense_style": "balanced", "defense_style": "base_defense"}
+                                  for tname in all_dynasty_teams}
             team_list = sorted(all_dynasty_teams.keys())
-            cols_per_row = 3
-            team_chunks = [team_list[i:i + cols_per_row] for i in range(0, len(team_list), cols_per_row)]
-            for chunk in team_chunks:
-                cols = st.columns(len(chunk))
-                for col, tname in zip(cols, chunk):
-                    with col:
-                        is_user = tname == dynasty.coach.team_name
-                        label = f"**{tname}** (YOU)" if is_user else f"**{tname}**"
-                        st.markdown(label)
-                        off = st.selectbox("Off", style_keys, format_func=lambda x: styles[x]["label"],
-                                           key=f"dyn_off_{tname}_{dynasty.current_year}")
-                        defs = st.selectbox("Def", defense_style_keys,
-                                            format_func=lambda x: defense_styles[x]["label"],
-                                            key=f"dyn_def_{tname}_{dynasty.current_year}")
-                        dyn_style_configs[tname] = {"offense_style": off, "defense_style": defs}
+
+            with st.expander("Style Configuration", expanded=False):
+                cols_per_row = 4
+                team_chunks = [team_list[i:i + cols_per_row] for i in range(0, len(team_list), cols_per_row)]
+                for chunk in team_chunks:
+                    cols = st.columns(len(chunk))
+                    for col, tname in zip(cols, chunk):
+                        with col:
+                            is_user = tname == dynasty.coach.team_name
+                            conf_label = dynasty.get_team_conference(tname)
+                            label_parts = [f"**{tname}**"]
+                            if is_user:
+                                label_parts.append("(YOU)")
+                            if conf_label:
+                                label_parts.append(f"[{conf_label}]")
+                            st.markdown(" ".join(label_parts))
+                            off = st.selectbox("Off", style_keys, format_func=lambda x: styles[x]["label"],
+                                               key=f"dyn_off_{tname}_{dynasty.current_year}")
+                            defs = st.selectbox("Def", defense_style_keys,
+                                                format_func=lambda x: defense_styles[x]["label"],
+                                                key=f"dyn_def_{tname}_{dynasty.current_year}")
+                            dyn_style_configs[tname] = {"offense_style": off, "defense_style": defs}
 
             if st.button(f"Simulate {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
-                season = create_season(f"{dynasty.current_year} CVL Season", all_dynasty_teams, dyn_style_configs)
-                season.generate_round_robin_schedule()
+                conf_dict = dynasty.get_conferences_dict()
+                season = create_season(
+                    f"{dynasty.current_year} CVL Season",
+                    all_dynasty_teams,
+                    dyn_style_configs,
+                    conferences=conf_dict,
+                    games_per_team=games_per_team if games_per_team < max_rr else 0
+                )
 
-                with st.spinner(f"Simulating {dynasty.current_year} season ({len(season.schedule)} games)..."):
-                    season.simulate_season()
+                total_games = len(season.schedule)
+                with st.spinner(f"Simulating {dynasty.current_year} season ({total_games} games, {games_per_team}/team)..."):
+                    season.simulate_season(generate_polls=True)
 
-                playoff_count = min(4, len(team_list))
+                playoff_count = min(playoff_format, len(team_list))
                 if playoff_count >= 4:
                     with st.spinner("Running playoffs..."):
                         season.simulate_playoff(num_teams=playoff_count)
@@ -1465,22 +1549,6 @@ elif page == "Dynasty Mode":
                 st.divider()
                 st.subheader(f"{prev_year} Season Results")
 
-                standings = season.get_standings_sorted()
-                standings_data = []
-                for i, record in enumerate(standings, 1):
-                    is_user = record.team_name == dynasty.coach.team_name
-                    standings_data.append({
-                        "Rank": i,
-                        "Team": f"{'> ' if is_user else ''}{record.team_name}",
-                        "W": record.wins,
-                        "L": record.losses,
-                        "Win%": f"{record.win_percentage:.3f}",
-                        "PF": f"{record.points_for:.1f}",
-                        "PA": f"{record.points_against:.1f}",
-                        "OPI": f"{record.avg_opi:.1f}",
-                    })
-                st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True)
-
                 if season.champion:
                     if season.champion == dynasty.coach.team_name:
                         st.balloons()
@@ -1488,7 +1556,121 @@ elif page == "Dynasty Mode":
                     else:
                         st.info(f"Champion: {season.champion}")
 
+                standings = season.get_standings_sorted()
+                standings_data = []
+                for i, record in enumerate(standings, 1):
+                    is_user = record.team_name == dynasty.coach.team_name
+                    standings_data.append({
+                        "Rank": i,
+                        "Team": f"{'>>> ' if is_user else ''}{record.team_name}",
+                        "Conf": record.conference,
+                        "W": record.wins,
+                        "L": record.losses,
+                        "Conf W-L": f"{record.conf_wins}-{record.conf_losses}",
+                        "Win%": f"{record.win_percentage:.3f}",
+                        "PF": f"{record.points_for:.1f}",
+                        "PA": f"{record.points_against:.1f}",
+                        "OPI": f"{record.avg_opi:.1f}",
+                    })
+                st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=400)
+
         with tab2:
+            st.subheader("Standings & Weekly Poll")
+
+            if "last_dynasty_season" in st.session_state:
+                season = st.session_state["last_dynasty_season"]
+                prev_year = dynasty.current_year - 1
+
+                view_mode = st.radio("View", ["Conference Standings", "Weekly Poll"], horizontal=True, key="standings_view")
+
+                if view_mode == "Conference Standings":
+                    conf_names = list(season.conferences.keys())
+                    if conf_names:
+                        for conf_name in conf_names:
+                            st.subheader(f"{conf_name}")
+                            conf_standings = season.get_conference_standings(conf_name)
+                            if conf_standings:
+                                conf_data = []
+                                for i, record in enumerate(conf_standings, 1):
+                                    is_user = record.team_name == dynasty.coach.team_name
+                                    conf_data.append({
+                                        "Rank": i,
+                                        "Team": f"{'>>> ' if is_user else ''}{record.team_name}",
+                                        "Conf": f"{record.conf_wins}-{record.conf_losses}",
+                                        "Overall": f"{record.wins}-{record.losses}",
+                                        "Win%": f"{record.win_percentage:.3f}",
+                                        "PF": f"{record.points_for:.1f}",
+                                        "PA": f"{record.points_against:.1f}",
+                                        "OPI": f"{record.avg_opi:.1f}",
+                                        "Kicking": f"{record.avg_kicking:.1f}",
+                                        "Chaos": f"{record.avg_chaos:.1f}",
+                                    })
+                                st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
+                    else:
+                        st.caption("No conferences configured")
+
+                elif view_mode == "Weekly Poll":
+                    if season.weekly_polls:
+                        total_weeks = len(season.weekly_polls)
+                        selected_week_idx = st.slider("Select Week", 1, total_weeks, total_weeks,
+                                                       key="poll_week_slider")
+                        poll = season.weekly_polls[selected_week_idx - 1]
+
+                        st.subheader(f"CVL Top 25 Poll - Week {poll.week}")
+
+                        poll_data = []
+                        for r in poll.rankings:
+                            change_str = ""
+                            if r.rank_change is not None:
+                                if r.rank_change > 0:
+                                    change_str = f"+{r.rank_change}"
+                                elif r.rank_change < 0:
+                                    change_str = str(r.rank_change)
+                                else:
+                                    change_str = "-"
+                            else:
+                                change_str = "NEW"
+                            is_user = r.team_name == dynasty.coach.team_name
+                            poll_data.append({
+                                "#": r.rank,
+                                "Team": f"{'>>> ' if is_user else ''}{r.team_name}",
+                                "Record": r.record,
+                                "Conf": r.conference,
+                                "Score": f"{r.poll_score:.1f}",
+                                "Change": change_str,
+                            })
+                        st.dataframe(pd.DataFrame(poll_data), hide_index=True, use_container_width=True, height=600)
+
+                        if total_weeks >= 2:
+                            st.subheader("Poll Movement")
+                            track_teams = st.multiselect("Track Teams",
+                                                          [r.team_name for r in season.weekly_polls[-1].rankings[:10]],
+                                                          default=[dynasty.coach.team_name] if dynasty.coach.team_name in
+                                                                   [r.team_name for r in season.weekly_polls[-1].rankings[:25]] else [],
+                                                          key="poll_track")
+                            if track_teams:
+                                movement_data = []
+                                for poll in season.weekly_polls:
+                                    for r in poll.rankings:
+                                        if r.team_name in track_teams:
+                                            movement_data.append({
+                                                "Week": poll.week,
+                                                "Team": r.team_name,
+                                                "Rank": r.rank,
+                                            })
+                                if movement_data:
+                                    fig = px.line(pd.DataFrame(movement_data), x="Week", y="Rank",
+                                                  color="Team", title="Poll Ranking Over Season",
+                                                  markers=True)
+                                    fig.update_yaxes(autorange="reversed", title="Rank (#1 = top)")
+                                    fig.update_layout(height=400)
+                                    st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.caption("No polls generated yet. Simulate a season first.")
+            else:
+                st.caption("Simulate a season to see standings and polls.")
+
+        with tab3:
             st.subheader("Coach Career Dashboard")
             coach = dynasty.coach
 
@@ -1518,7 +1700,7 @@ elif page == "Dynasty Mode":
                 fig = px.bar(x=years, y=wins, title="Wins Per Season", labels={"x": "Year", "y": "Wins"})
                 st.plotly_chart(fig, use_container_width=True)
 
-        with tab3:
+        with tab4:
             st.subheader("Team History")
             selected_history_team = st.selectbox("Select Team", sorted(dynasty.team_histories.keys()), key="history_team")
 
@@ -1549,7 +1731,7 @@ elif page == "Dynasty Mode":
                         })
                     st.dataframe(pd.DataFrame(hist_data), hide_index=True, use_container_width=True)
 
-        with tab4:
+        with tab5:
             st.subheader("Record Book")
             rb = dynasty.record_book
 
@@ -1573,7 +1755,7 @@ elif page == "Dynasty Mode":
             if rec_data:
                 st.dataframe(pd.DataFrame(rec_data), hide_index=True, use_container_width=True)
             else:
-                st.caption("No records yet — simulate some seasons!")
+                st.caption("No records yet - simulate some seasons!")
 
             st.markdown("**All-Time Records**")
             alltime_data = []

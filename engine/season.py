@@ -2,8 +2,9 @@
 Season Simulation for Viperball Dynasty Mode
 
 Handles:
-- Schedule generation (round-robin, conference play)
+- Schedule generation (round-robin, conference play, configurable game count)
 - Season-long standings
+- Weekly poll/rankings
 - Playoff brackets
 - Season metrics and statistics
 - Championship resolution
@@ -11,6 +12,7 @@ Handles:
 
 import json
 import random
+import math
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,8 +29,8 @@ class TeamRecord:
     losses: int = 0
     points_for: float = 0.0
     points_against: float = 0.0
+    conference: str = ""
 
-    # Season-long cumulative metrics
     total_opi: float = 0.0
     total_territory: float = 0.0
     total_pressure: float = 0.0
@@ -38,21 +40,26 @@ class TeamRecord:
     total_turnover_impact: float = 0.0
     games_played: int = 0
 
-    # Style configuration
+    conf_wins: int = 0
+    conf_losses: int = 0
+
     offense_style: str = "balanced"
     defense_style: str = "base_defense"
 
-    def add_game_result(self, won: bool, points_for: float, points_against: float, metrics: Dict):
-        """Add a game result to the season record"""
+    def add_game_result(self, won: bool, points_for: float, points_against: float,
+                        metrics: Dict, is_conference_game: bool = False):
         if won:
             self.wins += 1
+            if is_conference_game:
+                self.conf_wins += 1
         else:
             self.losses += 1
+            if is_conference_game:
+                self.conf_losses += 1
 
         self.points_for += points_for
         self.points_against += points_against
 
-        # Accumulate metrics
         self.total_opi += metrics.get('opi', 0.0)
         self.total_territory += metrics.get('territory_rating', 0.0)
         self.total_pressure += metrics.get('pressure_index', 0.0)
@@ -64,7 +71,6 @@ class TeamRecord:
 
     @property
     def avg_opi(self) -> float:
-        """Average OPI across all games"""
         return self.total_opi / self.games_played if self.games_played > 0 else 0.0
 
     @property
@@ -93,15 +99,42 @@ class TeamRecord:
 
     @property
     def win_percentage(self) -> float:
-        """Win percentage (0.0 to 1.0)"""
         total_games = self.wins + self.losses
         return self.wins / total_games if total_games > 0 else 0.0
 
     @property
+    def conf_win_percentage(self) -> float:
+        total = self.conf_wins + self.conf_losses
+        return self.conf_wins / total if total > 0 else 0.0
+
+    @property
     def point_differential(self) -> float:
-        """Average point differential per game"""
         total_games = self.wins + self.losses
         return (self.points_for - self.points_against) / total_games if total_games > 0 else 0.0
+
+
+@dataclass
+class PollRanking:
+    """A single team's poll ranking for a given week"""
+    rank: int
+    team_name: str
+    record: str
+    conference: str
+    poll_score: float
+    prev_rank: Optional[int] = None
+
+    @property
+    def rank_change(self) -> Optional[int]:
+        if self.prev_rank is None:
+            return None
+        return self.prev_rank - self.rank
+
+
+@dataclass
+class WeeklyPoll:
+    """Complete poll for a single week"""
+    week: int
+    rankings: List[PollRanking] = field(default_factory=list)
 
 
 @dataclass
@@ -113,8 +146,8 @@ class Game:
     home_score: Optional[float] = None
     away_score: Optional[float] = None
     completed: bool = False
+    is_conference_game: bool = False
 
-    # Game metrics for both teams
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
 
@@ -127,62 +160,168 @@ class Season:
     schedule: List[Game] = field(default_factory=list)
     standings: Dict[str, TeamRecord] = field(default_factory=dict)
 
-    # Style configurations for each team
     style_configs: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
-    # Playoff results
+    conferences: Dict[str, List[str]] = field(default_factory=dict)
+    team_conferences: Dict[str, str] = field(default_factory=dict)
+
+    weekly_polls: List[WeeklyPoll] = field(default_factory=list)
+
     playoff_bracket: List[Game] = field(default_factory=list)
     champion: Optional[str] = None
 
     def __post_init__(self):
-        """Initialize standings for all teams"""
         for team_name, team in self.teams.items():
-            # Get style config if exists
             style_config = self.style_configs.get(team_name, {})
             offense_style = style_config.get('offense_style', 'balanced')
             defense_style = style_config.get('defense_style', 'base_defense')
+            conf = self.team_conferences.get(team_name, "")
 
             self.standings[team_name] = TeamRecord(
                 team_name=team_name,
                 offense_style=offense_style,
-                defense_style=defense_style
+                defense_style=defense_style,
+                conference=conf
             )
 
-    def generate_round_robin_schedule(self):
-        """Generate a round-robin schedule where each team plays each other once"""
-        team_names = list(self.teams.keys())
-        week = 1
+    def generate_schedule(self, games_per_team: int = 0, conference_weight: float = 0.6):
+        """
+        Generate a season schedule with configurable game count.
 
-        # Generate all unique matchups
+        Args:
+            games_per_team: Number of games each team plays. 0 = full round-robin.
+            conference_weight: Proportion of games that should be conference games (0.0-1.0).
+                             Only applies when conferences exist and games_per_team > 0.
+        """
+        team_names = list(self.teams.keys())
+        num_teams = len(team_names)
+
+        if games_per_team <= 0 or games_per_team >= num_teams - 1:
+            self._generate_round_robin(team_names)
+        else:
+            self._generate_partial_schedule(team_names, games_per_team, conference_weight)
+
+    def _generate_round_robin(self, team_names: List[str]):
+        """Full round-robin: each team plays each other once"""
+        games = []
         for i in range(len(team_names)):
             for j in range(i + 1, len(team_names)):
                 home = team_names[i]
                 away = team_names[j]
-
-                # Randomly decide home/away
                 if random.random() < 0.5:
                     home, away = away, home
 
-                self.schedule.append(Game(
-                    week=week,
-                    home_team=home,
-                    away_team=away
-                ))
-                week += 1
+                is_conf = (self.team_conferences.get(home, "") == self.team_conferences.get(away, "")
+                           and self.team_conferences.get(home, "") != "")
+                games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
 
-        # Shuffle schedule for variety
-        random.shuffle(self.schedule)
+        random.shuffle(games)
+        games_per_slot = max(1, len(team_names) // 2)
+        for i, game in enumerate(games):
+            game.week = (i // games_per_slot) + 1
+        self.schedule = games
 
-        # Reassign weeks sequentially
-        for i, game in enumerate(self.schedule):
-            game.week = (i // (len(team_names) // 2)) + 1
+    def _generate_partial_schedule(self, team_names: List[str], games_per_team: int,
+                                    conference_weight: float):
+        """Generate a schedule with a fixed number of games per team"""
+        game_counts = {name: 0 for name in team_names}
+        scheduled_pairs = set()
+        games = []
+
+        has_conferences = bool(self.conferences) and len(self.conferences) > 1
+
+        if has_conferences:
+            conf_games_target = int(games_per_team * conference_weight)
+            nonconf_games_target = games_per_team - conf_games_target
+
+            for conf_name, conf_teams in self.conferences.items():
+                conf_team_list = [t for t in conf_teams if t in self.teams]
+                if len(conf_team_list) < 2:
+                    continue
+
+                conf_matchups = []
+                for i in range(len(conf_team_list)):
+                    for j in range(i + 1, len(conf_team_list)):
+                        conf_matchups.append((conf_team_list[i], conf_team_list[j]))
+                random.shuffle(conf_matchups)
+
+                for home, away in conf_matchups:
+                    if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
+                        continue
+                    if game_counts[home] >= conf_games_target and game_counts[away] >= conf_games_target:
+                        continue
+                    pair = tuple(sorted([home, away]))
+                    if pair in scheduled_pairs:
+                        continue
+
+                    if random.random() < 0.5:
+                        home, away = away, home
+                    games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=True))
+                    scheduled_pairs.add(pair)
+                    game_counts[home] += 1
+                    game_counts[away] += 1
+
+            nonconf_matchups = []
+            for i in range(len(team_names)):
+                for j in range(i + 1, len(team_names)):
+                    t1, t2 = team_names[i], team_names[j]
+                    if self.team_conferences.get(t1, "") != self.team_conferences.get(t2, "") or \
+                       self.team_conferences.get(t1, "") == "":
+                        nonconf_matchups.append((t1, t2))
+            random.shuffle(nonconf_matchups)
+
+            for home, away in nonconf_matchups:
+                if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
+                    continue
+                pair = tuple(sorted([home, away]))
+                if pair in scheduled_pairs:
+                    continue
+                if random.random() < 0.5:
+                    home, away = away, home
+                games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=False))
+                scheduled_pairs.add(pair)
+                game_counts[home] += 1
+                game_counts[away] += 1
+        else:
+            single_conf = len(self.conferences) == 1
+            all_matchups = []
+            for i in range(len(team_names)):
+                for j in range(i + 1, len(team_names)):
+                    all_matchups.append((team_names[i], team_names[j]))
+            random.shuffle(all_matchups)
+
+            for home, away in all_matchups:
+                if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
+                    continue
+                pair = tuple(sorted([home, away]))
+                if pair in scheduled_pairs:
+                    continue
+                if random.random() < 0.5:
+                    home, away = away, home
+                is_conf = single_conf or (
+                    self.team_conferences.get(home, "") == self.team_conferences.get(away, "")
+                    and self.team_conferences.get(home, "") != ""
+                )
+                games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
+                scheduled_pairs.add(pair)
+                game_counts[home] += 1
+                game_counts[away] += 1
+
+        random.shuffle(games)
+        games_per_slot = max(1, len(team_names) // 2)
+        for i, game in enumerate(games):
+            game.week = (i // games_per_slot) + 1
+        self.schedule = games
+
+    def generate_round_robin_schedule(self):
+        """Legacy method - generates full round-robin"""
+        self.generate_schedule(games_per_team=0)
 
     def simulate_game(self, game: Game, verbose: bool = False) -> Dict:
         """Simulate a single game and update standings"""
         home_team = self.teams[game.home_team]
         away_team = self.teams[game.away_team]
 
-        # Get style overrides for both teams
         home_style_config = self.style_configs.get(game.home_team, {})
         away_style_config = self.style_configs.get(game.away_team, {})
 
@@ -193,7 +332,6 @@ class Season:
             f"{away_team.name}_defense": away_style_config.get('defense_style', 'base_defense'),
         }
 
-        # Simulate the game
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -202,19 +340,16 @@ class Season:
         )
         result = engine.simulate_game()
 
-        # Extract scores
         game.home_score = result['final_score']['home']['score']
         game.away_score = result['final_score']['away']['score']
         game.completed = True
 
-        # Calculate metrics for both teams
         home_metrics = calculate_viperball_metrics(result, 'home')
         away_metrics = calculate_viperball_metrics(result, 'away')
 
         game.home_metrics = home_metrics
         game.away_metrics = away_metrics
 
-        # Update standings
         home_won = game.home_score > game.away_score
         away_won = game.away_score > game.home_score
 
@@ -222,29 +357,99 @@ class Season:
             won=home_won,
             points_for=game.home_score,
             points_against=game.away_score,
-            metrics=home_metrics
+            metrics=home_metrics,
+            is_conference_game=game.is_conference_game
         )
 
         self.standings[game.away_team].add_game_result(
             won=away_won,
             points_for=game.away_score,
             points_against=game.home_score,
-            metrics=away_metrics
+            metrics=away_metrics,
+            is_conference_game=game.is_conference_game
         )
-
-        if verbose:
-            print(f"Week {game.week}: {game.away_team} @ {game.home_team}")
-            print(f"  Final: {game.away_team} {game.away_score:.1f} - {game.home_team} {game.home_score:.1f}")
-            print(f"  {game.home_team} OPI: {home_metrics['opi']:.1f}/100")
-            print(f"  {game.away_team} OPI: {away_metrics['opi']:.1f}/100")
 
         return result
 
-    def simulate_season(self, verbose: bool = False):
-        """Simulate all regular season games"""
-        for game in self.schedule:
-            if not game.completed:
+    def simulate_season(self, verbose: bool = False, generate_polls: bool = True):
+        """Simulate all regular season games, optionally generating weekly polls"""
+        weeks = sorted(set(g.week for g in self.schedule if not g.completed))
+
+        for week in weeks:
+            week_games = [g for g in self.schedule if g.week == week and not g.completed]
+            for game in week_games:
                 self.simulate_game(game, verbose=verbose)
+
+            if generate_polls:
+                self._generate_weekly_poll(week)
+
+    def _calculate_poll_score(self, record: TeamRecord) -> float:
+        """Calculate poll ranking score for a team"""
+        if record.games_played == 0:
+            return 0.0
+
+        win_score = record.win_percentage * 40
+
+        opi_score = min(20, record.avg_opi * 0.2)
+
+        ppg = record.points_for / max(1, record.games_played)
+        ppg_against = record.points_against / max(1, record.games_played)
+        diff = ppg - ppg_against
+        diff_score = min(15, max(0, (diff + 20) * 0.375))
+
+        sos = self._calculate_sos(record.team_name)
+        sos_score = sos * 25
+
+        return win_score + opi_score + diff_score + sos_score
+
+    def _calculate_sos(self, team_name: str) -> float:
+        """Calculate strength of schedule for a team based on opponent win percentages"""
+        opponents = set()
+        for game in self.schedule:
+            if game.completed:
+                if game.home_team == team_name:
+                    opponents.add(game.away_team)
+                elif game.away_team == team_name:
+                    opponents.add(game.home_team)
+
+        if not opponents:
+            return 0.5
+
+        opp_win_pcts = []
+        for opp in opponents:
+            if opp in self.standings:
+                opp_win_pcts.append(self.standings[opp].win_percentage)
+
+        return sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
+
+    def _generate_weekly_poll(self, week: int):
+        """Generate rankings after a week of games"""
+        prev_poll = self.weekly_polls[-1] if self.weekly_polls else None
+        prev_ranks = {}
+        if prev_poll:
+            for r in prev_poll.rankings:
+                prev_ranks[r.team_name] = r.rank
+
+        team_scores = []
+        for team_name, record in self.standings.items():
+            if record.games_played > 0:
+                score = self._calculate_poll_score(record)
+                team_scores.append((team_name, record, score))
+
+        team_scores.sort(key=lambda x: x[2], reverse=True)
+
+        rankings = []
+        for i, (team_name, record, score) in enumerate(team_scores[:25], 1):
+            rankings.append(PollRanking(
+                rank=i,
+                team_name=team_name,
+                record=f"{record.wins}-{record.losses}",
+                conference=record.conference,
+                poll_score=round(score, 2),
+                prev_rank=prev_ranks.get(team_name)
+            ))
+
+        self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings))
 
     def get_standings_sorted(self) -> List[TeamRecord]:
         """Get standings sorted by win percentage, then point differential"""
@@ -254,23 +459,37 @@ class Season:
             reverse=True
         )
 
+    def get_conference_standings(self, conference_name: str) -> List[TeamRecord]:
+        """Get standings filtered to a specific conference, sorted by conf record then overall"""
+        conf_teams = self.conferences.get(conference_name, [])
+        conf_records = [
+            self.standings[t] for t in conf_teams
+            if t in self.standings
+        ]
+        return sorted(
+            conf_records,
+            key=lambda r: (r.conf_win_percentage, r.win_percentage, r.point_differential),
+            reverse=True
+        )
+
     def get_playoff_teams(self, num_teams: int = 4) -> List[TeamRecord]:
-        """Get top N teams for playoffs"""
         sorted_standings = self.get_standings_sorted()
         return sorted_standings[:num_teams]
 
-    def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
-        """
-        Simulate playoff bracket
+    def get_latest_poll(self) -> Optional[WeeklyPoll]:
+        return self.weekly_polls[-1] if self.weekly_polls else None
 
-        num_teams: 4 (semifinals + final) or 8 (quarterfinals + semifinals + final)
-        """
+    def get_total_weeks(self) -> int:
+        if not self.schedule:
+            return 0
+        return max(g.week for g in self.schedule)
+
+    def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
         playoff_teams = self.get_playoff_teams(num_teams)
 
         if num_teams == 4:
-            # Semifinals: #1 vs #4, #2 vs #3
             semi1 = Game(
-                week=999,  # Playoff week
+                week=999,
                 home_team=playoff_teams[0].team_name,
                 away_team=playoff_teams[3].team_name
             )
@@ -283,35 +502,23 @@ class Season:
             self.playoff_bracket.append(semi1)
             self.playoff_bracket.append(semi2)
 
-            if verbose:
-                print("\n🏆 SEMIFINALS")
-                print("=" * 70)
-
             self.simulate_game(semi1, verbose=verbose)
             self.simulate_game(semi2, verbose=verbose)
 
-            # Championship
             semi1_winner = semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team
             semi2_winner = semi2.home_team if (semi2.home_score or 0) > (semi2.away_score or 0) else semi2.away_team
 
             championship = Game(
-                week=1000,  # Championship week
+                week=1000,
                 home_team=semi1_winner,
                 away_team=semi2_winner
             )
 
             self.playoff_bracket.append(championship)
-
-            if verbose:
-                print("\n🏆 CHAMPIONSHIP")
-                print("=" * 70)
-
             self.simulate_game(championship, verbose=verbose)
-
             self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
 
         elif num_teams == 8:
-            # Quarterfinals: 1v8, 2v7, 3v6, 4v5
             quarters = []
             for i in range(4):
                 game = Game(
@@ -322,14 +529,9 @@ class Season:
                 quarters.append(game)
                 self.playoff_bracket.append(game)
 
-            if verbose:
-                print("\n🏆 QUARTERFINALS")
-                print("=" * 70)
-
             for game in quarters:
                 self.simulate_game(game, verbose=verbose)
 
-            # Semifinals
             semi1 = Game(
                 week=999,
                 home_team=quarters[0].home_team if (quarters[0].home_score or 0) > (quarters[0].away_score or 0) else quarters[0].away_team,
@@ -344,14 +546,9 @@ class Season:
             self.playoff_bracket.append(semi1)
             self.playoff_bracket.append(semi2)
 
-            if verbose:
-                print("\n🏆 SEMIFINALS")
-                print("=" * 70)
-
             self.simulate_game(semi1, verbose=verbose)
             self.simulate_game(semi2, verbose=verbose)
 
-            # Championship
             championship = Game(
                 week=1000,
                 home_team=semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team,
@@ -359,13 +556,7 @@ class Season:
             )
 
             self.playoff_bracket.append(championship)
-
-            if verbose:
-                print("\n🏆 CHAMPIONSHIP")
-                print("=" * 70)
-
             self.simulate_game(championship, verbose=verbose)
-
             self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
 
 
@@ -384,21 +575,37 @@ def load_teams_from_directory(directory: str) -> Dict[str, Team]:
 def create_season(
     name: str,
     teams: Dict[str, Team],
-    style_configs: Optional[Dict[str, Dict[str, str]]] = None
+    style_configs: Optional[Dict[str, Dict[str, str]]] = None,
+    conferences: Optional[Dict[str, List[str]]] = None,
+    games_per_team: int = 0
 ) -> Season:
     """
     Create a season with teams and optional style configurations
 
     Args:
-        name: Season name (e.g., "2026 Season")
+        name: Season name
         teams: Dictionary of team_name -> Team
         style_configs: Optional dictionary of team_name -> {'offense_style': ..., 'defense_style': ...}
+        conferences: Optional dictionary of conference_name -> [team_names]
+        games_per_team: Games per team (0 = full round-robin)
 
     Returns:
         Season object ready for simulation
     """
-    return Season(
+    conf_map = conferences or {}
+    team_conf_map = {}
+    for conf_name, conf_teams in conf_map.items():
+        for t in conf_teams:
+            team_conf_map[t] = conf_name
+
+    season = Season(
         name=name,
         teams=teams,
-        style_configs=style_configs or {}
+        style_configs=style_configs or {},
+        conferences=conf_map,
+        team_conferences=team_conf_map,
     )
+
+    season.generate_schedule(games_per_team=games_per_team)
+
+    return season

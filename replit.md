@@ -81,7 +81,15 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
    - Debug panel: fatigue curves, explosive plays, turnover triggers, kick decisions, style params, Viperball Metrics
    - Export: download box score (.md), play log (.csv), drives (.csv), full JSON
 2. **Season Simulator** - Full round-robin season with team selection, style configs, standings, radar charts, score distributions, playoffs, CSV export
-3. **Dynasty Mode** - Multi-season career mode with coach dashboard, team history, record book, awards, JSON save/load
+3. **Dynasty Mode** - Multi-season career mode with configurable features:
+   - Conference setup: 1-4 conferences with custom names and team assignment
+   - Configurable season length: games-per-team slider (6-20 or full round-robin)
+   - Conference-weighted scheduling: prioritizes conference matchups (60% default)
+   - 5 tabs: Simulate Season, Standings & Polls, Coach Dashboard, Team History, Record Book
+   - Standings & Polls tab: conference standings with conf W-L, weekly Top 25 poll with movement tracking
+   - Weekly poll system: rankings based on win% (40%), OPI (20%), point differential (15%), SOS (25%)
+   - Poll movement chart: line graph tracking team rankings over the season
+   - Coach dashboard, team history, record book, awards, JSON save/load
 4. **Debug Tools** - Batch sims (5-200), averages, fatigue curves, turnover rates, drive outcome aggregation
    - Export: batch summary (.csv), all games (.json), full data + plays (.json)
 5. **Play Inspector** - Run single plays repeatedly with situation controls
@@ -109,6 +117,9 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - 2026-02-16: Viperball Metrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact) displayed in Game Simulator debug panel
 - 2026-02-16: Season Simulator page: round-robin scheduling, standings with metrics, radar charts, score distributions, playoff brackets, CSV export
 - 2026-02-16: Dynasty Mode page: multi-season career tracking, coach dashboard, team history, record book, awards, JSON save/load
+- 2026-02-16: Dynasty Mode: configurable season length (games-per-team slider), multi-conference setup (1-4 conferences), conference-weighted scheduling
+- 2026-02-16: Weekly poll/ranking system: Top 25 rankings after each week, poll movement chart, conference standings view
+- 2026-02-16: Dynasty UI overhauled: 5 tabs (Simulate Season, Standings & Polls, Coach Dashboard, Team History, Record Book)
 - 2026-02-16: Season/Dynasty integration with viperball_metrics module for OPI, Territory, Pressure, Chaos, Kicking averages in standings
 - 2026-02-15: Integrated AFL-style engine: 52% kicks, CFL rouge/pindown (1pt), chaos mechanics, enhanced lateral risk
 - 2026-02-15: Tiered kicking accuracy (drop kicks + place kicks), contextual kick triggers
