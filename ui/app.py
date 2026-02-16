@@ -122,6 +122,25 @@ def format_time(seconds):
     return f"{m:02d}:{s:02d}"
 
 
+def fmt_vb_score(v):
+    """Format Viperball score: whole numbers without .0, half-points as ½."""
+    if v is None:
+        return "0"
+    if isinstance(v, (int, float)):
+        negative = v < 0
+        av = abs(float(v))
+        whole = int(av)
+        frac = av - whole
+        sign = "-" if negative else ""
+        if abs(frac) < 0.01:
+            return f"{sign}{whole}"
+        elif abs(frac - 0.5) < 0.01:
+            return f"{sign}{whole}½" if whole > 0 else f"{sign}½"
+        else:
+            return f"{v:g}"
+    return str(v)
+
+
 def generate_box_score_markdown(result):
     home = result["final_score"]["home"]
     away = result["final_score"]["away"]
@@ -162,9 +181,6 @@ def generate_box_score_markdown(result):
             else:
                 away_q[q] += 0.5
 
-    def _fq(v):
-        return f"{v:g}" if v == int(v) else f"{v:.1f}"
-
     lines = []
     lines.append(f"# {home['team']} vs {away['team']}")
     lines.append(f"**Seed:** {result.get('seed', 'N/A')}")
@@ -172,8 +188,8 @@ def generate_box_score_markdown(result):
     lines.append("## Score")
     lines.append(f"| Team | Q1 | Q2 | Q3 | Q4 | Final |")
     lines.append(f"|------|----|----|----|----|-------|")
-    lines.append(f"| {home['team']} | {_fq(home_q[1])} | {_fq(home_q[2])} | {_fq(home_q[3])} | {_fq(home_q[4])} | **{_fq(home['score'])}** |")
-    lines.append(f"| {away['team']} | {_fq(away_q[1])} | {_fq(away_q[2])} | {_fq(away_q[3])} | {_fq(away_q[4])} | **{_fq(away['score'])}** |")
+    lines.append(f"| {home['team']} | {fmt_vb_score(home_q[1])} | {fmt_vb_score(home_q[2])} | {fmt_vb_score(home_q[3])} | {fmt_vb_score(home_q[4])} | **{fmt_vb_score(home['score'])}** |")
+    lines.append(f"| {away['team']} | {fmt_vb_score(away_q[1])} | {fmt_vb_score(away_q[2])} | {fmt_vb_score(away_q[3])} | {fmt_vb_score(away_q[4])} | **{fmt_vb_score(away['score'])}** |")
     lines.append("")
 
     lines.append("## Team Stats")
@@ -190,7 +206,7 @@ def generate_box_score_markdown(result):
     lines.append(f"| Field Goals (3pts) | {hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made']*3}pts) | {as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made']*3}pts) |")
     lines.append(f"| Safeties (2pts) | {a_saf} ({a_saf*2}pts) | {h_saf} ({h_saf*2}pts) |")
     lines.append(f"| Pindowns (1pt) | {hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts) | {as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts) |")
-    lines.append(f"| Strikes (0.5pts) | {h_fr} ({h_frp:g}pts) | {a_fr} ({a_frp:g}pts) |")
+    lines.append(f"| Strikes (½pt) | {h_fr} ({fmt_vb_score(h_frp)}pts) | {a_fr} ({fmt_vb_score(a_frp)}pts) |")
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
@@ -288,7 +304,7 @@ def generate_batch_summary_csv(results):
         as_ = r["stats"]["away"]
         winner = h["team"] if h["score"] > a["score"] else (a["team"] if a["score"] > h["score"] else "TIE")
         writer.writerow([
-            i + 1, r.get("seed", ""), h["team"], a["team"], h["score"], a["score"],
+            i + 1, r.get("seed", ""), h["team"], a["team"], fmt_vb_score(h["score"]), fmt_vb_score(a["score"]),
             hs["total_yards"], as_["total_yards"], hs["touchdowns"], as_["touchdowns"],
             hs["fumbles_lost"], as_["fumbles_lost"], hs["total_plays"], as_["total_plays"],
             hs.get("kick_percentage", 0), as_.get("kick_percentage", 0),
@@ -308,7 +324,7 @@ def drive_result_label(result):
     labels = {
         "touchdown": "TD",
         "successful_kick": "SK/FG",
-        "fumble": "STRIKE (+0.5)",
+        "fumble": "STRIKE (+½)",
         "turnover_on_downs": "DOWNS",
         "punt": "PUNT",
         "missed_kick": "MISSED KICK",
@@ -421,22 +437,19 @@ if page == "Game Simulator":
 
         st.divider()
 
-        def fmt_score(s):
-            return f"{s:g}" if s == int(s) else f"{s:.1f}"
-
         sc1, sc2, sc3 = st.columns([2, 1, 2])
         with sc1:
             st.markdown(f'<p class="team-name">{home_name}</p>', unsafe_allow_html=True)
-            st.markdown(f'<p class="score-big">{fmt_score(home_score)}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{fmt_vb_score(home_score)}</p>', unsafe_allow_html=True)
         with sc2:
             st.markdown("<p style='text-align:center; padding-top:10px; font-size:1.2rem; opacity:0.5;'>vs</p>", unsafe_allow_html=True)
             st.caption(f"Seed: {actual_seed}")
         with sc3:
             st.markdown(f'<p class="team-name">{away_name}</p>', unsafe_allow_html=True)
-            st.markdown(f'<p class="score-big">{fmt_score(away_score)}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="score-big">{fmt_vb_score(away_score)}</p>', unsafe_allow_html=True)
 
         margin = abs(home_score - away_score)
-        margin_str = fmt_score(margin)
+        margin_str = fmt_vb_score(margin)
         if home_score > away_score:
             st.success(f"{home_name} wins by {margin_str}")
         elif away_score > home_score:
@@ -535,11 +548,11 @@ if page == "Game Simulator":
 
         qtr_data = {
             "": [home_name, away_name],
-            "Q1": [home_q[1], away_q[1]],
-            "Q2": [home_q[2], away_q[2]],
-            "Q3": [home_q[3], away_q[3]],
-            "Q4": [home_q[4], away_q[4]],
-            "Final": [home_score, away_score],
+            "Q1": [fmt_vb_score(home_q[1]), fmt_vb_score(away_q[1])],
+            "Q2": [fmt_vb_score(home_q[2]), fmt_vb_score(away_q[2])],
+            "Q3": [fmt_vb_score(home_q[3]), fmt_vb_score(away_q[3])],
+            "Q4": [fmt_vb_score(home_q[4]), fmt_vb_score(away_q[4])],
+            "Final": [fmt_vb_score(home_score), fmt_vb_score(away_score)],
         }
         st.dataframe(pd.DataFrame(qtr_data), hide_index=True, use_container_width=True)
 
@@ -552,7 +565,7 @@ if page == "Game Simulator":
         a_saf = as_.get('safeties_conceded', 0)
         scoring_data = {
             "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
-                 "Safeties (2pts)", "Pindowns (1pt)", "Strikes (0.5pts)",
+                 "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
                  "Punts", "Kick %",
                  "Total Yards", "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
@@ -1368,6 +1381,52 @@ elif page == "Season Simulator":
             if tname not in style_configs:
                 style_configs[tname] = {"offense_style": "balanced", "defense_style": "base_defense"}
 
+        auto_conferences = {}
+        for tname in selected_teams:
+            identity = team_identities.get(tname, {})
+            conf = identity.get("conference", "")
+            if conf:
+                auto_conferences.setdefault(conf, []).append(tname)
+        auto_conferences = {k: v for k, v in auto_conferences.items() if len(v) >= 2}
+
+        if auto_conferences:
+            with st.expander("Conference Names", expanded=False):
+                st.caption("Edit conference names or click the button to generate new ones.")
+
+                if "season_conf_seed" not in st.session_state:
+                    st.session_state["season_conf_seed"] = None
+
+                orig_conf_names = sorted(auto_conferences.keys())
+
+                if st.session_state["season_conf_seed"] is not None:
+                    gen_names = generate_conference_names(
+                        count=len(orig_conf_names),
+                        seed=st.session_state["season_conf_seed"],
+                    )
+                else:
+                    gen_names = list(orig_conf_names)
+
+                regen_col, _ = st.columns([1, 5])
+                with regen_col:
+                    if st.button("🎲 New Names", key="regen_season_conf"):
+                        st.session_state["season_conf_seed"] = random.randint(0, 999999)
+                        st.rerun()
+
+                conf_rename_map = {}
+                conf_cols = st.columns(min(len(orig_conf_names), 4))
+                for ci, old_name in enumerate(orig_conf_names):
+                    with conf_cols[ci % len(conf_cols)]:
+                        new_name = st.text_input(
+                            old_name, value=gen_names[ci], key=f"season_conf_{ci}"
+                        )
+                        conf_rename_map[old_name] = new_name
+
+                renamed_conferences = {}
+                for old_name, team_list in auto_conferences.items():
+                    new_name = conf_rename_map.get(old_name, old_name)
+                    renamed_conferences[new_name] = team_list
+                auto_conferences = renamed_conferences
+
         sched_col1, sched_col2 = st.columns(2)
         with sched_col1:
             season_games = st.slider("Regular Season Games Per Team", min_value=8, max_value=12, value=10, key="season_games_per_team")
@@ -1385,14 +1444,6 @@ elif page == "Season Simulator":
 
         if run_season:
             filtered_teams = {name: team for name, team in all_teams.items() if name in selected_teams}
-
-            auto_conferences = {}
-            for tname in selected_teams:
-                identity = team_identities.get(tname, {})
-                conf = identity.get("conference", "")
-                if conf:
-                    auto_conferences.setdefault(conf, []).append(tname)
-            auto_conferences = {k: v for k, v in auto_conferences.items() if len(v) >= 2}
 
             season = create_season(season_name, filtered_teams, style_configs,
                                    conferences=auto_conferences if auto_conferences else None,
@@ -1432,9 +1483,9 @@ elif page == "Season Simulator":
                     "W": record.wins,
                     "L": record.losses,
                     "Win%": f"{record.win_percentage:.3f}",
-                    "PF": f"{record.points_for:.1f}",
-                    "PA": f"{record.points_against:.1f}",
-                    "Diff": f"{record.point_differential:+.1f}",
+                    "PF": fmt_vb_score(record.points_for),
+                    "PA": fmt_vb_score(record.points_against),
+                    "Diff": fmt_vb_score(record.point_differential),
                     "OPI": f"{record.avg_opi:.1f}",
                     "Territory": f"{record.avg_territory:.1f}",
                     "Pressure": f"{record.avg_pressure:.1f}",
@@ -1459,8 +1510,8 @@ elif page == "Season Simulator":
                                     "Conf": f"{record.conf_wins}-{record.conf_losses}",
                                     "Overall": f"{record.wins}-{record.losses}",
                                     "Win%": f"{record.win_percentage:.3f}",
-                                    "PF": f"{record.points_for:.1f}",
-                                    "PA": f"{record.points_against:.1f}",
+                                    "PF": fmt_vb_score(record.points_for),
+                                    "PA": fmt_vb_score(record.points_against),
                                     "OPI": f"{record.avg_opi:.1f}",
                                 })
                             st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
@@ -1535,7 +1586,7 @@ elif page == "Season Simulator":
                             loser = game.away_team if hs > aws else game.home_team
                             w_score = max(hs, aws)
                             l_score = min(hs, aws)
-                            st.markdown(f"Game {i}: **{winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+                            st.markdown(f"Game {i}: **{winner}** {fmt_vb_score(w_score)} def. {loser} {fmt_vb_score(l_score)}")
 
                 _render_round("First Round", 997)
                 _render_round("Quarterfinals", 998)
@@ -1550,7 +1601,7 @@ elif page == "Season Simulator":
                     loser = game.away_team if hs > aws else game.home_team
                     w_score = max(hs, aws)
                     l_score = min(hs, aws)
-                    st.success(f"**CHAMPION: {winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+                    st.success(f"**CHAMPION: {winner}** {fmt_vb_score(w_score)} def. {loser} {fmt_vb_score(l_score)}")
 
             if season.bowl_games:
                 st.subheader("Bowl Games")
@@ -1570,7 +1621,7 @@ elif page == "Season Simulator":
                     l_score = min(hs, aws)
                     w_rec = bowl.team_1_record if winner == g.home_team else bowl.team_2_record
                     l_rec = bowl.team_2_record if winner == g.home_team else bowl.team_1_record
-                    st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {w_score:.1f} def. {loser} ({l_rec}) {l_score:.1f}")
+                    st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
             st.subheader("Full Schedule Results")
             schedule_data = []
@@ -1583,8 +1634,8 @@ elif page == "Season Simulator":
                         "Week": game.week,
                         "Home": game.home_team,
                         "Away": game.away_team,
-                        "Home Score": f"{hs:.1f}",
-                        "Away Score": f"{aws:.1f}",
+                        "Home Score": fmt_vb_score(hs),
+                        "Away Score": fmt_vb_score(aws),
                         "Winner": winner,
                     })
             if schedule_data:
@@ -1598,8 +1649,8 @@ elif page == "Season Simulator":
                 writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "OPI"])
                 for i, r in enumerate(standings, 1):
                     writer.writerow([i, r.team_name, r.wins, r.losses, f"{r.win_percentage:.3f}",
-                                     f"{r.points_for:.1f}", f"{r.points_against:.1f}",
-                                     f"{r.point_differential:+.1f}", f"{r.avg_opi:.1f}"])
+                                     fmt_vb_score(r.points_for), fmt_vb_score(r.points_against),
+                                     fmt_vb_score(r.point_differential), f"{r.avg_opi:.1f}"])
                 st.download_button("Download Standings (CSV)", standings_csv.getvalue(),
                                    file_name="season_standings.csv", mime="text/csv")
             with exp_col2:
@@ -1612,7 +1663,7 @@ elif page == "Season Simulator":
                         aws = game.away_score or 0
                         winner = game.home_team if hs > aws else game.away_team
                         writer.writerow([game.week, game.home_team, game.away_team,
-                                         f"{hs:.1f}", f"{aws:.1f}", winner])
+                                         fmt_vb_score(hs), fmt_vb_score(aws), winner])
                 st.download_button("Download Schedule (CSV)", schedule_csv.getvalue(),
                                    file_name="season_schedule.csv", mime="text/csv")
 
@@ -1875,8 +1926,8 @@ elif page == "Dynasty Mode":
                         "L": record.losses,
                         "Conf W-L": f"{record.conf_wins}-{record.conf_losses}",
                         "Win%": f"{record.win_percentage:.3f}",
-                        "PF": f"{record.points_for:.1f}",
-                        "PA": f"{record.points_against:.1f}",
+                        "PF": fmt_vb_score(record.points_for),
+                        "PA": fmt_vb_score(record.points_against),
                         "OPI": f"{record.avg_opi:.1f}",
                     })
                 st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=400)
@@ -1901,7 +1952,7 @@ elif page == "Dynasty Mode":
                         l_rec = bowl.team_2_record if winner == g.home_team else bowl.team_1_record
                         is_user_bowl = dynasty.coach.team_name in (g.home_team, g.away_team)
                         prefix = ">>> " if is_user_bowl else ""
-                        st.markdown(f"{prefix}**{bowl.name}**: **{winner}** ({w_rec}) {w_score:.1f} def. {loser} ({l_rec}) {l_score:.1f}")
+                        st.markdown(f"{prefix}**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
         with tab2:
             st.subheader("Standings & Weekly Poll")
@@ -1928,8 +1979,8 @@ elif page == "Dynasty Mode":
                                         "Conf": f"{record.conf_wins}-{record.conf_losses}",
                                         "Overall": f"{record.wins}-{record.losses}",
                                         "Win%": f"{record.win_percentage:.3f}",
-                                        "PF": f"{record.points_for:.1f}",
-                                        "PA": f"{record.points_against:.1f}",
+                                        "PF": fmt_vb_score(record.points_for),
+                                        "PA": fmt_vb_score(record.points_against),
                                         "OPI": f"{record.avg_opi:.1f}",
                                         "Kicking": f"{record.avg_kicking:.1f}",
                                         "Chaos": f"{record.avg_chaos:.1f}",
@@ -2017,8 +2068,8 @@ elif page == "Dynasty Mode":
                     season_hist.append({
                         "Year": year,
                         "W-L": f"{rec['wins']}-{rec['losses']}",
-                        "PF": f"{rec['points_for']:.1f}",
-                        "PA": f"{rec['points_against']:.1f}",
+                        "PF": fmt_vb_score(rec['points_for']),
+                        "PA": fmt_vb_score(rec['points_against']),
                         "Playoff": "Yes" if rec.get("playoff") else "No",
                         "Champion": "Yes" if rec.get("champion") else "No",
                     })
@@ -2053,8 +2104,8 @@ elif page == "Dynasty Mode":
                         hist_data.append({
                             "Year": year,
                             "W-L": f"{rec['wins']}-{rec['losses']}",
-                            "PF": f"{rec['points_for']:.1f}",
-                            "PA": f"{rec['points_against']:.1f}",
+                            "PF": fmt_vb_score(rec['points_for']),
+                            "PA": fmt_vb_score(rec['points_against']),
                             "OPI": f"{rec.get('avg_opi', 0):.1f}",
                             "Champion": "Yes" if rec.get("champion") else "No",
                         })

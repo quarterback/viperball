@@ -1718,7 +1718,7 @@ class ViperballEngine:
                 players_involved=[plabel],
                 yards_gained=fumble_yards,
                 result=PlayResult.FUMBLE.value,
-                description=f"{ptag} {action} → {fumble_yards} — FUMBLE! Defense recovers (+0.5){weather_tag}",
+                description=f"{ptag} {action} → {fumble_yards} — FUMBLE! Defense recovers (+½){weather_tag}",
                 fatigue=round(stamina, 1),
                 fumble=True,
             )
@@ -1862,7 +1862,7 @@ class ViperballEngine:
                 players_involved=chain_labels,
                 yards_gained=yards_gained,
                 result=PlayResult.FUMBLE.value,
-                description=f"{chain_tags} lateral → FUMBLE! Defense recovers (+0.5)",
+                description=f"{chain_tags} lateral → FUMBLE! Defense recovers (+½)",
                 fatigue=round(stamina, 1),
                 laterals=chain_length,
                 fumble=True,
@@ -2001,7 +2001,7 @@ class ViperballEngine:
                         players_involved=[player_label(punter), player_label(blocker)],
                         yards_gained=block_distance,
                         result=PlayResult.BLOCKED_PUNT.value,
-                        description=f"{ptag} punt BLOCKED by {btag}! Defense recovers at {self.state.field_position}! (+0.5)",
+                        description=f"{ptag} punt BLOCKED by {btag}! Defense recovers at {self.state.field_position}! (+½)",
                         fatigue=round(stamina, 1),
                     )
                 else:
@@ -2196,7 +2196,7 @@ class ViperballEngine:
                     players_involved=[player_label(punter), player_label(kicker_recoverer)],
                     yards_gained=distance,
                     result=PlayResult.MUFFED_PUNT.value,
-                    description=f"{ptag} punt → MUFFED! {ktag} recovers for kicking team at {self.state.field_position}! (+0.5)",
+                    description=f"{ptag} punt → MUFFED! {ktag} recovers for kicking team at {self.state.field_position}! (+½)",
                     fatigue=round(stamina, 1),
                 )
 
