@@ -1001,11 +1001,18 @@ class ViperballEngine:
 
         pk_success = self._place_kick_success(fg_distance)
         pk_kickoff_bonus = 0.8
-        ev_place_kick = pk_success * (3 + pk_kickoff_bonus)
+        pk_reliability_boost = 1.15
+        ev_place_kick = pk_success * (3 + pk_kickoff_bonus) * pk_reliability_boost
 
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
         dk_kickoff_bonus = 0.8
         ev_drop_kick = dk_success * (5 + dk_kickoff_bonus)
+
+        arch_info = get_archetype_info(kicker.archetype)
+        if kicker.archetype == "kicking_zb":
+            ev_drop_kick *= 1.40
+            snapkick_boost = arch_info.get("snapkick_trigger_boost", 0.0)
+            ev_drop_kick *= (1.0 + snapkick_boost)
 
         punt_distance = random.gauss(42, 5)
         new_fp_after_punt = max(1, fp + int(punt_distance))
@@ -1052,12 +1059,14 @@ class ViperballEngine:
             if time_left <= 120 and 1 <= score_diff <= 3:
                 ev_place_kick *= 1.25
 
-        if down >= 5 and fg_distance <= 35:
-            ev_place_kick *= 1.40
-        elif down >= 5 and fg_distance <= 45:
+        if down >= 5 and fg_distance <= 40:
+            ev_place_kick *= 1.45
+        elif down >= 5 and fg_distance <= 50:
+            ev_place_kick *= 1.30
+        elif down >= 4 and fg_distance <= 45:
             ev_place_kick *= 1.25
-        elif down >= 4 and fg_distance <= 40:
-            ev_place_kick *= 1.20
+        elif down >= 4 and fg_distance <= 52:
+            ev_place_kick *= 1.15
 
         style = self._current_style()
         kick_rate = style.get("kick_rate", 0.2)
@@ -1082,16 +1091,16 @@ class ViperballEngine:
             if best == 'punt':
                 best = 'go_for_it'
 
-        if down == 5 and fp >= 50:
+        if down == 5 and fp >= 45:
             if best == 'punt':
-                if fg_distance <= 52:
+                if fg_distance <= 55:
                     best = 'place_kick'
                 else:
                     best = 'go_for_it'
 
-        if down == 6 and fp >= 60:
+        if down == 6 and fp >= 55:
             if best == 'punt':
-                best = 'place_kick' if fg_distance <= 55 else 'go_for_it'
+                best = 'place_kick' if fg_distance <= 58 else 'go_for_it'
 
         kick_available = 'place_kick' in options or 'drop_kick' in options
         if kick_available:
@@ -1116,8 +1125,12 @@ class ViperballEngine:
         if kick_available and 'drop_kick' in options:
             if fg_distance <= 40 and down >= 5 and ytg > 3:
                 best = 'drop_kick'
+            if fg_distance <= 45 and down >= 4 and ytg > 5:
+                best = 'drop_kick'
             score_diff = self._get_score_diff()
-            if score_diff < -6 and fg_distance <= 50 and down >= 5:
+            if score_diff < -6 and fg_distance <= 50 and down >= 4:
+                best = 'drop_kick'
+            if kicker.archetype == "kicking_zb" and fg_distance <= 48 and down >= 3:
                 best = 'drop_kick'
 
         if down == 6 and ytg <= 5:
@@ -1154,21 +1167,31 @@ class ViperballEngine:
             style = self._current_style()
             kick_rate = style.get("kick_rate", 0.2)
 
-            if fg_distance <= 55:
+            is_kicking_zb = kicker.archetype == "kicking_zb"
+
+            if fg_distance <= 58:
                 dk_success = self._drop_kick_success(fg_distance, kicker.kicking)
                 pk_success = self._place_kick_success(fg_distance)
 
-                if kick_rate >= 0.40:
-                    if dk_success >= 0.35:
+                if is_kicking_zb:
+                    if fg_distance <= 48 and dk_success >= 0.30:
                         return PlayType.DROP_KICK
-                    elif pk_success >= 0.50:
+                    elif fg_distance <= 40 and random.random() < 0.6:
+                        return PlayType.DROP_KICK
+                    elif pk_success >= 0.45:
+                        return PlayType.PLACE_KICK
+
+                if kick_rate >= 0.40:
+                    if dk_success >= 0.30:
+                        return PlayType.DROP_KICK
+                    elif pk_success >= 0.45:
                         return PlayType.PLACE_KICK
                 elif kick_rate >= 0.20:
-                    if fg_distance <= 35 and random.random() < 0.7:
+                    if fg_distance <= 38 and random.random() < 0.7:
+                        return PlayType.DROP_KICK if dk_success >= 0.40 else PlayType.PLACE_KICK
+                    elif fg_distance <= 48 and random.random() < 0.5:
                         return PlayType.DROP_KICK if dk_success >= 0.45 else PlayType.PLACE_KICK
-                    elif fg_distance <= 45 and random.random() < 0.5:
-                        return PlayType.DROP_KICK if dk_success >= 0.50 else PlayType.PLACE_KICK
-                    elif fg_distance <= 55 and pk_success >= 0.50 and random.random() < 0.35:
+                    elif fg_distance <= 55 and pk_success >= 0.45 and random.random() < 0.40:
                         return PlayType.PLACE_KICK
 
             return PlayType.PUNT
