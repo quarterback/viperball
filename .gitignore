@@ -43,3 +43,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Dynasty saves (test data)
+dynasty_save.json
+*.dynasty.json
