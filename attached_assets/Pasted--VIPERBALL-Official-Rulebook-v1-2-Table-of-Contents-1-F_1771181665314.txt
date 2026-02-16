@@ -575,25 +575,150 @@ At the snap, the offensive team shall satisfy positional distribution requiremen
 
 Five players shall be designated as Linemen at the snap. Linemen must align within one yard of the line of scrimmage and between the outermost offensive players. Linemen may advance, lateral, receive laterals, and kick once the ball is live. Linemen are eligible to recover all live balls. Linemen provide the foundation for both blocking schemes and quick lateral distribution in open play.
 
+#### Linemen Archetypes
+
+| Archetype | Primary Strength | Team Fit |
+|-----------|-----------------|----------|
+| **Maulers** | Run blocking dominance | Power-based rushing attack |
+| **Screens** | Screen blocking & mobility | Lateral-heavy offense |
+| **Hybrids** | Balanced blocking | Versatile play-calling |
+
+#### Line Unit Ratings
+
+| Metric | Elite | Good | Average | Below Average |
+|--------|-------|------|---------|---------------|
+| **Run Block Grade** | 85+ | 75-84 | 65-74 | <65 |
+| **Screen Block Grade** | 80+ | 70-79 | 60-69 | <60 |
+| **Kick Protection Grade** | 85+ | 75-84 | 65-74 | <65 |
+| **Blown Assignments/Game** | <1.0 | 1.0-2.0 | 2.0-3.5 | >3.5 |
+
 ### Zeroback
 
 Each offensive formation must include one Zeroback. The Zeroback is the primary distributor and may receive the snap directly. The Zeroback may run, lateral, or kick at any time. A different player may receive the snap, but the Zeroback designation must still be present on the field. The Zeroback serves as the offensive quarterback equivalent, orchestrating plays and making critical tactical decisions in real time.
 
-### Halfback
+#### Zeroback Archetypes
 
-One Halfback must be present. The Halfback may receive handoffs, laterals, or kicks and may kick in open play.
+| Archetype | Primary Threat | Secondary Threat | Playstyle |
+|-----------|---------------|------------------|-----------|
+| **Kicking ZB** | Drop-kick accuracy | Field position control | Calculated field management, dominant kicking threat |
+| **Running ZB** | Ground rushing | Lateral distribution | Dual-threat mobility, pressure through rushing lanes |
+| **Distributor ZB** | Lateral precision | Vision & spacing | Traditional field general, controlled possession |
+| **Dual-Threat ZB** | Balanced run/kick | Versatile playmaking | Dynamic threat requiring defensive commitment |
 
-### Wingbacks
+#### Statistical Targets by Archetype
 
-One Left Wingback (LW) and one Right Wingback (RW) must be present at the snap. Wingbacks must align outside the interior formation.
+| Archetype | Touches/Game | Rush Yards/Game | Yards/Carry | Laterals Thrown/Game | Snapkick Attempts/Game | Snapkick Accuracy | TDs/Game | Team TD Involvement |
+|-----------|--------------|-----------------|-------------|---------------------|------------------------|-------------------|----------|---------------------|
+| **Kicking ZB** | 8-12 | 15-30 | 3.0-4.0 | 4-6 | 3-5 | 65%+ | 0.3-0.6 | 40-55% |
+| **Running ZB** | 15-22 | 60-90 | 4.5-6.0 | 6-9 | 1-2 | 50%+ | 0.8-1.2 | 55-70% |
+| **Distributor ZB** | 10-15 | 20-40 | 3.5-4.5 | 8-12 | 2-3 | 55%+ | 0.4-0.7 | 50-65% |
+| **Dual-Threat ZB** | 12-18 | 45-70 | 4.0-5.5 | 5-8 | 2-4 | 60%+ | 0.6-1.0 | 60-75% |
 
-### Shiftback
+#### Attribute Weights by Archetype
 
-One Shiftback shall be designated at the snap. The Shiftback aligns between the interior and perimeter and may block, run, lateral, receive kicks, or defend. The Shiftback may shift position prior to the snap provided the minimum offensive structure remains intact. The Shiftback creates unpredictability, shifting based on defensive alignment and exploiting mismatches.
+| Archetype | Kicking | Speed | Power | Hands | Vision | Stamina |
+|-----------|---------|-------|-------|-------|--------|---------|
+| **Kicking ZB** | ★★★★★ | ★★☆☆☆ | ★★☆☆☆ | ★★★☆☆ | ★★★★☆ | ★★★☆☆ |
+| **Running ZB** | ★★☆☆☆ | ★★★★★ | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★☆ |
+| **Distributor ZB** | ★★★☆☆ | ★★★☆☆ | ★★☆☆☆ | ★★★★★ | ★★★★★ | ★★★☆☆ |
+| **Dual-Threat ZB** | ★★★★☆ | ★★★★☆ | ★★★☆☆ | ★★★★☆ | ★★★★☆ | ★★★★★ |
+
+#### Defensive Adjustments by Archetype
+
+| Archetype | Defensive Priority | Coverage Adjustments | Personnel Considerations |
+|-----------|-------------------|---------------------|-------------------------|
+| **Kicking ZB** | Kick rush pressure | Deep safety positioning | Extra return coverage depth |
+| **Running ZB** | Contain rushing lanes | Spotback gap discipline | Additional box defenders |
+| **Distributor ZB** | Lateral lane coverage | Deny lateral windows | Quick-reaction defenders |
+| **Dual-Threat ZB** | Balanced gap/kick defense | Flexible safety positioning | Versatile defensive backs |
+
+### Flankers (Halfback, Left Wingback, Right Wingback, Shiftback)
+
+The Flankers are the primary ball-carriers and versatile playmakers in the offensive backfield. Four flanker positions must be present at the snap:
+
+**Halfback (HB):** One Halfback must be present. The Halfback may receive handoffs, laterals, or kicks and may kick in open play.
+
+**Wingbacks (LW/RW):** One Left Wingback (LW) and one Right Wingback (RW) must be present at the snap. Wingbacks must align outside the interior formation.
+
+**Shiftback (SB):** One Shiftback shall be designated at the snap. The Shiftback aligns between the interior and perimeter and may block, run, lateral, receive kicks, or defend. The Shiftback may shift position prior to the snap provided the minimum offensive structure remains intact. The Shiftback creates unpredictability, shifting based on defensive alignment and exploiting mismatches.
+
+#### Position-Specific Roles
+
+| Position | Alignment | Primary Role | Secondary Role |
+|----------|-----------|--------------|----------------|
+| **Halfback** | Central backfield | Primary ball-carrier | Lateral receiver |
+| **Left Wingback** | Outside left | Perimeter runner | Blocking support |
+| **Right Wingback** | Outside right | Perimeter runner | Blocking support |
+| **Shiftback** | Flexible positioning | Mismatch creator | Versatile playmaker |
+
+#### Flanker Archetypes
+
+| Archetype | Primary Strength | Secondary Strength | Playstyle |
+|-----------|-----------------|-------------------|-----------|
+| **Speed Flanker** | Breakaway speed | Open-field running | Elite acceleration, home run threat |
+| **Power Flanker** | Physical rushing | Tackle-breaking | Downhill runner, short-yardage specialist |
+| **Elusive Flanker** | Agility & vision | Cut-back ability | Slippery runner, makes defenders miss |
+| **Reliable Flanker** | Ball security | Consistent production | Dependable hands, low-risk option |
+
+#### Statistical Targets (Per Flanker)
+
+| Archetype | Touches/Game | Yards/Touch | TDs/Game | Broken Tackles/Game | Fumbles/Game | Chain Receptions/Game |
+|-----------|--------------|-------------|----------|---------------------|--------------|----------------------|
+| **Speed Flanker** | 8-12 | 7.5-10.0 | 0.5-0.9 | 1.5-2.5 | 0.10-0.20 | 3-5 |
+| **Power Flanker** | 12-18 | 5.0-6.5 | 0.6-1.0 | 3.0-4.5 | 0.05-0.15 | 2-4 |
+| **Elusive Flanker** | 10-15 | 6.5-8.5 | 0.5-0.8 | 2.5-3.5 | 0.08-0.18 | 4-6 |
+| **Reliable Flanker** | 10-14 | 5.5-7.0 | 0.4-0.7 | 1.8-2.8 | 0.02-0.08 | 3-5 |
+
+#### Combined Flanker Targets (All Four Combined)
+
+| Metric | Target Range |
+|--------|--------------|
+| **Total Touches** | 40-60 per game |
+| **Total Yards** | 250-400 per game |
+| **Total TDs** | 2.0-3.5 per game |
+| **% of Team Offensive Touches** | 60-75% |
+
+#### Attribute Weights by Archetype
+
+| Archetype | Speed | Power | Hands | Agility | Stamina | Ball Security |
+|-----------|-------|-------|-------|---------|---------|---------------|
+| **Speed Flanker** | ★★★★★ | ★★☆☆☆ | ★★★☆☆ | ★★★★☆ | ★★★☆☆ | ★★★☆☆ |
+| **Power Flanker** | ★★★☆☆ | ★★★★★ | ★★★☆☆ | ★★★☆☆ | ★★★★☆ | ★★★★☆ |
+| **Elusive Flanker** | ★★★★☆ | ★★☆☆☆ | ★★★★☆ | ★★★★★ | ★★★☆☆ | ★★★★☆ |
+| **Reliable Flanker** | ★★★☆☆ | ★★★☆☆ | ★★★★★ | ★★★☆☆ | ★★★★☆ | ★★★★★ |
 
 ### Viper
 
 One Viper shall be designated at the snap. The Viper is alignment-exempt and may position freely at any depth or width. The Viper shall wear a jersey of a distinctly different color from the rest of the team. The Viper serves as a wild card, capable of deep positioning for kick returns, motion-based misdirection, or surprise rushing angles. The distinct jersey allows officials and opponents to track the Viper's unique status.
+
+#### Viper Archetypes
+
+| Archetype | Primary Threat | Secondary Threat | Playstyle |
+|-----------|---------------|------------------|-----------|
+| **Receiving Viper** | Lateral reception | Space exploitation | High-touch playmaker in open field |
+| **Power Viper** | Physical rushing | Short-yardage conversion | Bruising runner, mismatch creator |
+| **Decoy Viper** | Pre-snap manipulation | Alignment confusion | Strategic positioning, defensive disruption |
+| **Hybrid Viper** | Balanced versatility | Unpredictable usage | Multi-dimensional threat |
+
+#### Statistical Targets by Archetype
+
+| Archetype | Touches/Game | Yards/Touch | Rush Yards/Game | Lateral Receptions/Game | TDs/Game | Decoy Snaps % | Viper Impact Plays* |
+|-----------|--------------|-------------|-----------------|-------------------------|----------|---------------|---------------------|
+| **Receiving Viper** | 10-15 | 7.0-9.0 | 30-50 | 6-10 | 0.7-1.1 | 10-20% | 3-5 |
+| **Power Viper** | 12-18 | 5.0-6.5 | 60-85 | 4-7 | 0.8-1.3 | 15-25% | 2-4 |
+| **Decoy Viper** | 4-8 | 6.0-8.0 | 15-30 | 2-5 | 0.3-0.6 | 40-60% | 5-8 |
+| **Hybrid Viper** | 8-13 | 6.5-8.5 | 40-65 | 5-8 | 0.6-0.9 | 20-35% | 3-6 |
+
+*Viper impact play: any play where pre-snap Viper alignment causes a defensive adjustment or breakdown*
+
+#### Attribute Weights by Archetype
+
+| Archetype | Speed | Power | Hands | Agility | Football IQ | Stamina |
+|-----------|-------|-------|-------|---------|-------------|---------|
+| **Receiving Viper** | ★★★★★ | ★★☆☆☆ | ★★★★★ | ★★★★★ | ★★★★☆ | ★★★☆☆ |
+| **Power Viper** | ★★★☆☆ | ★★★★★ | ★★★☆☆ | ★★★☆☆ | ★★★☆☆ | ★★★★☆ |
+| **Decoy Viper** | ★★★★☆ | ★★★☆☆ | ★★★☆☆ | ★★★★☆ | ★★★★★ | ★★★★☆ |
+| **Hybrid Viper** | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★★ |
 
 ### Offensive 11
 
