@@ -1299,10 +1299,21 @@ elif page == "Season Simulator":
 
         if run_season:
             filtered_teams = {name: team for name, team in all_teams.items() if name in selected_teams}
-            season = create_season(season_name, filtered_teams, style_configs, games_per_team=season_games)
+
+            auto_conferences = {}
+            for tname in selected_teams:
+                identity = team_identities.get(tname, {})
+                conf = identity.get("conference", "")
+                if conf:
+                    auto_conferences.setdefault(conf, []).append(tname)
+            auto_conferences = {k: v for k, v in auto_conferences.items() if len(v) >= 2}
+
+            season = create_season(season_name, filtered_teams, style_configs,
+                                   conferences=auto_conferences if auto_conferences else None,
+                                   games_per_team=season_games)
 
             with st.spinner(f"Simulating {len(season.schedule)} games..."):
-                season.simulate_season(generate_polls=False)
+                season.simulate_season(generate_polls=True)
 
             num_playoff = playoff_size
             if num_playoff > 0 and len(selected_teams) >= num_playoff:
@@ -1321,11 +1332,17 @@ elif page == "Season Simulator":
             st.divider()
             st.subheader("Standings")
             standings = season.get_standings_sorted()
+            has_conferences = bool(season.conferences) and len(season.conferences) >= 1
             standings_data = []
             for i, record in enumerate(standings, 1):
-                standings_data.append({
+                row = {
                     "Rank": i,
                     "Team": record.team_name,
+                }
+                if has_conferences:
+                    row["Conf"] = record.conference
+                    row["Conf W-L"] = f"{record.conf_wins}-{record.conf_losses}"
+                row.update({
                     "W": record.wins,
                     "L": record.losses,
                     "Win%": f"{record.win_percentage:.3f}",
@@ -1338,7 +1355,55 @@ elif page == "Season Simulator":
                     "Chaos": f"{record.avg_chaos:.1f}",
                     "Kicking": f"{record.avg_kicking:.1f}",
                 })
+                standings_data.append(row)
             st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True)
+
+            if season.conferences and len(season.conferences) >= 1:
+                st.subheader("Conference Standings")
+                conf_tabs = st.tabs(sorted(season.conferences.keys()))
+                for conf_tab, conf_name in zip(conf_tabs, sorted(season.conferences.keys())):
+                    with conf_tab:
+                        conf_standings = season.get_conference_standings(conf_name)
+                        if conf_standings:
+                            conf_data = []
+                            for i, record in enumerate(conf_standings, 1):
+                                conf_data.append({
+                                    "Rank": i,
+                                    "Team": record.team_name,
+                                    "Conf": f"{record.conf_wins}-{record.conf_losses}",
+                                    "Overall": f"{record.wins}-{record.losses}",
+                                    "Win%": f"{record.win_percentage:.3f}",
+                                    "PF": f"{record.points_for:.1f}",
+                                    "PA": f"{record.points_against:.1f}",
+                                    "OPI": f"{record.avg_opi:.1f}",
+                                })
+                            st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
+
+            final_poll = season.get_latest_poll()
+            if final_poll:
+                st.subheader("Final Top 25 Rankings")
+                poll_data = []
+                for r in final_poll.rankings:
+                    movement = ""
+                    if r.prev_rank is not None:
+                        diff = r.prev_rank - r.rank
+                        if diff > 0:
+                            movement = f"+{diff}"
+                        elif diff < 0:
+                            movement = str(diff)
+                        else:
+                            movement = "--"
+                    else:
+                        movement = "NEW"
+                    poll_data.append({
+                        "#": r.rank,
+                        "Team": r.team_name,
+                        "Record": r.record,
+                        "Conf": r.conference,
+                        "Score": f"{r.poll_score:.1f}",
+                        "Move": movement,
+                    })
+                st.dataframe(pd.DataFrame(poll_data), hide_index=True, use_container_width=True)
 
             st.subheader("Season Metrics Radar")
             radar_teams = st.multiselect("Compare Teams", [r.team_name for r in standings],
