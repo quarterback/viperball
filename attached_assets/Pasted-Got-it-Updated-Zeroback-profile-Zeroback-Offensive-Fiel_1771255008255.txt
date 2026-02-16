@@ -1,0 +1,66 @@
+Got it. Updated Zeroback profile:
+
+---
+
+### Zeroback (Offensive Field General)
+
+**Role:** The Zeroback is the offensive hub—part quarterback, part running back, part kicker. They touch the ball on nearly every play and can beat defenses multiple ways. The best Zerobacks force defensive coordinators to pick their poison.
+
+**Archetypes:**
+
+| Type | Primary Threat | Secondary Threat | Playstyle |
+|------|---------------|------------------|-----------|
+| **Kicking ZB** | Snapkick (drop kick) | Play-action runs | Sets up in space, threatens 5 points anytime past midfield. Defense must pressure, which opens running lanes. |
+| **Running ZB** | Elusive carries | Lateral distribution | Pile through defenses or juke in space. TD machine. Forces defense to commit to the run, opens up chain plays. |
+| **Distributor ZB** | Lateral chains | Occasional scramble | Orchestrates the offense, gets playmakers the ball in space. Lower individual stats, higher team efficiency. |
+| **Dual-Threat ZB** | Balanced run/kick | Unpredictable | Keeps defense guessing. Slightly lower ceiling in each skill, but no clear defensive answer. |
+
+**Statistical Targets by Archetype:**
+
+| Metric | Kicking ZB | Running ZB | Distributor ZB | Dual-Threat ZB |
+|--------|-----------|------------|----------------|----------------|
+| Touches/game | 12–16 | 18–25 | 8–12 | 14–18 |
+| Rush yards/game | 25–40 | 60–100 | 15–30 | 40–65 |
+| Yards/carry | 4–5 | 5–7 | 3–4 | 4.5–6 |
+| Laterals thrown/game | 20–28 | 12–18 | 28–38 | 18–26 |
+| Snapkick attempts/game | 3–5 | 0–1 | 1–2 | 2–3 |
+| Snapkick accuracy | 55–70% | — | 40–50% | 45–60% |
+| TDs/game | 0.5–1 | 1.5–2.5 | 0.3–0.6 | 0.8–1.5 |
+| Team TD involvement | 40–50% (via distribution) | 30–40% (direct) | 60–70% (assists) | 45–55% (mixed) |
+
+**Attribute Weights by Archetype:**
+
+| Attribute | Kicking ZB | Running ZB | Distributor ZB | Dual-Threat ZB |
+|-----------|-----------|------------|----------------|----------------|
+| Kicking | ★★★★★ | ★★ | ★★★ | ★★★★ |
+| Speed | ★★★ | ★★★★★ | ★★★ | ★★★★ |
+| Power | ★★ | ★★★★ | ★★ | ★★★ |
+| Hands | ★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Vision | ★★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Stamina | ★★★ | ★★★★★ | ★★★ | ★★★★ |
+
+**Defensive Adjustments by Archetype:**
+
+| Facing... | Defensive Response | Creates Opportunity For... |
+|-----------|-------------------|---------------------------|
+| Kicking ZB | Pressure/rush to disrupt kick setup | Running lanes, chain plays to flankers |
+| Running ZB | Stack the box, gap discipline | Snapkick attempts, perimeter chains |
+| Distributor ZB | Cover flankers, force ZB to run | ZB scrambles, delayed kicks |
+| Dual-Threat ZB | No clear adjustment | Lower-percentage plays across the board |
+
+**Playcalling Implications:**
+
+When simulating AI-controlled teams:
+
+- **Kicking ZB teams** should attempt snapkicks earlier in drives (4th–5th down past the 40) and use play-action to set up running plays
+- **Running ZB teams** should lean heavily on ZB carries in short-yardage and red zone situations, with flankers as change-of-pace
+- **Distributor ZB teams** should run more lateral chains, longer drives, and rely on Viper/flanker playmaking for TDs
+- **Dual-Threat ZB teams** should vary playcalling based on game state—run when ahead, kick when trailing, mix when close
+
+**Recruiting Pipeline Indicators:**
+
+Teams with strong kicking pipelines (Australian, soccer converts) trend toward Kicking ZBs. Teams with track/rugby sevens pipelines trend toward Running ZBs. Teams with basketball/netball pipelines trend toward Distributor ZBs.
+
+---
+
+This makes ZB archetype a meaningful team-building decision that affects offensive identity, playcalling logic, and how opposing defenses prepare. Want me to do similar archetype breakdowns for the Viper or defensive positions?
