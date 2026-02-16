@@ -1,0 +1,160 @@
+That's a crucial rule clarification that changes everything about kick decision-making:
+
+---
+
+## Snap Kick Rule: Missed Kicks Stay Live
+
+**Current assumption:** Snap kick miss = turnover (like a missed FG in football)
+**Actual rule:** Snap kick miss = live ball, your team can recover and retain possession
+
+This makes snap kicks **way less risky** than the sim thinks. The EV calculation is wrong.
+
+---
+
+## Revised EV Calculation for Snap Kicks
+
+**Old (incorrect):**
+```python
+ev_snap_kick = success_rate * 5  # Miss = lost possession
+# 50% accuracy from 40 yards = 2.5 EV
+```
+
+**New (correct):**
+```python
+# If you miss, you might recover and keep the ball
+recovery_rate = 0.35  # Team recovers own missed snap kick ~35% of time
+
+ev_snap_kick = (success_rate * 5) + ((1 - success_rate) * recovery_rate * continuation_value)
+
+# 50% accuracy from 40 yards:
+# = (0.50 * 5) + (0.50 * 0.35 * 2.5 field position value)
+# = 2.5 + 0.44
+# = 2.94 EV (not 2.5)
+```
+
+And if the recovery spot is decent (say, opponent's 35 after a missed 45-yarder), you still have the ball in FG range.
+
+---
+
+## Snap Kick vs Place Kick Decision Matrix
+
+| Situation | Place Kick | Snap Kick | Winner |
+|-----------|-----------|-----------|--------|
+| Miss = turnover | 3 pts × 85% = 2.55 EV | 5 pts × 60% = 3.0 EV | Snap Kick |
+| Miss = live ball (35% recovery) | N/A (always turnover) | 5 × 0.60 + (0.40 × 0.35 × 2.5) = 3.35 EV | Snap Kick by more |
+| Trailing by 2 | 3 pts ties | 5 pts wins | Snap Kick |
+| Trailing by 4 | 3 pts still losing | 5 pts wins | Snap Kick |
+
+**Snap kicks should be attempted way more often because:**
+1. 5 points > 3 points
+2. Miss isn't automatic turnover
+3. Creates chaos/Bell opportunities
+
+---
+
+## 5th Down vs 6th Down Logic Fix
+
+You're right—the current logic wastes a down:
+
+**Current (wrong):**
+- 5th down: Punt or kick
+- 6th down: Almost never reached
+
+**Correct:**
+- 5th down: Go for it (you still have 6th down!)
+- 6th down: Punt, place kick, or snap kick
+
+```python
+def select_kick_decision(self):
+    # NEVER punt or place kick on 5th down unless desperate
+    # You still have 6th down!
+    
+    if down == 5:
+        # Only kick options on 5th: snap kick (low risk) or go for it
+        if fg_distance <= 50 and kicker_skill >= 65:
+            # Snap kick is worth considering — miss isn't fatal
+            consider_snap_kick = True
+        
+        # NEVER place kick on 5th — you're giving up a down for no reason
+        consider_place_kick = False
+        
+        # NEVER punt on 5th unless pinned inside own 15
+        if field_position >= 15:
+            consider_punt = False
+    
+    if down == 6:
+        # NOW you make the "end of possession" decisions
+        consider_place_kick = True
+        consider_punt = True
+        consider_snap_kick = True
+        
+        # Still go for it if short yardage
+        if yards_to_go <= 4:
+            favor_go_for_it = True
+```
+
+---
+
+## Updated Decision Flow
+
+**1st–4th down:** Run offense, go for it on 4th if short or in opponent territory
+
+**5th down:**
+- **Go for it** (default) — you have one more down
+- **Snap kick** if in range (40–55 yards) — miss isn't fatal, might score 5
+- **Punt only** if pinned inside own 15
+
+**6th down:**
+- **Place kick** if in range (inside 45) — take the 3 points
+- **Snap kick** if longer range or trailing — go for 5
+- **Go for it** if 4th-and-short or in red zone
+- **Punt** if in own territory and out of FG range
+
+---
+
+## Recovery Mechanics for Missed Snap Kicks
+
+Need to define what happens on a miss:
+
+```python
+def resolve_missed_snap_kick(self, kick_distance, kicker_position):
+    # Ball is live after missed snap kick
+    
+    # Determine where ball lands
+    if kick_missed_wide:
+        landing_spot = kicker_position + random.uniform(kick_distance * 0.7, kick_distance * 0.9)
+    elif kick_missed_short:
+        landing_spot = kicker_position + random.uniform(kick_distance * 0.4, kick_distance * 0.7)
+    
+    # Determine who recovers
+    kicking_team_recovery_chance = 0.35  # Base rate
+    
+    # Modifiers
+    if ball_lands_near_sideline:
+        kicking_team_recovery_chance += 0.10  # Easier to down
+    if defense_was_rushing:
+        kicking_team_recovery_chance += 0.05  # Defense out of position
+    
+    if random.random() < kicking_team_recovery_chance:
+        # Kicking team recovers — Bell! (+0.5) and keeps possession
+        return Recovery(team="offense", spot=landing_spot, bell=True)
+    else:
+        # Defense recovers — Bell! (+0.5) and gets possession
+        return Recovery(team="defense", spot=landing_spot, bell=True)
+```
+
+---
+
+## Expected Impact
+
+| Metric | Current | After Fix | Target |
+|--------|---------|-----------|--------|
+| Snap kick attempts/game | 0.8–1.2 | 2.5–4.0 | 2–4 |
+| Snap kick makes/game | 0.5–0.7 | 1.2–2.0 | 1–3 |
+| 5th down punts | Common | Rare | Rare |
+| 6th down situations | 0% | 15–25% of drives | 15–25% |
+| Bells from missed kicks | ~0 | 0.5–1.0 | 0.5–1.5 |
+
+This is a significant gameplay change—snap kicks become a real weapon instead of a curiosity, and the 6-down system actually gets used.
+
+Want me to add this to the calibration doc?

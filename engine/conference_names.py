@@ -61,14 +61,14 @@ def generate_conference_names(
     """Generate unique conference names.
 
     Args:
-        count: Number of names to generate (1-8).
+        count: Number of names to generate (1-16).
         seed: Optional random seed for reproducibility.
         exclude: Names to avoid duplicating.
 
     Returns:
         List of generated conference name strings.
     """
-    count = max(1, min(8, count))
+    count = max(1, min(16, count))
     exclude_set = set(exclude or [])
 
     rng = random.Random(seed)

@@ -1410,6 +1410,8 @@ elif page == "Season Simulator":
                 with regen_col:
                     if st.button("🎲 New Names", key="regen_season_conf"):
                         st.session_state["season_conf_seed"] = random.randint(0, 999999)
+                        for ci2 in range(len(orig_conf_names)):
+                            st.session_state.pop(f"season_conf_{ci2}", None)
                         st.rerun()
 
                 conf_rename_map = {}
@@ -1689,7 +1691,20 @@ elif page == "Dynasty Mode":
         setup_teams = load_teams_from_directory(teams_dir)
         all_team_names_sorted = sorted(setup_teams.keys())
 
-        num_conferences = st.radio("Number of Conferences", [1, 2, 3, 4], index=1, horizontal=True, key="num_conf")
+        total_teams = len(all_team_names_sorted)
+        max_conf = max(1, total_teams // 9)
+        conf_options = list(range(1, min(max_conf + 1, 13)))
+        default_idx = min(len(conf_options) - 1, max(0, total_teams // 12 - 1))
+        num_conferences = st.select_slider(
+            f"Number of Conferences ({total_teams} teams available)",
+            options=conf_options,
+            value=conf_options[default_idx],
+            key="num_conf",
+        )
+        teams_per = total_teams // max(1, num_conferences)
+        remainder = total_teams % max(1, num_conferences)
+        size_note = f"~{teams_per} teams per conference" if remainder == 0 else f"~{teams_per}-{teams_per+1} teams per conference"
+        st.caption(size_note)
 
         if "conf_name_seed" not in st.session_state:
             st.session_state["conf_name_seed"] = random.randint(0, 999999)
@@ -1703,6 +1718,8 @@ elif page == "Dynasty Mode":
         with btn_col:
             if st.button("🎲 New Names", key="regen_conf_names", use_container_width=True):
                 st.session_state["conf_name_seed"] = random.randint(0, 999999)
+                for ci2 in range(20):
+                    st.session_state.pop(f"conf_name_{ci2}", None)
                 st.rerun()
 
         if num_conferences == 1:
@@ -1712,11 +1729,14 @@ elif page == "Dynasty Mode":
             for tname in all_team_names_sorted:
                 conf_assignments[tname] = conf_name_single
         else:
-            conf_cols = st.columns(num_conferences)
-            for ci in range(num_conferences):
-                with conf_cols[ci]:
-                    cname = st.text_input(f"Conference {ci+1}", value=generated_names[ci], key=f"conf_name_{ci}")
-                    conf_names_list.append(cname)
+            cols_per_row = min(num_conferences, 4)
+            for row_start in range(0, num_conferences, cols_per_row):
+                row_end = min(row_start + cols_per_row, num_conferences)
+                conf_cols = st.columns(row_end - row_start)
+                for ci_offset, ci in enumerate(range(row_start, row_end)):
+                    with conf_cols[ci_offset]:
+                        cname = st.text_input(f"Conference {ci+1}", value=generated_names[ci], key=f"conf_name_{ci}")
+                        conf_names_list.append(cname)
 
             chunk_size = len(all_team_names_sorted) // num_conferences
             default_splits = {}

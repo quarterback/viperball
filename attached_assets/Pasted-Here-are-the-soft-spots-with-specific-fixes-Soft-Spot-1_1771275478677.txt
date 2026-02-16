@@ -1,0 +1,187 @@
+Here are the soft spots with specific fixes:
+
+---
+
+## Soft Spot 1: Snap Kicks Too Rare
+
+**Current:** 0.5–0.7 per game
+**Target:** 1–3 per game
+
+Snap kicks (drop kicks) are supposed to be a signature Viperball mechanic—the 5-point live-ball field goal that elite Kicking ZBs build their offense around. Right now they barely happen.
+
+**Diagnosis:** The EV calculation probably favors place kicks (safer) or going for TD (more points) in almost all situations. Drop kicks only make sense when:
+- Distance favors DK range (40–55 yards) where place kicks are iffy
+- Team is trailing and needs 5 instead of 3
+- Kicking ZB archetype is on field
+
+**Fixes:**
+
+```python
+# 1. Boost DK consideration for Kicking ZB archetype
+if zeroback.archetype == "Kicking ZB":
+    dk_ev_multiplier = 1.25  # 25% EV boost for specialists
+    dk_range_extension = 5   # Attempt from 5 yards further out
+
+# 2. Trigger DK in trailing situations (5 > 3 matters)
+if team_trailing and score_diff <= 8:
+    dk_ev_multiplier *= 1.15
+
+# 3. Allow DK attempts on earlier downs when in range
+if down >= 3 and fg_distance >= 38 and fg_distance <= 52:
+    consider_drop_kick = True  # Currently maybe only 5th-6th down?
+
+# 4. Add "shot play" DK attempts — low probability surprise attempts
+if random.random() < 0.03 and fg_distance <= 48:  # 3% chance
+    attempt_snap_kick = True
+```
+
+**Validation target:** After fix, should see 1.5–2.5 snap kick attempts per game, 0.8–1.5 makes.
+
+---
+
+## Soft Spot 2: Fumbles Still Low
+
+**Current:** 2.3–2.5 per game
+**Target:** 4–6 per game
+
+Fumbles create chaos, Bells (0.5 pts), and momentum swings. The game is too clean right now.
+
+**Diagnosis:** Lateral efficiency at 93–95% means chains almost never fail. Run fumbles were cut to 0.8–1.4% base which might be too low.
+
+**Current fumble sources:**
+- Lateral chains: ~5–8% cumulative per chain (working, but chains are 94% efficient)
+- Runs: 0.8–1.4% base (too low)
+- Returns: unclear if implemented
+
+**Fixes:**
+
+```python
+# 1. Bump run fumble rates back up slightly
+run_fumble_rates = {
+    'dive_option': 0.012,    # Was 0.008, bump to 1.2%
+    'sweep_option': 0.018,   # Was 0.012, bump to 1.8%  
+    'speed_option': 0.020,   # Was 0.014, bump to 2.0%
+}
+
+# 2. Reduce lateral efficiency target to 88-91%
+# Increase per-exchange fumble rate
+lateral_fumble_per_exchange = 0.028  # Was ~0.022, bump to 2.8%
+
+# 3. Add fumble boost on big hits / TFLs
+if yards_gained <= 0:  # Stuffed at line
+    fumble_prob += 0.025  # +2.5% on TFLs
+
+# 4. Weather impact (already implemented, verify it's aggressive enough)
+if weather in ['rain', 'snow', 'sleet']:
+    fumble_prob *= 1.35  # 35% increase in bad weather
+```
+
+**Validation target:** 4–5 fumbles per game, lateral efficiency 88–92%.
+
+---
+
+## Soft Spot 3: Pindowns Too Rare
+
+**Current:** 0.5–1.0 per game
+**Target:** 2–4 per game
+
+Pindowns (1 pt for forcing opponent to start inside their 10) should reward good punting and special teams. They're barely happening.
+
+**Diagnosis:** Either punts aren't landing inside the 10, or the pindown logic isn't triggering correctly.
+
+**Fixes:**
+
+```python
+# 1. Check punt landing distribution
+# Target: 25-30% of punts should land inside the 20, 10-15% inside the 10
+
+# 2. Improve punter targeting when in range
+if punter_field_position >= 35 and punter_field_position <= 55:
+    # "Coffin corner" range — aim for inside 10
+    target_landing = random.uniform(3, 12)  # Aim for 3-12 yard line
+    punt_variance = 8  # yards of variance
+    
+# 3. Verify pindown triggers correctly
+if opponent_starting_position <= 10:
+    award_pindown = True  # 1 point
+    
+# 4. Add touchback prevention logic
+# Punters should try to avoid touchbacks (which give opponent the 20)
+if projected_landing <= 5:
+    reduce_punt_power()  # Don't boom it into end zone
+```
+
+**Validation target:** 2–3 pindowns per game, 25% of punts inside the 20.
+
+---
+
+## Soft Spot 4: Lateral Efficiency Too High
+
+**Current:** 93–95%
+**Target:** 85–92%
+
+Chains are too safe. They should be the high-risk/high-reward option compared to runs.
+
+**Diagnosis:** Per-exchange fumble rate is too low, or chain length distribution skews short (2-lateral chains are safest).
+
+**Fixes:**
+
+```python
+# 1. Increase base fumble rate per lateral exchange
+fumble_per_exchange = 0.030  # 3% per exchange (was ~2.2%)
+
+# 2. Cumulative probability targets:
+#    2-lateral chain: 1 - (0.97)^2 = 5.9% fumble chance
+#    3-lateral chain: 1 - (0.97)^3 = 8.7% fumble chance  
+#    4-lateral chain: 1 - (0.97)^4 = 11.5% fumble chance
+#    5-lateral chain: 1 - (0.97)^5 = 14.1% fumble chance
+
+# 3. Encourage longer chains (more exciting but riskier)
+if offensive_style == "lateral_spread":
+    avg_chain_length = 3.5  # vs 2.8 for other styles
+    
+# 4. Defensive pressure should disrupt chains more
+if defense_style in ["pressure", "blitz"]:
+    fumble_per_exchange += 0.008  # +0.8% per exchange vs aggressive D
+```
+
+**Validation target:** Lateral efficiency 88–91%, with visible risk/reward tradeoff vs runs.
+
+---
+
+## Soft Spot 5: 6th Down Conversion Never Happens
+
+**Current:** 0%
+**Target:** Doesn't matter much, but > 0% shows teams use all 6 downs
+
+Teams never face 6th down because they punt or kick before then. This is mostly fine—the 6-down system means you rarely exhaust all chances—but seeing occasional 6th down attempts would show the system working.
+
+**Diagnosis:** AI kicks/punts on 5th down almost always. 6th down only happens if 5th down attempt fails.
+
+**Fixes:**
+
+```python
+# 1. Slightly increase go-for-it rate on 5th down in opponent territory
+if down == 5 and field_position >= 50:
+    go_for_it_threshold += 0.10  # More aggressive
+
+# 2. Log when 6th down situations occur
+# Even if rare, they should happen sometimes
+
+# 3. Make sure 6th-and-short triggers go-for-it
+if down == 6 and yards_to_go <= 5:
+    always_go_for_it = True  # No punting on 6th-and-short
+```
+
+**Validation target:** 0.5–2% of drives reach 6th down, with some conversions.
+
+---
+
+## Priority Order
+
+1. **Snap kicks** — Signature mechanic that's missing
+2. **Fumbles / lateral efficiency** — Needs more chaos
+3. **Pindowns** — Rewards special teams play
+4. **6th down** — Minor, mostly cosmetic
+
+Want me to update the calibration doc with these specific fixes?
