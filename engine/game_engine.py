@@ -74,6 +74,244 @@ POSITION_TAGS = {
     "Corner": "CB",
 }
 
+WEATHER_CONDITIONS = {
+    "clear": {
+        "label": "Clear",
+        "description": "Perfect conditions — no weather impact",
+        "fumble_modifier": 0.0,
+        "kick_accuracy_modifier": 0.0,
+        "stamina_drain_modifier": 0.0,
+        "muff_modifier": 0.0,
+        "lateral_fumble_modifier": 0.0,
+        "punt_distance_modifier": 0.0,
+        "speed_modifier": 0.0,
+    },
+    "rain": {
+        "label": "Rain",
+        "description": "Wet ball, slippery field — increased fumbles and muffs, reduced kick accuracy",
+        "fumble_modifier": 0.025,
+        "kick_accuracy_modifier": -0.08,
+        "stamina_drain_modifier": 0.10,
+        "muff_modifier": 0.03,
+        "lateral_fumble_modifier": 0.015,
+        "punt_distance_modifier": -0.05,
+        "speed_modifier": -0.03,
+    },
+    "snow": {
+        "label": "Snow",
+        "description": "Cold and slippery — major kick accuracy loss, moderate fumble increase, slower play",
+        "fumble_modifier": 0.020,
+        "kick_accuracy_modifier": -0.12,
+        "stamina_drain_modifier": 0.15,
+        "muff_modifier": 0.025,
+        "lateral_fumble_modifier": 0.020,
+        "punt_distance_modifier": -0.10,
+        "speed_modifier": -0.05,
+    },
+    "sleet": {
+        "label": "Sleet",
+        "description": "Worst conditions — extreme fumble risk, terrible kicking, exhausting",
+        "fumble_modifier": 0.035,
+        "kick_accuracy_modifier": -0.15,
+        "stamina_drain_modifier": 0.20,
+        "muff_modifier": 0.04,
+        "lateral_fumble_modifier": 0.025,
+        "punt_distance_modifier": -0.12,
+        "speed_modifier": -0.06,
+    },
+    "heat": {
+        "label": "Extreme Heat",
+        "description": "100°F+ — rapid stamina drain, slight fumble increase from sweaty hands",
+        "fumble_modifier": 0.010,
+        "kick_accuracy_modifier": -0.02,
+        "stamina_drain_modifier": 0.30,
+        "muff_modifier": 0.015,
+        "lateral_fumble_modifier": 0.010,
+        "punt_distance_modifier": 0.0,
+        "speed_modifier": -0.02,
+    },
+    "wind": {
+        "label": "Heavy Wind",
+        "description": "Strong gusts — kick accuracy heavily impacted, longer punts with variance",
+        "fumble_modifier": 0.005,
+        "kick_accuracy_modifier": -0.10,
+        "stamina_drain_modifier": 0.05,
+        "muff_modifier": 0.02,
+        "lateral_fumble_modifier": 0.005,
+        "punt_distance_modifier": 0.08,
+        "speed_modifier": -0.01,
+    },
+}
+
+POSITION_ARCHETYPES = {
+    "zeroback": {
+        "kicking_zb": {
+            "label": "Kicking ZB",
+            "description": "Snapkick threat from anywhere past midfield",
+            "kick_accuracy_bonus": 0.12,
+            "run_yards_modifier": 0.90,
+            "lateral_throw_bonus": 0.05,
+            "snapkick_trigger_boost": 0.25,
+            "td_rate_modifier": 0.85,
+            "touches_target": (12, 16),
+        },
+        "running_zb": {
+            "label": "Running ZB",
+            "description": "Elusive runner, TD machine, forces box-stacking",
+            "kick_accuracy_bonus": -0.05,
+            "run_yards_modifier": 1.20,
+            "lateral_throw_bonus": -0.05,
+            "snapkick_trigger_boost": -0.15,
+            "td_rate_modifier": 1.25,
+            "touches_target": (18, 25),
+        },
+        "distributor_zb": {
+            "label": "Distributor ZB",
+            "description": "Gets playmakers the ball in space via lateral chains",
+            "kick_accuracy_bonus": 0.0,
+            "run_yards_modifier": 0.85,
+            "lateral_throw_bonus": 0.15,
+            "snapkick_trigger_boost": -0.10,
+            "td_rate_modifier": 0.80,
+            "touches_target": (8, 12),
+        },
+        "dual_threat_zb": {
+            "label": "Dual-Threat ZB",
+            "description": "Balanced run/kick — no clear defensive answer",
+            "kick_accuracy_bonus": 0.06,
+            "run_yards_modifier": 1.05,
+            "lateral_throw_bonus": 0.05,
+            "snapkick_trigger_boost": 0.10,
+            "td_rate_modifier": 1.05,
+            "touches_target": (14, 18),
+        },
+    },
+    "viper": {
+        "receiving_viper": {
+            "label": "Receiving Viper",
+            "description": "Chain target in space — mismatches against slower defenders",
+            "yards_per_touch_modifier": 1.20,
+            "chain_target_bonus": 0.20,
+            "run_yards_modifier": 0.90,
+            "td_rate_modifier": 1.15,
+            "decoy_rate": 0.20,
+        },
+        "power_viper": {
+            "label": "Power Viper",
+            "description": "Short-yardage conversions, lead blocking battering ram",
+            "yards_per_touch_modifier": 0.85,
+            "chain_target_bonus": -0.10,
+            "run_yards_modifier": 1.15,
+            "td_rate_modifier": 1.10,
+            "decoy_rate": 0.12,
+            "short_yardage_bonus": 0.25,
+        },
+        "decoy_viper": {
+            "label": "Decoy Viper",
+            "description": "Draws coverage, creates space for others",
+            "yards_per_touch_modifier": 1.30,
+            "chain_target_bonus": -0.15,
+            "run_yards_modifier": 0.85,
+            "td_rate_modifier": 0.80,
+            "decoy_rate": 0.55,
+            "team_yards_bonus": 0.08,
+        },
+        "hybrid_viper": {
+            "label": "Hybrid Viper",
+            "description": "B+ at everything, defensive nightmare",
+            "yards_per_touch_modifier": 1.05,
+            "chain_target_bonus": 0.05,
+            "run_yards_modifier": 1.05,
+            "td_rate_modifier": 1.05,
+            "decoy_rate": 0.30,
+        },
+    },
+    "flanker": {
+        "speed_flanker": {
+            "label": "Speed Flanker",
+            "description": "Breakaway threat on perimeter plays",
+            "yards_per_touch_modifier": 1.25,
+            "breakaway_bonus": 0.10,
+            "fumble_modifier": 1.10,
+            "td_rate_modifier": 1.15,
+            "touches_target": (5, 8),
+        },
+        "power_flanker": {
+            "label": "Power Flanker",
+            "description": "Yards after contact, inside runs and chain extensions",
+            "yards_per_touch_modifier": 0.90,
+            "breakaway_bonus": 0.0,
+            "fumble_modifier": 0.80,
+            "td_rate_modifier": 1.0,
+            "touches_target": (6, 10),
+            "yac_bonus": 0.15,
+        },
+        "elusive_flanker": {
+            "label": "Elusive Flanker",
+            "description": "Missed tackle generator in open field",
+            "yards_per_touch_modifier": 1.30,
+            "breakaway_bonus": 0.08,
+            "fumble_modifier": 1.15,
+            "td_rate_modifier": 1.20,
+            "touches_target": (5, 8),
+        },
+        "reliable_flanker": {
+            "label": "Reliable Flanker",
+            "description": "Low fumble rate, high-volume clock control",
+            "yards_per_touch_modifier": 0.90,
+            "breakaway_bonus": 0.0,
+            "fumble_modifier": 0.60,
+            "td_rate_modifier": 0.85,
+            "touches_target": (8, 12),
+        },
+    },
+}
+
+
+def assign_archetype(player) -> str:
+    pos = player.position
+    spd = player.speed
+    kick = player.kicking
+    lat = player.lateral_skill
+    stam = player.stamina
+    tck = player.tackling
+
+    if "Zeroback" in pos:
+        if kick >= 80 and kick >= spd:
+            return "kicking_zb"
+        elif spd >= 90 and spd > kick + 5:
+            return "running_zb"
+        elif lat >= 85 and lat >= spd and lat >= kick:
+            return "distributor_zb"
+        else:
+            return "dual_threat_zb"
+    elif "Viper" in pos:
+        if lat >= 90 and spd >= 90:
+            return "receiving_viper"
+        elif tck >= 80 and stam >= 85:
+            return "power_viper"
+        elif spd >= 93 and lat < 85:
+            return "decoy_viper"
+        else:
+            return "hybrid_viper"
+    elif any(p in pos for p in ["Halfback", "Wingback", "Shiftback", "Wing"]):
+        if spd >= 93:
+            return "speed_flanker"
+        elif tck >= 80 and stam >= 88:
+            return "power_flanker"
+        elif lat >= 88 and spd >= 85:
+            return "elusive_flanker"
+        else:
+            return "reliable_flanker"
+    return "none"
+
+
+def get_archetype_info(archetype: str) -> dict:
+    for category, archetypes in POSITION_ARCHETYPES.items():
+        if archetype in archetypes:
+            return archetypes[archetype]
+    return {}
+
 
 def player_tag(player) -> str:
     pos = player.position
@@ -112,6 +350,14 @@ class Player:
     lateral_skill: int
     tackling: int
     current_stamina: float = 100.0
+    archetype: str = "none"
+    game_touches: int = 0
+    game_yards: int = 0
+    game_tds: int = 0
+    game_fumbles: int = 0
+    game_laterals_thrown: int = 0
+    game_kick_attempts: int = 0
+    game_kick_makes: int = 0
 
 
 @dataclass
@@ -140,24 +386,56 @@ class Penalty:
 
 PENALTY_CATALOG = {
     "pre_snap": [
-        {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.018},
-        {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.014},
-        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.006},
-        {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.005},
-        {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
+        {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.022},
+        {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.018},
+        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.008},
+        {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.006},
+        {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.008},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.006},
+        {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.003},
+        {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.004},
     ],
-    "during_play": [
-        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.022},
-        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.010, "auto_first": True},
-        {"name": "Illegal Lateral", "yards": 5, "on": "offense", "prob": 0.005},
-        {"name": "Facemask", "yards": 15, "on": "either", "prob": 0.004},
-        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.003},
+    "during_play_run": [
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.028},
+        {"name": "Illegal Block", "yards": 10, "on": "offense", "prob": 0.008},
+        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.004},
+        {"name": "Chop Block", "yards": 15, "on": "offense", "prob": 0.003},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.012, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.006},
+        {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.005, "auto_first": True},
+        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.005},
         {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.003},
     ],
+    "during_play_lateral": [
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.025},
+        {"name": "Illegal Forward Lateral", "yards": 5, "on": "offense", "prob": 0.010, "loss_of_down": True},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "offense", "prob": 0.008},
+        {"name": "Lateral Interference", "yards": 10, "on": "defense", "prob": 0.010, "auto_first": True},
+        {"name": "Illegal Contact", "yards": 5, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.012, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.006, "auto_first": True},
+        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.004},
+        {"name": "Illegal Screen", "yards": 10, "on": "offense", "prob": 0.005},
+        {"name": "Illegal Viper Contact", "yards": 10, "on": "defense", "prob": 0.006, "auto_first": True},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.004},
+    ],
+    "during_play_kick": [
+        {"name": "Roughing the Kicker", "yards": 15, "on": "defense", "prob": 0.012, "auto_first": True},
+        {"name": "Running Into Kicker", "yards": 5, "on": "defense", "prob": 0.015},
+        {"name": "Fair Catch Interference", "yards": 15, "on": "defense", "prob": 0.006},
+        {"name": "Kick Catch Interference", "yards": 15, "on": "defense", "prob": 0.005},
+        {"name": "Illegal Kick", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.015},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "either", "prob": 0.008},
+    ],
     "post_play": [
-        {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.003},
-        {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.002},
-        {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.003},
+        {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.006},
+        {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.006},
+        {"name": "Excessive Celebration", "yards": 15, "on": "offense", "prob": 0.003},
+        {"name": "Sideline Interference", "yards": 15, "on": "either", "prob": 0.002},
     ],
 }
 
@@ -479,7 +757,8 @@ DEFENSE_MUFF_MODIFIERS = {
 class ViperballEngine:
 
     def __init__(self, home_team: Team, away_team: Team, seed: Optional[int] = None,
-                 style_overrides: Optional[Dict[str, str]] = None):
+                 style_overrides: Optional[Dict[str, str]] = None,
+                 weather: str = "clear"):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.state = GameState()
@@ -488,6 +767,13 @@ class ViperballEngine:
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
+        self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
+        self.weather_info = WEATHER_CONDITIONS[self.weather]
+
+        for p in self.home_team.players:
+            p.archetype = assign_archetype(p)
+        for p in self.away_team.players:
+            p.archetype = assign_archetype(p)
 
         if seed is not None:
             random.seed(seed)
@@ -890,10 +1176,31 @@ class ViperballEngine:
         result = self.select_kick_decision()
         return result if result is not None else PlayType.PUNT
 
-    def _check_penalties(self, phase: str) -> Optional[Penalty]:
-        penalties = PENALTY_CATALOG.get(phase, [])
+    def _check_penalties(self, phase: str, play_type: str = "run") -> Optional[Penalty]:
+        if phase == "during_play":
+            if play_type in ("lateral_chain",):
+                catalog_key = "during_play_lateral"
+            elif play_type in ("punt", "drop_kick", "place_kick"):
+                catalog_key = "during_play_kick"
+            else:
+                catalog_key = "during_play_run"
+        else:
+            catalog_key = phase
+
+        penalties = PENALTY_CATALOG.get(catalog_key, [])
+
+        weather_penalty_boost = 0.0
+        if self.weather in ("rain", "snow", "sleet"):
+            weather_penalty_boost = 0.003
+        if self.weather == "heat":
+            weather_penalty_boost = 0.002
+
         for pen_def in penalties:
-            if random.random() < pen_def["prob"]:
+            prob = pen_def["prob"] + weather_penalty_boost
+            if self.state.quarter == 4 and self.state.time_remaining < 300:
+                prob *= 1.15
+
+            if random.random() < prob:
                 on_side = pen_def["on"]
                 if on_side == "offense":
                     team_name = self.state.possession
@@ -1034,7 +1341,7 @@ class ViperballEngine:
                 else:
                     play = self.simulate_punt(family)
 
-                post_pen = self._check_penalties("post_play")
+                post_pen = self._check_penalties("post_play", play_type=play.play_type)
                 if post_pen:
                     play = self._apply_post_play_penalty(post_pen, play)
                 return play
@@ -1059,11 +1366,12 @@ class ViperballEngine:
         else:
             play = self.simulate_run(play_family)
 
-        during_pen = self._check_penalties("during_play")
+        actual_type = play.play_type if play else "run"
+        during_pen = self._check_penalties("during_play", play_type=actual_type)
         if during_pen:
             play = self._apply_during_play_penalty(during_pen, play)
         else:
-            post_pen = self._check_penalties("post_play")
+            post_pen = self._check_penalties("post_play", play_type=actual_type)
             if post_pen:
                 play = self._apply_post_play_penalty(post_pen, play)
 
@@ -1153,8 +1461,9 @@ class ViperballEngine:
 
         # Base probability modified by kicking team's coverage
         muff_prob = BASE_MUFF_PUNT * coverage_modifier
+        muff_prob += self.weather_info.get("muff_modifier", 0.0)
 
-        return min(0.15, max(0.02, muff_prob))  # Cap at 15%, floor at 2%
+        return min(0.15, max(0.02, muff_prob))
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
         """
@@ -1259,7 +1568,7 @@ class ViperballEngine:
                 return yards_gained + extra
         return yards_gained
 
-    def _run_fumble_check(self, family: PlayFamily, yards_gained: int) -> bool:
+    def _run_fumble_check(self, family: PlayFamily, yards_gained: int, carrier=None) -> bool:
         if family == PlayFamily.DIVE_OPTION:
             base_fumble = 0.008
         elif family in (PlayFamily.SPEED_OPTION, PlayFamily.SWEEP_OPTION):
@@ -1288,6 +1597,14 @@ class ViperballEngine:
         if yards_gained <= 0:
             base_fumble += 0.03
 
+        base_fumble += self.weather_info.get("fumble_modifier", 0.0)
+
+        if carrier and carrier.archetype != "none":
+            arch_info = get_archetype_info(carrier.archetype)
+            fumble_mod = arch_info.get("fumble_modifier", 1.0)
+            if isinstance(fumble_mod, float) and fumble_mod != 1.0:
+                base_fumble *= fumble_mod
+
         return random.random() < base_fumble
 
     def simulate_run(self, family: PlayFamily = PlayFamily.DIVE_OPTION) -> Play:
@@ -1295,6 +1612,7 @@ class ViperballEngine:
         player = random.choice(team.players[:5])
         plabel = player_label(player)
         ptag = player_tag(player)
+        player.game_touches += 1
 
         if family == PlayFamily.DIVE_OPTION:
             base_yards = random.gauss(6.8, 3.5)
@@ -1308,6 +1626,13 @@ class ViperballEngine:
         else:
             base_yards = random.gauss(6.8, 3.5)
             action = "run"
+
+        arch_info = get_archetype_info(player.archetype)
+        run_arch_mod = arch_info.get("run_yards_modifier", 1.0)
+        base_yards *= run_arch_mod
+
+        speed_weather_mod = 1.0 + self.weather_info.get("speed_modifier", 0.0)
+        base_yards *= speed_weather_mod
 
         style = self._current_style()
         strength_factor = team.avg_speed / 90
@@ -1348,9 +1673,10 @@ class ViperballEngine:
 
         yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
 
-        if self._run_fumble_check(family, yards_gained):
+        if self._run_fumble_check(family, yards_gained, carrier=player):
             fumble_yards = random.randint(-3, max(1, yards_gained))
             old_pos = self.state.field_position
+            player.game_fumbles += 1
             self.change_possession()
             self.state.field_position = max(1, 100 - (old_pos + fumble_yards))
             self.state.down = 1
@@ -1358,6 +1684,7 @@ class ViperballEngine:
             self.add_score(0.5)
             self.apply_stamina_drain(3)
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
             return Play(
                 play_number=self.state.play_number,
                 quarter=self.state.quarter,
@@ -1369,7 +1696,7 @@ class ViperballEngine:
                 players_involved=[plabel],
                 yards_gained=fumble_yards,
                 result=PlayResult.FUMBLE.value,
-                description=f"{ptag} {action} → {fumble_yards} — FUMBLE! Defense recovers (+0.5)",
+                description=f"{ptag} {action} → {fumble_yards} — FUMBLE! Defense recovers (+0.5){weather_tag}",
                 fatigue=round(stamina, 1),
                 fumble=True,
             )
@@ -1406,6 +1733,8 @@ class ViperballEngine:
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - self.state.field_position
             self.add_score(9)
+            player.game_tds += 1
+            player.game_yards += yards_gained
             description = f"{ptag} {action} → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
@@ -1458,6 +1787,7 @@ class ViperballEngine:
         base_fumble_prob = random.uniform(0.020, 0.030)
         fumble_prob = base_fumble_prob
         fumble_prob += (chain_length - 1) * 0.006
+        fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
         if self.drive_play_count >= 5:
             fumble_prob += random.uniform(0.010, 0.018)
         if chain_length >= 3:
@@ -1674,7 +2004,8 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
 
-        base_distance = random.gauss(45, 10)
+        punt_weather_mod = 1.0 + self.weather_info.get("punt_distance_modifier", 0.0)
+        base_distance = random.gauss(45, 10) * punt_weather_mod
         kicking_factor = punter.kicking / 80
 
         # DEFENSIVE SYSTEM: Defensive kick suppression
@@ -1975,6 +2306,9 @@ class ViperballEngine:
         skill_factor = kicker.kicking / 85
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
 
+        arch_info = get_archetype_info(kicker.archetype)
+        kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
+
         if distance <= 25:
             base_prob = 0.72
         elif distance <= 35:
@@ -1986,12 +2320,16 @@ class ViperballEngine:
         else:
             base_prob = max(0.08, 0.30 - (distance - 55) * 0.015)
 
-        success_prob = base_prob * skill_factor * (1.0 + kick_acc)
+        weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        success_prob = base_prob * skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        kicker.game_kick_attempts += 1
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
         if random.random() < success_prob:
             self.add_score(5)
+            kicker.game_kick_makes += 1
+            weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
 
             return Play(
                 play_number=self.state.play_number,
@@ -2006,7 +2344,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{ptag} snap kick {distance}yd — GOOD! +5",
+                description=f"{ptag} snap kick {distance}yd — GOOD! +5{weather_tag}",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -2142,12 +2480,18 @@ class ViperballEngine:
 
         skill_factor = kicker.kicking / 85
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
-        success_prob *= skill_factor * (1.0 + kick_acc)
+        arch_info = get_archetype_info(kicker.archetype)
+        kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
+        weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        success_prob *= skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        kicker.game_kick_attempts += 1
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
         if random.random() < success_prob:
             self.add_score(3)
+            kicker.game_kick_makes += 1
+            weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
 
             return Play(
                 play_number=self.state.play_number,
@@ -2162,7 +2506,7 @@ class ViperballEngine:
                 players_involved=[player_label(kicker)],
                 yards_gained=0,
                 result=PlayResult.SUCCESSFUL_KICK.value,
-                description=f"{ptag} field goal {distance}yd — GOOD! +3",
+                description=f"{ptag} field goal {distance}yd — GOOD! +3{weather_tag}",
                 fatigue=round(stamina, 1),
             )
         else:
@@ -2249,10 +2593,12 @@ class ViperballEngine:
             return 0.7 + (stamina / 70) * 0.3
 
     def apply_stamina_drain(self, amount: float):
+        weather_drain = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+        adjusted = amount * weather_drain
         if self.state.possession == "home":
-            self.state.home_stamina = max(40, self.state.home_stamina - amount)
+            self.state.home_stamina = max(40, self.state.home_stamina - adjusted)
         else:
-            self.state.away_stamina = max(40, self.state.away_stamina - amount)
+            self.state.away_stamina = max(40, self.state.away_stamina - adjusted)
 
     def calculate_viper_impact(self) -> float:
         positions = ["free", "left", "right", "deep"]
@@ -2340,6 +2686,26 @@ class ViperballEngine:
         away_stats["viperball_metrics"] = away_metrics
         away_stats["viperball_metrics"]["overall_performance_index"] = away_opi
 
+        def collect_player_stats(team):
+            stats = []
+            for p in team.players:
+                if p.game_touches > 0 or p.game_kick_attempts > 0:
+                    stats.append({
+                        "tag": player_tag(p),
+                        "name": p.name,
+                        "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
+                        "touches": p.game_touches,
+                        "yards": p.game_yards,
+                        "tds": p.game_tds,
+                        "fumbles": p.game_fumbles,
+                        "kick_att": p.game_kick_attempts,
+                        "kick_made": p.game_kick_makes,
+                    })
+            return sorted(stats, key=lambda x: x["touches"] + x["kick_att"], reverse=True)
+
+        home_player_stats = collect_player_stats(self.home_team)
+        away_player_stats = collect_player_stats(self.away_team)
+
         summary = {
             "final_score": {
                 "home": {
@@ -2353,10 +2719,17 @@ class ViperballEngine:
             },
             "home_style": self.home_team.offense_style,
             "away_style": self.away_team.offense_style,
+            "weather": self.weather,
+            "weather_label": self.weather_info["label"],
+            "weather_description": self.weather_info["description"],
             "seed": self.seed,
             "stats": {
                 "home": home_stats,
                 "away": away_stats,
+            },
+            "player_stats": {
+                "home": home_player_stats,
+                "away": away_player_stats,
             },
             "drive_summary": self.drive_log,
             "play_by_play": play_dicts,

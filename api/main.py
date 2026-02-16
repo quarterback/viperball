@@ -23,6 +23,7 @@ class SimulateRequest(BaseModel):
     away: str
     seed: Optional[int] = None
     styles: Optional[Dict[str, str]] = None
+    weather: str = "clear"
 
 
 class SimulateManyRequest(BaseModel):
@@ -31,6 +32,7 @@ class SimulateManyRequest(BaseModel):
     count: int = 10
     seed: Optional[int] = None
     styles: Optional[Dict[str, str]] = None
+    weather: str = "clear"
 
 
 class DebugPlayRequest(BaseModel):
@@ -59,7 +61,7 @@ def list_teams():
 def simulate(req: SimulateRequest):
     home_team = _load_team(req.home)
     away_team = _load_team(req.away)
-    engine = ViperballEngine(home_team, away_team, seed=req.seed, style_overrides=req.styles)
+    engine = ViperballEngine(home_team, away_team, seed=req.seed, style_overrides=req.styles, weather=req.weather)
     result = engine.simulate_game()
     return result
 
@@ -71,7 +73,7 @@ def simulate_many(req: SimulateManyRequest):
         home_team = _load_team(req.home)
         away_team = _load_team(req.away)
         game_seed = (req.seed + i) if req.seed is not None else None
-        engine = ViperballEngine(home_team, away_team, seed=game_seed, style_overrides=req.styles)
+        engine = ViperballEngine(home_team, away_team, seed=game_seed, style_overrides=req.styles, weather=req.weather)
         result = engine.simulate_game()
         results.append(result)
 

@@ -455,11 +455,18 @@ class Season:
             f"{away_team.name}_defense": away_style_config.get('defense_style', 'base_defense'),
         }
 
+        season_weather = random.choices(
+            ["clear", "rain", "snow", "sleet", "heat", "wind"],
+            weights=[40, 20, 10, 5, 15, 10],
+            k=1
+        )[0]
+
         engine = ViperballEngine(
             home_team,
             away_team,
             seed=random.randint(1, 1000000),
-            style_overrides=style_overrides
+            style_overrides=style_overrides,
+            weather=season_weather
         )
         result = engine.simulate_game()
 

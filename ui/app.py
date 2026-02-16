@@ -14,6 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES, DEFENSE_STYLES
+from engine.game_engine import WEATHER_CONDITIONS, POSITION_ARCHETYPES, get_archetype_info
 from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
 from engine.viperball_metrics import calculate_viperball_metrics
@@ -372,7 +373,14 @@ if page == "Game Simulator":
                                        key="away_def_style")
         st.caption(DEFENSE_TOOLTIPS.get(away_def_style, defense_styles[away_def_style]["description"]))
 
-    col_seed, col_btn = st.columns([1, 2])
+    weather_keys = list(WEATHER_CONDITIONS.keys())
+    weather_labels = {k: v["label"] for k, v in WEATHER_CONDITIONS.items()}
+    col_weather, col_seed, col_btn = st.columns([1, 1, 2])
+    with col_weather:
+        weather = st.selectbox("Weather", weather_keys, format_func=lambda x: f"{weather_labels[x]}", key="weather")
+        wx = WEATHER_CONDITIONS[weather]
+        if weather != "clear":
+            st.caption(f"{wx['description']}")
     with col_seed:
         seed = st.number_input("Seed (0 = random)", min_value=0, max_value=999999, value=0, key="seed")
     with col_btn:
@@ -391,7 +399,7 @@ if page == "Game Simulator":
         style_overrides[f"{home_team.name}_defense"] = home_def_style
         style_overrides[f"{away_team.name}_defense"] = away_def_style
 
-        engine = ViperballEngine(home_team, away_team, seed=actual_seed, style_overrides=style_overrides)
+        engine = ViperballEngine(home_team, away_team, seed=actual_seed, style_overrides=style_overrides, weather=weather)
 
         with st.spinner("Simulating game..."):
             result = engine.simulate_game()
@@ -434,6 +442,14 @@ if page == "Game Simulator":
             st.success(f"{away_name} wins by {margin_str}")
         else:
             st.info("Game ended in a tie")
+
+        game_weather = result.get("weather", "clear")
+        weather_label = result.get("weather_label", "Clear")
+        weather_desc = result.get("weather_description", "")
+        weather_icons = {"clear": "☀️", "rain": "🌧️", "snow": "❄️", "sleet": "🌨️", "heat": "🔥", "wind": "💨"}
+        wx_icon = weather_icons.get(game_weather, "☀️")
+        if game_weather != "clear":
+            st.info(f"{wx_icon} **{weather_label}** — {weather_desc}")
 
         # ====== EXPORT SECTION ======
         st.subheader("Export Game Data")
@@ -589,6 +605,50 @@ if page == "Game Simulator":
             dc1, dc2 = st.columns(2)
             dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
             dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
+
+        # ====== PENALTY TRACKER ======
+        st.subheader("Penalty Tracker")
+        penalty_plays = [p for p in plays if p.get("penalty")]
+        if penalty_plays:
+            pen_home = [p for p in penalty_plays if p["penalty"]["on_team"] == "home" and not p["penalty"]["declined"]]
+            pen_away = [p for p in penalty_plays if p["penalty"]["on_team"] == "away" and not p["penalty"]["declined"]]
+            pen_dec = [p for p in penalty_plays if p["penalty"]["declined"]]
+            pc1, pc2, pc3 = st.columns(3)
+            pc1.metric(f"{home_name} Penalties", f"{len(pen_home)} for {sum(p['penalty']['yards'] for p in pen_home)} yds")
+            pc2.metric(f"{away_name} Penalties", f"{len(pen_away)} for {sum(p['penalty']['yards'] for p in pen_away)} yds")
+            pc3.metric("Declined", len(pen_dec))
+
+            all_accepted = pen_home + pen_away
+            if all_accepted:
+                pen_data = []
+                for p in all_accepted:
+                    pen_data.append({
+                        "Q": p["quarter"],
+                        "Time": p["time_remaining"],
+                        "Penalty": p["penalty"]["name"],
+                        "On": home_name if p["penalty"]["on_team"] == "home" else away_name,
+                        "Player": p["penalty"]["player"],
+                        "Yards": p["penalty"]["yards"],
+                        "Phase": p["penalty"]["phase"],
+                    })
+                st.dataframe(pd.DataFrame(pen_data), hide_index=True, use_container_width=True)
+        else:
+            st.caption("No penalties called this game.")
+
+        # ====== PLAYER ARCHETYPES ======
+        player_stats = result.get("player_stats", {})
+        if player_stats.get("home") or player_stats.get("away"):
+            st.subheader("Player Performance & Archetypes")
+            ptab1, ptab2 = st.tabs([home_name, away_name])
+            for ptab, side, tname in [(ptab1, "home", home_name), (ptab2, "away", away_name)]:
+                with ptab:
+                    pstats = player_stats.get(side, [])
+                    if pstats:
+                        pdf = pd.DataFrame(pstats)
+                        pdf.columns = ["Tag", "Name", "Archetype", "Touches", "Yards", "TDs", "Fumbles", "Kick Att", "Kick Made"]
+                        st.dataframe(pdf, hide_index=True, use_container_width=True)
+                    else:
+                        st.caption("No player stat data available.")
 
         # ====== VPA (Viperball Points Added) ======
         st.subheader("VPA — Viperball Points Added")
@@ -845,11 +905,14 @@ elif page == "Debug Tools":
         away_style = st.selectbox("Away Style", style_keys,
                                   format_func=lambda x: styles[x]["label"], key="dbg_away_style")
 
-    col_n, col_seed = st.columns(2)
+    col_n, col_seed, col_wx = st.columns(3)
     with col_n:
         num_sims = st.slider("Number of Simulations", 5, 200, 50)
     with col_seed:
         base_seed = st.number_input("Base Seed (0 = random)", min_value=0, max_value=999999, value=42, key="dbg_seed")
+    with col_wx:
+        dbg_weather = st.selectbox("Weather", list(WEATHER_CONDITIONS.keys()),
+                                   format_func=lambda x: WEATHER_CONDITIONS[x]["label"], key="dbg_weather")
 
     run_batch = st.button("Run Batch Simulation", type="primary", use_container_width=True)
 
@@ -864,7 +927,7 @@ elif page == "Debug Tools":
             s = (base_seed + i) if base_seed > 0 else None
             home_t = load_team(home_key)
             away_t = load_team(away_key)
-            engine = ViperballEngine(home_t, away_t, seed=s, style_overrides=style_overrides)
+            engine = ViperballEngine(home_t, away_t, seed=s, style_overrides=style_overrides, weather=dbg_weather)
             r = engine.simulate_game()
             results.append(r)
             progress.progress((i + 1) / num_sims)
@@ -1105,11 +1168,14 @@ elif page == "Play Inspector":
         down = st.selectbox("Down", [1, 2, 3, 4, 5, 6], key="pi_down")
         ytg = st.number_input("Yards to Go", min_value=1, max_value=99, value=20, key="pi_ytg")
 
-    col_n, col_seed = st.columns(2)
+    col_n, col_seed, col_piwx = st.columns(3)
     with col_n:
         num_plays = st.slider("Number of Plays to Run", 1, 500, 50, key="pi_num")
     with col_seed:
         pi_seed = st.number_input("Base Seed (0 = random)", min_value=0, max_value=999999, value=0, key="pi_seed")
+    with col_piwx:
+        pi_weather = st.selectbox("Weather", list(WEATHER_CONDITIONS.keys()),
+                                  format_func=lambda x: WEATHER_CONDITIONS[x]["label"], key="pi_weather")
 
     run_plays = st.button("Run Plays", type="primary", use_container_width=True)
 
@@ -1120,7 +1186,7 @@ elif page == "Play Inspector":
         play_results = []
         for i in range(num_plays):
             s = (pi_seed + i) if pi_seed > 0 else None
-            engine = ViperballEngine(home_team, away_team, seed=s)
+            engine = ViperballEngine(home_team, away_team, seed=s, weather=pi_weather)
             result = engine.simulate_single_play(
                 style=play_style,
                 field_position=field_pos,
