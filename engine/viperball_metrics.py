@@ -283,6 +283,29 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
 # OVERALL PERFORMANCE INDEX (OPI)
 # ========================================
 # Single 0-100 number representing overall team performance
+def calculate_viperball_metrics(game_result: Dict, team: str) -> Dict:
+    """
+    Calculate all Viperball metrics for a team from a game result
+
+    Args:
+        game_result: Complete game result dictionary from ViperballEngine.simulate_game()
+        team: 'home' or 'away'
+
+    Returns:
+        Dictionary with all metrics including OPI
+    """
+    plays = game_result.get('play_by_play', [])
+    drives = game_result.get('drives', [])
+
+    # Calculate comprehensive rating
+    metrics = calculate_comprehensive_rating(plays, drives, team)
+
+    # Add OPI
+    metrics['opi'] = calculate_overall_performance_index(metrics)
+
+    return metrics
+
+
 def calculate_overall_performance_index(metrics: Dict) -> float:
     """
     Overall Performance Index: 0-100 scale
