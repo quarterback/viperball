@@ -223,50 +223,63 @@ class Season:
 
     def _generate_partial_schedule(self, team_names: List[str], games_per_team: int,
                                     conference_weight: float):
-        """Generate a schedule with a fixed number of games per team"""
+        """Generate a schedule: conference round-robin first, then non-conference fill.
+
+        Conference games: full round-robin within conference. If conference is too
+        large (more opponents than games_per_team), each team plays a random subset
+        of conference opponents.
+
+        Non-conference games: remaining slots filled with cross-conference matchups.
+        """
         game_counts = {name: 0 for name in team_names}
         scheduled_pairs = set()
         games = []
 
         has_conferences = bool(self.conferences) and len(self.conferences) > 1
 
-        if has_conferences:
-            conf_games_target = int(games_per_team * conference_weight)
-            nonconf_games_target = games_per_team - conf_games_target
+        def _add_game(home, away, is_conf):
+            if random.random() < 0.5:
+                home, away = away, home
+            games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
+            scheduled_pairs.add(tuple(sorted([home, away])))
+            game_counts[home] += 1
+            game_counts[away] += 1
 
+        if has_conferences:
             for conf_name, conf_teams in self.conferences.items():
                 conf_team_list = [t for t in conf_teams if t in self.teams]
                 if len(conf_team_list) < 2:
                     continue
 
-                conf_matchups = []
-                for i in range(len(conf_team_list)):
-                    for j in range(i + 1, len(conf_team_list)):
-                        conf_matchups.append((conf_team_list[i], conf_team_list[j]))
-                random.shuffle(conf_matchups)
+                conf_size = len(conf_team_list) - 1
 
-                for home, away in conf_matchups:
-                    if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
-                        continue
-                    if game_counts[home] >= conf_games_target and game_counts[away] >= conf_games_target:
-                        continue
-                    pair = tuple(sorted([home, away]))
-                    if pair in scheduled_pairs:
-                        continue
-
-                    if random.random() < 0.5:
-                        home, away = away, home
-                    games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=True))
-                    scheduled_pairs.add(pair)
-                    game_counts[home] += 1
-                    game_counts[away] += 1
+                if conf_size <= games_per_team:
+                    for i in range(len(conf_team_list)):
+                        for j in range(i + 1, len(conf_team_list)):
+                            h, a = conf_team_list[i], conf_team_list[j]
+                            pair = tuple(sorted([h, a]))
+                            if pair not in scheduled_pairs:
+                                _add_game(h, a, True)
+                else:
+                    max_conf_games = games_per_team - 2
+                    for team in conf_team_list:
+                        opponents = [t for t in conf_team_list if t != team]
+                        random.shuffle(opponents)
+                        for opp in opponents[:max_conf_games]:
+                            pair = tuple(sorted([team, opp]))
+                            if pair in scheduled_pairs:
+                                continue
+                            if game_counts[team] >= games_per_team or game_counts[opp] >= games_per_team:
+                                continue
+                            _add_game(team, opp, True)
 
             nonconf_matchups = []
             for i in range(len(team_names)):
                 for j in range(i + 1, len(team_names)):
                     t1, t2 = team_names[i], team_names[j]
-                    if self.team_conferences.get(t1, "") != self.team_conferences.get(t2, "") or \
-                       self.team_conferences.get(t1, "") == "":
+                    c1 = self.team_conferences.get(t1, "")
+                    c2 = self.team_conferences.get(t2, "")
+                    if c1 != c2 or c1 == "":
                         nonconf_matchups.append((t1, t2))
             random.shuffle(nonconf_matchups)
 
@@ -276,12 +289,7 @@ class Season:
                 pair = tuple(sorted([home, away]))
                 if pair in scheduled_pairs:
                     continue
-                if random.random() < 0.5:
-                    home, away = away, home
-                games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=False))
-                scheduled_pairs.add(pair)
-                game_counts[home] += 1
-                game_counts[away] += 1
+                _add_game(home, away, False)
         else:
             single_conf = len(self.conferences) == 1
             all_matchups = []
@@ -296,16 +304,11 @@ class Season:
                 pair = tuple(sorted([home, away]))
                 if pair in scheduled_pairs:
                     continue
-                if random.random() < 0.5:
-                    home, away = away, home
                 is_conf = single_conf or (
                     self.team_conferences.get(home, "") == self.team_conferences.get(away, "")
                     and self.team_conferences.get(home, "") != ""
                 )
-                games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
-                scheduled_pairs.add(pair)
-                game_counts[home] += 1
-                game_counts[away] += 1
+                _add_game(home, away, is_conf)
 
         random.shuffle(games)
         games_per_slot = max(1, len(team_names) // 2)
@@ -484,80 +487,82 @@ class Season:
             return 0
         return max(g.week for g in self.schedule)
 
+    def _get_winner(self, game: Game) -> str:
+        return game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
+
+    def _play_round(self, matchups: list, week: int, verbose: bool = False) -> list:
+        games = []
+        for home, away in matchups:
+            game = Game(week=week, home_team=home, away_team=away)
+            self.playoff_bracket.append(game)
+            games.append(game)
+        for game in games:
+            self.simulate_game(game, verbose=verbose)
+        return games
+
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
         playoff_teams = self.get_playoff_teams(num_teams)
+        seeds = [t.team_name for t in playoff_teams]
 
         if num_teams == 4:
-            semi1 = Game(
-                week=999,
-                home_team=playoff_teams[0].team_name,
-                away_team=playoff_teams[3].team_name
+            semis = self._play_round(
+                [(seeds[0], seeds[3]), (seeds[1], seeds[2])], week=999, verbose=verbose
             )
-            semi2 = Game(
-                week=999,
-                home_team=playoff_teams[1].team_name,
-                away_team=playoff_teams[2].team_name
-            )
-
-            self.playoff_bracket.append(semi1)
-            self.playoff_bracket.append(semi2)
-
-            self.simulate_game(semi1, verbose=verbose)
-            self.simulate_game(semi2, verbose=verbose)
-
-            semi1_winner = semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team
-            semi2_winner = semi2.home_team if (semi2.home_score or 0) > (semi2.away_score or 0) else semi2.away_team
-
-            championship = Game(
-                week=1000,
-                home_team=semi1_winner,
-                away_team=semi2_winner
-            )
-
-            self.playoff_bracket.append(championship)
-            self.simulate_game(championship, verbose=verbose)
-            self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
+            final_matchup = [(self._get_winner(semis[0]), self._get_winner(semis[1]))]
+            finals = self._play_round(final_matchup, week=1000, verbose=verbose)
+            self.champion = self._get_winner(finals[0])
 
         elif num_teams == 8:
-            quarters = []
-            for i in range(4):
-                game = Game(
-                    week=998,
-                    home_team=playoff_teams[i].team_name,
-                    away_team=playoff_teams[7-i].team_name
-                )
-                quarters.append(game)
-                self.playoff_bracket.append(game)
-
-            for game in quarters:
-                self.simulate_game(game, verbose=verbose)
-
-            semi1 = Game(
-                week=999,
-                home_team=quarters[0].home_team if (quarters[0].home_score or 0) > (quarters[0].away_score or 0) else quarters[0].away_team,
-                away_team=quarters[3].home_team if (quarters[3].home_score or 0) > (quarters[3].away_score or 0) else quarters[3].away_team
+            quarters = self._play_round(
+                [(seeds[i], seeds[7 - i]) for i in range(4)], week=998, verbose=verbose
             )
-            semi2 = Game(
-                week=999,
-                home_team=quarters[1].home_team if (quarters[1].home_score or 0) > (quarters[1].away_score or 0) else quarters[1].away_team,
-                away_team=quarters[2].home_team if (quarters[2].home_score or 0) > (quarters[2].away_score or 0) else quarters[2].away_team
+            qw = [self._get_winner(g) for g in quarters]
+            semis = self._play_round(
+                [(qw[0], qw[3]), (qw[1], qw[2])], week=999, verbose=verbose
             )
-
-            self.playoff_bracket.append(semi1)
-            self.playoff_bracket.append(semi2)
-
-            self.simulate_game(semi1, verbose=verbose)
-            self.simulate_game(semi2, verbose=verbose)
-
-            championship = Game(
-                week=1000,
-                home_team=semi1.home_team if (semi1.home_score or 0) > (semi1.away_score or 0) else semi1.away_team,
-                away_team=semi2.home_team if (semi2.home_score or 0) > (semi2.away_score or 0) else semi2.away_team
+            finals = self._play_round(
+                [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
             )
+            self.champion = self._get_winner(finals[0])
 
-            self.playoff_bracket.append(championship)
-            self.simulate_game(championship, verbose=verbose)
-            self.champion = championship.home_team if (championship.home_score or 0) > (championship.away_score or 0) else championship.away_team
+        elif num_teams == 12:
+            byes = seeds[:4]
+            first_round = self._play_round(
+                [(seeds[4 + i], seeds[11 - i]) for i in range(4)], week=997, verbose=verbose
+            )
+            frw = [self._get_winner(g) for g in first_round]
+            quarter_matchups = [
+                (byes[0], frw[3]),
+                (byes[1], frw[2]),
+                (byes[2], frw[1]),
+                (byes[3], frw[0]),
+            ]
+            quarters = self._play_round(quarter_matchups, week=998, verbose=verbose)
+            qw = [self._get_winner(g) for g in quarters]
+            semis = self._play_round(
+                [(qw[0], qw[3]), (qw[1], qw[2])], week=999, verbose=verbose
+            )
+            finals = self._play_round(
+                [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
+            )
+            self.champion = self._get_winner(finals[0])
+
+        elif num_teams == 16:
+            first_round = self._play_round(
+                [(seeds[i], seeds[15 - i]) for i in range(8)], week=997, verbose=verbose
+            )
+            frw = [self._get_winner(g) for g in first_round]
+            quarters = self._play_round(
+                [(frw[i], frw[7 - i]) for i in range(4)], week=998, verbose=verbose
+            )
+            qw = [self._get_winner(g) for g in quarters]
+            semis = self._play_round(
+                [(qw[0], qw[3]), (qw[1], qw[2])], week=999, verbose=verbose
+            )
+            finals = self._play_round(
+                [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
+            )
+            self.champion = self._get_winner(finals[0])
 
 
 def load_teams_from_directory(directory: str) -> Dict[str, Team]:

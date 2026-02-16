@@ -130,9 +130,10 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - 2026-02-16: Added defensive archetypes system: 5 defense styles (Base, Pressure, Contain, Run-Stop, Coverage) with play modifiers, special teams chaos probabilities
 - 2026-02-16: Defense style selectors added to Game Simulator UI for both teams
 - 2026-02-16: Viperball Metrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact) displayed in Game Simulator debug panel
-- 2026-02-16: Season Simulator page: round-robin scheduling, standings with metrics, radar charts, score distributions, playoff brackets, CSV export
-- 2026-02-16: Dynasty Mode page: multi-season career tracking, coach dashboard, team history, record book, awards, JSON save/load
-- 2026-02-16: Dynasty Mode: configurable season length (games-per-team slider), multi-conference setup (1-4 conferences), conference-weighted scheduling
+- 2026-02-16: Season Simulator: 8-12 games per team slider, conference round-robin + non-conference fill scheduling, 4/8/12/16-team playoff brackets
+- 2026-02-16: Dynasty Mode: 8-12 games per team, 4/8/12/16-team playoff brackets, multi-conference setup (1-4 conferences)
+- 2026-02-16: Scheduling model: full round-robin within conference first, remaining slots filled with non-conference games; oversized conferences get subset scheduling
+- 2026-02-16: Playoff engine: refactored with 12-team (top 4 byes + 8 first round) and 16-team (full bracket) support
 - 2026-02-16: Weekly poll/ranking system: Top 25 rankings after each week, poll movement chart, conference standings view
 - 2026-02-16: Dynasty UI overhauled: 5 tabs (Simulate Season, Standings & Polls, Coach Dashboard, Team History, Record Book)
 - 2026-02-16: Season/Dynasty integration with viperball_metrics module for OPI, Territory, Pressure, Chaos, Kicking averages in standings

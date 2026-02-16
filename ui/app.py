@@ -1282,18 +1282,25 @@ elif page == "Season Simulator":
             if tname not in style_configs:
                 style_configs[tname] = {"offense_style": "balanced", "defense_style": "base_defense"}
 
-        playoff_size = st.radio("Playoff Format", [4, "All Teams (Round Robin Only)"], index=0, key="playoff_size", horizontal=True)
+        sched_col1, sched_col2 = st.columns(2)
+        with sched_col1:
+            season_games = st.slider("Regular Season Games Per Team", min_value=8, max_value=12, value=10, key="season_games_per_team")
+        with sched_col2:
+            playoff_options = [p for p in [4, 8, 12, 16] if p <= len(selected_teams)]
+            if not playoff_options:
+                playoff_options = [len(selected_teams)]
+            playoff_size = st.radio("Playoff Format", playoff_options, index=0, key="playoff_size", horizontal=True)
 
         run_season = st.button("Simulate Season", type="primary", use_container_width=True, key="run_season")
 
         if run_season:
             filtered_teams = {name: team for name, team in all_teams.items() if name in selected_teams}
-            season = create_season(season_name, filtered_teams, style_configs)
+            season = create_season(season_name, filtered_teams, style_configs, games_per_team=season_games)
 
             with st.spinner(f"Simulating {len(season.schedule)} games..."):
                 season.simulate_season(generate_polls=False)
 
-            num_playoff = 4 if playoff_size == 4 else 0
+            num_playoff = playoff_size
             if num_playoff > 0 and len(selected_teams) >= num_playoff:
                 with st.spinner("Running playoffs..."):
                     season.simulate_playoff(num_teams=min(num_playoff, len(selected_teams)))
@@ -1358,20 +1365,24 @@ elif page == "Season Simulator":
             if season.playoff_bracket:
                 st.subheader("Playoff Bracket")
 
-                semis = [g for g in season.playoff_bracket if g.week == 999]
+                def _render_round(label, week):
+                    round_games = [g for g in season.playoff_bracket if g.week == week]
+                    if round_games:
+                        st.markdown(f"**{label}**")
+                        for i, game in enumerate(round_games, 1):
+                            hs = game.home_score or 0
+                            aws = game.away_score or 0
+                            winner = game.home_team if hs > aws else game.away_team
+                            loser = game.away_team if hs > aws else game.home_team
+                            w_score = max(hs, aws)
+                            l_score = min(hs, aws)
+                            st.markdown(f"Game {i}: **{winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
+
+                _render_round("First Round", 997)
+                _render_round("Quarterfinals", 998)
+                _render_round("Semifinals", 999)
+
                 championship = [g for g in season.playoff_bracket if g.week == 1000]
-
-                if semis:
-                    st.markdown("**Semifinals**")
-                    for i, game in enumerate(semis, 1):
-                        hs = game.home_score or 0
-                        aws = game.away_score or 0
-                        winner = game.home_team if hs > aws else game.away_team
-                        loser = game.away_team if hs > aws else game.home_team
-                        w_score = max(hs, aws)
-                        l_score = min(hs, aws)
-                        st.markdown(f"Game {i}: **{winner}** {w_score:.1f} def. {loser} {l_score:.1f}")
-
                 if championship:
                     game = championship[0]
                     hs = game.home_score or 0
@@ -1549,22 +1560,16 @@ elif page == "Dynasty Mode":
             setup_col1, setup_col2 = st.columns(2)
             with setup_col1:
                 total_teams = len(all_dynasty_teams)
-                max_rr = total_teams - 1
-                games_options = [6, 8, 10, 12, 14, 16, 20, max_rr]
-                games_options = sorted(set(g for g in games_options if g <= max_rr))
-                if max_rr not in games_options:
-                    games_options.append(max_rr)
-                games_options = sorted(set(games_options))
-                games_labels = {g: f"{g} games" + (" (full round-robin)" if g == max_rr else "") for g in games_options}
-                games_per_team = st.select_slider(
+                games_per_team = st.slider(
                     "Regular Season Games Per Team",
-                    options=games_options,
-                    value=min(12, max_rr),
-                    format_func=lambda x: games_labels.get(x, f"{x} games"),
+                    min_value=8, max_value=12, value=10,
                     key=f"dyn_games_{dynasty.current_year}"
                 )
             with setup_col2:
-                playoff_format = st.radio("Playoff Format", [4, 8], index=0, horizontal=True,
+                dyn_playoff_options = [p for p in [4, 8, 12, 16] if p <= total_teams]
+                if not dyn_playoff_options:
+                    dyn_playoff_options = [total_teams]
+                playoff_format = st.radio("Playoff Format", dyn_playoff_options, index=0, horizontal=True,
                                           key=f"dyn_playoff_{dynasty.current_year}")
 
             from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
@@ -1627,7 +1632,7 @@ elif page == "Dynasty Mode":
                     all_dynasty_teams,
                     dyn_style_configs,
                     conferences=conf_dict,
-                    games_per_team=games_per_team if games_per_team < max_rr else 0
+                    games_per_team=games_per_team
                 )
 
                 total_games = len(season.schedule)
