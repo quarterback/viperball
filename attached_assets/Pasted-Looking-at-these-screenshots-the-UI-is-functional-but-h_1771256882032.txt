@@ -1,0 +1,282 @@
+Looking at these screenshots, the UI is functional but has some clear areas for improvement. Here's a spec for your engineer:
+
+---
+
+# Viperball Simulator UI Improvement Spec
+
+## Current State Assessment
+
+**What's working:**
+- Clean layout, readable typography
+- Dropdown selectors function properly
+- Red accent color provides visual hierarchy
+- Conference setup in Dynasty Mode is intuitive
+
+**What needs improvement:**
+- Team Style Configuration (Season Simulator) is tedious—requires manual selection for every team
+- No visual distinction between human-controlled and AI-controlled teams
+- No team identity information (colors, logos, conference)
+- Scheme descriptions are minimal ("No strong tendency, adapts to situation")
+- No preview of what schemes mean strategically
+
+---
+
+## Priority 1: AI Team Management (Biggest Pain Point)
+
+The Season Simulator screenshot shows the core problem—you have to manually set offense/defense for every team. This should be automated for non-human teams.
+
+### Proposed Changes
+
+**Add "Human Teams" selector at top of Season Setup:**
+```
+Human-Controlled Teams (select 1-4)
+[ ] American University
+[ ] Belmont University
+[✓] Boston University    ← User's team
+[ ] Bradley University
+...
+```
+
+**For human-controlled teams:** Show full offense/defense dropdowns (current behavior)
+
+**For AI-controlled teams:** Replace dropdowns with read-only "AI Coach" badge:
+```
+American University
+Offense: AI Coach (Ground & Pound)    [i]
+Defense: AI Coach (Pressure)          [i]
+```
+
+The `[i]` icon shows a tooltip explaining the AI-assigned scheme based on team profile.
+
+**Add "Randomize AI Schemes" button:**
+- Assigns schemes based on team archetypes (from team profile data)
+- Adds variance so not every AI team is identical
+- User can override individual teams if desired
+
+**Add "Auto-Assign All" toggle:**
+- When ON: Only show human team configuration
+- When OFF: Show all teams (current behavior for power users)
+
+---
+
+## Priority 2: Team Identity Display
+
+Teams currently show as plain text. Add visual identity.
+
+### Team Card Component
+
+Replace plain dropdown with team cards:
+
+```
+┌─────────────────────────────────────┐
+│ ■ Boston University                 │
+│   Terriers | Patriot League         │
+│   Colors: Scarlet & White           │
+│                                     │
+│   Offense: [Lateral Spread    ▼]    │
+│   Defense: [Pressure          ▼]    │
+│                                     │
+│   [Human-Controlled ✓]              │
+└─────────────────────────────────────┘
+```
+
+**Elements:**
+- Color swatch (■) showing primary team color
+- School name (bold)
+- Mascot | Conference (smaller text)
+- Offense/Defense selectors
+- Human-controlled toggle (instead of separate section)
+
+### Game Simulator Team Display
+
+Same card treatment for the single-game simulator:
+
+```
+Home Team                          Away Team
+┌──────────────────────┐          ┌──────────────────────┐
+│ ■ Air Force          │    vs    │ ■ Albany             │
+│   Falcons            │          │   Great Danes        │
+│   Mountain West*     │          │   America East       │
+└──────────────────────┘          └──────────────────────┘
+
+* Note: Air Force is a military academy—consider whether 
+  they should be in this league thematically
+```
+
+---
+
+## Priority 3: Scheme Selector Improvements
+
+Current scheme descriptions are vague. Make them actionable.
+
+### Expanded Scheme Tooltips
+
+**Offense Options (with descriptions):**
+
+| Scheme | Short Description | Tooltip Detail |
+|--------|-------------------|----------------|
+| Balanced | Adapts to situation | No strong tendency. Mixes run, chain, and kick based on game state. |
+| Ground & Pound | TD-focused rushing | Heavy inside runs, power backs. Low kick attempts, high TD rate. |
+| Lateral Spread | Chain-heavy attack | Spreads defense with lateral chains. High-variance, explosive. |
+| Kick Heavy | Field goal emphasis | Prioritizes snapkicks and place kicks. Plays for field position. |
+| Ball Control | Clock management | Long drives, reliable gains. Wears down defense. |
+
+**Defense Options:**
+
+| Scheme | Short Description | Tooltip Detail |
+|--------|-------------------|----------------|
+| Base Defense | Solid fundamentals | Balanced approach. No major weaknesses or strengths. |
+| Contain | Gap discipline | Prevents big plays, forces runs inside. Vulnerable to patient offense. |
+| Pressure | Aggressive disruption | Penetrating front, blitzing spotbacks. High risk/reward. |
+| Bend Don't Break | Prevent big plays | Soft coverage, rally to ball. Gives up yards, not TDs. |
+| Blitz | Maximum aggression | All-out rush. Devastating or exploited—no middle ground. |
+
+### Visual Scheme Indicator
+
+Add a small radar chart or icon set showing scheme tendencies:
+
+```
+Ground & Pound
+[TD ████████░░] [Kick ██░░░░░░░░] [Risk ████░░░░░░]
+```
+
+Or simpler icon approach:
+```
+Ground & Pound  🏃💪  (Run-heavy, Power)
+Kick Heavy      🦵🎯  (Kicking, Precision)
+Lateral Spread  ↔️⚡  (Width, Explosive)
+```
+
+---
+
+## Priority 4: Dynasty Mode Enhancements
+
+### Conference Assignment UX
+
+The "Assign Teams to Conferences" accordion is good, but could show more info:
+
+```
+Conference 1: CVL East (6 teams)
+┌────────────────────────────────────────────────┐
+│ [Drag to reorder / move between conferences]   │
+│                                                │
+│ ■ Boston University (Your Team)                │
+│ ■ American University                          │
+│ ■ Fairfield University                         │
+│ ■ Duquesne University                          │
+│ ■ College of Charleston                        │
+│ ■ Davidson College                             │
+│                                                │
+│ Geographic center: Mid-Atlantic                │
+│ Avg distance between schools: 312 mi           │
+└────────────────────────────────────────────────┘
+```
+
+**Add:**
+- Drag-and-drop team assignment
+- Geographic coherence indicator
+- "Auto-assign by geography" button
+- Conference rename inline (not separate field)
+
+### Coach/Dynasty Identity
+
+```
+Create New Dynasty
+┌────────────────────────────────────────────────┐
+│ Dynasty Name: [My Viperball Dynasty         ]  │
+│ Coach Name:   [Coach                        ]  │
+│ Starting Year: [2026]                          │
+│                                                │
+│ Your Team:                                     │
+│ ┌──────────────────────────────────────────┐   │
+│ │ ■ United States Air Force Academy        │   │
+│ │   Falcons | Independent                  │   │
+│ │                                          │   │
+│ │   Coaching Style:                        │   │
+│ │   [Aggressive ▼] (affects AI perception) │   │
+│ │                                          │   │
+│ │   Starting Archetype:                    │   │
+│ │   [Balanced ▼]                           │   │
+│ └──────────────────────────────────────────┘   │
+└────────────────────────────────────────────────┘
+```
+
+**Add:**
+- Coaching style selector (affects how AI teams prepare for you)
+- Starting archetype (sets initial offense/defense philosophy)
+- Optional: Coach avatar or initials icon
+
+---
+
+## Priority 5: Visual Polish
+
+### Color System
+
+Current red (`#E53935` or similar) is good for CTAs. Add:
+
+- **Team colors:** Pull from team data, use as accents
+- **Scheme colors:** Consistent color per scheme type
+  - Ground & Pound: Brown/Bronze
+  - Lateral Spread: Blue
+  - Kick Heavy: Green
+  - Ball Control: Gray
+  - Balanced: Purple
+- **Conference colors:** Each conference gets a subtle background tint
+
+### Typography Hierarchy
+
+Current hierarchy is decent. Tighten up:
+
+- **H1:** Page titles (Viperball Game Simulator) — keep as-is
+- **H2:** Section headers (Home Team, Away Team) — keep as-is
+- **H3:** Subsection (Team Style Configuration) — slightly smaller
+- **Labels:** Form labels — lighter weight, smaller
+- **Descriptions:** Scheme descriptions — italic, muted color
+
+### Spacing
+
+- Add more vertical breathing room between team cards
+- Group related controls (Offense + Defense for same team should be visually connected)
+- Consistent padding inside cards
+
+---
+
+## Priority 6: Responsive Considerations
+
+The current layout appears desktop-focused. For tablet/mobile:
+
+- Stack Home/Away teams vertically on narrow screens
+- Collapse team cards to show only name + scheme summary (expand on tap)
+- Season Simulator team grid should wrap to 2 columns, then 1 column
+
+---
+
+## Implementation Order
+
+1. **AI Team Management** — Biggest UX win, reduces setup friction dramatically
+2. **Scheme Tooltips** — Quick win, improves understanding
+3. **Team Cards with Identity** — Medium effort, high visual impact
+4. **Dynasty Mode Enhancements** — Important for long-term engagement
+5. **Visual Polish** — Can be iterative
+
+---
+
+## Streamlit-Specific Notes
+
+Streamlit has limitations. Some suggestions for working within them:
+
+**For team cards:** Use `st.container()` with custom CSS via `st.markdown()` with `unsafe_allow_html=True`
+
+**For drag-and-drop:** Consider `streamlit-sortables` or similar community component
+
+**For tooltips:** Use `st.help()` or `st.popover()` (Streamlit 1.29+)
+
+**For color swatches:** Inline HTML/CSS or small colored `st.container()` backgrounds
+
+**For radar charts:** `st.pyplot()` with matplotlib or `st.altair_chart()`
+
+If Streamlit becomes too limiting, consider migrating to Gradio (more flexible layout) or a full React frontend with FastAPI backend.
+
+---
+
+Want me to create wireframes or mockups for any of these, or add more detail to a specific section?
