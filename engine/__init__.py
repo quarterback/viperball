@@ -15,7 +15,7 @@ from .game_engine import (
 from .box_score import BoxScoreGenerator
 from .poll_system import PollSystem, TeamRecord, calculate_strength_of_schedule
 from .epa import calculate_ep, calculate_epa, calculate_drive_epa, calculate_game_epa
-from .season import Season, Game, BowlGame, TeamRecord as SeasonTeamRecord, WeeklyPoll, PollRanking, load_teams_from_directory, create_season, BOWL_NAMES, get_recommended_bowl_count
+from .season import Season, Game, BowlGame, TeamRecord as SeasonTeamRecord, WeeklyPoll, PollRanking, load_teams_from_directory, create_season, generate_bowl_names, get_recommended_bowl_count
 from .dynasty import Dynasty, Coach, create_dynasty
 from .viperball_metrics import calculate_viperball_metrics
 from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label, load_team_identity

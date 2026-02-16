@@ -152,12 +152,71 @@ class Game:
     away_metrics: Optional[Dict] = None
 
 
-BOWL_NAMES = [
-    "Viper Bowl", "Snapkick Classic", "Lateral Challenge", "Territory Bowl",
-    "Chain Reaction Bowl", "Keeper's Cup", "Zeroback Showdown", "Flanker Bowl",
-    "Gridiron Classic", "Endzone Invitational", "Pindown Bowl", "Bell Bowl",
-    "Heritage Bowl", "Frontier Bowl", "Summit Classic", "Heartland Bowl",
-]
+BOWL_WORD_BANKS = {
+    "concepts": [
+        "Horizon", "Keystone", "Summit", "Meridian", "Pioneer", "Union",
+        "Heritage", "Legacy", "Vanguard", "Frontier", "Catalyst", "Apex",
+        "Commonwealth", "Founders", "Iron", "Copper", "Granite", "Harbor",
+        "Prairie", "Lakes", "River", "Delta", "Corridor", "Heartland",
+    ],
+    "places": [
+        "Great Lakes", "Rust Belt", "Yankee", "Prairie", "Crossroads",
+        "Motor City", "Steel City", "River Valley", "Lakefront", "Capital",
+        "Heartland", "Coastal", "Inland", "Metro", "Tri-State", "Border",
+        "Plains", "Peninsula",
+    ],
+    "descriptors_premier": ["Classic", "Crown", "Showcase", "Championship"],
+    "descriptors_major": ["Challenge", "Cup", "Series", "Trophy"],
+    "descriptors_standard": ["Invitational", "Shield", "Clash"],
+    "objects": [
+        "Lantern", "Anchor", "Rail", "Forge", "Mill", "Beacon", "Bridge",
+        "Line", "Yard", "Depot", "Gridiron", "Banner", "Torch", "Spire",
+    ],
+}
+
+
+def generate_bowl_names(count: int, tiers: Optional[List[int]] = None) -> List[str]:
+    """Generate unique random bowl names using word banks, with tier-appropriate descriptors."""
+    banks = BOWL_WORD_BANKS
+    used = set()
+    names = []
+
+    for i in range(count):
+        tier = tiers[i] if tiers and i < len(tiers) else 3
+        if tier == 1:
+            descriptors = banks["descriptors_premier"]
+        elif tier == 2:
+            descriptors = banks["descriptors_major"]
+        else:
+            descriptors = banks["descriptors_standard"]
+
+        if tier <= 2:
+            patterns = ["region_desc", "concept_desc"]
+        else:
+            patterns = ["region_desc", "concept_object", "place", "concept"]
+
+        for _ in range(50):
+            pattern = random.choice(patterns)
+            if pattern == "region_desc":
+                name = f"{random.choice(banks['places'])} {random.choice(descriptors)}"
+            elif pattern == "concept_desc":
+                name = f"{random.choice(banks['concepts'])} {random.choice(descriptors)}"
+            elif pattern == "concept_object":
+                name = f"{random.choice(banks['concepts'])} {random.choice(banks['objects'])} Bowl"
+            elif pattern == "place":
+                name = f"{random.choice(banks['places'])} Bowl"
+            else:
+                name = f"{random.choice(banks['concepts'])} Bowl"
+
+            if name not in used:
+                used.add(name)
+                names.append(name)
+                break
+        else:
+            names.append(f"Bowl Game {i + 1}")
+
+    return names
+
 
 BOWL_TIERS = {1: "Premier", 2: "Major", 3: "Standard"}
 
@@ -665,9 +724,13 @@ class Season:
             return
         bowl_count = min(bowl_count, len(pool) // 2)
 
-        names = list(bowl_names or BOWL_NAMES)
-        while len(names) < bowl_count:
-            names.append(f"Bowl {len(names) + 1}")
+        tier_list = [1 if i < 2 else (2 if i < 4 else 3) for i in range(bowl_count)]
+        if bowl_names:
+            names = list(bowl_names)
+            while len(names) < bowl_count:
+                names.append(f"Bowl Game {len(names) + 1}")
+        else:
+            names = generate_bowl_names(bowl_count, tier_list)
 
         max_win_diff = 3
         used = set()
