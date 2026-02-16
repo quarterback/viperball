@@ -386,56 +386,56 @@ class Penalty:
 
 PENALTY_CATALOG = {
     "pre_snap": [
-        {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.022},
-        {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.018},
-        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.008},
-        {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.006},
-        {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.008},
-        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.006},
-        {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.003},
-        {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.004},
+        {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.014},
+        {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.012},
+        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.005},
+        {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.004},
+        {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
+        {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.002},
+        {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.003},
     ],
     "during_play_run": [
-        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.028},
-        {"name": "Illegal Block", "yards": 10, "on": "offense", "prob": 0.008},
-        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.004},
-        {"name": "Chop Block", "yards": 15, "on": "offense", "prob": 0.003},
-        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.012, "auto_first": True},
-        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
-        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.006},
-        {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.005, "auto_first": True},
-        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.005},
-        {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.003},
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.018},
+        {"name": "Illegal Block", "yards": 10, "on": "offense", "prob": 0.005},
+        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.003},
+        {"name": "Chop Block", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.005, "auto_first": True},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.003, "auto_first": True},
+        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.002},
     ],
     "during_play_lateral": [
-        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.025},
-        {"name": "Illegal Forward Lateral", "yards": 5, "on": "offense", "prob": 0.010, "loss_of_down": True},
-        {"name": "Illegal Block in Back", "yards": 10, "on": "offense", "prob": 0.008},
-        {"name": "Lateral Interference", "yards": 10, "on": "defense", "prob": 0.010, "auto_first": True},
-        {"name": "Illegal Contact", "yards": 5, "on": "defense", "prob": 0.008, "auto_first": True},
-        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.012, "auto_first": True},
-        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.006, "auto_first": True},
-        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.004},
-        {"name": "Illegal Screen", "yards": 10, "on": "offense", "prob": 0.005},
-        {"name": "Illegal Viper Contact", "yards": 10, "on": "defense", "prob": 0.006, "auto_first": True},
-        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.004},
-        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.016},
+        {"name": "Illegal Forward Lateral", "yards": 5, "on": "offense", "prob": 0.007, "loss_of_down": True},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "offense", "prob": 0.005},
+        {"name": "Lateral Interference", "yards": 10, "on": "defense", "prob": 0.007, "auto_first": True},
+        {"name": "Illegal Contact", "yards": 5, "on": "defense", "prob": 0.005, "auto_first": True},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.004, "auto_first": True},
+        {"name": "Clipping", "yards": 15, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Screen", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Viper Contact", "yards": 10, "on": "defense", "prob": 0.004, "auto_first": True},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.003},
     ],
     "during_play_kick": [
-        {"name": "Roughing the Kicker", "yards": 15, "on": "defense", "prob": 0.012, "auto_first": True},
-        {"name": "Running Into Kicker", "yards": 5, "on": "defense", "prob": 0.015},
-        {"name": "Fair Catch Interference", "yards": 15, "on": "defense", "prob": 0.006},
-        {"name": "Kick Catch Interference", "yards": 15, "on": "defense", "prob": 0.005},
-        {"name": "Illegal Kick", "yards": 10, "on": "offense", "prob": 0.003},
-        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.015},
-        {"name": "Illegal Block in Back", "yards": 10, "on": "either", "prob": 0.008},
+        {"name": "Roughing the Kicker", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Running Into Kicker", "yards": 5, "on": "defense", "prob": 0.010},
+        {"name": "Fair Catch Interference", "yards": 15, "on": "defense", "prob": 0.004},
+        {"name": "Kick Catch Interference", "yards": 15, "on": "defense", "prob": 0.003},
+        {"name": "Illegal Kick", "yards": 10, "on": "offense", "prob": 0.002},
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.010},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "either", "prob": 0.005},
     ],
     "post_play": [
-        {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.006},
-        {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.004},
-        {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.006},
-        {"name": "Excessive Celebration", "yards": 15, "on": "offense", "prob": 0.003},
-        {"name": "Sideline Interference", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.004},
+        {"name": "Excessive Celebration", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Sideline Interference", "yards": 15, "on": "either", "prob": 0.001},
     ],
 }
 
@@ -842,7 +842,7 @@ class ViperballEngine:
     def simulate_drive(self):
         style = self._current_style()
         tempo = style["tempo"]
-        max_plays = int(15 + tempo * 15)
+        max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
 
         drive_team = self.state.possession
@@ -901,9 +901,9 @@ class ViperballEngine:
     ]
 
     CONVERSION_RATES = {
-        4: {3: 0.65, 6: 0.48, 10: 0.35, 15: 0.22, 20: 0.15},
-        5: {3: 0.60, 6: 0.44, 10: 0.32, 15: 0.20, 20: 0.12},
-        6: {3: 0.55, 6: 0.40, 10: 0.28, 15: 0.17, 20: 0.10},
+        4: {3: 0.72, 6: 0.55, 10: 0.42, 15: 0.28, 20: 0.20},
+        5: {3: 0.67, 6: 0.52, 10: 0.38, 15: 0.25, 20: 0.16},
+        6: {3: 0.62, 6: 0.47, 10: 0.34, 15: 0.22, 20: 0.13},
     }
 
     def _fp_value(self, fp: int) -> float:
@@ -926,15 +926,15 @@ class ViperballEngine:
 
     def _place_kick_success(self, distance: int) -> float:
         if distance <= 25:
-            return 0.92
+            return 0.94
         elif distance <= 34:
-            return 0.85
+            return 0.88
         elif distance <= 44:
-            return 0.75
+            return 0.78
         elif distance <= 54:
-            return 0.60
+            return 0.62
         else:
-            return max(0.15, 0.40 - (distance - 55) * 0.02)
+            return max(0.15, 0.42 - (distance - 55) * 0.02)
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         if kicker_skill >= 85:
@@ -969,13 +969,13 @@ class ViperballEngine:
     POSSESSION_VALUE = 2.5
 
     GO_FOR_IT_MATRIX = {
-        15:  {4: 2,  5: 4,  6: 8},
-        30:  {4: 4,  5: 7,  6: 12},
-        45:  {4: 6,  5: 10, 6: 16},
-        50:  {4: 8,  5: 12, 6: 20},
-        60:  {4: 10, 5: 15, 6: 20},
-        75:  {4: 6,  5: 12, 6: 20},
-        100: {4: 5,  5: 20, 6: 20},
+        15:  {4: 4,  5: 8,  6: 12},
+        30:  {4: 6,  5: 10, 6: 16},
+        45:  {4: 9,  5: 14, 6: 20},
+        50:  {4: 12, 5: 16, 6: 20},
+        60:  {4: 14, 5: 18, 6: 20},
+        75:  {4: 10, 5: 16, 6: 20},
+        100: {4: 8,  5: 20, 6: 20},
     }
 
     def _go_for_it_threshold(self, fp: int, down: int) -> int:
@@ -1010,9 +1010,9 @@ class ViperballEngine:
 
         arch_info = get_archetype_info(kicker.archetype)
         if kicker.archetype == "kicking_zb":
-            ev_drop_kick *= 1.40
+            ev_drop_kick *= 1.20
             snapkick_boost = arch_info.get("snapkick_trigger_boost", 0.0)
-            ev_drop_kick *= (1.0 + snapkick_boost)
+            ev_drop_kick *= (1.0 + snapkick_boost * 0.5)
 
         punt_distance = random.gauss(42, 5)
         new_fp_after_punt = max(1, fp + int(punt_distance))
@@ -1034,7 +1034,7 @@ class ViperballEngine:
             td_prob_boost = 0.18 * 9
         ev_go_for_it = conversion_rate * (continuation_value + drive_ep * 0.6 + td_prob_boost)
 
-        aggression = {4: 1.40, 5: 1.25, 6: 1.10}.get(down, 1.0)
+        aggression = {4: 1.50, 5: 1.35, 6: 1.15}.get(down, 1.0)
         if fg_distance <= 55:
             aggression = min(aggression, 1.0)
         ev_go_for_it *= aggression
@@ -1060,12 +1060,10 @@ class ViperballEngine:
                 ev_place_kick *= 1.25
 
         if down >= 5 and fg_distance <= 40:
-            ev_place_kick *= 1.45
+            ev_place_kick *= 1.35
         elif down >= 5 and fg_distance <= 50:
-            ev_place_kick *= 1.30
+            ev_place_kick *= 1.20
         elif down >= 4 and fg_distance <= 45:
-            ev_place_kick *= 1.25
-        elif down >= 4 and fg_distance <= 52:
             ev_place_kick *= 1.15
 
         style = self._current_style()
@@ -1105,38 +1103,35 @@ class ViperballEngine:
         kick_available = 'place_kick' in options or 'drop_kick' in options
         if kick_available:
             if down == 4:
-                if fg_distance <= 50 and ytg > 2:
-                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
-                elif fg_distance <= 60 and ytg > 6:
-                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
-                elif fg_distance <= 65 and ytg > 12:
+                if fg_distance <= 45 and ytg > 7:
                     best = 'place_kick' if 'place_kick' in options else best
             if down == 5:
-                if fg_distance <= 55 and ytg > 2:
+                if fg_distance <= 48 and ytg > 4:
                     best = 'place_kick' if 'place_kick' in options else 'drop_kick'
-                elif fg_distance <= 65 and ytg > 5:
+                elif fg_distance <= 55 and ytg > 8:
                     best = 'place_kick' if 'place_kick' in options else 'drop_kick'
             if down == 6:
-                if fg_distance <= 60 and ytg > 2:
+                if fg_distance <= 52 and ytg > 3:
                     best = 'place_kick' if 'place_kick' in options else 'drop_kick'
-                elif fg_distance <= 65 and ytg > 4:
+                elif fg_distance <= 58 and ytg > 6:
                     best = 'place_kick' if 'place_kick' in options else 'drop_kick'
 
         if kick_available and 'drop_kick' in options:
-            if fg_distance <= 40 and down >= 5 and ytg > 3:
-                best = 'drop_kick'
-            if fg_distance <= 45 and down >= 4 and ytg > 5:
+            if fg_distance <= 35 and down >= 5 and ytg > 3:
                 best = 'drop_kick'
             score_diff = self._get_score_diff()
-            if score_diff < -6 and fg_distance <= 50 and down >= 4:
+            if score_diff < -6 and fg_distance <= 45 and down >= 5:
                 best = 'drop_kick'
-            if kicker.archetype == "kicking_zb" and fg_distance <= 48 and down >= 3:
+            if kicker.archetype == "kicking_zb" and fg_distance <= 40 and down >= 4:
                 best = 'drop_kick'
 
-        if down == 6 and ytg <= 5:
+        if down == 6 and ytg <= 6:
             best = 'go_for_it'
 
-        if down == 4 and ytg <= 2 and fp >= 30:
+        if down == 5 and ytg <= 3 and fp >= 40:
+            best = 'go_for_it'
+
+        if down == 4 and ytg <= 3 and fp >= 30:
             best = 'go_for_it'
 
         go_threshold = self._go_for_it_threshold(fp, down)
@@ -1174,24 +1169,22 @@ class ViperballEngine:
                 pk_success = self._place_kick_success(fg_distance)
 
                 if is_kicking_zb:
-                    if fg_distance <= 48 and dk_success >= 0.30:
+                    if fg_distance <= 38 and dk_success >= 0.40 and random.random() < 0.5:
                         return PlayType.DROP_KICK
-                    elif fg_distance <= 40 and random.random() < 0.6:
-                        return PlayType.DROP_KICK
-                    elif pk_success >= 0.45:
+                    elif pk_success >= 0.50:
                         return PlayType.PLACE_KICK
 
                 if kick_rate >= 0.40:
-                    if dk_success >= 0.30:
+                    if dk_success >= 0.40 and random.random() < 0.6:
                         return PlayType.DROP_KICK
-                    elif pk_success >= 0.45:
+                    elif pk_success >= 0.50:
                         return PlayType.PLACE_KICK
                 elif kick_rate >= 0.20:
-                    if fg_distance <= 38 and random.random() < 0.7:
-                        return PlayType.DROP_KICK if dk_success >= 0.40 else PlayType.PLACE_KICK
-                    elif fg_distance <= 48 and random.random() < 0.5:
+                    if fg_distance <= 35 and random.random() < 0.5:
                         return PlayType.DROP_KICK if dk_success >= 0.45 else PlayType.PLACE_KICK
-                    elif fg_distance <= 55 and pk_success >= 0.45 and random.random() < 0.40:
+                    elif fg_distance <= 45 and random.random() < 0.35:
+                        return PlayType.DROP_KICK if dk_success >= 0.50 else PlayType.PLACE_KICK
+                    elif fg_distance <= 55 and pk_success >= 0.50 and random.random() < 0.30:
                         return PlayType.PLACE_KICK
 
             return PlayType.PUNT
@@ -1307,7 +1300,8 @@ class ViperballEngine:
             play.yards_gained = 0
             play.result = "penalty"
         else:
-            penalty_def = next((p for p in PENALTY_CATALOG["during_play"] if p["name"] == penalty.name), None)
+            all_during = PENALTY_CATALOG.get("during_play_run", []) + PENALTY_CATALOG.get("during_play_lateral", []) + PENALTY_CATALOG.get("during_play_kick", [])
+            penalty_def = next((p for p in all_during if p["name"] == penalty.name), None)
             auto_first = penalty_def.get("auto_first", False) if penalty_def else False
             self.state.field_position = min(99, self.state.field_position + penalty.yards)
             if auto_first or penalty.yards >= self.state.yards_to_go:
@@ -1563,41 +1557,46 @@ class ViperballEngine:
         if yards_gained < 2:
             return False
         if new_position >= 95:
-            td_chance = 0.55 + (team.avg_speed - 85) * 0.01
-            if self.drive_play_count >= 6:
+            td_chance = 0.65 + (team.avg_speed - 85) * 0.01
+            if self.drive_play_count >= 5:
                 td_chance += 0.10
             return random.random() < td_chance
         elif new_position >= 90:
-            td_chance = 0.35 + (team.avg_speed - 85) * 0.008
+            td_chance = 0.45 + (team.avg_speed - 85) * 0.008
+            if self.drive_play_count >= 5:
+                td_chance += 0.10
+            return random.random() < td_chance
+        elif new_position >= 85:
+            td_chance = 0.28 + (team.avg_speed - 85) * 0.005
             if self.drive_play_count >= 6:
                 td_chance += 0.08
             return random.random() < td_chance
-        elif new_position >= 85:
-            td_chance = 0.18 + (team.avg_speed - 85) * 0.005
+        elif new_position >= 80:
+            td_chance = 0.12 + (team.avg_speed - 85) * 0.003
             if self.drive_play_count >= 8:
                 td_chance += 0.05
             return random.random() < td_chance
         return False
 
     def _breakaway_check(self, yards_gained: int, team: Team) -> int:
-        if yards_gained >= 10:
+        if yards_gained >= 8:
             speed_gap = (team.avg_speed - 85) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
-            breakaway_chance = 0.18 + speed_gap + def_fatigue_bonus
+            breakaway_chance = 0.22 + speed_gap + def_fatigue_bonus
             if self.state.field_position >= 50:
-                breakaway_chance += 0.10
+                breakaway_chance += 0.12
             if random.random() < breakaway_chance:
-                extra = random.randint(10, 40)
+                extra = random.randint(12, 45)
                 return yards_gained + extra
         return yards_gained
 
     def _run_fumble_check(self, family: PlayFamily, yards_gained: int, carrier=None) -> bool:
         if family == PlayFamily.DIVE_OPTION:
-            base_fumble = 0.008
+            base_fumble = 0.005
         elif family in (PlayFamily.SPEED_OPTION, PlayFamily.SWEEP_OPTION):
-            base_fumble = 0.014
-        else:
             base_fumble = 0.010
+        else:
+            base_fumble = 0.007
 
         team = self.get_offensive_team()
         best_power = max(p.stamina for p in team.players[:5])
@@ -1608,7 +1607,7 @@ class ViperballEngine:
 
         fatigue_factor = self.get_fatigue_factor()
         if fatigue_factor < 0.85:
-            base_fumble += 0.025
+            base_fumble += 0.015
 
         defense = self._current_defense()
         pressure = defense.get("pressure_factor", 0.50)
@@ -1618,7 +1617,7 @@ class ViperballEngine:
         base_fumble *= (1 + turnover_bonus)
 
         if yards_gained <= 0:
-            base_fumble += 0.03
+            base_fumble += 0.018
 
         base_fumble += self.weather_info.get("fumble_modifier", 0.0)
 
@@ -1807,19 +1806,19 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = random.uniform(0.020, 0.030)
+        base_fumble_prob = random.uniform(0.015, 0.025)
         fumble_prob = base_fumble_prob
-        fumble_prob += (chain_length - 1) * 0.006
+        fumble_prob += (chain_length - 1) * 0.004
         fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
-        if self.drive_play_count >= 5:
-            fumble_prob += random.uniform(0.010, 0.018)
+        if self.drive_play_count >= 6:
+            fumble_prob += random.uniform(0.006, 0.012)
         if chain_length >= 3:
-            fumble_prob += 0.008
+            fumble_prob += 0.005
         if chain_length >= 4:
-            fumble_prob += 0.008
+            fumble_prob += 0.006
         fatigue_factor_lat = self.get_fatigue_factor()
         if fatigue_factor_lat < 0.9:
-            fumble_prob += 0.02
+            fumble_prob += 0.012
 
         tempo = style.get("tempo", 0.5)
         fumble_prob *= (1 + (tempo - 0.5) * 0.10)

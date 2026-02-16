@@ -42,6 +42,7 @@ The project is structured with a clear separation of concerns:
 - **Position Tag System**: Players are identified by position abbreviation + jersey number (e.g., VB1, HB13).
 
 ## Recent Changes
+- **2026-02-16 (tuning)**: Calibrated kick decision engine: PK 1.6/game (target 1.5-2.5), DK 0.76/game (target 0.5-1.5), scoring drive rate ~39.5% (target 40%+), penalties 15.2/game (target 10-16). PK gets 1.15x reliability EV boost. Kicking ZB archetype gets 1.20x DK boost with snapkick trigger. Expanded FG range to 58 yards. Reduced penalty probabilities ~35%. Reduced fumble rates (base run, fatigue, lateral chain). Boosted red zone TD probabilities (added 80-yard-line check). Increased breakaway threshold/chance. Fixed PENALTY_CATALOG KeyError for during_play subcatalogs. Boosted go-for-it aggressiveness via matrix and conversion rates.
 - **2026-02-16**: Added comprehensive weather system (6 conditions), expanded penalty system (30+ types with play-type-specific catalogs), and player archetype system (12 archetypes with gameplay modifiers). Weather selector added to Game Simulator, Debug Tools, and Play Inspector. Penalty Tracker and Player Performance & Archetypes sections added to game results UI. Season games get random weather. API updated with weather parameter.
 
 ## External Dependencies
