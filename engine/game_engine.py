@@ -716,7 +716,7 @@ class ViperballEngine:
             td_prob_boost = 0.10 * 9
         ev_go_for_it = conversion_rate * (continuation_value + td_prob_boost)
 
-        aggression = {4: 1.15, 5: 1.0, 6: 0.85}.get(down, 1.0)
+        aggression = {4: 1.25, 5: 1.10, 6: 0.90}.get(down, 1.0)
         ev_go_for_it *= aggression
 
         score_diff = self._get_score_diff()
@@ -1104,17 +1104,17 @@ class ViperballEngine:
         if yards_gained < 2:
             return False
         if new_position >= 95:
-            td_chance = 0.40 + (team.avg_speed - 85) * 0.01
+            td_chance = 0.55 + (team.avg_speed - 85) * 0.01
             if self.drive_play_count >= 6:
                 td_chance += 0.10
             return random.random() < td_chance
         elif new_position >= 90:
-            td_chance = 0.20 + (team.avg_speed - 85) * 0.008
+            td_chance = 0.35 + (team.avg_speed - 85) * 0.008
             if self.drive_play_count >= 6:
                 td_chance += 0.08
             return random.random() < td_chance
         elif new_position >= 85:
-            td_chance = 0.10 + (team.avg_speed - 85) * 0.005
+            td_chance = 0.18 + (team.avg_speed - 85) * 0.005
             if self.drive_play_count >= 8:
                 td_chance += 0.05
             return random.random() < td_chance
@@ -1170,16 +1170,16 @@ class ViperballEngine:
         ptag = player_tag(player)
 
         if family == PlayFamily.DIVE_OPTION:
-            base_yards = random.gauss(5.5, 3.5)
+            base_yards = random.gauss(6.2, 3.5)
             action = "keep"
         elif family == PlayFamily.SPEED_OPTION:
-            base_yards = random.gauss(6.5, 4.5)
+            base_yards = random.gauss(7.5, 4.5)
             action = "pitch"
         elif family == PlayFamily.SWEEP_OPTION:
-            base_yards = random.gauss(5.0, 5.0)
+            base_yards = random.gauss(6.0, 5.0)
             action = "sweep"
         else:
-            base_yards = random.gauss(5.5, 3.5)
+            base_yards = random.gauss(6.2, 3.5)
             action = "run"
 
         style = self._current_style()
@@ -1389,8 +1389,8 @@ class ViperballEngine:
                 fumble=True,
             )
 
-        base_yards = random.gauss(10, 6)
-        lateral_bonus = chain_length * 2.5
+        base_yards = random.gauss(12, 6)
+        lateral_bonus = chain_length * 3.0
         fatigue_factor = self.get_fatigue_factor()
         viper_factor = self.calculate_viper_impact()
         def_fatigue = self._defensive_fatigue_factor()
@@ -2176,8 +2176,7 @@ class ViperballEngine:
                 if next_p.possession == p.possession:
                     ep_after = calculate_ep(next_p.field_position, next_p.down)
                 else:
-                    opp_yard = 100 - next_p.field_position
-                    ep_after = -calculate_ep(opp_yard, 1)
+                    ep_after = 0
             else:
                 ep_after = 0
 

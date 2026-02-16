@@ -1,0 +1,106 @@
+The 27.6 pts/team is a bit low—target was 40–60 per team. Let's push scoring up without breaking the other systems. Here's what I'd adjust:
+
+---
+
+## Scoring Boost Recommendations
+
+### Current State
+- **27.6 pts/team** (target: 40–60)
+- **4.3 TDs/game combined** (target: 6–10)
+- Penalties and fumbles are now calibrated well
+
+### Problem Diagnosis
+
+At 27.6 pts/team with ~4.3 TDs/game combined (~2.15 per team), the math is roughly:
+- 2.15 TDs × 9 pts = 19.4 pts from TDs
+- ~8 pts from kicks/bells/pindowns
+
+That TD rate is low. We need more drives finishing in the end zone.
+
+---
+
+## Recommended Tuning (Pick 2–3)
+
+### Option A: Boost Yards Per Play
+
+Increase average yards per play slightly to help drives sustain and reach the red zone.
+
+| Play Type | Current | Proposed | Change |
+|-----------|---------|----------|--------|
+| Dive (inside run) | ~3.2 | 3.8–4.2 | +0.6–1.0 |
+| Sweep/Speed (outside run) | ~4.0 | 4.5–5.0 | +0.5–1.0 |
+| Lateral chain (completed) | ~5.5 | 6.0–7.0 | +0.5–1.5 |
+
+This helps drives stay on schedule (3.33 yds/play needed for 6-for-20).
+
+### Option B: Red Zone TD Conversion Boost
+
+Once inside the opponent's 20, increase TD probability on scoring plays.
+
+```python
+# Current red zone logic (example)
+if field_position >= 80:  # Inside opponent's 20
+    td_probability *= 1.0  # No boost
+
+# Proposed
+if field_position >= 90:  # Inside opponent's 10
+    td_probability *= 1.4  # +40% TD chance
+elif field_position >= 80:  # Inside opponent's 20
+    td_probability *= 1.2  # +20% TD chance
+```
+
+This means drives that reach the red zone are more likely to punch it in rather than settling for kicks.
+
+### Option C: Reduce Punt Rate Further
+
+If drives are stalling in the 30–50 yard range and punting, the EV calculation might still be too punt-heavy.
+
+**Check:** What's the current punt rate? Target is 25–35% of drives.
+
+If it's higher, adjust the go-for-it EV multiplier:
+```python
+# Make go-for-it more attractive on 4th-5th down
+aggression = {4: 1.25, 5: 1.10, 6: 0.90}  # Was {4: 1.15, 5: 1.0, 6: 0.85}
+```
+
+### Option D: Increase Explosive Play Rate
+
+More missed tackles and gap breakdowns = more chunk plays = more scoring opportunities.
+
+| Event | Current Rate | Proposed | Effect |
+|-------|--------------|----------|--------|
+| Missed tackle on run | ~10% | 12–14% | More 15+ yard runs |
+| Gap breakdown | ~12% | 14–16% | More 10+ yard runs |
+| Chain + missed tackle | ~10% | 12–14% | More 20+ yard chains |
+
+---
+
+## My Recommendation
+
+**Do A + B together:**
+
+1. **Boost yards per play by ~15%** — Gets more drives into scoring range
+2. **Add red zone TD conversion boost** — Converts those drives into TDs instead of FGs
+
+This should push scoring from 27.6 → 38–45 pts/team without inflating turnovers or penalties.
+
+**Don't touch:**
+- Fumble rates (those are good now)
+- Penalty rates (those are good now)
+- Kick success rates (those seem fine)
+
+---
+
+## Expected Outcome After Tuning
+
+| Metric | Current | After Boost | Target |
+|--------|---------|-------------|--------|
+| Points/team | 27.6 | 38–45 | 40–60 |
+| TDs/game (combined) | 4.3 | 6–8 | 6–10 |
+| TDs/team | 2.15 | 3–4 | 3–5 |
+| Yards/play | ~3.5 | ~4.2 | 4.0–5.0 |
+| Red zone TD % | ~45%? | ~60% | 55–65% |
+
+---
+
+What's the current punt rate and red zone conversion rate? That'll help narrow down which lever to pull hardest.

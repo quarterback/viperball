@@ -590,57 +590,60 @@ if page == "Game Simulator":
             dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
             dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
 
-        # ====== EPA SUMMARY ======
-        st.subheader("Expected Points Added (EPA)")
-        h_epa = hs.get("epa", {})
-        a_epa = as_.get("epa", {})
+        # ====== VPA (Viperball Points Added) ======
+        st.subheader("VPA — Viperball Points Added")
+        st.caption("Measures play efficiency vs league-average expectation from same field position & down. Positive = above average.")
+        h_vpa = hs.get("epa", {})
+        a_vpa = as_.get("epa", {})
 
-        epa1, epa2 = st.columns(2)
-        epa1.metric(f"{home_name} Total EPA", h_epa.get("total_epa", 0))
-        epa2.metric(f"{away_name} Total EPA", a_epa.get("total_epa", 0))
+        v1, v2 = st.columns(2)
+        v1.metric(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
+        v2.metric(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
 
-        epa3, epa4, epa5, epa6 = st.columns(4)
-        epa3.metric(f"{home_name} EPA/Play", h_epa.get("epa_per_play", 0))
-        epa4.metric(f"{away_name} EPA/Play", a_epa.get("epa_per_play", 0))
-        epa5.metric(f"{home_name} Off EPA", h_epa.get("offense_epa", 0))
-        epa6.metric(f"{away_name} Off EPA", a_epa.get("offense_epa", 0))
+        v3, v4, v5, v6 = st.columns(4)
+        v3.metric(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+        v4.metric(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+        v5.metric(f"{home_name} Success Rate", f"{h_vpa.get('success_rate', 0)}%")
+        v6.metric(f"{away_name} Success Rate", f"{a_vpa.get('success_rate', 0)}%")
 
-        epa7, epa8 = st.columns(2)
-        epa7.metric(f"{home_name} Special Teams EPA", h_epa.get("special_teams_epa", 0))
-        epa8.metric(f"{away_name} Special Teams EPA", a_epa.get("special_teams_epa", 0))
+        v7, v8, v9, v10 = st.columns(4)
+        v7.metric(f"{home_name} Explosiveness", h_vpa.get("explosiveness", 0))
+        v8.metric(f"{away_name} Explosiveness", a_vpa.get("explosiveness", 0))
+        v9.metric(f"{home_name} Off VPA", h_vpa.get("offense_vpa", h_vpa.get("offense_epa", 0)))
+        v10.metric(f"{away_name} Off VPA", a_vpa.get("offense_vpa", a_vpa.get("offense_epa", 0)))
 
-        epa_plays = [p for p in plays if "epa" in p]
-        if epa_plays:
-            home_epa_plays = [p for p in epa_plays if p["possession"] == "home"]
-            away_epa_plays = [p for p in epa_plays if p["possession"] == "away"]
+        vpa_plays = [p for p in plays if "epa" in p]
+        if vpa_plays:
+            home_vpa_plays = [p for p in vpa_plays if p["possession"] == "home"]
+            away_vpa_plays = [p for p in vpa_plays if p["possession"] == "away"]
 
-            fig_epa = go.Figure()
-            if home_epa_plays:
+            fig_vpa = go.Figure()
+            if home_vpa_plays:
                 home_cum = []
                 running = 0
-                for p in home_epa_plays:
+                for p in home_vpa_plays:
                     running += p["epa"]
                     home_cum.append(round(running, 2))
-                fig_epa.add_trace(go.Scatter(
+                fig_vpa.add_trace(go.Scatter(
                     y=home_cum, mode="lines", name=home_name,
                     line=dict(color="#3b82f6", width=2)
                 ))
-            if away_epa_plays:
+            if away_vpa_plays:
                 away_cum = []
                 running = 0
-                for p in away_epa_plays:
+                for p in away_vpa_plays:
                     running += p["epa"]
                     away_cum.append(round(running, 2))
-                fig_epa.add_trace(go.Scatter(
+                fig_vpa.add_trace(go.Scatter(
                     y=away_cum, mode="lines", name=away_name,
                     line=dict(color="#ef4444", width=2)
                 ))
-            fig_epa.update_layout(
-                title="Cumulative EPA Over Game",
-                xaxis_title="Play #", yaxis_title="Cumulative EPA",
+            fig_vpa.update_layout(
+                title="Cumulative VPA Over Game",
+                xaxis_title="Play #", yaxis_title="Cumulative VPA",
                 height=350, template="plotly_white"
             )
-            st.plotly_chart(fig_epa, use_container_width=True)
+            st.plotly_chart(fig_vpa, use_container_width=True)
 
         # ====== 2. PLAY FAMILY DISTRIBUTION ======
         st.subheader("Play Family Distribution")
@@ -987,16 +990,26 @@ elif page == "Debug Tools":
             label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down Conv %"
             dc_cols[idx].metric(label, f"{avg_rate}%")
 
-        st.markdown("**Avg EPA**")
-        epa_cols = st.columns(4)
-        home_total_epa = [r["stats"]["home"].get("epa", {}).get("total_epa", 0) for r in results]
-        away_total_epa = [r["stats"]["away"].get("epa", {}).get("total_epa", 0) for r in results]
-        home_epa_pp = [r["stats"]["home"].get("epa", {}).get("epa_per_play", 0) for r in results]
-        away_epa_pp = [r["stats"]["away"].get("epa", {}).get("epa_per_play", 0) for r in results]
-        epa_cols[0].metric(f"Avg {home_name} EPA", round(sum(home_total_epa) / n, 2))
-        epa_cols[1].metric(f"Avg {away_name} EPA", round(sum(away_total_epa) / n, 2))
-        epa_cols[2].metric(f"Avg {home_name} EPA/Play", round(sum(home_epa_pp) / n, 3))
-        epa_cols[3].metric(f"Avg {away_name} EPA/Play", round(sum(away_epa_pp) / n, 3))
+        st.markdown("**Avg VPA (Viperball Points Added)**")
+        vpa_cols = st.columns(4)
+        home_total_vpa = [r["stats"]["home"].get("epa", {}).get("total_vpa", r["stats"]["home"].get("epa", {}).get("total_epa", 0)) for r in results]
+        away_total_vpa = [r["stats"]["away"].get("epa", {}).get("total_vpa", r["stats"]["away"].get("epa", {}).get("total_epa", 0)) for r in results]
+        home_vpa_pp = [r["stats"]["home"].get("epa", {}).get("vpa_per_play", r["stats"]["home"].get("epa", {}).get("epa_per_play", 0)) for r in results]
+        away_vpa_pp = [r["stats"]["away"].get("epa", {}).get("vpa_per_play", r["stats"]["away"].get("epa", {}).get("epa_per_play", 0)) for r in results]
+        vpa_cols[0].metric(f"Avg {home_name} VPA", round(sum(home_total_vpa) / n, 2))
+        vpa_cols[1].metric(f"Avg {away_name} VPA", round(sum(away_total_vpa) / n, 2))
+        vpa_cols[2].metric(f"Avg {home_name} VPA/Play", round(sum(home_vpa_pp) / n, 3))
+        vpa_cols[3].metric(f"Avg {away_name} VPA/Play", round(sum(away_vpa_pp) / n, 3))
+
+        home_sr = [r["stats"]["home"].get("epa", {}).get("success_rate", 0) for r in results]
+        away_sr = [r["stats"]["away"].get("epa", {}).get("success_rate", 0) for r in results]
+        home_exp = [r["stats"]["home"].get("epa", {}).get("explosiveness", 0) for r in results]
+        away_exp = [r["stats"]["away"].get("epa", {}).get("explosiveness", 0) for r in results]
+        sr_cols = st.columns(4)
+        sr_cols[0].metric(f"Avg {home_name} Success Rate", f"{round(sum(home_sr) / n, 1)}%")
+        sr_cols[1].metric(f"Avg {away_name} Success Rate", f"{round(sum(away_sr) / n, 1)}%")
+        sr_cols[2].metric(f"Avg {home_name} Explosiveness", round(sum(home_exp) / n, 3))
+        sr_cols[3].metric(f"Avg {away_name} Explosiveness", round(sum(away_exp) / n, 3))
 
         st.subheader("Score Distribution")
         fig = go.Figure()

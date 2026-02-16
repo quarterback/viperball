@@ -107,14 +107,19 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 
 ## Tuning Diagnostics (30-sim batch)
-- Avg score: ~27.6 per team
-- TDs/game: ~4.3
-- Fumbles/game: ~4-5 (run fumbles ~1/game + lateral fumbles)
-- Penalties/game: ~10.6 for ~77 yards
+- Avg score: ~36.3 per team (target: 40-60)
+- TDs/game: ~6.3 (target: 6-10)
+- Fumbles/game: ~4.2 (run fumbles ~1/game + lateral fumbles)
+- Penalties/game: ~10.3 for ~76 yards
 - Kick %: ~17%
 - Plays/game: ~123
+- VPA/team: ~-3.5 avg (range -29 to +22, 40% positive)
+- Success Rate: ~48% (target: 45-55%)
+- Explosiveness: ~1.0
 
 ## Recent Changes
+- 2026-02-16: VPA (Viperball Points Added) system overhaul: recalibrated EP table for 6-down/9pt TD system, 6-down multipliers, removed double-counting on possession changes, added Success Rate and Explosiveness metrics
+- 2026-02-16: Scoring boost: increased base run yards ~15%, boosted red zone TD conversion (55%/35%/18% by zone), increased go-for-it aggression, lateral chain yardage boost
 - 2026-02-16: CALIBRATION v3.2: Added run fumble system (1.2% dive, 2.0% speed/sweep, modifiers for power/fatigue/defense)
 - 2026-02-16: CALIBRATION v3.2: EV-based kick decision system replacing rule-based kick logic (field position value tables, conversion rates, game state modifiers)
 - 2026-02-16: CALIBRATION v3.2: Penalty system with 14 penalty types across pre-snap/during-play/post-play phases
