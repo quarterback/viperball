@@ -1,0 +1,1205 @@
+# Viperball Simulation Calibration Guide v3.0
+
+## Overview
+
+This document provides calibration targets for the Viperball simulation engine. The goal is to produce a dynamic, watchable sport with touchdowns as the primary scoring method, a robust kicking game as a legitimate alternative offensive philosophy, and chaos events (Bells, Pindowns) adding texture.
+
+**Core Design Principles:**
+- 6 downs to gain 20 yards (3.33 yards/play to stay on schedule)
+- No forward pass—lateral chains replace passing offense
+- Kicking is live offense, not just field position management
+- TDs are natural and frequent, not rare events
+- Kicking-heavy teams are a viable archetype, not a gimmick
+- 85–90% defensive success rate creates meaningful defense with explosive exceptions
+
+---
+
+## Scoring System
+
+| Event | Points | Description |
+|-------|--------|-------------|
+| Touchdown | 9 | Ball carried or kicked into end zone |
+| Snapkick (Drop Kick FG) | 5 | Live-ball drop kick through uprights from anywhere |
+| Place Kick FG | 3 | Traditional place kick from scrimmage |
+| Safety | 2 | Offense downed in own end zone or commits foul there |
+| Pindown | 1 | Force opponent to start drive inside own 10-yard line |
+| Bell | 0.5 | Recover any loose ball (fumble, muff, blocked kick) |
+
+---
+
+## Scoring Distribution Targets
+
+### League-Wide Averages (Per Team Per Game)
+
+| Scoring Event | Target Range | Notes |
+|---------------|--------------|-------|
+| Touchdowns | 3–5 | Primary scoring method |
+| Snapkicks (made) | 0.5–1.5 | Playmaker-dependent, high variance |
+| Place Kick FGs (made) | 1.5–2.5 | Reliable points, developed kicking culture |
+| Safeties | 0.1–0.3 | Rare, high-leverage |
+| Pindowns | 1–3 | Organic from punting/kicking game |
+| Bells | 2–4 | Fumbles, muffs, blocked kicks |
+| **Total Points** | **40–60** | Higher-scoring than current sim |
+
+### Team Archetype Scoring Profiles
+
+| Archetype | TDs | Snapkicks | Place Kicks | Style |
+|-----------|-----|-----------|-------------|-------|
+| **TD-Heavy** | 5–6 | 0–0.5 | 0.5–1 | Pound the ball, score in end zone |
+| **Balanced** | 3–4 | 0.5–1 | 1.5–2 | Multiple threats, adaptable |
+| **Kick-Heavy** | 2–3 | 1.5–2.5 | 2.5–3.5 | Death by field goals, prevent defense |
+| **Chaos** | 3–4 | 0.5–1 | 1–2 | High turnovers forced, Bells galore |
+
+### Game Totals (Both Teams Combined)
+
+| Metric | Target Range |
+|--------|--------------|
+| Total TDs | 6–10 |
+| Total Snapkicks (made) | 1–3 |
+| Total Place Kicks (made) | 3–5 |
+| Total Points | 80–120 |
+| Games with 100+ points | 20–30% |
+| Games under 60 points | 10–15% |
+
+---
+
+## Kicking Game Calibration
+
+### Place Kick Field Goals
+
+Place kicks are the reliable, high-percentage option. With larger goalposts and targeted recruiting of Australian, Gaelic, and soccer players, place kicking becomes a developed skill in Viperball.
+
+**Success Rates by Distance:**
+
+| Distance | Success Rate | Notes |
+|----------|--------------|-------|
+| <25 yards | 90–95% | Near-automatic |
+| 25–34 yards | 82–90% | Highly reliable |
+| 35–44 yards | 70–82% | Standard range |
+| 45–54 yards | 55–70% | Long but makeable |
+| 55+ yards | 35–50% | Specialist territory |
+
+**Attempt Frequency (Per Team Per Game):**
+
+| Team Archetype | Attempts | Makes | Notes |
+|----------------|----------|-------|-------|
+| TD-Heavy | 1–2 | 0.5–1.5 | Only when TD unlikely |
+| Balanced | 2–3 | 1.5–2.5 | Situational |
+| Kick-Heavy | 4–6 | 3–4.5 | Primary scoring method |
+
+**AI Playcalling Triggers for Place Kicks:**
+
+- 4th–6th down inside opponent's 40: Consider place kick
+- 5th–6th down inside opponent's 30: Strong place kick lean
+- Trailing by 1–3 points, final 2 minutes: Place kick if in range
+- Leading by 7+, any field position: Place kick over risky TD attempt
+
+### Snapkicks (Drop Kick Field Goals)
+
+Snapkicks are the high-risk, high-reward option. They can be attempted from anywhere during live play, but require elite skill. The best Kicking ZBs turn snapkicks into a primary weapon.
+
+**Success Rates by Distance:**
+
+| Distance | Elite Kicker | Good Kicker | Average Kicker |
+|----------|--------------|-------------|----------------|
+| <25 yards | 80–88% | 70–78% | 60–70% |
+| 25–34 yards | 68–78% | 55–65% | 45–55% |
+| 35–44 yards | 52–65% | 40–50% | 30–40% |
+| 45–54 yards | 35–48% | 25–35% | 15–25% |
+| 55+ yards | 18–30% | 10–18% | 5–12% |
+
+**Attempt Frequency by Team Archetype:**
+
+| Team Archetype | Attempts/Game | Makes/Game | Conversion % |
+|----------------|---------------|------------|--------------|
+| TD-Heavy | 0–1 | 0–0.5 | 50–60% |
+| Balanced | 1–2 | 0.5–1 | 55–65% |
+| Kick-Heavy | 3–5 | 1.5–2.5 | 55–70% |
+| Elite Kicking ZB | 4–6 | 2–3.5 | 60–75% |
+
+**AI Playcalling Triggers for Snapkicks:**
+
+- Kicking ZB teams: Attempt from 45+ yards on 3rd–4th down
+- Any team: Consider snapkick on 4th down past midfield if Kicking ZB
+- Trailing late: Snapkick attempts increase (5 pts vs 3 pts matters)
+- Kick-Heavy archetype: Attempt snapkick before place kick when in range for both
+
+### Punting
+
+Punting remains a field position tool, but should be less frequent than current sim.
+
+**Punt Statistics:**
+
+| Metric | Target |
+|--------|--------|
+| Punts per team per game | 3–5 |
+| Average punt distance | 38–45 yards |
+| Punts inside 10-yard line | 25–35% |
+| Punts resulting in Pindown | 20–30% |
+| Blocked punts per game (both teams) | 0.1–0.3 |
+| Muffed punt returns per game | 0.2–0.4 |
+
+**AI Playcalling Triggers for Punts:**
+
+- 5th–6th down in own territory: Punt unless desperate
+- 5th down between own 40 and opponent's 45: Situational (game state)
+- 6th down anywhere past own 35: Go for it or kick FG, rarely punt
+- Pinned inside own 10: Punt on 4th+ down
+
+---
+
+## Drive Mechanics
+
+### Drive Length and Efficiency
+
+| Metric | Target | Current Sim | Fix Needed |
+|--------|--------|-------------|------------|
+| Plays per drive | 4–7 | 1.8 | Major increase |
+| Yards per drive | 28–42 | 4.2 | Major increase |
+| Yards per play (run) | 3.5–5.0 | ~2.5 | Increase |
+| Yards per play (lateral chain) | 4.5–7.5 | ? | Higher variance |
+| First downs per drive | 1.5–2.5 | ~0.3 | Major increase |
+
+### Drive Outcomes (Per Team Per Game, ~10–12 Drives)
+
+| Outcome | Target % | Target Count |
+|---------|----------|--------------|
+| Touchdown | 25–40% | 3–5 |
+| Place Kick FG (made) | 12–20% | 1.5–2.5 |
+| Place Kick FG (missed) | 5–10% | 0.5–1 |
+| Snapkick (made) | 4–12% | 0.5–1.5 |
+| Snapkick (missed) | 3–8% | 0.3–1 |
+| Punt | 20–35% | 2.5–4 |
+| Turnover (fumble) | 8–12% | 1–1.5 |
+| Turnover on downs | 3–6% | 0.3–0.7 |
+| End of half/game | 3–5% | 0.3–0.5 |
+
+### Yards Per Play by Play Type
+
+| Play Type | Average | Range | Variance |
+|-----------|---------|-------|----------|
+| Inside run | 3.5–4.5 | -2 to +12 | Medium |
+| Outside run | 4.0–5.5 | -3 to +20 | High |
+| Lateral chain (short) | 4.0–5.5 | -5 to +15 | High |
+| Lateral chain (medium) | 5.5–7.5 | -8 to +25 | Very high |
+| Lateral chain (long/risky) | 6.5–9.0 | -10 to +40 | Extreme |
+| Viper touch | 6.5–9.0 | -2 to +30 | High |
+| ZB scramble | 4.0–6.0 | -3 to +25 | High |
+
+---
+
+## Defensive Calibration
+
+### Tackle/Stop Success Rates
+
+| Metric | Target | Creates |
+|--------|--------|---------|
+| Overall defensive success rate | 85–90% | Meaningful defense |
+| Tackle success rate | 87–92% | Most plays contained |
+| Missed tackle rate | 8–13% | Source of explosive plays |
+| Gap integrity hold rate | 80–88% | Structure matters |
+| Gap breakdown rate | 12–20% | Source of big runs |
+
+### 1-on-1 Battles
+
+| Matchup | Offensive Win % | Defensive Win % | Notes |
+|---------|-----------------|-----------------|-------|
+| Ball carrier vs tackler (open field) | 35–45% | 55–65% | Slight defensive edge |
+| Speed flanker vs corner | 45–52% | 48–55% | Near even |
+| Power back vs spotback | 40–48% | 52–60% | Defensive edge |
+| Viper vs any defender | 48–55% | 45–52% | Slight offensive edge |
+| Elusive player vs any | 50–58% | 42–50% | Offensive edge |
+
+### Explosive Play Generation
+
+| Play Type | Frequency | Avg Gain | TD Conversion |
+|-----------|-----------|----------|---------------|
+| Standard run (contained) | 65–75% of runs | 3–4 yds | 2–5% |
+| Gap breakdown run | 12–18% of runs | 10–18 yds | 12–18% |
+| Missed tackle run | 10–15% of runs | 15–30 yds | 22–35% |
+| Chain (completed, contained) | 55–65% of chains | 5–8 yds | 5–10% |
+| Chain (broken/fumbled) | 5–10% of chains | Turnover | — |
+| Chain + missed tackle | 10–15% of chains | 18–35 yds | 28–42% |
+| Chain + gap breakdown | 8–12% of chains | 12–22 yds | 15–25% |
+
+### Defensive Scheme Effectiveness Matrix
+
+| Offense \ Defense | Contain | Pressure | Bend Don't Break | Blitz |
+|-------------------|---------|----------|------------------|-------|
+| Ground & Pound | Neutral | +8–12% O | −5–8% O | High variance |
+| Lateral Spread | −5–8% O | +5–10% O | Neutral | −12–18% O |
+| Kick Heavy | +8–12% O | −3–8% O | −8–12% O | Neutral |
+| Ball Control | +3–6% O | Neutral | −10–15% O | +8–12% O |
+| Hybrid | Neutral | Neutral | Neutral | Neutral |
+
+*Positive % = advantage to offense; Negative % = advantage to defense*
+
+---
+
+## Fumble System (CRITICAL FIX REQUIRED)
+
+### Current Problem
+
+Fumbles currently only occur on lateral chain plays. This is a fundamental design flaw that creates two problems:
+
+1. **Lateral chains feel punishing** — Players learn chains = fumble risk, runs = safe. This discourages the signature mechanic of the sport.
+2. **It's unrealistic** — Ball carriers fumble on runs, sweeps, dives, kick returns, and scrambles. Stripping the ball is a core defensive skill.
+
+### New Fumble Model
+
+Fumbles should occur on ANY ball-carrying play, not just lateral chains.
+
+#### Fumble Opportunities by Play Type
+
+| Play Type | Can Fumble? | Base Rate | Notes |
+|-----------|-------------|-----------|-------|
+| Inside run (dive) | Yes | 1.5–2.5% | Lower risk, ball secured |
+| Outside run (sweep/option) | Yes | 2–3% | More exposure, arm tackles |
+| Lateral chain | Yes | 2–3% per exchange | Each lateral is a fumble opportunity |
+| Punt return | Yes | 2–4% | Catching + running in traffic |
+| Kick return (missed FG) | Yes | 2–3% | Keeper fielding and returning |
+| Scramble (ZB) | Yes | 2–3% | Loose carry while improvising |
+| Designed kick play | No | — | Ball is kicked, not carried |
+| Punt (kicking team) | No | — | But can be blocked/muffed |
+
+#### Fumble Probability Modifiers
+
+**Ball Carrier Attributes:**
+- High Power (80+): −20% to −30% fumble probability
+- Low Power (<50): +10% to +15% fumble probability
+
+**Fatigue:**
+- Stamina below 70%: +2–3% fumble probability
+
+**Defensive Scheme:**
+- Pressure/Blitz defense: +1–2% (more hits)
+- Contain defense: No modifier
+- Bend Don't Break: −1% (softer tackles)
+
+**Tackle Type:**
+- Standard tackle: Base rate
+- Big hit / TFL / Loss of yards: +3–5% additional
+
+**Weather (if implemented):**
+- Rain/snow: +2–3%
+
+#### Lateral Chain Specific Logic
+
+Each exchange in a lateral chain has its own fumble check:
+
+```
+Per-exchange fumble rate: 2–3%
+3-lateral chain: 3 checks at 2.5% each
+Cumulative probability: 1 - (0.975)^3 = 7.3% chance of fumble somewhere in chain
+```
+
+This makes a 3-lateral chain roughly 3× riskier than a single run (7% vs 2%), which is the correct tradeoff for higher expected yardage.
+
+#### Implementation: Add Fumble Check to Run Plays
+
+```python
+def simulate_run(self, family: PlayFamily) -> Play:
+    # ... existing run logic ...
+    
+    # Fumble check for ball carrier
+    base_fumble_prob = 0.02  # 2% base for runs
+    
+    # Adjust by play type
+    if family == PlayFamily.DIVE_OPTION:
+        base_fumble_prob = 0.015  # Inside runs safer
+    elif family in [PlayFamily.SWEEP_OPTION, PlayFamily.SPEED_OPTION]:
+        base_fumble_prob = 0.025  # Outside runs riskier
+    
+    # Modify by carrier attributes
+    carrier = self.get_ball_carrier()
+    if carrier.power >= 80:
+        base_fumble_prob *= 0.75  # Strong carriers hold on
+    elif carrier.power < 50:
+        base_fumble_prob *= 1.12
+    
+    # Modify by fatigue
+    if carrier.stamina < 70:
+        base_fumble_prob += 0.025
+    
+    # Modify by defensive pressure
+    defense = self._current_defense()
+    if defense.get("style") == "pressure":
+        base_fumble_prob += 0.015
+    elif defense.get("style") == "blitz":
+        base_fumble_prob += 0.02
+    elif defense.get("style") == "bend_dont_break":
+        base_fumble_prob -= 0.01
+    
+    # Big hit check (TFL or loss of yards)
+    if yards_gained <= 0:
+        base_fumble_prob += 0.03  # Stuffed at line = harder hit
+    
+    # Fumble roll
+    if random.random() < base_fumble_prob:
+        return self._create_fumble_play(...)
+```
+
+#### Implementation: Add Fumble Check to Returns
+
+```python
+def simulate_punt_return(self) -> Play:
+    # ... existing return logic ...
+    
+    # Muff chance on catch
+    muff_prob = 0.02
+    if weather == "rain":
+        muff_prob += 0.02
+    
+    if random.random() < muff_prob:
+        return self._create_muff_play(...)
+    
+    # Fumble during return
+    fumble_prob = 0.03
+    # Apply standard modifiers (fatigue, defensive pressure, etc.)
+    
+    if random.random() < fumble_prob:
+        return self._create_fumble_play(...)
+```
+
+#### Expected Fumble Distribution Per Game
+
+| Play Type | Plays/Game | Fumble Rate | Expected Fumbles |
+|-----------|------------|-------------|------------------|
+| Runs (all types) | 35–45 | 2% | 0.7–0.9 |
+| Lateral chains | 15–20 | 6–8% cumulative | 1.0–1.6 |
+| Punt returns | 4–6 | 3% | 0.1–0.2 |
+| Kick returns | 1–2 | 2.5% | 0.02–0.05 |
+| **Total per team** | — | — | **1.8–2.7** |
+
+**Both teams combined:** 3.5–5.5 fumbles per game
+**Fumbles lost per team (50% recovery):** ~1–1.5 per game
+
+---
+
+## Turnover and Chaos Events
+
+### Turnovers Per Game (Both Teams Combined)
+
+| Event | Frequency | Notes |
+|-------|-----------|-------|
+| Total fumbles | 4–6 | Distributed across all ball-carrying plays |
+| Fumbles lost (change of possession) | 2–3 | ~50% recovery rate |
+| Fumbles from runs | 1.5–2 | New: runs now have fumble risk |
+| Fumbles from lateral chains | 1.5–2.5 | Reduced from current overweighted rate |
+| Muffed punt returns | 0.3–0.6 | High leverage |
+| Blocked kicks (any type) | 0.2–0.5 | Rare but impactful |
+| Errant laterals (picked off) | 0.2–0.5 | Rare, usually desperation |
+
+### Bell Generation
+
+Bells (0.5 points) are awarded for recovering any loose ball. Target: 4–8 total Bells per game (both teams).
+
+| Bell Source | Per Game (Both Teams) |
+|-------------|----------------------|
+| Fumble recoveries | 2.5–4 |
+| Muffed punt recoveries | 0.3–0.6 |
+| Blocked kick recoveries | 0.2–0.5 |
+| Bouncing kick recoveries | 0.5–1.0 |
+
+### Pindown Generation
+
+Pindowns (1 point) are awarded when forcing opponent to start inside their own 10. Target: 2–6 total Pindowns per game (both teams).
+
+| Pindown Source | Per Game (Both Teams) |
+|----------------|----------------------|
+| Punts inside 10 | 1.5–3 |
+| Kickoffs inside 10 | 0.5–1.5 |
+| Missed FG touchbacks (opponent starts at 10) | 0.3–0.8 |
+
+---
+
+## Position Archetypes and Statistical Targets
+
+### Zeroback (Offensive Field General)
+
+The Zeroback is the offensive hub—part quarterback, part running back, part kicker. They touch the ball on nearly every play and dictate offensive tempo.
+
+**Archetypes:**
+
+| Type | Primary Threat | Secondary Threat | Playstyle |
+|------|---------------|------------------|-----------|
+| **Kicking ZB** | Snapkick (drop kick) | Play-action runs | Threatens 5 points anytime past midfield |
+| **Running ZB** | Elusive carries | Lateral distribution | TD machine, forces box-stacking |
+| **Distributor ZB** | Lateral chains | Occasional scramble | Gets playmakers the ball in space |
+| **Dual-Threat ZB** | Balanced run/kick | Unpredictable | No clear defensive answer |
+
+**Statistical Targets by Archetype:**
+
+| Metric | Kicking ZB | Running ZB | Distributor ZB | Dual-Threat ZB |
+|--------|-----------|------------|----------------|----------------|
+| Touches/game | 12–16 | 18–25 | 8–12 | 14–18 |
+| Rush yards/game | 25–45 | 65–110 | 15–35 | 45–75 |
+| Yards/carry | 4–5.5 | 5.5–7.5 | 3.5–5 | 5–6.5 |
+| Laterals thrown/game | 20–28 | 12–18 | 28–38 | 18–26 |
+| Snapkick attempts/game | 3–6 | 0–1 | 1–2 | 2–4 |
+| Snapkick accuracy | 58–72% | 40–50% | 42–55% | 50–65% |
+| TDs/game | 0.5–1.2 | 1.5–2.8 | 0.3–0.8 | 1.0–1.8 |
+| Team TD involvement | 45–55% (assists) | 35–45% (direct) | 65–75% (assists) | 50–60% (mixed) |
+
+**Attribute Weights:**
+
+| Attribute | Kicking ZB | Running ZB | Distributor ZB | Dual-Threat ZB |
+|-----------|-----------|------------|----------------|----------------|
+| Kicking | ★★★★★ | ★★ | ★★★ | ★★★★ |
+| Speed | ★★★ | ★★★★★ | ★★★ | ★★★★ |
+| Power | ★★ | ★★★★ | ★★ | ★★★ |
+| Hands | ★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Vision | ★★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Stamina | ★★★ | ★★★★★ | ★★★ | ★★★★ |
+
+---
+
+### Viper (Alignment-Exempt Playmaker)
+
+The Viper is the offensive wild card—the only player exempt from formation rules, wearing a distinctly colored jersey. They can line up anywhere pre-snap.
+
+**Archetypes:**
+
+| Type | Primary Threat | Secondary Threat | Playstyle |
+|------|---------------|------------------|-----------|
+| **Receiving Viper** | Chain target in space | Screen plays | Creates mismatches against slower defenders |
+| **Power Viper** | Short-yardage conversions | Lead blocking | Battering ram on 5th/6th down |
+| **Decoy Viper** | Drawing coverage | Occasional explosive touch | Creates space for others |
+| **Hybrid Viper** | Unpredictable usage | Everything | B+ at everything, defensive nightmare |
+
+**Statistical Targets by Archetype:**
+
+| Metric | Receiving Viper | Power Viper | Decoy Viper | Hybrid Viper |
+|--------|----------------|-------------|-------------|--------------|
+| Touches/game | 10–14 | 8–12 | 4–7 | 8–11 |
+| Yards/touch | 8–12 | 4–6 | 10–15 | 7–10 |
+| Rush yards/game | 15–35 | 45–70 | 12–25 | 28–50 |
+| Lateral receptions/game | 6–10 | 2–4 | 2–4 | 4–7 |
+| TDs/game | 0.8–1.6 | 0.6–1.3 | 0.3–0.8 | 0.6–1.2 |
+| Decoy snaps (no touch) | 15–25% | 10–15% | 50–65% | 25–40% |
+| Viper impact plays* | 4–6 | 3–5 | 5–8 | 4–6 |
+
+*Viper impact play: any play where pre-snap Viper alignment causes a defensive adjustment or breakdown*
+
+**Attribute Weights:**
+
+| Attribute | Receiving Viper | Power Viper | Decoy Viper | Hybrid Viper |
+|-----------|----------------|-------------|-------------|--------------|
+| Speed | ★★★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Power | ★★ | ★★★★★ | ★★ | ★★★ |
+| Hands | ★★★★★ | ★★★ | ★★★ | ★★★★ |
+| Agility | ★★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Football IQ | ★★★★ | ★★★ | ★★★★★ | ★★★★ |
+| Stamina | ★★★ | ★★★★ | ★★★★ | ★★★★ |
+
+---
+
+### Flankers (Halfback, Left Wingback, Right Wingback, Shiftback)
+
+The flankers are the workhorses—they touch the ball most often, grind out yards, and score the plurality of TDs.
+
+**Position-Specific Roles:**
+
+| Position | Alignment | Primary Role | Secondary Role |
+|----------|-----------|--------------|----------------|
+| **Halfback** | Behind ZB | Inside runs, chain safety valve | Screens, delays |
+| **Left Wingback** | Wide left | Perimeter chains, sweeps | Reverses, kick returns |
+| **Right Wingback** | Wide right | Perimeter chains, sweeps | Reverses, kick returns |
+| **Shiftback** | Motion/flex | Pre-snap motion, misdirection | Gap filling |
+
+**Archetypes (any flanker):**
+
+| Type | Primary Trait | Usage Pattern |
+|------|--------------|---------------|
+| **Speed Flanker** | Breakaway threat | Perimeter plays, space |
+| **Power Flanker** | Yards after contact | Inside runs, chain extensions |
+| **Elusive Flanker** | Missed tackle generator | Open field, screens |
+| **Reliable Flanker** | Low fumble rate | High-volume, clock control |
+
+**Statistical Targets (Per Flanker):**
+
+| Metric | Speed | Power | Elusive | Reliable |
+|--------|-------|-------|---------|----------|
+| Touches/game | 5–8 | 6–10 | 5–8 | 8–12 |
+| Yards/touch | 6.5–9.5 | 4.5–6.5 | 7.5–10.5 | 4.5–6.5 |
+| TDs/game | 0.4–0.9 | 0.3–0.7 | 0.5–0.9 | 0.3–0.6 |
+| Broken tackles/game | 1–2 | 2–4 | 3–5 | 1–2 |
+| Fumbles/game | 0.15–0.35 | 0.08–0.18 | 0.18–0.35 | 0.03–0.1 |
+| Chain receptions/game | 3–5 | 2–4 | 3–5 | 4–7 |
+
+**Combined Flanker Targets (All Four):**
+
+| Metric | Target |
+|--------|--------|
+| Total touches | 24–36 |
+| Total yards | 140–210 |
+| Total TDs | 1.5–3.0 |
+| % of team offensive touches | 55–65% |
+
+---
+
+### Offensive Line (5 Linemen)
+
+**Archetypes:**
+
+| Type | Primary Strength | Team Fit |
+|------|-----------------|----------|
+| **Maulers** | Drive blocking, create push | Ground & Pound |
+| **Screens** | Lateral movement, downfield | Lateral Spread |
+| **Hybrids** | Balanced, adaptable | Any scheme |
+
+**Line Unit Ratings:**
+
+| Metric | Target Range |
+|--------|--------------|
+| Run block grade | 70–90 |
+| Screen block grade | 70–90 |
+| Kick protection grade | 65–85 |
+| Blown assignments/game | 1–3 |
+
+---
+
+### Defensive Line Anchors (Left Guard, Nose, Right Guard)
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Run Stuffer** | Gap control | Clogs lanes, forces bounces |
+| **Penetrator** | Quick first step | Backfield disruption |
+| **Space Eater** | Double-team magnet | Frees up others |
+
+**Statistical Targets (Per Anchor):**
+
+| Metric | Run Stuffer | Penetrator | Space Eater |
+|--------|-------------|------------|-------------|
+| Tackles/game | 4–7 | 3–5 | 3–5 |
+| TFLs/game | 0.3–0.7 | 0.9–1.6 | 0.2–0.5 |
+| Gap holds/game | 6–10 | 3–5 | 5–8 |
+| Pressures/game | 0.5–1.2 | 1.5–2.8 | 0.5–1.2 |
+| Double-teams absorbed | 3–5 | 1–2 | 6–10 |
+
+---
+
+### Edge Defenders (Left Edge, Right Edge)
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Speed Rusher** | First to ball carrier | Chase down, pressure kicks |
+| **Edge Setter** | Outside leverage | Force inside, discipline |
+| **Hybrid Edge** | Balanced | Versatile |
+
+**Statistical Targets (Per Edge):**
+
+| Metric | Speed Rusher | Edge Setter | Hybrid |
+|--------|--------------|-------------|--------|
+| Tackles/game | 4–7 | 5–9 | 5–8 |
+| TFLs/game | 0.5–1.2 | 0.3–0.7 | 0.4–0.9 |
+| Edge contains/game | 2–4 | 5–9 | 4–7 |
+| Pressures on kicks | 1.2–2.2 | 0.5–1.2 | 0.8–1.6 |
+| Pursuit tackles | 2–4 | 1–2 | 1.5–3 |
+
+---
+
+### Spotbacks (Left Spotback, Right Spotback)
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Thumper** | Downhill tackler | Run defense, gap fill |
+| **Coverage Spotback** | Lateral range | Chain defense |
+| **Blitzer** | Timed rushes | Pressure, disruption |
+
+**Statistical Targets (Per Spotback):**
+
+| Metric | Thumper | Coverage | Blitzer |
+|--------|---------|----------|---------|
+| Tackles/game | 7–11 | 5–9 | 5–8 |
+| TFLs/game | 0.5–1.2 | 0.2–0.6 | 0.9–1.7 |
+| Gap fills/game | 5–9 | 3–6 | 3–5 |
+| Chain breakups/game | 0.5–1.2 | 2–5 | 1–2.5 |
+| Blitzes/game | 1–2 | 0–1 | 4–7 |
+
+---
+
+### Cornerbacks (Left Corner, Right Corner)
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Lockdown Corner** | Tight coverage | Shadows best flanker |
+| **Tackler Corner** | Sure stops | Run support, perimeter |
+| **Ball Hawk** | Turnover generator | Jumps routes |
+
+**Statistical Targets (Per Corner):**
+
+| Metric | Lockdown | Tackler | Ball Hawk |
+|--------|----------|---------|-----------|
+| Tackles/game | 3–6 | 6–10 | 4–7 |
+| Yards allowed/coverage | 4–6 | 6–9 | 5–8 |
+| Chain deflections/game | 1.2–2.2 | 0.5–1.2 | 1.5–2.8 |
+| Forced fumbles/game | 0.1–0.25 | 0.2–0.45 | 0.4–0.9 |
+| Missed tackles/game | 0.5–1.2 | 0.2–0.6 | 0.8–1.6 |
+
+---
+
+### Lastback (Deep Safety)
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Rangy Safety** | Sideline-to-sideline | Deep coverage |
+| **Box Safety** | Run support first | Extra gap defender |
+| **Ballhawk Safety** | Turnover generator | Reads plays |
+
+**Statistical Targets:**
+
+| Metric | Rangy | Box | Ballhawk |
+|--------|-------|-----|----------|
+| Tackles/game | 4–7 | 7–11 | 4–8 |
+| Deep plays prevented/game | 2–5 | 1–2 | 1.5–3.5 |
+| Run support tackles/game | 1–2.5 | 4–7 | 2–4 |
+| Forced fumbles/game | 0.1–0.25 | 0.2–0.45 | 0.3–0.7 |
+| Lateral interceptions/game | 0.08–0.2 | 0.03–0.12 | 0.2–0.45 |
+
+---
+
+### Keeper (Deepest Defender)
+
+The Keeper is unique to Viperball—they field missed field goals, prevent breakaway TDs, and serve as the ultimate last line.
+
+**Archetypes:**
+
+| Type | Primary Trait | Role |
+|------|--------------|------|
+| **Return Keeper** | Speed, open-field running | Missed FGs become scoring chances |
+| **Sure-Hands Keeper** | Ball security | No mistakes, secures possession |
+| **Tackle Keeper** | Closing speed | Last-ditch stops |
+
+**Statistical Targets:**
+
+| Metric | Return | Sure-Hands | Tackle |
+|--------|--------|------------|--------|
+| Missed FGs fielded/game | 1.5–2.8 | 1.5–2.8 | 1–2 |
+| Return yards/game | 28–50 | 12–25 | 18–30 |
+| Return TDs/season | 1–4 | 0–1 | 0–1 |
+| Last-line tackles/game | 1–2.5 | 1–2.5 | 3–6 |
+| Breakaway TDs prevented/game | 0.3–0.7 | 0.2–0.5 | 0.7–1.2 |
+| Muffs/game | 0.1–0.22 | 0–0.06 | 0.08–0.18 |
+
+---
+
+## Defensive Scheme Profiles
+
+| Scheme | Front Philosophy | Spotback Role | Corner Role | Best Against | Vulnerable To |
+|--------|------------------|---------------|-------------|--------------|---------------|
+| **Contain** | Hold gaps | Fill, read, react | Force inside | Lateral Spread | Patient offense |
+| **Pressure** | Aggressive penetration | Blitz frequently | Tight coverage | Kick-Heavy | Elusive ZBs |
+| **Bend Don't Break** | Soft, prevent big plays | Deep drops | Cushion | Explosive teams | Ball control |
+| **Blitz** | Variable, unpredictable | Max blitz | Cover-0/1 | All (high variance) | Quick chains |
+
+---
+
+## AI Playcalling Logic
+
+### Current Problem with Kick Selection
+
+The existing kick decision logic is purely rule-based with hard-coded field position thresholds and weighted random choices. It never compares expected values, which leads to:
+
+1. **Place kicks being underutilized** — The AI chooses drop kicks or punts when place kicks would be the percentage play
+2. **Kicks suppressed on early downs** — Even when a field goal is smart (e.g., 3rd down at opponent's 25, unlikely to convert), kicks are discouraged
+3. **No consideration of kicker skill** — Elite Kicking ZBs should attempt more drop kicks; weak kickers should lean place kicks
+4. **Punting from scoring range** — The AI sometimes punts from the opponent's 40 on 5th down instead of attempting a field goal
+
+### EV-Based Kick Decision System (REPLACEMENT)
+
+Replace the rule-based kick logic with expected value calculations. On every down where a kick is possible, calculate EV for each option and choose the highest.
+
+#### Core Formula
+
+```
+EV(place_kick) = success_rate(distance) × 3
+EV(drop_kick) = success_rate(distance, kicker_skill) × 5
+EV(go_for_it) = conversion_rate(down, ytg) × continuation_value(new_fp)
+EV(punt) = opponent_field_position_cost(expected_landing) + pindown_probability × 1
+```
+
+#### Success Rate Tables
+
+**Place Kick Success Rate by Distance:**
+
+| Distance | Success Rate | EV (×3 pts) |
+|----------|--------------|-------------|
+| <25 yds | 92% | 2.76 |
+| 25–34 yds | 85% | 2.55 |
+| 35–44 yds | 75% | 2.25 |
+| 45–54 yds | 60% | 1.80 |
+| 55+ yds | 40% | 1.20 |
+
+**Drop Kick Success Rate by Distance and Kicker Skill:**
+
+| Distance | Elite (85+) | Good (70–84) | Average (50–69) | Poor (<50) |
+|----------|-------------|--------------|-----------------|------------|
+| <25 yds | 85% | 75% | 65% | 55% |
+| 25–34 yds | 72% | 62% | 52% | 42% |
+| 35–44 yds | 60% | 48% | 38% | 28% |
+| 45–54 yds | 45% | 32% | 22% | 15% |
+| 55+ yds | 28% | 18% | 10% | 5% |
+
+**Field Position Value Table (for punt and go-for-it calculations):**
+
+| Field Position | Points Value | Notes |
+|----------------|--------------|-------|
+| Own 1–10 | 0.3 | Pinned deep |
+| Own 11–20 | 0.6 | Poor field position |
+| Own 21–35 | 1.0 | Neutral-ish |
+| Own 36–50 | 1.5 | Plus territory |
+| Opp 49–35 | 2.2 | FG range approaching |
+| Opp 34–20 | 3.0 | Solid FG range |
+| Opp 19–10 | 4.5 | Red zone |
+| Opp 9–1 | 6.5 | Goal-to-go |
+
+**Conversion Rate by Down and Distance:**
+
+| Down | 1–3 yds | 4–6 yds | 7–10 yds | 11–15 yds | 16–20 yds |
+|------|---------|---------|----------|-----------|-----------|
+| 4th | 65% | 48% | 35% | 22% | 15% |
+| 5th | 60% | 44% | 32% | 20% | 12% |
+| 6th | 55% | 40% | 28% | 17% | 10% |
+
+#### Implementation: New Kick Decision Function
+
+```python
+def select_kick_decision(self) -> PlayType:
+    """
+    EV-based kick decision. Called on 4th/5th/6th down to determine
+    whether to kick (and what type) or go for it.
+    Returns None if go-for-it has highest EV.
+    """
+    fp = self.state.field_position
+    down = self.state.down
+    ytg = self.state.yards_to_go
+    
+    # Calculate field goal distance (end zone depth + snap distance)
+    fg_distance = (100 - fp) + 17
+    
+    # Get kicker skill (0-100 scale)
+    kicker = self.get_kicker()
+    kicker_skill = getattr(kicker, 'kicking', 50)
+    
+    # --- Calculate EVs ---
+    
+    # Place kick EV
+    pk_success = self.place_kick_success_rate(fg_distance)
+    ev_place_kick = pk_success * 3
+    
+    # Drop kick EV (modified by kicker skill)
+    dk_success = self.drop_kick_success_rate(fg_distance, kicker_skill)
+    ev_drop_kick = dk_success * 5
+    
+    # Punt EV
+    punt_distance = self.expected_punt_distance()
+    new_fp_after_punt = max(1, fp - punt_distance)
+    # Value to opponent (we want to minimize this, so it's negative for us)
+    opponent_fp_value = self.field_position_value(100 - new_fp_after_punt)
+    pindown_prob = 0.25 if new_fp_after_punt <= 10 else 0.0
+    ev_punt = (3.0 - opponent_fp_value) + (pindown_prob * 1)  # Baseline 3.0 minus what we give them
+    
+    # Go-for-it EV
+    conversion_rate = self.conversion_rate(down, ytg)
+    new_fp_if_convert = min(100, fp + ytg)
+    continuation_value = self.field_position_value(new_fp_if_convert)
+    td_prob_boost = self.td_probability_from_position(new_fp_if_convert) * 9
+    ev_go_for_it = conversion_rate * (continuation_value + td_prob_boost)
+    
+    # --- Aggression Modifier by Down ---
+    # More aggressive on 4th down (have more downs left if fail)
+    # More conservative on 6th down (last chance)
+    aggression = {4: 1.15, 5: 1.0, 6: 0.85}.get(down, 1.0)
+    ev_go_for_it *= aggression
+    
+    # --- Build Options Dict ---
+    options = {}
+    
+    # Place kick only if in range (<60 yards)
+    if fg_distance <= 60:
+        options['place_kick'] = ev_place_kick
+    
+    # Drop kick only if in range (<58 yards) 
+    if fg_distance <= 58:
+        options['drop_kick'] = ev_drop_kick
+    
+    # Punt only if not already in good scoring position
+    if fp < 70:  # Don't punt from inside opponent's 30
+        options['punt'] = ev_punt
+    
+    # Go for it always an option on 4th+
+    if down >= 4:
+        options['go_for_it'] = ev_go_for_it
+    
+    # --- Select Highest EV ---
+    if not options:
+        return None  # Shouldn't happen, but fallback to go-for-it
+    
+    best_option = max(options, key=options.get)
+    
+    # Map to PlayType
+    type_map = {
+        'place_kick': PlayType.PLACE_KICK,
+        'drop_kick': PlayType.DROP_KICK,
+        'punt': PlayType.PUNT,
+        'go_for_it': None  # Signal to run a normal play instead
+    }
+    
+    return type_map[best_option]
+```
+
+#### When to Call This Function
+
+**Option A (Recommended):** Call on every 4th/5th/6th down BEFORE play family selection
+
+```python
+def select_play(self):
+    down = self.state.down
+    
+    # On 4th+ down, check if kicking is optimal
+    if down >= 4:
+        kick_decision = self.select_kick_decision()
+        if kick_decision is not None:
+            return self.execute_kick(kick_decision)
+    
+    # Otherwise, select normal play family
+    family = self.select_play_family()
+    return self.execute_play(family)
+```
+
+**Option B:** Replace `_resolve_kick_type` when `territory_kick` is selected
+
+If `territory_kick` is randomly selected, call `select_kick_decision()` to determine kick type. If it returns `None`, re-roll play selection.
+
+#### Example Scenarios
+
+**Scenario 1: 5th down, opponent's 28 (fp=72), 8 yards to go**
+
+```
+FG distance: 28 + 17 = 45 yards
+
+Place kick: 60% × 3 = 1.80 EV
+Drop kick (avg kicker): 38% × 5 = 1.90 EV
+Punt: Not considered (inside opp 30)
+Go for it: 32% × 3.5 value = 1.12 EV
+
+Winner: DROP KICK (1.90 EV)
+```
+
+**Scenario 2: 6th down, opponent's 22 (fp=78), 14 yards to go**
+
+```
+FG distance: 22 + 17 = 39 yards
+
+Place kick: 75% × 3 = 2.25 EV
+Drop kick (avg): 38% × 5 = 1.90 EV
+Drop kick (elite): 60% × 5 = 3.00 EV
+Punt: Not considered
+Go for it: 17% × 0.85 aggression × 4.5 = 0.65 EV
+
+Winner: PLACE KICK (2.25 EV) for average kicker
+Winner: DROP KICK (3.00 EV) for elite kicker
+```
+
+**Scenario 3: 4th down, opponent's 35 (fp=65), 2 yards to go**
+
+```
+FG distance: 35 + 17 = 52 yards
+
+Place kick: 55% × 3 = 1.65 EV
+Drop kick: 32% × 5 = 1.60 EV
+Punt: ~1.2 EV
+Go for it: 65% × 1.15 aggression × 3.0 = 2.24 EV
+
+Winner: GO FOR IT (2.24 EV)
+```
+
+**Scenario 4: 5th down, own 45 (fp=45), 12 yards to go**
+
+```
+FG distance: 55 + 17 = 72 yards (out of range)
+
+Place kick: Not available
+Drop kick: Not available
+Punt: Expected landing at opp 15, value = ~0.8 EV
+Go for it: 20% × 1.5 = 0.30 EV
+
+Winner: PUNT (0.80 EV)
+```
+
+#### Game State Modifiers
+
+Add these adjustments to the base EV calculations:
+
+| Situation | Adjustment |
+|-----------|------------|
+| Trailing by 10+ | Go-for-it EV ×1.25, Drop kick EV ×1.10 (5 pts > 3 pts matters more) |
+| Leading by 10+ | Place kick EV ×1.15, Punt EV ×1.10 (take safe points) |
+| Final 5 min, trailing | Go-for-it EV ×1.30, almost never punt |
+| Final 2 min, trailing by 3–8 | Drop kick EV ×1.20 (5 pts could tie/win, 3 pts might not) |
+| Final 2 min, leading by 1–3 | Place kick EV ×1.25 (take the safe points) |
+
+### Expected Outcomes After Implementation
+
+| Metric | Before Fix | After Fix | Target |
+|--------|------------|-----------|--------|
+| Place kicks per team/game | 0.5–1 | 1.5–2.5 | 1.5–2.5 ✓ |
+| Drop kicks per team/game | 1–2 | 0.5–1.5 | 0.5–1.5 ✓ |
+| Punts per team/game | 6–10 | 3–5 | 3–5 ✓ |
+| FG attempts from inside 35 | Rare | Common | Common ✓ |
+| Punts from opponent's territory | Common | Rare | Rare ✓ |
+
+---
+
+### Playcalling Decision Tree (Simplified Reference)
+
+The EV system replaces hard-coded rules, but here's the expected behavior:
+
+**1st–3rd down:**
+- Almost never punt unless pinned inside own 5
+- Run offense based on scheme and personnel
+
+**4th down:**
+- Own 0–30: Punt (unless desperate)
+- Own 30–45: Situational (game state, score, time)
+- Own 45–Opp 45: Go for it (6 downs is forgiving)
+- Opp 45–35: Consider snapkick if Kicking ZB
+- Opp 35–25: Place kick or snapkick consideration
+- Opp 25–0: Go for TD, place kick if stalled
+
+**5th down:**
+- Own 0–35: Punt
+- Own 35–Opp 40: Go for it
+- Opp 40–30: Snapkick range (Kicking ZB) or go for it
+- Opp 30–0: Place kick or go for TD
+
+**6th down:**
+- Own 0–25: Punt (desperation only)
+- Own 25–Opp 45: Go for it
+- Opp 45–35: Place kick (long) or go for it
+- Opp 35–0: Place kick
+
+### Archetype-Specific Adjustments
+
+**Kick-Heavy Teams:**
+- Attempt snapkicks starting at opponent's 45
+- Prefer place kicks to TD attempts when inside 30
+- Punt earlier to play field position game
+- Run prevent-style defense when leading
+
+**TD-Heavy Teams:**
+- Go for it on 5th/6th down more aggressively
+- Rarely attempt snapkicks
+- Place kicks only when TD is unlikely
+- Aggressive defense to force turnovers
+
+**Balanced Teams:**
+- Standard decision tree
+- Adapt to game state
+
+### Game State Modifiers
+
+| Situation | Adjustment |
+|-----------|------------|
+| Trailing by 10+ | +25% go-for-it rate, +20% snapkick attempts |
+| Leading by 10+ | +20% punt/FG rate, conservative |
+| Final 5 min, trailing | Almost never punt, aggressive kicks |
+| Final 5 min, leading | Run clock, take points when available |
+| Final 2 min, trailing by 3–8 | Snapkicks become premium (5 > 3) |
+
+---
+
+## Team Composition Examples
+
+### Ground & Pound (TD-Heavy)
+
+**Offense:**
+- Running ZB
+- Power Viper
+- Power/Reliable Flankers
+- Mauler O-Line
+
+**Defense:**
+- Run Stuffer Anchors
+- Edge Setter Edges
+- Thumper Spotbacks
+- Tackler Corners
+- Box Safety
+- Tackle Keeper
+
+**Expected Output:**
+- TDs: 5–6
+- Snapkicks: 0–0.5
+- Place Kicks: 0.5–1
+- Points: 48–58
+
+---
+
+### Air Raid (Kick-Heavy)
+
+**Offense:**
+- Kicking ZB (elite)
+- Decoy Viper
+- Speed/Reliable Flankers
+- Screen O-Line
+
+**Defense:**
+- Space Eater Anchors
+- Hybrid Edges
+- Coverage Spotbacks
+- Lockdown Corners
+- Rangy Safety
+- Sure-Hands Keeper
+
+**Expected Output:**
+- TDs: 2–3
+- Snapkicks: 2–3
+- Place Kicks: 3–4
+- Points: 42–55
+
+**Playstyle:** Score through the air (kicks), play prevent defense, win field position battle. The "Warriors of Viperball"—they don't pound you inside, they kill you with snapkicks and place kicks from range.
+
+---
+
+### Lateral Spread (Balanced)
+
+**Offense:**
+- Distributor ZB
+- Receiving Viper
+- Speed/Elusive Flankers
+- Screen O-Line
+
+**Defense:**
+- Penetrator Anchors
+- Speed Rusher Edges
+- Coverage Spotbacks
+- Ball Hawk Corners
+- Rangy Safety
+- Return Keeper
+
+**Expected Output:**
+- TDs: 3–4
+- Snapkicks: 0.5–1
+- Place Kicks: 1.5–2
+- Points: 40–52
+
+---
+
+### Chaos/Turnover (High Variance)
+
+**Offense:**
+- Dual-Threat ZB
+- Hybrid Viper
+- Elusive Flankers (high fumble risk)
+- Hybrid O-Line
+
+**Defense:**
+- Penetrator Anchors
+- Speed Rusher Edges
+- Blitzer Spotbacks
+- Ball Hawk Corners
+- Ballhawk Safety
+- Return Keeper
+
+**Expected Output:**
+- TDs: 3–5
+- Snapkicks: 0.5–1
+- Place Kicks: 1–2
+- Bells: 3–5 (force turnovers)
+- Points: 42–58 (high variance)
+
+---
+
+## Sample Game Output
+
+### Boston College 52, Providence 38
+
+| Team | TDs | Snapkicks | Place Kicks | Safeties | Pindowns | Bells | Total |
+|------|-----|-----------|-------------|----------|----------|-------|-------|
+| BC | 4 | 2 | 2 | 0 | 2 | 2 | 52 |
+| PROV | 3 | 1 | 2 | 0 | 1 | 1.5 | 38 |
+
+**BC Drive Summary:**
+1. 6 plays, 58 yds → TD (9)
+2. 5 plays, 42 yds → Place Kick 28 yds GOOD (3)
+3. 4 plays, 31 yds → Fumble lost
+4. 7 plays, 75 yds → TD (9)
+5. 3 plays, 12 yds → Punt (Pindown +1)
+6. 5 plays, 48 yds → Snapkick 35 yds GOOD (5)
+7. 4 plays, 22 yds → Snapkick 42 yds GOOD (5)
+8. 6 plays, 67 yds → TD (9)
+9. 5 plays, 55 yds → TD (9)
+10. 3 plays, 8 yds → Punt (Pindown +1)
+
+**BC Bells:** Recovered fumble (+0.5), recovered muffed punt (+0.5), forced fumble on kick return (+0.5), recovered blocked punt (+0.5) = 2 Bells
+
+**Game Flow Notes:**
+- BC's Kicking ZB (Dual-Threat archetype) hit 2/3 snapkicks from 35+ yards
+- Providence's Running ZB scored 2 TDs but fumbled twice
+- BC's Bend Don't Break defense held Providence to 3 TDs despite 420 total yards
+- High Bell count (3.5 total) reflects chaotic, turnover-heavy game
+
+---
+
+## Validation Checks
+
+After running 100+ simulated games, verify:
+
+### Scoring Metrics
+
+| Metric | Target | Flag If Outside |
+|--------|--------|-----------------|
+| Avg TDs per team | 3.5–4.5 | <3.0 or >5.5 |
+| Avg Place Kicks per team | 1.8–2.5 | <1.2 or >3.5 |
+| Avg Snapkicks per team | 0.6–1.2 | <0.3 or >2.0 |
+| Avg Points per team | 42–52 | <35 or >60 |
+| 100+ point games | 18–30% | <12% or >40% |
+
+### Drive Metrics
+
+| Metric | Target | Flag If Outside |
+|--------|--------|-----------------|
+| Avg Plays per drive | 4.5–6.5 | <3.5 or >8.0 |
+| Punt rate | 25–35% | <18% or >45% |
+| TD drive rate | 28–38% | <20% or >48% |
+| Shutout rate | <3% | >5% |
+
+### Fumble System Validation (NEW)
+
+| Metric | Target | Flag If Outside |
+|--------|--------|-----------------|
+| Total fumbles per game (both teams) | 4–6 | <2.5 or >8 |
+| Fumbles from runs | 1.5–2.5 | <0.5 or >4 |
+| Fumbles from lateral chains | 1.5–2.5 | <0.5 or >4 |
+| Fumble rate on runs | 1.5–2.5% | <1% or >4% |
+| Fumble rate on chains (cumulative) | 6–10% | <4% or >15% |
+| Fumbles lost per team | 1–1.5 | <0.5 or >2.5 |
+
+### Kick Decision Validation (NEW)
+
+| Metric | Target | Flag If Outside |
+|--------|--------|-----------------|
+| Place kick attempts from inside 35 yds | 80%+ of opportunities | <60% |
+| Drop kick attempts from 45+ yds (elite kicker) | 50%+ of opportunities | <30% |
+| Punts from opponent's territory | <15% of punts | >25% |
+| FG attempts on 5th–6th down in range | 70%+ | <50% |
+| Go-for-it rate on 4th-and-short (<3 yds) | 50–70% | <35% or >85% |
+
+---
+
+## Version History
+
+- **v3.0** (Current): Added fumble system overhaul (fumbles on all ball-carrying plays), EV-based kick decision system with implementation code
+- **v2.0**: Added kicking game calibration, archetype profiles, AI playcalling logic, sample outputs
+- **v1.0**: Initial scoring targets and drive mechanics

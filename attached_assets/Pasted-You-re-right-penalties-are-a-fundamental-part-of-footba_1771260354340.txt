@@ -1,0 +1,423 @@
+You're right—penalties are a fundamental part of football that the sim is missing. They create variance, extend/kill drives, and add strategic depth. Here's a spec to add:
+
+---
+
+# Viperball Penalty System Specification
+
+## Why Penalties Matter
+
+Penalties in real football account for:
+- **5–8% of all plays** result in a penalty
+- **~12–15 penalties per game** (both teams combined)
+- **80–120 penalty yards per game** (both teams combined)
+- Penalties extend drives (defensive penalties) and kill drives (offensive penalties) at critical moments
+
+Without penalties, the sim is missing:
+1. Drive-extending first downs from defensive fouls
+2. Drive-killing holding calls on big gains
+3. Free plays from offsides
+4. Strategic fouling (intentional holding to prevent a TD, etc.)
+5. Discipline as a team attribute
+
+---
+
+## Penalty Categories
+
+### Pre-Snap Penalties
+
+| Penalty | Yards | Against | Frequency | Trigger |
+|---------|-------|---------|-----------|---------|
+| False Start | 5 | Offense | Common | Random, higher on loud/road games |
+| Offsides | 5 | Defense | Common | Random, higher vs hard count teams |
+| Delay of Game | 5 | Offense | Rare | Random, higher when fatigued |
+| Illegal Formation | 5 | Offense | Rare | Random |
+| Encroachment | 5 | Defense | Uncommon | Random, blitz-heavy defenses |
+| Neutral Zone Infraction | 5 | Defense | Uncommon | Random |
+
+### Run Play Penalties
+
+| Penalty | Yards | Against | Frequency | Trigger |
+|---------|-------|---------|-----------|---------|
+| Holding | 10 | Offense | Common | On big gains (15+ yds), or random |
+| Illegal Block | 10 | Offense | Uncommon | On screen/chain plays |
+| Unnecessary Roughness | 15 | Either | Rare | On big hits, TFLs |
+| Personal Foul | 15 | Either | Rare | Random |
+| Facemask | 15 | Defense | Rare | On tackle attempts |
+| Horse Collar | 15 | Defense | Rare | On open-field tackles |
+
+### Lateral Chain Penalties
+
+| Penalty | Yards | Against | Frequency | Trigger |
+|---------|-------|---------|-----------|---------|
+| Illegal Forward Lateral | 5 + Loss of Down | Offense | Uncommon | Random, more on long chains |
+| Holding | 10 | Offense | Common | On successful chains |
+| Illegal Block in Back | 10 | Offense | Uncommon | On screen plays |
+| Pass Interference* | 15 | Defense | Rare | On contested laterals |
+
+*Pass interference on laterals = defender impedes receiver before ball arrives
+
+### Kicking Penalties
+
+| Penalty | Yards | Against | Frequency | Trigger |
+|---------|-------|---------|-----------|---------|
+| Roughing the Kicker | 15 + Auto First | Defense | Rare | On blocked kick attempts |
+| Running Into Kicker | 5 | Defense | Uncommon | On punt rush |
+| Illegal Kick | 10 | Offense | Very Rare | Random |
+| Fair Catch Interference | 15 | Defense | Rare | On punt returns |
+| Kick Catch Interference | 15 + spot | Defense | Rare | On punt returns |
+
+### Special Viperball Penalties
+
+| Penalty | Yards | Against | Frequency | Trigger |
+|---------|-------|---------|-----------|---------|
+| Illegal Viper Alignment | 5 | Offense | Rare | Random (Viper lined up wrong) |
+| Too Many Laterals* | 5 + Loss of Down | Offense | Very Rare | If >5 laterals attempted |
+| Illegal Screen | 10 | Offense | Uncommon | On Viper screen plays |
+
+*If Viperball has a lateral limit rule
+
+---
+
+## Penalty Frequency Targets
+
+### Per Game (Both Teams Combined)
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| Total penalties | 10–16 | ~12–13 average |
+| Total penalty yards | 80–130 | ~100 average |
+| Offensive penalties | 5–9 | Slightly more than defensive |
+| Defensive penalties | 4–8 | |
+| Penalties per play | 4–6% | Of all plays |
+| Declined penalties | 1–3 | When yardage gain > penalty |
+
+### Per Team Per Game
+
+| Metric | Target |
+|--------|--------|
+| Penalties | 5–8 |
+| Penalty yards | 40–65 |
+| False starts | 0.5–1.5 |
+| Holding calls | 1.5–2.5 |
+| Personal fouls | 0.3–0.8 |
+| Drive-extending penalties (defense) | 1–2 |
+| Drive-killing penalties (offense) | 1–2 |
+
+---
+
+## Penalty Timing and Impact
+
+### When Penalties Occur
+
+**Pre-snap penalties:** Checked before play execution
+- Base rate: 1.5–2% per play
+- Modifiers: Road game (+0.5%), fatigue (+0.5%), hurry-up offense (+1%)
+
+**During-play penalties:** Checked after play result calculated
+- Base rate: 3–4% per play
+- Modifiers: Big gain increases offensive holding chance, blitz increases defensive penalty chance
+
+### Penalty Impact on Drives
+
+| Situation | Penalty Effect |
+|-----------|----------------|
+| 3rd-and-8 → Defensive holding | 1st-and-10 (drive extended) |
+| 1st-and-10, 15-yard gain → Offensive holding | 1st-and-20 (big gain negated) |
+| 2nd-and-5 → False start | 2nd-and-10 |
+| Punt → Roughing the kicker | Auto 1st down, 15 yards |
+| TD run → Holding (behind play) | TD stands, no penalty |
+| TD run → Holding (springing runner) | TD negated, 1st-and-goal from 20 |
+
+---
+
+## Implementation
+
+### Penalty Check Function
+
+```python
+def check_for_penalty(self, play_type: PlayType, play_result: Play) -> Penalty | None:
+    """
+    Check if a penalty occurs on this play.
+    Called after play result is determined.
+    Returns Penalty object or None.
+    """
+    
+    # --- Pre-snap penalty check (already happened before play) ---
+    # This function handles during-play penalties
+    
+    offense = self.get_offensive_team()
+    defense = self.get_defensive_team()
+    
+    # Base penalty probability
+    base_prob = 0.035  # 3.5% of plays have a penalty
+    
+    # --- Offensive Penalty Check ---
+    offensive_penalty_prob = base_prob * 0.55  # 55% of penalties are offensive
+    
+    # Holding more likely on big gains
+    if play_result.yards >= 15:
+        offensive_penalty_prob += 0.04  # +4% on big plays
+    
+    # Holding more likely on lateral chains
+    if play_type == PlayType.LATERAL_CHAIN:
+        offensive_penalty_prob += 0.02
+    
+    # Team discipline modifier
+    offensive_penalty_prob *= (1.1 - offense.discipline / 100)  # Low discipline = more penalties
+    
+    if random.random() < offensive_penalty_prob:
+        return self._select_offensive_penalty(play_type, play_result)
+    
+    # --- Defensive Penalty Check ---
+    defensive_penalty_prob = base_prob * 0.45  # 45% of penalties are defensive
+    
+    # More penalties when blitzing
+    defense_style = self._current_defense()
+    if defense_style.get("style") in ["pressure", "blitz"]:
+        defensive_penalty_prob += 0.015
+    
+    # Facemask/horse collar more likely on big plays
+    if play_result.yards >= 20:
+        defensive_penalty_prob += 0.02
+    
+    # Team discipline modifier
+    defensive_penalty_prob *= (1.1 - defense.discipline / 100)
+    
+    if random.random() < defensive_penalty_prob:
+        return self._select_defensive_penalty(play_type, play_result)
+    
+    return None
+
+
+def check_presnap_penalty(self) -> Penalty | None:
+    """
+    Check for pre-snap penalties before play execution.
+    """
+    offense = self.get_offensive_team()
+    defense = self.get_defensive_team()
+    
+    # False start check
+    false_start_prob = 0.012  # 1.2% base
+    if self.is_road_game():
+        false_start_prob += 0.005
+    if self.state.down >= 5:  # Pressure situations
+        false_start_prob += 0.003
+    
+    if random.random() < false_start_prob:
+        return Penalty("False Start", 5, "offense", False)
+    
+    # Offsides check
+    offsides_prob = 0.010  # 1% base
+    defense_style = self._current_defense()
+    if defense_style.get("style") == "blitz":
+        offsides_prob += 0.008  # Aggressive defenses jump more
+    
+    if random.random() < offsides_prob:
+        return Penalty("Offsides", 5, "defense", False)
+    
+    # Delay of game (rare)
+    if random.random() < 0.003:
+        return Penalty("Delay of Game", 5, "offense", False)
+    
+    return None
+```
+
+### Penalty Selection
+
+```python
+def _select_offensive_penalty(self, play_type, play_result) -> Penalty:
+    """Select which offensive penalty occurred."""
+    
+    if play_type == PlayType.LATERAL_CHAIN:
+        penalties = [
+            (Penalty("Holding", 10, "offense", True), 0.50),
+            (Penalty("Illegal Block in Back", 10, "offense", True), 0.25),
+            (Penalty("Illegal Forward Lateral", 5, "offense", True, loss_of_down=True), 0.15),
+            (Penalty("Illegal Block", 10, "offense", True), 0.10),
+        ]
+    else:  # Run plays
+        penalties = [
+            (Penalty("Holding", 10, "offense", True), 0.60),
+            (Penalty("Illegal Block", 10, "offense", True), 0.20),
+            (Penalty("Personal Foul", 15, "offense", False), 0.10),
+            (Penalty("Unnecessary Roughness", 15, "offense", False), 0.10),
+        ]
+    
+    return random.choices(
+        [p[0] for p in penalties],
+        weights=[p[1] for p in penalties]
+    )[0]
+
+
+def _select_defensive_penalty(self, play_type, play_result) -> Penalty:
+    """Select which defensive penalty occurred."""
+    
+    penalties = [
+        (Penalty("Defensive Holding", 5, "defense", True, auto_first=True), 0.35),
+        (Penalty("Facemask", 15, "defense", False, auto_first=True), 0.20),
+        (Penalty("Unnecessary Roughness", 15, "defense", False, auto_first=True), 0.20),
+        (Penalty("Horse Collar", 15, "defense", False, auto_first=True), 0.10),
+        (Penalty("Personal Foul", 15, "defense", False, auto_first=True), 0.15),
+    ]
+    
+    return random.choices(
+        [p[0] for p in penalties],
+        weights=[p[1] for p in penalties]
+    )[0]
+```
+
+### Penalty Application
+
+```python
+def apply_penalty(self, penalty: Penalty, play_result: Play) -> Play:
+    """
+    Apply penalty to game state and modify play result.
+    """
+    
+    if penalty.against == "offense":
+        # Offensive penalty: negate gain, apply yards from original LOS
+        if penalty.negates_play:
+            new_fp = max(1, self.state.field_position - penalty.yards)
+            new_down = self.state.down + (1 if penalty.loss_of_down else 0)
+            new_ytg = self.state.yards_to_go + penalty.yards
+        else:
+            # Penalty away from play (doesn't negate)
+            # Usually still enforced, but TD stands
+            if play_result.result == "touchdown":
+                return play_result  # TD stands
+            new_fp = max(1, self.state.field_position - penalty.yards)
+            new_ytg = self.state.yards_to_go + penalty.yards
+    
+    else:  # Defensive penalty
+        new_fp = min(99, self.state.field_position + penalty.yards)
+        
+        if penalty.auto_first:
+            new_down = 1
+            new_ytg = 20
+        else:
+            new_ytg = max(1, self.state.yards_to_go - penalty.yards)
+    
+    # Update game state
+    self.state.field_position = new_fp
+    self.state.down = new_down
+    self.state.yards_to_go = new_ytg
+    
+    # Return modified play with penalty info
+    play_result.penalty = penalty
+    return play_result
+```
+
+---
+
+## Penalty Data Model
+
+```python
+@dataclass
+class Penalty:
+    name: str
+    yards: int
+    against: str  # "offense" or "defense"
+    negates_play: bool  # Does this wipe out the play's yardage?
+    auto_first: bool = False  # Automatic first down?
+    loss_of_down: bool = False  # Loss of down (rare)
+    spot_foul: bool = False  # Enforced from spot of foul?
+```
+
+### JSON Output
+
+```json
+{
+  "play_number": 47,
+  "play_type": "lateral_chain",
+  "yards": 23,
+  "result": "penalty_negated",
+  "penalty": {
+    "name": "Holding",
+    "yards": 10,
+    "against": "offense",
+    "negates_play": true,
+    "enforced_from": 45,
+    "result_field_position": 35,
+    "result_down": 1,
+    "result_yards_to_go": 30
+  },
+  "description": "WB5 → LM9 → ZB7 lateral → 23 yards, HOLDING #72 offense, 10 yard penalty, repeat 1st down"
+}
+```
+
+---
+
+## Team Discipline Attribute
+
+Add a **Discipline** rating (0–100) to teams that affects penalty frequency:
+
+| Discipline | Penalty Modifier | Description |
+|------------|------------------|-------------|
+| 90–100 | 0.7× | Elite discipline, rarely penalized |
+| 75–89 | 0.85× | Well-coached, few mistakes |
+| 60–74 | 1.0× | Average |
+| 45–59 | 1.15× | Undisciplined, frequent flags |
+| <45 | 1.3× | Sloppy, penalty-prone |
+
+Discipline can be:
+- A team attribute set at season start
+- Modified by coach archetype (Traditionalist = high discipline, Gambler = low)
+- Affected by fatigue (late-game penalties increase)
+
+---
+
+## Strategic Considerations
+
+### Decline Penalties
+
+The AI should decline penalties when the play result is better:
+
+```python
+def should_decline_penalty(self, penalty: Penalty, play_result: Play) -> bool:
+    """
+    Determine if the penalty should be declined.
+    """
+    if penalty.against == "offense":
+        # Defense declines if the play result is better for them
+        # e.g., fumble, TFL, short gain on late down
+        if play_result.result in ["fumble", "turnover_on_downs"]:
+            return True
+        if play_result.yards <= 2 and self.state.down >= 5:
+            return True  # Short gain on late down is fine
+    
+    else:  # Defensive penalty
+        # Offense declines if play result is better
+        # e.g., TD, big gain
+        if play_result.result == "touchdown":
+            return True
+        if play_result.yards > penalty.yards + 5:
+            return True  # Big gain beats penalty yards
+    
+    return False
+```
+
+### Intentional Penalties
+
+In future versions, consider:
+- Intentional holding to prevent a TD (15 yards better than 9 points)
+- Taking a delay of game to give punter more room
+- Strategic personal fouls (not recommended but happens in real football)
+
+---
+
+## Validation Checks
+
+| Metric | Target | Flag If Outside |
+|--------|--------|-----------------|
+| Penalties per game (both teams) | 10–16 | <7 or >20 |
+| Penalty yards per game | 80–130 | <60 or >160 |
+| Offensive penalties % | 50–60% | <40% or >70% |
+| False starts per game | 1–3 | <0.5 or >5 |
+| Holding calls per game | 3–5 | <1.5 or >7 |
+| Auto first down penalties | 2–4 | <1 or >6 |
+| Declined penalties | 1–3 | <0.5 or >5 |
+| Penalties negating TDs | 0.2–0.5 | >1 |
+
+---
+
+Want me to add this to the calibration document?

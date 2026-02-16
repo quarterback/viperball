@@ -1,0 +1,152 @@
+You're right. That's a fundamental design flaw. In real football—and in the sports Viperball draws from—fumbles happen on any carry. Limiting fumbles to lateral chains creates two problems:
+
+1. **It makes lateral chains feel punishing** — Players learn that chains = fumble risk, runs = safe. That discourages the signature mechanic of the sport.
+
+2. **It's unrealistic** — Ball carriers fumble on runs, sweeps, dives, kick returns, and scrambles. Stripping the ball is a core defensive skill.
+
+---
+
+## Proposed Fumble Model
+
+### Fumble Opportunities by Play Type
+
+| Play Type | Can Fumble? | Base Rate | Notes |
+|-----------|-------------|-----------|-------|
+| Inside run (dive) | Yes | 1.5–2.5% | Lower risk, ball secured |
+| Outside run (sweep/option) | Yes | 2–3% | More exposure, arm tackles |
+| Lateral chain | Yes | 2–3% per exchange | Each lateral is a fumble opportunity |
+| Punt return | Yes | 2–4% | Catching + running in traffic |
+| Kick return (missed FG) | Yes | 2–3% | Keeper fielding and returning |
+| Scramble (ZB) | Yes | 2–3% | Loose carry while improvising |
+| Designed kick play | No | — | Ball is kicked, not carried |
+| Punt (kicking team) | No | — | But can be blocked/muffed |
+
+### Fumble Probability Factors
+
+**Base rate by play type** (see above)
+
+**Modifiers:**
+- **Ball carrier Power attribute:** High power = better ball security (−20% to −30%)
+- **Ball carrier fatigue:** Below 70% stamina = +2–3%
+- **Defensive scheme:** Pressure/Blitz = +1–2% (more hits)
+- **Tackle type:** Standard tackle = base rate; big hit/TFL = +3–5%
+- **Weather (if implemented):** Rain/snow = +2–3%
+
+**Lateral chain specific:**
+- Each exchange has its own fumble check (2–3% per lateral)
+- Chain length of 4 = roughly 8–12% cumulative chance across all exchanges
+- This is higher than a single run, which is the tradeoff for higher expected yards
+
+---
+
+## Example Fumble Rates Per Game (Target)
+
+| Play Type | Plays/Game | Fumble Rate | Expected Fumbles |
+|-----------|------------|-------------|------------------|
+| Runs (all types) | 35–45 | 2% | 0.7–0.9 |
+| Lateral chains | 15–20 | 6–8% cumulative | 1.0–1.6 |
+| Punt returns | 4–6 | 3% | 0.1–0.2 |
+| Kick returns | 1–2 | 2.5% | 0.02–0.05 |
+| **Total per team** | — | — | **1.8–2.7** |
+
+**Both teams combined:** 3.5–5.5 fumbles per game (not all lost—~50% recovery rate)
+**Fumbles lost per team:** ~1–1.5 per game
+
+This matches the calibration target of 4–6 total fumbles per game with 2–3 changing possession.
+
+---
+
+## Implementation Changes
+
+### 1. Add fumble check to run plays
+
+```python
+def simulate_run(self, family: PlayFamily) -> Play:
+    # ... existing run logic ...
+    
+    # Fumble check for ball carrier
+    base_fumble_prob = 0.02  # 2% base for runs
+    
+    # Adjust by play type
+    if family == PlayFamily.DIVE_OPTION:
+        base_fumble_prob = 0.015  # Inside runs safer
+    elif family in [PlayFamily.SWEEP_OPTION, PlayFamily.SPEED_OPTION]:
+        base_fumble_prob = 0.025  # Outside runs riskier
+    
+    # Modify by carrier attributes
+    carrier = self.get_ball_carrier()
+    if carrier.power >= 80:
+        base_fumble_prob *= 0.75  # Strong carriers hold on
+    
+    # Modify by fatigue
+    if carrier.stamina < 70:
+        base_fumble_prob += 0.025
+    
+    # Modify by defensive pressure
+    defense = self._current_defense()
+    if defense.get("style") == "pressure":
+        base_fumble_prob += 0.015
+    
+    # Big hit check (TFL or loss of yards)
+    if yards_gained <= 0:
+        base_fumble_prob += 0.03  # Stuffed at line = harder hit
+    
+    # Fumble roll
+    if random.random() < base_fumble_prob:
+        return self._create_fumble_play(...)
+```
+
+### 2. Add fumble check to returns
+
+```python
+def simulate_punt_return(self) -> Play:
+    # ... existing return logic ...
+    
+    # Muff chance on catch
+    muff_prob = 0.02
+    if weather == "rain":
+        muff_prob += 0.02
+    
+    if random.random() < muff_prob:
+        return self._create_muff_play(...)
+    
+    # Fumble during return
+    fumble_prob = 0.03
+    # ... modifiers ...
+    
+    if random.random() < fumble_prob:
+        return self._create_fumble_play(...)
+```
+
+### 3. Rebalance lateral chain fumbles
+
+Since runs now have fumble risk, lateral chains should feel like a calculated gamble—higher ceiling, higher floor—not the *only* source of turnovers.
+
+```python
+# Per-exchange fumble rate (not per-chain)
+exchange_fumble_prob = 0.025  # 2.5% per lateral
+
+# 3-lateral chain = 3 checks at 2.5% each
+# Cumulative: 1 - (0.975)^3 = 7.3% chance of fumble somewhere in chain
+```
+
+This makes a 3-lateral chain roughly 3× riskier than a single run (7% vs 2%), which feels right given the higher expected yardage.
+
+---
+
+## Summary for Engineer
+
+**Current state:** Only lateral chains can fumble → chains feel punishing, runs feel artificially safe
+
+**Fix:** Add fumble probability to all ball-carrying plays:
+- Runs: 1.5–2.5% base
+- Lateral chains: 2–3% per exchange (cumulative)
+- Returns: 2–4% base
+
+**Result:** 
+- Total fumbles per game: 4–6 (both teams)
+- Fumbles lost per team: 1–1.5
+- Lateral chains remain riskier than runs, but not the *only* risk
+- Defensive pressure and ball carrier attributes matter across all plays
+
+Want me to add this to the calibration document?

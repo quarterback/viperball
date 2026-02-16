@@ -1,0 +1,83 @@
+Love this pivot.
+
+Here’s a compact **Bowl Name Engine** you can actually use when you’re generating matchups.
+
+---
+
+### 1. Basic structure
+
+Most names follow one of these patterns:
+
+1. **[Sponsor/Concept] + Bowl**  
+2. **[Place/Region] + Bowl**  
+3. **[Descriptor] + [Object] + Bowl**  
+4. **[Person/Legacy] + Bowl**
+
+You can mix and match.
+
+---
+
+### 2. Word banks
+
+**Sponsors / Concepts**
+
+- Horizon, Keystone, Summit, Meridian, Pioneer, Union, Heritage, Legacy, Vanguard, Frontier, Catalyst, Apex, Commonwealth, Founders, Iron, Copper, Granite, Harbor, Prairie, Lakes, River, Delta, Corridor, Heartland
+
+**Places / Regions**
+
+- Great Lakes, Rust Belt, Yankee, Prairie, Crossroads, Motor City, Steel City, River Valley, Lakefront, Capital, Heartland, Coastal, Inland, Metro, Tri-State, Border, Plains, Peninsula
+
+**Descriptors**
+
+- Classic, Cup, Shield, Crown, Showcase, Challenge, Invitational, Championship, Clash, Series, Trophy
+
+**Objects / Flavor**
+
+- Lantern, Anchor, Rail, Forge, Mill, Harbor, Beacon, Bridge, Line, Yard, Depot, Yardline, Gridiron, Banner, Torch, Spire
+
+---
+
+### 3. Simple generation recipes
+
+Pick one from each column:
+
+**Pattern A: [Region] + [Descriptor] + Bowl**
+
+- Great Lakes Classic Bowl  
+- Rust Belt Crown Bowl  
+- Heartland Showcase Bowl  
+
+**Pattern B: [Concept] + [Object] + Bowl**
+
+- Keystone Lantern Bowl  
+- Summit Anchor Bowl  
+- Frontier Forge Bowl  
+
+**Pattern C: [Place] + Bowl**
+
+- Yankee Conference Bowl  
+- Motor City Bowl  
+- River Valley Bowl  
+
+**Pattern D: [Concept] + Bowl**
+
+- Heritage Bowl  
+- Vanguard Bowl  
+- Commonwealth Bowl  
+
+---
+
+### 4. Make it feel “college”
+
+To make it feel like FBS‑adjacent:
+
+- Use **Classic / Crown / Showcase / Championship** for higher tiers  
+- Use **Challenge / Cup / Series** for mid‑tier  
+- Use **Invitational / Shield** for quirky or new bowls  
+
+---
+
+If you tell me:
+
+- how many tiers you want (New Year’s Six analog, mid, low),  
+I can spit out a full, tiered bowl lineup that matches your fictional conferences.

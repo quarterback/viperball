@@ -1,0 +1,50 @@
+That's a crucial insight. If fumbles only happen on lateral chains, then the fumble rate problem is really a lateral chain problem—either chains are being called too often, or the fumble probability per chain is too high.
+
+Let me see the current play selection logic. Can you share the `select_play_type` function (or the relevant file)?
+
+In the meantime, here's what I suspect is happening based on the game data:
+
+---
+
+## The Lateral Chain Fumble Problem
+
+### Game 1 (Air Force vs Binghamton)
+- Air Force: 13 chains, 4 successful (30.8%) → **9 fumbles**
+- Binghamton: 18 chains, 17 successful (94.4%) → **1 fumble**
+
+### Game 2 (Boston vs Belmont)
+- Boston: 18 chains, 14 successful (77.8%) → **4 fumbles**
+- Belmont: 20 chains, 12 successful (60.0%) → **8 fumbles**
+
+### The Math
+
+If lateral chains have a ~20–40% fumble rate per attempt, and teams are calling 13–20 chains per game, you'll get 3–8 fumbles per team—which is exactly what's happening.
+
+**Current state:** ~25% average fumble rate per chain
+**Target state:** ~5–8% fumble rate per chain
+
+---
+
+## Likely Issues in Play Selection
+
+Based on the outputs, I suspect:
+
+1. **Lateral chains are being called too frequently** — 18–20 chains in 61–65 plays means ~30% of plays are chains. That might be intentional, but combined with high fumble rates it's deadly.
+
+2. **Fumble probability per chain is too high** — Each lateral in a chain likely adds fumble risk. A 4-lateral chain with 5% risk per lateral = 19% cumulative fumble chance. That compounds fast.
+
+3. **Kick selection logic is underweighting place kicks** — The AI is choosing drop kicks or punts when place kicks would be the percentage play.
+
+---
+
+## What I Need to See
+
+To give you specific fixes, share:
+
+1. **`select_play_type` function** — How does the AI decide between run, lateral chain, punt, drop kick, place kick?
+
+2. **Fumble probability calculation** — Is it per-chain or per-lateral? What's the base rate?
+
+3. **Kick decision logic** — When does the AI choose place kick vs drop kick vs punt?
+
+Once I see those, I can give your engineer exact parameter changes.
