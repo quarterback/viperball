@@ -42,16 +42,18 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 - **Tempo System**: High tempo (+5% fumble risk, more plays) vs low tempo (-5% fumble risk, fewer plays)
 - **Deterministic Seeds**: Every sim accepts a seed for reproducibility
 - **Scoring**: Touchdowns = 9pts, Snap Kicks = 5pts, Field Goals = 3pts, Safeties = 2pts, Pindowns = 1pt, Strikes = 0.5pts
-- **AFL-style kicking**: ~52% of plays are kicks (punts, snap kicks, field goals). Contextual kick triggers based on down/distance/field position
-- **Snap kick accuracy**: Tiered success (100%/92%/80%/60% by distance range), viable offensive weapon
-- **Field goal accuracy**: Tiered success (95%/88%/75%/55% by distance)
+- **Down System**: 6 downs to gain 20 yards (changed from 5 downs)
+- **Run-first play calling**: Kicks suppressed on early downs (1-3), only territory_kick boosts on 5th-6th down
+- **Kicking**: ~12% of plays are kicks. Contextual kick triggers based on down/distance/field position
+- **Snap kick accuracy**: Tiered success (72%/60%/45%/30% by 25/35/45/55yd distance range)
+- **Field goal accuracy**: Tiered success (93%/86%/76%/62% by 25/35/45/55yd distance)
 - **CFL Rouge/Pindown**: 1pt awarded when kick lands in end zone and receiver can't return out. Applies to punts, missed snap kicks, missed field goals
 - **Strikes**: Fumble recovery by opposing team awards 0.5pts (fractional scoring supported)
-- **Lateral risk system**: 8-12% base fumble, +3% per extra lateral, +4% for 3+ chains, +4% for 4+ chains, +5% fatigue penalty; multiplied by style lateral_risk (0.8–1.4)
-- **Chaos mechanics**: 4% tipped punts (12% kicking team recovery), 7% chaos bounces, 8% punt return TDs, contested recoveries
+- **Lateral risk system**: 6-9% base fumble, +2% per extra lateral, +3% for 3+ chains, +3% for 4+ chains, fatigue penalty at 5+ drive plays; multiplied by style lateral_risk (0.8–1.4)
+- **Chaos mechanics**: 4% tipped punts (12% kicking team recovery), 7% chaos bounces, 3% punt return TDs, contested recoveries
 - **Fatigue tracking**: Per-play fatigue logged in play-by-play
-- **Breakaway system**: 12+ yard runs can explode into big plays based on speed/fatigue
-- **Red zone TD model**: Inside 85/93 yard line, TD probability spikes (requires 2+ yards gained)
+- **Breakaway system**: 10+ yard runs can explode into big plays based on speed/fatigue (18% base chance)
+- **Red zone TD model**: Inside 85/90/95 yard line, TD probability spikes (10%/20%/40% base, requires 2+ yards gained)
 - **Defensive fatigue scaling**: Long drives (5/8/12+ plays) degrade defense by 1.05/1.15/1.25x
 - **Lateral chain compounding**: Each lateral in chain adds 5% explosive chance
 
@@ -105,13 +107,26 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 
 ## Tuning Diagnostics (50-sim, Gonzaga vs Villanova)
-- Avg score: 31-36 per team
-- Kick %: 52.5% (target: ~53%)
-- Pindowns: 3.3/game (range 0-7)
-- Lateral efficiency: 75.5% (target: 65-80%)
-- Kick % range: 43.8-60.7%
+- Avg score: 32.5 per team (target: 31-36)
+- TDs/game: 5.0 (target: 6-10)
+- Kick %: ~12% (target: 10-20%)
+- Plays/drive: 4.0 (target: 4-7)
+- Punt drives: 25.7% (target: 20-35%)
+- TD drives: 16.5%
+- Drives/game: 30.2
+- Lateral efficiency: 73% (target: 65-80%)
+- Pindowns: 0.8/game
 
 ## Recent Changes
+- 2026-02-16: MAJOR ENGINE REBALANCE: Changed from 5 downs to 6 downs for 20 yards
+- 2026-02-16: Rebalanced all 5 offense styles — reduced territory_kick weights (65%→56% territorial, 48%→22% balanced, etc.)
+- 2026-02-16: Overhauled play calling: kicks suppressed on early downs (1-3), only boosted on 5th-6th down
+- 2026-02-16: Increased run yardage (base gauss +1.0, caps 30→45), lateral chain yardage (base 8→10, cap 40→55)
+- 2026-02-16: Improved red zone TD model (3 zones: 85/90/95 yd with 10%/20%/40% base conversion)
+- 2026-02-16: Reduced lateral fumble compounding (~30% reduction across all factors)
+- 2026-02-16: Updated kicking accuracy tables (snapkick: 72/60/45/30%, field goal: 93/86/76/62%)
+- 2026-02-16: Reduced punt return TDs (8%→3%), softened defensive read penalty (60-80%→70-88%)
+- 2026-02-16: Improved breakaway threshold (12→10 yards, 15%→18% base chance)
 - 2026-02-16: Added defensive archetypes system: 5 defense styles (Base, Pressure, Contain, Run-Stop, Coverage) with play modifiers, special teams chaos probabilities
 - 2026-02-16: Defense style selectors added to Game Simulator UI for both teams
 - 2026-02-16: Viperball Metrics (OPI, Territory, Pressure, Chaos, Kicking, Drive Quality, Turnover Impact) displayed in Game Simulator debug panel
@@ -132,7 +147,7 @@ creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 - 2026-02-15: Added EPA (Expected Points Added) engine with EP table, down multipliers, lateral penalties, chaos bonuses
 - 2026-02-15: EPA integrated into play-by-play (ep_before, epa per play), team stats (total/offense/special teams/chaos EPA)
 - 2026-02-15: Cumulative EPA chart in Game Simulator, batch EPA averages in Debug Tools
-- 2026-02-15: Added 3rd/4th/5th down conversion rate tracking and display
+- 2026-02-15: Added 4th/5th/6th down conversion rate tracking and display
 - 2026-02-15: Renamed terminology: Drop Kicks→Snap Kicks, Place Kicks→Field Goals, Fumble Recoveries→Strikes
 - 2026-02-15: Tuned game balance — breakaway system, red zone TD model, defensive fatigue, lateral compounding
 - 2026-02-15: Fixed red zone TD bug (requires yards_gained >= 2)

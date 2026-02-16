@@ -189,10 +189,10 @@ def generate_box_score_markdown(result):
     lines.append("## Down Conversions")
     lines.append("| Down | " + home['team'] + " | " + away['team'] + " |")
     lines.append("|------|---:|---:|")
-    for d in [3, 4, 5]:
+    for d in [4, 5, 6]:
         hd = h_dc.get(d, h_dc.get(str(d), {"converted": 0, "attempts": 0, "rate": 0}))
         ad = a_dc.get(d, a_dc.get(str(d), {"converted": 0, "attempts": 0, "rate": 0}))
-        label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'}"
+        label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'}"
         lines.append(f"| {label} | {hd['converted']}/{hd['attempts']} ({hd['rate']}%) | {ad['converted']}/{ad['attempts']} ({ad['rate']}%) |")
     lines.append("")
 
@@ -560,10 +560,10 @@ if page == "Game Simulator":
         st.markdown("**Down Conversions**")
         h_dc = hs.get("down_conversions", {})
         a_dc = as_.get("down_conversions", {})
-        for d in [3, 4, 5]:
+        for d in [4, 5, 6]:
             hd = h_dc.get(d, h_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
             ad = a_dc.get(d, a_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
-            label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down"
+            label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down"
             dc1, dc2 = st.columns(2)
             dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
             dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
@@ -962,7 +962,7 @@ elif page == "Debug Tools":
                     dd = dc.get(d, dc.get(str(d), {"rate": 0}))
                     rates.append(dd["rate"])
             avg_rate = round(sum(rates) / max(1, len(rates)), 1)
-            label = f"{'3rd' if d == 3 else '4th' if d == 4 else '5th'} Down Conv %"
+            label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down Conv %"
             dc_cols[idx].metric(label, f"{avg_rate}%")
 
         st.markdown("**Avg EPA**")
@@ -1067,7 +1067,7 @@ elif page == "Play Inspector":
 
     with col2:
         field_pos = st.slider("Field Position (yards from own goal)", 1, 99, 40, key="pi_fp")
-        down = st.selectbox("Down", [1, 2, 3, 4, 5], key="pi_down")
+        down = st.selectbox("Down", [1, 2, 3, 4, 5, 6], key="pi_down")
         ytg = st.number_input("Yards to Go", min_value=1, max_value=99, value=20, key="pi_ytg")
 
     col_n, col_seed = st.columns(2)
