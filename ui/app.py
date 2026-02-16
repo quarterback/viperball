@@ -197,6 +197,7 @@ def generate_box_score_markdown(result):
     lines.append(f"| Lateral Chains | {hs['lateral_chains']} ({hs['lateral_efficiency']}% eff) | {as_['lateral_chains']} ({as_['lateral_efficiency']}% eff) |")
     lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
     lines.append(f"| Turnovers on Downs | {hs['turnovers_on_downs']} | {as_['turnovers_on_downs']} |")
+    lines.append(f"| Penalties | {hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds | {as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds |")
     lines.append(f"| Avg Fatigue | {hs['avg_fatigue']}% | {as_['avg_fatigue']}% |")
     lines.append("")
 
@@ -539,6 +540,7 @@ if page == "Game Simulator":
                  "Total Yards", "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
                  "Fumbles Lost", "Turnovers on Downs",
+                 "Penalties", "Penalty Yards",
                  "Longest Play", "Avg Fatigue"],
             home_name: [
                 f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
@@ -552,6 +554,8 @@ if page == "Game Simulator":
                 str(hs["total_yards"]), str(hs["yards_per_play"]), str(hs["total_plays"]),
                 str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
                 str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
+                str(hs.get("penalties", 0)),
+                str(hs.get("penalty_yards", 0)),
                 str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
                 f'{hs["avg_fatigue"]}%',
             ],
@@ -567,6 +571,8 @@ if page == "Game Simulator":
                 str(as_["total_yards"]), str(as_["yards_per_play"]), str(as_["total_plays"]),
                 str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
                 str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
+                str(as_.get("penalties", 0)),
+                str(as_.get("penalty_yards", 0)),
                 str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
                 f'{as_["avg_fatigue"]}%',
             ],

@@ -106,18 +106,22 @@ The app runs via `python main.py` which launches Streamlit on port 5000.
 ## Teams Available
 creighton, gonzaga, marquette, nyu, ut_arlington, vcu, villanova
 
-## Tuning Diagnostics (50-sim, Gonzaga vs Villanova)
-- Avg score: 32.5 per team (target: 31-36)
-- TDs/game: 5.0 (target: 6-10)
-- Kick %: ~12% (target: 10-20%)
-- Plays/drive: 4.0 (target: 4-7)
-- Punt drives: 25.7% (target: 20-35%)
-- TD drives: 16.5%
-- Drives/game: 30.2
-- Lateral efficiency: 73% (target: 65-80%)
-- Pindowns: 0.8/game
+## Tuning Diagnostics (30-sim batch)
+- Avg score: ~27.6 per team
+- TDs/game: ~4.3
+- Fumbles/game: ~4-5 (run fumbles ~1/game + lateral fumbles)
+- Penalties/game: ~10.6 for ~77 yards
+- Kick %: ~17%
+- Plays/game: ~123
 
 ## Recent Changes
+- 2026-02-16: CALIBRATION v3.2: Added run fumble system (1.2% dive, 2.0% speed/sweep, modifiers for power/fatigue/defense)
+- 2026-02-16: CALIBRATION v3.2: EV-based kick decision system replacing rule-based kick logic (field position value tables, conversion rates, game state modifiers)
+- 2026-02-16: CALIBRATION v3.2: Penalty system with 14 penalty types across pre-snap/during-play/post-play phases
+- 2026-02-16: Penalty decline logic: auto-decline when result is better without penalty (TD on offense penalty, turnover on defense penalty, etc.)
+- 2026-02-16: Penalty stats in box score, play log, and markdown export (penalties count, yards, declined)
+- 2026-02-16: EV kick decision factors: place kick EV, drop kick EV, punt EV, go-for-it EV with down aggression (4th: 1.15x, 5th: 1.0x, 6th: 0.85x)
+- 2026-02-16: Game state modifiers for kick decisions (trailing boosts go-for-it, leading boosts conservative, late-game urgency)
 - 2026-02-16: MAJOR ENGINE REBALANCE: Changed from 5 downs to 6 downs for 20 yards
 - 2026-02-16: Rebalanced all 5 offense styles — reduced territory_kick weights (65%→56% territorial, 48%→22% balanced, etc.)
 - 2026-02-16: Overhauled play calling: kicks suppressed on early downs (1-3), only boosted on 5th-6th down

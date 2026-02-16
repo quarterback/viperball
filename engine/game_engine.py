@@ -130,6 +130,39 @@ class Team:
 
 
 @dataclass
+class Penalty:
+    name: str
+    yards: int
+    on_team: str
+    player: str = ""
+    declined: bool = False
+    phase: str = "pre_snap"
+
+PENALTY_CATALOG = {
+    "pre_snap": [
+        {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.018},
+        {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.014},
+        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.006},
+        {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.005},
+        {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
+    ],
+    "during_play": [
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.022},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.010, "auto_first": True},
+        {"name": "Illegal Lateral", "yards": 5, "on": "offense", "prob": 0.005},
+        {"name": "Facemask", "yards": 15, "on": "either", "prob": 0.004},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.003},
+    ],
+    "post_play": [
+        {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.003},
+    ],
+}
+
+
+@dataclass
 class Play:
     play_number: int
     quarter: int
@@ -147,6 +180,7 @@ class Play:
     fatigue: float = 100.0
     laterals: int = 0
     fumble: bool = False
+    penalty: Optional[Penalty] = None
 
 
 OFFENSE_STYLES = {
@@ -575,40 +609,312 @@ class ViperballEngine:
             "result": drive_result,
         })
 
-    def _resolve_kick_type(self) -> PlayType:
+    FIELD_POSITION_VALUE = [
+        (10, 0.3), (20, 0.6), (35, 1.0), (50, 1.5),
+        (65, 2.2), (80, 3.0), (90, 4.5), (100, 6.5),
+    ]
+
+    CONVERSION_RATES = {
+        4: {3: 0.65, 6: 0.48, 10: 0.35, 15: 0.22, 20: 0.15},
+        5: {3: 0.60, 6: 0.44, 10: 0.32, 15: 0.20, 20: 0.12},
+        6: {3: 0.55, 6: 0.40, 10: 0.28, 15: 0.17, 20: 0.10},
+    }
+
+    def _fp_value(self, fp: int) -> float:
+        for threshold, val in self.FIELD_POSITION_VALUE:
+            if fp <= threshold:
+                return val
+        return 6.5
+
+    def _conversion_rate(self, down: int, ytg: int) -> float:
+        rates = self.CONVERSION_RATES.get(down, self.CONVERSION_RATES[6])
+        if ytg <= 3:
+            return rates[3]
+        elif ytg <= 6:
+            return rates[6]
+        elif ytg <= 10:
+            return rates[10]
+        elif ytg <= 15:
+            return rates[15]
+        return rates[20]
+
+    def _place_kick_success(self, distance: int) -> float:
+        if distance <= 25:
+            return 0.92
+        elif distance <= 34:
+            return 0.85
+        elif distance <= 44:
+            return 0.75
+        elif distance <= 54:
+            return 0.60
+        else:
+            return max(0.15, 0.40 - (distance - 55) * 0.02)
+
+    def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
+        if kicker_skill >= 85:
+            tier = 0
+        elif kicker_skill >= 70:
+            tier = 1
+        elif kicker_skill >= 50:
+            tier = 2
+        else:
+            tier = 3
+
+        table = [
+            [0.85, 0.72, 0.60, 0.45, 0.28],
+            [0.75, 0.62, 0.48, 0.32, 0.18],
+            [0.65, 0.52, 0.38, 0.22, 0.10],
+            [0.55, 0.42, 0.28, 0.15, 0.05],
+        ]
+
+        if distance <= 25:
+            col = 0
+        elif distance <= 34:
+            col = 1
+        elif distance <= 44:
+            col = 2
+        elif distance <= 54:
+            col = 3
+        else:
+            col = 4
+
+        return table[tier][col]
+
+    def select_kick_decision(self) -> PlayType:
         fp = self.state.field_position
         down = self.state.down
-        distance_to_goal = 100 - fp + 10
+        ytg = self.state.yards_to_go
 
-        if down >= 5:
-            if fp >= 65:
-                return PlayType.PLACE_KICK
-            elif fp >= 50:
-                return random.choices(
-                    [PlayType.PLACE_KICK, PlayType.DROP_KICK, PlayType.PUNT],
-                    weights=[0.45, 0.25, 0.30]
-                )[0]
-            else:
-                return random.choices(
-                    [PlayType.PUNT, PlayType.DROP_KICK],
-                    weights=[0.80, 0.20]
-                )[0]
+        fg_distance = (100 - fp) + 17
 
-        if fp >= 65:
-            return random.choices(
-                [PlayType.PLACE_KICK, PlayType.DROP_KICK],
-                weights=[0.60, 0.40]
-            )[0]
-        elif fp >= 50:
-            return random.choices(
-                [PlayType.DROP_KICK, PlayType.PUNT],
-                weights=[0.50, 0.50]
-            )[0]
+        team = self.get_offensive_team()
+        kicker = max(team.players[:8], key=lambda p: p.kicking)
+        kicker_skill = kicker.kicking
+
+        pk_success = self._place_kick_success(fg_distance)
+        ev_place_kick = pk_success * 3
+
+        dk_success = self._drop_kick_success(fg_distance, kicker_skill)
+        ev_drop_kick = dk_success * 5
+
+        punt_distance = random.gauss(42, 5)
+        new_fp_after_punt = max(1, fp + int(punt_distance))
+        opp_fp = max(1, 100 - new_fp_after_punt)
+        opponent_fp_value = self._fp_value(opp_fp)
+        pindown_prob = 0.25 if opp_fp <= 10 else 0.0
+        ev_punt = max(0.1, (3.0 - opponent_fp_value) + pindown_prob * 1)
+
+        conversion_rate = self._conversion_rate(down, ytg)
+        new_fp_if_convert = min(99, fp + ytg)
+        continuation_value = self._fp_value(new_fp_if_convert)
+        td_prob_boost = 0.0
+        if new_fp_if_convert >= 95:
+            td_prob_boost = 0.40 * 9
+        elif new_fp_if_convert >= 90:
+            td_prob_boost = 0.20 * 9
+        elif new_fp_if_convert >= 85:
+            td_prob_boost = 0.10 * 9
+        ev_go_for_it = conversion_rate * (continuation_value + td_prob_boost)
+
+        aggression = {4: 1.15, 5: 1.0, 6: 0.85}.get(down, 1.0)
+        ev_go_for_it *= aggression
+
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+        time_left = self.state.time_remaining
+
+        if score_diff <= -10:
+            ev_go_for_it *= 1.25
+            ev_drop_kick *= 1.10
+        elif score_diff >= 10:
+            ev_place_kick *= 1.15
+            ev_punt *= 1.10
+
+        if quarter == 4 and time_left <= 300:
+            if score_diff < 0:
+                ev_go_for_it *= 1.30
+                ev_punt *= 0.3
+            if time_left <= 120 and -8 <= score_diff <= -3:
+                ev_drop_kick *= 1.20
+            if time_left <= 120 and 1 <= score_diff <= 3:
+                ev_place_kick *= 1.25
+
+        options = {}
+        if fg_distance <= 60:
+            options['place_kick'] = ev_place_kick
+        if fg_distance <= 58:
+            options['drop_kick'] = ev_drop_kick
+        if fp < 70:
+            options['punt'] = ev_punt
+        options['go_for_it'] = ev_go_for_it
+
+        best = max(options, key=options.get)
+        type_map = {
+            'place_kick': PlayType.PLACE_KICK,
+            'drop_kick': PlayType.DROP_KICK,
+            'punt': PlayType.PUNT,
+            'go_for_it': None,
+        }
+        return type_map[best]
+
+    def _get_score_diff(self) -> float:
+        if self.state.possession == "home":
+            return self.state.home_score - self.state.away_score
+        return self.state.away_score - self.state.home_score
+
+    def _resolve_kick_type(self) -> PlayType:
+        result = self.select_kick_decision()
+        return result if result is not None else PlayType.PUNT
+
+    def _check_penalties(self, phase: str) -> Optional[Penalty]:
+        penalties = PENALTY_CATALOG.get(phase, [])
+        for pen_def in penalties:
+            if random.random() < pen_def["prob"]:
+                on_side = pen_def["on"]
+                if on_side == "offense":
+                    team_name = self.state.possession
+                elif on_side == "defense":
+                    team_name = "away" if self.state.possession == "home" else "home"
+                else:
+                    team_name = random.choice(["home", "away"])
+
+                team_obj = self.home_team if team_name == "home" else self.away_team
+                player = random.choice(team_obj.players[:8])
+                ptag = player_tag(player)
+
+                return Penalty(
+                    name=pen_def["name"],
+                    yards=pen_def["yards"],
+                    on_team=team_name,
+                    player=ptag,
+                    phase=phase,
+                )
+        return None
+
+    def _should_decline_penalty(self, penalty: Penalty, play: Play) -> bool:
+        on_offense = (penalty.on_team == self.state.possession)
+
+        if on_offense:
+            if play.result in ("touchdown", "successful_kick"):
+                return True
+            if play.yards_gained > penalty.yards:
+                return True
         else:
-            return PlayType.PUNT
+            if play.result in ("fumble", "turnover_on_downs"):
+                return True
+            if play.yards_gained <= -(penalty.yards):
+                return True
+
+        return False
+
+    def _apply_pre_snap_penalty(self, penalty: Penalty) -> Play:
+        on_offense = (penalty.on_team == self.state.possession)
+        if on_offense:
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+        else:
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+            if penalty.yards >= self.state.yards_to_go:
+                self.state.down = 1
+                self.state.yards_to_go = 20
+
+        team_label = "OFFENSE" if on_offense else "DEFENSE"
+        stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+        return Play(
+            play_number=self.state.play_number,
+            quarter=self.state.quarter,
+            time=self.state.time_remaining,
+            possession=self.state.possession,
+            field_position=self.state.field_position,
+            down=self.state.down,
+            yards_to_go=self.state.yards_to_go,
+            play_type="penalty",
+            play_family="none",
+            players_involved=[penalty.player],
+            yards_gained=0,
+            result="penalty",
+            description=f"PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yards",
+            fatigue=round(stamina, 1),
+            penalty=penalty,
+        )
+
+    def _apply_during_play_penalty(self, penalty: Penalty, play: Play) -> Play:
+        if self._should_decline_penalty(penalty, play):
+            penalty.declined = True
+            play.penalty = penalty
+            play.description += f" [DECLINED: {penalty.name}]"
+            return play
+
+        on_offense = (penalty.on_team == self.state.possession)
+        if on_offense:
+            if play.yards_gained > 0:
+                self.state.field_position = max(1, self.state.field_position - play.yards_gained)
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+            play.yards_gained = 0
+            play.result = "penalty"
+        else:
+            penalty_def = next((p for p in PENALTY_CATALOG["during_play"] if p["name"] == penalty.name), None)
+            auto_first = penalty_def.get("auto_first", False) if penalty_def else False
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+            if auto_first or penalty.yards >= self.state.yards_to_go:
+                self.state.down = 1
+                self.state.yards_to_go = 20
+            play.yards_gained = penalty.yards
+
+        play.field_position = self.state.field_position
+        play.down = self.state.down
+        play.yards_to_go = self.state.yards_to_go
+        play.penalty = penalty
+        team_label = "OFFENSE" if on_offense else "DEFENSE"
+        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
+
+        return play
+
+    def _apply_post_play_penalty(self, penalty: Penalty, play: Play) -> Play:
+        if self._should_decline_penalty(penalty, play):
+            penalty.declined = True
+            play.penalty = penalty
+            play.description += f" [DECLINED: {penalty.name}]"
+            return play
+
+        on_offense = (penalty.on_team == play.possession)
+        if on_offense:
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+        else:
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+
+        play.field_position = self.state.field_position
+        play.penalty = penalty
+        team_label = "OFFENSE" if on_offense else "DEFENSE"
+        play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
+
+        return play
 
     def simulate_play(self) -> Play:
         self.state.play_number += 1
+
+        pre_snap_pen = self._check_penalties("pre_snap")
+        if pre_snap_pen:
+            return self._apply_pre_snap_penalty(pre_snap_pen)
+
+        if self.state.down >= 4:
+            kick_decision = self.select_kick_decision()
+            if kick_decision is not None:
+                family = PlayFamily.TERRITORY_KICK
+                if kick_decision == PlayType.PUNT:
+                    play = self.simulate_punt(family)
+                elif kick_decision == PlayType.DROP_KICK:
+                    play = self.simulate_drop_kick(family)
+                elif kick_decision == PlayType.PLACE_KICK:
+                    play = self.simulate_place_kick(family)
+                else:
+                    play = self.simulate_punt(family)
+
+                post_pen = self._check_penalties("post_play")
+                if post_pen:
+                    play = self._apply_post_play_penalty(post_pen, play)
+                return play
+
         play_family = self.select_play_family()
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
@@ -617,17 +923,27 @@ class ViperballEngine:
             play_family = PlayFamily.TERRITORY_KICK
 
         if play_type == PlayType.RUN:
-            return self.simulate_run(play_family)
+            play = self.simulate_run(play_family)
         elif play_type == PlayType.LATERAL_CHAIN:
-            return self.simulate_lateral_chain(play_family)
+            play = self.simulate_lateral_chain(play_family)
         elif play_type == PlayType.PUNT:
-            return self.simulate_punt(play_family)
+            play = self.simulate_punt(play_family)
         elif play_type == PlayType.DROP_KICK:
-            return self.simulate_drop_kick(play_family)
+            play = self.simulate_drop_kick(play_family)
         elif play_type == PlayType.PLACE_KICK:
-            return self.simulate_place_kick(play_family)
+            play = self.simulate_place_kick(play_family)
         else:
-            return self.simulate_run(play_family)
+            play = self.simulate_run(play_family)
+
+        during_pen = self._check_penalties("during_play")
+        if during_pen:
+            play = self._apply_during_play_penalty(during_pen, play)
+        else:
+            post_pen = self._check_penalties("post_play")
+            if post_pen:
+                play = self._apply_post_play_penalty(post_pen, play)
+
+        return play
 
     def select_play_family(self) -> PlayFamily:
         style = self._current_style()
@@ -816,6 +1132,37 @@ class ViperballEngine:
                 return yards_gained + extra
         return yards_gained
 
+    def _run_fumble_check(self, family: PlayFamily, yards_gained: int) -> bool:
+        if family == PlayFamily.DIVE_OPTION:
+            base_fumble = 0.012
+        elif family in (PlayFamily.SPEED_OPTION, PlayFamily.SWEEP_OPTION):
+            base_fumble = 0.020
+        else:
+            base_fumble = 0.015
+
+        team = self.get_offensive_team()
+        best_power = max(p.stamina for p in team.players[:5])
+        if best_power >= 80:
+            base_fumble *= 0.75
+        elif best_power < 50:
+            base_fumble *= 1.12
+
+        fatigue_factor = self.get_fatigue_factor()
+        if fatigue_factor < 0.85:
+            base_fumble += 0.025
+
+        defense = self._current_defense()
+        pressure = defense.get("pressure_factor", 0.50)
+        if pressure >= 0.80:
+            base_fumble += 0.015
+        turnover_bonus = defense.get("turnover_bonus", 0.0)
+        base_fumble *= (1 + turnover_bonus)
+
+        if yards_gained <= 0:
+            base_fumble += 0.03
+
+        return random.random() < base_fumble
+
     def simulate_run(self, family: PlayFamily = PlayFamily.DIVE_OPTION) -> Play:
         team = self.get_offensive_team()
         player = random.choice(team.players[:5])
@@ -861,7 +1208,6 @@ class ViperballEngine:
         if def_fatigue > 1.0 and tired_def_broken > 0:
             broken_play_bonus += tired_def_broken
 
-        # Check for explosive play (before defensive modifiers)
         is_explosive = False
         if broken_play_bonus > 0 and yards_gained >= 8:
             if random.random() < broken_play_bonus:
@@ -873,8 +1219,33 @@ class ViperballEngine:
 
         yards_gained = self._breakaway_check(yards_gained, team)
 
-        # DEFENSIVE SYSTEM: Apply all defensive modifiers
         yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
+
+        if self._run_fumble_check(family, yards_gained):
+            fumble_yards = random.randint(-3, max(1, yards_gained))
+            old_pos = self.state.field_position
+            self.change_possession()
+            self.state.field_position = max(1, 100 - (old_pos + fumble_yards))
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            self.add_score(0.5)
+            self.apply_stamina_drain(3)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=1, yards_to_go=20,
+                play_type="run", play_family=family.value,
+                players_involved=[plabel],
+                yards_gained=fumble_yards,
+                result=PlayResult.FUMBLE.value,
+                description=f"{ptag} {action} → {fumble_yards} — FUMBLE! Defense recovers (+0.5)",
+                fatigue=round(stamina, 1),
+                fumble=True,
+            )
 
         new_position = min(100, self.state.field_position + yards_gained)
 
@@ -1911,6 +2282,11 @@ class ViperballEngine:
                 "rate": round(len(converted) / max(1, len(down_plays)) * 100, 1) if down_plays else 0.0,
             }
 
+        penalty_plays = [p for p in plays if p.penalty is not None]
+        penalties_accepted = [p for p in penalty_plays if not p.penalty.declined]
+        penalties_declined = [p for p in penalty_plays if p.penalty.declined]
+        penalty_yards = sum(p.penalty.yards for p in penalties_accepted)
+
         return {
             "total_yards": total_yards,
             "total_plays": total_plays,
@@ -1935,10 +2311,13 @@ class ViperballEngine:
             "avg_fatigue": avg_fatigue,
             "safeties_conceded": len([p for p in plays if p.result == "safety"]),
             "down_conversions": down_conversions,
+            "penalties": len(penalties_accepted),
+            "penalty_yards": penalty_yards,
+            "penalties_declined": len(penalties_declined),
         }
 
     def play_to_dict(self, play: Play) -> Dict:
-        return {
+        d = {
             "play_number": play.play_number,
             "quarter": play.quarter,
             "time_remaining": play.time,
@@ -1956,6 +2335,16 @@ class ViperballEngine:
             "laterals": play.laterals if play.laterals > 0 else None,
             "fumble": play.fumble if play.fumble else None,
         }
+        if play.penalty:
+            d["penalty"] = {
+                "name": play.penalty.name,
+                "yards": play.penalty.yards,
+                "on_team": play.penalty.on_team,
+                "player": play.penalty.player,
+                "declined": play.penalty.declined,
+                "phase": play.penalty.phase,
+            }
+        return d
 
 
 def load_team_from_json(filepath: str) -> Team:

@@ -1,0 +1,299 @@
+You're right. The `should_decline_penalty` function I included earlier is too simplistic. Here's comprehensive logic:
+
+---
+
+## Penalty Decline Logic
+
+### Core Principle
+
+Decline a penalty when the play result is **more advantageous** than enforcing the penalty. This requires comparing:
+- **Result of the play** (yards gained/lost, turnover, TD, etc.)
+- **Result if penalty is enforced** (new down, distance, field position)
+
+### When to Decline Offensive Penalties (Defense Decides)
+
+The defense should decline an offensive penalty when:
+
+| Situation | Decline? | Reasoning |
+|-----------|----------|-----------|
+| Turnover occurred (fumble, interception) | **Yes** | Turnover > any penalty yards |
+| Turnover on downs | **Yes** | Getting the ball > replay the down |
+| Short gain on late down (5th/6th, gained < needed) | **Yes** | They're punting/kicking anyway |
+| Loss of yards (TFL, sack) | **Usually Yes** | Negative play > 10-yard holding call |
+| Safety scored | **Yes** | 2 points + ball > penalty |
+| Play ended out of bounds stopping clock (late game, offense trailing) | **Maybe** | Clock considerations |
+| Penalty yards < yards lost on play | **Yes** | e.g., 5-yard penalty vs 8-yard loss |
+
+### When to Decline Defensive Penalties (Offense Decides)
+
+The offense should decline a defensive penalty when:
+
+| Situation | Decline? | Reasoning |
+|-----------|----------|-----------|
+| Touchdown scored | **Yes** | TD (9 pts) > any penalty |
+| Yards gained > penalty yards + 5 | **Usually Yes** | e.g., 18-yard gain > 10-yard penalty |
+| First down achieved and gain > penalty | **Yes** | Already got the first down |
+| Turnover occurred (rare—lateral picked off) | **No** | Accept penalty, keep ball |
+| Field goal made | **Yes** | Points > replay the down |
+| Auto-first penalty but big gain anyway | **Compare** | Which gives better field position? |
+
+### Implementation
+
+```python
+def should_decline_penalty(self, penalty: Penalty, play_result: Play) -> bool:
+    """
+    Determine if the penalty should be declined.
+    Returns True if the non-penalized result is more advantageous.
+    """
+    
+    fp = self.state.field_position
+    down = self.state.down
+    ytg = self.state.yards_to_go
+    yards_gained = play_result.yards
+    
+    # --- DEFENSIVE DECISION (Declining Offensive Penalty) ---
+    if penalty.against == "offense":
+        
+        # ALWAYS decline if turnover occurred
+        if play_result.result in ["fumble", "turnover_on_downs", "interception"]:
+            return True
+        
+        # ALWAYS decline if safety scored
+        if play_result.result == "safety":
+            return True
+        
+        # Decline if play lost more yards than penalty would cost them
+        if yards_gained < 0 and abs(yards_gained) >= penalty.yards:
+            return True
+        
+        # Decline if loss of yards and it's a late down (they'll punt anyway)
+        if yards_gained <= 0 and down >= 5:
+            return True
+        
+        # Decline if short gain on late down won't give first down
+        yards_after_play = fp + yards_gained
+        would_convert = yards_gained >= ytg
+        
+        if down >= 5 and not would_convert and yards_gained <= 3:
+            # They're likely punting/kicking anyway
+            return True
+        
+        # Decline if the play result puts them in worse field position
+        # than penalty enforcement would
+        if penalty.negates_play:
+            # Penalty would return to original LOS minus penalty yards
+            position_after_penalty = fp - penalty.yards
+            position_after_play = fp + yards_gained
+            
+            # If play left them in worse position, decline
+            if position_after_play < position_after_penalty:
+                return True
+        
+        # Late game clock considerations
+        if self._is_late_game() and self._offense_trailing():
+            # If play went out of bounds (stops clock), consider accepting
+            # to make them run another play
+            if play_result.out_of_bounds and yards_gained > 0:
+                return False  # Accept penalty, make them replay
+        
+        return False
+    
+    # --- OFFENSIVE DECISION (Declining Defensive Penalty) ---
+    else:
+        
+        # ALWAYS decline if touchdown scored
+        if play_result.result == "touchdown":
+            return True
+        
+        # ALWAYS decline if field goal made
+        if play_result.result in ["successful_kick", "field_goal_good"]:
+            return True
+        
+        # Calculate what we'd get from accepting vs declining
+        
+        # Position after play
+        position_after_play = fp + yards_gained
+        achieved_first_down = yards_gained >= ytg
+        
+        # Position after penalty accepted
+        position_after_penalty = min(99, fp + penalty.yards)
+        
+        # If penalty gives auto-first down
+        if penalty.auto_first:
+            # Compare: auto first from penalty spot vs current play result
+            
+            # If we already got a first down with more yards, decline
+            if achieved_first_down and position_after_play > position_after_penalty:
+                return True
+            
+            # If big gain exceeds penalty yards significantly, decline
+            if yards_gained > penalty.yards + 5:
+                return True
+            
+            # Otherwise accept the auto-first (it's valuable)
+            return False
+        
+        else:
+            # Non-auto-first penalty (rare for defense)
+            # Simply compare field position
+            if position_after_play > position_after_penalty:
+                return True
+            
+            return False
+
+
+def _is_late_game(self) -> bool:
+    """Returns True if in final 5 minutes of 4th quarter."""
+    return self.state.quarter == 4 and self.state.time_remaining <= 300
+
+
+def _offense_trailing(self) -> bool:
+    """Returns True if offensive team is behind."""
+    if self.state.possession == "home":
+        return self.state.home_score < self.state.away_score
+    else:
+        return self.state.away_score < self.state.home_score
+
+
+def _offense_leading(self) -> bool:
+    """Returns True if offensive team is ahead."""
+    if self.state.possession == "home":
+        return self.state.home_score > self.state.away_score
+    else:
+        return self.state.away_score > self.state.home_score
+```
+
+### Complex Scenarios
+
+#### Scenario 1: Holding on a 15-yard gain, 1st-and-20
+
+```
+Situation: 1st-and-20 at own 30
+Play result: 15-yard run
+Penalty: Offensive holding (10 yards)
+
+If accepted: 1st-and-30 at own 20 (backed up 10)
+If declined: 2nd-and-5 at own 45 (gained 15)
+
+Defense should: DECLINE
+- Offense is in much better position with the play
+- But they didn't get the first down
+- 2nd-and-5 is manageable for defense
+```
+
+#### Scenario 2: Facemask on a 3-yard run, 3rd-and-8
+
+```
+Situation: 3rd-and-8 at opponent's 40
+Play result: 3-yard run (4th-and-5 coming)
+Penalty: Facemask (15 yards, auto-first)
+
+If accepted: 1st-and-10 at opponent's 25
+If declined: 4th-and-5 at opponent's 37
+
+Offense should: ACCEPT
+- Auto-first down in red zone is very valuable
+- 3 yards gained isn't worth giving up 15 + first down
+```
+
+#### Scenario 3: Defensive holding on a 22-yard lateral chain
+
+```
+Situation: 2nd-and-12 at own 35
+Play result: 22-yard chain (1st down achieved, now at opponent's 43)
+Penalty: Defensive holding (5 yards, auto-first)
+
+If accepted: 1st-and-20 at own 40
+If declined: 1st-and-20 at opponent's 43
+
+Offense should: DECLINE
+- Already got the first down
+- At opponent's 43 vs own 40 is a 17-yard difference
+- Decline is obviously better
+```
+
+#### Scenario 4: Holding negates TD
+
+```
+Situation: 1st-and-10 at opponent's 25
+Play result: 25-yard TD run
+Penalty: Offensive holding (10 yards, on the play)
+
+If penalty was behind the play (blocker at LOS): TD STANDS, no enforcement
+If penalty sprung the runner (blocker at point of attack): TD NEGATED
+
+This requires tracking WHERE the penalty occurred.
+```
+
+#### Scenario 5: Turnover with defensive penalty
+
+```
+Situation: 2nd-and-8 at opponent's 30
+Play result: Fumble, defense recovers
+Penalty: Defensive unnecessary roughness (15 yards)
+
+If accepted: 1st-and-10 at opponent's 15, offense keeps ball
+If declined: Defense has ball at spot of recovery
+
+Offense should: ACCEPT (obviously)
+- Keep the ball, get free yards, in red zone
+```
+
+#### Scenario 6: Late game, trailing, clock management
+
+```
+Situation: 4th quarter, 1:30 left, offense trailing by 4
+Play: 6-yard run, runner goes out of bounds (clock stops)
+Penalty: Offensive holding (10 yards)
+
+If accepted: Replay down, clock was stopped on penalty anyway
+If declined: Next down, but clock stopped on out-of-bounds
+
+Defense might: ACCEPT
+- Makes offense travel further
+- Clock is stopped either way
+- But gives offense another chance to score...
+
+Actually: DECLINE
+- Offense has one fewer down to work with
+- Distance is longer but they have to score TD anyway
+```
+
+### Penalty Decline Decision Matrix (Quick Reference)
+
+| Play Result | Offensive Penalty (D decides) | Defensive Penalty (O decides) |
+|-------------|-------------------------------|-------------------------------|
+| Touchdown | N/A (penalty may negate) | **DECLINE** (always) |
+| Field Goal Good | N/A | **DECLINE** (always) |
+| Turnover | **DECLINE** (always) | **ACCEPT** (always) |
+| Big gain (15+ yds) | Usually decline | Compare to penalty yards |
+| First down achieved | Compare field position | Decline if gain > penalty |
+| Short gain, late down | **DECLINE** (punt coming) | Accept auto-first if offered |
+| Loss of yards | **DECLINE** (usually) | **ACCEPT** (always) |
+| Safety | **DECLINE** (always) | N/A |
+
+### JSON Output for Declined Penalties
+
+```json
+{
+  "play_number": 53,
+  "play_type": "lateral_chain",
+  "yards": 18,
+  "result": "first_down",
+  "penalty": {
+    "name": "Defensive Holding",
+    "yards": 5,
+    "against": "defense",
+    "auto_first": true,
+    "declined": true,
+    "decline_reason": "Play gained 18 yards (first down), exceeds penalty value",
+    "position_if_accepted": 40,
+    "position_after_play": 53
+  },
+  "description": "WB5 → ZB7 → HB9 lateral → 18 yards, FIRST DOWN. Defensive holding declined."
+}
+```
+
+---
+
+Want me to add this to the calibration document?
