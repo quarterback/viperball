@@ -1012,7 +1012,7 @@ class ViperballEngine:
 
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
         dk_recovery = 0.35
-        ev_drop_kick = dk_success * 5 + (1 - dk_success) * (dk_recovery * (self._fp_value(fp) * 0.5 + 0.5) + (1 - dk_recovery) * (-self.POSSESSION_VALUE * 0.3) + 0.5)
+        ev_drop_kick = dk_success * 5 + (1 - dk_success) * (dk_recovery * (self._fp_value(fp) * 0.5) + (1 - dk_recovery) * (-tod_value * 0.3))
 
         arch_info = get_archetype_info(kicker.archetype)
         if kicker.archetype == "kicking_zb":
@@ -2408,7 +2408,6 @@ class ViperballEngine:
             landing_offset = random.randint(5, 15)
 
             if random.random() < recovery_chance:
-                self.add_score(0.5)
                 landing_spot = min(99, self.state.field_position + landing_offset)
                 self.state.field_position = landing_spot
                 self.state.down = 1
@@ -2429,12 +2428,12 @@ class ViperballEngine:
                     players_involved=[player_label(kicker)],
                     yards_gained=landing_offset,
                     result=PlayResult.SNAP_KICK_RECOVERY.value,
-                    description=f"{ptag} snap kick {distance}yd — NO GOOD → LIVE BALL! Kicking team recovers at {landing_spot}! (+½)",
+                    description=f"{ptag} snap kick {distance}yd — NO GOOD → LIVE BALL! Kicking team recovers at {landing_spot}!",
                     fatigue=round(stamina, 1),
                 )
             else:
-                self.add_score(0.5)
                 self.change_possession()
+                self.add_score(0.5)
                 landing_spot = max(1, self.state.field_position + landing_offset)
                 self.state.field_position = max(1, 100 - landing_spot)
                 self.state.down = 1
