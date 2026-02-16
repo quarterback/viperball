@@ -1,0 +1,75 @@
+This is great—the Keeper becoming a "sweeper-keeper" style position with its own skill set and stats is emergent from the rules, not bolted on.
+
+---
+
+## What This Creates
+
+**The Keeper isn't a punt returner who tackles.** They're a specialized defensive playmaker whose job is to:
+
+1. Read the ZB's body language (plant foot, eyes, hips)
+2. Decide: stay home for the kick or cheat up for the run/lateral
+3. If kick comes, get a deflection or recovery (Bell hunting)
+4. If fake comes, not give up 9 points behind them
+
+That's a unique skill set. Part free safety, part goalkeeper, part centerfielder.
+
+---
+
+## The Place Kick as "Safe Mode"
+
+The 3-point Place Kick becomes the conservative counter:
+
+| Kick Type | Points | Keeper Can Disrupt? | When to Use |
+|-----------|--------|---------------------|-------------|
+| Snap Kick | 5 | Yes—can deflect, recover, return | Keeper playing soft, trailing, need points |
+| Place Kick | 3 | Barely—dead ball, wall protection | Keeper is aggressive, protect the points |
+
+So the offense is reading the Keeper just like the Keeper is reading the ZB. If the Keeper is cheating up, snap kick over their head. If the Keeper is hanging deep to play the kick, run the lateral into the vacated space.
+
+---
+
+## Keeper Stats
+
+**Traditional:**
+- Tackles
+- Missed FG returns (yards, TDs)
+
+**Viperball-specific:**
+- **Kick Deflections (KD)** — knocked down a snap kick attempt
+- **Bells Generated** — forced or recovered turnovers
+- **Coverage Snaps** — plays where Keeper stayed home vs. cheated up
+- **Fake TD Allowed** — gave up a TD on a kick fake (the killer stat)
+
+A Keeper with 15 KDs and 8 Bells is a defensive weapon. A Keeper who gave up 4 Fake TDs is a liability.
+
+---
+
+## To Your Question: 6th Down Two-Minute Drill
+
+**Trailing by 5-8 with 2 minutes left:**
+
+| Points Needed | Best Path | Why |
+|---------------|-----------|-----|
+| 5 | Snap kick | Ties it, live ball if miss |
+| 6-8 | TD (9) | One score wins, don't settle |
+| 9+ | TD + snap kick, or 2 TDs | Must score twice, go fast |
+
+**The decision tree:**
+
+- If you're on the opponent's 35 and need 6 to tie: **go for TD**. A place kick (3) doesn't help enough, and a snap kick (5) still leaves you short.
+  
+- If you're on the opponent's 40 and need 5 to tie: **snap kick**. You're in range, it ties the game, and a miss is a live ball—you might recover and try again.
+
+- If you're on the opponent's 20 and need 3 to tie: **place kick**. Don't risk the snap kick deflection. Take the guaranteed points.
+
+**The Keeper's dilemma in the 2-minute drill:**
+
+They know a snap kick might be coming. Do they:
+- Play deep to defend it (gives up easy yards underneath)
+- Cheat up to help stop the drive (leaves the uprights exposed)
+
+If the Keeper guesses wrong, it's either a long TD or a made snap kick. No good options—just like a goalkeeper facing a penalty.
+
+---
+
+Want me to add a Keeper position breakdown to the calibration doc?
