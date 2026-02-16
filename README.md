@@ -116,4 +116,50 @@ Viperball assumes a timeline where:
 
 ---
 
+## 6. Scoring
+
+Viperball uses a multi-channel scoring system that rewards field position, turnovers, and live-ball kicking.
+
+### 6.1 Touchdown — 9 points
+
+Awarded when the ball is carried or kicked into the opponent's end zone.
+
+### 6.2 Snapkick — 5 points
+
+A live-ball drop-kick through the uprights from anywhere on the field.
+
+### 6.3 Field Goal (Place Kick) — 3 points
+
+A traditional place-kick attempt from scrimmage.
+
+### 6.4 Safety — 2 points
+
+Awarded when the offense is downed in its own end zone or commits a foul there.
+
+### 6.5 Interception Point — 1 point
+
+Awarded immediately upon a defensive interception.
+Play continues live.
+
+### 6.6 Pindown — 1 point
+
+Awarded when a team forces the opponent to begin a drive inside its own 10-yard line.
+
+### 6.7 Bell — 0.5 points
+
+Awarded to the defense when it recovers a fumble during live play.
+
+### 6.8 Fumble Recovery — 0.5 points
+
+Awarded to the defense when it gains possession of a loose ball during live play, including:
+- forced fumbles
+- mishandled laterals
+- dropped or bouncing kicks
+- any loose ball recovered by the defense before the play is whistled dead
+
+The ball remains live and may be advanced.
+- If the recovery results in the ball being carried into the end zone, standard touchdown or pindown rules apply.
+
+---
+
 ... (rest of the file content remains the same) ...
