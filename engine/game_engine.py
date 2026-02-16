@@ -680,6 +680,28 @@ class ViperballEngine:
 
         return table[tier][col]
 
+    POSSESSION_VALUE = 2.5
+
+    GO_FOR_IT_MATRIX = {
+        15:  {4: 2,  5: 4,  6: 8},
+        30:  {4: 4,  5: 7,  6: 12},
+        45:  {4: 6,  5: 10, 6: 16},
+        50:  {4: 8,  5: 12, 6: 20},
+        60:  {4: 10, 5: 15, 6: 20},
+        75:  {4: 6,  5: 12, 6: 20},
+        100: {4: 5,  5: 20, 6: 20},
+    }
+
+    def _go_for_it_threshold(self, fp: int, down: int) -> int:
+        for threshold in sorted(self.GO_FOR_IT_MATRIX.keys()):
+            if fp <= threshold:
+                return self.GO_FOR_IT_MATRIX[threshold].get(down, 20)
+        return 20
+
+    def _expected_points_from_position(self, fp: int) -> float:
+        from engine.epa import calculate_ep
+        return calculate_ep(fp, 1)
+
     def select_kick_decision(self) -> PlayType:
         fp = self.state.field_position
         down = self.state.down
@@ -692,31 +714,36 @@ class ViperballEngine:
         kicker_skill = kicker.kicking
 
         pk_success = self._place_kick_success(fg_distance)
-        ev_place_kick = pk_success * 3
+        pk_kickoff_bonus = 0.8
+        ev_place_kick = pk_success * (3 + pk_kickoff_bonus)
 
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
-        ev_drop_kick = dk_success * 5
+        dk_kickoff_bonus = 0.8
+        ev_drop_kick = dk_success * (5 + dk_kickoff_bonus)
 
         punt_distance = random.gauss(42, 5)
         new_fp_after_punt = max(1, fp + int(punt_distance))
         opp_fp = max(1, 100 - new_fp_after_punt)
         opponent_fp_value = self._fp_value(opp_fp)
         pindown_prob = 0.25 if opp_fp <= 10 else 0.0
-        ev_punt = max(0.1, (3.0 - opponent_fp_value) + pindown_prob * 1)
+        ev_punt = max(0.1, (3.0 - opponent_fp_value) + pindown_prob * 1 - self.POSSESSION_VALUE)
 
         conversion_rate = self._conversion_rate(down, ytg)
         new_fp_if_convert = min(99, fp + ytg)
         continuation_value = self._fp_value(new_fp_if_convert)
+        drive_ep = self._expected_points_from_position(new_fp_if_convert)
         td_prob_boost = 0.0
         if new_fp_if_convert >= 95:
-            td_prob_boost = 0.40 * 9
+            td_prob_boost = 0.55 * 9
         elif new_fp_if_convert >= 90:
-            td_prob_boost = 0.20 * 9
+            td_prob_boost = 0.35 * 9
         elif new_fp_if_convert >= 85:
-            td_prob_boost = 0.10 * 9
-        ev_go_for_it = conversion_rate * (continuation_value + td_prob_boost)
+            td_prob_boost = 0.18 * 9
+        ev_go_for_it = conversion_rate * (continuation_value + drive_ep * 0.6 + td_prob_boost)
 
-        aggression = {4: 1.25, 5: 1.10, 6: 0.90}.get(down, 1.0)
+        aggression = {4: 1.40, 5: 1.25, 6: 1.10}.get(down, 1.0)
+        if fg_distance <= 55:
+            aggression = min(aggression, 1.0)
         ev_go_for_it *= aggression
 
         score_diff = self._get_score_diff()
@@ -739,16 +766,84 @@ class ViperballEngine:
             if time_left <= 120 and 1 <= score_diff <= 3:
                 ev_place_kick *= 1.25
 
+        if down >= 5 and fg_distance <= 35:
+            ev_place_kick *= 1.40
+        elif down >= 5 and fg_distance <= 45:
+            ev_place_kick *= 1.25
+        elif down >= 4 and fg_distance <= 40:
+            ev_place_kick *= 1.20
+
+        style = self._current_style()
+        kick_rate = style.get("kick_rate", 0.2)
+        if kick_rate >= 0.40:
+            ev_drop_kick *= 1.30
+            ev_place_kick *= 1.20
+        elif kick_rate >= 0.20:
+            ev_drop_kick *= 1.10
+
         options = {}
-        if fg_distance <= 60:
+        if fg_distance <= 65:
             options['place_kick'] = ev_place_kick
-        if fg_distance <= 58:
+        if fg_distance <= 65:
             options['drop_kick'] = ev_drop_kick
         if fp < 70:
             options['punt'] = ev_punt
         options['go_for_it'] = ev_go_for_it
 
         best = max(options, key=options.get)
+
+        if down <= 4 and fp >= 10:
+            if best == 'punt':
+                best = 'go_for_it'
+
+        if down == 5 and fp >= 50:
+            if best == 'punt':
+                if fg_distance <= 52:
+                    best = 'place_kick'
+                else:
+                    best = 'go_for_it'
+
+        if down == 6 and fp >= 60:
+            if best == 'punt':
+                best = 'place_kick' if fg_distance <= 55 else 'go_for_it'
+
+        kick_available = 'place_kick' in options or 'drop_kick' in options
+        if kick_available:
+            if down == 4:
+                if fg_distance <= 50 and ytg > 2:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+                elif fg_distance <= 60 and ytg > 6:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+                elif fg_distance <= 65 and ytg > 12:
+                    best = 'place_kick' if 'place_kick' in options else best
+            if down == 5:
+                if fg_distance <= 55 and ytg > 2:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+                elif fg_distance <= 65 and ytg > 5:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+            if down == 6:
+                if fg_distance <= 60 and ytg > 2:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+                elif fg_distance <= 65 and ytg > 4:
+                    best = 'place_kick' if 'place_kick' in options else 'drop_kick'
+
+        if kick_available and 'drop_kick' in options:
+            if fg_distance <= 40 and down >= 5 and ytg > 3:
+                best = 'drop_kick'
+            score_diff = self._get_score_diff()
+            if score_diff < -6 and fg_distance <= 50 and down >= 5:
+                best = 'drop_kick'
+
+        if down == 6 and ytg <= 5:
+            best = 'go_for_it'
+
+        if down == 4 and ytg <= 2 and fp >= 30:
+            best = 'go_for_it'
+
+        go_threshold = self._go_for_it_threshold(fp, down)
+        if best == 'punt' and ytg <= go_threshold:
+            best = 'go_for_it'
+
         type_map = {
             'place_kick': PlayType.PLACE_KICK,
             'drop_kick': PlayType.DROP_KICK,
@@ -763,6 +858,35 @@ class ViperballEngine:
         return self.state.away_score - self.state.home_score
 
     def _resolve_kick_type(self) -> PlayType:
+        down = self.state.down
+        fp = self.state.field_position
+        fg_distance = (100 - fp) + 17
+
+        if down <= 3:
+            team = self.get_offensive_team()
+            kicker = max(team.players[:8], key=lambda p: p.kicking)
+            style = self._current_style()
+            kick_rate = style.get("kick_rate", 0.2)
+
+            if fg_distance <= 55:
+                dk_success = self._drop_kick_success(fg_distance, kicker.kicking)
+                pk_success = self._place_kick_success(fg_distance)
+
+                if kick_rate >= 0.40:
+                    if dk_success >= 0.35:
+                        return PlayType.DROP_KICK
+                    elif pk_success >= 0.50:
+                        return PlayType.PLACE_KICK
+                elif kick_rate >= 0.20:
+                    if fg_distance <= 35 and random.random() < 0.7:
+                        return PlayType.DROP_KICK if dk_success >= 0.45 else PlayType.PLACE_KICK
+                    elif fg_distance <= 45 and random.random() < 0.5:
+                        return PlayType.DROP_KICK if dk_success >= 0.50 else PlayType.PLACE_KICK
+                    elif fg_distance <= 55 and pk_success >= 0.50 and random.random() < 0.35:
+                        return PlayType.PLACE_KICK
+
+            return PlayType.PUNT
+
         result = self.select_kick_decision()
         return result if result is not None else PlayType.PUNT
 
@@ -967,8 +1091,11 @@ class ViperballEngine:
                 weights["territory_kick"] = weights.get("territory_kick", 0.2) + 0.20
 
         if down <= 3:
-            if style.get("kick_rate", 0.2) < 0.40:
-                weights["territory_kick"] = max(0.02, weights.get("territory_kick", 0.2) * 0.3)
+            kick_rate = style.get("kick_rate", 0.2)
+            if kick_rate >= 0.40:
+                weights["territory_kick"] = max(0.05, weights.get("territory_kick", 0.2) * 0.50)
+            else:
+                weights["territory_kick"] = max(0.04, weights.get("territory_kick", 0.2) * 0.4)
 
         families = list(PlayFamily)
         w = [weights.get(f.value, 0.2) for f in families]
@@ -1134,11 +1261,11 @@ class ViperballEngine:
 
     def _run_fumble_check(self, family: PlayFamily, yards_gained: int) -> bool:
         if family == PlayFamily.DIVE_OPTION:
-            base_fumble = 0.012
+            base_fumble = 0.008
         elif family in (PlayFamily.SPEED_OPTION, PlayFamily.SWEEP_OPTION):
-            base_fumble = 0.020
+            base_fumble = 0.014
         else:
-            base_fumble = 0.015
+            base_fumble = 0.010
 
         team = self.get_offensive_team()
         best_power = max(p.stamina for p in team.players[:5])
@@ -1170,16 +1297,16 @@ class ViperballEngine:
         ptag = player_tag(player)
 
         if family == PlayFamily.DIVE_OPTION:
-            base_yards = random.gauss(6.2, 3.5)
+            base_yards = random.gauss(6.8, 3.5)
             action = "keep"
         elif family == PlayFamily.SPEED_OPTION:
-            base_yards = random.gauss(7.5, 4.5)
+            base_yards = random.gauss(8.0, 4.5)
             action = "pitch"
         elif family == PlayFamily.SWEEP_OPTION:
-            base_yards = random.gauss(6.0, 5.0)
+            base_yards = random.gauss(6.5, 5.0)
             action = "sweep"
         else:
-            base_yards = random.gauss(6.2, 3.5)
+            base_yards = random.gauss(6.8, 3.5)
             action = "run"
 
         style = self._current_style()
@@ -1328,15 +1455,15 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        base_fumble_prob = random.uniform(0.025, 0.04)
+        base_fumble_prob = random.uniform(0.020, 0.030)
         fumble_prob = base_fumble_prob
-        fumble_prob += (chain_length - 1) * 0.008
+        fumble_prob += (chain_length - 1) * 0.006
         if self.drive_play_count >= 5:
-            fumble_prob += random.uniform(0.015, 0.025)
+            fumble_prob += random.uniform(0.010, 0.018)
         if chain_length >= 3:
-            fumble_prob += 0.012
+            fumble_prob += 0.008
         if chain_length >= 4:
-            fumble_prob += 0.012
+            fumble_prob += 0.008
         fatigue_factor_lat = self.get_fatigue_factor()
         if fatigue_factor_lat < 0.9:
             fumble_prob += 0.02
