@@ -319,19 +319,25 @@ def render_season_simulator(shared):
 
             if season.conferences and len(season.conferences) >= 1:
                 st.subheader("Conference Standings")
+                champions = season.get_conference_champions()
                 conf_tabs = st.tabs(sorted(season.conferences.keys()))
                 for conf_tab, conf_name in zip(conf_tabs, sorted(season.conferences.keys())):
                     with conf_tab:
                         conf_standings = season.get_conference_standings(conf_name)
                         if conf_standings:
+                            champ_name = champions.get(conf_name, "")
+                            if champ_name:
+                                st.caption(f"Conference Champion: **{champ_name}**")
                             conf_data = []
                             for i, record in enumerate(conf_standings, 1):
+                                pi = season.calculate_power_index(record.team_name)
                                 conf_data.append({
                                     "Rank": i,
                                     "Team": record.team_name,
                                     "Conf": f"{record.conf_wins}-{record.conf_losses}",
                                     "Overall": f"{record.wins}-{record.losses}",
                                     "Win%": f"{record.win_percentage:.3f}",
+                                    "PI": f"{pi:.1f}",
                                     "PF": fmt_vb_score(record.points_for),
                                     "PA": fmt_vb_score(record.points_against),
                                     "OPI": f"{record.avg_opi:.1f}",
@@ -340,7 +346,7 @@ def render_season_simulator(shared):
 
             final_poll = season.get_latest_poll()
             if final_poll:
-                st.subheader("Final Top 25 Rankings")
+                st.subheader("Final Power Rankings (Top 25)")
                 poll_data = []
                 for r in final_poll.rankings:
                     movement = ""
@@ -354,14 +360,17 @@ def render_season_simulator(shared):
                             movement = "--"
                     else:
                         movement = "NEW"
-                    poll_data.append({
+                    row = {
                         "#": r.rank,
                         "Team": r.team_name,
                         "Record": r.record,
                         "Conf": r.conference,
-                        "Score": f"{r.poll_score:.1f}",
+                        "Power Index": f"{r.power_index:.1f}",
+                        "Quality Wins": r.quality_wins,
+                        "SOS Rank": r.sos_rank,
                         "Move": movement,
-                    })
+                    }
+                    poll_data.append(row)
                 st.dataframe(pd.DataFrame(poll_data), hide_index=True, use_container_width=True)
 
             st.subheader("Season Metrics Radar")
@@ -395,6 +404,23 @@ def render_season_simulator(shared):
                 st.plotly_chart(fig, use_container_width=True)
 
             if season.playoff_bracket:
+                st.subheader("Playoff Field")
+                playoff_teams = season.get_playoff_teams(num_playoff)
+                pf_data = []
+                for i, t in enumerate(playoff_teams, 1):
+                    bid = season.get_playoff_bid_type(t.team_name)
+                    pi = season.calculate_power_index(t.team_name)
+                    pf_data.append({
+                        "Seed": i,
+                        "Team": t.team_name,
+                        "Record": f"{t.wins}-{t.losses}",
+                        "Conf": t.conference,
+                        "Conf Record": f"{t.conf_wins}-{t.conf_losses}",
+                        "Power Index": f"{pi:.1f}",
+                        "Bid": bid.upper() if bid else "",
+                    })
+                st.dataframe(pd.DataFrame(pf_data), hide_index=True, use_container_width=True)
+
                 st.subheader("Playoff Bracket")
 
                 def _render_round(label, week):

@@ -324,6 +324,7 @@ def render_dynasty_mode(shared):
                 standings_data = []
                 for i, record in enumerate(standings, 1):
                     is_user = record.team_name == dynasty.coach.team_name
+                    pi = season.calculate_power_index(record.team_name)
                     standings_data.append({
                         "Rank": i,
                         "Team": f"{'>>> ' if is_user else ''}{record.team_name}",
@@ -332,6 +333,7 @@ def render_dynasty_mode(shared):
                         "L": record.losses,
                         "Conf W-L": f"{record.conf_wins}-{record.conf_losses}",
                         "Win%": f"{record.win_percentage:.3f}",
+                        "PI": f"{pi:.1f}",
                         "PF": fmt_vb_score(record.points_for),
                         "PA": fmt_vb_score(record.points_against),
                         "OPI": f"{record.avg_opi:.1f}",
@@ -444,24 +446,27 @@ def render_dynasty_mode(shared):
                 if view_mode == "Conference Standings":
                     conf_names = list(season.conferences.keys())
                     if conf_names:
-                        for conf_name in conf_names:
-                            st.subheader(f"{conf_name}")
+                        champions = season.get_conference_champions()
+                        for conf_name in sorted(conf_names):
+                            champ = champions.get(conf_name, "")
+                            champ_label = f" — Champion: {champ}" if champ else ""
+                            st.subheader(f"{conf_name}{champ_label}")
                             conf_standings = season.get_conference_standings(conf_name)
                             if conf_standings:
                                 conf_data = []
                                 for i, record in enumerate(conf_standings, 1):
                                     is_user = record.team_name == dynasty.coach.team_name
+                                    pi = season.calculate_power_index(record.team_name)
                                     conf_data.append({
                                         "Rank": i,
                                         "Team": f"{'>>> ' if is_user else ''}{record.team_name}",
                                         "Conf": f"{record.conf_wins}-{record.conf_losses}",
                                         "Overall": f"{record.wins}-{record.losses}",
                                         "Win%": f"{record.win_percentage:.3f}",
+                                        "PI": f"{pi:.1f}",
                                         "PF": fmt_vb_score(record.points_for),
                                         "PA": fmt_vb_score(record.points_against),
                                         "OPI": f"{record.avg_opi:.1f}",
-                                        "Kicking": f"{record.avg_kicking:.1f}",
-                                        "Chaos": f"{record.avg_chaos:.1f}",
                                     })
                                 st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
                     else:
@@ -474,7 +479,7 @@ def render_dynasty_mode(shared):
                                                        key="poll_week_slider")
                         poll = season.weekly_polls[selected_week_idx - 1]
 
-                        st.subheader(f"CVL Top 25 Poll - Week {poll.week}")
+                        st.subheader(f"CVL Power Rankings - Week {poll.week}")
 
                         poll_data = []
                         for r in poll.rankings:
@@ -494,7 +499,9 @@ def render_dynasty_mode(shared):
                                 "Team": f"{'>>> ' if is_user else ''}{r.team_name}",
                                 "Record": r.record,
                                 "Conf": r.conference,
-                                "Score": f"{r.poll_score:.1f}",
+                                "Power Index": f"{r.power_index:.1f}",
+                                "Quality Wins": r.quality_wins,
+                                "SOS Rank": r.sos_rank,
                                 "Change": change_str,
                             })
                         st.dataframe(pd.DataFrame(poll_data), hide_index=True, use_container_width=True, height=600)

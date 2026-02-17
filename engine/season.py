@@ -123,6 +123,10 @@ class PollRanking:
     conference: str
     poll_score: float
     prev_rank: Optional[int] = None
+    power_index: float = 0.0
+    quality_wins: int = 0
+    sos_rank: int = 0
+    bid_type: str = ""
 
     @property
     def rank_change(self) -> Optional[int]:
@@ -522,27 +526,8 @@ class Season:
             if generate_polls:
                 self._generate_weekly_poll(week)
 
-    def _calculate_poll_score(self, record: TeamRecord) -> float:
-        """Calculate poll ranking score for a team"""
-        if record.games_played == 0:
-            return 0.0
-
-        win_score = record.win_percentage * 40
-
-        opi_score = min(20, record.avg_opi * 0.2)
-
-        ppg = record.points_for / max(1, record.games_played)
-        ppg_against = record.points_against / max(1, record.games_played)
-        diff = ppg - ppg_against
-        diff_score = min(15, max(0, (diff + 20) * 0.375))
-
-        sos = self._calculate_sos(record.team_name)
-        sos_score = sos * 25
-
-        return win_score + opi_score + diff_score + sos_score
-
     def _calculate_sos(self, team_name: str) -> float:
-        """Calculate strength of schedule for a team based on opponent win percentages"""
+        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts"""
         opponents = set()
         for game in self.schedule:
             if game.completed:
@@ -555,37 +540,240 @@ class Season:
             return 0.5
 
         opp_win_pcts = []
+        opp_opp_win_pcts = []
         for opp in opponents:
             if opp in self.standings:
-                opp_win_pcts.append(self.standings[opp].win_percentage)
+                opp_wp = self.standings[opp].win_percentage
+                opp_win_pcts.append(opp_wp)
+                opp_opps = set()
+                for g in self.schedule:
+                    if g.completed:
+                        if g.home_team == opp and g.away_team != team_name:
+                            opp_opps.add(g.away_team)
+                        elif g.away_team == opp and g.home_team != team_name:
+                            opp_opps.add(g.home_team)
+                for oo in opp_opps:
+                    if oo in self.standings:
+                        opp_opp_win_pcts.append(self.standings[oo].win_percentage)
 
-        return sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
+        direct = sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
+        indirect = sum(opp_opp_win_pcts) / len(opp_opp_win_pcts) if opp_opp_win_pcts else 0.5
+        return direct * 0.667 + indirect * 0.333
+
+    def _get_current_rankings(self) -> Dict[str, int]:
+        """Get current team rankings from latest poll, or by win pct if no poll exists"""
+        if self.weekly_polls:
+            return {r.team_name: r.rank for r in self.weekly_polls[-1].rankings}
+        ranked = sorted(
+            [(n, r) for n, r in self.standings.items() if r.games_played > 0],
+            key=lambda x: (x[1].win_percentage, x[1].point_differential),
+            reverse=True
+        )
+        return {name: i + 1 for i, (name, _) in enumerate(ranked)}
+
+    def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
+        """Count wins against teams ranked in top 25"""
+        quality = 0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            if game.home_team == team_name and (game.home_score or 0) > (game.away_score or 0):
+                opp = game.away_team
+            elif game.away_team == team_name and (game.away_score or 0) > (game.home_score or 0):
+                opp = game.home_team
+            else:
+                continue
+            if opp in rankings and rankings[opp] <= 25:
+                quality += 1
+        return quality
+
+    def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
+        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents"""
+        score = 0.0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            if game.home_team == team_name and (game.home_score or 0) > (game.away_score or 0):
+                opp = game.away_team
+            elif game.away_team == team_name and (game.away_score or 0) > (game.home_score or 0):
+                opp = game.home_team
+            else:
+                continue
+            if opp in rankings and rankings[opp] <= 25:
+                rank = rankings[opp]
+                if rank <= 5:
+                    score += 5.0
+                elif rank <= 10:
+                    score += 3.5
+                elif rank <= 15:
+                    score += 2.5
+                elif rank <= 20:
+                    score += 1.5
+                else:
+                    score += 1.0
+        return score
+
+    def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
+        """Losses to top-10 teams penalized less; losses to unranked teams penalized more"""
+        penalty = 0.0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            if game.home_team == team_name and (game.home_score or 0) < (game.away_score or 0):
+                opp = game.away_team
+            elif game.away_team == team_name and (game.away_score or 0) < (game.home_score or 0):
+                opp = game.home_team
+            else:
+                continue
+            if opp in rankings:
+                rank = rankings[opp]
+                if rank <= 5:
+                    penalty += 0.5
+                elif rank <= 10:
+                    penalty += 1.0
+                elif rank <= 25:
+                    penalty += 2.0
+                else:
+                    penalty += 3.0
+            else:
+                penalty += 3.5
+        return penalty
+
+    def _non_conference_record(self, team_name: str) -> Tuple[int, int]:
+        """Get non-conference wins and losses"""
+        nc_wins = 0
+        nc_losses = 0
+        for game in self.schedule:
+            if not game.completed or game.is_conference_game:
+                continue
+            if game.home_team == team_name:
+                if (game.home_score or 0) > (game.away_score or 0):
+                    nc_wins += 1
+                else:
+                    nc_losses += 1
+            elif game.away_team == team_name:
+                if (game.away_score or 0) > (game.home_score or 0):
+                    nc_wins += 1
+                else:
+                    nc_losses += 1
+        return nc_wins, nc_losses
+
+    def _conference_strength(self, conference: str) -> float:
+        """Calculate conference strength based on non-conference performance of all members"""
+        conf_teams = self.conferences.get(conference, [])
+        if not conf_teams:
+            return 0.5
+        total_nc_wins = 0
+        total_nc_games = 0
+        for team in conf_teams:
+            nc_w, nc_l = self._non_conference_record(team)
+            total_nc_wins += nc_w
+            total_nc_games += nc_w + nc_l
+        return total_nc_wins / total_nc_games if total_nc_games > 0 else 0.5
+
+    def calculate_power_index(self, team_name: str) -> float:
+        """Calculate comprehensive Power Index for a team.
+
+        Components (100-point scale):
+        - Win percentage:       30 pts
+        - Strength of schedule: 20 pts
+        - Quality wins:         20 pts (weighted by opponent rank)
+        - Loss quality:        -penalty (bad losses hurt more)
+        - Non-conf record:      10 pts
+        - Conference strength:  10 pts
+        - Point differential:   10 pts
+        """
+        record = self.standings.get(team_name)
+        if not record or record.games_played == 0:
+            return 0.0
+
+        rankings = self._get_current_rankings()
+
+        win_component = record.win_percentage * 30.0
+
+        sos = self._calculate_sos(team_name)
+        sos_component = sos * 20.0
+
+        qw_score = self._quality_win_score(team_name, rankings)
+        qw_component = min(20.0, qw_score * 4.0)
+
+        loss_penalty = self._loss_quality_score(team_name, rankings)
+
+        nc_w, nc_l = self._non_conference_record(team_name)
+        nc_total = nc_w + nc_l
+        nc_component = (nc_w / nc_total * 10.0) if nc_total > 0 else 5.0
+
+        conf = self.team_conferences.get(team_name, "")
+        conf_str = self._conference_strength(conf) if conf else 0.5
+        conf_component = conf_str * 10.0
+
+        ppg = record.points_for / max(1, record.games_played)
+        ppg_against = record.points_against / max(1, record.games_played)
+        diff = ppg - ppg_against
+        diff_component = min(10.0, max(0.0, (diff + 20) * 0.25))
+
+        power = (win_component + sos_component + qw_component + nc_component +
+                 conf_component + diff_component - loss_penalty)
+        return max(0.0, round(power, 2))
+
+    def get_all_power_rankings(self) -> List[Tuple[str, float, int]]:
+        """Get all teams sorted by power index. Returns [(team_name, power_index, quality_wins)]"""
+        rankings = self._get_current_rankings()
+        results = []
+        for team_name, record in self.standings.items():
+            if record.games_played > 0:
+                pi = self.calculate_power_index(team_name)
+                qw = self._count_quality_wins(team_name, rankings)
+                results.append((team_name, pi, qw))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    def get_conference_champions(self) -> Dict[str, str]:
+        """Determine conference champion for each conference (best conf record, then overall)"""
+        champions = {}
+        for conf_name in self.conferences:
+            conf_standings = self.get_conference_standings(conf_name)
+            if conf_standings:
+                champions[conf_name] = conf_standings[0].team_name
+        return champions
+
+    def _calculate_poll_score(self, record: TeamRecord) -> float:
+        """Calculate poll ranking score using Power Index"""
+        if record.games_played == 0:
+            return 0.0
+        return self.calculate_power_index(record.team_name)
 
     def _generate_weekly_poll(self, week: int):
-        """Generate rankings after a week of games"""
+        """Generate rankings after a week using Power Index"""
         prev_poll = self.weekly_polls[-1] if self.weekly_polls else None
         prev_ranks = {}
         if prev_poll:
             for r in prev_poll.rankings:
                 prev_ranks[r.team_name] = r.rank
 
-        team_scores = []
+        power_rankings = self.get_all_power_rankings()
+        current_rankings = self._get_current_rankings()
+
+        sos_list = []
         for team_name, record in self.standings.items():
             if record.games_played > 0:
-                score = self._calculate_poll_score(record)
-                team_scores.append((team_name, record, score))
-
-        team_scores.sort(key=lambda x: x[2], reverse=True)
+                sos_list.append((team_name, self._calculate_sos(team_name)))
+        sos_list.sort(key=lambda x: x[1], reverse=True)
+        sos_rank_map = {name: i + 1 for i, (name, _) in enumerate(sos_list)}
 
         rankings = []
-        for i, (team_name, record, score) in enumerate(team_scores[:25], 1):
+        for i, (team_name, pi, qw) in enumerate(power_rankings[:25], 1):
+            record = self.standings[team_name]
             rankings.append(PollRanking(
                 rank=i,
                 team_name=team_name,
                 record=f"{record.wins}-{record.losses}",
                 conference=record.conference,
-                poll_score=round(score, 2),
-                prev_rank=prev_ranks.get(team_name)
+                poll_score=round(pi, 2),
+                prev_rank=prev_ranks.get(team_name),
+                power_index=round(pi, 2),
+                quality_wins=qw,
+                sos_rank=sos_rank_map.get(team_name, 0),
             ))
 
         self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings))
@@ -612,8 +800,50 @@ class Season:
         )
 
     def get_playoff_teams(self, num_teams: int = 4) -> List[TeamRecord]:
-        sorted_standings = self.get_standings_sorted()
-        return sorted_standings[:num_teams]
+        """Select playoff teams: conference champions get auto-bids, remaining spots filled by power index.
+
+        Each conference champion gets an automatic bid. Remaining spots go to the
+        highest-rated teams by power index (at-large bids). Teams are then seeded
+        by power index regardless of bid type.
+        """
+        champions = self.get_conference_champions()
+        num_conferences = len(champions)
+
+        auto_bid_teams = set(champions.values())
+        self._playoff_bid_types = {}
+
+        if num_conferences > 0 and num_teams >= num_conferences:
+            for conf, champ in champions.items():
+                self._playoff_bid_types[champ] = "auto"
+
+            at_large_spots = num_teams - len(auto_bid_teams)
+
+            power_ranked = self.get_all_power_rankings()
+            at_large = []
+            for team_name, pi, qw in power_ranked:
+                if team_name not in auto_bid_teams:
+                    at_large.append(team_name)
+                    self._playoff_bid_types[team_name] = "at-large"
+                    if len(at_large) >= at_large_spots:
+                        break
+
+            all_playoff_names = list(auto_bid_teams) + at_large
+
+            pi_map = {name: pi for name, pi, _ in power_ranked}
+            all_playoff_names.sort(key=lambda n: pi_map.get(n, 0), reverse=True)
+
+            return [self.standings[n] for n in all_playoff_names if n in self.standings]
+        else:
+            power_ranked = self.get_all_power_rankings()
+            result = []
+            for team_name, pi, qw in power_ranked[:num_teams]:
+                self._playoff_bid_types[team_name] = "at-large"
+                result.append(self.standings[team_name])
+            return result
+
+    def get_playoff_bid_type(self, team_name: str) -> str:
+        """Get whether a team earned an 'auto' or 'at-large' bid"""
+        return getattr(self, '_playoff_bid_types', {}).get(team_name, "")
 
     def get_latest_poll(self) -> Optional[WeeklyPoll]:
         return self.weekly_polls[-1] if self.weekly_polls else None
