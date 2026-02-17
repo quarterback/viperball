@@ -168,7 +168,7 @@ def render_season_simulator(shared):
         with sched_col1:
             season_games = st.slider("Regular Season Games Per Team", min_value=8, max_value=12, value=10, key="season_games_per_team")
         with sched_col2:
-            playoff_options = [p for p in [4, 8, 12, 16] if p <= len(selected_teams)]
+            playoff_options = [p for p in [4, 8, 12, 16, 24, 32] if p <= len(selected_teams)]
             if not playoff_options:
                 playoff_options = [len(selected_teams)]
             playoff_size = st.radio("Playoff Format", playoff_options, index=0, key="playoff_size", horizontal=True)
@@ -375,6 +375,7 @@ def render_season_simulator(shared):
                                 l_score = min(hs, aws)
                                 st.markdown(f"Game {i}: **{winner}** {fmt_vb_score(w_score)} def. {loser} {fmt_vb_score(l_score)}")
 
+                    _render_round("Opening Round", 996)
                     _render_round("First Round", 997)
                     _render_round("Quarterfinals", 998)
                     _render_round("Semifinals", 999)
@@ -488,12 +489,10 @@ def render_season_simulator(shared):
                         all_game_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
                 if season.playoff_bracket:
+                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "Quarterfinals", 999: "Semifinals", 1000: "Championship"}
                     for g in season.playoff_bracket:
                         if g.completed:
-                            if g.week == 1000:
-                                round_label = "Championship"
-                            else:
-                                round_label = f"Playoff R{g.week}"
+                            round_label = playoff_round_names.get(g.week, f"Playoff R{g.week}")
                             all_game_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.week})
 
                 if season.bowl_games:

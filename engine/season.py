@@ -930,6 +930,57 @@ class Season:
             )
             self.champion = self._get_winner(finals[0])
 
+        elif num_teams == 24:
+            byes = seeds[:8]
+            first_round = self._play_round(
+                [(seeds[8 + i], seeds[23 - i]) for i in range(8)], week=996, verbose=verbose
+            )
+            frw = [self._get_winner(g) for g in first_round]
+            second_matchups = [
+                (byes[0], frw[7]),
+                (byes[1], frw[6]),
+                (byes[2], frw[5]),
+                (byes[3], frw[4]),
+                (byes[4], frw[3]),
+                (byes[5], frw[2]),
+                (byes[6], frw[1]),
+                (byes[7], frw[0]),
+            ]
+            second_round = self._play_round(second_matchups, week=997, verbose=verbose)
+            srw = [self._get_winner(g) for g in second_round]
+            quarters = self._play_round(
+                [(srw[i], srw[7 - i]) for i in range(4)], week=998, verbose=verbose
+            )
+            qw = [self._get_winner(g) for g in quarters]
+            semis = self._play_round(
+                [(qw[0], qw[3]), (qw[1], qw[2])], week=999, verbose=verbose
+            )
+            finals = self._play_round(
+                [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
+            )
+            self.champion = self._get_winner(finals[0])
+
+        elif num_teams == 32:
+            first_round = self._play_round(
+                [(seeds[i], seeds[31 - i]) for i in range(16)], week=996, verbose=verbose
+            )
+            frw = [self._get_winner(g) for g in first_round]
+            second_round = self._play_round(
+                [(frw[i], frw[15 - i]) for i in range(8)], week=997, verbose=verbose
+            )
+            srw = [self._get_winner(g) for g in second_round]
+            quarters = self._play_round(
+                [(srw[i], srw[7 - i]) for i in range(4)], week=998, verbose=verbose
+            )
+            qw = [self._get_winner(g) for g in quarters]
+            semis = self._play_round(
+                [(qw[0], qw[3]), (qw[1], qw[2])], week=999, verbose=verbose
+            )
+            finals = self._play_round(
+                [(self._get_winner(semis[0]), self._get_winner(semis[1]))], week=1000, verbose=verbose
+            )
+            self.champion = self._get_winner(finals[0])
+
     def simulate_bowls(self, bowl_count: int = 0, playoff_size: int = 4,
                        bowl_names: Optional[List[str]] = None, verbose: bool = False):
         """Simulate bowl games for non-playoff teams.

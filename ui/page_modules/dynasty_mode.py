@@ -202,7 +202,7 @@ def render_dynasty_mode(shared):
                     key=f"dyn_games_{dynasty.current_year}"
                 )
             with setup_col2:
-                dyn_playoff_options = [p for p in [4, 8, 12, 16] if p <= total_teams]
+                dyn_playoff_options = [p for p in [4, 8, 12, 16, 24, 32] if p <= total_teams]
                 if not dyn_playoff_options:
                     dyn_playoff_options = [total_teams]
                 playoff_format = st.radio("Playoff Format", dyn_playoff_options, index=0, horizontal=True,
@@ -368,12 +368,10 @@ def render_dynasty_mode(shared):
                         dyn_all_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
                 if season.playoff_bracket:
+                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "Quarterfinals", 999: "Semifinals", 1000: "Championship"}
                     for g in season.playoff_bracket:
                         if g.completed:
-                            if g.week == 1000:
-                                round_label = "Championship"
-                            else:
-                                round_label = f"Playoff R{g.week}"
+                            round_label = playoff_round_names.get(g.week, f"Playoff R{g.week}")
                             dyn_all_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.week})
 
                 if season.bowl_games:
