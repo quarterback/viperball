@@ -3727,7 +3727,20 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
     defense_style = data.get("style", {}).get("defense_style", "base_defense")
     identity = data.get("identity", {})
     philosophy = identity.get("philosophy", "hybrid")
-    recruiting_pipeline = data.get("recruiting_pipeline", None)
+    state = data["team_info"].get("state", "")
+
+    # Build geo-aware pipeline from school location; this is blended with the
+    # international baseline inside generate_player_name's select_origin().
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+        _root = str(_Path(__file__).parent.parent)
+        if _root not in _sys.path:
+            _sys.path.insert(0, _root)
+        from scripts.generate_names import build_geo_pipeline as _build_geo
+        recruiting_pipeline = _build_geo(state) if state else data.get("recruiting_pipeline", None)
+    except Exception:
+        recruiting_pipeline = data.get("recruiting_pipeline", None)
 
     has_roster = "roster" in data and data["roster"].get("players")
 

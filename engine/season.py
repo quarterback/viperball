@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from engine.game_engine import ViperballEngine, Team, load_team_from_json
+from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
 
 
@@ -266,6 +267,9 @@ class Season:
     conferences: Dict[str, List[str]] = field(default_factory=dict)
     team_conferences: Dict[str, str] = field(default_factory=dict)
 
+    # Optional: map team name -> US state for geo-aware weather generation
+    team_states: Dict[str, str] = field(default_factory=dict)
+
     weekly_polls: List[WeeklyPoll] = field(default_factory=list)
 
     playoff_bracket: List[Game] = field(default_factory=list)
@@ -455,11 +459,14 @@ class Season:
             f"{away_team.name}_defense": away_style_config.get('defense_style', 'base_defense'),
         }
 
-        season_weather = random.choices(
-            ["clear", "rain", "snow", "sleet", "heat", "wind"],
-            weights=[40, 20, 10, 5, 15, 10],
-            k=1
-        )[0]
+        # Geo-aware weather: use home team's state if available
+        home_state = self.team_states.get(game.home_team)
+        total_weeks = max((g.week for g in self.schedule), default=18)
+        season_weather = generate_game_weather(
+            state=home_state,
+            week=game.week,
+            total_weeks=total_weeks,
+        )
 
         engine = ViperballEngine(
             home_team,
@@ -806,12 +813,37 @@ def load_teams_from_directory(directory: str) -> Dict[str, Team]:
     return teams
 
 
+def load_teams_with_states(directory: str) -> tuple:
+    """
+    Load all teams from a directory and also return a state map for weather.
+
+    Returns:
+        (teams_dict, team_states_dict) where team_states maps team_name -> state
+    """
+    import json as _json
+    teams = {}
+    team_states = {}
+    team_dir = Path(directory)
+
+    for team_file in team_dir.glob("*.json"):
+        with open(team_file) as f:
+            raw = _json.load(f)
+        state = raw.get("team_info", {}).get("state", "")
+        team = load_team_from_json(str(team_file))
+        teams[team.name] = team
+        if state:
+            team_states[team.name] = state
+
+    return teams, team_states
+
+
 def create_season(
     name: str,
     teams: Dict[str, Team],
     style_configs: Optional[Dict[str, Dict[str, str]]] = None,
     conferences: Optional[Dict[str, List[str]]] = None,
-    games_per_team: int = 0
+    games_per_team: int = 0,
+    team_states: Optional[Dict[str, str]] = None,
 ) -> Season:
     """
     Create a season with teams and optional style configurations
@@ -822,6 +854,7 @@ def create_season(
         style_configs: Optional dictionary of team_name -> {'offense_style': ..., 'defense_style': ...}
         conferences: Optional dictionary of conference_name -> [team_names]
         games_per_team: Games per team (0 = full round-robin)
+        team_states: Optional dict of team_name -> US state abbreviation for geo-aware weather
 
     Returns:
         Season object ready for simulation
@@ -838,6 +871,7 @@ def create_season(
         style_configs=style_configs or {},
         conferences=conf_map,
         team_conferences=team_conf_map,
+        team_states=team_states or {},
     )
 
     season.generate_schedule(games_per_team=games_per_team)

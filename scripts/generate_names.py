@@ -115,6 +115,80 @@ REGION_TO_ORIGIN = {
     'other_intl': ('irish_european', 'European'),
 }
 
+# Map US state abbreviations to primary recruiting region
+STATE_TO_REGION: Dict[str, str] = {
+    # Northeast
+    'VT': 'northeast', 'ME': 'northeast', 'NH': 'northeast', 'MA': 'northeast',
+    'RI': 'northeast', 'CT': 'northeast', 'NY': 'northeast', 'NJ': 'northeast',
+    'PA': 'northeast',
+    # Mid-Atlantic
+    'DC': 'mid_atlantic', 'MD': 'mid_atlantic', 'VA': 'mid_atlantic',
+    'DE': 'mid_atlantic', 'WV': 'mid_atlantic',
+    # South
+    'NC': 'south', 'SC': 'south', 'TN': 'south', 'GA': 'south', 'FL': 'south',
+    'AL': 'south', 'MS': 'south', 'AR': 'south', 'KY': 'south', 'OK': 'south',
+    'LA': 'south',
+    # Midwest
+    'OH': 'midwest', 'IN': 'midwest', 'IL': 'midwest', 'WI': 'midwest',
+    'MI': 'midwest', 'MN': 'midwest', 'IA': 'midwest', 'MO': 'midwest',
+    'ND': 'midwest', 'SD': 'midwest', 'NE': 'midwest', 'KS': 'midwest',
+    # West Coast
+    'CA': 'west_coast', 'OR': 'west_coast', 'WA': 'west_coast',
+    'ID': 'west_coast', 'MT': 'west_coast',
+    # Texas / Southwest
+    'TX': 'texas_southwest', 'AZ': 'texas_southwest', 'NM': 'texas_southwest',
+    'CO': 'texas_southwest', 'UT': 'texas_southwest', 'NV': 'texas_southwest',
+    'WY': 'texas_southwest',
+}
+
+# Adjacent/neighboring regions for spillover recruiting
+REGION_NEIGHBORS: Dict[str, List[str]] = {
+    'northeast':       ['mid_atlantic', 'midwest'],
+    'mid_atlantic':    ['northeast', 'south', 'midwest'],
+    'south':           ['mid_atlantic', 'midwest', 'texas_southwest'],
+    'midwest':         ['northeast', 'mid_atlantic', 'south', 'west_coast', 'texas_southwest'],
+    'west_coast':      ['midwest', 'texas_southwest'],
+    'texas_southwest': ['south', 'midwest', 'west_coast'],
+}
+
+def build_geo_pipeline(state: str) -> Dict[str, float]:
+    """
+    Build a domestic recruiting pipeline for a school based on its US state.
+
+    Priority:
+      - Home region: 50%
+      - 1st neighbor: 20%
+      - 2nd neighbor: 15%
+      - Remaining regions split remaining 15%
+
+    The international baseline is added automatically in select_origin().
+    Returns only domestic region weights (will be normalized to 66% in select_origin).
+    """
+    home = STATE_TO_REGION.get(state, 'midwest')
+    neighbors = REGION_NEIGHBORS.get(home, [])
+    all_domestic = list(DOMESTIC_KEYS)
+    others = [r for r in all_domestic if r != home and r not in neighbors]
+
+    pipeline: Dict[str, float] = {home: 0.50}
+    if neighbors:
+        pipeline[neighbors[0]] = 0.20
+        if len(neighbors) > 1:
+            pipeline[neighbors[1]] = 0.15
+        # Distribute remaining among further neighbors + others
+        remaining = 0.15
+        far = neighbors[2:] + others
+        if far:
+            per = remaining / len(far)
+            for r in far:
+                pipeline[r] = per
+    else:
+        # No neighbors — split evenly among others
+        if others:
+            per = 0.50 / len(others)
+            for r in others:
+                pipeline[r] = per
+    return pipeline
+
 def select_origin(recruiting_pipeline: Optional[Dict[str, float]] = None) -> Tuple[str, str]:
     """
     Select origin and region based on recruiting pipeline weights.

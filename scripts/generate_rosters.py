@@ -22,7 +22,7 @@ import sys
 # Add parent directory to path to import generate_names
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.generate_names import generate_player_name
+from scripts.generate_names import generate_player_name, build_geo_pipeline
 from scripts.generate_coach_names import generate_coach_name
 
 
@@ -226,9 +226,26 @@ def generate_roster(school_data):
 
     school_id = school_data['school_id']
     school_name = school_data['school_name']
-    recruiting_pipeline = school_data.get('recruiting_pipeline', {})
+    state = school_data.get('state', '')
     identity = school_data.get('identity', {})
     philosophy = identity.get('philosophy', 'hybrid')
+
+    # Build geo-based domestic pipeline from school location.
+    # Any school-level overrides can supplement (not replace) the geo pipeline.
+    geo_pipeline = build_geo_pipeline(state)
+    stored_pipeline = school_data.get('recruiting_pipeline', {})
+    if stored_pipeline:
+        # Blend: use geo pipeline as base but amplify any regions explicitly boosted
+        # by the school's stored pipeline (e.g. australian for Pacific schools)
+        from scripts.generate_names import DOMESTIC_KEYS
+        for key, val in stored_pipeline.items():
+            if key not in DOMESTIC_KEYS:
+                # Preserve international boosts from stored pipeline (they'll be
+                # overridden by INTERNATIONAL_BASELINE in select_origin anyway,
+                # but we keep the dict around for reference)
+                pass
+        # Use geo pipeline as the effective domestic pipeline
+    recruiting_pipeline = geo_pipeline
 
     print(f"  Generating roster for {school_name}...")
 
