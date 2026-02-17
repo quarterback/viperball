@@ -129,10 +129,6 @@ class SeasonAwards:
         return self.honors.get("coach_of_year", "") if self.honors else ""
 
     @property
-    def chaos_king(self) -> str:
-        return self.honors.get("chaos_king", "") if self.honors else ""
-
-    @property
     def most_improved(self) -> str:
         return self.honors.get("most_improved", "") if self.honors else ""
 

@@ -235,23 +235,22 @@ def export_dynasty_awards_csv(dynasty: "Dynasty", filepath: str) -> str:
 
         # Team-level awards
         team_awards = [
-            ("team", "CVL Champion", awards.champion, awards.champion, "", 0),
-            ("team", "Best Record", awards.best_record, awards.best_record, "", 0),
-            ("team", "Highest Scoring", awards.highest_scoring, awards.highest_scoring, "", 0),
-            ("team", "Best Defense", awards.best_defense, awards.best_defense, "", 0),
-            ("team", "Highest OPI", awards.highest_opi, awards.highest_opi, "", 0),
-            ("team", "Most Chaos", awards.most_chaos, awards.most_chaos, "", 0),
-            ("team", "Best Kicking", awards.best_kicking, awards.best_kicking, "", 0),
+            ("team", "CVL Champion",    awards.champion,        awards.champion),
+            ("team", "Best Record",     awards.best_record,     awards.best_record),
+            ("team", "Highest Scoring", awards.highest_scoring, awards.highest_scoring),
+            ("team", "Best Defense",    awards.best_defense,    awards.best_defense),
+            ("team", "Highest OPI",     awards.highest_opi,     awards.highest_opi),
+            ("team", "Best Kicking",    awards.best_kicking,    awards.best_kicking),
         ]
-        for award_type, award_name, winner, team, pos, ovr in team_awards:
+        for award_type, award_name, winner, team in team_awards:
             rows.append({
                 "year": year,
                 "award_type": award_type,
                 "award_name": award_name,
                 "winner": winner,
                 "team": team,
-                "position": pos,
-                "overall_rating": ovr,
+                "position": "",
+                "overall_rating": 0,
             })
 
         # Individual awards from honors
@@ -267,11 +266,10 @@ def export_dynasty_awards_csv(dynasty: "Dynasty", filepath: str) -> str:
                 "overall_rating": a.get("overall_rating", 0),
             })
 
-        # Team-level honors awards
+        # Team-level honors
         for award_name, winner in [
-            ("Coach of the Year", honors.get("coach_of_year", "")),
-            ("Chaos King", honors.get("chaos_king", "")),
-            ("Most Improved Team", honors.get("most_improved", "")),
+            ("Coach of the Year",        honors.get("coach_of_year", "")),
+            ("Most Improved Program",    honors.get("most_improved", "")),
         ]:
             if winner:
                 rows.append({
@@ -362,20 +360,28 @@ def export_development_history_csv(dynasty: "Dynasty", filepath: str) -> str:
 
 def export_all_american_csv(dynasty: "Dynasty", filepath: str) -> str:
     """
-    Export All-American selections across all seasons to CSV.
+    Export All-CVL selections (1st, 2nd, 3rd, HM, Freshman) across all seasons to CSV.
 
-    Columns: year, team_level, position_slot, player, team, position, overall_rating
+    Columns: year, team_level, position_slot, player, year_in_school, team, position, overall_rating
     """
     _ensure_dir(filepath)
     fieldnames = [
         "year", "team_level", "position_slot",
-        "player", "team", "position", "overall_rating",
+        "player", "year_in_school", "team", "position", "overall_rating",
+    ]
+
+    _tiers = [
+        ("all_american_first",  "1st Team"),
+        ("all_american_second", "2nd Team"),
+        ("all_american_third",  "3rd Team"),
+        ("honorable_mention",   "Honorable Mention"),
+        ("all_freshman",        "All-Freshman"),
     ]
 
     rows = []
     for year in sorted(dynasty.honors_history.keys()):
         honors = dynasty.honors_history[year]
-        for team_key, level_label in [("all_american_first", "1st Team"), ("all_american_second", "2nd Team")]:
+        for team_key, level_label in _tiers:
             team_data = honors.get(team_key) or {}
             for slot in team_data.get("slots", []):
                 rows.append({
@@ -383,6 +389,7 @@ def export_all_american_csv(dynasty: "Dynasty", filepath: str) -> str:
                     "team_level": level_label,
                     "position_slot": slot.get("award_name", ""),
                     "player": slot.get("player_name", ""),
+                    "year_in_school": slot.get("year_in_school", ""),
                     "team": slot.get("team_name", ""),
                     "position": slot.get("position", ""),
                     "overall_rating": slot.get("overall_rating", 0),
@@ -398,30 +405,39 @@ def export_all_american_csv(dynasty: "Dynasty", filepath: str) -> str:
 
 def export_all_conference_csv(dynasty: "Dynasty", filepath: str) -> str:
     """
-    Export All-Conference selections across all seasons to CSV.
+    Export All-Conference selections (1st and 2nd team) across all seasons to CSV.
 
-    Columns: year, conference, position_slot, player, team, position, overall_rating
+    Columns: year, conference, team_level, position_slot, player, year_in_school,
+             team, position, overall_rating
     """
     _ensure_dir(filepath)
     fieldnames = [
-        "year", "conference", "position_slot",
-        "player", "team", "position", "overall_rating",
+        "year", "conference", "team_level", "position_slot",
+        "player", "year_in_school", "team", "position", "overall_rating",
     ]
 
     rows = []
     for year in sorted(dynasty.honors_history.keys()):
         honors = dynasty.honors_history[year]
-        for conf_name, conf_data in (honors.get("all_conference_teams") or {}).items():
-            for slot in conf_data.get("slots", []):
-                rows.append({
-                    "year": year,
-                    "conference": conf_name,
-                    "position_slot": slot.get("award_name", ""),
-                    "player": slot.get("player_name", ""),
-                    "team": slot.get("team_name", ""),
-                    "position": slot.get("position", ""),
-                    "overall_rating": slot.get("overall_rating", 0),
-                })
+        for conf_name, tiers in (honors.get("all_conference_teams") or {}).items():
+            # tiers is {"first": {...}, "second": {...}}
+            for tier_key, tier_label in [("first", "1st Team"), ("second", "2nd Team")]:
+                conf_data = tiers.get(tier_key) if isinstance(tiers, dict) else None
+                if not conf_data:
+                    continue
+                slots = conf_data.get("slots", []) if isinstance(conf_data, dict) else []
+                for slot in slots:
+                    rows.append({
+                        "year": year,
+                        "conference": conf_name,
+                        "team_level": tier_label,
+                        "position_slot": slot.get("award_name", ""),
+                        "player": slot.get("player_name", ""),
+                        "year_in_school": slot.get("year_in_school", ""),
+                        "team": slot.get("team_name", ""),
+                        "position": slot.get("position", ""),
+                        "overall_rating": slot.get("overall_rating", 0),
+                    })
 
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
