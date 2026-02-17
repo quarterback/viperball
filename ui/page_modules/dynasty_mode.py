@@ -50,7 +50,7 @@ def render_dynasty_mode(shared):
 
         st.divider()
         st.subheader("Conference Setup")
-        teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        teams_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "teams")
         setup_teams = load_teams_from_directory(teams_dir)
         all_team_names_sorted = sorted(setup_teams.keys())
 
@@ -213,7 +213,7 @@ def render_dynasty_mode(shared):
             dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, dyn_max_bowls), value=min(dyn_rec, min(12, dyn_max_bowls)),
                                         key=f"dyn_bowls_{dynasty.current_year}")
 
-            teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+            teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "teams")
             team_identities = load_team_identity(teams_dir_path)
             
             st.markdown("**Your Team**")
