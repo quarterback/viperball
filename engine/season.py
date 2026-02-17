@@ -151,6 +151,7 @@ class Game:
 
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
+    full_result: Optional[Dict] = None
 
 
 BOWL_WORD_BANKS = {
@@ -486,6 +487,7 @@ class Season:
 
         game.home_metrics = home_metrics
         game.away_metrics = away_metrics
+        game.full_result = result
 
         home_won = game.home_score > game.away_score
         away_won = game.away_score > game.home_score

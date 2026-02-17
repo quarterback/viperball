@@ -19,6 +19,7 @@ from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
 from engine.viperball_metrics import calculate_viperball_metrics
 from engine.conference_names import generate_conference_names
+from engine.geography import get_geographic_conference_defaults
 from engine.injuries import InjuryTracker
 from engine.player_card import player_to_card
 from engine.export import (
@@ -376,7 +377,136 @@ def drive_result_color(result):
     return colors.get(result, "#94a3b8")
 
 
-page = st.sidebar.radio("Navigation", ["Game Simulator", "Season Simulator", "Dynasty Mode", "Debug Tools", "Play Inspector"], index=0)
+def render_game_detail(result, key_prefix="gd"):
+    """Render a full game detail view from a game result dict."""
+    home = result["final_score"]["home"]
+    away = result["final_score"]["away"]
+    hs = result["stats"]["home"]
+    as_ = result["stats"]["away"]
+    plays = result["play_by_play"]
+    home_name = home["team"]
+    away_name = away["team"]
+
+    winner = home_name if home["score"] > away["score"] else away_name
+    w_score = max(home["score"], away["score"])
+    l_score = min(home["score"], away["score"])
+    loser = away_name if winner == home_name else home_name
+
+    st.markdown(f"### {winner} {fmt_vb_score(w_score)} - {loser} {fmt_vb_score(l_score)}")
+
+    weather = result.get("weather", "clear")
+    seed = result.get("seed", "N/A")
+    st.caption(f"Weather: {weather.title()} | Seed: {seed}")
+
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    for p in plays:
+        q = p.get("quarter", 0)
+        if q not in home_q:
+            continue
+        if p["result"] in ("touchdown", "punt_return_td"):
+            if p["possession"] == "home":
+                home_q[q] += 9
+            else:
+                away_q[q] += 9
+        elif p["result"] == "successful_kick":
+            pts = 5 if p.get("play_type") == "drop_kick" else 3
+            if p["possession"] == "home":
+                home_q[q] += pts
+            else:
+                away_q[q] += pts
+        elif p["result"] == "pindown":
+            if p["possession"] == "home":
+                home_q[q] += 1
+            else:
+                away_q[q] += 1
+        elif p["result"] == "safety":
+            if p["possession"] == "home":
+                away_q[q] += 2
+            else:
+                home_q[q] += 2
+        elif p["result"] == "fumble":
+            if p["possession"] == "home":
+                away_q[q] += 0.5
+            else:
+                home_q[q] += 0.5
+
+    q_data = []
+    q_data.append({"Team": home_name, "Q1": fmt_vb_score(home_q[1]), "Q2": fmt_vb_score(home_q[2]),
+                    "Q3": fmt_vb_score(home_q[3]), "Q4": fmt_vb_score(home_q[4]),
+                    "Final": fmt_vb_score(home["score"])})
+    q_data.append({"Team": away_name, "Q1": fmt_vb_score(away_q[1]), "Q2": fmt_vb_score(away_q[2]),
+                    "Q3": fmt_vb_score(away_q[3]), "Q4": fmt_vb_score(away_q[4]),
+                    "Final": fmt_vb_score(away["score"])})
+    st.dataframe(pd.DataFrame(q_data), hide_index=True, use_container_width=True)
+
+    st.markdown("**Team Stats**")
+    stat_rows = [
+        {"Stat": "Touchdowns (9pts)", home_name: f"{hs['touchdowns']} ({hs['touchdowns']*9}pts)", away_name: f"{as_['touchdowns']} ({as_['touchdowns']*9}pts)"},
+        {"Stat": "Snap Kicks (5pts)", home_name: f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)}", away_name: f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)}"},
+        {"Stat": "Field Goals (3pts)", home_name: f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)}", away_name: f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)}"},
+        {"Stat": "Pindowns (1pt)", home_name: str(hs.get('pindowns',0)), away_name: str(as_.get('pindowns',0))},
+        {"Stat": "Strikes (1/2pt)", home_name: str(hs.get('fumble_recoveries',0)), away_name: str(as_.get('fumble_recoveries',0))},
+        {"Stat": "Total Yards", home_name: str(hs['total_yards']), away_name: str(as_['total_yards'])},
+        {"Stat": "Rushing Yards", home_name: str(hs.get('rushing_yards',0)), away_name: str(as_.get('rushing_yards',0))},
+        {"Stat": "Lateral Yards", home_name: str(hs.get('lateral_yards',0)), away_name: str(as_.get('lateral_yards',0))},
+        {"Stat": "Yards/Play", home_name: str(hs['yards_per_play']), away_name: str(as_['yards_per_play'])},
+        {"Stat": "Total Plays", home_name: str(hs['total_plays']), away_name: str(as_['total_plays'])},
+        {"Stat": "Fumbles Lost", home_name: str(hs['fumbles_lost']), away_name: str(as_['fumbles_lost'])},
+        {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
+    ]
+    st.dataframe(pd.DataFrame(stat_rows), hide_index=True, use_container_width=True)
+
+    drives = result.get("drive_summary", [])
+    if drives:
+        with st.expander("Drive Summary", expanded=False):
+            drive_rows = []
+            for i, d in enumerate(drives):
+                team_label = home_name if d['team'] == 'home' else away_name
+                drive_rows.append({
+                    "#": i + 1,
+                    "Team": team_label,
+                    "Qtr": f"Q{d['quarter']}",
+                    "Start": f"{d['start_yard_line']}yd",
+                    "Plays": d['plays'],
+                    "Yards": d['yards'],
+                    "Result": drive_result_label(d['result']),
+                })
+            st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True)
+
+    with st.expander("Play-by-Play", expanded=False):
+        quarter_filter = st.multiselect("Filter by Quarter", [1, 2, 3, 4], default=[1, 2, 3, 4], key=f"{key_prefix}_qfilter")
+        filtered_plays = [p for p in plays if p.get("quarter") in quarter_filter]
+        play_rows = []
+        for p in filtered_plays:
+            team_label = home_name if p['possession'] == 'home' else away_name
+            play_rows.append({
+                "#": p['play_number'],
+                "Team": team_label,
+                "Qtr": f"Q{p['quarter']}",
+                "Time": format_time(p['time_remaining']),
+                "Down": f"{p['down']}&{p.get('yards_to_go','')}",
+                "FP": f"{p['field_position']}yd",
+                "Family": p.get('play_family', ''),
+                "Description": p['description'],
+                "Yds": p['yards'],
+                "Result": p['result'],
+            })
+        st.dataframe(pd.DataFrame(play_rows), hide_index=True, use_container_width=True, height=400)
+
+    with st.expander("Export Game Data", expanded=False):
+        dl1, dl2 = st.columns(2)
+        with dl1:
+            st.download_button("Download Play Log (CSV)", generate_play_log_csv(result),
+                               file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_plays.csv",
+                               mime="text/csv", key=f"{key_prefix}_dl_plays")
+        with dl2:
+            st.download_button("Download Drives (CSV)", generate_drives_csv(result),
+                               file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_drives.csv",
+                               mime="text/csv", key=f"{key_prefix}_dl_drives")
+
+
+page = st.sidebar.radio("Navigation", ["Game Simulator", "Season Simulator", "Dynasty Mode", "Team Roster", "Debug Tools", "Play Inspector"], index=0)
 
 
 if page == "Game Simulator":
@@ -959,6 +1089,99 @@ if page == "Game Simulator":
 
         with st.expander("Raw JSON"):
             st.json(result)
+
+
+elif page == "Team Roster":
+    st.title("Team Roster Viewer")
+
+    roster_key = st.selectbox("Select Team", [t["key"] for t in teams],
+                              format_func=lambda x: team_names[x], key="roster_team")
+
+    team_data = json.load(open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams", f"{roster_key}.json")))
+    info = team_data["team_info"]
+    roster = team_data["roster"]
+
+    st.subheader(f"{info['school_name']} {info['mascot']}")
+    info_cols = st.columns(4)
+    with info_cols[0]:
+        st.metric("Conference", info["conference"])
+    with info_cols[1]:
+        st.metric("Location", f"{info['city']}, {info['state']}")
+    with info_cols[2]:
+        st.metric("Colors", " / ".join(info.get("colors", [])))
+    with info_cols[3]:
+        st.metric("Roster Size", roster["size"])
+
+    st.divider()
+
+    players = roster["players"]
+    all_positions = sorted(set(p["position"] for p in players))
+    selected_positions = st.multiselect("Filter by Position", all_positions, default=all_positions)
+
+    rows = []
+    for p in players:
+        if p["position"] not in selected_positions:
+            continue
+        s = p["stats"]
+        rows.append({
+            "#": p["number"],
+            "Name": p["name"],
+            "Position": p["position"],
+            "Archetype": p.get("archetype", ""),
+            "Year": p["year"],
+            "Height": p["height"],
+            "Weight": p["weight"],
+            "Hometown": f"{p['hometown']['city']}, {p['hometown']['state']}",
+            "Speed": s["speed"],
+            "Stamina": s["stamina"],
+            "Kicking": s["kicking"],
+            "Lateral Skill": s["lateral_skill"],
+            "Tackling": s["tackling"],
+            "Agility": s["agility"],
+            "Power": s["power"],
+            "Awareness": s["awareness"],
+            "Hands": s["hands"],
+        })
+
+    df = pd.DataFrame(rows)
+    st.dataframe(df, use_container_width=True)
+
+    st.divider()
+    st.subheader("Team Summary Stats")
+
+    if rows:
+        stat_cols = st.columns(5)
+        avg_speed = sum(r["Speed"] for r in rows) / len(rows)
+        avg_stamina = sum(r["Stamina"] for r in rows) / len(rows)
+        avg_agility = sum(r["Agility"] for r in rows) / len(rows)
+        avg_power = sum(r["Power"] for r in rows) / len(rows)
+        avg_awareness = sum(r["Awareness"] for r in rows) / len(rows)
+        with stat_cols[0]:
+            st.metric("Avg Speed", f"{avg_speed:.1f}")
+        with stat_cols[1]:
+            st.metric("Avg Stamina", f"{avg_stamina:.1f}")
+        with stat_cols[2]:
+            st.metric("Avg Agility", f"{avg_agility:.1f}")
+        with stat_cols[3]:
+            st.metric("Avg Power", f"{avg_power:.1f}")
+        with stat_cols[4]:
+            st.metric("Avg Awareness", f"{avg_awareness:.1f}")
+
+        stat_cols2 = st.columns(5)
+        avg_kicking = sum(r["Kicking"] for r in rows) / len(rows)
+        avg_lateral = sum(r["Lateral Skill"] for r in rows) / len(rows)
+        avg_tackling = sum(r["Tackling"] for r in rows) / len(rows)
+        avg_hands = sum(r["Hands"] for r in rows) / len(rows)
+        with stat_cols2[0]:
+            st.metric("Avg Kicking", f"{avg_kicking:.1f}")
+        with stat_cols2[1]:
+            st.metric("Avg Lateral Skill", f"{avg_lateral:.1f}")
+        with stat_cols2[2]:
+            st.metric("Avg Tackling", f"{avg_tackling:.1f}")
+        with stat_cols2[3]:
+            st.metric("Avg Hands", f"{avg_hands:.1f}")
+        with stat_cols2[4]:
+            st.metric("Players Shown", len(rows))
 
 
 elif page == "Debug Tools":
@@ -1572,6 +1795,71 @@ elif page == "Season Simulator":
                 standings_data.append(row)
             st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True)
 
+            st.subheader("League Statistics")
+            st.caption("Season-wide averages and benchmarks")
+
+            total_games = sum(1 for g in season.schedule if g.completed)
+            all_scores = []
+            for g in season.schedule:
+                if g.completed:
+                    all_scores.extend([g.home_score or 0, g.away_score or 0])
+
+            avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+            avg_opi = sum(r.avg_opi for r in standings) / len(standings) if standings else 0
+            avg_territory = sum(r.avg_territory for r in standings) / len(standings) if standings else 0
+            avg_pressure = sum(r.avg_pressure for r in standings) / len(standings) if standings else 0
+            avg_chaos = sum(r.avg_chaos for r in standings) / len(standings) if standings else 0
+            avg_kicking = sum(r.avg_kicking for r in standings) / len(standings) if standings else 0
+
+            lc1, lc2, lc3, lc4 = st.columns(4)
+            lc1.metric("Games Played", total_games)
+            lc2.metric("League Avg Score", f"{avg_score:.1f}")
+            lc3.metric("League Avg OPI", f"{avg_opi:.1f}")
+            lc4.metric("Avg Chaos", f"{avg_chaos:.1f}")
+
+            st.markdown("**Statistical Leaders**")
+            leader_categories = [
+                ("Highest Scoring", lambda r: r.points_for / max(1, r.games_played), "PPG"),
+                ("Best Defense", lambda r: -(r.points_against / max(1, r.games_played)), "PA/G"),
+                ("Top OPI", lambda r: r.avg_opi, "OPI"),
+                ("Territory King", lambda r: r.avg_territory, "Territory"),
+                ("Pressure Leader", lambda r: r.avg_pressure, "Pressure"),
+                ("Chaos Master", lambda r: r.avg_chaos, "Chaos"),
+                ("Kicking Leader", lambda r: r.avg_kicking, "Kicking"),
+                ("Best Turnover Impact", lambda r: r.avg_turnover_impact, "TO Impact"),
+            ]
+            leader_rows = []
+            for cat_name, key_func, stat_label in leader_categories:
+                if cat_name == "Best Defense":
+                    leader = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
+                    val = leader.points_against / max(1, leader.games_played)
+                else:
+                    leader = max(standings, key=key_func)
+                    val = key_func(leader)
+                leader_rows.append({
+                    "Category": cat_name,
+                    "Team": leader.team_name,
+                    "Value": f"{abs(val):.1f}",
+                })
+            st.dataframe(pd.DataFrame(leader_rows), hide_index=True, use_container_width=True)
+
+            st.subheader("Season Awards")
+            best_record = standings[0]
+            highest_scoring = max(standings, key=lambda r: r.points_for / max(1, r.games_played))
+            best_defense = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
+            highest_opi = max(standings, key=lambda r: r.avg_opi)
+            most_chaos = max(standings, key=lambda r: r.avg_chaos)
+            best_kicking = max(standings, key=lambda r: r.avg_kicking)
+
+            aw1, aw2, aw3 = st.columns(3)
+            aw1.metric("Best Record", f"{best_record.team_name} ({best_record.wins}-{best_record.losses})")
+            aw2.metric("Highest Scoring", f"{highest_scoring.team_name} ({highest_scoring.points_for / max(1, highest_scoring.games_played):.1f} PPG)")
+            aw3.metric("Best Defense", f"{best_defense.team_name} ({best_defense.points_against / max(1, best_defense.games_played):.1f} PA/G)")
+            aw4, aw5, aw6 = st.columns(3)
+            aw4.metric("Highest OPI", f"{highest_opi.team_name} ({highest_opi.avg_opi:.1f})")
+            aw5.metric("Chaos Award", f"{most_chaos.team_name} ({most_chaos.avg_chaos:.1f})")
+            aw6.metric("Kicking Award", f"{best_kicking.team_name} ({best_kicking.avg_kicking:.1f})")
+
             if season.conferences and len(season.conferences) >= 1:
                 st.subheader("Conference Standings")
                 conf_tabs = st.tabs(sorted(season.conferences.keys()))
@@ -1700,23 +1988,54 @@ elif page == "Season Simulator":
                     l_rec = bowl.team_2_record if winner == g.home_team else bowl.team_1_record
                     st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
-            st.subheader("Full Schedule Results")
+            st.subheader("Game Log")
+            completed_games = [g for g in season.schedule if g.completed]
+            completed_games_sorted = sorted(completed_games, key=lambda g: g.week)
+
+            game_filter_col1, game_filter_col2 = st.columns(2)
+            with game_filter_col1:
+                filter_team = st.selectbox("Filter by Team", ["All Teams"] + sorted(set(g.home_team for g in completed_games) | set(g.away_team for g in completed_games)), key="season_game_filter_team")
+            with game_filter_col2:
+                filter_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(set(g.week for g in completed_games)), key="season_game_filter_week")
+
+            filtered_games = completed_games_sorted
+            if filter_team != "All Teams":
+                filtered_games = [g for g in filtered_games if g.home_team == filter_team or g.away_team == filter_team]
+            if filter_week != "All Weeks":
+                filtered_games = [g for g in filtered_games if g.week == filter_week]
+
+            game_labels = []
+            for g in filtered_games:
+                hs = g.home_score or 0
+                aws = g.away_score or 0
+                winner = g.home_team if hs > aws else g.away_team
+                game_labels.append(f"Wk {g.week}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+
             schedule_data = []
-            for game in season.schedule:
-                if game.completed:
-                    hs = game.home_score or 0
-                    aws = game.away_score or 0
-                    winner = game.home_team if hs > aws else game.away_team
-                    schedule_data.append({
-                        "Week": game.week,
-                        "Home": game.home_team,
-                        "Away": game.away_team,
-                        "Home Score": fmt_vb_score(hs),
-                        "Away Score": fmt_vb_score(aws),
-                        "Winner": winner,
-                    })
+            for g in filtered_games:
+                hs = g.home_score or 0
+                aws = g.away_score or 0
+                winner = g.home_team if hs > aws else g.away_team
+                schedule_data.append({
+                    "Week": g.week,
+                    "Home": g.home_team,
+                    "Away": g.away_team,
+                    "Home Score": fmt_vb_score(hs),
+                    "Away Score": fmt_vb_score(aws),
+                    "Winner": winner,
+                })
             if schedule_data:
-                st.dataframe(pd.DataFrame(schedule_data), hide_index=True, use_container_width=True, height=400)
+                st.dataframe(pd.DataFrame(schedule_data), hide_index=True, use_container_width=True, height=300)
+
+            if game_labels:
+                selected_game_label = st.selectbox("Select a game to view details", game_labels, key="season_game_detail_select")
+                game_idx = game_labels.index(selected_game_label)
+                selected_game = filtered_games[game_idx]
+                if selected_game.full_result:
+                    with st.expander("Game Details", expanded=True):
+                        render_game_detail(selected_game.full_result, key_prefix=f"season_gd_{game_idx}")
+                else:
+                    st.caption("Detailed game data not available for this game.")
 
             st.subheader("Export Season Data")
             exp_col1, exp_col2 = st.columns(2)
@@ -1784,7 +2103,13 @@ elif page == "Dynasty Mode":
         if "conf_name_seed" not in st.session_state:
             st.session_state["conf_name_seed"] = random.randint(0, 999999)
 
-        generated_names = generate_conference_names(count=num_conferences, seed=st.session_state["conf_name_seed"])
+        if st.session_state.get("use_geo_names", True):
+            geo_clusters = get_geographic_conference_defaults(teams_dir, all_team_names_sorted, num_conferences)
+            generated_names = list(geo_clusters.keys())
+            if len(generated_names) < num_conferences:
+                generated_names.extend(generate_conference_names(count=num_conferences - len(generated_names), seed=st.session_state["conf_name_seed"]))
+        else:
+            generated_names = generate_conference_names(count=num_conferences, seed=st.session_state["conf_name_seed"])
 
         conf_assignments = {}
         conf_names_list = []
@@ -1793,6 +2118,7 @@ elif page == "Dynasty Mode":
         with btn_col:
             if st.button("🎲 New Names", key="regen_conf_names", use_container_width=True):
                 st.session_state["conf_name_seed"] = random.randint(0, 999999)
+                st.session_state["use_geo_names"] = False
                 for ci2 in range(20):
                     st.session_state.pop(f"conf_name_{ci2}", None)
                 st.rerun()
@@ -1813,13 +2139,16 @@ elif page == "Dynasty Mode":
                         cname = st.text_input(f"Conference {ci+1}", value=generated_names[ci], key=f"conf_name_{ci}")
                         conf_names_list.append(cname)
 
-            chunk_size = len(all_team_names_sorted) // num_conferences
+            geo_clusters = get_geographic_conference_defaults(teams_dir, all_team_names_sorted, num_conferences)
+            geo_cluster_list = list(geo_clusters.values())
             default_splits = {}
             for ci in range(num_conferences):
-                start_idx = ci * chunk_size
-                end_idx = start_idx + chunk_size if ci < num_conferences - 1 else len(all_team_names_sorted)
-                for tname in all_team_names_sorted[start_idx:end_idx]:
-                    default_splits[tname] = conf_names_list[ci]
+                if ci < len(geo_cluster_list):
+                    for tname in geo_cluster_list[ci]:
+                        default_splits[tname] = conf_names_list[ci]
+            for tname in all_team_names_sorted:
+                if tname not in default_splits:
+                    default_splits[tname] = conf_names_list[-1]
 
             with st.expander("Assign Teams to Conferences", expanded=False):
                 assign_cols_per_row = 4
@@ -2064,6 +2393,44 @@ elif page == "Dynasty Mode":
                         is_user_bowl = dynasty.coach.team_name in (g.home_team, g.away_team)
                         prefix = ">>> " if is_user_bowl else ""
                         st.markdown(f"{prefix}**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
+
+                st.subheader("Game Log")
+                dyn_completed = [g for g in season.schedule if g.completed]
+                dyn_completed_sorted = sorted(dyn_completed, key=lambda g: g.week)
+                dyn_team_options = sorted(set(g.home_team for g in dyn_completed) | set(g.away_team for g in dyn_completed))
+
+                dyn_fc1, dyn_fc2 = st.columns(2)
+                with dyn_fc1:
+                    dyn_filter_team = st.selectbox("Filter by Team", ["My Team", "All Teams"] + dyn_team_options, key="dyn_game_filter_team")
+                with dyn_fc2:
+                    dyn_filter_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(set(g.week for g in dyn_completed)), key="dyn_game_filter_week")
+
+                dyn_filtered = dyn_completed_sorted
+                if dyn_filter_team == "My Team":
+                    my_team = dynasty.coach.team_name
+                    dyn_filtered = [g for g in dyn_filtered if g.home_team == my_team or g.away_team == my_team]
+                elif dyn_filter_team != "All Teams":
+                    dyn_filtered = [g for g in dyn_filtered if g.home_team == dyn_filter_team or g.away_team == dyn_filter_team]
+                if dyn_filter_week != "All Weeks":
+                    dyn_filtered = [g for g in dyn_filtered if g.week == dyn_filter_week]
+
+                dyn_game_labels = []
+                for g in dyn_filtered:
+                    hs = g.home_score or 0
+                    aws = g.away_score or 0
+                    dyn_game_labels.append(f"Wk {g.week}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+
+                if dyn_game_labels:
+                    dyn_sel = st.selectbox("Select a game to view details", dyn_game_labels, key="dyn_game_detail_select")
+                    dyn_gi = dyn_game_labels.index(dyn_sel)
+                    dyn_sg = dyn_filtered[dyn_gi]
+                    if dyn_sg.full_result:
+                        with st.expander("Game Details", expanded=True):
+                            render_game_detail(dyn_sg.full_result, key_prefix=f"dyn_gd_{dyn_gi}")
+                    else:
+                        st.caption("Detailed game data not available for this game.")
+                elif dyn_completed:
+                    st.caption("No games match the current filter.")
 
         with tab2:
             st.subheader("Standings & Weekly Poll")
