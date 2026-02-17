@@ -98,5 +98,49 @@
     "Pedersen", "Christiansen", "Sorensen", "Rasmussen", "Jorgensen", "Petersen",
     "Madsen", "Kristensen", "Nilsen", "Lindberg", "Berg", "Eriksen", "Carlson",
     "Svensson", "Gustafsson", "Olsson", "Jonsson", "Andersson", "Karlsson"
+  ],
+  "canadian_french": [
+    "Tremblay", "Gagnon", "Roy", "Côté", "Bouchard", "Gauthier", "Morin",
+    "Lavoie", "Fortin", "Gagné", "Ouellet", "Pelletier", "Leblanc", "Bergeron",
+    "Girard", "Bélanger", "Martel", "Lapointe", "Deschênes", "Vaillancourt",
+    "Leclerc", "Richard", "Desrosiers", "Chartier", "Simard", "Thibodeau",
+    "Brassard", "Arsenault", "Bédard", "Cloutier"
+  ],
+  "new_zealand": [
+    "Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "Anderson",
+    "Walker", "Thomas", "Johnson", "Harris", "King", "Roberts", "Lee",
+    "Martin", "Thompson", "Robinson", "Davis", "Clark", "Edwards",
+    "Parata", "Ngata", "Karaka", "Wiki", "Hura", "Rāwiri",
+    "Tūhoe", "Tūkiata", "Moana", "Te Aho"
+  ],
+  "african": [
+    "Okonkwo", "Adeyemi", "Obi", "Eze", "Emenike", "Okeke", "Nwosu", "Chukwu",
+    "Mensah", "Asante", "Boateng", "Owusu", "Asare", "Amoah", "Acheampong", "Amponsah",
+    "Dlamini", "Ndlovu", "Khumalo", "Nkosi", "Mthembu", "Zulu", "Nxumalo", "Cele", "Hadebe",
+    "Kamau", "Wanjiku", "Njoroge", "Mwangi", "Ochieng", "Otieno", "Owino",
+    "Diallo", "Diop", "Sow", "Ndiaye", "Mbaye", "Fall", "Gaye", "Ba"
+  ],
+  "caribbean": [
+    "Campbell", "Brown", "Williams", "Thompson", "Edwards", "Morrison", "Gordon",
+    "Clarke", "Stewart", "Walker", "Robinson", "Anderson", "Henry", "Francis",
+    "Murray", "Thomas", "Lewis", "James", "Phillips", "Roberts", "Alexander",
+    "Bailey", "Beckford", "Bennett", "Blackwood", "Burke", "Chin", "Cooper",
+    "Dixon", "Dyer", "Ellis", "Ferguson", "Fletcher", "Foster", "Francis"
+  ],
+  "uk_european": [
+    "Wilson", "Roberts", "Evans", "Davies", "Hughes", "Lewis", "Clarke",
+    "Cooper", "Harrison", "Marshall", "Morrison", "Bennett", "Howard", "Ward",
+    "Dupont", "Martin", "Bernard", "Thomas", "Petit", "Richard", "Leroy",
+    "Moreau", "Girard", "David", "Laurent", "Simon",
+    "Weber", "Bauer", "Fischer", "Zimmermann", "Meyer", "Hoffmann", "Schmitt",
+    "Martínez", "López", "Sánchez", "Pérez", "González", "Rodríguez", "Fernández",
+    "de Jong", "van den Berg", "Jansen", "Bakker", "Visser"
+  ],
+  "latin_american": [
+    "Silva", "Santos", "Oliveira", "Souza", "Lima", "Ferreira", "Costa",
+    "Carvalho", "Almeida", "Rodrigues", "Nascimento", "Pereira", "Barbosa",
+    "Cunha", "Dias", "González", "Rodríguez", "López", "Martínez", "Pérez",
+    "Sánchez", "Fernández", "García", "Díaz", "Morales", "Herrera", "Vargas",
+    "Ramos", "Castro", "Gómez", "Álvarez", "Rojas", "Torres", "Flores", "Cruz"
   ]
 }

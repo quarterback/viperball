@@ -37,6 +37,28 @@
     "major": ["Melbourne VIC", "Sydney NSW", "Brisbane QLD", "Perth WA", "Adelaide SA"],
     "secondary": ["Gold Coast QLD", "Canberra ACT", "Newcastle NSW", "Wollongong NSW", "Hobart TAS", "Geelong VIC", "Townsville QLD", "Cairns QLD", "Darwin NT"]
   },
-  "new_zealand": ["Auckland", "Wellington", "Christchurch", "Hamilton", "Dunedin"],
-  "pacific_islands": ["Honolulu HI", "Hilo HI", "Pago Pago", "Apia", "Nuku'alofa", "Suva"]
+  "new_zealand": ["Auckland", "Wellington", "Christchurch", "Hamilton", "Dunedin", "Tauranga", "Palmerston North", "Nelson", "Rotorua", "New Plymouth", "Whanganui", "Invercargill", "Napier", "Hastings", "Whangarei"],
+  "pacific_islands": ["Honolulu HI", "Hilo HI", "Pago Pago", "Apia", "Nuku'alofa", "Suva"],
+  "canada": {
+    "major": ["Toronto ON", "Montreal QC", "Vancouver BC", "Calgary AB", "Ottawa ON", "Edmonton AB"],
+    "secondary": ["Winnipeg MB", "Quebec City QC", "Hamilton ON", "Kitchener ON", "London ON", "Halifax NS", "Saskatoon SK", "Regina SK", "Victoria BC", "Kelowna BC", "Gatineau QC", "Windsor ON"],
+    "small": ["Barrie ON", "Kingston ON", "Sudbury ON", "Thunder Bay ON", "Fredericton NB", "Moncton NB", "Lethbridge AB", "Red Deer AB"]
+  },
+  "uk_europe": {
+    "england": ["London ENG", "Manchester ENG", "Birmingham ENG", "Liverpool ENG", "Leeds ENG", "Sheffield ENG", "Bristol ENG", "Newcastle ENG"],
+    "france": ["Paris FRA", "Lyon FRA", "Marseille FRA", "Toulouse FRA", "Nice FRA", "Bordeaux FRA", "Lille FRA", "Nantes FRA"],
+    "germany": ["Berlin GER", "Hamburg GER", "Munich GER", "Cologne GER", "Frankfurt GER", "Stuttgart GER", "Düsseldorf GER", "Dortmund GER"],
+    "spain": ["Madrid ESP", "Barcelona ESP", "Valencia ESP", "Seville ESP", "Bilbao ESP", "Málaga ESP", "Zaragoza ESP"],
+    "other_europe": ["Amsterdam NED", "Rotterdam NED", "Brussels BEL", "Ghent BEL", "Lisbon POR", "Porto POR", "Rome ITA", "Milan ITA", "Stockholm SWE", "Gothenburg SWE", "Oslo NOR", "Copenhagen DEN"]
+  },
+  "latin_america": {
+    "brazil": ["São Paulo BRA", "Rio de Janeiro BRA", "Belo Horizonte BRA", "Brasília BRA", "Salvador BRA", "Fortaleza BRA", "Curitiba BRA", "Manaus BRA", "Recife BRA", "Porto Alegre BRA"],
+    "south_america": ["Buenos Aires ARG", "Córdoba ARG", "Rosario ARG", "Bogotá COL", "Medellín COL", "Cali COL", "Lima PER", "Arequipa PER", "Santiago CHI", "Valparaíso CHI", "Montevideo URU", "Asunción PAR", "Quito ECU", "Guayaquil ECU"]
+  },
+  "africa": {
+    "west_africa": ["Lagos NGA", "Abuja NGA", "Kano NGA", "Ibadan NGA", "Accra GHA", "Kumasi GHA", "Tamale GHA", "Dakar SEN", "Conakry GIN", "Abidjan CIV", "Lomé TOG", "Bamako MLI"],
+    "east_africa": ["Nairobi KEN", "Mombasa KEN", "Kampala UGA", "Dar es Salaam TZA", "Addis Ababa ETH", "Kigali RWA"],
+    "southern_africa": ["Johannesburg ZAF", "Cape Town ZAF", "Durban ZAF", "Pretoria ZAF", "Harare ZWE", "Lusaka ZMB", "Gaborone BWA"]
+  },
+  "caribbean": ["Kingston JAM", "Montego Bay JAM", "Port of Spain TTO", "Chaguanas TTO", "Bridgetown BRB", "Nassau BAH", "Freeport BAH", "Port-au-Prince HAI", "Santo Domingo DOM", "San Juan PRI", "Georgetown GUY", "Paramaribo SUR", "Castries LCA", "Roseau DMA", "Basseterre SKN"]
 }
