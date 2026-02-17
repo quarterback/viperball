@@ -172,14 +172,14 @@ def generate_box_score_markdown(result):
                 away_q[q] += 1
         elif p["result"] == "safety":
             if p["possession"] == "home":
-                home_q[q] += 2
-            else:
                 away_q[q] += 2
+            else:
+                home_q[q] += 2
         elif p["result"] == "fumble":
             if p["possession"] == "home":
-                home_q[q] += 0.5
-            else:
                 away_q[q] += 0.5
+            else:
+                home_q[q] += 0.5
 
     lines = []
     lines.append(f"# {home['team']} vs {away['team']}")
@@ -207,6 +207,8 @@ def generate_box_score_markdown(result):
     lines.append(f"| Safeties (2pts) | {a_saf} ({a_saf*2}pts) | {h_saf} ({h_saf*2}pts) |")
     lines.append(f"| Pindowns (1pt) | {hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts) | {as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts) |")
     lines.append(f"| Strikes (½pt) | {h_fr} ({fmt_vb_score(h_frp)}pts) | {a_fr} ({fmt_vb_score(a_frp)}pts) |")
+    lines.append(f"| Punt Return TDs | {hs.get('punt_return_tds',0)} | {as_.get('punt_return_tds',0)} |")
+    lines.append(f"| Chaos Recoveries | {hs.get('chaos_recoveries',0)} | {as_.get('chaos_recoveries',0)} |")
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
@@ -539,14 +541,14 @@ if page == "Game Simulator":
                     away_q[q] += 1
             elif p["result"] == "safety":
                 if p["possession"] == "home":
-                    home_q[q] += 2
-                else:
                     away_q[q] += 2
+                else:
+                    home_q[q] += 2
             elif p["result"] == "fumble":
                 if p["possession"] == "home":
-                    home_q[q] += 0.5
-                else:
                     away_q[q] += 0.5
+                else:
+                    home_q[q] += 0.5
 
         qtr_data = {
             "": [home_name, away_name],
@@ -568,12 +570,14 @@ if page == "Game Simulator":
         scoring_data = {
             "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
                  "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
+                 "Punt Return TDs", "Chaos Recoveries",
                  "Punts", "Kick %",
                  "Total Yards", "Rushing Yards", "Lateral Yards",
                  "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
                  "Fumbles Lost", "Turnovers on Downs",
                  "Penalties", "Penalty Yards",
+                 "Keeper Deflections", "Keeper Tackles",
                  "Longest Play", "Avg Fatigue"],
             home_name: [
                 f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
@@ -582,6 +586,8 @@ if page == "Game Simulator":
                 f"{a_saf} ({a_saf * 2}pts)",
                 f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
                 f"{h_fr} ({h_frp:g}pts)",
+                str(hs.get("punt_return_tds", 0)),
+                str(hs.get("chaos_recoveries", 0)),
                 str(hs.get("punts", 0)),
                 f"{hs.get('kick_percentage', 0)}%",
                 str(hs["total_yards"]),
@@ -592,6 +598,8 @@ if page == "Game Simulator":
                 str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
                 str(hs.get("penalties", 0)),
                 str(hs.get("penalty_yards", 0)),
+                str(hs.get("keeper_deflections", 0)),
+                str(hs.get("keeper_tackles", 0)),
                 str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
                 f'{hs["avg_fatigue"]}%',
             ],
@@ -602,6 +610,8 @@ if page == "Game Simulator":
                 f"{h_saf} ({h_saf * 2}pts)",
                 f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
                 f"{a_fr} ({a_frp:g}pts)",
+                str(as_.get("punt_return_tds", 0)),
+                str(as_.get("chaos_recoveries", 0)),
                 str(as_.get("punts", 0)),
                 f"{as_.get('kick_percentage', 0)}%",
                 str(as_["total_yards"]),
@@ -612,6 +622,8 @@ if page == "Game Simulator":
                 str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
                 str(as_.get("penalties", 0)),
                 str(as_.get("penalty_yards", 0)),
+                str(as_.get("keeper_deflections", 0)),
+                str(as_.get("keeper_tackles", 0)),
                 str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
                 f'{as_["avg_fatigue"]}%',
             ],
@@ -1036,10 +1048,10 @@ elif page == "Debug Tools":
         avg5, avg6, avg7, avg8 = st.columns(4)
         home_tds = [r["stats"]["home"]["touchdowns"] for r in results]
         away_tds = [r["stats"]["away"]["touchdowns"] for r in results]
-        avg5.metric("Avg TDs/game", round((sum(home_tds) + sum(away_tds)) / n, 2))
+        avg5.metric("Avg TDs/team", round((sum(home_tds) + sum(away_tds)) / (2 * n), 2))
         home_fumbles = [r["stats"]["home"]["fumbles_lost"] for r in results]
         away_fumbles = [r["stats"]["away"]["fumbles_lost"] for r in results]
-        avg6.metric("Avg Fumbles/game", round((sum(home_fumbles) + sum(away_fumbles)) / n, 2))
+        avg6.metric("Avg Fumbles/team", round((sum(home_fumbles) + sum(away_fumbles)) / (2 * n), 2))
 
         longest_plays = []
         for r in results:
@@ -1065,11 +1077,28 @@ elif page == "Debug Tools":
 
         home_dk = [r["stats"]["home"].get("drop_kicks_made", 0) for r in results]
         away_dk = [r["stats"]["away"].get("drop_kicks_made", 0) for r in results]
-        k4.metric("Avg Snap Kicks/game", round((sum(home_dk) + sum(away_dk)) / n, 2))
+        k4.metric("Avg Snap Kicks/team", round((sum(home_dk) + sum(away_dk)) / (2 * n), 2))
+
+        k5, k6, k7, k8 = st.columns(4)
+        home_pk = [r["stats"]["home"].get("place_kicks_made", 0) for r in results]
+        away_pk = [r["stats"]["away"].get("place_kicks_made", 0) for r in results]
+        k5.metric("Avg FGs Made/team", round((sum(home_pk) + sum(away_pk)) / (2 * n), 2))
+
+        home_bells = [r["stats"]["home"].get("bells", 0) for r in results]
+        away_bells = [r["stats"]["away"].get("bells", 0) for r in results]
+        k6.metric("Avg Bells/team", round((sum(home_bells) + sum(away_bells)) / (2 * n), 2))
+
+        home_punts = [r["stats"]["home"].get("punts", 0) for r in results]
+        away_punts = [r["stats"]["away"].get("punts", 0) for r in results]
+        k7.metric("Avg Punts/team", round((sum(home_punts) + sum(away_punts)) / (2 * n), 2))
+
+        home_saf = [r["stats"]["home"].get("safeties_conceded", 0) for r in results]
+        away_saf = [r["stats"]["away"].get("safeties_conceded", 0) for r in results]
+        k8.metric("Avg Safeties/team", round((sum(home_saf) + sum(away_saf)) / (2 * n), 2))
 
         st.markdown("**Avg Down Conversions**")
         dc_cols = st.columns(3)
-        for idx, d in enumerate([3, 4, 5]):
+        for idx, d in enumerate([4, 5, 6]):
             rates = []
             for r in results:
                 for side in ["home", "away"]:
