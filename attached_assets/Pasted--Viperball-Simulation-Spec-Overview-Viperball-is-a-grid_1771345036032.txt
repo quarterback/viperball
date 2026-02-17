@@ -1,0 +1,448 @@
+# Viperball Simulation Spec
+
+## Overview
+
+Viperball is a gridiron sport with no forward pass. The ball moves through runs, lateral pitches, and kicks.
+
+**Core Rules:**
+- 6 downs to gain 20 yards
+- No forward pass — lateral chains replace passing offense
+- Kicks are live-ball offense, not just field position
+- One player (Viper) is exempt from formation rules
+
+---
+
+## Scoring
+
+| Event | Points |
+|-------|--------|
+| Touchdown | 9 |
+| Snap Kick (drop kick through uprights) | 5 |
+| Place Kick (field goal) | 3 |
+| Safety | 2 |
+| Pindown (opponent starts inside own 10) | 1 |
+| Bell (recover opponent's loose ball) | ½ |
+
+**Bell Rule:** Only awarded for recovering the OTHER team's fumble/muff/blocked kick. No Bell for recovering your own.
+
+**Pindown:** Awarded when your punt/kick forces opponent to start inside their 10 (not a touchback).
+
+---
+
+## Targets (Per Team Per Game)
+
+| Metric | Target |
+|--------|--------|
+| Touchdowns | 3–5 |
+| Snap Kicks Made | 1.5–2.5 |
+| Place Kicks Made | 1.5–2.5 |
+| Bells | 2–4 |
+| Safeties | 0.1–0.3 |
+| Pindowns | 1–3 |
+| Punts | 3–5 |
+| Total Points | 40–60 |
+
+**Status: CALIBRATED ✓** — Do not change scoring mechanics.
+
+---
+
+## Positions
+
+| Position | Code | Role |
+|----------|------|------|
+| Zeroback | ZB | Offensive hub — runs, pitches, kicks |
+| Viper | VP | Wildcard — exempt from formation rules, creates mismatches |
+| Flankers | HB, WB, SF, PF, EF | Ball carriers, blockers, lateral targets |
+| Keeper | KP | Deepest defender — last line, fields kicks |
+
+**Archetypes (12 total):**
+- ZB: Running, Kicking, Distributor, Dual-Threat
+- VP: Receiving, Blocking, Hybrid
+- Flanker: Speed, Power, Elusive, Reliable, Hybrid
+
+---
+
+## Offensive Playstyles (8)
+
+| Style | Philosophy | Primary Score |
+|-------|------------|---------------|
+| Ground & Pound | Grind 20 yards, punch it in | TD (9) |
+| Lateral Spread | Horizontal stretch, chain attacks | TD (9) |
+| Boot Raid | Get to 45, start kicking | Snap Kick (5) |
+| Ball Control | Conservative, clock management | Place Kick (3) |
+| Ghost Formation | Viper chaos, pre-snap confusion | TD (9) |
+| Rouge Hunt | Field position, defensive scoring | Pindown (1) |
+| Chain Gang | Maximum laterals, high variance | TD (9) |
+| Triple Threat | Single-wing misdirection | Mixed |
+
+---
+
+## Run Play Types (7)
+
+| Play | Base Yards | Explosive % | Fumble Rate | Primary Carrier |
+|------|------------|-------------|-------------|-----------------|
+| Dive | 3.5–4.5 | 8% | 1.0% | HB, PF |
+| Power | 4.0–5.0 | 10% | 1.2% | PF, HB |
+| Sweep | 4.5–6.0 | 18% | 1.6% | SF, WB |
+| Speed Option | 5.0–7.0 | 15% | 1.8% | ZB, WB |
+| Counter | 4.0–6.5 | 20% | 1.5% | WB, VP |
+| Draw | 4.5–7.0 | 12% | 1.4% | HB, ZB |
+| Viper Jet | 5.5–8.0 | 28% | 2.8% | VP only |
+
+---
+
+## FEATURES TO BUILD
+
+Everything below this line needs implementation.
+
+---
+
+### 1. Carrier Selection by Play Type
+
+**Current:** `random.choice(team.players[:5])`
+
+**Build:** Select carrier based on play type and position.
+
+```python
+CARRIER_BY_PLAY = {
+    'dive': {'positions': ['HB', 'PF', 'ZB'], 'weights': [0.45, 0.35, 0.20]},
+    'power': {'positions': ['PF', 'HB'], 'weights': [0.60, 0.40]},
+    'sweep': {'positions': ['SF', 'WB', 'EF'], 'weights': [0.40, 0.35, 0.25]},
+    'speed_option': {'positions': ['ZB', 'SF', 'WB'], 'weights': [0.35, 0.35, 0.30]},
+    'counter': {'positions': ['WB', 'HB', 'VP'], 'weights': [0.35, 0.35, 0.30]},
+    'draw': {'positions': ['HB', 'ZB'], 'weights': [0.55, 0.45]},
+    'viper_jet': {'positions': ['VP'], 'weights': [1.0]},
+}
+
+def select_ball_carrier(self, play_type, team):
+    config = CARRIER_BY_PLAY[play_type]
+    eligible = []
+    weights = []
+    
+    for i, pos in enumerate(config['positions']):
+        for player in team.get_players_by_position(pos):
+            eligible.append(player)
+            weight = config['weights'][i]
+            if player.current_fatigue > 70:
+                weight *= 0.6
+            weights.append(weight)
+    
+    if not eligible:
+        return random.choice(team.skill_players)
+    
+    return random.choices(eligible, weights=weights, k=1)[0]
+```
+
+---
+
+### 2. Explosive Run System
+
+**Current:** Breakaways exist but not differentiated by play type
+
+**Build:** 8–28% explosive chance based on play type, resolved via Keeper matchup.
+
+```python
+EXPLOSIVE_CHANCE = {
+    'dive': 0.08, 'power': 0.10, 'sweep': 0.18, 'speed_option': 0.15,
+    'counter': 0.20, 'draw': 0.12, 'viper_jet': 0.28, 'lateral_chain': 0.22,
+}
+
+def check_explosive_run(self, carrier, play_type, yards_gained):
+    if yards_gained < 5:
+        return yards_gained
+    
+    chance = EXPLOSIVE_CHANCE.get(play_type, 0.12)
+    
+    if carrier.speed >= 85:
+        chance += 0.08
+    if carrier.elusiveness >= 80:
+        chance += 0.06
+    if self.state.keeper_fatigue > 70:
+        chance += 0.10
+    
+    if random.random() < chance:
+        return self.resolve_keeper_matchup(carrier, yards_gained)
+    
+    return yards_gained
+
+def resolve_keeper_matchup(self, carrier, yards_at_break):
+    keeper = self.defense.get_keeper()
+    remaining = 100 - self.state.field_position - yards_at_break
+    
+    carrier_score = carrier.speed * 0.5 + carrier.elusiveness * 0.3 + carrier.power * 0.2
+    keeper_score = keeper.speed * 0.4 + keeper.tackling * 0.4 + keeper.awareness * 0.2
+    
+    if self.state.keeper_fatigue > 70:
+        keeper_score *= 0.80
+    
+    diff = carrier_score - keeper_score
+    
+    if diff > 15:
+        td_chance = 0.85
+    elif diff > 5:
+        td_chance = 0.60
+    elif diff > -5:
+        td_chance = 0.40
+    else:
+        td_chance = 0.20
+    
+    if remaining <= 20:
+        td_chance += 0.15
+    
+    if random.random() < td_chance:
+        return yards_at_break + remaining  # TD
+    else:
+        return yards_at_break + int(remaining * random.uniform(0.5, 0.85))
+```
+
+---
+
+### 3. Play-Specific Signatures
+
+**Current:** All plays use same calculation with different means
+
+**Build:** Each play has unique mechanics.
+
+```python
+def apply_play_signature(self, play_type, base_yards, game_state):
+    if play_type == 'dive':
+        return base_yards * random.uniform(0.90, 1.10)  # Lowest variance
+    
+    elif play_type == 'sweep':
+        if game_state.keeper_alignment == 'inside':
+            return base_yards * 1.25
+        elif game_state.keeper_alignment == 'outside':
+            return base_yards * 0.75
+    
+    elif play_type == 'speed_option':
+        zb = self.offense.get_zeroback()
+        if random.random() < (zb.awareness / 100):
+            return base_yards + random.uniform(2, 5)
+        else:
+            return base_yards - random.uniform(1, 4)
+    
+    elif play_type == 'counter':
+        if random.random() < 0.20:  # Defense bites
+            return base_yards + random.uniform(5, 10)
+    
+    elif play_type == 'draw':
+        if game_state.defense_expecting_kick:
+            return base_yards * 1.30
+        if game_state.defense_style == 'pressure':
+            return base_yards * 1.20
+    
+    elif play_type == 'viper_jet':
+        return base_yards * random.uniform(0.6, 1.4)
+    
+    return base_yards
+```
+
+---
+
+### 4. Viper Jet (7th Run Type)
+
+**Current:** Not implemented
+
+**Build:** Highest risk/reward. Viper only.
+
+```python
+def simulate_viper_jet(self, team):
+    viper = team.get_viper()
+    if not viper:
+        return self.simulate_run('speed_option', team)
+    
+    base = random.uniform(5.0, 8.0)
+    yards = random.gauss(base, 6.5)
+    
+    if viper.speed >= 90:
+        yards += 2
+    
+    # 8% botched exchange
+    if random.random() < 0.08:
+        yards = random.uniform(-3, 1)
+    
+    yards = self.check_explosive_run(viper, 'viper_jet', yards)
+    fumble = self.check_fumble(viper, 'viper_jet', yards)
+    
+    return PlayResult(yards=yards, carrier=viper, fumble=fumble, play_type='viper_jet')
+```
+
+---
+
+### 5. Viper Alignment Advantage
+
+**Current:** Viper alignment is cosmetic
+
+**Build:** Running opposite Viper = +18% yards.
+
+```python
+VIPER_BONUS = {
+    ('left', 'right'): 0.18, ('right', 'left'): 0.18,
+    ('slot_left', 'right'): 0.12, ('slot_right', 'left'): 0.12,
+    ('left', 'left'): -0.05, ('right', 'right'): -0.05,
+}
+
+def apply_viper_alignment(self, base_yards, play_direction):
+    bonus = VIPER_BONUS.get((self.state.viper_alignment, play_direction), 0.0)
+    return base_yards * (1 + bonus)
+```
+
+---
+
+### 6. Defensive Alignment vs Play Type
+
+**Current:** Flat defensive modifier
+
+**Build:** Rock-paper-scissors matchups.
+
+```python
+DEFENSE_VS_PLAY = {
+    ('spread', 'dive'): +0.20, ('spread', 'power'): +0.15,
+    ('spread', 'sweep'): -0.08, ('spread', 'lateral_chain'): -0.12,
+    ('stacked', 'dive'): -0.18, ('stacked', 'sweep'): +0.18,
+    ('stacked', 'viper_jet'): +0.15, ('stacked', 'lateral_chain'): +0.20,
+    ('aggressive', 'counter'): +0.25, ('aggressive', 'draw'): +0.30,
+}
+
+def apply_defense_modifier(self, base_yards, play_type):
+    mod = DEFENSE_VS_PLAY.get((self.state.defense_alignment, play_type), 0.0)
+    return base_yards * (1 + mod)
+```
+
+---
+
+### 7. Run-Specific Fumble Rates + TFL Boost
+
+**Current:** All runs use same fumble rate
+
+**Build:** Different rates by play, boosted on TFLs.
+
+```python
+FUMBLE_RATE = {
+    'dive': 0.010, 'power': 0.012, 'sweep': 0.016,
+    'speed_option': 0.018, 'counter': 0.015, 'draw': 0.014, 'viper_jet': 0.028,
+}
+
+def check_run_fumble(self, carrier, play_type, yards):
+    prob = FUMBLE_RATE.get(play_type, 0.015)
+    
+    if yards <= 0:
+        prob += 0.035  # TFL boost
+    elif yards <= 2:
+        prob += 0.015
+    
+    if carrier.ball_security >= 85:
+        prob *= 0.70
+    
+    if self.weather in ['rain', 'snow', 'sleet']:
+        prob *= 1.40
+    
+    return random.random() < prob
+```
+
+---
+
+### 8. Fumble Recovery Contest
+
+**Current:** Fixed 50/50
+
+**Build:** Player-based contest.
+
+```python
+def resolve_fumble_recovery(self, fumble_location):
+    nearby_off = self.get_nearby_players(fumble_location, self.offense, 5)
+    nearby_def = self.get_nearby_players(fumble_location, self.defense, 5)
+    
+    def score(player, dist):
+        return player.awareness * 0.35 + player.speed * 0.25 + (5 - dist) * 5 + random.uniform(0, 20)
+    
+    off_score = max([score(p, self.distance(p, fumble_location)) for p in nearby_off], default=0)
+    def_score = max([score(p, self.distance(p, fumble_location)) for p in nearby_def], default=0)
+    
+    if random.random() < off_score / (off_score + def_score):
+        return 'offense', False
+    else:
+        return 'defense', True  # Bell
+```
+
+---
+
+### 9. Rushing vs Lateral Yards Split
+
+**Current:** All yards in one bucket
+
+**Build:** Separate tracking.
+
+```python
+class PlayerGameStats:
+    def __init__(self):
+        self.rushing_attempts = 0
+        self.rushing_yards = 0
+        self.rushing_tds = 0
+        
+        self.lateral_receptions = 0
+        self.lateral_yards = 0
+        self.lateral_tds = 0
+        self.lateral_assists = 0
+```
+
+---
+
+### 10. Lateral Assists
+
+**Current:** Not tracked
+
+**Build:** Pitchers get assists.
+
+```python
+def record_lateral_chain(self, chain_players, yards_by_player, is_td):
+    for i, player in enumerate(chain_players):
+        if i < len(chain_players) - 1:
+            player.stats.lateral_assists += 1
+        if i > 0:
+            player.stats.lateral_receptions += 1
+            player.stats.lateral_yards += yards_by_player.get(player, 0)
+        if is_td and i == len(chain_players) - 1:
+            player.stats.lateral_tds += 1
+```
+
+---
+
+### 11. Special Teams Stats
+
+**Current:** No ST tracking
+
+**Build:** Track returns, ST tackles.
+
+```python
+class PlayerSTStats:
+    def __init__(self):
+        self.kick_returns = 0
+        self.kick_return_yards = 0
+        self.kick_return_tds = 0
+        self.punt_returns = 0
+        self.punt_return_yards = 0
+        self.punt_return_tds = 0
+        self.muffs = 0
+        self.st_tackles = 0
+```
+
+---
+
+## Priority Order
+
+| # | Feature | Impact |
+|---|---------|--------|
+| 1 | Carrier selection by play type | High |
+| 2 | Explosive run system | High |
+| 3 | Play-specific signatures | High |
+| 4 | Viper Jet | High |
+| 5 | Viper alignment advantage | Medium |
+| 6 | Defensive alignment vs play | Medium |
+| 7 | Run-specific fumble rates | Medium |
+| 8 | Fumble recovery contest | Low |
+| 9 | Rushing/lateral yards split | Low |
+| 10 | Lateral assists | Low |
+| 11 | Special teams stats | Low |
+
+**Do 1–4 first.** They make the game feel like Viperball.
