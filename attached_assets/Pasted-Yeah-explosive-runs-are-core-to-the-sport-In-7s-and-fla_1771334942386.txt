@@ -1,0 +1,125 @@
+Yeah, explosive runs are core to the sport. In 7s and flag football, one broken tackle and you’re gone—there’s no cavalry coming. Same in Viperball.
+
+Explosive Run Mechanics
+Why Explosives Happen in Viperball
+	1.	Fewer defenders — Like 7s, the field is spread thin
+	2.	No deep safety help — Keeper is the last line, not a safety 15 yards back
+	3.	Pursuit angles are longer — Defenders flow to ball, but laterals keep them guessing
+	4.	One miss = gone — Beat the Keeper and it’s 6 (well, 9)
+Explosive Trigger System
+
+def check_explosive_run(self, carrier, play_type, yards_after_first_level):
+    """
+    If carrier beats the first level with momentum, check for breakaway.
+    """
+    
+    # Only trigger on runs that already got 5+ yards
+    if yards_after_first_level < 5:
+        return yards_after_first_level
+    
+    # Base explosive chance by play type
+    EXPLOSIVE_CHANCE = {
+        'dive': 0.08,           # Rare — capped by traffic
+        'power': 0.10,          # Downhill, can break arm tackles
+        'sweep': 0.18,          # Speed to edge, open field
+        'speed_option': 0.15,   # If pitch is on time, runway
+        'counter': 0.20,        # Defense going wrong way = acres of space
+        'draw': 0.12,           # Delayed timing can spring free
+        'viper_jet': 0.28,      # Highest — Viper in space is dangerous
+    }
+    
+    base_chance = EXPLOSIVE_CHANCE.get(play_type, 0.12)
+    
+    # Carrier attributes boost
+    if carrier.speed >= 85:
+        base_chance += 0.08
+    if carrier.elusiveness >= 80:
+        base_chance += 0.06
+    if carrier.breakaway >= 85:  # If this attribute exists
+        base_chance += 0.10
+    
+    # Keeper fatigue matters (Boot Raid wears them out)
+    if self.keeper_fatigue > 70:
+        base_chance += 0.10  # Gassed Keeper can't close
+    
+    # Roll for explosive
+    if random.random() < base_chance:
+        return self.resolve_explosive_run(carrier, yards_after_first_level)
+    
+    return yards_after_first_level
+
+
+def resolve_explosive_run(self, carrier, yards_at_break):
+    """
+    Carrier broke free — now it's a footrace.
+    """
+    
+    # Determine how far they go
+    # Most explosives are 15-35 yards, some go the distance
+    
+    remaining_field = 100 - self.state.field_position - yards_at_break
+    
+    # TD chance based on where they broke free
+    if remaining_field <= 20:
+        # Already in red zone — likely TD
+        td_chance = 0.75
+    elif remaining_field <= 40:
+        # Midfield break — coin flip
+        td_chance = 0.45
+    else:
+        # Own territory — long way to go
+        td_chance = 0.25
+    
+    # Speed matters for TD conversion
+    if carrier.speed >= 90:
+        td_chance += 0.15
+    
+    if random.random() < td_chance:
+        # TOUCHDOWN
+        return remaining_field + yards_at_break
+    else:
+        # Big gain but caught from behind
+        gain = random.uniform(0.5, 0.85) * remaining_field
+        return yards_at_break + gain
+
+
+Explosive Rates by Play Type
+
+
+
+|Play             |Explosive Chance|Why                                 |
+|-----------------|----------------|------------------------------------|
+|Dive             |8%              |Traffic, bodies, no runway          |
+|Power            |10%             |Downhill momentum can break tackles |
+|Sweep            |18%             |Edge speed, open field              |
+|Speed Option     |15%             |Clean pitch = carrier in space      |
+|Counter          |20%             |Defense going wrong way             |
+|Draw             |12%             |Delayed timing catches D flat-footed|
+|Viper Jet        |28%             |Viper in jet motion is a nightmare  |
+|**Lateral Chain**|22%             |Multiple chances to spring someone  |
+
+Sample Explosive Run Output
+
+Q2 | 1st & 20 | Own 35
+
+Play: Viper Jet — VP1 in motion, takes handoff
+
+VP1 cuts upfield → 8 yards (beat first level)
+    [EXPLOSIVE CHECK: 28% base + 8% speed + 6% elusiveness = 42%]
+    [ROLL: 0.31 — EXPLOSIVE TRIGGERED]
+
+VP1 breaks into open field — Keeper KP4 in pursuit
+    [Remaining field: 57 yards]
+    [TD chance: 45% base + 15% speed = 60%]
+    [ROLL: 0.44 — TOUCHDOWN]
+
+VP1 Viper Jet → 65 yards — TOUCHDOWN!
+
+
+What This Creates
+	∙	Home run threat on every snap — Defense can’t relax
+	∙	Viper Jet and Counter are the “deep ball” — High-risk, high-reward
+	∙	Dives are safe but capped — You’re not breaking one for 50
+	∙	Keeper fatigue matters — Boot Raid teams wear down the Keeper, then gash them with Viper Jets late
+	∙	Speed wins — Elite speed Flankers and Vipers have TD upside every touch
+This matches 7s/flag football feel—most plays are 4-8 yards, but any touch can go the distance.​​​​​​​​​​​​​​​​

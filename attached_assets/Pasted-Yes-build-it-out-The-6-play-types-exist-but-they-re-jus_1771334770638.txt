@@ -1,0 +1,151 @@
+Yes, build it out. The 6 play types exist but they’re just different gaussians—no real mechanical difference. The v3.11 spec has the target design, but here’s the prioritized implementation plan:
+
+Run Game Depth - Implementation Plan
+Phase 1: Carrier Selection by Play Type (Highest Impact)
+Make play types feel different by who touches the ball.
+
+CARRIER_BY_PLAY = {
+    'dive': ['HB', 'FB', 'PF'],           # Power backs up the gut
+    'power': ['PF', 'HB', 'VP'],           # Big bodies behind pulling guard
+    'sweep': ['SF', 'WB', 'EF'],           # Speed to the edge
+    'speed_option': ['ZB', 'WB', 'SF'],    # ZB reads, fast pitch targets
+    'counter': ['HB', 'VP', 'WB'],         # Misdirection to playmaker
+    'draw': ['HB', 'ZB'],                  # Delayed handoff after fake
+    'viper_jet': ['VP'],                   # Viper only
+}
+
+
+This alone makes play calling feel intentional—you call Sweep because your Speed Flanker is electric, not just because you want higher variance.
+Phase 2: Gap/Blocking Phase
+Two-phase yard calculation:
+
+def calculate_run_yards(self, play, carrier):
+    # Phase 1: Line battle (determines initial penetration)
+    oline_strength = self.offense.oline_rating
+    dline_strength = self.defense.dline_rating
+    
+    line_differential = oline_strength - dline_strength
+    
+    if line_differential > 10:
+        # Dominant line - hole opens
+        initial_yards = random.uniform(2, 5)
+    elif line_differential < -10:
+        # Line gets blown up - TFL territory
+        initial_yards = random.uniform(-3, 1)
+    else:
+        # Contested - small crease
+        initial_yards = random.uniform(0, 3)
+    
+    # Phase 2: Second level (carrier vs LBs/DBs)
+    yards_after_contact = self.resolve_tackle_phase(carrier, initial_yards)
+    
+    return initial_yards + yards_after_contact
+
+
+Phase 3: Tackle Contest
+Individual matchup, not flat modifier:
+
+def resolve_tackle_phase(self, carrier, yards_to_contact):
+    # Find nearest defender
+    defender = self.get_nearest_defender(carrier.position)
+    
+    # Matchup depends on play type
+    if carrier.speed > defender.speed + 5:
+        # Carrier outruns angle
+        escape_chance = 0.4
+    elif carrier.power > defender.tackle + 5:
+        # Carrier runs through arm tackle
+        escape_chance = 0.3
+    elif carrier.elusiveness > defender.awareness + 5:
+        # Carrier makes defender miss
+        escape_chance = 0.35
+    else:
+        # Contested tackle
+        escape_chance = 0.15
+    
+    if random.random() < escape_chance:
+        # Broken tackle - chunk play
+        return random.uniform(5, 15)
+    else:
+        # Tackled at or near contact
+        return random.uniform(-1, 3)
+
+
+Phase 4: Play-Specific Signatures
+Each play type has a unique mechanic:
+
+
+
+|Play            |Signature Mechanic                                           |
+|----------------|-------------------------------------------------------------|
+|**Dive**        |Lowest variance, highest success rate, lowest big-play chance|
+|**Power**       |Pulling guard creates +15% hole chance, but slower developing|
+|**Sweep**       |Highest variance, -10% if defense has edge speed             |
+|**Speed Option**|ZB makes read—if correct, +3 yards; if wrong, -2 yards       |
+|**Counter**     |“Misdirection bonus”—15% chance defense bites, auto +5 yards |
+|**Draw**        |+20% yards if opponent in pass-rush mode (Boot Raid counter) |
+|**Viper Jet**   |+25% big play chance, +30% fumble risk                       |
+
+def apply_play_signature(self, play_type, base_yards, game_state):
+    if play_type == 'counter':
+        # Misdirection bonus
+        if random.random() < 0.15:
+            return base_yards + 5  # Defense bit on fake
+    
+    elif play_type == 'draw':
+        # Punishes pass-rush
+        if game_state.opponent_expecting_kick:
+            return base_yards * 1.20
+    
+    elif play_type == 'speed_option':
+        # ZB read
+        read_correct = random.random() < 0.65  # 65% correct read
+        if read_correct:
+            return base_yards + 3
+        else:
+            return base_yards - 2
+    
+    elif play_type == 'viper_jet':
+        # High upside, high risk
+        if random.random() < 0.25:
+            return base_yards * 1.8  # Explosive
+        # Fumble check handled separately with +30% rate
+    
+    return base_yards
+
+
+Phase 5: Fumble Recovery Contest
+Not fixed percentage—actual player chase:
+
+def resolve_fumble_recovery(self, fumble_location, carrier, nearby_players):
+    # Get players within recovery range
+    offense_players = [p for p in nearby_players if p.team == carrier.team]
+    defense_players = [p for p in nearby_players if p.team != carrier.team]
+    
+    # Weight by awareness + speed + proximity
+    offense_recovery_score = sum(
+        p.awareness * 0.4 + p.speed * 0.3 + (10 - p.distance_to_ball) * 0.3
+        for p in offense_players
+    )
+    
+    defense_recovery_score = sum(
+        p.awareness * 0.4 + p.speed * 0.3 + (10 - p.distance_to_ball) * 0.3
+        for p in defense_players
+    )
+    
+    total = offense_recovery_score + defense_recovery_score
+    offense_chance = offense_recovery_score / total
+    
+    if random.random() < offense_chance:
+        return 'offense'
+    else:
+        return 'defense'  # Bell awarded
+
+
+Implementation Order
+	1.	Carrier selection — Immediate feel improvement, low complexity
+	2.	Play signatures — Makes each play type distinct, medium complexity
+	3.	Gap/blocking phase — Adds strategic depth (OL matters), medium complexity
+	4.	Tackle contest — Individual matchups, higher complexity
+	5.	Fumble recovery contest — Polish, lower priority
+Start with 1 and 2—those give you the most “feel” improvement for the least work. 3-5 add depth but the game already plays well without them.​​​​​​​​​​​​​​​​

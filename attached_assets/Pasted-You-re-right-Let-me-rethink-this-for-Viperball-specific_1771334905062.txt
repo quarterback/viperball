@@ -1,0 +1,170 @@
+You’re right. Let me rethink this for Viperball specifically.
+
+Viperball Run Game - What’s Different
+There’s no offensive line in the traditional sense. Viperball is closer to rugby/Australian rules—blockers are mobile, not a static wall. The “gap” concept doesn’t apply the same way.
+What matters in Viperball runs:
+	1.	Blockers are Flankers — They’re the same players who carry the ball and catch laterals. They block, then release, then become pitch targets.
+	2.	The Viper creates chaos — Their pre-snap alignment pulls defenders out of position. A run to the opposite side of where the Viper lined up should have an advantage.
+	3.	The Keeper is the last line — If you break through the first level, you’re 1-on-1 with the Keeper. That’s the matchup that matters.
+	4.	Lateral threat opens runs — If the defense is spread to cover lateral chains, inside runs should gash them. If they stack the box, laterals kill them.
+	5.	No forward pass = different pursuit angles — Defenders don’t have to respect deep routes. They’re all flowing to the ball. Speed to the edge matters more.
+
+Revised Run Mechanics for Viperball
+Phase 1: Viper Alignment Advantage
+
+def calculate_viper_advantage(self, play_direction, viper_alignment):
+    """
+    If Viper lined up opposite the play direction, defense is pulled out of position.
+    """
+    if viper_alignment == 'left' and play_direction == 'right':
+        return 0.15  # +15% yards
+    elif viper_alignment == 'right' and play_direction == 'left':
+        return 0.15
+    elif viper_alignment == 'center':
+        return 0.05  # Viper in backfield = less misdirection but more blocking
+    else:
+        return 0.0  # Viper on same side as play
+
+
+Phase 2: Defensive Alignment vs Play Type
+
+def calculate_defensive_alignment_modifier(self, play_type, defense_alignment):
+    """
+    Spread defense = weak vs inside runs
+    Stacked defense = weak vs outside runs and laterals
+    """
+    
+    ALIGNMENT_VS_PLAY = {
+        # (defense_alignment, play_type): modifier
+        ('spread', 'dive'): +0.20,      # Nobody in the middle
+        ('spread', 'power'): +0.15,
+        ('spread', 'sweep'): -0.05,     # Already covering edges
+        ('spread', 'lateral_spread'): -0.10,
+        
+        ('stacked', 'dive'): -0.15,     # Bodies everywhere inside
+        ('stacked', 'power'): -0.10,
+        ('stacked', 'sweep'): +0.15,    # Edge is open
+        ('stacked', 'lateral_spread'): +0.20,  # Can't cover width
+        
+        ('balanced', 'dive'): 0.0,
+        ('balanced', 'sweep'): 0.0,
+    }
+    
+    return ALIGNMENT_VS_PLAY.get((defense_alignment, play_type), 0.0)
+
+
+Phase 3: Keeper Matchup (The Real “Tackle Phase”)
+In Viperball, if you beat the first level, it’s carrier vs Keeper:
+
+def resolve_keeper_matchup(self, carrier, keeper, yards_gained_so_far):
+    """
+    Carrier broke through — now it's 1-on-1 with the Keeper.
+    """
+    
+    # Only triggers on chunk plays (8+ yards already)
+    if yards_gained_so_far < 8:
+        return yards_gained_so_far  # Tackled before reaching Keeper
+    
+    # Matchup attributes
+    carrier_score = carrier.speed * 0.5 + carrier.elusiveness * 0.3 + carrier.power * 0.2
+    keeper_score = keeper.speed * 0.4 + keeper.tackling * 0.4 + keeper.awareness * 0.2
+    
+    differential = carrier_score - keeper_score
+    
+    if differential > 15:
+        # Carrier blows by Keeper — TD or huge gain
+        return yards_gained_so_far + random.uniform(20, 50)
+    elif differential > 5:
+        # Carrier wins but Keeper slows them
+        return yards_gained_so_far + random.uniform(8, 20)
+    elif differential > -5:
+        # Contested — could go either way
+        if random.random() < 0.4:
+            return yards_gained_so_far + random.uniform(5, 15)
+        else:
+            return yards_gained_so_far  # Keeper makes the stop
+    else:
+        # Keeper wins — tackle at the spot
+        return yards_gained_so_far
+
+
+Phase 4: Carrier Selection by Play Type (Viperball Positions)
+
+CARRIER_BY_PLAY = {
+    'dive': ['HB', 'PF', 'ZB'],           # Up the gut
+    'power': ['PF', 'HB'],                 # Downhill runner
+    'sweep': ['SF', 'WB', 'EF'],           # Speed to edge
+    'speed_option': ['ZB', 'SF', 'WB'],    # ZB reads, fast targets
+    'counter': ['WB', 'HB', 'VP'],         # Misdirection
+    'draw': ['HB', 'ZB'],                  # Delayed after fake kick look
+    'viper_jet': ['VP'],                   # Viper only — jet motion
+}
+
+
+Phase 5: Play Signatures (Viperball-Specific)
+
+
+
+|Play            |Viperball Signature                                                      |
+|----------------|-------------------------------------------------------------------------|
+|**Dive**        |Lowest variance, safest. Best when defense is spread for laterals.       |
+|**Power**       |Flanker leads through hole. +10% if Power Flanker is lead blocker.       |
+|**Sweep**       |Speed to edge. Keeper angle is the key—if Keeper cheats inside, big play.|
+|**Speed Option**|ZB reads Keeper. Correct read = +4 yards. Wrong read = -2 yards.         |
+|**Counter**     |20% chance defense bites on Viper motion, auto +6 yards.                 |
+|**Draw**        |+25% yards if defense was in “kick block” stance (counters Boot Raid).   |
+|**Viper Jet**   |Highest ceiling, highest floor. +30% explosive chance, +40% fumble risk. |
+
+def apply_viperball_signature(self, play_type, base_yards, game_state):
+    
+    if play_type == 'dive':
+        # Safest play — low variance
+        return base_yards * random.uniform(0.85, 1.10)
+    
+    elif play_type == 'sweep':
+        # Keeper angle matters
+        if game_state.keeper_alignment == 'inside':
+            return base_yards * 1.25  # Edge is open
+        elif game_state.keeper_alignment == 'outside':
+            return base_yards * 0.80  # Keeper has the angle
+    
+    elif play_type == 'counter':
+        # Misdirection — did defense bite?
+        if random.random() < 0.20:
+            return base_yards + 6  # Defense went wrong way
+    
+    elif play_type == 'draw':
+        # Punishes kick-block defense
+        if game_state.defense_expecting_kick:
+            return base_yards * 1.25
+    
+    elif play_type == 'speed_option':
+        # ZB reads the Keeper
+        read_correct = random.random() < (game_state.zb.awareness / 100)
+        if read_correct:
+            return base_yards + 4
+        else:
+            return base_yards - 2
+    
+    elif play_type == 'viper_jet':
+        # Boom or bust
+        if random.random() < 0.30:
+            return base_yards * 1.8  # Explosive
+        # Higher fumble risk handled in fumble check
+    
+    return base_yards
+
+
+What’s NOT in Viperball Runs
+	∙	❌ Offensive line vs defensive line battle (no static line)
+	∙	❌ Gap assignments (A gap, B gap, etc.)
+	∙	❌ Pulling guards (blockers are mobile by default)
+	∙	❌ Pass rush (no forward pass to rush)
+What IS in Viperball Runs
+	∙	✅ Viper alignment creating pre-snap advantages
+	∙	✅ Defensive alignment vs play type (spread vs stacked)
+	∙	✅ Keeper as the last line (the real 1-on-1)
+	∙	✅ Lateral threat forcing defensive choices
+	∙	✅ Speed to edge (no deep coverage = aggressive pursuit)
+
+This feel right for the sport?​​​​​​​​​​​​​​​​
