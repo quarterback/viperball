@@ -18,11 +18,15 @@ from engine.season import Season, TeamRecord, Game
 # ========================================
 
 OFFENSE_STYLE_NAMES = {
-    "territorial": "Territorial",
-    "balanced": "Balanced",
-    "power_option": "Power Option",
-    "option_spread": "Option Spread",
+    "ground_pound": "Ground & Pound",
     "lateral_spread": "Lateral Spread",
+    "boot_raid": "Boot Raid",
+    "ball_control": "Ball Control",
+    "ghost": "Ghost Formation",
+    "rouge_hunt": "Rouge Hunt",
+    "chain_gang": "Chain Gang",
+    "triple_threat": "Triple Threat",
+    "balanced": "Balanced",
 }
 
 DEFENSE_STYLE_NAMES = {

@@ -96,10 +96,14 @@ defense_style_keys = list(DEFENSE_STYLES.keys())
 defense_styles = DEFENSE_STYLES
 
 OFFENSE_TOOLTIPS = {
-    "power_option": "Heavy inside runs with option reads. Low kick attempts, high TD rate. Best against soft defenses.",
-    "lateral_spread": "Spreads the field with lateral chains. High-variance, explosive plays. Risky but devastating when it works.",
-    "territorial": "Prioritizes snap kicks and field goals. Plays for field position and pindowns. Patient, grinding style.",
-    "option_spread": "Speed-based option reads mixed with lateral chains. Exploits tired defenses. High tempo.",
+    "ground_pound": "Grind 20 yards, punch it in. Heavy dive/power runs using all 6 downs. Old-school power football.",
+    "lateral_spread": "Stretch the defense with 2-4 lateral chains. High-variance, big-play offense. Risky but devastating.",
+    "boot_raid": "Air Raid with the foot. Get to the Launch Pad (opp 40-45), then fire snap kicks. Kick-heavy.",
+    "ball_control": "Conservative, mistake-free football. Take the 3-point place kick when available. Win 24-21.",
+    "ghost": "Pre-snap chaos. Viper misdirection, counters, and broken plays. Defense never knows who has the ball.",
+    "rouge_hunt": "Punt early, pin deep, force mistakes. Score via Pindowns, Bells, Safeties. Defense-first offense.",
+    "chain_gang": "Maximum laterals, maximum chaos. Every play is a 4-5 lateral chain. Showtime Viperball.",
+    "triple_threat": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
     "balanced": "No strong tendency — mixes run, chain, and kick based on game state. Jack of all trades.",
 }
 

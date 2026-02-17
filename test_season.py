@@ -44,36 +44,36 @@ def main():
     # Configure diverse styles for strategic matchups
     style_configs = {
         "Gonzaga": {
-            "offense_style": "territorial",
-            "defense_style": "coverage_defense"  # Anti-kicking package
+            "offense_style": "boot_raid",
+            "defense_style": "coverage_defense"
         },
         "Villanova": {
             "offense_style": "lateral_spread",
-            "defense_style": "contain_defense"  # Anti-lateral package
+            "defense_style": "contain_defense"
         },
         "Xavier": {
             "offense_style": "balanced",
-            "defense_style": "pressure_defense"  # Aggressive, creates turnovers
+            "defense_style": "pressure_defense"
         },
         "Marquette": {
-            "offense_style": "power_option",
-            "defense_style": "run_stop_defense"  # Anti-run package
+            "offense_style": "ground_pound",
+            "defense_style": "run_stop_defense"
         },
         "Butler": {
-            "offense_style": "option_spread",
-            "defense_style": "base_defense"  # Balanced defense
+            "offense_style": "ghost",
+            "defense_style": "base_defense"
         },
         "Creighton": {
-            "offense_style": "territorial",
-            "defense_style": "base_defense"  # Kicking-focused
+            "offense_style": "rouge_hunt",
+            "defense_style": "base_defense"
         },
         "Providence": {
-            "offense_style": "lateral_spread",
-            "defense_style": "pressure_defense"  # High-risk chaos
+            "offense_style": "chain_gang",
+            "defense_style": "pressure_defense"
         },
         "St. John's": {
-            "offense_style": "power_option",
-            "defense_style": "contain_defense"  # Disciplined defense
+            "offense_style": "triple_threat",
+            "defense_style": "contain_defense"
         },
     }
 

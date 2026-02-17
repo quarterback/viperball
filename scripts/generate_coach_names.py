@@ -107,9 +107,14 @@ COACHING_BACKGROUNDS = [
 
 # Coaching philosophies (these will match team identities)
 PHILOSOPHIES = {
-    'power_option': "Ground-based option attack with physical play",
+    'ground_pound': "Ground-based power attack using all 6 downs",
     'lateral_spread': "Multiple lateral chains and perimeter speed",
-    'territorial': "Field position battle with strategic kicking",
+    'boot_raid': "Snap kick-heavy air raid with the foot",
+    'ball_control': "Conservative, mistake-free football",
+    'ghost': "Pre-snap chaos and Viper misdirection",
+    'rouge_hunt': "Defense-first, punt early and pin deep",
+    'chain_gang': "Maximum laterals, maximum chaos",
+    'triple_threat': "Single-wing misdirection with direct snaps",
     'tempo_chaos': "Fast-paced, high-risk offensive tempo",
     'hybrid': "Balanced approach adapting to opponent",
     'defensive_first': "Defensive stability and ball control"
@@ -204,7 +209,7 @@ def generate_coach_name(
 
     # Determine coaching style based on philosophy
     if team_philosophy:
-        if 'power' in team_philosophy or 'territorial' in team_philosophy:
+        if 'ground' in team_philosophy or 'ball_control' in team_philosophy or 'rouge' in team_philosophy:
             coaching_style = random.choice(['conservative', 'physical', 'methodical'])
         elif 'lateral' in team_philosophy or 'tempo' in team_philosophy:
             coaching_style = random.choice(['aggressive', 'innovative', 'risk-taking'])
@@ -290,7 +295,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     print("\n1. Female head coach:")
-    coach1 = generate_coach_name(gender='female', team_philosophy='power_option')
+    coach1 = generate_coach_name(gender='female', team_philosophy='ground_pound')
     print(json.dumps(coach1, indent=2))
 
     print("\n2. Male head coach:")
@@ -298,7 +303,7 @@ if __name__ == "__main__":
     print(json.dumps(coach2, indent=2))
 
     print("\n3. Gender-neutral coach:")
-    coach3 = generate_coach_name(gender='neutral', team_philosophy='territorial')
+    coach3 = generate_coach_name(gender='neutral', team_philosophy='boot_raid')
     print(json.dumps(coach3, indent=2))
 
     print("\n4. Random coach (former player):")

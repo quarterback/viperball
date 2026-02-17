@@ -50,7 +50,7 @@ def derive_coaching_style_from_position(position: str) -> Dict[str, any]:
         return {
             'offensive_specialty': 'Decision-making and option execution',
             'coaching_strength': 'Play calling and game management',
-            'philosophy_tendency': 'power_option',
+            'philosophy_tendency': 'ground_pound',
             'risk_tolerance': 'medium',
             'teaching_focus': 'Reads and decision trees'
         }
@@ -59,7 +59,7 @@ def derive_coaching_style_from_position(position: str) -> Dict[str, any]:
         return {
             'offensive_specialty': 'Running game and ball carrying',
             'coaching_strength': 'Physical play and toughness',
-            'philosophy_tendency': 'power_option',
+            'philosophy_tendency': 'ground_pound',
             'risk_tolerance': 'conservative',
             'teaching_focus': 'Fundamentals and physicality'
         }
@@ -95,7 +95,7 @@ def derive_coaching_style_from_position(position: str) -> Dict[str, any]:
         return {
             'offensive_specialty': 'Line play and physicality',
             'coaching_strength': 'Toughness and fundamentals',
-            'philosophy_tendency': 'territorial',
+            'philosophy_tendency': 'ball_control',
             'risk_tolerance': 'conservative',
             'teaching_focus': 'Blocking and defensive fundamentals'
         }
@@ -152,7 +152,7 @@ def derive_coaching_tendencies_from_stats(player_stats: Dict) -> Dict:
         style = 'tempo_chaos'
         description = "Fast-paced, high-tempo offensive attack"
     elif max_stat == 'kicking' and kicking >= 80:
-        style = 'territorial'
+        style = 'boot_raid'
         description = "Field position battle with strategic kicking"
     elif max_stat == 'lateral_skill' and lateral_skill >= 85:
         style = 'lateral_spread'

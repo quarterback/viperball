@@ -22,10 +22,10 @@ from typing import Dict, Optional, Tuple
 
 
 PHILOSOPHY_TO_OFFENSE = {
-    "kick_heavy": ["territorial", "balanced"],
-    "lateral_heavy": ["lateral_spread", "option_spread"],
-    "ground_and_pound": ["power_option", "balanced"],
-    "hybrid": ["balanced", "option_spread", "power_option"],
+    "kick_heavy": ["boot_raid", "rouge_hunt", "ball_control"],
+    "lateral_heavy": ["lateral_spread", "chain_gang", "ghost"],
+    "ground_and_pound": ["ground_pound", "ball_control", "triple_threat"],
+    "hybrid": ["balanced", "ghost", "triple_threat", "ground_pound"],
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
@@ -50,24 +50,38 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
     offense_candidates = list(PHILOSOPHY_TO_OFFENSE.get(philosophy, ["balanced"]))
 
-    if kicking >= 77 and "territorial" not in offense_candidates:
-        offense_candidates.append("territorial")
+    if kicking >= 77 and "boot_raid" not in offense_candidates:
+        offense_candidates.append("boot_raid")
+    if kicking >= 72 and "rouge_hunt" not in offense_candidates:
+        offense_candidates.append("rouge_hunt")
     if lateral >= 87 and "lateral_spread" not in offense_candidates:
         offense_candidates.append("lateral_spread")
-    if speed >= 87 and "option_spread" not in offense_candidates:
-        offense_candidates.append("option_spread")
+    if lateral >= 85 and "chain_gang" not in offense_candidates:
+        offense_candidates.append("chain_gang")
+    if speed >= 87 and "ghost" not in offense_candidates:
+        offense_candidates.append("ghost")
+    if speed >= 85 and "triple_threat" not in offense_candidates:
+        offense_candidates.append("triple_threat")
 
     weights = []
     for c in offense_candidates:
         w = 1.0
-        if c == "territorial" and kicking >= 77:
+        if c == "boot_raid" and kicking >= 77:
             w += (kicking - 70) * 0.15
+        elif c == "rouge_hunt" and kicking >= 72:
+            w += (kicking - 68) * 0.10
         elif c == "lateral_spread" and lateral >= 85:
             w += (lateral - 80) * 0.12
-        elif c == "option_spread" and speed >= 86:
+        elif c == "chain_gang" and lateral >= 85:
+            w += (lateral - 80) * 0.10
+        elif c == "ghost" and speed >= 86:
             w += (speed - 84) * 0.2
-        elif c == "power_option" and defense >= 78:
+        elif c == "triple_threat" and speed >= 85:
+            w += (speed - 83) * 0.15
+        elif c == "ground_pound" and defense >= 78:
             w += (defense - 75) * 0.1
+        elif c == "ball_control":
+            w += 0.2
         elif c == "balanced":
             w += 0.3
         weights.append(max(0.1, w))
@@ -103,10 +117,14 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
 def get_scheme_label(offense: str, defense: str) -> str:
     offense_labels = {
-        "power_option": "Ground & Pound",
-        "lateral_spread": "Chain Attack",
-        "territorial": "Field Position",
-        "option_spread": "Speed Option",
+        "ground_pound": "Ground & Pound",
+        "lateral_spread": "Lateral Spread",
+        "boot_raid": "Boot Raid",
+        "ball_control": "Ball Control",
+        "ghost": "Ghost Formation",
+        "rouge_hunt": "Rouge Hunt",
+        "chain_gang": "Chain Gang",
+        "triple_threat": "Triple Threat",
         "balanced": "Balanced",
     }
     defense_labels = {

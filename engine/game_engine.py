@@ -666,49 +666,52 @@ class Play:
 
 
 OFFENSE_STYLES = {
-    "power_option": {
-        "label": "Power Option",
-        "description": "Heavy run game with option reads",
+    "ground_pound": {
+        "label": "Ground & Pound",
+        "description": "Grind 20 yards, punch it in. Old-school power football using all 6 downs.",
         "weights": {
-            "dive_option": 0.18,
+            "dive_option": 0.30,
+            "power": 0.25,
+            "sweep_option": 0.18,
             "speed_option": 0.10,
-            "sweep_option": 0.12,
-            "power": 0.18,
             "counter": 0.08,
             "draw": 0.05,
-            "viper_jet": 0.04,
-            "lateral_spread": 0.12,
-            "territory_kick": 0.13,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.02,
+            "territory_kick": 0.00,
         },
-        "tempo": 0.5,
-        "lateral_risk": 0.8,
-        "kick_rate": 0.15,
+        "tempo": 0.4,
+        "lateral_risk": 0.6,
+        "kick_rate": 0.08,
         "option_rate": 0.55,
-        "run_bonus": 0.10,
-        "fatigue_resistance": 0.05,
+        "run_bonus": 0.12,
+        "fatigue_resistance": 0.08,
         "kick_accuracy_bonus": 0.0,
         "explosive_lateral_bonus": 0.0,
         "option_read_bonus": 0.0,
         "broken_play_bonus": 0.0,
         "pindown_bonus": 0.0,
+        "run_vs_lateral": 0.92,
+        "early_down_aggression": 0.70,
+        "red_zone_run_pct": 0.85,
     },
     "lateral_spread": {
         "label": "Lateral Spread",
-        "description": "High lateral chain usage, spread the field",
+        "description": "Stretch the defense horizontally with 2-4 lateral chains. High-variance, big-play offense.",
         "weights": {
-            "dive_option": 0.05,
-            "speed_option": 0.08,
-            "sweep_option": 0.07,
-            "power": 0.03,
-            "counter": 0.04,
-            "draw": 0.04,
-            "viper_jet": 0.03,
-            "lateral_spread": 0.50,
-            "territory_kick": 0.16,
+            "dive_option": 0.08,
+            "power": 0.05,
+            "sweep_option": 0.12,
+            "speed_option": 0.10,
+            "counter": 0.08,
+            "draw": 0.07,
+            "viper_jet": 0.10,
+            "lateral_spread": 0.40,
+            "territory_kick": 0.00,
         },
         "tempo": 0.7,
         "lateral_risk": 1.4,
-        "kick_rate": 0.18,
+        "kick_rate": 0.12,
         "option_rate": 0.25,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
@@ -719,63 +722,191 @@ OFFENSE_STYLES = {
         "pindown_bonus": 0.0,
         "lateral_success_bonus": 0.10,
         "tired_def_yardage_bonus": 0.05,
+        "run_vs_lateral": 0.45,
+        "early_down_aggression": 0.85,
+        "red_zone_run_pct": 0.55,
     },
-    "territorial": {
-        "label": "Territorial",
-        "description": "Field position game, frequent kicks and punts — kick-heavy archetype",
+    "boot_raid": {
+        "label": "Boot Raid",
+        "description": "Air Raid with the foot. Get to the Launch Pad (opp 40-45), then fire snap kicks.",
         "weights": {
-            "dive_option": 0.08,
-            "speed_option": 0.05,
-            "sweep_option": 0.06,
-            "power": 0.05,
-            "counter": 0.03,
-            "draw": 0.03,
-            "viper_jet": 0.02,
+            "dive_option": 0.25,
+            "power": 0.15,
+            "sweep_option": 0.12,
+            "speed_option": 0.08,
+            "counter": 0.05,
+            "draw": 0.08,
+            "viper_jet": 0.07,
             "lateral_spread": 0.10,
-            "territory_kick": 0.58,
+            "territory_kick": 0.10,
         },
-        "tempo": 0.3,
-        "lateral_risk": 0.8,
-        "kick_rate": 0.56,
-        "option_rate": 0.25,
+        "weights_attack": {
+            "territory_kick": 0.50,
+            "lateral_spread": 0.25,
+            "speed_option": 0.15,
+            "dive_option": 0.10,
+        },
+        "tempo": 0.6,
+        "lateral_risk": 0.9,
+        "kick_rate": 0.35,
+        "option_rate": 0.30,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
-        "kick_accuracy_bonus": 0.10,
+        "kick_accuracy_bonus": 0.08,
         "explosive_lateral_bonus": 0.0,
         "option_read_bonus": 0.0,
         "broken_play_bonus": 0.0,
-        "pindown_bonus": 0.15,
+        "pindown_bonus": 0.10,
+        "snap_kick_aggression": 1.5,
+        "launch_pad_threshold": 55,
     },
-    "option_spread": {
-        "label": "Option Spread",
-        "description": "Speed-based option reads with lateral chains",
+    "ball_control": {
+        "label": "Ball Control",
+        "description": "Conservative, mistake-free football. Take the 3-point place kick when available. Win 24-21.",
         "weights": {
-            "dive_option": 0.08,
-            "speed_option": 0.20,
-            "sweep_option": 0.10,
-            "power": 0.05,
-            "counter": 0.07,
-            "draw": 0.06,
-            "viper_jet": 0.06,
-            "lateral_spread": 0.25,
-            "territory_kick": 0.13,
+            "dive_option": 0.35,
+            "power": 0.25,
+            "sweep_option": 0.20,
+            "speed_option": 0.10,
+            "counter": 0.05,
+            "draw": 0.03,
+            "viper_jet": 0.01,
+            "lateral_spread": 0.01,
+            "territory_kick": 0.00,
         },
-        "tempo": 0.8,
-        "lateral_risk": 1.25,
-        "kick_rate": 0.14,
-        "option_rate": 0.50,
+        "tempo": 0.3,
+        "lateral_risk": 0.5,
+        "kick_rate": 0.10,
+        "option_rate": 0.30,
+        "run_bonus": 0.08,
+        "fatigue_resistance": 0.05,
+        "kick_accuracy_bonus": 0.05,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.0,
+        "pindown_bonus": 0.08,
+        "run_vs_lateral": 0.95,
+        "early_down_aggression": 0.50,
+        "clock_burn_multiplier": 1.3,
+    },
+    "ghost": {
+        "label": "Ghost Formation",
+        "description": "Viper chaos and pre-snap confusion. The defense never knows where the playmaker is.",
+        "weights": {
+            "dive_option": 0.10,
+            "power": 0.08,
+            "sweep_option": 0.15,
+            "speed_option": 0.12,
+            "counter": 0.18,
+            "draw": 0.10,
+            "viper_jet": 0.15,
+            "lateral_spread": 0.12,
+            "territory_kick": 0.00,
+        },
+        "tempo": 0.65,
+        "lateral_risk": 1.1,
+        "kick_rate": 0.10,
+        "option_rate": 0.40,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
         "kick_accuracy_bonus": 0.0,
-        "explosive_lateral_bonus": 0.0,
-        "option_read_bonus": 0.15,
+        "explosive_lateral_bonus": 0.08,
+        "option_read_bonus": 0.05,
         "broken_play_bonus": 0.10,
         "pindown_bonus": 0.0,
-        "tired_def_broken_play_bonus": 0.10,
+        "viper_touch_rate": 0.35,
+        "pre_snap_motion": 0.80,
+        "misdirection_bonus": 1.3,
+    },
+    "rouge_hunt": {
+        "label": "Rouge Hunt",
+        "description": "Defense-first offense. Punt early, pin deep, force mistakes. Score Pindowns, Bells, Safeties.",
+        "weights": {
+            "dive_option": 0.25,
+            "power": 0.20,
+            "sweep_option": 0.12,
+            "speed_option": 0.08,
+            "counter": 0.05,
+            "draw": 0.05,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.03,
+            "territory_kick": 0.20,
+        },
+        "tempo": 0.35,
+        "lateral_risk": 0.6,
+        "kick_rate": 0.35,
+        "option_rate": 0.25,
+        "run_bonus": 0.05,
+        "fatigue_resistance": 0.05,
+        "kick_accuracy_bonus": 0.05,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.0,
+        "pindown_bonus": 0.20,
+        "early_punt_threshold": 3,
+        "pindown_priority": 1.5,
+    },
+    "chain_gang": {
+        "label": "Chain Gang",
+        "description": "Maximum laterals, maximum chaos. Every play is a 4-5 lateral chain. Showtime Viperball.",
+        "weights": {
+            "dive_option": 0.05,
+            "power": 0.03,
+            "sweep_option": 0.08,
+            "speed_option": 0.07,
+            "counter": 0.07,
+            "draw": 0.05,
+            "viper_jet": 0.10,
+            "lateral_spread": 0.55,
+            "territory_kick": 0.00,
+        },
+        "tempo": 0.8,
+        "lateral_risk": 1.6,
+        "kick_rate": 0.08,
+        "option_rate": 0.25,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.25,
+        "option_read_bonus": 0.0,
+        "broken_play_bonus": 0.12,
+        "pindown_bonus": 0.0,
+        "lateral_success_bonus": 0.15,
+        "run_vs_lateral": 0.25,
+        "chain_length_preference": 4,
+        "risk_tolerance": 0.90,
+    },
+    "triple_threat": {
+        "label": "Triple Threat",
+        "description": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
+        "weights": {
+            "dive_option": 0.20,
+            "power": 0.18,
+            "sweep_option": 0.15,
+            "speed_option": 0.15,
+            "counter": 0.12,
+            "draw": 0.10,
+            "viper_jet": 0.05,
+            "lateral_spread": 0.05,
+            "territory_kick": 0.00,
+        },
+        "tempo": 0.45,
+        "lateral_risk": 0.7,
+        "kick_rate": 0.10,
+        "option_rate": 0.45,
+        "run_bonus": 0.05,
+        "fatigue_resistance": 0.04,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.05,
+        "broken_play_bonus": 0.05,
+        "pindown_bonus": 0.0,
+        "direct_snap_rate": 0.25,
+        "misdirection_bonus": 1.2,
     },
     "balanced": {
         "label": "Balanced",
-        "description": "No strong tendency, adapts to situation",
+        "description": "No strong tendency, adapts to situation. Multiple threats, adaptable gameplan.",
         "weights": {
             "dive_option": 0.12,
             "speed_option": 0.10,
@@ -799,6 +930,12 @@ OFFENSE_STYLES = {
         "broken_play_bonus": 0.05,
         "pindown_bonus": 0.05,
     },
+}
+
+STYLE_MIGRATION = {
+    "power_option": "ground_pound",
+    "territorial": "boot_raid",
+    "option_spread": "ghost",
 }
 
 # ========================================
@@ -992,11 +1129,15 @@ BASE_MUFF_PUNT = 0.05    # 5% base chance of muffed punt return
 
 # Offensive style modifiers for blocks (lower = better special teams)
 OFFENSE_BLOCK_MODIFIERS = {
-    "territorial": 0.8,       # Built to kick, good protection
-    "balanced": 1.0,          # Average
-    "power_option": 1.1,      # Slightly weak special teams
-    "option_spread": 1.2,     # Less focus on kicking
-    "lateral_spread": 1.2,    # Less focus on kicking
+    "boot_raid": 0.8,
+    "ball_control": 0.85,
+    "rouge_hunt": 0.85,
+    "balanced": 1.0,
+    "triple_threat": 1.05,
+    "ground_pound": 1.1,
+    "ghost": 1.15,
+    "lateral_spread": 1.2,
+    "chain_gang": 1.2,
 }
 
 # Defensive style modifiers for blocks/muffs (higher = better special teams pressure)
@@ -1074,8 +1215,12 @@ class ViperballEngine:
                                 t.offense_style = style
                                 break
 
-        self.home_style = OFFENSE_STYLES.get(self.home_team.offense_style, OFFENSE_STYLES["balanced"])
-        self.away_style = OFFENSE_STYLES.get(self.away_team.offense_style, OFFENSE_STYLES["balanced"])
+        home_off = STYLE_MIGRATION.get(self.home_team.offense_style, self.home_team.offense_style)
+        away_off = STYLE_MIGRATION.get(self.away_team.offense_style, self.away_team.offense_style)
+        self.home_team.offense_style = home_off
+        self.away_team.offense_style = away_off
+        self.home_style = OFFENSE_STYLES.get(home_off, OFFENSE_STYLES["balanced"])
+        self.away_style = OFFENSE_STYLES.get(away_off, OFFENSE_STYLES["balanced"])
         self.home_defense = DEFENSE_STYLES.get(self.home_team.defense_style, DEFENSE_STYLES["base_defense"])
         self.away_defense = DEFENSE_STYLES.get(self.away_team.defense_style, DEFENSE_STYLES["base_defense"])
 
@@ -1869,6 +2014,9 @@ class ViperballEngine:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
+        style_name = self._current_style_name()
+        self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
+
         families = list(PlayFamily)
         w = [max(0.01, weights.get(f.value, 0.05)) for f in families]
         return random.choices(families, weights=w)[0]
@@ -1878,11 +2026,68 @@ class ViperballEngine:
             return self.home_style
         return self.away_style
 
-    def _current_defense(self) -> Dict:
-        """Returns the defensive style of the team currently on defense"""
+    def _current_style_name(self) -> str:
         if self.state.possession == "home":
-            return self.away_defense  # Away is on defense when home has ball
-        return self.home_defense      # Home is on defense when away has ball
+            return self.home_team.offense_style
+        return self.away_team.offense_style
+
+    def _current_defense(self) -> Dict:
+        if self.state.possession == "home":
+            return self.away_defense
+        return self.home_defense
+
+    def _apply_style_situational(self, weights: Dict, style_name: str, down: int, ytg: int, fp: int, score_diff: int, quarter: int, time_left: int):
+        if style_name == "ground_pound":
+            if down <= 3:
+                weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
+                weights["power"] = weights.get("power", 0.1) * 1.3
+            if fp >= 80:
+                weights["dive_option"] = weights.get("dive_option", 0.1) * 1.4
+                weights["power"] = weights.get("power", 0.1) * 1.4
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
+
+        elif style_name == "boot_raid":
+            launch_pad = self._current_style().get("launch_pad_threshold", 55)
+            if fp >= launch_pad and fp < 85:
+                attack_weights = self._current_style().get("weights_attack", {})
+                for k, v in attack_weights.items():
+                    weights[k] = v
+            elif fp < 40:
+                weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
+                weights["power"] = weights.get("power", 0.1) * 1.2
+
+        elif style_name == "ball_control":
+            if quarter >= 3 and score_diff > 0:
+                weights["dive_option"] = weights.get("dive_option", 0.1) * 1.5
+                weights["power"] = weights.get("power", 0.1) * 1.5
+                weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
+                weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.3
+
+        elif style_name == "ghost":
+            weights["counter"] = weights.get("counter", 0.05) * 1.4
+            weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
+            if down <= 2:
+                weights["draw"] = weights.get("draw", 0.05) * 1.5
+
+        elif style_name == "rouge_hunt":
+            early_punt = self._current_style().get("early_punt_threshold", 3)
+            if down >= early_punt and fp < 50 and ytg >= 10:
+                weights["territory_kick"] = weights.get("territory_kick", 0.2) * 3.0
+
+        elif style_name == "chain_gang":
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.3
+            weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.4
+            if quarter == 4 and abs(score_diff) <= 7:
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.5
+
+        elif style_name == "triple_threat":
+            if down <= 2:
+                weights["counter"] = weights.get("counter", 0.05) * 1.5
+                weights["draw"] = weights.get("draw", 0.05) * 1.3
+            if fp >= 70:
+                weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
+                weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
 
     def calculate_block_probability(self, kick_type: str = "punt") -> float:
         """
