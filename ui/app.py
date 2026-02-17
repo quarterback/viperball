@@ -349,6 +349,9 @@ def drive_result_label(result):
         "punt_return_td": "PUNT RET TD",
         "chaos_recovery": "CHAOS REC",
         "safety": "SAFETY",
+        "blocked_punt": "BLOCKED PUNT",
+        "muffed_punt": "MUFFED PUNT",
+        "blocked_kick": "BLOCKED KICK",
     }
     return labels.get(result, result.upper())
 
@@ -366,6 +369,9 @@ def drive_result_color(result):
         "punt_return_td": "#22c55e",
         "chaos_recovery": "#f97316",
         "safety": "#dc2626",
+        "blocked_punt": "#a855f7",
+        "muffed_punt": "#ec4899",
+        "blocked_kick": "#a855f7",
     }
     return colors.get(result, "#94a3b8")
 
@@ -906,6 +912,21 @@ if page == "Game Simulator":
                 st.text(f"  Lateral Risk: {a_style['lateral_risk']}")
                 st.text(f"  Kick Rate: {a_style['kick_rate']}")
                 st.text(f"  Option Rate: {a_style['option_rate']}")
+
+            st.markdown("**Special Teams Events**")
+            blocked_punts = [p for p in plays if p.get("result") == "blocked_punt"]
+            muffed_punts = [p for p in plays if p.get("result") == "muffed_punt"]
+            blocked_kicks = [p for p in plays if p.get("result") == "blocked_kick"]
+            st_c1, st_c2, st_c3 = st.columns(3)
+            st_c1.metric("Blocked Punts", len(blocked_punts))
+            st_c2.metric("Muffed Punts", len(muffed_punts))
+            st_c3.metric("Blocked Kicks", len(blocked_kicks))
+            all_st_events = blocked_punts + muffed_punts + blocked_kicks
+            if all_st_events:
+                for ev in sorted(all_st_events, key=lambda p: p.get("play_number", 0)):
+                    st.text(f"  Q{ev.get('quarter', '?')} | {ev.get('result', '').replace('_', ' ').upper()} | {ev.get('description', '')}")
+            else:
+                st.caption("No special teams chaos this game.")
 
             st.markdown("**Viperball Metrics (0-100)**")
             try:
