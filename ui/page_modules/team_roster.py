@@ -4,10 +4,19 @@ import json
 import streamlit as st
 import pandas as pd
 
+from engine.game_engine import POSITION_ARCHETYPES, get_archetype_info
+from ui.helpers import load_team
+
 
 def render_team_roster(shared):
     teams = shared["teams"]
+    styles = shared["styles"]
     team_names = shared["team_names"]
+    style_keys = shared["style_keys"]
+    defense_style_keys = shared["defense_style_keys"]
+    defense_styles = shared["defense_styles"]
+    OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
+    DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
 
     st.title("Team Roster Viewer")
 

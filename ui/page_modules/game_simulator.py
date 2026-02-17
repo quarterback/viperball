@@ -13,6 +13,7 @@ from ui.helpers import (
     load_team, format_time, fmt_vb_score,
     generate_box_score_markdown, generate_play_log_csv,
     generate_drives_csv, safe_filename, drive_result_label,
+    render_game_detail, drive_result_color,
 )
 
 

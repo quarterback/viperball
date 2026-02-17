@@ -9,10 +9,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from engine.season import load_teams_from_directory, create_season, get_recommended_bowl_count, BOWL_TIERS
-from engine.game_engine import WEATHER_CONDITIONS
 from engine.conference_names import generate_conference_names
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
 from engine.geography import get_geographic_conference_defaults
+from engine.awards import compute_season_awards
 from ui.helpers import fmt_vb_score, render_game_detail, safe_filename
 
 
@@ -280,21 +280,42 @@ def render_season_simulator(shared):
             st.dataframe(pd.DataFrame(leader_rows), hide_index=True, use_container_width=True)
 
             st.subheader("Season Awards")
+            try:
+                season_honors = compute_season_awards(
+                    season, year=2025,
+                    conferences=season.conferences if hasattr(season, 'conferences') else None,
+                )
+                indiv_awards = season_honors.individual_awards
+                if indiv_awards:
+                    st.markdown("**Individual Awards**")
+                    award_cols = st.columns(min(3, len(indiv_awards)))
+                    for i, award in enumerate(indiv_awards):
+                        col = award_cols[i % len(award_cols)]
+                        col.metric(
+                            award.award_name,
+                            f"{award.player_name}",
+                            f"{award.team_name} — {award.position}"
+                        )
+                    st.markdown("---")
+                    st.markdown("**Team Awards**")
+                    team_aw1, team_aw2 = st.columns(2)
+                    if season_honors.coach_of_year:
+                        team_aw1.metric("Coach of the Year", season_honors.coach_of_year)
+                    if season_honors.most_improved:
+                        team_aw2.metric("Most Improved Program", season_honors.most_improved)
+            except Exception:
+                pass
+
             best_record = standings[0]
             highest_scoring = max(standings, key=lambda r: r.points_for / max(1, r.games_played))
             best_defense = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
             highest_opi = max(standings, key=lambda r: r.avg_opi)
-            most_chaos = max(standings, key=lambda r: r.avg_chaos)
-            best_kicking = max(standings, key=lambda r: r.avg_kicking)
-
-            aw1, aw2, aw3 = st.columns(3)
+            st.markdown("**Team Statistical Leaders**")
+            aw1, aw2, aw3, aw4 = st.columns(4)
             aw1.metric("Best Record", f"{best_record.team_name} ({best_record.wins}-{best_record.losses})")
             aw2.metric("Highest Scoring", f"{highest_scoring.team_name} ({highest_scoring.points_for / max(1, highest_scoring.games_played):.1f} PPG)")
             aw3.metric("Best Defense", f"{best_defense.team_name} ({best_defense.points_against / max(1, best_defense.games_played):.1f} PA/G)")
-            aw4, aw5, aw6 = st.columns(3)
             aw4.metric("Highest OPI", f"{highest_opi.team_name} ({highest_opi.avg_opi:.1f})")
-            aw5.metric("Chaos Award", f"{most_chaos.team_name} ({most_chaos.avg_chaos:.1f})")
-            aw6.metric("Kicking Award", f"{best_kicking.team_name} ({best_kicking.avg_kicking:.1f})")
 
             if season.conferences and len(season.conferences) >= 1:
                 st.subheader("Conference Standings")
@@ -424,35 +445,73 @@ def render_season_simulator(shared):
                     st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
             st.subheader("Game Log")
-            completed_games = [g for g in season.schedule if g.completed]
-            completed_games_sorted = sorted(completed_games, key=lambda g: g.week)
+            all_game_entries = []
+            for g in season.schedule:
+                if g.completed:
+                    all_game_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
-            game_filter_col1, game_filter_col2 = st.columns(2)
+            if season.playoff_bracket:
+                max_week = max((g.week for g in season.playoff_bracket), default=0)
+                for g in season.playoff_bracket:
+                    if g.completed:
+                        if g.week == 1000:
+                            round_label = "Championship"
+                        else:
+                            round_label = f"Playoff R{g.week}"
+                        all_game_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.week})
+
+            if season.bowl_games:
+                for i, bowl in enumerate(season.bowl_games):
+                    bg = bowl.game
+                    if bg.completed:
+                        all_game_entries.append({"game": bg, "phase": "Bowl", "label_prefix": bowl.name, "sort_key": 800 + i})
+
+            all_game_entries.sort(key=lambda e: e["sort_key"])
+
+            all_teams_in_log = set()
+            all_phases = set()
+            for entry in all_game_entries:
+                g = entry["game"]
+                all_teams_in_log.add(g.home_team)
+                all_teams_in_log.add(g.away_team)
+                all_phases.add(entry["phase"])
+
+            game_filter_col1, game_filter_col2, game_filter_col3 = st.columns(3)
             with game_filter_col1:
-                filter_team = st.selectbox("Filter by Team", ["All Teams"] + sorted(set(g.home_team for g in completed_games) | set(g.away_team for g in completed_games)), key="season_game_filter_team")
+                filter_team = st.selectbox("Filter by Team", ["All Teams"] + sorted(all_teams_in_log), key="season_game_filter_team")
             with game_filter_col2:
-                filter_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(set(g.week for g in completed_games)), key="season_game_filter_week")
+                phase_options = ["All Phases"] + sorted(all_phases)
+                filter_phase = st.selectbox("Filter by Phase", phase_options, key="season_game_filter_phase")
+            with game_filter_col3:
+                reg_weeks = sorted(set(g.week for g in season.schedule if g.completed))
+                filter_week = st.selectbox("Filter by Week (Reg Season)", ["All Weeks"] + reg_weeks, key="season_game_filter_week")
 
-            filtered_games = completed_games_sorted
+            filtered_entries = all_game_entries
             if filter_team != "All Teams":
-                filtered_games = [g for g in filtered_games if g.home_team == filter_team or g.away_team == filter_team]
+                filtered_entries = [e for e in filtered_entries if e["game"].home_team == filter_team or e["game"].away_team == filter_team]
+            if filter_phase != "All Phases":
+                filtered_entries = [e for e in filtered_entries if e["phase"] == filter_phase]
             if filter_week != "All Weeks":
-                filtered_games = [g for g in filtered_games if g.week == filter_week]
+                filtered_entries = [e for e in filtered_entries if e["phase"] == "Regular Season" and e["game"].week == filter_week]
 
             game_labels = []
-            for g in filtered_games:
+            filtered_games = []
+            for entry in filtered_entries:
+                g = entry["game"]
                 hs = g.home_score or 0
                 aws = g.away_score or 0
-                winner = g.home_team if hs > aws else g.away_team
-                game_labels.append(f"Wk {g.week}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                game_labels.append(f"{entry['label_prefix']}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                filtered_games.append(g)
 
             schedule_data = []
-            for g in filtered_games:
+            for entry in filtered_entries:
+                g = entry["game"]
                 hs = g.home_score or 0
                 aws = g.away_score or 0
                 winner = g.home_team if hs > aws else g.away_team
                 schedule_data.append({
-                    "Week": g.week,
+                    "Phase": entry["phase"],
+                    "Round": entry["label_prefix"],
                     "Home": g.home_team,
                     "Away": g.away_team,
                     "Home Score": fmt_vb_score(hs),

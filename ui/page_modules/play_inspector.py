@@ -7,13 +7,18 @@ import plotly.express as px
 
 from engine import ViperballEngine, OFFENSE_STYLES
 from engine.game_engine import WEATHER_CONDITIONS
-from ui.helpers import load_team
+from ui.helpers import load_team, format_time, fmt_vb_score
 
 
 def render_play_inspector(shared):
     teams = shared["teams"]
     styles = shared["styles"]
+    team_names = shared["team_names"]
     style_keys = shared["style_keys"]
+    defense_style_keys = shared["defense_style_keys"]
+    defense_styles = shared["defense_styles"]
+    OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
+    DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
 
     st.title("Play Inspector - Single Play Runner")
 

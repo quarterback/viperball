@@ -8,14 +8,18 @@ import plotly.graph_objects as go
 
 from engine import ViperballEngine
 from engine.game_engine import WEATHER_CONDITIONS
-from ui.helpers import load_team, fmt_vb_score, safe_filename, generate_batch_summary_csv, drive_result_label
+from ui.helpers import load_team, fmt_vb_score, format_time, safe_filename, generate_batch_summary_csv, drive_result_label
 
 
 def render_debug_tools(shared):
     teams = shared["teams"]
-    team_names = shared["team_names"]
     styles = shared["styles"]
+    team_names = shared["team_names"]
     style_keys = shared["style_keys"]
+    defense_style_keys = shared["defense_style_keys"]
+    defense_styles = shared["defense_styles"]
+    OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
+    DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
 
     st.title("Debug Tools - Batch Simulation")
 
