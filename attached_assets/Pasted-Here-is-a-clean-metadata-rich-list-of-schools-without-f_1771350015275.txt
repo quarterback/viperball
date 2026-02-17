@@ -1,0 +1,59 @@
+Here is a clean, metadata-rich list of schools without football programs for your simulation. I’ve categorized them by their "vibe" (Prestige, City, Legacy) so your engineer can easily assign simulation attributes like Intelligence, Market Size, or Tradition.
+
+### **1. The "Academic Elite" (High Prestige, Non-Football)**
+
+These schools are the academic equivalent of the Ivy League in D3.
+
+* **NYU (Violets)** | New York, NY | Colors: Purple/White
+* **Emory University (Eagles)** | Atlanta, GA | Colors: Blue/Gold
+* **Brandeis University (Judges)** | Waltham, MA | Colors: Blue/White
+* **Vassar College (Brewers)** | Poughkeepsie, NY | Colors: Burgundy/Grey
+* **Swarthmore College (Garnet)** | Swarthmore, PA | Colors: Garnet/White
+* **Haverford College (Fords)** | Haverford, PA | Colors: Scarlet/Black
+* **Babson College (Beavers)** | Wellesley, MA | Colors: Green/White
+* **Claremont McKenna (Stags/Athenas)** | Claremont, CA | Colors: Cardinal/Gold
+
+### **2. The "Metro Titans" (Large City Schools)**
+
+Large student bodies, urban campuses, but zero football.
+
+* **Hunter College (Hawks)** | New York, NY | Colors: Purple/Gold
+* **Baruch College (Bearcats)** | New York, NY | Colors: Blue/White/Black
+* **John Jay College (Bloodhounds)** | New York, NY | Colors: Blue/Gold
+* **Suffolk University (Rams)** | Boston, MA | Colors: Blue/Gold
+* **UMass Boston (Beacons)** | Boston, MA | Colors: Blue/White
+* **UC Santa Cruz (Banana Slugs)** | Santa Cruz, CA | Colors: Blue/Gold
+* **UT Dallas (Comets)** | Richardson, TX | Colors: Orange/Green/White
+
+### **3. The "Legacy" Programs (Dropped Football)**
+
+These schools once had historic football programs but cut them, leaving an "athletic vacuum."
+
+* **UChicago (Maroons)** | Chicago, IL | *Historical powerhouse; Big Ten founder.*
+* **UC Santa Barbara (Gauchos)** | Santa Barbara, CA | *Dropped D1 football in 1992.*
+* **Cal State Fullerton (Titans)** | Fullerton, CA | *Former D1-A (FBS) program; dropped 1992.*
+* **Whittier College (Poets)** | Whittier, CA | *Dropped D3 football in 2022.*
+* **Occidental College (Tigers)** | Los Angeles, CA | *Dropped D3 football in 2020.*
+* **Hofstra University (Pride)** | Hempstead, NY | *Former high-level FCS program; dropped 2009.*
+* **Boston University (Terriers)** | Boston, MA | *Dropped D1 football in 1997.*
+
+### **4. "Pure" Women's Institutions (D3)**
+
+Perfect for a women's sport simulation as they prioritize women's athletics above all.
+
+* **Smith College (Pioneers)** | Northampton, MA | Colors: Blue/Yellow
+* **Wellesley College (Blue)** | Wellesley, MA | Colors: Blue/White
+* **Bryn Mawr College (Owls)** | Bryn Mawr, PA | Colors: Yellow/White
+* **Meredith College (Avenging Angels)** | Raleigh, NC | Colors: Maroon/Black/White
+* **Mount Holyoke (Lyons)** | South Hadley, MA | Colors: Blue/White
+
+### **5. Interesting D2 & NAIA Picks**
+
+* **Academy of Art (Urban Knights)** | San Francisco, CA | *D2 art school with high-level sports.*
+* **Point Loma Nazarene (Sea Lions)** | San Diego, CA | *D2; famously scenic cliffside campus.*
+* **Biola University (Eagles)** | La Mirada, CA | *High-level D2 West Coast program.*
+* **British Columbia (Thunderbirds)** | Vancouver, BC | *Massive NAIA prestige; international flavor.*
+
+---
+
+**Would you like me to generate a JSON snippet with these schools including their specific Hex codes and Stadium names for your game files?**

@@ -1,0 +1,46 @@
+Got it. For **Viperball**, you need schools that bring some narrative weight—either high academic prestige or a "fallen giant" history where they once had a gridiron footprint but walked away, leaving a vacuum for a new sport to fill.
+
+Here is a curated list of non-football schools (mostly D3, with some D2/NAIA/Defunct "Legacy" picks) that would make for great simulation targets.
+
+### 1. The "Ivy League Alternatives" (High Prestige D3)
+
+These schools are incredibly prestigious and often have massive athletic budgets for everything *except* football. In your sim, these would be the "Smart/Technical" teams.
+
+* **NYU (Violets):** The ultimate "big city" powerhouse. They have a massive student body but haven't played football since the 1950s.
+* **Emory University (Eagles):** Perennial top-10 academic school. They are a "blue blood" in D3 tennis and swimming; adding them to Viperball gives you an Atlanta-based juggernaut.
+* **University of Chicago (Maroons):** **The best "Legacy" story.** They were a founding member of the Big Ten (D1) and won a Heisman Trophy before they famously abolished football in 1939 to focus on academics. They have a small D3 team now, but they are the quintessential "academic over athletic" program.
+* **Vassar College (Brewers):** High prestige, formerly women-only. They have no football history, making them a "pure" Viperball candidate.
+
+### 2. The "West Coast Fallen Giants" (Legacy Cal States)
+
+In the 90s and early 2000s, a huge wave of California schools dropped football. These are large, recognizable brands that are now "vacant" gridiron territory.
+
+* **UC Santa Barbara (Gauchos):** Huge prestige and an incredible campus. Dropped football in 1992. They are a "soccer school" now but would be a Viperball natural.
+* **Cal State Fullerton (Titans):** They were a D1-A (FBS) powerhouse in the 80s/early 90s. Dropped football in 1992.
+* **Long Beach State (Beach/49ers):** Another D1-A program that produced NFL talent before cutting the cord in 1991.
+* **UC Riverside (Highlanders):** Dropped football in 1975. They have a great "Inland Empire" identity.
+* **Whittier College (Poets):** A recent D3 drop (2022). They were Richard Nixon’s alma mater and had a long-standing tradition before it became too expensive.
+
+### 3. The "Pure" Women's Athletics Powerhouses
+
+Since Viperball is a women's sport, these schools are the "Originals." They don't have men's football programs, so the women's teams are the primary focus of the campus.
+
+* **Smith College (Pioneers):** High-prestige "Seven Sisters" school. No football, but a massive tradition in rowing and basketball.
+* **Wellesley College (Blue):** Academic elite (Hillary Clinton’s alma mater). No football infrastructure at all.
+* **Simmons University (Sharks):** Based in Boston. Very strong athletic identity without the shadow of a football team.
+
+### 4. Interesting/Unique Nicknames (D2 & NAIA)
+
+* **Academy of Art (Urban Knights):** Based in San Francisco. A D2 art school with a surprisingly high-level athletic department.
+* **Biola University (Eagles):** A strong D2 program in SoCal with no football history.
+* **UC Santa Cruz (Banana Slugs):** The most famous "alternative" athletic identity in the country. Perfect for a "cult favorite" team in a sim.
+* **Point Loma Nazarene (Sea Lions):** Located on the cliffs in San Diego; literally the most beautiful campus in America, and they've never had football.
+
+### 5. Historical "What-If" Programs (NAIA/D3)
+
+* **Menlo College (Oaks):** Dropped football in 2015. They are located in Silicon Valley and were a major pipeline for athletes before cutting the program.
+* **Iona University (Gaels):** Dropped football in 2008. They are a small-school basketball powerhouse in NY that would be a gritty Viperball rival for NYU or Hunter.
+
+---
+
+**Would you like me to find the primary/secondary hex colors for these specific schools so you can add them to your `teams.json` (or equivalent data file)?**

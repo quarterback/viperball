@@ -11,19 +11,21 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## System Architecture
 
 ### UI/UX Decisions
-The user interface is built with Streamlit and features a 5-page sandbox:
+The user interface is built with Streamlit and features a 6-page sandbox:
 - **Game Simulator**: Allows configuration of offense/defense styles and weather, displaying real-time box scores, play distributions, drive outcomes, penalty tracking, player archetype performance, and a detailed play log. Includes a debug panel for granular data.
 - **Season Simulator**: Configurable for various season and playoff formats, featuring standings, radar charts, and score distributions.
 - **Dynasty Mode**: A multi-season career mode with customizable conference setups, season lengths, and scheduling. It includes 9 tabs for simulating seasons, tracking standings, coach dashboard, team history, record book, awards, injury reports, player development, and CSV export functionalities.
 - **Debug Tools**: Facilitates batch simulations for averaging, analyzing fatigue curves, turnover rates, and drive outcome aggregations.
 - **Play Inspector**: Enables repeated execution of single plays under controlled conditions for detailed analysis.
+- **Team Roster**: Browse and inspect individual team rosters, player archetypes, and stats.
 
 ### Technical Implementations
 The project follows a clear separation of concerns:
 - **`engine/`**: Contains core Python simulation logic, including game simulation, offense/defense styles, play families, weather, penalty systems, player archetypes, box score generation, polling, EPA calculations, season and dynasty simulations, and custom Viperball metrics.
 - **`api/`**: Implements FastAPI REST endpoints for programmatic access to simulation functionalities, supporting requests for single simulations, batch simulations, play debugging, and team data, with a weather parameter.
-- **`ui/`**: Hosts the Streamlit web application.
-- **`data/teams/`**: Stores team configuration in JSON files.
+- **`ui/`**: Hosts the Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`).
+- **`data/teams/`**: Stores team configuration in JSON files (126 teams total, including D3, metro, legacy, women's, and international programs).
+- **`scripts/generate_new_teams.py`**: Team generation script for adding new schools with proper rosters, stats, and metadata.
 - **`main.py`**: The application's entry point, launching Streamlit.
 
 ### Feature Specifications
