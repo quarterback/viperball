@@ -25,61 +25,138 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stApp { max-width: 100%; }
-    .block-container { padding-top: 1rem; }
+    .block-container { padding-top: 1rem; padding-bottom: 2rem; }
+
+    /* Sidebar branding */
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a;
+    }
+    section[data-testid="stSidebar"] .stMarkdown,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] p {
+        color: #e2e8f0 !important;
+    }
+    section[data-testid="stSidebar"] .stRadio > label {
+        color: #94a3b8 !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+        color: #cbd5e1 !important;
+        font-size: 0.95rem !important;
+        text-transform: none;
+        letter-spacing: normal;
+        font-weight: 400;
+        padding: 0.4rem 0.6rem;
+        border-radius: 6px;
+        transition: background-color 0.15s;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
+        background-color: #1e293b;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-checked="true"],
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input:checked) {
+        background-color: #1e293b;
+        color: #ffffff !important;
+        font-weight: 600;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: #334155;
+    }
+    .sidebar-brand {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #ffffff !important;
+        letter-spacing: -0.02em;
+        margin-bottom: 0;
+        line-height: 1.2;
+    }
+    .sidebar-tagline {
+        font-size: 0.75rem;
+        color: #64748b !important;
+        margin-top: 2px;
+        margin-bottom: 1rem;
+    }
+
+    /* Metric cards */
     div[data-testid="stMetric"] {
-        background-color: #f0f2f6;
-        border: 1px solid #d1d5db;
-        padding: 12px;
-        border-radius: 8px;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px 16px;
+        border-radius: 10px;
     }
     div[data-testid="stMetric"] label {
-        color: #6b7280 !important;
+        color: #64748b !important;
         font-weight: 600 !important;
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
     div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-        color: #111827 !important;
+        color: #0f172a !important;
         font-weight: 700 !important;
-        font-size: 1.6rem !important;
+        font-size: 1.5rem !important;
     }
     div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
-        color: #6b7280 !important;
+        color: #64748b !important;
+        font-size: 0.85rem !important;
     }
-    @media (prefers-color-scheme: dark) {
-        div[data-testid="stMetric"] {
-            background-color: #1e1e2e;
-            border: 1px solid #444;
-        }
-        div[data-testid="stMetric"] label {
-            color: #a0aec0 !important;
-        }
-        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-            color: #ffffff !important;
-        }
-        div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
-            color: #a0aec0 !important;
-        }
-    }
+
+    /* Score display */
     .score-big {
-        font-size: 2.5rem;
+        font-size: 2.8rem;
         font-weight: 800;
         text-align: center;
         line-height: 1;
         margin: 0;
-        color: #111827;
+        color: #0f172a;
     }
     .team-name {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 600;
         text-align: center;
-        color: #4b5563;
-        margin-bottom: 4px;
+        color: #475569;
+        margin-bottom: 2px;
     }
-    .drive-td { color: #22c55e; font-weight: 700; }
-    .drive-kick { color: #3b82f6; font-weight: 700; }
-    .drive-fumble { color: #ef4444; font-weight: 700; }
-    .drive-downs { color: #f59e0b; font-weight: 700; }
+
+    /* Drive result colors */
+    .drive-td { color: #16a34a; font-weight: 700; }
+    .drive-kick { color: #2563eb; font-weight: 700; }
+    .drive-fumble { color: #dc2626; font-weight: 700; }
+    .drive-downs { color: #d97706; font-weight: 700; }
     .drive-punt { color: #94a3b8; }
+
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 8px 20px;
+        font-weight: 500;
+    }
+
+    /* Better table styling */
+    .stDataFrame {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* Section headers */
+    h2 {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.3rem;
+    }
+
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        color: #334155;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,20 +178,26 @@ shared = {
     "DEFENSE_TOOLTIPS": DEFENSE_TOOLTIPS,
 }
 
-page = st.sidebar.radio("Navigation", [
-    "Game Simulator", "Season Simulator", "Dynasty Mode",
-    "Team Roster", "Debug Tools", "Play Inspector"
-], index=0)
+with st.sidebar:
+    st.markdown('<p class="sidebar-brand">Viperball Sandbox</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sidebar-tagline">Collegiate Viperball League Simulator</p>', unsafe_allow_html=True)
+    st.divider()
 
-if page == "Game Simulator":
-    render_game_simulator(shared)
-elif page == "Season Simulator":
-    render_season_simulator(shared)
-elif page == "Dynasty Mode":
-    render_dynasty_mode(shared)
-elif page == "Team Roster":
-    render_team_roster(shared)
-elif page == "Debug Tools":
-    render_debug_tools(shared)
-elif page == "Play Inspector":
-    render_play_inspector(shared)
+PAGES = {
+    "Game Simulator": ("single_game", render_game_simulator),
+    "Season Simulator": ("season", render_season_simulator),
+    "Dynasty Mode": ("dynasty", render_dynasty_mode),
+    "Team Roster": ("roster", render_team_roster),
+    "Debug Tools": ("debug", render_debug_tools),
+    "Play Inspector": ("inspector", render_play_inspector),
+}
+
+page = st.sidebar.radio("Pages", list(PAGES.keys()), index=0, label_visibility="collapsed")
+
+with st.sidebar:
+    st.divider()
+    st.caption("v0.9 Beta — CVL Engine")
+    st.caption(f"{len(teams)} teams across 12 conferences")
+
+_, render_fn = PAGES[page]
+render_fn(shared)

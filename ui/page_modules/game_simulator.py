@@ -27,46 +27,48 @@ def render_game_simulator(shared):
     OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
     DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
 
-    st.title("Viperball Game Simulator")
+    st.title("Game Simulator")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Home Team")
-        home_key = st.selectbox("Select Home Team", [t["key"] for t in teams],
-                                format_func=lambda x: team_names[x], key="home")
-        home_style = st.selectbox("Home Offense Style", style_keys,
-                                  format_func=lambda x: styles[x]["label"],
-                                  index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == home_key), "balanced")),
-                                  key="home_style")
-        st.caption(OFFENSE_TOOLTIPS.get(home_style, styles[home_style]["description"]))
-        home_def_style = st.selectbox("Home Defense Style", defense_style_keys,
-                                       format_func=lambda x: defense_styles[x]["label"],
-                                       key="home_def_style")
-        st.caption(DEFENSE_TOOLTIPS.get(home_def_style, defense_styles[home_def_style]["description"]))
+    with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Home Team**")
+            home_key = st.selectbox("Select Home Team", [t["key"] for t in teams],
+                                    format_func=lambda x: team_names[x], key="home")
+            hc1, hc2 = st.columns(2)
+            with hc1:
+                home_style = st.selectbox("Offense", style_keys,
+                                          format_func=lambda x: styles[x]["label"],
+                                          index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == home_key), "balanced")),
+                                          key="home_style")
+            with hc2:
+                home_def_style = st.selectbox("Defense", defense_style_keys,
+                                               format_func=lambda x: defense_styles[x]["label"],
+                                               key="home_def_style")
+            st.caption(OFFENSE_TOOLTIPS.get(home_style, styles[home_style]["description"]))
 
-    with col2:
-        st.subheader("Away Team")
-        away_key = st.selectbox("Select Away Team", [t["key"] for t in teams],
-                                format_func=lambda x: team_names[x],
-                                index=min(1, len(teams) - 1), key="away")
-        away_style = st.selectbox("Away Offense Style", style_keys,
-                                  format_func=lambda x: styles[x]["label"],
-                                  index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == away_key), "balanced")),
-                                  key="away_style")
-        st.caption(OFFENSE_TOOLTIPS.get(away_style, styles[away_style]["description"]))
-        away_def_style = st.selectbox("Away Defense Style", defense_style_keys,
-                                       format_func=lambda x: defense_styles[x]["label"],
-                                       key="away_def_style")
-        st.caption(DEFENSE_TOOLTIPS.get(away_def_style, defense_styles[away_def_style]["description"]))
+        with col2:
+            st.markdown("**Away Team**")
+            away_key = st.selectbox("Select Away Team", [t["key"] for t in teams],
+                                    format_func=lambda x: team_names[x],
+                                    index=min(1, len(teams) - 1), key="away")
+            ac1, ac2 = st.columns(2)
+            with ac1:
+                away_style = st.selectbox("Offense", style_keys,
+                                          format_func=lambda x: styles[x]["label"],
+                                          index=style_keys.index(next((t["default_style"] for t in teams if t["key"] == away_key), "balanced")),
+                                          key="away_style")
+            with ac2:
+                away_def_style = st.selectbox("Defense", defense_style_keys,
+                                               format_func=lambda x: defense_styles[x]["label"],
+                                               key="away_def_style")
+            st.caption(OFFENSE_TOOLTIPS.get(away_style, styles[away_style]["description"]))
 
     weather_keys = list(WEATHER_CONDITIONS.keys())
     weather_labels = {k: v["label"] for k, v in WEATHER_CONDITIONS.items()}
     col_weather, col_seed, col_btn = st.columns([1, 1, 2])
     with col_weather:
         weather = st.selectbox("Weather", weather_keys, format_func=lambda x: f"{weather_labels[x]}", key="weather")
-        wx = WEATHER_CONDITIONS[weather]
-        if weather != "clear":
-            st.caption(f"{wx['description']}")
     with col_seed:
         seed = st.number_input("Seed (0 = random)", min_value=0, max_value=999999, value=0, key="seed")
     with col_btn:
@@ -103,6 +105,7 @@ def render_game_simulator(shared):
         away_score = result["final_score"]["away"]["score"]
         hs = result["stats"]["home"]
         as_ = result["stats"]["away"]
+        plays = result["play_by_play"]
 
         st.divider()
 
@@ -111,7 +114,7 @@ def render_game_simulator(shared):
             st.markdown(f'<p class="team-name">{home_name}</p>', unsafe_allow_html=True)
             st.markdown(f'<p class="score-big">{fmt_vb_score(home_score)}</p>', unsafe_allow_html=True)
         with sc2:
-            st.markdown("<p style='text-align:center; padding-top:10px; font-size:1.2rem; opacity:0.5;'>vs</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align:center; padding-top:10px; font-size:1.2rem; opacity:0.4;'>vs</p>", unsafe_allow_html=True)
             st.caption(f"Seed: {actual_seed}")
         with sc3:
             st.markdown(f'<p class="team-name">{away_name}</p>', unsafe_allow_html=True)
@@ -134,466 +137,519 @@ def render_game_simulator(shared):
         if game_weather != "clear":
             st.info(f"{wx_icon} **{weather_label}** — {weather_desc}")
 
-        st.subheader("Export Game Data")
-        home_safe = safe_filename(home_name)
-        away_safe = safe_filename(away_name)
-        game_tag = f"{home_safe}_vs_{away_safe}_s{actual_seed}"
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("Total Plays", hs["total_plays"] + as_["total_plays"])
+        m2.metric("Total Yards", f"{hs['total_yards'] + as_['total_yards']}")
+        m3.metric("Turnovers", f"{hs['fumbles_lost'] + as_['fumbles_lost'] + hs['turnovers_on_downs'] + as_['turnovers_on_downs']}")
+        m4.metric("Penalties", f"{hs.get('penalties', 0) + as_.get('penalties', 0)}")
+        h_dk = hs.get('drop_kicks_made', 0)
+        a_dk = as_.get('drop_kicks_made', 0)
+        m5.metric("Snap Kicks", f"{h_dk + a_dk}")
+        h_td = hs.get('touchdowns', 0)
+        a_td = as_.get('touchdowns', 0)
+        m6.metric("Touchdowns", f"{h_td + a_td}")
 
-        ex1, ex2, ex3, ex4 = st.columns(4)
-        with ex1:
-            md_content = generate_box_score_markdown(result)
-            st.download_button(
-                "Box Score (.md)",
-                data=md_content,
-                file_name=f"{game_tag}_box_score.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
-        with ex2:
-            csv_plays = generate_play_log_csv(result)
-            st.download_button(
-                "Play Log (.csv)",
-                data=csv_plays,
-                file_name=f"{game_tag}_plays.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
-        with ex3:
-            csv_drives = generate_drives_csv(result)
-            st.download_button(
-                "Drives (.csv)",
-                data=csv_drives,
-                file_name=f"{game_tag}_drives.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
-        with ex4:
-            json_str = json.dumps(result, indent=2, default=str)
-            st.download_button(
-                "Full JSON",
-                data=json_str,
-                file_name=f"{game_tag}_full.json",
-                mime="application/json",
-                use_container_width=True,
-            )
+        tab_box, tab_drives, tab_plays, tab_analytics, tab_export = st.tabs([
+            "Box Score", "Drives", "Play-by-Play", "Analytics", "Export"
+        ])
 
-        st.subheader("Box Score")
+        with tab_box:
+            _render_box_score(result, plays, home_name, away_name, home_score, away_score, hs, as_)
 
-        plays = result["play_by_play"]
-        home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-        away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-        for p in plays:
-            q = p["quarter"]
-            if q not in home_q:
-                continue
-            if p["result"] in ("touchdown", "punt_return_td"):
-                if p["possession"] == "home":
-                    home_q[q] += 9
-                else:
-                    away_q[q] += 9
-            elif p["result"] == "successful_kick":
-                pts = 5 if p["play_type"] == "drop_kick" else 3
-                if p["possession"] == "home":
-                    home_q[q] += pts
-                else:
-                    away_q[q] += pts
-            elif p["result"] == "pindown":
-                if p["possession"] == "home":
-                    home_q[q] += 1
-                else:
-                    away_q[q] += 1
-            elif p["result"] == "safety":
-                if p["possession"] == "home":
-                    away_q[q] += 2
-                else:
-                    home_q[q] += 2
-            elif p["result"] == "fumble":
-                if p["possession"] == "home":
-                    away_q[q] += 0.5
-                else:
-                    home_q[q] += 0.5
+        with tab_drives:
+            _render_drives(result, home_name, away_name)
 
-        qtr_data = {
-            "": [home_name, away_name],
-            "Q1": [fmt_vb_score(home_q[1]), fmt_vb_score(away_q[1])],
-            "Q2": [fmt_vb_score(home_q[2]), fmt_vb_score(away_q[2])],
-            "Q3": [fmt_vb_score(home_q[3]), fmt_vb_score(away_q[3])],
-            "Q4": [fmt_vb_score(home_q[4]), fmt_vb_score(away_q[4])],
-            "Final": [fmt_vb_score(home_score), fmt_vb_score(away_score)],
-        }
-        st.dataframe(pd.DataFrame(qtr_data), hide_index=True, use_container_width=True)
+        with tab_plays:
+            _render_play_by_play(plays, home_name, away_name)
 
-        st.markdown("**Scoring Breakdown**")
-        h_frp = hs.get('fumble_recovery_points', 0)
-        a_frp = as_.get('fumble_recovery_points', 0)
-        h_fr = hs.get('fumble_recoveries', 0)
-        a_fr = as_.get('fumble_recoveries', 0)
-        h_saf = hs.get('safeties_conceded', 0)
-        a_saf = as_.get('safeties_conceded', 0)
-        scoring_data = {
-            "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
-                 "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
-                 "Punt Return TDs", "Chaos Recoveries",
-                 "Punts", "Kick %",
-                 "Total Yards", "Rushing Yards", "Lateral Yards",
-                 "Yards/Play", "Total Plays",
-                 "Lateral Chains", "Lateral Efficiency",
-                 "Fumbles Lost", "Turnovers on Downs",
-                 "Penalties", "Penalty Yards",
-                 "Keeper Deflections", "Keeper Tackles",
-                 "Longest Play", "Avg Fatigue"],
-            home_name: [
-                f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
-                f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
-                f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
-                f"{a_saf} ({a_saf * 2}pts)",
-                f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
-                f"{h_fr} ({h_frp:g}pts)",
-                str(hs.get("punt_return_tds", 0)),
-                str(hs.get("chaos_recoveries", 0)),
-                str(hs.get("punts", 0)),
-                f"{hs.get('kick_percentage', 0)}%",
-                str(hs["total_yards"]),
-                str(hs.get("rushing_yards", 0)),
-                str(hs.get("lateral_yards", 0)),
-                str(hs["yards_per_play"]), str(hs["total_plays"]),
-                str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
-                str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
-                str(hs.get("penalties", 0)),
-                str(hs.get("penalty_yards", 0)),
-                str(hs.get("keeper_deflections", 0)),
-                str(hs.get("keeper_tackles", 0)),
-                str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
-                f'{hs["avg_fatigue"]}%',
-            ],
-            away_name: [
-                f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
-                f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
-                f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
-                f"{h_saf} ({h_saf * 2}pts)",
-                f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
-                f"{a_fr} ({a_frp:g}pts)",
-                str(as_.get("punt_return_tds", 0)),
-                str(as_.get("chaos_recoveries", 0)),
-                str(as_.get("punts", 0)),
-                f"{as_.get('kick_percentage', 0)}%",
-                str(as_["total_yards"]),
-                str(as_.get("rushing_yards", 0)),
-                str(as_.get("lateral_yards", 0)),
-                str(as_["yards_per_play"]), str(as_["total_plays"]),
-                str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
-                str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
-                str(as_.get("penalties", 0)),
-                str(as_.get("penalty_yards", 0)),
-                str(as_.get("keeper_deflections", 0)),
-                str(as_.get("keeper_tackles", 0)),
-                str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
-                f'{as_["avg_fatigue"]}%',
-            ],
-        }
-        st.dataframe(pd.DataFrame(scoring_data), hide_index=True, use_container_width=True)
+        with tab_analytics:
+            _render_analytics(result, plays, home_name, away_name, hs, as_)
 
-        st.markdown("**Down Conversions**")
-        h_dc = hs.get("down_conversions", {})
-        a_dc = as_.get("down_conversions", {})
-        for d in [4, 5, 6]:
-            hd = h_dc.get(d, h_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
-            ad = a_dc.get(d, a_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
-            label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down"
-            dc1, dc2 = st.columns(2)
-            dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
-            dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
-
-        st.subheader("Penalty Tracker")
-        penalty_plays = [p for p in plays if p.get("penalty")]
-        if penalty_plays:
-            pen_home = [p for p in penalty_plays if p["penalty"]["on_team"] == "home" and not p["penalty"]["declined"]]
-            pen_away = [p for p in penalty_plays if p["penalty"]["on_team"] == "away" and not p["penalty"]["declined"]]
-            pen_dec = [p for p in penalty_plays if p["penalty"]["declined"]]
-            pc1, pc2, pc3 = st.columns(3)
-            pc1.metric(f"{home_name} Penalties", f"{len(pen_home)} for {sum(p['penalty']['yards'] for p in pen_home)} yds")
-            pc2.metric(f"{away_name} Penalties", f"{len(pen_away)} for {sum(p['penalty']['yards'] for p in pen_away)} yds")
-            pc3.metric("Declined", len(pen_dec))
-
-            all_accepted = pen_home + pen_away
-            if all_accepted:
-                pen_data = []
-                for p in all_accepted:
-                    pen_data.append({
-                        "Q": p["quarter"],
-                        "Time": p["time_remaining"],
-                        "Penalty": p["penalty"]["name"],
-                        "On": home_name if p["penalty"]["on_team"] == "home" else away_name,
-                        "Player": p["penalty"]["player"],
-                        "Yards": p["penalty"]["yards"],
-                        "Phase": p["penalty"]["phase"],
-                    })
-                st.dataframe(pd.DataFrame(pen_data), hide_index=True, use_container_width=True)
-        else:
-            st.caption("No penalties called this game.")
-
-        player_stats = result.get("player_stats", {})
-        if player_stats.get("home") or player_stats.get("away"):
-            st.subheader("Player Performance & Archetypes")
-            ptab1, ptab2 = st.tabs([home_name, away_name])
-            for ptab, side, tname in [(ptab1, "home", home_name), (ptab2, "away", away_name)]:
-                with ptab:
-                    pstats = player_stats.get(side, [])
-                    if pstats:
-                        pdf = pd.DataFrame(pstats)
-                        display_cols = ["Tag", "Name", "Archetype", "Touches", "Yards", "Rush Yds", "Lat Yds", "TDs", "Fumbles", "Lat Thrown", "Kick Att", "Kick Made", "Deflections", "Bells", "Cov Snaps", "KP Tackles", "KP Ret Yds"]
-                        if len(pdf.columns) == len(display_cols):
-                            pdf.columns = display_cols
-                        elif len(pdf.columns) >= 11:
-                            pdf.columns = display_cols[:len(pdf.columns)]
-                        st.dataframe(pdf, hide_index=True, use_container_width=True)
-                    else:
-                        st.caption("No player stat data available.")
-
-        st.subheader("VPA — Viperball Points Added")
-        st.caption("Measures play efficiency vs league-average expectation from same field position & down. Positive = above average.")
-        h_vpa = hs.get("epa", {})
-        a_vpa = as_.get("epa", {})
-
-        v1, v2 = st.columns(2)
-        v1.metric(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
-        v2.metric(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
-
-        v3, v4, v5, v6 = st.columns(4)
-        v3.metric(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
-        v4.metric(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
-        v5.metric(f"{home_name} Success Rate", f"{h_vpa.get('success_rate', 0)}%")
-        v6.metric(f"{away_name} Success Rate", f"{a_vpa.get('success_rate', 0)}%")
-
-        v7, v8, v9, v10 = st.columns(4)
-        v7.metric(f"{home_name} Explosiveness", h_vpa.get("explosiveness", 0))
-        v8.metric(f"{away_name} Explosiveness", a_vpa.get("explosiveness", 0))
-        v9.metric(f"{home_name} Off VPA", h_vpa.get("offense_vpa", h_vpa.get("offense_epa", 0)))
-        v10.metric(f"{away_name} Off VPA", a_vpa.get("offense_vpa", a_vpa.get("offense_epa", 0)))
-
-        vpa_plays = [p for p in plays if "epa" in p]
-        if vpa_plays:
-            home_vpa_plays = [p for p in vpa_plays if p["possession"] == "home"]
-            away_vpa_plays = [p for p in vpa_plays if p["possession"] == "away"]
-
-            fig_vpa = go.Figure()
-            if home_vpa_plays:
-                home_cum = []
-                running = 0
-                for p in home_vpa_plays:
-                    running += p["epa"]
-                    home_cum.append(round(running, 2))
-                fig_vpa.add_trace(go.Scatter(
-                    y=home_cum, mode="lines", name=home_name,
-                    line=dict(color="#3b82f6", width=2)
-                ))
-            if away_vpa_plays:
-                away_cum = []
-                running = 0
-                for p in away_vpa_plays:
-                    running += p["epa"]
-                    away_cum.append(round(running, 2))
-                fig_vpa.add_trace(go.Scatter(
-                    y=away_cum, mode="lines", name=away_name,
-                    line=dict(color="#ef4444", width=2)
-                ))
-            fig_vpa.update_layout(
-                title="Cumulative VPA Over Game",
-                xaxis_title="Play #", yaxis_title="Cumulative VPA",
-                height=350, template="plotly_white"
-            )
-            st.plotly_chart(fig_vpa, use_container_width=True)
-
-        st.subheader("Play Family Distribution")
-        home_fam = hs.get("play_family_breakdown", {})
-        away_fam = as_.get("play_family_breakdown", {})
-
-        all_families = sorted(set(list(home_fam.keys()) + list(away_fam.keys())))
-        home_total = sum(home_fam.values()) or 1
-        away_total = sum(away_fam.values()) or 1
-
-        fam_chart_data = []
-        for f in all_families:
-            fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": home_name,
-                                   "Pct": round(home_fam.get(f, 0) / home_total * 100, 1)})
-            fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": away_name,
-                                   "Pct": round(away_fam.get(f, 0) / away_total * 100, 1)})
-
-        fig = px.bar(pd.DataFrame(fam_chart_data), x="Family", y="Pct", color="Team",
-                     barmode="group", title="Play Call Distribution (%)",
-                     labels={"Pct": "Percentage", "Family": "Play Family"})
-        fig.update_layout(yaxis_ticksuffix="%", height=350)
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Drive Summary")
-        drives = result.get("drive_summary", [])
-        if drives:
-            drive_rows = []
-            for i, d in enumerate(drives):
-                team_label = home_name if d["team"] == "home" else away_name
-                drive_rows.append({
-                    "#": i + 1,
-                    "Team": team_label,
-                    "Qtr": f"Q{d['quarter']}",
-                    "Start": f"{d['start_yard_line']}yd",
-                    "Plays": d["plays"],
-                    "Yards": d["yards"],
-                    "Result": drive_result_label(d["result"]),
-                })
-            st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True, height=350)
-
-            drive_outcomes = {}
-            for d in drives:
-                r = drive_result_label(d["result"])
-                drive_outcomes[r] = drive_outcomes.get(r, 0) + 1
-
-            fig = px.bar(x=list(drive_outcomes.keys()), y=list(drive_outcomes.values()),
-                         title="Drive Outcomes",
-                         color=list(drive_outcomes.keys()),
-                         color_discrete_map={
-                             "TD": "#22c55e", "FG": "#3b82f6", "FUMBLE": "#ef4444",
-                             "DOWNS": "#f59e0b", "PUNT": "#94a3b8", "MISSED FG": "#f59e0b",
-                             "END OF QUARTER": "#64748b", "PINDOWN": "#a855f7",
-                             "PUNT RET TD": "#22c55e", "CHAOS REC": "#f97316",
-                         })
-            fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome", yaxis_title="Count")
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Play-by-Play")
-        play_df = pd.DataFrame(plays)
-
-        quarter_filter = st.selectbox("Filter by Quarter", ["All", "Q1", "Q2", "Q3", "Q4"])
-        if quarter_filter != "All":
-            q = int(quarter_filter[1])
-            play_df = play_df[play_df["quarter"] == q]
-
-        if not play_df.empty:
-            display_df = play_df.copy()
-            if "time_remaining" in display_df.columns:
-                display_df["time"] = display_df["time_remaining"].apply(format_time)
-            if "possession" in display_df.columns:
-                display_df["team"] = display_df["possession"].apply(
-                    lambda x: home_name if x == "home" else away_name)
-
-            show_cols = ["play_number", "team", "time", "down", "field_position",
-                         "play_family", "description", "yards", "result", "fatigue"]
-            available = [c for c in show_cols if c in display_df.columns]
-            st.dataframe(display_df[available], hide_index=True, use_container_width=True, height=400)
+        with tab_export:
+            _render_export(result, home_name, away_name, actual_seed)
 
         with st.expander("Debug Panel"):
-            st.markdown("**Fatigue Over Time**")
-            home_fat = []
-            away_fat = []
-            for p in plays:
-                if p.get("fatigue") is not None:
-                    entry = {"play": p["play_number"], "fatigue": p["fatigue"]}
-                    if p["possession"] == "home":
-                        home_fat.append({**entry, "team": home_name})
-                    else:
-                        away_fat.append({**entry, "team": away_name})
-
-            if home_fat or away_fat:
-                fat_df = pd.DataFrame(home_fat + away_fat)
-                fig = px.line(fat_df, x="play", y="fatigue", color="team",
-                              title="Fatigue Curve")
-                fig.update_yaxes(range=[30, 105])
-                fig.update_layout(height=300)
-                st.plotly_chart(fig, use_container_width=True)
-
-            st.markdown("**Turnover Triggers**")
-            fumble_plays = [p for p in plays if p.get("fumble")]
-            tod_plays = [p for p in plays if p["result"] == "turnover_on_downs"]
-            tc1, tc2 = st.columns(2)
-            tc1.metric("Fumbles", len(fumble_plays))
-            tc2.metric("Turnovers on Downs", len(tod_plays))
-
-            if fumble_plays:
-                st.markdown("*Fumble locations:*")
-                for fp in fumble_plays:
-                    team_label = home_name if fp["possession"] == "home" else away_name
-                    st.text(f"  Q{fp['quarter']} {format_time(fp['time_remaining'])} | {team_label} at {fp['field_position']}yd | {fp['description']}")
-
-            st.markdown("**Explosive Plays (15+ yards)**")
-            big_plays = [p for p in plays if p["yards"] >= 15 and p["play_type"] not in ["punt"]]
-            if big_plays:
-                for bp in big_plays:
-                    team_label = home_name if bp["possession"] == "home" else away_name
-                    st.text(f"  Q{bp['quarter']} | {team_label} | {bp['yards']}yds | {bp['description']}")
-            else:
-                st.text("  No explosive plays")
-
-            st.markdown("**Kick Decision Summary**")
-            kick_plays = [p for p in plays if p["play_type"] in ["drop_kick", "place_kick", "punt"]]
-            kc1, kc2, kc3 = st.columns(3)
-            punts = [p for p in kick_plays if p["play_type"] == "punt"]
-            drops = [p for p in kick_plays if p["play_type"] == "drop_kick"]
-            places = [p for p in kick_plays if p["play_type"] == "place_kick"]
-            kc1.metric("Punts", len(punts))
-            kc2.metric("Snap Kick Attempts", len(drops))
-            kc3.metric("Field Goal Attempts", len(places))
-
-            st.markdown("**Style Parameters**")
-            sc1, sc2 = st.columns(2)
-            h_style_key = result.get("home_style", "balanced")
-            a_style_key = result.get("away_style", "balanced")
-            h_style = OFFENSE_STYLES.get(h_style_key, OFFENSE_STYLES["balanced"])
-            a_style = OFFENSE_STYLES.get(a_style_key, OFFENSE_STYLES["balanced"])
-            with sc1:
-                st.markdown(f"**{home_name}** ({h_style['label']})")
-                st.text(f"  Tempo: {h_style['tempo']}")
-                st.text(f"  Lateral Risk: {h_style['lateral_risk']}")
-                st.text(f"  Kick Rate: {h_style['kick_rate']}")
-                st.text(f"  Option Rate: {h_style['option_rate']}")
-            with sc2:
-                st.markdown(f"**{away_name}** ({a_style['label']})")
-                st.text(f"  Tempo: {a_style['tempo']}")
-                st.text(f"  Lateral Risk: {a_style['lateral_risk']}")
-                st.text(f"  Kick Rate: {a_style['kick_rate']}")
-                st.text(f"  Option Rate: {a_style['option_rate']}")
-
-            st.markdown("**Special Teams Events**")
-            blocked_punts = [p for p in plays if p.get("result") == "blocked_punt"]
-            muffed_punts = [p for p in plays if p.get("result") == "muffed_punt"]
-            blocked_kicks = [p for p in plays if p.get("result") == "blocked_kick"]
-            st_c1, st_c2, st_c3 = st.columns(3)
-            st_c1.metric("Blocked Punts", len(blocked_punts))
-            st_c2.metric("Muffed Punts", len(muffed_punts))
-            st_c3.metric("Blocked Kicks", len(blocked_kicks))
-            all_st_events = blocked_punts + muffed_punts + blocked_kicks
-            if all_st_events:
-                for ev in sorted(all_st_events, key=lambda p: p.get("play_number", 0)):
-                    st.text(f"  Q{ev.get('quarter', '?')} | {ev.get('result', '').replace('_', ' ').upper()} | {ev.get('description', '')}")
-            else:
-                st.caption("No special teams chaos this game.")
-
-            st.markdown("**Viperball Metrics (0-100)**")
-            try:
-                home_metrics = calculate_viperball_metrics(result, "home")
-                away_metrics = calculate_viperball_metrics(result, "away")
-                mc1, mc2 = st.columns(2)
-                metric_labels = {
-                    "opi": "OPI (Overall)",
-                    "territory_rating": "Territory Rating",
-                    "pressure_index": "Pressure Index",
-                    "chaos_factor": "Chaos Factor",
-                    "kicking_efficiency": "Kicking Efficiency",
-                    "drive_quality": "Drive Quality",
-                    "turnover_impact": "Turnover Impact",
-                }
-                with mc1:
-                    st.markdown(f"*{home_name}*")
-                    for k, label in metric_labels.items():
-                        v = home_metrics.get(k, 0)
-                        display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
-                        st.text(f"  {label}: {display}")
-                with mc2:
-                    st.markdown(f"*{away_name}*")
-                    for k, label in metric_labels.items():
-                        v = away_metrics.get(k, 0)
-                        display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
-                        st.text(f"  {label}: {display}")
-            except Exception:
-                st.caption("Metrics unavailable for this game result")
+            _render_debug(result, plays, home_name, away_name, hs, as_)
 
         with st.expander("Raw JSON"):
             st.json(result)
+
+
+def _render_box_score(result, plays, home_name, away_name, home_score, away_score, hs, as_):
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    for p in plays:
+        q = p["quarter"]
+        if q not in home_q:
+            continue
+        if p["result"] in ("touchdown", "punt_return_td"):
+            if p["possession"] == "home":
+                home_q[q] += 9
+            else:
+                away_q[q] += 9
+        elif p["result"] == "successful_kick":
+            pts = 5 if p["play_type"] == "drop_kick" else 3
+            if p["possession"] == "home":
+                home_q[q] += pts
+            else:
+                away_q[q] += pts
+        elif p["result"] == "pindown":
+            if p["possession"] == "home":
+                home_q[q] += 1
+            else:
+                away_q[q] += 1
+        elif p["result"] == "safety":
+            if p["possession"] == "home":
+                away_q[q] += 2
+            else:
+                home_q[q] += 2
+        elif p["result"] == "fumble":
+            if p["possession"] == "home":
+                away_q[q] += 0.5
+            else:
+                home_q[q] += 0.5
+
+    qtr_data = {
+        "": [home_name, away_name],
+        "Q1": [fmt_vb_score(home_q[1]), fmt_vb_score(away_q[1])],
+        "Q2": [fmt_vb_score(home_q[2]), fmt_vb_score(away_q[2])],
+        "Q3": [fmt_vb_score(home_q[3]), fmt_vb_score(away_q[3])],
+        "Q4": [fmt_vb_score(home_q[4]), fmt_vb_score(away_q[4])],
+        "Final": [fmt_vb_score(home_score), fmt_vb_score(away_score)],
+    }
+    st.dataframe(pd.DataFrame(qtr_data), hide_index=True, use_container_width=True)
+
+    h_frp = hs.get('fumble_recovery_points', 0)
+    a_frp = as_.get('fumble_recovery_points', 0)
+    h_fr = hs.get('fumble_recoveries', 0)
+    a_fr = as_.get('fumble_recoveries', 0)
+    h_saf = hs.get('safeties_conceded', 0)
+    a_saf = as_.get('safeties_conceded', 0)
+
+    st.markdown("**Scoring & Stats**")
+    scoring_data = {
+        "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
+             "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
+             "Punt Return TDs", "Chaos Recoveries",
+             "Punts", "Kick %",
+             "Total Yards", "Rushing Yards", "Lateral Yards",
+             "Yards/Play", "Total Plays",
+             "Lateral Chains", "Lateral Efficiency",
+             "Fumbles Lost", "Turnovers on Downs",
+             "Penalties", "Penalty Yards",
+             "Keeper Deflections", "Keeper Tackles",
+             "Longest Play", "Avg Fatigue"],
+        home_name: [
+            f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
+            f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
+            f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
+            f"{a_saf} ({a_saf * 2}pts)",
+            f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
+            f"{h_fr} ({h_frp:g}pts)",
+            str(hs.get("punt_return_tds", 0)),
+            str(hs.get("chaos_recoveries", 0)),
+            str(hs.get("punts", 0)),
+            f"{hs.get('kick_percentage', 0)}%",
+            str(hs["total_yards"]),
+            str(hs.get("rushing_yards", 0)),
+            str(hs.get("lateral_yards", 0)),
+            str(hs["yards_per_play"]), str(hs["total_plays"]),
+            str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
+            str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
+            str(hs.get("penalties", 0)),
+            str(hs.get("penalty_yards", 0)),
+            str(hs.get("keeper_deflections", 0)),
+            str(hs.get("keeper_tackles", 0)),
+            str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
+            f'{hs["avg_fatigue"]}%',
+        ],
+        away_name: [
+            f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
+            f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
+            f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
+            f"{h_saf} ({h_saf * 2}pts)",
+            f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
+            f"{a_fr} ({a_frp:g}pts)",
+            str(as_.get("punt_return_tds", 0)),
+            str(as_.get("chaos_recoveries", 0)),
+            str(as_.get("punts", 0)),
+            f"{as_.get('kick_percentage', 0)}%",
+            str(as_["total_yards"]),
+            str(as_.get("rushing_yards", 0)),
+            str(as_.get("lateral_yards", 0)),
+            str(as_["yards_per_play"]), str(as_["total_plays"]),
+            str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
+            str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
+            str(as_.get("penalties", 0)),
+            str(as_.get("penalty_yards", 0)),
+            str(as_.get("keeper_deflections", 0)),
+            str(as_.get("keeper_tackles", 0)),
+            str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
+            f'{as_["avg_fatigue"]}%',
+        ],
+    }
+    st.dataframe(pd.DataFrame(scoring_data), hide_index=True, use_container_width=True)
+
+    st.markdown("**Down Conversions**")
+    h_dc = hs.get("down_conversions", {})
+    a_dc = as_.get("down_conversions", {})
+    for d in [4, 5, 6]:
+        hd = h_dc.get(d, h_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
+        ad = a_dc.get(d, a_dc.get(str(d), {"attempts": 0, "converted": 0, "rate": 0}))
+        label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down"
+        dc1, dc2 = st.columns(2)
+        dc1.metric(f"{home_name} {label}", f"{hd['converted']}/{hd['attempts']} ({hd['rate']}%)")
+        dc2.metric(f"{away_name} {label}", f"{ad['converted']}/{ad['attempts']} ({ad['rate']}%)")
+
+    penalty_plays = [p for p in plays if p.get("penalty")]
+    if penalty_plays:
+        st.markdown("**Penalties**")
+        pen_home = [p for p in penalty_plays if p["penalty"]["on_team"] == "home" and not p["penalty"]["declined"]]
+        pen_away = [p for p in penalty_plays if p["penalty"]["on_team"] == "away" and not p["penalty"]["declined"]]
+        pen_dec = [p for p in penalty_plays if p["penalty"]["declined"]]
+        pc1, pc2, pc3 = st.columns(3)
+        pc1.metric(f"{home_name} Penalties", f"{len(pen_home)} for {sum(p['penalty']['yards'] for p in pen_home)} yds")
+        pc2.metric(f"{away_name} Penalties", f"{len(pen_away)} for {sum(p['penalty']['yards'] for p in pen_away)} yds")
+        pc3.metric("Declined", len(pen_dec))
+
+        all_accepted = pen_home + pen_away
+        if all_accepted:
+            pen_data = []
+            for p in all_accepted:
+                pen_data.append({
+                    "Q": p["quarter"],
+                    "Time": p["time_remaining"],
+                    "Penalty": p["penalty"]["name"],
+                    "On": home_name if p["penalty"]["on_team"] == "home" else away_name,
+                    "Player": p["penalty"]["player"],
+                    "Yards": p["penalty"]["yards"],
+                    "Phase": p["penalty"]["phase"],
+                })
+            st.dataframe(pd.DataFrame(pen_data), hide_index=True, use_container_width=True)
+
+    player_stats = result.get("player_stats", {})
+    if player_stats.get("home") or player_stats.get("away"):
+        st.markdown("**Player Performance**")
+        ptab1, ptab2 = st.tabs([home_name, away_name])
+        for ptab, side, tname in [(ptab1, "home", home_name), (ptab2, "away", away_name)]:
+            with ptab:
+                pstats = player_stats.get(side, [])
+                if pstats:
+                    pdf = pd.DataFrame(pstats)
+                    display_cols = ["Tag", "Name", "Archetype", "Touches", "Yards", "Rush Yds", "Lat Yds", "TDs", "Fumbles", "Lat Thrown", "Kick Att", "Kick Made", "Deflections", "Bells", "Cov Snaps", "KP Tackles", "KP Ret Yds"]
+                    if len(pdf.columns) == len(display_cols):
+                        pdf.columns = display_cols
+                    elif len(pdf.columns) >= 11:
+                        pdf.columns = display_cols[:len(pdf.columns)]
+                    st.dataframe(pdf, hide_index=True, use_container_width=True)
+                else:
+                    st.caption("No player stat data available.")
+
+
+def _render_drives(result, home_name, away_name):
+    drives = result.get("drive_summary", [])
+    if drives:
+        home_drives = [d for d in drives if d["team"] == "home"]
+        away_drives = [d for d in drives if d["team"] == "away"]
+
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric(f"{home_name} Drives", len(home_drives))
+        d2.metric(f"{away_name} Drives", len(away_drives))
+        home_avg_plays = sum(d["plays"] for d in home_drives) / max(1, len(home_drives))
+        away_avg_plays = sum(d["plays"] for d in away_drives) / max(1, len(away_drives))
+        d3.metric(f"{home_name} Avg Plays/Drive", f"{home_avg_plays:.1f}")
+        d4.metric(f"{away_name} Avg Plays/Drive", f"{away_avg_plays:.1f}")
+
+        drive_rows = []
+        for i, d in enumerate(drives):
+            team_label = home_name if d["team"] == "home" else away_name
+            drive_rows.append({
+                "#": i + 1,
+                "Team": team_label,
+                "Qtr": f"Q{d['quarter']}",
+                "Start": f"{d['start_yard_line']}yd",
+                "Plays": d["plays"],
+                "Yards": d["yards"],
+                "Result": drive_result_label(d["result"]),
+            })
+        st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True, height=400)
+
+        drive_outcomes = {}
+        for d in drives:
+            r = drive_result_label(d["result"])
+            drive_outcomes[r] = drive_outcomes.get(r, 0) + 1
+
+        fig = px.bar(x=list(drive_outcomes.keys()), y=list(drive_outcomes.values()),
+                     title="Drive Outcomes",
+                     color=list(drive_outcomes.keys()),
+                     color_discrete_map={
+                         "TD": "#16a34a", "FG": "#2563eb", "FUMBLE": "#dc2626",
+                         "DOWNS": "#d97706", "PUNT": "#94a3b8", "MISSED FG": "#d97706",
+                         "END OF QUARTER": "#64748b", "PINDOWN": "#a855f7",
+                         "PUNT RET TD": "#16a34a", "CHAOS REC": "#f97316",
+                     })
+        fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome", yaxis_title="Count",
+                         template="plotly_white")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.caption("No drive data available.")
+
+
+def _render_play_by_play(plays, home_name, away_name):
+    play_df = pd.DataFrame(plays)
+
+    quarter_filter = st.selectbox("Filter by Quarter", ["All", "Q1", "Q2", "Q3", "Q4"])
+    if quarter_filter != "All":
+        q = int(quarter_filter[1])
+        play_df = play_df[play_df["quarter"] == q]
+
+    if not play_df.empty:
+        display_df = play_df.copy()
+        if "time_remaining" in display_df.columns:
+            display_df["time"] = display_df["time_remaining"].apply(format_time)
+        if "possession" in display_df.columns:
+            display_df["team"] = display_df["possession"].apply(
+                lambda x: home_name if x == "home" else away_name)
+
+        show_cols = ["play_number", "team", "time", "down", "field_position",
+                     "play_family", "description", "yards", "result", "fatigue"]
+        available = [c for c in show_cols if c in display_df.columns]
+        st.dataframe(display_df[available], hide_index=True, use_container_width=True, height=500)
+    else:
+        st.caption("No plays to display.")
+
+
+def _render_analytics(result, plays, home_name, away_name, hs, as_):
+    st.markdown("**VPA — Viperball Points Added**")
+    st.caption("Play efficiency vs league-average expectation from same field position & down.")
+    h_vpa = hs.get("epa", {})
+    a_vpa = as_.get("epa", {})
+
+    v1, v2 = st.columns(2)
+    v1.metric(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
+    v2.metric(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
+
+    v3, v4, v5, v6 = st.columns(4)
+    v3.metric(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+    v4.metric(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+    v5.metric(f"{home_name} Success Rate", f"{h_vpa.get('success_rate', 0)}%")
+    v6.metric(f"{away_name} Success Rate", f"{a_vpa.get('success_rate', 0)}%")
+
+    v7, v8, v9, v10 = st.columns(4)
+    v7.metric(f"{home_name} Explosiveness", h_vpa.get("explosiveness", 0))
+    v8.metric(f"{away_name} Explosiveness", a_vpa.get("explosiveness", 0))
+    v9.metric(f"{home_name} Off VPA", h_vpa.get("offense_vpa", h_vpa.get("offense_epa", 0)))
+    v10.metric(f"{away_name} Off VPA", a_vpa.get("offense_vpa", a_vpa.get("offense_epa", 0)))
+
+    vpa_plays = [p for p in plays if "epa" in p]
+    if vpa_plays:
+        home_vpa_plays = [p for p in vpa_plays if p["possession"] == "home"]
+        away_vpa_plays = [p for p in vpa_plays if p["possession"] == "away"]
+
+        fig_vpa = go.Figure()
+        if home_vpa_plays:
+            home_cum = []
+            running = 0
+            for p in home_vpa_plays:
+                running += p["epa"]
+                home_cum.append(round(running, 2))
+            fig_vpa.add_trace(go.Scatter(
+                y=home_cum, mode="lines", name=home_name,
+                line=dict(color="#2563eb", width=2)
+            ))
+        if away_vpa_plays:
+            away_cum = []
+            running = 0
+            for p in away_vpa_plays:
+                running += p["epa"]
+                away_cum.append(round(running, 2))
+            fig_vpa.add_trace(go.Scatter(
+                y=away_cum, mode="lines", name=away_name,
+                line=dict(color="#dc2626", width=2)
+            ))
+        fig_vpa.update_layout(
+            title="Cumulative VPA Over Game",
+            xaxis_title="Play #", yaxis_title="Cumulative VPA",
+            height=350, template="plotly_white"
+        )
+        st.plotly_chart(fig_vpa, use_container_width=True)
+
+    st.markdown("**Play Family Distribution**")
+    home_fam = hs.get("play_family_breakdown", {})
+    away_fam = as_.get("play_family_breakdown", {})
+
+    all_families = sorted(set(list(home_fam.keys()) + list(away_fam.keys())))
+    home_total = sum(home_fam.values()) or 1
+    away_total = sum(away_fam.values()) or 1
+
+    fam_chart_data = []
+    for f in all_families:
+        fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": home_name,
+                               "Pct": round(home_fam.get(f, 0) / home_total * 100, 1)})
+        fam_chart_data.append({"Family": f.replace("_", " ").title(), "Team": away_name,
+                               "Pct": round(away_fam.get(f, 0) / away_total * 100, 1)})
+
+    fig = px.bar(pd.DataFrame(fam_chart_data), x="Family", y="Pct", color="Team",
+                 barmode="group", title="Play Call Distribution (%)",
+                 labels={"Pct": "Percentage", "Family": "Play Family"})
+    fig.update_layout(yaxis_ticksuffix="%", height=350, template="plotly_white")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def _render_export(result, home_name, away_name, actual_seed):
+    st.markdown("Download game data in various formats.")
+    home_safe = safe_filename(home_name)
+    away_safe = safe_filename(away_name)
+    game_tag = f"{home_safe}_vs_{away_safe}_s{actual_seed}"
+
+    ex1, ex2 = st.columns(2)
+    with ex1:
+        md_content = generate_box_score_markdown(result)
+        st.download_button(
+            "Box Score (.md)",
+            data=md_content,
+            file_name=f"{game_tag}_box_score.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+        csv_plays = generate_play_log_csv(result)
+        st.download_button(
+            "Play Log (.csv)",
+            data=csv_plays,
+            file_name=f"{game_tag}_plays.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with ex2:
+        csv_drives = generate_drives_csv(result)
+        st.download_button(
+            "Drives (.csv)",
+            data=csv_drives,
+            file_name=f"{game_tag}_drives.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+        json_str = json.dumps(result, indent=2, default=str)
+        st.download_button(
+            "Full JSON",
+            data=json_str,
+            file_name=f"{game_tag}_full.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+
+def _render_debug(result, plays, home_name, away_name, hs, as_):
+    st.markdown("**Fatigue Over Time**")
+    home_fat = []
+    away_fat = []
+    for p in plays:
+        if p.get("fatigue") is not None:
+            entry = {"play": p["play_number"], "fatigue": p["fatigue"]}
+            if p["possession"] == "home":
+                home_fat.append({**entry, "team": home_name})
+            else:
+                away_fat.append({**entry, "team": away_name})
+
+    if home_fat or away_fat:
+        fat_df = pd.DataFrame(home_fat + away_fat)
+        fig = px.line(fat_df, x="play", y="fatigue", color="team",
+                      title="Fatigue Curve")
+        fig.update_yaxes(range=[30, 105])
+        fig.update_layout(height=300, template="plotly_white")
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("**Turnover Triggers**")
+    fumble_plays = [p for p in plays if p.get("fumble")]
+    tod_plays = [p for p in plays if p["result"] == "turnover_on_downs"]
+    tc1, tc2 = st.columns(2)
+    tc1.metric("Fumbles", len(fumble_plays))
+    tc2.metric("Turnovers on Downs", len(tod_plays))
+
+    if fumble_plays:
+        st.markdown("*Fumble locations:*")
+        for fp in fumble_plays:
+            team_label = home_name if fp["possession"] == "home" else away_name
+            st.text(f"  Q{fp['quarter']} {format_time(fp['time_remaining'])} | {team_label} at {fp['field_position']}yd | {fp['description']}")
+
+    st.markdown("**Explosive Plays (15+ yards)**")
+    big_plays = [p for p in plays if p["yards"] >= 15 and p["play_type"] not in ["punt"]]
+    if big_plays:
+        for bp in big_plays:
+            team_label = home_name if bp["possession"] == "home" else away_name
+            st.text(f"  Q{bp['quarter']} | {team_label} | {bp['yards']}yds | {bp['description']}")
+    else:
+        st.text("  No explosive plays")
+
+    st.markdown("**Kick Decision Summary**")
+    kick_plays = [p for p in plays if p["play_type"] in ["drop_kick", "place_kick", "punt"]]
+    kc1, kc2, kc3 = st.columns(3)
+    punts = [p for p in kick_plays if p["play_type"] == "punt"]
+    drops = [p for p in kick_plays if p["play_type"] == "drop_kick"]
+    places = [p for p in kick_plays if p["play_type"] == "place_kick"]
+    kc1.metric("Punts", len(punts))
+    kc2.metric("Snap Kick Attempts", len(drops))
+    kc3.metric("Field Goal Attempts", len(places))
+
+    st.markdown("**Style Parameters**")
+    sc1, sc2 = st.columns(2)
+    h_style_key = result.get("home_style", "balanced")
+    a_style_key = result.get("away_style", "balanced")
+    h_style = OFFENSE_STYLES.get(h_style_key, OFFENSE_STYLES["balanced"])
+    a_style = OFFENSE_STYLES.get(a_style_key, OFFENSE_STYLES["balanced"])
+    with sc1:
+        st.markdown(f"**{home_name}** ({h_style['label']})")
+        st.text(f"  Tempo: {h_style['tempo']}")
+        st.text(f"  Lateral Risk: {h_style['lateral_risk']}")
+        st.text(f"  Kick Rate: {h_style['kick_rate']}")
+        st.text(f"  Option Rate: {h_style['option_rate']}")
+    with sc2:
+        st.markdown(f"**{away_name}** ({a_style['label']})")
+        st.text(f"  Tempo: {a_style['tempo']}")
+        st.text(f"  Lateral Risk: {a_style['lateral_risk']}")
+        st.text(f"  Kick Rate: {a_style['kick_rate']}")
+        st.text(f"  Option Rate: {a_style['option_rate']}")
+
+    st.markdown("**Special Teams Events**")
+    blocked_punts = [p for p in plays if p.get("result") == "blocked_punt"]
+    muffed_punts = [p for p in plays if p.get("result") == "muffed_punt"]
+    blocked_kicks = [p for p in plays if p.get("result") == "blocked_kick"]
+    st_c1, st_c2, st_c3 = st.columns(3)
+    st_c1.metric("Blocked Punts", len(blocked_punts))
+    st_c2.metric("Muffed Punts", len(muffed_punts))
+    st_c3.metric("Blocked Kicks", len(blocked_kicks))
+    all_st_events = blocked_punts + muffed_punts + blocked_kicks
+    if all_st_events:
+        for ev in sorted(all_st_events, key=lambda p: p.get("play_number", 0)):
+            st.text(f"  Q{ev.get('quarter', '?')} | {ev.get('result', '').replace('_', ' ').upper()} | {ev.get('description', '')}")
+    else:
+        st.caption("No special teams chaos this game.")
+
+    st.markdown("**Viperball Metrics (0-100)**")
+    try:
+        home_metrics = calculate_viperball_metrics(result, "home")
+        away_metrics = calculate_viperball_metrics(result, "away")
+        mc1, mc2 = st.columns(2)
+        metric_labels = {
+            "opi": "OPI (Overall)",
+            "territory_rating": "Territory Rating",
+            "pressure_index": "Pressure Index",
+            "chaos_factor": "Chaos Factor",
+            "kicking_efficiency": "Kicking Efficiency",
+            "drive_quality": "Drive Quality",
+            "turnover_impact": "Turnover Impact",
+        }
+        with mc1:
+            st.markdown(f"*{home_name}*")
+            for k, label in metric_labels.items():
+                v = home_metrics.get(k, 0)
+                display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
+                st.text(f"  {label}: {display}")
+        with mc2:
+            st.markdown(f"*{away_name}*")
+            for k, label in metric_labels.items():
+                v = away_metrics.get(k, 0)
+                display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
+                st.text(f"  {label}: {display}")
+    except Exception:
+        st.caption("Metrics unavailable for this game result")

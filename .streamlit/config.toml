@@ -11,7 +11,8 @@ serverAddress = "0.0.0.0"
 
 [theme]
 base = "light"
-primaryColor = "#ef4444"
+primaryColor = "#dc2626"
 backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f0f2f6"
-textColor = "#111827"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#0f172a"
+font = "sans serif"
