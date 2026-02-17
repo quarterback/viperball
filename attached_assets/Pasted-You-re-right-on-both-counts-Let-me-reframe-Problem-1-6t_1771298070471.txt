@@ -1,0 +1,171 @@
+You're right on both counts. Let me reframe:
+
+---
+
+## Problem 1: 6th Down Treated as Garbage Time
+
+The sim treats 6th down like "oh shit we're out of options" instead of what it actually is: **a normal 4th down in football**.
+
+**6-down Viperball maps to 4-down football like this:**
+
+| Viperball | Football Equivalent | Decision |
+|-----------|---------------------|----------|
+| 1st–3rd down | 1st–2nd down | Run offense |
+| 4th–5th down | 3rd down | Run offense, maybe get aggressive |
+| 6th down | 4th down | Punt, kick FG, or go for it |
+
+Right now the AI is treating 5th down like 4th down in football, which wastes an entire down. Teams should be running normal offense through 5th down and only making the punt/kick/go-for-it decision on 6th.
+
+---
+
+## Problem 2: "Lateral Chain" is Not the Only Offense
+
+The sim has collapsed all ball-carrying into a false binary:
+
+- **Lateral chain** = "passing game" equivalent
+- **Everything else** = ???
+
+But real Viperball offense would have the full playbook:
+
+### Run Game (No Laterals)
+
+| Play Type | Description | When to Use |
+|-----------|-------------|-------------|
+| Dive | Straight ahead, behind center | Short yardage, clock kill |
+| Sweep | Outside run, speed to edge | Space on perimeter |
+| Power | Pulling guards, downhill | Goal line, need 2–3 yards |
+| Option | ZB reads defender, keeps or pitches | Creates numbers advantage |
+| Viper run | Give to Viper on jet motion | Mismatch exploitation |
+| Draw | Fake kick/lateral, delayed handoff | Catch defense cheating |
+
+### Lateral Game (1+ Laterals)
+
+| Play Type | Description | When to Use |
+|-----------|-------------|-------------|
+| Short chain (2 laterals) | Quick pitch sequence | Safe yards, move ball horizontally |
+| Medium chain (3 laterals) | Extended ball movement | Spread defense, find seam |
+| Long chain (4–5 laterals) | Full-field lateral attack | Explosive play hunting, risky |
+| Screen lateral | Fake inside, lateral to perimeter | Defense crashing inside |
+| Viper lateral | Get ball to Viper in space | Playmaker isolation |
+
+### Kicking Game
+
+| Play Type | Description | When to Use |
+|-----------|-------------|-------------|
+| Snap kick | Live-ball drop kick for 5 pts | In range, want to score |
+| Place kick | Set piece FG for 3 pts | 6th down, take the points |
+| Punt | Field position | 6th down, out of FG range |
+| Quick kick | Surprise punt on early down | Flip field, pin deep |
+
+---
+
+## Current Play Family Breakdown (From Your JSON)
+
+```json
+"play_family_breakdown": {
+    "speed_option": 12,
+    "lateral_spread": 16,
+    "dive_option": 11,
+    "territory_kick": 7,
+    "sweep_option": 12,
+    "none": 3
+}
+```
+
+This actually looks decent—there's variety. But the issue is probably:
+
+1. **Lateral chains are called when runs would be smarter** (short yardage, clock situations)
+2. **The lateral/run decision doesn't consider game context**
+
+---
+
+## Fix: Offensive Play Selection by Situation
+
+```python
+def select_play_type(self):
+    down = self.state.down
+    ytg = self.state.yards_to_go
+    fp = self.state.field_position
+    time_remaining = self.state.time_remaining
+    score_diff = self.get_score_differential()
+    
+    # === SHORT YARDAGE (1-3 yards to go) ===
+    if ytg <= 3:
+        # Favor power runs, dives — don't risk lateral fumble
+        weights = {
+            'dive_option': 0.40,
+            'power_option': 0.30,
+            'sweep_option': 0.15,
+            'lateral_spread': 0.10,  # Low — don't need to risk it
+            'snap_kick': 0.05,       # Only if in range
+        }
+    
+    # === MEDIUM YARDAGE (4-10 yards) ===
+    elif ytg <= 10:
+        # Balanced attack
+        weights = {
+            'sweep_option': 0.25,
+            'speed_option': 0.20,
+            'lateral_spread': 0.25,
+            'dive_option': 0.15,
+            'option': 0.10,
+            'snap_kick': 0.05,
+        }
+    
+    # === LONG YARDAGE (11+ yards) ===
+    else:
+        # Need chunk play — laterals, speed
+        weights = {
+            'lateral_spread': 0.40,  # High risk/reward
+            'speed_option': 0.25,
+            'sweep_option': 0.20,
+            'snap_kick': 0.10,       # Take the points if in range
+            'dive_option': 0.05,     # Won't get 11+ on a dive
+        }
+    
+    # === CLOCK MANAGEMENT ===
+    if leading and time_remaining < 300:
+        # Run the ball, avoid turnovers
+        weights['lateral_spread'] *= 0.5
+        weights['dive_option'] *= 1.5
+        weights['sweep_option'] *= 1.3
+    
+    # === TRAILING LATE ===
+    if trailing and time_remaining < 300:
+        # Need big plays
+        weights['lateral_spread'] *= 1.4
+        weights['snap_kick'] *= 1.5
+    
+    # === RED ZONE ===
+    if fp >= 80:
+        # Tighter space, less room for laterals
+        weights['dive_option'] *= 1.3
+        weights['power_option'] *= 1.3
+        weights['lateral_spread'] *= 0.7
+    
+    # === DOWN-SPECIFIC ADJUSTMENTS ===
+    if down <= 3:
+        # Early downs — can take risks
+        pass  # Use base weights
+    
+    elif down in [4, 5]:
+        # Middle downs — still have cushion, but be smart
+        if ytg <= 5:
+            weights['dive_option'] *= 1.2  # Get the first down
+    
+    elif down == 6:
+        # DECISION DOWN — like 4th down in football
+        return self.select_6th_down_decision()  # Separate logic
+    
+    return weighted_choice(weights)
+```
+
+---
+
+## Key Insight
+
+The offense should feel like football with more options, not like a gimmick sport where every play is a lateral circus. Ground and pound should work. Clock management should exist. Short yardage should be dive/power, not a 4-lateral chain.
+
+The lateral game is the *replacement for passing*, not the replacement for running.
+
+Want me to write up a full offensive philosophy section for the calibration doc?
