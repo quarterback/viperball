@@ -870,9 +870,41 @@ class ViperballEngine:
 
         return self.generate_game_summary()
 
+    def _check_rouge_pindown(self, receiving_team_obj, kicking_possession: str) -> bool:
+        return_speed = receiving_team_obj.avg_speed
+        pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
+        receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
+        pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
+        return_chance = (return_speed / 200) * (1.0 - pindown_bonus) / pindown_defense_factor
+        return_chance = max(0.10, min(0.45, return_chance))
+        can_return_out = random.random() < return_chance
+        return not can_return_out
+
+    def _apply_rouge_pindown(self, kicking_possession: str, receiving_possession: str):
+        self.state.possession = kicking_possession
+        self.add_score(1)
+        self.state.possession = receiving_possession
+        self.state.field_position = 25
+        self.state.down = 1
+        self.state.yards_to_go = 20
+
     def kickoff(self, receiving_team: str):
         self.state.possession = receiving_team
-        kick_distance = random.randint(40, 65)
+        kick_distance = int(random.gauss(62, 10))
+        kick_distance = max(40, min(85, kick_distance))
+
+        if kick_distance >= 60:
+            receiving_team_obj = self.home_team if receiving_team == "home" else self.away_team
+            kicking_team = "away" if receiving_team == "home" else "home"
+            if self._check_rouge_pindown(receiving_team_obj, kicking_team):
+                self._apply_rouge_pindown(kicking_team, receiving_team)
+                return
+            else:
+                self.state.field_position = random.randint(15, 30)
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                return
+
         return_yards = random.randint(10, 30)
         start_position = max(10, min(40, return_yards))
         self.state.field_position = start_position
@@ -1062,11 +1094,16 @@ class ViperballEngine:
             snapkick_boost = arch_info.get("snapkick_trigger_boost", 0.0)
             ev_drop_kick *= (1.0 + snapkick_boost * 0.5)
 
-        punt_distance = random.gauss(42, 5)
+        if fp <= 25:
+            punt_distance = random.gauss(55, 8)
+        elif fp <= 40:
+            punt_distance = random.gauss(50, 7)
+        else:
+            punt_distance = random.gauss(45, 6)
         new_fp_after_punt = max(1, fp + int(punt_distance))
         opp_fp = max(1, 100 - new_fp_after_punt)
         opp_value_after_punt = self._fp_value(opp_fp)
-        pindown_prob = 0.35 if opp_fp <= 10 else (0.20 if opp_fp <= 20 else 0.05)
+        pindown_prob = 0.40 if new_fp_after_punt >= 100 else (0.25 if opp_fp <= 10 else (0.15 if opp_fp <= 20 else 0.05))
         ev_punt = max(0.3, tod_value - opp_value_after_punt + pindown_prob * 1.0 - 1.5)
 
         conversion_rate = self._conversion_rate(down, ytg)
@@ -2154,20 +2191,23 @@ class ViperballEngine:
 
         punt_weather_mod = 1.0 + self.weather_info.get("punt_distance_modifier", 0.0)
         fp = self.state.field_position
-        ideal_punt = max(20, min(70, (100 - fp) - random.randint(3, 10)))
-        if 35 <= fp <= 55:
+        ideal_punt = max(25, min(80, (100 - fp) - random.randint(0, 5)))
+        yards_to_endzone = 100 - fp
+        if fp <= 20:
+            base_distance = random.gauss(62, 12) * punt_weather_mod
+        elif fp <= 35:
+            base_distance = random.gauss(55, 10) * punt_weather_mod
+        elif fp <= 55:
             base_distance = random.gauss(ideal_punt, 6) * punt_weather_mod
         else:
-            base_distance = random.gauss(45, 10) * punt_weather_mod
+            base_distance = random.gauss(ideal_punt, 8) * punt_weather_mod
         kicking_factor = punter.kicking / 80
 
-        # DEFENSIVE SYSTEM: Defensive kick suppression
-        # The defensive team's coverage affects kick effectiveness
         defense = self._current_defense()
         kick_suppression = defense.get("kick_suppression", 1.0)
 
         distance = int(base_distance * kicking_factor * kick_suppression)
-        distance = max(20, min(distance, 70))
+        distance = max(20, min(distance, 85))
 
         if random.random() < 0.04:
             tipped_distance = random.randint(5, 15)
@@ -2215,26 +2255,15 @@ class ViperballEngine:
         landing_position = self.state.field_position + distance
 
         if landing_position >= 100:
-            receiving_team = self.get_defensive_team()
-            return_speed = receiving_team.avg_speed
-            pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
+            receiving_team_obj = self.get_defensive_team()
+            kicking_team = self.state.possession
+            receiving = "away" if kicking_team == "home" else "home"
 
-            # DEFENSIVE SYSTEM: Defensive pindown prevention
-            # The RECEIVING team's defensive style affects their special teams coverage
-            # Get the receiving team's defensive style
-            receiving_defense = self.away_defense if self.state.possession == "home" else self.home_defense
-            pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
+            is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
 
-            # Apply defensive pindown prevention
-            # - pindown_defense of 0.80 means receiving team is 20% MORE LIKELY to return out (prevents pindown)
-            # - pindown_defense of 1.20 means receiving team is LESS LIKELY to return out (allows pindown)
-            # Formula: lower pindown_defense = better at preventing pindowns
-            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus) / pindown_defense_factor
-            can_return_out = random.random() < (return_speed / 110) * (1.0 - pindown_bonus)
-
-            if can_return_out:
+            if not is_pindown:
                 self.change_possession()
-                self.state.field_position = random.randint(5, 20)
+                self.state.field_position = random.randint(15, 25)
                 self.state.down = 1
                 self.state.yards_to_go = 20
                 self.apply_stamina_drain(2)
@@ -2250,8 +2279,6 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
             else:
-                kicking_team = self.state.possession
-                self.add_score(1)
                 self.apply_stamina_drain(2)
                 stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
                 play = Play(
@@ -2261,11 +2288,10 @@ class ViperballEngine:
                     play_type="punt", play_family=family.value,
                     players_involved=[player_label(punter)], yards_gained=-distance,
                     result=PlayResult.PINDOWN.value,
-                    description=f"{ptag} punt → {distance} yards — PINDOWN! +1",
+                    description=f"{ptag} punt → {distance} yards into end zone — PINDOWN! +1",
                     fatigue=round(stamina, 1),
                 )
-                receiving = "away" if kicking_team == "home" else "home"
-                self.kickoff(receiving)
+                self._apply_rouge_pindown(kicking_team, receiving)
                 return play
 
         # SPECIAL TEAMS CHAOS: Check for muffed punt return
@@ -2355,14 +2381,15 @@ class ViperballEngine:
         if landing_position >= 93 and landing_position < 100:
             endzone_bounce_prob = 0.35 + (landing_position - 93) * 0.08
             if random.random() < endzone_bounce_prob:
-                receiving_team = self.get_defensive_team()
-                return_speed = receiving_team.avg_speed
-                pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
-                can_return_out = random.random() < (return_speed / 120) * (1.0 - pindown_bonus)
+                receiving_team_obj = self.get_defensive_team()
+                kicking_team = self.state.possession
+                receiving = "away" if kicking_team == "home" else "home"
 
-                if can_return_out:
+                is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
+
+                if not is_pindown:
                     self.change_possession()
-                    self.state.field_position = random.randint(5, 18)
+                    self.state.field_position = random.randint(15, 25)
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.apply_stamina_drain(2)
@@ -2378,8 +2405,6 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
                 else:
-                    kicking_team = self.state.possession
-                    self.add_score(1)
                     self.apply_stamina_drain(2)
                     stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
                     play = Play(
@@ -2392,8 +2417,7 @@ class ViperballEngine:
                         description=f"{ptag} punt → {distance} yards — bounces into end zone — PINDOWN! +1",
                         fatigue=round(stamina, 1),
                     )
-                    receiving = "away" if kicking_team == "home" else "home"
-                    self.kickoff(receiving)
+                    self._apply_rouge_pindown(kicking_team, receiving)
                     return play
 
         new_position = 100 - min(99, self.state.field_position + distance)
@@ -2606,9 +2630,49 @@ class ViperballEngine:
                 recovery_chance = 0.40
 
             landing_offset = random.randint(5, 15)
+            ball_landing = self.state.field_position + landing_offset
+            kicking_team = self.state.possession
+            receiving = "away" if kicking_team == "home" else "home"
+
+            if ball_landing >= 100:
+                receiving_team_obj = self.get_defensive_team()
+                is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
+
+                if is_pindown:
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
+                    play = Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=kicking_team,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker)], yards_gained=0,
+                        result=PlayResult.PINDOWN.value,
+                        description=f"{ptag} snap kick {distance}yd — NO GOOD, into the end zone — PINDOWN! +1",
+                        fatigue=round(stamina, 1),
+                    )
+                    self._apply_rouge_pindown(kicking_team, receiving)
+                    return play
+                else:
+                    self.change_possession()
+                    self.state.field_position = random.randint(15, 25)
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker)], yards_gained=0,
+                        result=PlayResult.MISSED_KICK.value,
+                        description=f"{ptag} snap kick {distance}yd — NO GOOD, returned out of end zone to {self.state.field_position}",
+                        fatigue=round(stamina, 1),
+                    )
 
             if random.random() < recovery_chance:
-                landing_spot = min(99, self.state.field_position + landing_offset)
+                landing_spot = min(99, ball_landing)
                 self.state.field_position = landing_spot
                 self.state.down = 1
                 self.state.yards_to_go = 20
@@ -2634,7 +2698,7 @@ class ViperballEngine:
             else:
                 self.change_possession()
                 self.add_score(0.5)
-                landing_spot = max(1, self.state.field_position + landing_offset)
+                landing_spot = max(1, ball_landing)
                 self.state.field_position = max(1, 100 - landing_spot)
                 self.state.down = 1
                 self.state.yards_to_go = 20
@@ -2775,13 +2839,15 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
-            if self.state.field_position >= 50:
-                def_team = self.get_defensive_team()
-                pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
-                can_return = random.random() < (def_team.avg_speed / 115) * (1.0 - pindown_bonus)
-                if not can_return:
-                    kicking_team = self.state.possession
-                    self.add_score(1)
+            kicking_team = self.state.possession
+            receiving = "away" if kicking_team == "home" else "home"
+            ball_landing = self.state.field_position + distance + random.randint(-5, 10)
+
+            if ball_landing >= 100:
+                receiving_team_obj = self.get_defensive_team()
+                is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
+
+                if is_pindown:
                     self.apply_stamina_drain(2)
                     stamina = self.state.home_stamina if kicking_team == "home" else self.state.away_stamina
                     play = Play(
@@ -2791,15 +2857,31 @@ class ViperballEngine:
                         play_type="place_kick", play_family=family.value,
                         players_involved=[player_label(kicker)], yards_gained=0,
                         result=PlayResult.PINDOWN.value,
-                        description=f"{ptag} field goal {distance}yd — NO GOOD → PINDOWN! +1",
+                        description=f"{ptag} field goal {distance}yd — NO GOOD, through the end zone — PINDOWN! +1",
                         fatigue=round(stamina, 1),
                     )
-                    receiving = "away" if kicking_team == "home" else "home"
-                    self.kickoff(receiving)
+                    self._apply_rouge_pindown(kicking_team, receiving)
                     return play
+                else:
+                    self.change_possession()
+                    self.state.field_position = random.randint(15, 25)
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="place_kick", play_family=family.value,
+                        players_involved=[player_label(kicker)], yards_gained=0,
+                        result=PlayResult.MISSED_KICK.value,
+                        description=f"{ptag} field goal {distance}yd — NO GOOD, returned out of end zone to {self.state.field_position}",
+                        fatigue=round(stamina, 1),
+                    )
 
             self.change_possession()
-            self.state.field_position = 100 - self.state.field_position
+            self.state.field_position = max(1, 100 - ball_landing)
             self.state.down = 1
             self.state.yards_to_go = 20
 
