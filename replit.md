@@ -5,6 +5,7 @@ The Viperball Simulation Sandbox is a browser-accessible environment for the Col
 
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
+- **Snap kick (DK) rate**: User confirmed 1.78-2.23/game is PERFECT. Do NOT lower snap kicks — the old 0.5-1.5 target was too low. Updated target range: 1.5-2.5 DK per team per game.
 
 ## System Architecture
 
