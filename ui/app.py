@@ -210,6 +210,8 @@ def generate_box_score_markdown(result):
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
+    lines.append(f"| Rushing Yards | {hs.get('rushing_yards',0)} | {as_.get('rushing_yards',0)} |")
+    lines.append(f"| Lateral Yards | {hs.get('lateral_yards',0)} | {as_.get('lateral_yards',0)} |")
     lines.append(f"| Yards/Play | {hs['yards_per_play']} | {as_['yards_per_play']} |")
     lines.append(f"| Total Plays | {hs['total_plays']} | {as_['total_plays']} |")
     lines.append(f"| Lateral Chains | {hs['lateral_chains']} ({hs['lateral_efficiency']}% eff) | {as_['lateral_chains']} ({as_['lateral_efficiency']}% eff) |")
@@ -567,7 +569,8 @@ if page == "Game Simulator":
             "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
                  "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
                  "Punts", "Kick %",
-                 "Total Yards", "Yards/Play", "Total Plays",
+                 "Total Yards", "Rushing Yards", "Lateral Yards",
+                 "Yards/Play", "Total Plays",
                  "Lateral Chains", "Lateral Efficiency",
                  "Fumbles Lost", "Turnovers on Downs",
                  "Penalties", "Penalty Yards",
@@ -581,7 +584,10 @@ if page == "Game Simulator":
                 f"{h_fr} ({h_frp:g}pts)",
                 str(hs.get("punts", 0)),
                 f"{hs.get('kick_percentage', 0)}%",
-                str(hs["total_yards"]), str(hs["yards_per_play"]), str(hs["total_plays"]),
+                str(hs["total_yards"]),
+                str(hs.get("rushing_yards", 0)),
+                str(hs.get("lateral_yards", 0)),
+                str(hs["yards_per_play"]), str(hs["total_plays"]),
                 str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
                 str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
                 str(hs.get("penalties", 0)),
@@ -598,7 +604,10 @@ if page == "Game Simulator":
                 f"{a_fr} ({a_frp:g}pts)",
                 str(as_.get("punts", 0)),
                 f"{as_.get('kick_percentage', 0)}%",
-                str(as_["total_yards"]), str(as_["yards_per_play"]), str(as_["total_plays"]),
+                str(as_["total_yards"]),
+                str(as_.get("rushing_yards", 0)),
+                str(as_.get("lateral_yards", 0)),
+                str(as_["yards_per_play"]), str(as_["total_plays"]),
                 str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
                 str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
                 str(as_.get("penalties", 0)),
@@ -659,7 +668,11 @@ if page == "Game Simulator":
                     pstats = player_stats.get(side, [])
                     if pstats:
                         pdf = pd.DataFrame(pstats)
-                        pdf.columns = ["Tag", "Name", "Archetype", "Touches", "Yards", "TDs", "Fumbles", "Kick Att", "Kick Made"]
+                        display_cols = ["Tag", "Name", "Archetype", "Touches", "Yards", "Rush Yds", "Lat Yds", "TDs", "Fumbles", "Lat Thrown", "Kick Att", "Kick Made", "Deflections", "Bells", "Cov Snaps", "KP Tackles", "KP Ret Yds"]
+                        if len(pdf.columns) == len(display_cols):
+                            pdf.columns = display_cols
+                        elif len(pdf.columns) >= 11:
+                            pdf.columns = display_cols[:len(pdf.columns)]
                         st.dataframe(pdf, hide_index=True, use_container_width=True)
                     else:
                         st.caption("No player stat data available.")

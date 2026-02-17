@@ -387,6 +387,8 @@ class Player:
     archetype: str = "none"
     game_touches: int = 0
     game_yards: int = 0
+    game_rushing_yards: int = 0
+    game_lateral_yards: int = 0
     game_tds: int = 0
     game_fumbles: int = 0
     game_laterals_thrown: int = 0
@@ -1907,18 +1909,23 @@ class ViperballEngine:
             self.add_score(9)
             player.game_tds += 1
             player.game_yards += yards_gained
+            player.game_rushing_yards += yards_gained
             description = f"{ptag} {action} → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
+            player.game_yards += yards_gained
+            player.game_rushing_yards += yards_gained
             description = f"{ptag} {action} → {yards_gained} — FIRST DOWN"
         else:
             result = PlayResult.GAIN
             self.state.field_position = new_position
             self.state.down += 1
             self.state.yards_to_go -= yards_gained
+            player.game_yards += yards_gained
+            player.game_rushing_yards += yards_gained
             description = f"{ptag} {action} → {yards_gained}"
 
             if self.state.down > 6:
@@ -2058,22 +2065,35 @@ class ViperballEngine:
 
         new_position = min(100, self.state.field_position + yards_gained)
 
+        for p in players_involved:
+            p.game_touches += 1
+        for p in players_involved[:-1]:
+            p.game_laterals_thrown += 1
+        ball_carrier = players_involved[-1]
+
         if new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team):
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - self.state.field_position
             self.add_score(9)
+            ball_carrier.game_tds += 1
+            ball_carrier.game_yards += yards_gained
+            ball_carrier.game_lateral_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
+            ball_carrier.game_yards += yards_gained
+            ball_carrier.game_lateral_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained} — FIRST DOWN"
         else:
             result = PlayResult.GAIN
             self.state.field_position = new_position
             self.state.down += 1
             self.state.yards_to_go -= yards_gained
+            ball_carrier.game_yards += yards_gained
+            ball_carrier.game_lateral_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained}"
 
             if self.state.down > 6:
@@ -3053,8 +3073,11 @@ class ViperballEngine:
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "touches": p.game_touches,
                         "yards": p.game_yards,
+                        "rushing_yards": p.game_rushing_yards,
+                        "lateral_yards": p.game_lateral_yards,
                         "tds": p.game_tds,
                         "fumbles": p.game_fumbles,
+                        "laterals_thrown": p.game_laterals_thrown,
                         "kick_att": p.game_kick_attempts,
                         "kick_made": p.game_kick_makes,
                         "kick_deflections": p.game_kick_deflections,
@@ -3149,8 +3172,15 @@ class ViperballEngine:
         penalties_declined = [p for p in penalty_plays if p.penalty.declined]
         penalty_yards = sum(p.penalty.yards for p in penalties_accepted)
 
+        run_plays = [p for p in plays if p.play_type == "run"]
+        rushing_yards = sum(max(0, p.yards_gained) for p in run_plays)
+        lateral_chain_plays = [p for p in plays if p.play_type == "lateral_chain" and not p.fumble]
+        lateral_yards = sum(max(0, p.yards_gained) for p in lateral_chain_plays)
+
         return {
             "total_yards": total_yards,
+            "rushing_yards": rushing_yards,
+            "lateral_yards": lateral_yards,
             "total_plays": total_plays,
             "yards_per_play": round(total_yards / max(1, total_plays), 2),
             "touchdowns": len(touchdowns),
