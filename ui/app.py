@@ -21,6 +21,7 @@ from engine.viperball_metrics import calculate_viperball_metrics
 from engine.conference_names import generate_conference_names
 from engine.geography import get_geographic_conference_defaults
 from engine.injuries import InjuryTracker
+from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.export import (
     export_season_standings_csv, export_season_game_log_csv,
@@ -1844,21 +1845,42 @@ elif page == "Season Simulator":
             st.dataframe(pd.DataFrame(leader_rows), hide_index=True, use_container_width=True)
 
             st.subheader("Season Awards")
+            try:
+                season_honors = compute_season_awards(
+                    season, year=2025,
+                    conferences=season.conferences if hasattr(season, 'conferences') else None,
+                )
+                indiv_awards = season_honors.individual_awards
+                if indiv_awards:
+                    st.markdown("**Individual Awards**")
+                    award_cols = st.columns(min(3, len(indiv_awards)))
+                    for i, award in enumerate(indiv_awards):
+                        col = award_cols[i % len(award_cols)]
+                        col.metric(
+                            award.award_name,
+                            f"{award.player_name}",
+                            f"{award.team_name} — {award.position}"
+                        )
+                    st.markdown("---")
+                    st.markdown("**Team Awards**")
+                    team_aw1, team_aw2 = st.columns(2)
+                    if season_honors.coach_of_year:
+                        team_aw1.metric("Coach of the Year", season_honors.coach_of_year)
+                    if season_honors.most_improved:
+                        team_aw2.metric("Most Improved Program", season_honors.most_improved)
+            except Exception:
+                pass
+
             best_record = standings[0]
             highest_scoring = max(standings, key=lambda r: r.points_for / max(1, r.games_played))
             best_defense = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
             highest_opi = max(standings, key=lambda r: r.avg_opi)
-            most_chaos = max(standings, key=lambda r: r.avg_chaos)
-            best_kicking = max(standings, key=lambda r: r.avg_kicking)
-
-            aw1, aw2, aw3 = st.columns(3)
+            st.markdown("**Team Statistical Leaders**")
+            aw1, aw2, aw3, aw4 = st.columns(4)
             aw1.metric("Best Record", f"{best_record.team_name} ({best_record.wins}-{best_record.losses})")
             aw2.metric("Highest Scoring", f"{highest_scoring.team_name} ({highest_scoring.points_for / max(1, highest_scoring.games_played):.1f} PPG)")
             aw3.metric("Best Defense", f"{best_defense.team_name} ({best_defense.points_against / max(1, best_defense.games_played):.1f} PA/G)")
-            aw4, aw5, aw6 = st.columns(3)
             aw4.metric("Highest OPI", f"{highest_opi.team_name} ({highest_opi.avg_opi:.1f})")
-            aw5.metric("Chaos Award", f"{most_chaos.team_name} ({most_chaos.avg_chaos:.1f})")
-            aw6.metric("Kicking Award", f"{best_kicking.team_name} ({best_kicking.avg_kicking:.1f})")
 
             if season.conferences and len(season.conferences) >= 1:
                 st.subheader("Conference Standings")
