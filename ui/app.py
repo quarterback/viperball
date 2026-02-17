@@ -2011,35 +2011,73 @@ elif page == "Season Simulator":
                     st.markdown(f"**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
             st.subheader("Game Log")
-            completed_games = [g for g in season.schedule if g.completed]
-            completed_games_sorted = sorted(completed_games, key=lambda g: g.week)
+            all_game_entries = []
+            for g in season.schedule:
+                if g.completed:
+                    all_game_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
-            game_filter_col1, game_filter_col2 = st.columns(2)
+            if season.playoff_bracket:
+                max_week = max((g.week for g in season.playoff_bracket), default=0)
+                for g in season.playoff_bracket:
+                    if g.completed:
+                        if g.week == 1000:
+                            round_label = "Championship"
+                        else:
+                            round_label = f"Playoff R{g.week}"
+                        all_game_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.week})
+
+            if season.bowl_games:
+                for i, bowl in enumerate(season.bowl_games):
+                    bg = bowl.game
+                    if bg.completed:
+                        all_game_entries.append({"game": bg, "phase": "Bowl", "label_prefix": bowl.name, "sort_key": 800 + i})
+
+            all_game_entries.sort(key=lambda e: e["sort_key"])
+
+            all_teams_in_log = set()
+            all_phases = set()
+            for entry in all_game_entries:
+                g = entry["game"]
+                all_teams_in_log.add(g.home_team)
+                all_teams_in_log.add(g.away_team)
+                all_phases.add(entry["phase"])
+
+            game_filter_col1, game_filter_col2, game_filter_col3 = st.columns(3)
             with game_filter_col1:
-                filter_team = st.selectbox("Filter by Team", ["All Teams"] + sorted(set(g.home_team for g in completed_games) | set(g.away_team for g in completed_games)), key="season_game_filter_team")
+                filter_team = st.selectbox("Filter by Team", ["All Teams"] + sorted(all_teams_in_log), key="season_game_filter_team")
             with game_filter_col2:
-                filter_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(set(g.week for g in completed_games)), key="season_game_filter_week")
+                phase_options = ["All Phases"] + sorted(all_phases)
+                filter_phase = st.selectbox("Filter by Phase", phase_options, key="season_game_filter_phase")
+            with game_filter_col3:
+                reg_weeks = sorted(set(g.week for g in season.schedule if g.completed))
+                filter_week = st.selectbox("Filter by Week (Reg Season)", ["All Weeks"] + reg_weeks, key="season_game_filter_week")
 
-            filtered_games = completed_games_sorted
+            filtered_entries = all_game_entries
             if filter_team != "All Teams":
-                filtered_games = [g for g in filtered_games if g.home_team == filter_team or g.away_team == filter_team]
+                filtered_entries = [e for e in filtered_entries if e["game"].home_team == filter_team or e["game"].away_team == filter_team]
+            if filter_phase != "All Phases":
+                filtered_entries = [e for e in filtered_entries if e["phase"] == filter_phase]
             if filter_week != "All Weeks":
-                filtered_games = [g for g in filtered_games if g.week == filter_week]
+                filtered_entries = [e for e in filtered_entries if e["phase"] == "Regular Season" and e["game"].week == filter_week]
 
             game_labels = []
-            for g in filtered_games:
+            filtered_games = []
+            for entry in filtered_entries:
+                g = entry["game"]
                 hs = g.home_score or 0
                 aws = g.away_score or 0
-                winner = g.home_team if hs > aws else g.away_team
-                game_labels.append(f"Wk {g.week}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                game_labels.append(f"{entry['label_prefix']}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                filtered_games.append(g)
 
             schedule_data = []
-            for g in filtered_games:
+            for entry in filtered_entries:
+                g = entry["game"]
                 hs = g.home_score or 0
                 aws = g.away_score or 0
                 winner = g.home_team if hs > aws else g.away_team
                 schedule_data.append({
-                    "Week": g.week,
+                    "Phase": entry["phase"],
+                    "Round": entry["label_prefix"],
                     "Home": g.home_team,
                     "Away": g.away_team,
                     "Home Score": fmt_vb_score(hs),
@@ -2417,41 +2455,76 @@ elif page == "Dynasty Mode":
                         st.markdown(f"{prefix}**{bowl.name}**: **{winner}** ({w_rec}) {fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}")
 
                 st.subheader("Game Log")
-                dyn_completed = [g for g in season.schedule if g.completed]
-                dyn_completed_sorted = sorted(dyn_completed, key=lambda g: g.week)
-                dyn_team_options = sorted(set(g.home_team for g in dyn_completed) | set(g.away_team for g in dyn_completed))
+                dyn_all_entries = []
+                for g in season.schedule:
+                    if g.completed:
+                        dyn_all_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
-                dyn_fc1, dyn_fc2 = st.columns(2)
+                if season.playoff_bracket:
+                    for g in season.playoff_bracket:
+                        if g.completed:
+                            if g.week == 1000:
+                                round_label = "Championship"
+                            else:
+                                round_label = f"Playoff R{g.week}"
+                            dyn_all_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.week})
+
+                if season.bowl_games:
+                    for i, bowl in enumerate(season.bowl_games):
+                        bg = bowl.game
+                        if bg.completed:
+                            dyn_all_entries.append({"game": bg, "phase": "Bowl", "label_prefix": bowl.name, "sort_key": 800 + i})
+
+                dyn_all_entries.sort(key=lambda e: e["sort_key"])
+
+                dyn_teams_in_log = set()
+                dyn_phases = set()
+                for entry in dyn_all_entries:
+                    g = entry["game"]
+                    dyn_teams_in_log.add(g.home_team)
+                    dyn_teams_in_log.add(g.away_team)
+                    dyn_phases.add(entry["phase"])
+
+                dyn_fc1, dyn_fc2, dyn_fc3 = st.columns(3)
                 with dyn_fc1:
-                    dyn_filter_team = st.selectbox("Filter by Team", ["My Team", "All Teams"] + dyn_team_options, key="dyn_game_filter_team")
+                    dyn_filter_team = st.selectbox("Filter by Team", ["My Team", "All Teams"] + sorted(dyn_teams_in_log), key="dyn_game_filter_team")
                 with dyn_fc2:
-                    dyn_filter_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(set(g.week for g in dyn_completed)), key="dyn_game_filter_week")
+                    dyn_phase_options = ["All Phases"] + sorted(dyn_phases)
+                    dyn_filter_phase = st.selectbox("Filter by Phase", dyn_phase_options, key="dyn_game_filter_phase")
+                with dyn_fc3:
+                    dyn_reg_weeks = sorted(set(g.week for g in season.schedule if g.completed))
+                    dyn_filter_week = st.selectbox("Filter by Week (Reg Season)", ["All Weeks"] + dyn_reg_weeks, key="dyn_game_filter_week")
 
-                dyn_filtered = dyn_completed_sorted
+                dyn_filtered_entries = dyn_all_entries
                 if dyn_filter_team == "My Team":
                     my_team = dynasty.coach.team_name
-                    dyn_filtered = [g for g in dyn_filtered if g.home_team == my_team or g.away_team == my_team]
+                    dyn_filtered_entries = [e for e in dyn_filtered_entries if e["game"].home_team == my_team or e["game"].away_team == my_team]
                 elif dyn_filter_team != "All Teams":
-                    dyn_filtered = [g for g in dyn_filtered if g.home_team == dyn_filter_team or g.away_team == dyn_filter_team]
+                    dyn_filtered_entries = [e for e in dyn_filtered_entries if e["game"].home_team == dyn_filter_team or e["game"].away_team == dyn_filter_team]
+                if dyn_filter_phase != "All Phases":
+                    dyn_filtered_entries = [e for e in dyn_filtered_entries if e["phase"] == dyn_filter_phase]
                 if dyn_filter_week != "All Weeks":
-                    dyn_filtered = [g for g in dyn_filtered if g.week == dyn_filter_week]
+                    dyn_filtered_entries = [e for e in dyn_filtered_entries if e["phase"] == "Regular Season" and e["game"].week == dyn_filter_week]
 
                 dyn_game_labels = []
-                for g in dyn_filtered:
+                dyn_filtered_games = []
+                for entry in dyn_filtered_entries:
+                    g = entry["game"]
                     hs = g.home_score or 0
                     aws = g.away_score or 0
-                    dyn_game_labels.append(f"Wk {g.week}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                    dyn_game_labels.append(f"{entry['label_prefix']}: {g.home_team} {fmt_vb_score(hs)} vs {g.away_team} {fmt_vb_score(aws)}")
+                    dyn_filtered_games.append(g)
 
                 if dyn_game_labels:
                     dyn_sel = st.selectbox("Select a game to view details", dyn_game_labels, key="dyn_game_detail_select")
                     dyn_gi = dyn_game_labels.index(dyn_sel)
-                    dyn_sg = dyn_filtered[dyn_gi]
+                    dyn_sg = dyn_filtered_games[dyn_gi]
                     if dyn_sg.full_result:
                         with st.expander("Game Details", expanded=True):
                             render_game_detail(dyn_sg.full_result, key_prefix=f"dyn_gd_{dyn_gi}")
                     else:
                         st.caption("Detailed game data not available for this game.")
-                elif dyn_completed:
+                elif dyn_all_entries:
                     st.caption("No games match the current filter.")
 
         with tab2:
