@@ -1449,7 +1449,7 @@ class ViperballEngine:
         pk_success = self._place_kick_success(fg_distance)
         pk_miss_cost = (1 - pk_success) * tod_value * 0.3
         ev_place_kick = pk_success * 3 - pk_miss_cost
-        ev_place_kick *= 2.10
+        ev_place_kick *= 2.60
 
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
         dk_recovery = 0.35
@@ -1515,13 +1515,15 @@ class ViperballEngine:
                 ev_place_kick *= 1.25
 
         if fg_distance <= 30:
-            ev_place_kick *= 1.60
+            ev_place_kick *= 1.70
         elif fg_distance <= 40:
-            ev_place_kick *= 1.40
+            ev_place_kick *= 1.50
         elif fg_distance <= 50:
-            ev_place_kick *= 1.25
+            ev_place_kick *= 1.35
         elif fg_distance <= 58:
-            ev_place_kick *= 1.10
+            ev_place_kick *= 1.20
+        elif fg_distance <= 65:
+            ev_place_kick *= 1.05
 
         style = self._current_style()
         kick_rate = style.get("kick_rate", 0.2)
@@ -1532,7 +1534,7 @@ class ViperballEngine:
             ev_drop_kick *= 1.08
 
         options = {}
-        if fg_distance <= 62:
+        if fg_distance <= 65:
             options['place_kick'] = ev_place_kick
         if fg_distance <= 55:
             options['drop_kick'] = ev_drop_kick
@@ -1542,8 +1544,12 @@ class ViperballEngine:
 
         best = max(options, key=options.get)
 
-        if best == 'punt' and 'place_kick' in options and fg_distance <= 55:
+        if best == 'punt' and 'place_kick' in options and fg_distance <= 58:
             best = 'place_kick'
+
+        if best == 'punt' and 'place_kick' in options and fg_distance <= 65:
+            if random.random() < 0.55:
+                best = 'place_kick'
 
         if best == 'go_for_it' and 'place_kick' in options and fg_distance <= 45 and down >= 4:
             conservative_prob = 0.0
@@ -1595,45 +1601,47 @@ class ViperballEngine:
             if ytg <= 2 and fp >= 30 and down <= 3:
                 best = 'go_for_it'
 
-            if fp >= 60 and best == 'punt':
-                if fg_distance <= 58 and 'place_kick' in options:
+            if fp >= 55 and best == 'punt':
+                if fg_distance <= 62 and 'place_kick' in options:
                     best = 'place_kick'
                 elif 'go_for_it' in options:
                     best = 'go_for_it'
 
-            if down == 6 and 'place_kick' in options and fg_distance <= 62:
+            if down == 6 and 'place_kick' in options and fg_distance <= 65:
                 best = 'place_kick'
 
-            if down == 5 and 'place_kick' in options and fg_distance <= 58:
+            if down == 5 and 'place_kick' in options and fg_distance <= 62:
                 best = 'place_kick'
-            elif down == 4 and 'place_kick' in options and fg_distance <= 45 and ytg >= 3:
-                if random.random() < 0.55:
+            elif down == 4 and 'place_kick' in options and fg_distance <= 50 and ytg >= 3:
+                if random.random() < 0.65:
                     best = 'place_kick'
-            elif down == 4 and 'place_kick' in options and fg_distance <= 40 and ytg >= 8:
+            elif down == 4 and 'place_kick' in options and fg_distance <= 45 and ytg >= 8:
                 best = 'place_kick'
 
-            if 'place_kick' in options and fg_distance <= 58:
+            if 'place_kick' in options and fg_distance <= 65:
                 take_points_prob = 0.0
                 if down == 6 and ytg >= 4:
                     take_points_prob = 0.95
                 elif down == 6 and ytg >= 2:
-                    take_points_prob = 0.80
+                    take_points_prob = 0.85
                 elif down >= 5 and ytg >= 6:
-                    take_points_prob = 0.78
+                    take_points_prob = 0.82
                 elif down >= 5 and ytg >= 4:
-                    take_points_prob = 0.62
+                    take_points_prob = 0.68
                 elif down >= 5 and ytg >= 2:
-                    take_points_prob = 0.48
-                elif down >= 4 and ytg >= 8:
-                    take_points_prob = 0.65
-                elif down >= 4 and ytg >= 5:
-                    take_points_prob = 0.50
-                elif down >= 4 and ytg >= 3:
-                    take_points_prob = 0.35
-                elif down >= 3 and ytg >= 14:
                     take_points_prob = 0.55
+                elif down >= 4 and ytg >= 8:
+                    take_points_prob = 0.72
+                elif down >= 4 and ytg >= 5:
+                    take_points_prob = 0.58
+                elif down >= 4 and ytg >= 3:
+                    take_points_prob = 0.42
+                elif down >= 3 and ytg >= 14:
+                    take_points_prob = 0.60
                 elif down >= 3 and ytg >= 12:
-                    take_points_prob = 0.40
+                    take_points_prob = 0.48
+                elif down >= 3 and ytg >= 10:
+                    take_points_prob = 0.35
                 if pk_success >= 0.85:
                     take_points_prob += 0.12
                 elif pk_success >= 0.70:
@@ -1882,9 +1890,9 @@ class ViperballEngine:
             should_evaluate_kick = False
             if self.state.down >= 5:
                 should_evaluate_kick = True
-            elif self.state.down == 4 and (fg_distance <= 62 or self.state.yards_to_go >= 4):
+            elif self.state.down == 4 and (fg_distance <= 65 or self.state.yards_to_go >= 4):
                 should_evaluate_kick = True
-            elif self.state.down == 3 and fg_distance <= 45 and self.state.yards_to_go >= 12:
+            elif self.state.down == 3 and fg_distance <= 55 and self.state.yards_to_go >= 10:
                 should_evaluate_kick = True
 
             if should_evaluate_kick:
