@@ -23,6 +23,50 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.generate_names import generate_player_name
+from scripts.generate_coach_names import generate_coach_name
+
+
+def assign_archetype(position: str, speed: int, stamina: int,
+                     kicking: int, lateral_skill: int, tackling: int) -> str:
+    """Assign a gameplay archetype based on position and stats."""
+    spd, kick, lat, stam, tck = speed, kicking, lateral_skill, stamina, tackling
+
+    if "Zeroback" in position:
+        if kick >= 80 and kick >= spd:
+            return "kicking_zb"
+        elif spd >= 90 and spd > kick + 5:
+            return "running_zb"
+        elif lat >= 85 and lat >= spd and lat >= kick:
+            return "distributor_zb"
+        else:
+            return "dual_threat_zb"
+    elif "Viper" in position:
+        if lat >= 90 and spd >= 90:
+            return "receiving_viper"
+        elif tck >= 80 and stam >= 85:
+            return "power_viper"
+        elif spd >= 93 and lat < 85:
+            return "decoy_viper"
+        else:
+            return "hybrid_viper"
+    elif any(p in position for p in ["Halfback", "Wingback", "Shiftback", "Wing"]):
+        if spd >= 93:
+            return "speed_flanker"
+        elif tck >= 80 and stam >= 88:
+            return "power_flanker"
+        elif lat >= 88 and spd >= 85:
+            return "elusive_flanker"
+        else:
+            return "reliable_flanker"
+    elif any(p in position for p in ["Safety", "Keeper", "Corner"]):
+        if spd >= 90 and spd > tck:
+            return "return_keeper"
+        elif lat >= 85 and stam >= 85:
+            return "sure_hands_keeper"
+        else:
+            return "tackle_keeper"
+    return "none"
+
 
 DATA_DIR = Path(__file__).parent.parent / 'data'
 
@@ -195,6 +239,16 @@ def generate_roster(school_data):
         # Generate attributes
         attributes = generate_player_attributes(position, philosophy, year, is_viper)
 
+        # Compute archetype from position and stats
+        archetype = assign_archetype(
+            position,
+            attributes['speed'],
+            attributes['stamina'],
+            attributes['kicking'],
+            attributes['lateral_skill'],
+            attributes['tackling']
+        )
+
         # Build player data
         player = {
             'number': number,
@@ -205,6 +259,7 @@ def generate_roster(school_data):
             'year': year.capitalize(),
             'hometown': player_name_data['hometown'],
             'high_school': player_name_data['high_school'],
+            'archetype': archetype,
             'stats': {
                 'speed': attributes['speed'],
                 'stamina': attributes['stamina'],
@@ -227,11 +282,13 @@ def generate_roster(school_data):
     lateral_proficiency = sum(p['stats']['lateral_skill'] for p in roster) // len(roster)
     defensive_strength = sum(p['stats']['tackling'] for p in roster) // len(roster)
 
-    # Generate head coach (women's name)
-    coach_data = generate_player_name(
-        school_recruiting_pipeline=recruiting_pipeline,
-        recruiting_class=2015,  # Older generation
-        year='senior'
+    # Generate head coach using the dedicated coach name generator
+    # Coaches can be men or women (gender='random' picks ~45/45/10 female/male/neutral)
+    coach_data = generate_coach_name(
+        gender='random',
+        age_range=(35, 62),
+        team_philosophy=identity.get('philosophy', None),
+        school_name=school_name
     )
 
     return {
@@ -261,8 +318,11 @@ def generate_roster(school_data):
         },
         'coaching': {
             'head_coach': coach_data['full_name'],
-            'philosophy': f"{identity.get('style', 'balanced').capitalize()} {identity.get('philosophy', 'hybrid')} offense",
-            'experience': f"{random.randint(3, 15)} years"
+            'head_coach_gender': coach_data['gender'],
+            'philosophy': coach_data['philosophy'],
+            'coaching_style': coach_data['coaching_style'],
+            'experience': f"{coach_data['years_experience']} years",
+            'background': coach_data['background']
         }
     }
 

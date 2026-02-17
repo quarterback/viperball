@@ -5,6 +5,7 @@ Collegiate Viperball Simulation Engine
 from .game_engine import (
     ViperballEngine,
     load_team_from_json,
+    generate_team_on_the_fly,
     get_available_teams,
     get_available_styles,
     Team,
@@ -23,6 +24,7 @@ from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label,
 __all__ = [
     "ViperballEngine",
     "load_team_from_json",
+    "generate_team_on_the_fly",
     "get_available_teams",
     "get_available_styles",
     "Team",

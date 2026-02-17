@@ -31,429 +31,287 @@
     "players": [
       {
         "number": 1,
-        "name": "Brooklyn Lopez",
+        "name": "Rylee Herrera",
         "position": "Viper/Back",
         "height": "5-7",
-        "weight": 172,
+        "weight": 180,
         "year": "Senior",
         "hometown": {
-          "city": "Kansas City",
-          "state": "MO",
+          "city": "Asheville",
+          "state": "NC",
           "country": "USA",
-          "region": "midwest"
+          "region": "south"
         },
-        "high_school": "Kansas City West High School",
+        "high_school": "Asheville Central High School",
+        "archetype": "receiving_viper",
         "stats": {
-          "speed": 93,
-          "stamina": 87,
-          "kicking": 72,
-          "lateral_skill": 97,
-          "tackling": 74
+          "speed": 90,
+          "stamina": 91,
+          "kicking": 71,
+          "lateral_skill": 100,
+          "tackling": 86
         }
       },
       {
         "number": 2,
-        "name": "Stella Wright",
-        "position": "Zeroback/Back",
-        "height": "5-11",
-        "weight": 189,
-        "year": "Freshman",
+        "name": "Joyce Le",
+        "position": "Back/Safety",
+        "height": "5-8",
+        "weight": 164,
+        "year": "Senior",
         "hometown": {
-          "city": "Adelaide",
-          "state": "SA",
-          "country": "Australia",
-          "region": "australian"
+          "city": "Omaha",
+          "state": "NE",
+          "country": "USA",
+          "region": "midwest"
         },
-        "high_school": "Sydney Swans - AFLW Academy",
+        "high_school": "Omaha West High School",
+        "archetype": "tackle_keeper",
         "stats": {
-          "speed": 89,
-          "stamina": 76,
-          "kicking": 76,
-          "lateral_skill": 94,
-          "tackling": 79
+          "speed": 85,
+          "stamina": 91,
+          "kicking": 69,
+          "lateral_skill": 82,
+          "tackling": 74
         }
       },
       {
         "number": 3,
-        "name": "Emily O'Sullivan",
-        "position": "Back/Corner",
-        "height": "5-10",
-        "weight": 172,
-        "year": "Senior",
+        "name": "Wendy Lee",
+        "position": "Zeroback/Back",
+        "height": "5-6",
+        "weight": 184,
+        "year": "Freshman",
         "hometown": {
-          "city": "Duluth",
-          "state": "MN",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Duluth {Mascot} High School",
-        "stats": {
-          "speed": 85,
-          "stamina": 84,
-          "kicking": 86,
-          "lateral_skill": 94,
-          "tackling": 80
-        }
-      },
-      {
-        "number": 10,
-        "name": "Audrey Rivera",
-        "position": "Lineman",
-        "height": "6-1",
-        "weight": 213,
-        "year": "Junior",
-        "hometown": {
-          "city": "Dayton",
-          "state": "OH",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Dayton Central High School",
-        "stats": {
-          "speed": 85,
-          "stamina": 87,
-          "kicking": 70,
-          "lateral_skill": 83,
-          "tackling": 81
-        }
-      },
-      {
-        "number": 13,
-        "name": "Sophia Harrison",
-        "position": "Back/Corner",
-        "height": "5-7",
-        "weight": 162,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Hobart",
-          "state": "TAS",
+          "city": "Perth",
+          "state": "WA",
           "country": "Australia",
           "region": "australian"
         },
-        "high_school": "St. {Name}'s College",
+        "high_school": "Hale School",
+        "archetype": "dual_threat_zb",
         "stats": {
-          "speed": 88,
-          "stamina": 84,
-          "kicking": 78,
-          "lateral_skill": 87,
-          "tackling": 79
+          "speed": 75,
+          "stamina": 79,
+          "kicking": 71,
+          "lateral_skill": 75,
+          "tackling": 71
+        }
+      },
+      {
+        "number": 5,
+        "name": "Iris Brown",
+        "position": "Lineman",
+        "height": "6-3",
+        "weight": 188,
+        "year": "Junior",
+        "hometown": {
+          "city": "Grand Rapids",
+          "state": "MI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Grand Rapids South High School",
+        "archetype": "none",
+        "stats": {
+          "speed": 76,
+          "stamina": 88,
+          "kicking": 76,
+          "lateral_skill": 88,
+          "tackling": 82
+        }
+      },
+      {
+        "number": 6,
+        "name": "Diana Guerrero",
+        "position": "Halfback/Back",
+        "height": "5-9",
+        "weight": 184,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Milwaukee",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "{Name} Academy",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 79,
+          "stamina": 88,
+          "kicking": 77,
+          "lateral_skill": 93,
+          "tackling": 74
+        }
+      },
+      {
+        "number": 7,
+        "name": "Anna Soto",
+        "position": "Shiftback/Back",
+        "height": "5-5",
+        "weight": 179,
+        "year": "Junior",
+        "hometown": {
+          "city": "Green Bay",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Green Bay Central High School",
+        "archetype": "elusive_flanker",
+        "stats": {
+          "speed": 85,
+          "stamina": 80,
+          "kicking": 74,
+          "lateral_skill": 91,
+          "tackling": 67
+        }
+      },
+      {
+        "number": 8,
+        "name": "Jessica Stewart",
+        "position": "Back/Corner",
+        "height": "5-7",
+        "weight": 181,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Gold",
+          "state": "Coast",
+          "country": "Australia",
+          "region": "australian"
+        },
+        "high_school": "Gold Anglican School",
+        "archetype": "tackle_keeper",
+        "stats": {
+          "speed": 82,
+          "stamina": 83,
+          "kicking": 57,
+          "lateral_skill": 96,
+          "tackling": 75
+        }
+      },
+      {
+        "number": 11,
+        "name": "Baylee Smith",
+        "position": "Shiftback/Back",
+        "height": "5-6",
+        "weight": 160,
+        "year": "Junior",
+        "hometown": {
+          "city": "Memphis",
+          "state": "TN",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Memphis Central High School",
+        "archetype": "speed_flanker",
+        "stats": {
+          "speed": 93,
+          "stamina": 87,
+          "kicking": 63,
+          "lateral_skill": 91,
+          "tackling": 68
         }
       },
       {
         "number": 14,
-        "name": "Caroline King",
-        "position": "Halfback/Back",
+        "name": "Carla Lewis",
+        "position": "Lineman",
         "height": "5-11",
-        "weight": 187,
-        "year": "Junior",
+        "weight": 215,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Milwaukee",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Milwaukee Central High School",
+        "archetype": "none",
+        "stats": {
+          "speed": 73,
+          "stamina": 80,
+          "kicking": 73,
+          "lateral_skill": 94,
+          "tackling": 73
+        }
+      },
+      {
+        "number": 16,
+        "name": "Wynne Sanchez",
+        "position": "Back/Safety",
+        "height": "5-7",
+        "weight": 183,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Columbia",
+          "state": "SC",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Columbia West High School",
+        "archetype": "sure_hands_keeper",
+        "stats": {
+          "speed": 78,
+          "stamina": 87,
+          "kicking": 59,
+          "lateral_skill": 90,
+          "tackling": 74
+        }
+      },
+      {
+        "number": 17,
+        "name": "Ellie Song",
+        "position": "Wing/End",
+        "height": "5-7",
+        "weight": 185,
+        "year": "Senior",
+        "hometown": {
+          "city": "Green Bay",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Green Bay North High School",
+        "archetype": "speed_flanker",
+        "stats": {
+          "speed": 96,
+          "stamina": 87,
+          "kicking": 78,
+          "lateral_skill": 96,
+          "tackling": 74
+        }
+      },
+      {
+        "number": 19,
+        "name": "Laura Baker",
+        "position": "Halfback/Back",
+        "height": "5-6",
+        "weight": 186,
+        "year": "Sophomore",
         "hometown": {
           "city": "Des Moines",
           "state": "IA",
           "country": "USA",
           "region": "midwest"
         },
-        "high_school": "Des Moines South High School",
-        "stats": {
-          "speed": 84,
-          "stamina": 82,
-          "kicking": 77,
-          "lateral_skill": 83,
-          "tackling": 69
-        }
-      },
-      {
-        "number": 17,
-        "name": "Evelyn Clark",
-        "position": "Back/Safety",
-        "height": "6-0",
-        "weight": 165,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Charleston",
-          "state": "SC",
-          "country": "USA",
-          "region": "south"
-        },
-        "high_school": "Charleston {Mascot} High School",
+        "high_school": "Des Moines High School",
+        "archetype": "speed_flanker",
         "stats": {
           "speed": 97,
-          "stamina": 80,
-          "kicking": 83,
-          "lateral_skill": 79,
-          "tackling": 76
-        }
-      },
-      {
-        "number": 18,
-        "name": "Freya Clark",
-        "position": "Back/Corner",
-        "height": "5-7",
-        "weight": 173,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Canberra",
-          "state": "ACT",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Canberra Girls' High School",
-        "stats": {
-          "speed": 86,
-          "stamina": 76,
-          "kicking": 72,
-          "lateral_skill": 74,
-          "tackling": 71
-        }
-      },
-      {
-        "number": 24,
-        "name": "Scarlett Martin",
-        "position": "Wing/End",
-        "height": "5-11",
-        "weight": 171,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Grand Rapids",
-          "state": "MI",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Grand Rapids Central High School",
-        "stats": {
-          "speed": 84,
           "stamina": 84,
-          "kicking": 78,
-          "lateral_skill": 89,
-          "tackling": 65
-        }
-      },
-      {
-        "number": 26,
-        "name": "Scarlett De Angelis",
-        "position": "Viper/Back",
-        "height": "5-7",
-        "weight": 186,
-        "year": "Senior",
-        "hometown": {
-          "city": "Rochester",
-          "state": "NY",
-          "country": "USA",
-          "region": "northeast"
-        },
-        "high_school": "Rochester East High School",
-        "stats": {
-          "speed": 89,
-          "stamina": 88,
-          "kicking": 76,
-          "lateral_skill": 97,
-          "tackling": 78
-        }
-      },
-      {
-        "number": 27,
-        "name": "Tahlia Campbell",
-        "position": "Wingback/End",
-        "height": "5-8",
-        "weight": 192,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Hobart",
-          "state": "TAS",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "St. {Name}'s College",
-        "stats": {
-          "speed": 91,
-          "stamina": 87,
           "kicking": 82,
-          "lateral_skill": 72,
-          "tackling": 76
-        }
-      },
-      {
-        "number": 29,
-        "name": "Eleanor Rivera",
-        "position": "Back/Safety",
-        "height": "6-0",
-        "weight": 187,
-        "year": "Junior",
-        "hometown": {
-          "city": "Cincinnati",
-          "state": "OH",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Cincinnati High School",
-        "stats": {
-          "speed": 94,
-          "stamina": 90,
-          "kicking": 63,
-          "lateral_skill": 96,
-          "tackling": 69
-        }
-      },
-      {
-        "number": 31,
-        "name": "Eleanor Ferrari",
-        "position": "Viper/Back",
-        "height": "5-10",
-        "weight": 171,
-        "year": "Junior",
-        "hometown": {
-          "city": "Minneapolis",
-          "state": "MN",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Blake School",
-        "stats": {
-          "speed": 93,
-          "stamina": 82,
-          "kicking": 78,
           "lateral_skill": 86,
-          "tackling": 81
+          "tackling": 83
         }
       },
       {
-        "number": 32,
-        "name": "Olivia Taylor",
-        "position": "Halfback/Back",
+        "number": 25,
+        "name": "Chloe Jackson",
+        "position": "Wing/End",
         "height": "6-0",
-        "weight": 183,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Adelaide",
-          "state": "SA",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Seymour College",
-        "stats": {
-          "speed": 79,
-          "stamina": 83,
-          "kicking": 59,
-          "lateral_skill": 87,
-          "tackling": 76
-        }
-      },
-      {
-        "number": 34,
-        "name": "Hine Schuster",
-        "position": "Viper/Back",
-        "height": "5-5",
-        "weight": 177,
-        "year": "Senior",
-        "hometown": {
-          "city": "Apia",
-          "state": "",
-          "country": "Pacific Islands",
-          "region": "pacific_islander"
-        },
-        "high_school": "Apia High School",
-        "stats": {
-          "speed": 84,
-          "stamina": 84,
-          "kicking": 63,
-          "lateral_skill": 96,
-          "tackling": 85
-        }
-      },
-      {
-        "number": 35,
-        "name": "Amelia Walker",
-        "position": "Zeroback/Back",
-        "height": "5-7",
-        "weight": 165,
-        "year": "Senior",
-        "hometown": {
-          "city": "Grand Rapids",
-          "state": "MI",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Grand Rapids West High School",
-        "stats": {
-          "speed": 98,
-          "stamina": 93,
-          "kicking": 82,
-          "lateral_skill": 89,
-          "tackling": 77
-        }
-      },
-      {
-        "number": 38,
-        "name": "Abigail Stewart",
-        "position": "Viper/Back",
-        "height": "5-7",
-        "weight": 185,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Adelaide",
-          "state": "SA",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Pembroke School",
-        "stats": {
-          "speed": 77,
-          "stamina": 80,
-          "kicking": 77,
-          "lateral_skill": 73,
-          "tackling": 70
-        }
-      },
-      {
-        "number": 39,
-        "name": "Stella Taylor",
-        "position": "Shiftback/Back",
-        "height": "5-9",
-        "weight": 164,
-        "year": "Senior",
-        "hometown": {
-          "city": "Indianapolis",
-          "state": "IN",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Indianapolis North High School",
-        "stats": {
-          "speed": 98,
-          "stamina": 87,
-          "kicking": 82,
-          "lateral_skill": 81,
-          "tackling": 75
-        }
-      },
-      {
-        "number": 43,
-        "name": "Emma Johnston",
-        "position": "Viper/Back",
-        "height": "5-8",
-        "weight": 160,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Melbourne",
-          "state": "VIC",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Lauriston Girls' School",
-        "stats": {
-          "speed": 79,
-          "stamina": 81,
-          "kicking": 55,
-          "lateral_skill": 94,
-          "tackling": 61
-        }
-      },
-      {
-        "number": 46,
-        "name": "Lily Soto",
-        "position": "Back/Safety",
-        "height": "5-11",
-        "weight": 189,
-        "year": "Sophomore",
+        "weight": 184,
+        "year": "Junior",
         "hometown": {
           "city": "Cincinnati",
           "state": "OH",
@@ -461,379 +319,560 @@
           "region": "midwest"
         },
         "high_school": "Cincinnati Central High School",
+        "archetype": "power_flanker",
         "stats": {
-          "speed": 89,
-          "stamina": 85,
-          "kicking": 81,
-          "lateral_skill": 74,
-          "tackling": 68
-        }
-      },
-      {
-        "number": 47,
-        "name": "Emily Scott",
-        "position": "Back/Safety",
-        "height": "5-5",
-        "weight": 184,
-        "year": "Junior",
-        "hometown": {
-          "city": "Indianapolis",
-          "state": "IN",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Indianapolis West High School",
-        "stats": {
-          "speed": 94,
+          "speed": 87,
           "stamina": 89,
-          "kicking": 67,
-          "lateral_skill": 99,
-          "tackling": 76
+          "kicking": 62,
+          "lateral_skill": 81,
+          "tackling": 86
         }
       },
       {
-        "number": 48,
-        "name": "Scarlett Moore",
-        "position": "Wing/End",
-        "height": "6-1",
-        "weight": 174,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Detroit",
-          "state": "MI",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Detroit North High School",
-        "stats": {
-          "speed": 89,
-          "stamina": 80,
-          "kicking": 66,
-          "lateral_skill": 87,
-          "tackling": 65
-        }
-      },
-      {
-        "number": 51,
-        "name": "Stella Watson",
-        "position": "Shiftback/Back",
-        "height": "6-0",
-        "weight": 167,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Cairns",
-          "state": "QLD",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Cairns Girls' High School",
-        "stats": {
-          "speed": 85,
-          "stamina": 80,
-          "kicking": 71,
-          "lateral_skill": 85,
-          "tackling": 80
-        }
-      },
-      {
-        "number": 53,
-        "name": "Savannah Herrmann",
-        "position": "Back/Corner",
-        "height": "5-7",
-        "weight": 172,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Dayton",
-          "state": "OH",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Dayton High School",
-        "stats": {
-          "speed": 95,
-          "stamina": 88,
-          "kicking": 59,
-          "lateral_skill": 84,
-          "tackling": 69
-        }
-      },
-      {
-        "number": 65,
-        "name": "Lillian Hall",
-        "position": "Halfback/Back",
-        "height": "5-9",
+        "number": 26,
+        "name": "Luella Walsh",
+        "position": "Back/Safety",
+        "height": "5-11",
         "weight": 166,
-        "year": "Junior",
+        "year": "Senior",
         "hometown": {
-          "city": "Albany",
-          "state": "NY",
+          "city": "Orlando",
+          "state": "FL",
           "country": "USA",
-          "region": "northeast"
+          "region": "south"
         },
-        "high_school": "Albany Central High School",
+        "high_school": "Orlando High School",
+        "archetype": "return_keeper",
         "stats": {
-          "speed": 95,
-          "stamina": 81,
-          "kicking": 61,
-          "lateral_skill": 83,
-          "tackling": 69
-        }
-      },
-      {
-        "number": 66,
-        "name": "Zara Johnston",
-        "position": "Halfback/Back",
-        "height": "5-9",
-        "weight": 187,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Gold",
-          "state": "Coast",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Gold Grammar School",
-        "stats": {
-          "speed": 83,
-          "stamina": 86,
-          "kicking": 81,
-          "lateral_skill": 96,
-          "tackling": 73
-        }
-      },
-      {
-        "number": 81,
-        "name": "Zoe Johnson",
-        "position": "Lineman",
-        "height": "6-3",
-        "weight": 187,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Albany",
-          "state": "NY",
-          "country": "USA",
-          "region": "northeast"
-        },
-        "high_school": "Albany {Mascot} High School",
-        "stats": {
-          "speed": 74,
-          "stamina": 84,
-          "kicking": 79,
-          "lateral_skill": 69,
+          "speed": 96,
+          "stamina": 91,
+          "kicking": 69,
+          "lateral_skill": 81,
           "tackling": 84
         }
       },
       {
-        "number": 82,
-        "name": "Sophia Keane",
-        "position": "Lineman",
-        "height": "6-0",
-        "weight": 211,
-        "year": "Junior",
-        "hometown": {
-          "city": "Manchester",
-          "state": "NH",
-          "country": "USA",
-          "region": "northeast"
-        },
-        "high_school": "Manchester North High School",
-        "stats": {
-          "speed": 73,
-          "stamina": 88,
-          "kicking": 64,
-          "lateral_skill": 72,
-          "tackling": 71
-        }
-      },
-      {
-        "number": 85,
-        "name": "Paisley Phillips",
-        "position": "Lineman",
-        "height": "6-1",
-        "weight": 210,
+        "number": 29,
+        "name": "Cheryl Sanchez",
+        "position": "Back/Safety",
+        "height": "5-10",
+        "weight": 177,
         "year": "Senior",
         "hometown": {
-          "city": "Greensboro",
-          "state": "NC",
-          "country": "USA",
-          "region": "south"
-        },
-        "high_school": "Greensboro East High School",
-        "stats": {
-          "speed": 86,
-          "stamina": 95,
-          "kicking": 76,
-          "lateral_skill": 82,
-          "tackling": 79
-        }
-      },
-      {
-        "number": 87,
-        "name": "Willow Hall",
-        "position": "Wedge/Line",
-        "height": "6-0",
-        "weight": 214,
-        "year": "Freshman",
-        "hometown": {
-          "city": "Darwin",
-          "state": "NT",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Western Bulldogs - AFLW Academy",
-        "stats": {
-          "speed": 74,
-          "stamina": 84,
-          "kicking": 71,
-          "lateral_skill": 72,
-          "tackling": 70
-        }
-      },
-      {
-        "number": 88,
-        "name": "Hannah Evans",
-        "position": "Wingback/End",
-        "height": "5-9",
-        "weight": 186,
-        "year": "Sophomore",
-        "hometown": {
-          "city": "Darwin",
-          "state": "NT",
-          "country": "Australia",
-          "region": "australian"
-        },
-        "high_school": "Collingwood - AFLW Academy",
-        "stats": {
-          "speed": 87,
-          "stamina": 82,
-          "kicking": 82,
-          "lateral_skill": 87,
-          "tackling": 73
-        }
-      },
-      {
-        "number": 90,
-        "name": "Penelope Edwards",
-        "position": "Zeroback/Back",
-        "height": "6-0",
-        "weight": 165,
-        "year": "Junior",
-        "hometown": {
-          "city": "Duluth",
+          "city": "Minneapolis",
           "state": "MN",
           "country": "USA",
           "region": "midwest"
         },
-        "high_school": "St. {Name} Preparatory",
+        "high_school": "Breck School",
+        "archetype": "return_keeper",
         "stats": {
-          "speed": 89,
-          "stamina": 88,
-          "kicking": 84,
-          "lateral_skill": 100,
-          "tackling": 81
+          "speed": 93,
+          "stamina": 90,
+          "kicking": 71,
+          "lateral_skill": 78,
+          "tackling": 82
         }
       },
       {
-        "number": 93,
-        "name": "Isabella Smith",
-        "position": "Back/Corner",
-        "height": "5-5",
-        "weight": 169,
+        "number": 30,
+        "name": "Beth Baker",
+        "position": "Viper/Back",
+        "height": "5-9",
+        "weight": 162,
         "year": "Senior",
-        "hometown": {
-          "city": "Grand Rapids",
-          "state": "MI",
-          "country": "USA",
-          "region": "midwest"
-        },
-        "high_school": "Grand Rapids {Mascot} High School",
-        "stats": {
-          "speed": 99,
-          "stamina": 89,
-          "kicking": 78,
-          "lateral_skill": 98,
-          "tackling": 83
-        }
-      },
-      {
-        "number": 97,
-        "name": "Tahlia Baker",
-        "position": "Shiftback/Back",
-        "height": "6-0",
-        "weight": 178,
-        "year": "Junior",
         "hometown": {
           "city": "Sydney",
           "state": "NSW",
           "country": "Australia",
           "region": "australian"
         },
-        "high_school": "James Ruse Agricultural High",
+        "high_school": "Adelaide Crows - AFLW Academy",
+        "archetype": "power_viper",
         "stats": {
-          "speed": 87,
-          "stamina": 88,
-          "kicking": 62,
-          "lateral_skill": 82,
-          "tackling": 73
+          "speed": 88,
+          "stamina": 89,
+          "kicking": 69,
+          "lateral_skill": 91,
+          "tackling": 86
         }
       },
       {
-        "number": 98,
-        "name": "Mia Jones",
-        "position": "Wedge/Line",
-        "height": "6-3",
-        "weight": 208,
-        "year": "Freshman",
+        "number": 32,
+        "name": "Stella Nelson",
+        "position": "Zeroback/Back",
+        "height": "5-8",
+        "weight": 163,
+        "year": "Junior",
         "hometown": {
-          "city": "Melbourne",
-          "state": "VIC",
-          "country": "Australia",
-          "region": "australian"
+          "city": "St. Louis",
+          "state": "MO",
+          "country": "USA",
+          "region": "midwest"
         },
-        "high_school": "Wesley College",
+        "high_school": "St. Louis West High School",
+        "archetype": "running_zb",
         "stats": {
-          "speed": 66,
-          "stamina": 83,
-          "kicking": 61,
-          "lateral_skill": 73,
-          "tackling": 79
+          "speed": 96,
+          "stamina": 84,
+          "kicking": 73,
+          "lateral_skill": 83,
+          "tackling": 71
         }
       },
       {
-        "number": 99,
-        "name": "Grace Flores",
+        "number": 33,
+        "name": "Heidi Feng",
         "position": "Wing/End",
         "height": "5-10",
-        "weight": 186,
-        "year": "Senior",
+        "weight": 176,
+        "year": "Freshman",
         "hometown": {
-          "city": "Cincinnati",
+          "city": "Cleveland",
           "state": "OH",
           "country": "USA",
           "region": "midwest"
         },
-        "high_school": "Cincinnati {Mascot} High School",
+        "high_school": "Cleveland East High School",
+        "archetype": "elusive_flanker",
+        "stats": {
+          "speed": 88,
+          "stamina": 80,
+          "kicking": 76,
+          "lateral_skill": 96,
+          "tackling": 73
+        }
+      },
+      {
+        "number": 40,
+        "name": "Alyssa Moore",
+        "position": "Halfback/Back",
+        "height": "5-7",
+        "weight": 187,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Sydney",
+          "state": "NSW",
+          "country": "Australia",
+          "region": "australian"
+        },
+        "high_school": "Sydney Grammar",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 80,
+          "stamina": 78,
+          "kicking": 80,
+          "lateral_skill": 90,
+          "tackling": 75
+        }
+      },
+      {
+        "number": 41,
+        "name": "Ellie Wilson",
+        "position": "Lineman",
+        "height": "6-2",
+        "weight": 201,
+        "year": "Junior",
+        "hometown": {
+          "city": "Geelong",
+          "state": "VIC",
+          "country": "Australia",
+          "region": "australian"
+        },
+        "high_school": "Geelong Girls' High School",
+        "archetype": "none",
+        "stats": {
+          "speed": 78,
+          "stamina": 86,
+          "kicking": 75,
+          "lateral_skill": 94,
+          "tackling": 90
+        }
+      },
+      {
+        "number": 44,
+        "name": "Taylor Walker",
+        "position": "Wing/End",
+        "height": "5-10",
+        "weight": 177,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Omaha",
+          "state": "NE",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Omaha West High School",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 81,
+          "stamina": 85,
+          "kicking": 68,
+          "lateral_skill": 80,
+          "tackling": 71
+        }
+      },
+      {
+        "number": 46,
+        "name": "Lynn McLaughlin",
+        "position": "Lineman",
+        "height": "6-2",
+        "weight": 189,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Grand Rapids",
+          "state": "MI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Grand Rapids Central High School",
+        "archetype": "none",
+        "stats": {
+          "speed": 81,
+          "stamina": 80,
+          "kicking": 76,
+          "lateral_skill": 79,
+          "tackling": 81
+        }
+      },
+      {
+        "number": 49,
+        "name": "Tiffany Thompson",
+        "position": "Wingback/End",
+        "height": "5-11",
+        "weight": 184,
+        "year": "Senior",
+        "hometown": {
+          "city": "Kansas City",
+          "state": "MO",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Kansas City North High School",
+        "archetype": "speed_flanker",
+        "stats": {
+          "speed": 99,
+          "stamina": 83,
+          "kicking": 79,
+          "lateral_skill": 90,
+          "tackling": 70
+        }
+      },
+      {
+        "number": 51,
+        "name": "Tessa Lewis",
+        "position": "Wing/End",
+        "height": "5-8",
+        "weight": 200,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Providence",
+          "state": "RI",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Providence North High School",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 83,
+          "stamina": 83,
+          "kicking": 73,
+          "lateral_skill": 78,
+          "tackling": 64
+        }
+      },
+      {
+        "number": 56,
+        "name": "Bethany Silvestri",
+        "position": "Wing/End",
+        "height": "6-1",
+        "weight": 186,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Grand Rapids",
+          "state": "MI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Grand Rapids High School",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 78,
+          "stamina": 81,
+          "kicking": 77,
+          "lateral_skill": 85,
+          "tackling": 80
+        }
+      },
+      {
+        "number": 57,
+        "name": "Hazel Parker",
+        "position": "Back/Safety",
+        "height": "6-0",
+        "weight": 165,
+        "year": "Senior",
+        "hometown": {
+          "city": "Charlotte",
+          "state": "NC",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Charlotte South High School",
+        "archetype": "sure_hands_keeper",
+        "stats": {
+          "speed": 85,
+          "stamina": 89,
+          "kicking": 78,
+          "lateral_skill": 100,
+          "tackling": 77
+        }
+      },
+      {
+        "number": 61,
+        "name": "Ava Carter",
+        "position": "Halfback/Back",
+        "height": "5-10",
+        "weight": 180,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Columbus",
+          "state": "OH",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Columbus West High School",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 84,
+          "stamina": 78,
+          "kicking": 75,
+          "lateral_skill": 72,
+          "tackling": 67
+        }
+      },
+      {
+        "number": 63,
+        "name": "Tina Marino",
+        "position": "Back/Safety",
+        "height": "5-8",
+        "weight": 172,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Omaha",
+          "state": "NE",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Omaha {Mascot} High School",
+        "archetype": "tackle_keeper",
+        "stats": {
+          "speed": 78,
+          "stamina": 83,
+          "kicking": 74,
+          "lateral_skill": 70,
+          "tackling": 80
+        }
+      },
+      {
+        "number": 64,
+        "name": "Nicole Green",
+        "position": "Wedge/Line",
+        "height": "5-10",
+        "weight": 203,
+        "year": "Junior",
+        "hometown": {
+          "city": "Minneapolis",
+          "state": "MN",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Breck School",
+        "archetype": "none",
+        "stats": {
+          "speed": 83,
+          "stamina": 85,
+          "kicking": 73,
+          "lateral_skill": 96,
+          "tackling": 81
+        }
+      },
+      {
+        "number": 68,
+        "name": "Riley Hernandez",
+        "position": "Zeroback/Back",
+        "height": "5-8",
+        "weight": 185,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Minneapolis",
+          "state": "MN",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Southwest High",
+        "archetype": "running_zb",
         "stats": {
           "speed": 93,
-          "stamina": 88,
-          "kicking": 66,
+          "stamina": 85,
+          "kicking": 64,
           "lateral_skill": 96,
-          "tackling": 88
+          "tackling": 85
+        }
+      },
+      {
+        "number": 73,
+        "name": "Carla Mitchell",
+        "position": "Zeroback/Back",
+        "height": "5-7",
+        "weight": 166,
+        "year": "Senior",
+        "hometown": {
+          "city": "Perth",
+          "state": "WA",
+          "country": "Australia",
+          "region": "australian"
+        },
+        "high_school": "Hale School",
+        "archetype": "distributor_zb",
+        "stats": {
+          "speed": 87,
+          "stamina": 93,
+          "kicking": 72,
+          "lateral_skill": 97,
+          "tackling": 79
+        }
+      },
+      {
+        "number": 76,
+        "name": "Zoe Young",
+        "position": "Halfback/Back",
+        "height": "5-7",
+        "weight": 165,
+        "year": "Junior",
+        "hometown": {
+          "city": "Providence",
+          "state": "RI",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Providence Central High School",
+        "archetype": "reliable_flanker",
+        "stats": {
+          "speed": 84,
+          "stamina": 82,
+          "kicking": 85,
+          "lateral_skill": 97,
+          "tackling": 71
+        }
+      },
+      {
+        "number": 80,
+        "name": "Nora Adams",
+        "position": "Back/Corner",
+        "height": "5-5",
+        "weight": 179,
+        "year": "Junior",
+        "hometown": {
+          "city": "Boston",
+          "state": "MA",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Brookline High",
+        "archetype": "sure_hands_keeper",
+        "stats": {
+          "speed": 87,
+          "stamina": 86,
+          "kicking": 79,
+          "lateral_skill": 100,
+          "tackling": 71
+        }
+      },
+      {
+        "number": 81,
+        "name": "Malaya Sua",
+        "position": "Wedge/Line",
+        "height": "5-11",
+        "weight": 213,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Nuku'alofa",
+          "state": "",
+          "country": "Pacific Islands",
+          "region": "pacific_islander"
+        },
+        "high_school": "Nuku'alofa High School",
+        "archetype": "none",
+        "stats": {
+          "speed": 70,
+          "stamina": 78,
+          "kicking": 74,
+          "lateral_skill": 88,
+          "tackling": 74
+        }
+      },
+      {
+        "number": 85,
+        "name": "Victoria Williams",
+        "position": "Back/Corner",
+        "height": "6-0",
+        "weight": 178,
+        "year": "Freshman",
+        "hometown": {
+          "city": "Madison",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Madison North High School",
+        "archetype": "return_keeper",
+        "stats": {
+          "speed": 90,
+          "stamina": 77,
+          "kicking": 61,
+          "lateral_skill": 98,
+          "tackling": 72
+        }
+      },
+      {
+        "number": 98,
+        "name": "Gina Neumann",
+        "position": "Back/Corner",
+        "height": "5-9",
+        "weight": 184,
+        "year": "Sophomore",
+        "hometown": {
+          "city": "Minneapolis",
+          "state": "MN",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Blake School",
+        "archetype": "tackle_keeper",
+        "stats": {
+          "speed": 82,
+          "stamina": 87,
+          "kicking": 69,
+          "lateral_skill": 84,
+          "tackling": 80
         }
       }
     ]
   },
   "team_stats": {
-    "avg_speed": 86,
+    "avg_speed": 85,
     "avg_weight": 181,
     "avg_stamina": 84,
     "kicking_strength": 72,
-    "lateral_proficiency": 85,
-    "defensive_strength": 75
+    "lateral_proficiency": 88,
+    "defensive_strength": 76
   },
   "coaching": {
-    "head_coach": "Camila Ortiz",
-    "philosophy": "Balanced lateral_heavy offense",
-    "experience": "8 years"
+    "head_coach": "Timothy Weber",
+    "head_coach_gender": "male",
+    "philosophy": "Balanced approach adapting to opponent",
+    "coaching_style": "aggressive",
+    "experience": "15 years",
+    "background": "Former college assistant promoted to head coach"
   }
 }

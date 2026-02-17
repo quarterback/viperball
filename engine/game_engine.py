@@ -3674,6 +3674,7 @@ def load_team_from_json(filepath: str) -> Team:
                 kicking=p_data["stats"]["kicking"],
                 lateral_skill=p_data["stats"]["lateral_skill"],
                 tackling=p_data["stats"]["tackling"],
+                archetype=p_data.get("archetype", "none"),
             )
         )
 
@@ -3693,6 +3694,98 @@ def load_team_from_json(filepath: str) -> Team:
         lateral_proficiency=data["team_stats"]["lateral_proficiency"],
         defensive_strength=data["team_stats"]["defensive_strength"],
         offense_style=style,
+        defense_style=defense_style,
+    )
+
+
+def generate_team_on_the_fly(
+    team_name: str,
+    abbreviation: str,
+    mascot: str,
+    offense_style: str = "balanced",
+    defense_style: str = "base_defense",
+    philosophy: str = "hybrid",
+    recruiting_pipeline: Optional[Dict] = None,
+) -> Team:
+    """
+    Generate a fresh Team with unique women players using the name/attribute generators.
+    Used when no pre-built roster JSON exists, or to create dynamic teams in season/dynasty mode.
+    Players are women only; archetypes are assigned from stats.
+    """
+    import sys
+    from pathlib import Path as _Path
+    _root = str(_Path(__file__).parent.parent)
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+
+    from scripts.generate_names import generate_player_name
+    from scripts.generate_rosters import generate_player_attributes, assign_archetype
+
+    GAME_POSITIONS = [
+        "Viper/Back",
+        "Zeroback/Back",
+        "Halfback/Back",
+        "Wingback/End",
+        "Shiftback/Back",
+        "Back/Safety",
+        "Back/Corner",
+        "Lineman",
+        "Wing/End",
+        "Wedge/Line",
+    ]
+
+    players = []
+    used_numbers: set = set()
+    # Viper always #1
+    for i, position in enumerate(GAME_POSITIONS):
+        number = 1 if i == 0 else None
+        while number is None or number in used_numbers:
+            number = random.randint(2, 99)
+        used_numbers.add(number)
+
+        year = random.choice(["freshman", "sophomore", "junior", "senior"])
+        is_viper = (i == 0)
+
+        name_data = generate_player_name(
+            school_recruiting_pipeline=recruiting_pipeline,
+            year=year,
+        )
+        attrs = generate_player_attributes(position, philosophy, year, is_viper)
+        archetype = assign_archetype(
+            position,
+            attrs["speed"], attrs["stamina"],
+            attrs["kicking"], attrs["lateral_skill"], attrs["tackling"],
+        )
+
+        players.append(Player(
+            number=number,
+            name=name_data["full_name"],
+            position=position,
+            speed=attrs["speed"],
+            stamina=attrs["stamina"],
+            kicking=attrs["kicking"],
+            lateral_skill=attrs["lateral_skill"],
+            tackling=attrs["tackling"],
+            archetype=archetype,
+        ))
+
+    avg_speed = sum(p.speed for p in players) // len(players)
+    avg_stamina = sum(p.stamina for p in players) // len(players)
+    kicking_strength = sum(p.kicking for p in players) // len(players)
+    lateral_proficiency = sum(p.lateral_skill for p in players) // len(players)
+    defensive_strength = sum(p.tackling for p in players) // len(players)
+
+    return Team(
+        name=team_name,
+        abbreviation=abbreviation,
+        mascot=mascot,
+        players=players,
+        avg_speed=avg_speed,
+        avg_stamina=avg_stamina,
+        kicking_strength=kicking_strength,
+        lateral_proficiency=lateral_proficiency,
+        defensive_strength=defensive_strength,
+        offense_style=offense_style,
         defense_style=defense_style,
     )
 
