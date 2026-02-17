@@ -11,25 +11,18 @@ Selection methodology:
 INDIVIDUAL TROPHIES
 ─────────────────────────────────────────────────────────────────────────────
 
-  The Viperball Award       – National Player of the Year (all positions eligible).
-                              The sport's highest individual honour, equivalent to the
-                              Heisman Trophy.  Any position can win.
+  CVL MVP                   – National Player of the Year (all positions eligible).
+                              The sport's highest individual honour.  Any position can win.
 
-  The Stillwater Trophy     – Outstanding Zeroback.
-                              Named after the first dominant collegiate ZB.
+  Best Zeroback             – Outstanding Zeroback.
 
-  The Rattler Award         – Outstanding Viper.
-                              Given to the most dangerous alignment-exempt threat.
+  Best Viper                – Outstanding Viper.
 
-  The Lateral Chain Award   – Outstanding lateral specialist.
-                              Recognises the player who best embodies the chain game.
+  Best Lateral Specialist   – Outstanding lateral specialist.
 
-  The Rampart Award         – Outstanding defensive player (Lineman or Safety/Keeper).
-                              Named for the wall that cannot be broken.
+  Best Defensive Player     – Outstanding defensive player (Lineman or Safety/Keeper).
 
-  The Snapkick Award        – Outstanding kicker.
-                              Celebrates the drop-kick / place-kick dimension that makes
-                              Viperball unique.
+  Best Kicker               – Outstanding kicker.
 
   Offensive Player of the Year  – Offensive standout not yet recognised above.
   Defensive Player of the Year  – Defensive standout not yet recognised above.
@@ -229,7 +222,7 @@ def _player_score(player: Player, team_perf_mult: float = 1.0) -> float:
 
 def _national_poy_score(player: Player, team_perf_mult: float = 1.0) -> float:
     """
-    The Viperball Award scorer — any position eligible.
+    CVL MVP scorer — any position eligible.
     Uses overall plus a 'impact' bonus for offensive skill positions.
     """
     base = float(player.overall)
@@ -372,7 +365,7 @@ def _select_individual_awards(
         return _best_in_position(teams, standings, group, score_fn,
                                   exclude_set if exclude_set is not None else seen)
 
-    # ── The Viperball Award (national POY — any position) ──────────────────
+    # ── CVL MVP (national POY — any position) ──────────────────
     best_poy = None
     best_poy_score = -1.0
     for t_name, t in teams.items():
@@ -386,23 +379,22 @@ def _select_individual_awards(
                 best_poy = (p, t_name)
     if best_poy:
         p, t = best_poy
-        _add(p, t, "The Viperball Award",
+        _add(p, t, "CVL MVP",
              f"Nation's outstanding collegiate viperball player ({t})")
 
-    # ── The Stillwater Trophy (best Zeroback) ─────────────────────────────
+    # ── Best Zeroback ─────────────────────────────
     pair = _best("zeroback", _player_score)
     if pair:
-        _add(pair[0], pair[1], "The Stillwater Trophy",
+        _add(pair[0], pair[1], "Best Zeroback",
              f"Nation's outstanding Zeroback ({pair[1]})")
 
-    # ── The Rattler Award (best Viper) ────────────────────────────────────
+    # ── Best Viper ────────────────────────────────
     pair = _best("viper", _player_score)
     if pair:
-        _add(pair[0], pair[1], "The Rattler Award",
+        _add(pair[0], pair[1], "Best Viper",
              f"Nation's outstanding Viper ({pair[1]})")
 
-    # ── The Lateral Chain Award (best lateral specialist) ─────────────────
-    # Open to any back or viper with elite lateral skill
+    # ── Best Lateral Specialist ─────────────────
     best_lat = None
     best_lat_score = -1.0
     for t_name, t in teams.items():
@@ -418,10 +410,10 @@ def _select_individual_awards(
                 best_lat_score = s
                 best_lat = (p, t_name)
     if best_lat:
-        _add(best_lat[0], best_lat[1], "The Lateral Chain Award",
+        _add(best_lat[0], best_lat[1], "Best Lateral Specialist",
              f"Nation's outstanding lateral specialist ({best_lat[1]})")
 
-    # ── The Rampart Award (best defensive player — lineman or safety) ──────
+    # ── Best Defensive Player (lineman or safety) ──────
     cand_l = _best("lineman", _defensive_score)
     cand_s = _best("safety", _defensive_score)
     if cand_l and cand_s:
@@ -431,10 +423,10 @@ def _select_individual_awards(
     else:
         pair = cand_l or cand_s
     if pair:
-        _add(pair[0], pair[1], "The Rampart Award",
+        _add(pair[0], pair[1], "Best Defensive Player",
              f"Nation's outstanding defensive player ({pair[1]})")
 
-    # ── The Snapkick Award (best kicker — any position) ───────────────────
+    # ── Best Kicker (any position) ───────────────────
     best_k = None
     best_k_score = -1.0
     for t_name, t in teams.items():
@@ -448,7 +440,7 @@ def _select_individual_awards(
                 best_k_score = s
                 best_k = (p, t_name)
     if best_k:
-        _add(best_k[0], best_k[1], "The Snapkick Award",
+        _add(best_k[0], best_k[1], "Best Kicker",
              f"Nation's outstanding kicker ({best_k[1]})")
 
     # ── Offensive Player of the Year ──────────────────────────────────────

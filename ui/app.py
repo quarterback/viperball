@@ -19,6 +19,14 @@ from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
 from engine.viperball_metrics import calculate_viperball_metrics
 from engine.conference_names import generate_conference_names
+from engine.injuries import InjuryTracker
+from engine.player_card import player_to_card
+from engine.export import (
+    export_season_standings_csv, export_season_game_log_csv,
+    export_dynasty_standings_csv, export_dynasty_awards_csv,
+    export_injury_history_csv, export_development_history_csv,
+    export_all_american_csv, export_all_conference_csv,
+)
 
 st.set_page_config(
     page_title="Viperball Sandbox",
@@ -1855,11 +1863,14 @@ elif page == "Dynasty Mode":
         if st.sidebar.button("End Dynasty", key="end_dynasty"):
             del st.session_state["dynasty"]
             del st.session_state["dynasty_teams"]
-            if "last_dynasty_season" in st.session_state:
-                del st.session_state["last_dynasty_season"]
+            for key in ["last_dynasty_season", "last_dynasty_injury_tracker"]:
+                st.session_state.pop(key, None)
             st.rerun()
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Simulate Season", "Standings & Polls", "Coach Dashboard", "Team History", "Record Book"])
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+            "Simulate Season", "Standings & Polls", "Coach Dashboard", "Team History",
+            "Record Book", "Awards & Honors", "Injury Report", "Development", "CSV Export"
+        ])
 
         with tab1:
             st.subheader(f"Season {dynasty.current_year}")
@@ -1949,8 +1960,16 @@ elif page == "Dynasty Mode":
                 )
 
                 total_games = len(season.schedule)
+                injury_tracker = InjuryTracker()
+                injury_tracker.seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
+
                 with st.spinner(f"Simulating {dynasty.current_year} season ({total_games} games, {games_per_team}/team)..."):
                     season.simulate_season(generate_polls=True)
+
+                    max_week = max((g.week for g in season.schedule if g.completed), default=0)
+                    for wk in range(1, max_week + 1):
+                        injury_tracker.process_week(wk, season.teams, season.standings)
+                        injury_tracker.resolve_week(wk)
 
                 playoff_count = min(playoff_format, len(team_list))
                 if playoff_count >= 4:
@@ -1961,9 +1980,14 @@ elif page == "Dynasty Mode":
                     with st.spinner("Running bowl games..."):
                         season.simulate_bowls(bowl_count=dyn_bowl_count, playoff_size=playoff_count)
 
-                dynasty.advance_season(season)
+                player_cards = {}
+                for t_name, t_obj in season.teams.items():
+                    player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
+
+                dynasty.advance_season(season, injury_tracker=injury_tracker, player_cards=player_cards)
                 st.session_state["dynasty"] = dynasty
                 st.session_state["last_dynasty_season"] = season
+                st.session_state["last_dynasty_injury_tracker"] = injury_tracker
                 st.rerun()
 
             if "last_dynasty_season" in st.session_state:
@@ -2251,3 +2275,292 @@ elif page == "Dynasty Mode":
                         st.download_button("Download Save File", f.read(),
                                            file_name=f"{dynasty.dynasty_name.replace(' ', '_')}.json",
                                            mime="application/json")
+
+        with tab6:
+            st.subheader("Awards & Honors")
+            if dynasty.honors_history:
+                available_award_years = sorted(dynasty.honors_history.keys(), reverse=True)
+                selected_award_year = st.selectbox("Select Season", available_award_years, key="award_year_select")
+                honors = dynasty.honors_history.get(selected_award_year, {})
+
+                if honors:
+                    st.markdown(f"### {selected_award_year} Individual Awards")
+                    indiv = honors.get("individual_awards", [])
+                    if indiv:
+                        award_rows = []
+                        for a in indiv:
+                            award_rows.append({
+                                "Award": a.get("award_name", ""),
+                                "Player": a.get("player_name", ""),
+                                "Position": a.get("position", ""),
+                                "Year": a.get("year_in_school", ""),
+                                "Team": a.get("team_name", ""),
+                                "OVR": a.get("overall_rating", 0),
+                            })
+                        st.dataframe(pd.DataFrame(award_rows), hide_index=True, use_container_width=True)
+
+                    coy = honors.get("coach_of_year", "")
+                    improved = honors.get("most_improved", "")
+                    if coy or improved:
+                        tc1, tc2 = st.columns(2)
+                        if coy:
+                            tc1.metric("Coach of the Year", coy)
+                        if improved:
+                            tc2.metric("Most Improved Program", improved)
+
+                    aa_tiers = [
+                        ("all_american_first", "1st Team All-CVL"),
+                        ("all_american_second", "2nd Team All-CVL"),
+                        ("all_american_third", "3rd Team All-CVL"),
+                        ("honorable_mention", "Honorable Mention"),
+                        ("all_freshman", "All-Freshman Team"),
+                    ]
+                    for tier_key, tier_label in aa_tiers:
+                        team_data = honors.get(tier_key)
+                        if team_data and team_data.get("slots"):
+                            st.markdown(f"### {tier_label}")
+                            slot_rows = []
+                            for slot in team_data["slots"]:
+                                slot_rows.append({
+                                    "Position": slot.get("award_name", ""),
+                                    "Player": slot.get("player_name", ""),
+                                    "Year": slot.get("year_in_school", "")[:2] if slot.get("year_in_school") else "",
+                                    "Team": slot.get("team_name", ""),
+                                    "OVR": slot.get("overall_rating", 0),
+                                })
+                            st.dataframe(pd.DataFrame(slot_rows), hide_index=True, use_container_width=True)
+
+                    all_conf = honors.get("all_conference_teams", {})
+                    if all_conf:
+                        st.markdown(f"### All-Conference Teams")
+                        conf_names_list_awards = list(all_conf.keys())
+                        selected_conf_award = st.selectbox("Conference", conf_names_list_awards, key="conf_award_select")
+                        conf_tiers = all_conf.get(selected_conf_award, {})
+                        for tier_key, tier_label in [("first", "1st Team"), ("second", "2nd Team")]:
+                            conf_data = conf_tiers.get(tier_key)
+                            if conf_data:
+                                slots = conf_data.get("slots", []) if isinstance(conf_data, dict) else []
+                                if slots:
+                                    st.markdown(f"**{selected_conf_award} - {tier_label} All-Conference**")
+                                    conf_slot_rows = []
+                                    for slot in slots:
+                                        conf_slot_rows.append({
+                                            "Position": slot.get("award_name", ""),
+                                            "Player": slot.get("player_name", ""),
+                                            "Year": slot.get("year_in_school", "")[:2] if slot.get("year_in_school") else "",
+                                            "Team": slot.get("team_name", ""),
+                                            "OVR": slot.get("overall_rating", 0),
+                                        })
+                                    st.dataframe(pd.DataFrame(conf_slot_rows), hide_index=True, use_container_width=True)
+
+                    if len(available_award_years) > 1:
+                        st.divider()
+                        st.markdown("### Award Winners Across Seasons")
+                        mvp_history = []
+                        for yr in sorted(dynasty.honors_history.keys()):
+                            h = dynasty.honors_history[yr]
+                            mvp_name = ""
+                            best_zb = ""
+                            best_vp = ""
+                            best_def = ""
+                            best_kick = ""
+                            best_lat = ""
+                            for a in h.get("individual_awards", []):
+                                n = a.get("award_name", "")
+                                p = a.get("player_name", "")
+                                t = a.get("team_name", "")
+                                label = f"{p} ({t})" if p else ""
+                                if n == "CVL MVP":
+                                    mvp_name = label
+                                elif n == "Best Zeroback":
+                                    best_zb = label
+                                elif n == "Best Viper":
+                                    best_vp = label
+                                elif n == "Best Lateral Specialist":
+                                    best_lat = label
+                                elif n == "Best Defensive Player":
+                                    best_def = label
+                                elif n == "Best Kicker":
+                                    best_kick = label
+                            mvp_history.append({
+                                "Year": yr,
+                                "CVL MVP": mvp_name,
+                                "Best ZB": best_zb,
+                                "Best Viper": best_vp,
+                                "Best Lat": best_lat,
+                                "Best Def": best_def,
+                                "Best Kicker": best_kick,
+                                "Coach of Year": h.get("coach_of_year", ""),
+                            })
+                        st.dataframe(pd.DataFrame(mvp_history), hide_index=True, use_container_width=True)
+            else:
+                st.caption("No awards recorded yet. Simulate a season first.")
+
+        with tab7:
+            st.subheader("Injury Report")
+            if dynasty.injury_history:
+                available_inj_years = sorted(dynasty.injury_history.keys(), reverse=True)
+                selected_inj_year = st.selectbox("Select Season", available_inj_years, key="inj_year_select")
+                report = dynasty.injury_history.get(selected_inj_year, {})
+
+                if report:
+                    total_injuries = sum(len(v) for v in report.values())
+                    tier_counts = {"minor": 0, "moderate": 0, "severe": 0}
+                    for team_inj_list in report.values():
+                        for inj in team_inj_list:
+                            tier_counts[inj.get("tier", "minor")] = tier_counts.get(inj.get("tier", "minor"), 0) + 1
+
+                    ic1, ic2, ic3, ic4 = st.columns(4)
+                    ic1.metric("Total Injuries", total_injuries)
+                    ic2.metric("Minor", tier_counts.get("minor", 0))
+                    ic3.metric("Moderate", tier_counts.get("moderate", 0))
+                    ic4.metric("Severe", tier_counts.get("severe", 0))
+
+                    st.markdown(f"### {selected_inj_year} Injuries by Team")
+                    all_inj_rows = []
+                    for team_name in sorted(report.keys()):
+                        for inj in report[team_name]:
+                            status = "OUT FOR SEASON" if inj.get("is_season_ending") else f"{inj.get('weeks_out', 0)} week(s)"
+                            all_inj_rows.append({
+                                "Team": team_name,
+                                "Player": inj.get("player_name", ""),
+                                "Position": inj.get("position", ""),
+                                "Injury": inj.get("description", ""),
+                                "Severity": inj.get("tier", "").capitalize(),
+                                "Week": inj.get("week_injured", 0),
+                                "Status": status,
+                            })
+                    if all_inj_rows:
+                        st.dataframe(pd.DataFrame(all_inj_rows), hide_index=True, use_container_width=True, height=500)
+
+                    st.markdown("### Injuries Per Team")
+                    team_inj_chart = []
+                    for t in sorted(report.keys()):
+                        team_inj_chart.append({"Team": t, "Injuries": len(report[t])})
+                    if team_inj_chart:
+                        fig_inj = px.bar(pd.DataFrame(team_inj_chart), x="Team", y="Injuries",
+                                         title=f"{selected_inj_year} Injuries by Team")
+                        fig_inj.update_layout(height=350, xaxis_tickangle=-45)
+                        st.plotly_chart(fig_inj, use_container_width=True)
+
+                    if len(available_inj_years) > 1:
+                        st.divider()
+                        st.markdown("### Injury Trends Across Seasons")
+                        trend_data = []
+                        for yr in sorted(dynasty.injury_history.keys()):
+                            yr_report = dynasty.injury_history[yr]
+                            yr_total = sum(len(v) for v in yr_report.values())
+                            yr_severe = sum(1 for team_inj in yr_report.values() for inj in team_inj if inj.get("tier") == "severe")
+                            trend_data.append({"Year": yr, "Total": yr_total, "Severe": yr_severe})
+                        fig_trend = px.line(pd.DataFrame(trend_data), x="Year", y=["Total", "Severe"],
+                                            title="Injuries Per Season", markers=True)
+                        fig_trend.update_layout(height=350)
+                        st.plotly_chart(fig_trend, use_container_width=True)
+                else:
+                    st.caption("No injuries recorded for this season.")
+            else:
+                st.caption("No injury data yet. Simulate a season first.")
+
+        with tab8:
+            st.subheader("Player Development")
+            if dynasty.development_history:
+                available_dev_years = sorted(dynasty.development_history.keys(), reverse=True)
+                selected_dev_year = st.selectbox("Select Offseason", available_dev_years,
+                                                  format_func=lambda y: f"{y} offseason",
+                                                  key="dev_year_select")
+                events = dynasty.development_history.get(selected_dev_year, [])
+
+                if events:
+                    breakouts = [e for e in events if e.get("event_type") == "breakout"]
+                    declines = [e for e in events if e.get("event_type") == "decline"]
+
+                    dc1, dc2, dc3 = st.columns(3)
+                    dc1.metric("Notable Events", len(events))
+                    dc2.metric("Breakouts", len(breakouts))
+                    dc3.metric("Declines", len(declines))
+
+                    if breakouts:
+                        st.markdown("### Breakout Players")
+                        bo_rows = []
+                        for ev in breakouts:
+                            bo_rows.append({
+                                "Player": ev.get("player", ""),
+                                "Team": ev.get("team", ""),
+                                "Description": ev.get("description", ""),
+                            })
+                        st.dataframe(pd.DataFrame(bo_rows), hide_index=True, use_container_width=True)
+
+                    if declines:
+                        st.markdown("### Declining Players")
+                        dec_rows = []
+                        for ev in declines:
+                            dec_rows.append({
+                                "Player": ev.get("player", ""),
+                                "Team": ev.get("team", ""),
+                                "Description": ev.get("description", ""),
+                            })
+                        st.dataframe(pd.DataFrame(dec_rows), hide_index=True, use_container_width=True)
+
+                    if len(available_dev_years) > 1:
+                        st.divider()
+                        st.markdown("### Development Trends")
+                        dev_trend = []
+                        for yr in sorted(dynasty.development_history.keys()):
+                            yr_events = dynasty.development_history[yr]
+                            yr_bo = sum(1 for e in yr_events if e.get("event_type") == "breakout")
+                            yr_dec = sum(1 for e in yr_events if e.get("event_type") == "decline")
+                            dev_trend.append({"Year": yr, "Breakouts": yr_bo, "Declines": yr_dec})
+                        fig_dev = px.bar(pd.DataFrame(dev_trend), x="Year", y=["Breakouts", "Declines"],
+                                         title="Notable Development Events Per Offseason", barmode="group")
+                        fig_dev.update_layout(height=350)
+                        st.plotly_chart(fig_dev, use_container_width=True)
+                else:
+                    st.caption("No notable development events this offseason.")
+            else:
+                st.caption("No development data yet. Simulate a season first.")
+
+        with tab9:
+            st.subheader("CSV Export")
+            st.caption("Download statistics as CSV files for external analysis.")
+
+            export_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "exports")
+
+            if "last_dynasty_season" in st.session_state:
+                st.markdown("### Current Season Exports")
+                season = st.session_state["last_dynasty_season"]
+                prev_year = dynasty.current_year - 1
+
+                exp_col1, exp_col2 = st.columns(2)
+                with exp_col1:
+                    if st.button("Export Season Standings", use_container_width=True, key="exp_standings"):
+                        path = export_season_standings_csv(season, os.path.join(export_dir, f"season_{prev_year}_standings.csv"))
+                        with open(path, 'r') as f:
+                            st.download_button("Download Standings CSV", f.read(),
+                                               file_name=f"season_{prev_year}_standings.csv", mime="text/csv", key="dl_standings")
+                with exp_col2:
+                    if st.button("Export Game Log", use_container_width=True, key="exp_gamelog"):
+                        path = export_season_game_log_csv(season, os.path.join(export_dir, f"season_{prev_year}_games.csv"))
+                        with open(path, 'r') as f:
+                            st.download_button("Download Game Log CSV", f.read(),
+                                               file_name=f"season_{prev_year}_games.csv", mime="text/csv", key="dl_gamelog")
+
+            if dynasty.seasons:
+                st.markdown("### Dynasty-Wide Exports")
+                dyn_exp_names = {
+                    "Dynasty Standings (All Seasons)": ("standings", export_dynasty_standings_csv),
+                    "Awards History": ("awards", export_dynasty_awards_csv),
+                    "Injury History": ("injuries", export_injury_history_csv),
+                    "Development History": ("development", export_development_history_csv),
+                    "All-CVL Selections": ("all_american", export_all_american_csv),
+                    "All-Conference Selections": ("all_conference", export_all_conference_csv),
+                }
+
+                for i, (label, (fname, export_fn)) in enumerate(dyn_exp_names.items()):
+                    if st.button(f"Export {label}", use_container_width=True, key=f"exp_dyn_{fname}"):
+                        path = export_fn(dynasty, os.path.join(export_dir, f"dynasty_{fname}.csv"))
+                        with open(path, 'r') as f:
+                            st.download_button(f"Download {label} CSV", f.read(),
+                                               file_name=f"dynasty_{fname}.csv", mime="text/csv",
+                                               key=f"dl_dyn_{fname}")
+            else:
+                st.caption("Simulate at least one season to enable exports.")

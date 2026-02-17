@@ -125,7 +125,7 @@ def display_award_history(dynasty: Dynasty):
         awards = dynasty.awards_history[year]
         print(f"{year:<8} {awards.champion:<22} {awards.best_record:<22} {awards.highest_scoring:<18} {awards.best_defense:<18}")
 
-    print(f"\n{'YEAR':<8} {'HIGHEST OPI':<22} {'BEST KICKING':<22} {'VIPERBALL AWARD':<24} {'COACH OF YEAR'}")
+    print(f"\n{'YEAR':<8} {'HIGHEST OPI':<22} {'BEST KICKING':<22} {'CVL MVP':<24} {'COACH OF YEAR'}")
     print(f"{'-' * 100}")
 
     for year in sorted(dynasty.awards_history.keys()):
@@ -134,7 +134,7 @@ def display_award_history(dynasty: Dynasty):
         coy = ""
         if awards.honors:
             for a in awards.honors.get("individual_awards", []):
-                if a.get("award_name") == "The Viperball Award":
+                if a.get("award_name") == "CVL MVP":
                     viperball_award = a.get("player_name", "")
             coy = awards.honors.get("coach_of_year", "")
         print(f"{year:<8} {awards.highest_opi:<22} {awards.best_kicking:<22} {viperball_award:<24} {coy}")
