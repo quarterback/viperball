@@ -435,16 +435,45 @@ class GameState:
 
 @dataclass
 class Player:
+    # --- Core identity ---
     number: int
     name: str
     position: str
+
+    # --- Core gameplay stats (0-100) ---
     speed: int
     stamina: int
     kicking: int
     lateral_skill: int
     tackling: int
+
+    # --- Extended gameplay attributes (0-100, default 75) ---
+    agility: int = 75        # quickness / change of direction
+    power: int = 75          # strength in contact situations
+    awareness: int = 75      # football IQ, reading plays
+    hands: int = 75          # catching, lateral security
+    kick_power: int = 75     # kick distance potential
+    kick_accuracy: int = 75  # kick precision
+
+    # --- Bio (populated by generator) ---
+    player_id: str = ""
+    nationality: str = "American"
+    hometown_city: str = ""
+    hometown_country: str = "USA"
+    high_school: str = ""
+    height: str = "5-10"
+    weight: int = 170
+    year: str = "Sophomore"
+
+    # --- Dynasty attributes ---
+    potential: int = 3        # 1–5 stars
+    development: str = "normal"  # normal / quick / slow / late_bloomer
+
+    # --- Fatigue / game state ---
     current_stamina: float = 100.0
     archetype: str = "none"
+
+    # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
     game_yards: int = 0
     game_rushing_yards: int = 0
@@ -460,6 +489,26 @@ class Player:
     game_fake_td_allowed: int = 0
     game_keeper_tackles: int = 0
     game_keeper_return_yards: int = 0
+
+    @property
+    def overall(self) -> int:
+        """Weighted overall rating based on all core and extended attributes."""
+        return int((
+            self.speed * 1.2 + self.stamina * 1.0 + self.kicking * 0.8 +
+            self.lateral_skill * 1.1 + self.tackling * 0.9 +
+            self.agility * 1.0 + self.power * 0.8 + self.awareness * 1.1 +
+            self.hands * 0.9 + self.kick_power * 0.6 + self.kick_accuracy * 0.6
+        ) / 10.0)
+
+    @property
+    def first_name(self) -> str:
+        parts = self.name.split()
+        return parts[0] if parts else self.name
+
+    @property
+    def last_name(self) -> str:
+        parts = self.name.split()
+        return parts[-1] if len(parts) > 1 else self.name
 
 
 @dataclass
@@ -3658,35 +3707,81 @@ class ViperballEngine:
         return d
 
 
-def load_team_from_json(filepath: str) -> Team:
+def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
+    """Load a team from its JSON metadata file.
+
+    Args:
+        filepath: Path to the team JSON file.
+        fresh: If True, always generate a brand-new roster from the team's
+               recruiting_pipeline and philosophy (dynamic mode).  If False,
+               load the stored static roster when one is present; fall back to
+               dynamic generation when there is no roster section.
+    """
     with open(filepath, "r") as f:
         data = json.load(f)
 
+    team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
+    abbreviation = data["team_info"]["abbreviation"]
+    mascot = data["team_info"]["mascot"]
+    style = data.get("style", {}).get("offense_style", "balanced")
+    defense_style = data.get("style", {}).get("defense_style", "base_defense")
+    identity = data.get("identity", {})
+    philosophy = identity.get("philosophy", "hybrid")
+    recruiting_pipeline = data.get("recruiting_pipeline", None)
+
+    has_roster = "roster" in data and data["roster"].get("players")
+
+    if fresh or not has_roster:
+        # Generate a completely fresh roster — each call produces unique players
+        return generate_team_on_the_fly(
+            team_name=team_name,
+            abbreviation=abbreviation,
+            mascot=mascot,
+            offense_style=style,
+            defense_style=defense_style,
+            philosophy=philosophy,
+            recruiting_pipeline=recruiting_pipeline,
+        )
+
+    # Load the stored roster (static path — used when loading a saved game)
     players = []
     for p_data in data["roster"]["players"][:10]:
+        stats = p_data.get("stats", {})
+        hometown = p_data.get("hometown", {})
         players.append(
             Player(
                 number=p_data["number"],
                 name=p_data["name"],
                 position=p_data["position"],
-                speed=p_data["stats"]["speed"],
-                stamina=p_data["stats"]["stamina"],
-                kicking=p_data["stats"]["kicking"],
-                lateral_skill=p_data["stats"]["lateral_skill"],
-                tackling=p_data["stats"]["tackling"],
+                speed=stats.get("speed", 80),
+                stamina=stats.get("stamina", 82),
+                kicking=stats.get("kicking", 72),
+                lateral_skill=stats.get("lateral_skill", 78),
+                tackling=stats.get("tackling", 75),
+                agility=stats.get("agility", 75),
+                power=stats.get("power", 75),
+                awareness=stats.get("awareness", 75),
+                hands=stats.get("hands", 75),
+                kick_power=stats.get("kick_power", 75),
+                kick_accuracy=stats.get("kick_accuracy", 75),
                 archetype=p_data.get("archetype", "none"),
+                player_id=p_data.get("player_id", ""),
+                nationality=p_data.get("nationality", "American"),
+                hometown_city=hometown.get("city", ""),
+                hometown_country=hometown.get("country", "USA"),
+                high_school=p_data.get("high_school", ""),
+                height=p_data.get("height", "5-10"),
+                weight=p_data.get("weight", 170),
+                year=p_data.get("year", "Sophomore"),
+                potential=p_data.get("potential", 3),
+                development=p_data.get("development", "normal"),
             )
         )
 
-    style = data.get("style", {}).get("offense_style", "balanced")
-    defense_style = data.get("style", {}).get("defense_style", "base_defense")
-
-    team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
-
     return Team(
         name=team_name,
-        abbreviation=data["team_info"]["abbreviation"],
-        mascot=data["team_info"]["mascot"],
+        abbreviation=abbreviation,
+        mascot=mascot,
         players=players,
         avg_speed=data["team_stats"]["avg_speed"],
         avg_stamina=data["team_stats"]["avg_stamina"],
@@ -3756,6 +3851,7 @@ def generate_team_on_the_fly(
             attrs["speed"], attrs["stamina"],
             attrs["kicking"], attrs["lateral_skill"], attrs["tackling"],
         )
+        hometown = name_data.get("hometown", {})
 
         players.append(Player(
             number=number,
@@ -3766,7 +3862,23 @@ def generate_team_on_the_fly(
             kicking=attrs["kicking"],
             lateral_skill=attrs["lateral_skill"],
             tackling=attrs["tackling"],
+            agility=attrs.get("agility", 75),
+            power=attrs.get("power", 75),
+            awareness=attrs.get("awareness", 75),
+            hands=attrs.get("hands", 75),
+            kick_power=attrs.get("kick_power", 75),
+            kick_accuracy=attrs.get("kick_accuracy", 75),
             archetype=archetype,
+            player_id=name_data.get("player_id", ""),
+            nationality=name_data.get("nationality", "American"),
+            hometown_city=hometown.get("city", ""),
+            hometown_country=hometown.get("country", "USA"),
+            high_school=name_data.get("high_school", ""),
+            height=attrs.get("height", "5-10"),
+            weight=attrs.get("weight", 170),
+            year=year.capitalize(),
+            potential=attrs.get("potential", 3),
+            development=attrs.get("development", "normal"),
         ))
 
     avg_speed = sum(p.speed for p in players) // len(players)

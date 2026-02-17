@@ -86,39 +86,65 @@ POSITIONS = [
 def generate_player_attributes(position, team_philosophy, year, is_viper=False):
     """Generate player stats based on position and team needs."""
 
-    # Base ranges
+    # Base ranges (core stats)
     base_speed = random.randint(75, 92)
     base_stamina = random.randint(80, 90)
     base_kicking = random.randint(60, 85)
     base_lateral_skill = random.randint(65, 90)
     base_tackling = random.randint(65, 88)
 
+    # Extended attributes base ranges
+    base_agility = random.randint(68, 90)
+    base_power = random.randint(65, 88)
+    base_awareness = random.randint(65, 88)
+    base_hands = random.randint(65, 88)
+    base_kick_power = random.randint(60, 85)
+    base_kick_accuracy = random.randint(60, 85)
+
     # Adjust for position
     if "Viper" in position or "Back" in position:
         base_speed += random.randint(3, 8)
         base_lateral_skill += random.randint(3, 8)
+        base_agility += random.randint(3, 8)
+        base_hands += random.randint(3, 7)
     elif "Lineman" in position or "Wedge" in position:
         base_tackling += random.randint(3, 8)
         base_stamina += random.randint(2, 5)
+        base_power += random.randint(5, 10)
         base_speed -= random.randint(3, 7)
+        base_agility -= random.randint(2, 5)
     elif "Wing" in position:
         base_speed += random.randint(2, 5)
         base_lateral_skill += random.randint(2, 5)
+        base_agility += random.randint(2, 5)
+    elif "Zeroback" in position:
+        base_awareness += random.randint(4, 8)
+        base_kick_power += random.randint(3, 7)
+        base_kick_accuracy += random.randint(3, 7)
+    elif any(p in position for p in ["Safety", "Keeper", "Corner"]):
+        base_awareness += random.randint(3, 7)
+        base_tackling += random.randint(2, 6)
 
     # Adjust for team philosophy
     if team_philosophy == 'kick_heavy':
         base_kicking += random.randint(5, 10)
+        base_kick_power += random.randint(3, 7)
+        base_kick_accuracy += random.randint(3, 7)
     elif team_philosophy == 'lateral_heavy':
         base_lateral_skill += random.randint(5, 10)
+        base_agility += random.randint(3, 6)
     elif team_philosophy == 'ground_and_pound':
         base_tackling += random.randint(3, 7)
         base_stamina += random.randint(3, 7)
+        base_power += random.randint(3, 6)
 
     # Viper gets boosted stats
     if is_viper:
         base_speed += random.randint(2, 5)
         base_lateral_skill += random.randint(3, 6)
         base_kicking += random.randint(2, 5)
+        base_agility += random.randint(2, 4)
+        base_awareness += random.randint(3, 6)
 
     # Class year modifiers
     if year == 'freshman':
@@ -138,6 +164,12 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False):
     kicking = min(100, max(50, base_kicking + modifier))
     lateral_skill = min(100, max(55, base_lateral_skill + modifier))
     tackling = min(100, max(55, base_tackling + modifier))
+    agility = min(100, max(55, base_agility + modifier))
+    power = min(100, max(55, base_power + modifier))
+    awareness = min(100, max(55, base_awareness + modifier))
+    hands = min(100, max(55, base_hands + modifier))
+    kick_power = min(100, max(50, base_kick_power + modifier))
+    kick_accuracy = min(100, max(50, base_kick_accuracy + modifier))
 
     # Generate height and weight (women's athletes)
     if "Lineman" in position or "Wedge" in position:
@@ -155,14 +187,38 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False):
     inches = height_inches % 12
     height = f"{feet}-{inches}"
 
+    # Generate potential (1-5 stars) — seniors rarely have 5-star potential
+    if year == 'freshman':
+        potential = random.choices([3, 4, 5, 2, 1], weights=[35, 30, 15, 15, 5])[0]
+    elif year == 'sophomore':
+        potential = random.choices([3, 4, 5, 2, 1], weights=[35, 28, 10, 20, 7])[0]
+    elif year == 'junior':
+        potential = random.choices([3, 4, 2, 5, 1], weights=[35, 25, 20, 8, 12])[0]
+    else:  # senior
+        potential = random.choices([3, 2, 4, 1], weights=[35, 30, 20, 15])[0]
+
+    # Generate development trait
+    development = random.choices(
+        ['normal', 'quick', 'slow', 'late_bloomer'],
+        weights=[60, 20, 12, 8]
+    )[0]
+
     return {
         'speed': speed,
         'stamina': stamina,
         'kicking': kicking,
         'lateral_skill': lateral_skill,
         'tackling': tackling,
+        'agility': agility,
+        'power': power,
+        'awareness': awareness,
+        'hands': hands,
+        'kick_power': kick_power,
+        'kick_accuracy': kick_accuracy,
         'height': height,
-        'weight': weight
+        'weight': weight,
+        'potential': potential,
+        'development': development,
     }
 
 def generate_roster(school_data):
@@ -259,13 +315,22 @@ def generate_roster(school_data):
             'year': year.capitalize(),
             'hometown': player_name_data['hometown'],
             'high_school': player_name_data['high_school'],
+            'nationality': player_name_data.get('nationality', 'American'),
             'archetype': archetype,
+            'potential': attributes['potential'],
+            'development': attributes['development'],
             'stats': {
                 'speed': attributes['speed'],
                 'stamina': attributes['stamina'],
                 'kicking': attributes['kicking'],
                 'lateral_skill': attributes['lateral_skill'],
-                'tackling': attributes['tackling']
+                'tackling': attributes['tackling'],
+                'agility': attributes['agility'],
+                'power': attributes['power'],
+                'awareness': attributes['awareness'],
+                'hands': attributes['hands'],
+                'kick_power': attributes['kick_power'],
+                'kick_accuracy': attributes['kick_accuracy'],
             }
         }
 

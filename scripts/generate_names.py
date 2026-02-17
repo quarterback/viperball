@@ -56,33 +56,99 @@ def load_name_pools():
 
     return _name_pools_cache
 
+# Default pipeline: 66% domestic (US), 34% international
+DEFAULT_PIPELINE = {
+    # Domestic US (66%)
+    'northeast': 0.12,
+    'mid_atlantic': 0.10,
+    'south': 0.12,
+    'midwest': 0.12,
+    'west_coast': 0.10,
+    'texas_southwest': 0.10,
+    # International (34%)
+    'australian': 0.102,
+    'canadian_english': 0.034,
+    'canadian_french': 0.034,
+    'new_zealand': 0.024,
+    'pacific_islander': 0.007,
+    'uk_european': 0.058,
+    'latin_american': 0.020,
+    'african': 0.031,
+    'caribbean': 0.020,
+    'other_intl': 0.003,
+}
+
+# International baseline (sums to 0.34) — applied on top of any school's domestic pipeline
+INTERNATIONAL_BASELINE = {
+    'australian': 0.102,
+    'canadian_english': 0.034,
+    'canadian_french': 0.034,
+    'new_zealand': 0.024,
+    'pacific_islander': 0.007,
+    'uk_european': 0.058,
+    'latin_american': 0.020,
+    'african': 0.031,
+    'caribbean': 0.020,
+    'other_intl': 0.003,
+}
+
+# Keys considered domestic (US) regions
+DOMESTIC_KEYS = {'northeast', 'mid_atlantic', 'south', 'midwest', 'west_coast', 'texas_southwest'}
+
+# Map region -> (origin, nationality)
+REGION_TO_ORIGIN = {
+    'northeast': ('american', 'American'),
+    'mid_atlantic': ('american', 'American'),
+    'south': ('american', 'American'),
+    'midwest': ('american', 'American'),
+    'west_coast': ('american', 'American'),
+    'texas_southwest': ('american', 'American'),
+    'australian': ('australian', 'Australian'),
+    'canadian_english': ('canadian_english', 'Canadian'),
+    'canadian_french': ('canadian_french', 'Canadian'),
+    'new_zealand': ('new_zealand', 'New Zealander'),
+    'pacific_islander': ('pacific_islander', 'Pacific Islander'),
+    'uk_european': ('uk_european', 'European'),
+    'latin_american': ('latin_american', 'Latin American'),
+    'african': ('african', 'African'),
+    'caribbean': ('caribbean', 'Caribbean'),
+    'other_intl': ('irish_european', 'European'),
+}
+
 def select_origin(recruiting_pipeline: Optional[Dict[str, float]] = None) -> Tuple[str, str]:
     """
     Select origin and region based on recruiting pipeline weights.
 
+    When a school-specific pipeline is provided, its domestic region weights are
+    normalized to 66% of the total, and the global international baseline (34%) is
+    always blended in so every team reflects the league's international composition.
+
     Args:
-        recruiting_pipeline: Dictionary of region weights (e.g., {'northeast': 0.4, 'australian': 0.15})
+        recruiting_pipeline: Dictionary of region weights
 
     Returns:
         Tuple of (origin, region)
     """
     if not recruiting_pipeline:
-        # Default weights: 75% American, 15% Australian, 10% other
-        recruiting_pipeline = {
-            'northeast': 0.15,
-            'mid_atlantic': 0.15,
-            'south': 0.15,
-            'midwest': 0.15,
-            'west_coast': 0.10,
-            'texas_southwest': 0.05,
-            'australian': 0.15,
-            'pacific_islander': 0.05,
-            'irish_european': 0.05
-        }
+        pipeline = DEFAULT_PIPELINE
+    else:
+        # Separate domestic keys from any legacy international keys
+        domestic = {k: v for k, v in recruiting_pipeline.items() if k in DOMESTIC_KEYS}
+        if domestic:
+            # Normalize domestic portion to 66% of total
+            dom_total = sum(domestic.values())
+            domestic_norm = {k: v / dom_total * 0.66 for k, v in domestic.items()}
+        else:
+            # Fallback: use default domestic distribution at 66%
+            default_dom = {k: v for k, v in DEFAULT_PIPELINE.items() if k in DOMESTIC_KEYS}
+            dom_total = sum(default_dom.values())
+            domestic_norm = {k: v / dom_total * 0.66 for k, v in default_dom.items()}
+        # Always use the global international baseline (34%)
+        pipeline = {**domestic_norm, **INTERNATIONAL_BASELINE}
 
     # Normalize weights
-    total = sum(recruiting_pipeline.values())
-    normalized = {k: v/total for k, v in recruiting_pipeline.items()}
+    total = sum(pipeline.values())
+    normalized = {k: v/total for k, v in pipeline.items()}
 
     # Select region
     rand = random.random()
@@ -98,18 +164,11 @@ def select_origin(recruiting_pipeline: Optional[Dict[str, float]] = None) -> Tup
     if not selected_region:
         selected_region = list(normalized.keys())[0]
 
-    # Map region to origin
-    american_regions = ['northeast', 'mid_atlantic', 'south', 'midwest', 'west_coast', 'texas_southwest']
-
-    if selected_region in american_regions:
-        origin = 'american'
-    elif selected_region == 'australian':
-        origin = 'australian'
-    elif selected_region == 'pacific_islander':
-        origin = 'pacific_islander'
-    elif selected_region == 'irish_european':
-        origin = 'irish_european'
+    # Map to origin
+    if selected_region in REGION_TO_ORIGIN:
+        origin, _ = REGION_TO_ORIGIN[selected_region]
     else:
+        # Unknown region — default to american midwest
         origin = 'american'
         selected_region = 'midwest'
 
@@ -119,42 +178,44 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
     """Select a first name based on origin and region."""
     first_names = pools['first_names']
 
-    # Map regions to name pools
+    pool_key_map = {
+        'american': {
+            'northeast': 'american_northeast',
+            'mid_atlantic': 'american_northeast',
+            'south': 'american_south',
+            'midwest': 'american_midwest',
+            'west_coast': 'american_west',
+            'texas_southwest': 'american_texas_southwest',
+        },
+        'australian': 'australian',
+        'canadian_english': 'canadian_english',
+        'canadian_french': 'canadian_french',
+        'new_zealand': 'new_zealand',
+        'pacific_islander': 'pacific_islander',
+        'uk_european': 'uk_european',
+        'latin_american': 'latin_american',
+        'african': 'african',
+        'caribbean': 'caribbean',
+        'irish_european': 'irish_european',
+    }
+
     if origin == 'american':
-        if region == 'northeast':
-            pool_key = 'american_northeast'
-        elif region == 'mid_atlantic':
-            pool_key = 'american_northeast'  # Similar naming patterns
-        elif region == 'south':
-            pool_key = 'american_south'
-        elif region == 'midwest':
-            pool_key = 'american_midwest'
-        elif region in ['west_coast', 'texas_southwest']:
-            pool_key = 'american_west'
-        else:
-            pool_key = 'american_midwest'
-    elif origin == 'australian':
-        pool_key = 'australian'
-    elif origin == 'pacific_islander':
-        pool_key = 'pacific_islander'
-    elif origin == 'irish_european':
-        pool_key = 'irish_european'
+        pool_key = pool_key_map['american'].get(region, 'american_midwest')
+    elif origin in pool_key_map:
+        pool_key = pool_key_map[origin]
     else:
         pool_key = 'american_midwest'
 
-    # Select from appropriate pool
     if pool_key in first_names:
         return random.choice(first_names[pool_key])
-    else:
-        return random.choice(first_names['american_midwest'])
+    return random.choice(first_names['american_midwest'])
 
 def select_surname(origin: str, region: str, pools: Dict) -> str:
     """Select a surname based on origin and region."""
     surnames = pools['surnames']
 
-    # Determine surname pool based on origin
     if origin == 'american':
-        # Mix of general American with some ethnic diversity
+        # Mix of ethnic surnames weighted by region
         weights = {
             'american_general': 0.50,
             'irish': 0.10,
@@ -167,8 +228,6 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
             'vietnamese': 0.02,
             'filipino': 0.01
         }
-
-        # Adjust weights based on region
         if region == 'northeast':
             weights['irish'] = 0.15
             weights['italian'] = 0.12
@@ -181,35 +240,50 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
             weights['latino_hispanic'] = 0.15
             weights['chinese'] = 0.05
             weights['filipino'] = 0.03
-
-        # Normalize
         total = sum(weights.values())
         weights = {k: v/total for k, v in weights.items()}
-
-        # Select pool
         rand = random.random()
         cumulative = 0
-        selected_pool = None
-
+        selected_pool = 'american_general'
         for pool, weight in weights.items():
             cumulative += weight
             if rand <= cumulative:
                 selected_pool = pool
                 break
-
-        if not selected_pool or selected_pool not in surnames:
+        if selected_pool not in surnames:
             selected_pool = 'american_general'
 
     elif origin == 'australian':
         selected_pool = 'australian'
+    elif origin in ('canadian_english', 'canadian_french'):
+        if origin == 'canadian_french':
+            selected_pool = 'canadian_french'
+        else:
+            # English Canadian — mix of British + American surnames
+            if random.random() < 0.4:
+                selected_pool = random.choice(['irish', 'australian'])
+            else:
+                selected_pool = 'american_general'
+    elif origin == 'new_zealand':
+        selected_pool = 'new_zealand'
     elif origin == 'pacific_islander':
         selected_pool = 'pacific_islander'
+    elif origin == 'uk_european':
+        selected_pool = 'uk_european'
+    elif origin == 'latin_american':
+        selected_pool = 'latin_american'
+    elif origin == 'african':
+        selected_pool = 'african'
+    elif origin == 'caribbean':
+        selected_pool = 'caribbean'
     elif origin == 'irish_european':
         selected_pool = 'irish'
     else:
         selected_pool = 'american_general'
 
-    return random.choice(surnames[selected_pool])
+    if selected_pool in surnames:
+        return random.choice(surnames[selected_pool])
+    return random.choice(surnames['american_general'])
 
 def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
     """Select a hometown based on origin and region."""
@@ -218,36 +292,109 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
     if origin == 'australian':
         city_pool = cities['australia']['major'] + cities['australia']['secondary']
         city_full = random.choice(city_pool)
-
-        # Parse Australian city format "Melbourne VIC"
         parts = city_full.split()
-        city = parts[0]
-        state = parts[1] if len(parts) > 1 else 'VIC'
-
-        return {
-            'city': city,
-            'state': state,
-            'country': 'Australia',
-            'region': 'australian'
-        }
+        city = ' '.join(parts[:-1]) if len(parts) > 1 else parts[0]
+        state = parts[-1] if len(parts) > 1 else 'VIC'
+        return {'city': city, 'state': state, 'country': 'Australia', 'region': 'australian'}
 
     elif origin == 'pacific_islander':
         city = random.choice(cities['pacific_islands'])
-        # Parse format
         if ' HI' in city:
-            return {
-                'city': city.replace(' HI', ''),
-                'state': 'HI',
-                'country': 'USA',
-                'region': 'pacific_islander'
-            }
+            return {'city': city.replace(' HI', ''), 'state': 'HI', 'country': 'USA', 'region': 'pacific_islander'}
         else:
-            return {
-                'city': city,
-                'state': '',
-                'country': 'Pacific Islands',
-                'region': 'pacific_islander'
-            }
+            return {'city': city, 'state': '', 'country': 'Pacific Islands', 'region': 'pacific_islander'}
+
+    elif origin in ('canadian_english', 'canadian_french'):
+        canada = cities['canada']
+        city_pool = canada['major'] + canada['secondary'] + canada['small']
+        city_full = random.choice(city_pool)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        province = parts[1] if len(parts) > 1 else 'ON'
+        return {'city': city, 'state': province, 'country': 'Canada', 'region': origin}
+
+    elif origin == 'new_zealand':
+        city = random.choice(cities['new_zealand'])
+        return {'city': city, 'state': '', 'country': 'New Zealand', 'region': 'new_zealand'}
+
+    elif origin == 'uk_european':
+        uke = cities['uk_europe']
+        all_cities = []
+        for sub in uke.values():
+            all_cities.extend(sub)
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'ENG'
+        country_map = {
+            'ENG': 'England', 'SCO': 'Scotland', 'WAL': 'Wales', 'NIR': 'Northern Ireland',
+            'FRA': 'France', 'GER': 'Germany', 'ESP': 'Spain', 'NED': 'Netherlands',
+            'BEL': 'Belgium', 'POR': 'Portugal', 'ITA': 'Italy',
+            'SWE': 'Sweden', 'NOR': 'Norway', 'DEN': 'Denmark'
+        }
+        country = country_map.get(country_code, 'Europe')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'uk_european'}
+
+    elif origin == 'latin_american':
+        la = cities['latin_america']
+        all_cities = []
+        for sub in la.values():
+            all_cities.extend(sub)
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'BRA'
+        country_map = {
+            'BRA': 'Brazil', 'ARG': 'Argentina', 'COL': 'Colombia',
+            'PER': 'Peru', 'CHI': 'Chile', 'MEX': 'Mexico',
+            'VEN': 'Venezuela', 'URU': 'Uruguay', 'PAR': 'Paraguay',
+            'ECU': 'Ecuador', 'CRC': 'Costa Rica', 'GTM': 'Guatemala', 'PAN': 'Panama'
+        }
+        country = country_map.get(country_code, 'Latin America')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'latin_american'}
+
+    elif origin == 'african':
+        af = cities['africa']
+        all_cities = []
+        for sub in af.values():
+            all_cities.extend(sub)
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'NGA'
+        country_map = {
+            'NGA': 'Nigeria', 'GHA': 'Ghana', 'SEN': 'Senegal', 'CIV': "Côte d'Ivoire",
+            'GIN': 'Guinea', 'MLI': 'Mali', 'TOG': 'Togo',
+            'KEN': 'Kenya', 'UGA': 'Uganda', 'TZA': 'Tanzania',
+            'ETH': 'Ethiopia', 'RWA': 'Rwanda',
+            'ZAF': 'South Africa', 'ZWE': 'Zimbabwe', 'ZMB': 'Zambia', 'BWA': 'Botswana'
+        }
+        country = country_map.get(country_code, 'Africa')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'african'}
+
+    elif origin == 'caribbean':
+        city_full = random.choice(cities['caribbean'])
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'JAM'
+        country_map = {
+            'JAM': 'Jamaica', 'TTO': 'Trinidad and Tobago', 'BRB': 'Barbados',
+            'BAH': 'Bahamas', 'HAI': 'Haiti', 'DOM': 'Dominican Republic',
+            'PRI': 'Puerto Rico', 'GUY': 'Guyana', 'SUR': 'Suriname',
+            'LCA': 'Saint Lucia', 'DMA': 'Dominica', 'SKN': 'Saint Kitts',
+            'GRN': 'Grenada', 'BEL': 'Belize'
+        }
+        country = country_map.get(country_code, 'Caribbean')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'caribbean'}
+
+    elif origin == 'irish_european':
+        # Treat as UK/European
+        uke = cities['uk_europe']
+        eng_cities = uke.get('england', []) + uke.get('other_uk', [])
+        city_full = random.choice(eng_cities) if eng_cities else 'London ENG'
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'ENG', 'country': 'United Kingdom', 'region': 'uk_european'}
 
     else:  # American
         if region == 'northeast':
@@ -266,50 +413,61 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
             city_pool = cities['midwest']['major']
 
         city_full = random.choice(city_pool)
-
-        # Parse American city format "Atlanta GA"
         parts = city_full.rsplit(' ', 1)
         city = parts[0]
         state = parts[1] if len(parts) > 1 else ''
-
-        return {
-            'city': city,
-            'state': state,
-            'country': 'USA',
-            'region': region
-        }
+        return {'city': city, 'state': state, 'country': 'USA', 'region': region}
 
 def select_high_school(origin: str, hometown: Dict, pools: Dict) -> str:
     """Select a high school based on origin and hometown."""
     high_schools = pools['high_schools']
 
     if origin == 'australian':
-        # Use AFLW academies or Australian schools
-        if random.random() < 0.3:  # 30% chance of AFLW academy
+        if random.random() < 0.3:
             return random.choice(high_schools['aflw_academies'])
-        else:
-            city = hometown['city'].lower()
-            if city in high_schools['australian_real_schools']:
-                return random.choice(high_schools['australian_real_schools'][city])
-            else:
-                # Use template
-                template = random.choice(high_schools['australian_schools'])
-                return template.replace('{City}', hometown['city'])
+        city = hometown['city'].lower()
+        if city in high_schools['australian_real_schools']:
+            return random.choice(high_schools['australian_real_schools'][city])
+        template = random.choice(high_schools['australian_schools'])
+        return template.replace('{City}', hometown['city'])
 
     elif origin == 'pacific_islander':
-        # Use simple high school name
+        return f"{hometown['city']} High School"
+
+    elif origin in ('canadian_english', 'canadian_french'):
+        return f"{hometown['city']} Secondary School"
+
+    elif origin == 'new_zealand':
+        return f"{hometown['city']} Girls' High School"
+
+    elif origin in ('uk_european', 'irish_european'):
+        return f"{hometown['city']} Academy"
+
+    elif origin == 'latin_american':
+        return f"Colegio {hometown['city']}"
+
+    elif origin == 'african':
+        return f"{hometown['city']} Secondary School"
+
+    elif origin == 'caribbean':
         return f"{hometown['city']} High School"
 
     else:  # American
         city = hometown['city'].lower().replace(' ', '_')
-
-        # Check if we have real schools for this city
         if city in high_schools['real_schools']:
             return random.choice(high_schools['real_schools'][city])
-        else:
-            # Use template
-            template = random.choice(high_schools['templates'])
-            return template.replace('{City}', hometown['city'])
+        # Only use templates that have {City} and no other unresolved placeholders
+        city_templates = [t for t in high_schools['templates'] if '{City}' in t and '{Name}' not in t and '{Mascot}' not in t]
+        template = random.choice(city_templates if city_templates else ['{City} High School'])
+        return template.replace('{City}', hometown['city'])
+
+def get_nationality(origin: str, region: str) -> str:
+    """Get nationality string from origin/region."""
+    if origin == 'american':
+        return 'American'
+    key = region if region in REGION_TO_ORIGIN else origin
+    _, nationality = REGION_TO_ORIGIN.get(key, ('american', 'American'))
+    return nationality
 
 def generate_player_name(
     origin: Optional[str] = None,
@@ -322,53 +480,34 @@ def generate_player_name(
     Generate a women's player name with hometown and background.
 
     Args:
-        origin: Specific origin ('american', 'australian', 'pacific_islander')
-        region: Geographic region ('northeast', 'south', 'midwest', 'west_coast', etc.)
+        origin: Specific origin ('american', 'australian', 'canadian_english', etc.)
+        region: Geographic region ('northeast', 'south', 'australian', 'canadian_french', etc.)
         school_recruiting_pipeline: School's recruiting territories (weighted dict)
-        recruiting_class: Year the player was recruited (default 2024)
+        recruiting_class: Year the player was recruited
         year: Current class year (freshman/sophomore/junior/senior)
 
     Returns:
-        Dictionary containing:
-            - first_name
-            - last_name
-            - display_name
-            - full_name
-            - hometown (dict)
-            - high_school
-            - origin_tags (list)
-            - recruiting_class
-            - year
-            - player_id (unique identifier)
+        Dictionary with player_id, first_name, last_name, display_name, full_name,
+        hometown, high_school, origin_tags, nationality, recruiting_class, year
     """
-    # Load name pools
     pools = load_name_pools()
 
-    # Select origin and region if not provided
     if not origin or not region:
         origin, region = select_origin(school_recruiting_pipeline)
 
-    # Generate name components
     first_name = select_first_name(origin, region, pools)
     last_name = select_surname(origin, region, pools)
 
-    # Create display name (first initial + last name)
     display_name = f"{first_name[0]}. {last_name}"
     full_name = f"{first_name} {last_name}"
 
-    # Generate hometown
     hometown = select_hometown(origin, region, pools)
-
-    # Select high school
     high_school = select_high_school(origin, hometown, pools)
 
-    # Create origin tags
     origin_tags = [origin, region]
-    if origin == 'american':
-        origin_tags.append(hometown['region'])
+    nationality = get_nationality(origin, region)
 
-    # Generate unique player ID
-    player_id = f"{first_name.lower()}_{last_name.lower()}_{random.randint(1000, 9999)}"
+    player_id = f"{first_name.lower().replace(' ', '_')}_{last_name.lower().replace(' ', '_')}_{random.randint(1000, 9999)}"
 
     return {
         'player_id': player_id,
@@ -379,32 +518,35 @@ def generate_player_name(
         'hometown': hometown,
         'high_school': high_school,
         'origin_tags': origin_tags,
+        'nationality': nationality,
         'recruiting_class': recruiting_class,
         'year': year
     }
 
 if __name__ == "__main__":
-    # Test the name generator
     print("Testing Women's Name Generator for Viperball\n")
 
     print("1. American Northeast player:")
     player1 = generate_player_name(origin='american', region='northeast')
-    print(json.dumps(player1, indent=2))
+    print(json.dumps(player1, indent=2, ensure_ascii=False))
 
     print("\n2. Australian player:")
     player2 = generate_player_name(origin='australian', region='australian')
-    print(json.dumps(player2, indent=2))
+    print(json.dumps(player2, indent=2, ensure_ascii=False))
 
-    print("\n3. Pacific Islander player:")
-    player3 = generate_player_name(origin='pacific_islander', region='pacific_islander')
-    print(json.dumps(player3, indent=2))
+    print("\n3. Canadian French player:")
+    player3 = generate_player_name(origin='canadian_french', region='canadian_french')
+    print(json.dumps(player3, indent=2, ensure_ascii=False))
 
-    print("\n4. Random player with custom recruiting pipeline:")
-    pipeline = {
-        'west_coast': 0.40,
-        'australian': 0.30,
-        'pacific_islander': 0.20,
-        'midwest': 0.10
-    }
-    player4 = generate_player_name(school_recruiting_pipeline=pipeline)
-    print(json.dumps(player4, indent=2))
+    print("\n4. African player:")
+    player4 = generate_player_name(origin='african', region='african')
+    print(json.dumps(player4, indent=2, ensure_ascii=False))
+
+    print("\n5. Default pipeline (66/34 split):")
+    counts = {}
+    for _ in range(1000):
+        _, region = select_origin()
+        _, nat = REGION_TO_ORIGIN.get(region, ('american', 'American'))
+        counts[nat] = counts.get(nat, 0) + 1
+    for nat, count in sorted(counts.items(), key=lambda x: -x[1]):
+        print(f"  {nat}: {count/10:.1f}%")
