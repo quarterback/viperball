@@ -336,11 +336,24 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 pstats = player_stats.get(side, [])
                 if pstats:
                     pdf = pd.DataFrame(pstats)
-                    display_cols = ["Tag", "Name", "Archetype", "Touches", "Yards", "Rush Yds", "Lat Yds", "TDs", "Fumbles", "Lat Thrown", "Kick Att", "Kick Made", "Deflections", "Bells", "Cov Snaps", "KP Tackles", "KP Ret Yds"]
-                    if len(pdf.columns) == len(display_cols):
-                        pdf.columns = display_cols
-                    elif len(pdf.columns) >= 11:
-                        pdf.columns = display_cols[:len(pdf.columns)]
+                    col_renames = {
+                        "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                        "touches": "Touches", "yards": "Yards",
+                        "rushing_yards": "Rush", "lateral_yards": "Lat Yds",
+                        "tds": "TDs", "fumbles": "Fum",
+                        "laterals_thrown": "Lat Thr", "lateral_receptions": "Lat Rec",
+                        "lateral_assists": "Lat Ast", "lateral_tds": "Lat TD",
+                        "kick_att": "K Att", "kick_made": "K Made",
+                        "kick_deflections": "Defl", "keeper_bells": "Bells",
+                        "coverage_snaps": "Cov", "keeper_tackles": "KP Tkl",
+                        "keeper_return_yards": "KP Ret",
+                        "kick_returns": "KR", "kick_return_yards": "KR Yds",
+                        "kick_return_tds": "KR TD",
+                        "punt_returns": "PR", "punt_return_yards": "PR Yds",
+                        "punt_return_tds": "PR TD",
+                        "muffs": "Muffs", "st_tackles": "ST Tkl",
+                    }
+                    pdf.rename(columns=col_renames, inplace=True)
                     st.dataframe(pdf, hide_index=True, use_container_width=True)
                 else:
                     st.caption("No player stat data available.")
