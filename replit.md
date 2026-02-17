@@ -40,8 +40,17 @@ The project follows a clear separation of concerns:
     - **Penalty System**: 30+ types across 5 phases, with play-type-specific selection, weather boosts, and Q4 pressure factors, targeting 10-16 penalties/game. Includes Viperball-specific penalties.
     - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and modifiers for various gameplay stats. Includes per-player game stat tracking.
     - **Red Zone**: Enhanced red zone TD model.
+    - **Carrier Selection**: Play-type-specific carrier weights using position tags (HB, WB, SB, ZB, VP). Each play family (dive, power, sweep, speed_option, counter, draw, viper_jet) has unique primary_positions, carrier_weights, and archetype_bonus multipliers.
+    - **Explosive Run System**: 8-28% base chances per play family, modified by carrier speed/agility and defensive fatigue. Keeper matchup scoring integrated.
+    - **Play Signatures**: Each play family produces a unique signature string (e.g., "KP cheats inside — edge open", "correct read", "jet motion") stored on the Play dataclass and exported in play_by_play output.
+    - **Viper Jet**: Distinct simulation path for VP-only plays with botched exchange mechanic (higher fumble rate * 1.40), jet motion descriptions, and unique signature outcomes.
+    - **Viper Alignment**: VIPER_ALIGNMENT_BONUS lookup table providing direction-based bonuses (left/right/center/free) against play families.
+    - **Defensive Alignment**: ALIGNMENT_VS_PLAY rock-paper-scissors system with 5 alignments (balanced, aggressive, stacked_box, wide, contain). Aggressive alignment added with high-risk/high-reward modifiers.
+    - **Run Fumble System**: Play-family-specific fumble rates using ball_security (hands attribute). Weather multiplier (1.40x for rain/snow/sleet). Archetype fumble_modifier applied.
+    - **Fumble Recovery Contest**: Player-based recovery scoring using awareness, speed, power, and proximity. No longer fixed probability.
+    - **Stat Tracking**: Per-player lateral_assists, lateral_receptions, lateral_tds. Special teams: kick_returns, kick_return_yards, kick_return_tds, punt_returns, punt_return_yards, punt_return_tds, muffs, st_tackles. Rushing/lateral yard split (game_rushing_yards vs game_lateral_yards).
 - **Drive Tracking**: Logs every possession with detailed outcomes.
-- **Position Tag System**: Players identified by position abbreviation + jersey number (e.g., VB1, HB13).
+- **Position Tag System**: Players identified by position abbreviation + jersey number (e.g., VB1, HB13). Actual tags: HB, WB, SB, ZB, VP, LB, CB, LA, KP, ED, BK.
 - **Dynasty Mode Enhancements**: Integrated injury tracking (3-tier severity, history, reports), player development (breakout/decline tracking, offseason trends), awards system (individual trophies, All-CVL/Conference teams, historical data), and CSV export for various season and dynasty data.
 - **CFL Rouge/Pindown Overhaul**: Comprehensive implementation following CFL rules, affecting punts, missed kicks, and kickoffs, with detailed return chance formulas and ball placement.
 
