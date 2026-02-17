@@ -11,12 +11,16 @@ Complete multi-season career mode with:
 """
 
 import json
+import random
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from collections import defaultdict
 
 from engine.season import Season, TeamRecord, Game
+from engine.awards import SeasonHonors, compute_season_awards
+from engine.injuries import InjuryTracker
+from engine.development import apply_team_development, get_preseason_breakout_candidates, DevelopmentReport
 
 
 # ========================================
@@ -108,10 +112,29 @@ class SeasonAwards:
     most_chaos: str
     best_kicking: str
 
-    # Individual awards (if we add player stats later)
-    # mvp: Optional[str] = None
-    # offensive_player: Optional[str] = None
-    # defensive_player: Optional[str] = None
+    # Individual & collective honors (SeasonHonors object serialised as dict)
+    honors: Optional[dict] = None   # SeasonHonors.to_dict() stored here
+
+    # Convenience accessors for individual awards
+    def get_individual_award(self, award_name: str) -> Optional[dict]:
+        if not self.honors:
+            return None
+        for a in self.honors.get("individual_awards", []):
+            if a.get("award_name") == award_name:
+                return a
+        return None
+
+    @property
+    def coach_of_year(self) -> str:
+        return self.honors.get("coach_of_year", "") if self.honors else ""
+
+    @property
+    def chaos_king(self) -> str:
+        return self.honors.get("chaos_king", "") if self.honors else ""
+
+    @property
+    def most_improved(self) -> str:
+        return self.honors.get("most_improved", "") if self.honors else ""
 
 
 # ========================================
@@ -208,6 +231,15 @@ class Dynasty:
     seasons: Dict[int, Season] = field(default_factory=dict)  # year -> Season
     awards_history: Dict[int, SeasonAwards] = field(default_factory=dict)  # year -> SeasonAwards
 
+    # Full honors (All-American, All-Conference, individual awards)
+    honors_history: Dict[int, dict] = field(default_factory=dict)  # year -> SeasonHonors.to_dict()
+
+    # Injury history per season
+    injury_history: Dict[int, dict] = field(default_factory=dict)  # year -> InjuryTracker.get_season_injury_report()
+
+    # Development history: year -> list of notable development event dicts
+    development_history: Dict[int, List[dict]] = field(default_factory=dict)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
 
@@ -230,18 +262,39 @@ class Dynasty:
                 return conf_name
         return ""
 
-    def advance_season(self, season: Season):
+    def advance_season(
+        self,
+        season: Season,
+        injury_tracker: Optional["InjuryTracker"] = None,
+        player_cards: Optional[Dict[str, list]] = None,
+        rng: Optional[random.Random] = None,
+    ):
         """
-        Add a completed season to dynasty history
+        Add a completed season to dynasty history.
 
         Updates:
         - Team histories
         - Coach record
-        - Awards
+        - Team + individual awards (SeasonAwards + SeasonHonors)
+        - All-American / All-Conference teams
+        - Injury history (if tracker provided)
+        - Player development arcs (if player_cards provided)
         - Record book
+
+        Args:
+            season:          Completed Season object
+            injury_tracker:  Optional InjuryTracker from this season
+            player_cards:    Optional dict of team_name -> list[PlayerCard] for dev arcs
+            rng:             Optional seeded Random for reproducibility
         """
         year = self.current_year
         self.seasons[year] = season
+
+        # Determine previous season wins for Most Improved calculation
+        prev_wins = {}
+        if (year - 1) in self.seasons:
+            for t, r in self.seasons[year - 1].standings.items():
+                prev_wins[t] = r.wins
 
         # Update team histories
         for team_name, record in season.standings.items():
@@ -309,13 +362,23 @@ class Dynasty:
                 "playoff": (self.coach.team_name in playoff_teams),
             }
 
-        # Record awards
+        # Team-level standings
         standings = season.get_standings_sorted()
         highest_scoring = max(standings, key=lambda r: r.points_for / max(1, r.games_played))
         best_defense = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
         highest_opi = max(standings, key=lambda r: r.avg_opi)
         most_chaos = max(standings, key=lambda r: r.avg_chaos)
         best_kicking = max(standings, key=lambda r: r.avg_kicking)
+
+        # Compute full honors (All-American, All-Conference, individual awards)
+        conf_dict = self.get_conferences_dict() if self.conferences else None
+        honors = compute_season_awards(
+            season=season,
+            year=year,
+            conferences=conf_dict,
+            prev_season_wins=prev_wins if prev_wins else None,
+        )
+        self.honors_history[year] = honors.to_dict()
 
         self.awards_history[year] = SeasonAwards(
             year=year,
@@ -326,13 +389,73 @@ class Dynasty:
             highest_opi=highest_opi.team_name,
             most_chaos=most_chaos.team_name,
             best_kicking=best_kicking.team_name,
+            honors=honors.to_dict(),
         )
+
+        # Store injury history for this season
+        if injury_tracker is not None:
+            self.injury_history[year] = injury_tracker.get_season_injury_report()
+
+        # Apply player development (offseason)
+        if player_cards is not None:
+            dev_events = []
+            dev_rng = rng or random.Random(year + 42)
+            for team_name, cards in player_cards.items():
+                report = apply_team_development(cards, rng=dev_rng)
+                for ev in report.notable_events:
+                    dev_events.append({
+                        "team": team_name,
+                        "player": ev.player_name,
+                        "event_type": ev.event_type,
+                        "description": ev.description,
+                        "attr_changes": ev.attr_changes,
+                    })
+            self.development_history[year] = dev_events
 
         # Update record book
         self._update_record_book(year, season)
 
         # Advance year
         self.current_year += 1
+
+    def get_honors(self, year: int) -> Optional[dict]:
+        """Return the full SeasonHonors dict for a given year."""
+        return self.honors_history.get(year)
+
+    def get_all_americans(self, year: int) -> Optional[dict]:
+        """Return All-American teams dict for a given year."""
+        h = self.honors_history.get(year)
+        if not h:
+            return None
+        return {
+            "first_team": h.get("all_american_first"),
+            "second_team": h.get("all_american_second"),
+        }
+
+    def get_all_conference(self, year: int, conference_name: str) -> Optional[dict]:
+        """Return All-Conference team dict for a given year and conference."""
+        h = self.honors_history.get(year)
+        if not h:
+            return None
+        return h.get("all_conference_teams", {}).get(conference_name)
+
+    def get_individual_award(self, year: int, award_name: str) -> Optional[dict]:
+        """Return a specific individual award winner dict for a given year."""
+        h = self.honors_history.get(year)
+        if not h:
+            return None
+        for a in h.get("individual_awards", []):
+            if a.get("award_name") == award_name:
+                return a
+        return None
+
+    def get_injury_report(self, year: int) -> Optional[dict]:
+        """Return the injury report for a given year."""
+        return self.injury_history.get(year)
+
+    def get_development_events(self, year: int) -> List[dict]:
+        """Return notable development events for a given offseason year."""
+        return self.development_history.get(year, [])
 
     def _update_record_book(self, year: int, season: Season):
         """Update record book with new season results"""

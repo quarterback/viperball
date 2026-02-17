@@ -12,6 +12,7 @@ Beautiful displays for:
 
 from typing import List, Dict, Optional
 from engine.dynasty import Dynasty, Coach, TeamHistory, SeasonAwards, RecordBook
+from engine.injuries import InjuryTracker
 
 
 # ========================================
@@ -281,6 +282,171 @@ def display_multi_season_comparison(dynasty: Dynasty, years: List[int]):
 
 # ========================================
 # CONFERENCE HISTORY
+# ========================================
+
+# ========================================
+# END-OF-SEASON HONORS
+# ========================================
+
+def display_individual_awards(dynasty: Dynasty, year: int):
+    """Display all individual award winners for a given season."""
+    honors = dynasty.get_honors(year)
+    if not honors:
+        print(f"\n  No honors data for {year}\n")
+        return
+
+    print(f"\n{'=' * 80}")
+    print(f"{'CVL INDIVIDUAL AWARDS — ' + str(year):^80}")
+    print(f"{'=' * 80}")
+
+    for award in honors.get("individual_awards", []):
+        name = award.get("player_name", "N/A")
+        team = award.get("team_name", "N/A")
+        pos = award.get("position", "N/A")
+        ovr = award.get("overall_rating", 0)
+        reason = award.get("reason", "")
+        print(f"\n  {award['award_name']}")
+        print(f"  {'─' * 50}")
+        print(f"  {name} ({pos}) — {team}  OVR {ovr}")
+        print(f"  \"{reason}\"")
+
+    coy = honors.get("coach_of_year", "")
+    chaos = honors.get("chaos_king", "")
+    improved = honors.get("most_improved", "")
+    if coy:
+        print(f"\n  Coach of the Year:   {coy}")
+    if chaos:
+        print(f"  Chaos King (Team):   {chaos}")
+    if improved:
+        print(f"  Most Improved Team:  {improved}")
+    print(f"\n{'=' * 80}\n")
+
+
+def display_all_american(dynasty: Dynasty, year: int):
+    """Display All-American teams for a given season."""
+    honors = dynasty.get_honors(year)
+    if not honors:
+        print(f"\n  No honors data for {year}\n")
+        return
+
+    print(f"\n{'=' * 80}")
+    print(f"{'CVL ALL-AMERICAN TEAMS — ' + str(year):^80}")
+    print(f"{'=' * 80}")
+
+    for team_key, label in [("all_american_first", "FIRST TEAM"), ("all_american_second", "SECOND TEAM")]:
+        team_data = honors.get(team_key)
+        if not team_data:
+            continue
+        print(f"\n  {label}")
+        print(f"  {'─' * 60}")
+        print(f"  {'POSITION':<30} {'PLAYER':<22} {'TEAM':<22} {'OVR'}")
+        print(f"  {'─' * 60}")
+        for slot in team_data.get("slots", []):
+            print(f"  {slot['award_name']:<30} {slot['player_name']:<22} {slot['team_name']:<22} {slot['overall_rating']}")
+
+    print(f"\n{'=' * 80}\n")
+
+
+def display_all_conference(dynasty: Dynasty, year: int, conference_name: str = None):
+    """Display All-Conference teams. If conference_name is None, shows all conferences."""
+    honors = dynasty.get_honors(year)
+    if not honors:
+        print(f"\n  No honors data for {year}\n")
+        return
+
+    all_conf = honors.get("all_conference_teams", {})
+    if not all_conf:
+        print(f"\n  No All-Conference data for {year}\n")
+        return
+
+    conferences = {conference_name: all_conf[conference_name]} if conference_name and conference_name in all_conf else all_conf
+
+    print(f"\n{'=' * 80}")
+    print(f"{'CVL ALL-CONFERENCE TEAMS — ' + str(year):^80}")
+    print(f"{'=' * 80}")
+
+    for conf_name, conf_data in conferences.items():
+        print(f"\n  {conf_name.upper()} — FIRST TEAM ALL-CONFERENCE")
+        print(f"  {'─' * 60}")
+        print(f"  {'POSITION':<30} {'PLAYER':<22} {'TEAM':<22} {'OVR'}")
+        print(f"  {'─' * 60}")
+        for slot in conf_data.get("slots", []):
+            print(f"  {slot['award_name']:<30} {slot['player_name']:<22} {slot['team_name']:<22} {slot['overall_rating']}")
+
+    print(f"\n{'=' * 80}\n")
+
+
+def display_season_injury_report(dynasty: Dynasty, year: int):
+    """Display the full season injury report for a given year."""
+    report = dynasty.get_injury_report(year)
+    if not report:
+        print(f"\n  No injury data recorded for {year}\n")
+        return
+
+    print(f"\n{'=' * 80}")
+    print(f"{'INJURY REPORT — ' + str(year):^80}")
+    print(f"{'=' * 80}")
+
+    total = sum(len(v) for v in report.values())
+    print(f"\n  Total injuries recorded: {total}\n")
+
+    for team_name, injuries in sorted(report.items()):
+        if not injuries:
+            continue
+        print(f"\n  {team_name}  ({len(injuries)} injury/injuries)")
+        print(f"  {'─' * 60}")
+        for inj in injuries:
+            tier_label = inj["tier"].upper()
+            status = "OUT FOR SEASON" if inj.get("is_season_ending") else f"{inj['weeks_out']} wk(s)"
+            print(f"    {inj['player_name']} ({inj['position']}) — {inj['description']} [{tier_label}] | Week {inj['week_injured']}, {status}")
+
+    print(f"\n{'=' * 80}\n")
+
+
+def display_development_report(dynasty: Dynasty, year: int):
+    """Display notable player development events from the offseason following a given year."""
+    events = dynasty.get_development_events(year)
+    if not events:
+        print(f"\n  No notable development events recorded for offseason after {year}\n")
+        return
+
+    print(f"\n{'=' * 80}")
+    print(f"{'OFFSEASON DEVELOPMENT — ' + str(year) + ' → ' + str(year + 1):^80}")
+    print(f"{'=' * 80}")
+
+    breakouts = [e for e in events if e["event_type"] == "breakout"]
+    declines = [e for e in events if e["event_type"] == "decline"]
+
+    if breakouts:
+        print(f"\n  BREAKOUT PLAYERS ({len(breakouts)})")
+        print(f"  {'─' * 60}")
+        for ev in breakouts:
+            print(f"    {ev['player']} ({ev['team']}) — {ev['description']}")
+
+    if declines:
+        print(f"\n  DECLINING PLAYERS ({len(declines)})")
+        print(f"  {'─' * 60}")
+        for ev in declines:
+            print(f"    {ev['player']} ({ev['team']}) — {ev['description']}")
+
+    print(f"\n{'=' * 80}\n")
+
+
+# ========================================
+# FULL SEASON HONORS SUMMARY (combines all above)
+# ========================================
+
+def display_full_season_honors(dynasty: Dynasty, year: int):
+    """Display all honors, awards, injuries, and development for a season."""
+    display_individual_awards(dynasty, year)
+    display_all_american(dynasty, year)
+    display_all_conference(dynasty, year)
+    display_season_injury_report(dynasty, year)
+    display_development_report(dynasty, year)
+
+
+# ========================================
+# CONFERENCE HISTORY (original)
 # ========================================
 
 def display_conference_history(dynasty: Dynasty, conference_name: str):
