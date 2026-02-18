@@ -501,7 +501,10 @@ NEW_SCHOOLS = [
     {"id": "oregon_state", "name": "Oregon State University", "abbrev": "ORST", "mascot": "Beavers", "city": "Corvallis", "state": "OR", "colors": ["Orange", "Black"], "conference": "Pacific Rim", "tier": 78},
     {"id": "washington_state", "name": "Washington State University", "abbrev": "WSU", "mascot": "Cougars", "city": "Pullman", "state": "WA", "colors": ["Crimson", "Gray"], "conference": "Pacific Rim", "tier": 77},
     {"id": "minnesota", "name": "University of Minnesota", "abbrev": "MINN", "mascot": "Golden Gophers", "city": "Minneapolis", "state": "MN", "colors": ["Maroon", "Gold"], "conference": "Great Lakes Union", "tier": 80},
-    {"id": "wayne_state", "name": "Wayne State University", "abbrev": "WAYS", "mascot": "Warriors", "city": "Detroit", "state": "MI", "colors": ["Green", "Gold"], "conference": "Great Lakes Union", "tier": 67},
+    {"id": "wayne_state", "name": "Wayne State University", "abbrev": "WAYS", "mascot": "Warriors", "city": "Detroit", "state": "MI", "colors": ["Green", "Gold"], "conference": "Continental Athletic Association", "tier": 67},
+    # ── Swaps: Maine→Bowdoin, Suffolk→Holy Cross ──
+    {"id": "bowdoin", "name": "Bowdoin College", "abbrev": "BOWD", "mascot": "Polar Bears", "city": "Brunswick", "state": "ME", "colors": ["Black", "White"], "conference": "Yankee Eight", "tier": 73},
+    {"id": "holy_cross", "name": "College of the Holy Cross", "abbrev": "HC", "mascot": "Crusaders", "city": "Worcester", "state": "MA", "colors": ["Purple", "White"], "conference": "Collegiate Commonwealth", "tier": 75},
 ]
 
 if __name__ == "__main__":
