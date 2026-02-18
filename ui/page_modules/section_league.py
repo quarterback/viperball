@@ -371,6 +371,13 @@ def _render_postseason(session_id, user_team):
 
 
 def _render_schedule(session_id, completed_games, user_team):
+    # Fetch ALL games (completed + upcoming) so users can see their full schedule
+    try:
+        all_schedule_resp = api_client.get_schedule(session_id)
+        all_reg_games = all_schedule_resp.get("games", [])
+    except api_client.APIError:
+        all_reg_games = completed_games  # fallback to completed only
+
     try:
         bracket_resp = api_client.get_playoff_bracket(session_id)
         bracket = bracket_resp.get("bracket", [])
@@ -384,21 +391,46 @@ def _render_schedule(session_id, completed_games, user_team):
         bowl_results = []
 
     all_game_entries = []
-    for g in completed_games:
-        all_game_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.get('week', 0)}", "sort_key": g.get("week", 0)})
+    for g in all_reg_games:
+        is_completed = g.get("completed", False)
+        is_conf = g.get("is_conference_game", False)
+        game_type = "Conference" if is_conf else "Non-Conference"
+        status = "Played" if is_completed else "Upcoming"
+        all_game_entries.append({
+            "game": g,
+            "phase": "Regular Season",
+            "label_prefix": f"Wk {g.get('week', 0)}",
+            "sort_key": g.get("week", 0),
+            "game_type": game_type,
+            "status": status,
+        })
 
     if bracket:
         playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "National Quarterfinals", 999: "National Semi-Finals", 1000: "National Championship"}
         for g in bracket:
-            if g.get("completed"):
-                round_label = playoff_round_names.get(g.get("week", 0), f"Playoff R{g.get('week', 0)}")
-                all_game_entries.append({"game": g, "phase": "Playoff", "label_prefix": round_label, "sort_key": 900 + g.get("week", 0)})
+            is_completed = g.get("completed", False)
+            round_label = playoff_round_names.get(g.get("week", 0), f"Playoff R{g.get('week', 0)}")
+            all_game_entries.append({
+                "game": g,
+                "phase": "Playoff",
+                "label_prefix": round_label,
+                "sort_key": 900 + g.get("week", 0),
+                "game_type": "Playoff",
+                "status": "Played" if is_completed else "Upcoming",
+            })
 
     if bowl_results:
         for i, bowl in enumerate(bowl_results):
             bg = bowl.get("game", {})
-            if bg.get("completed"):
-                all_game_entries.append({"game": bg, "phase": "Bowl", "label_prefix": bowl.get("name", f"Bowl {i+1}"), "sort_key": 800 + i})
+            is_completed = bg.get("completed", False)
+            all_game_entries.append({
+                "game": bg,
+                "phase": "Bowl",
+                "label_prefix": bowl.get("name", f"Bowl {i+1}"),
+                "sort_key": 800 + i,
+                "game_type": "Bowl",
+                "status": "Played" if is_completed else "Upcoming",
+            })
 
     all_game_entries.sort(key=lambda e: e["sort_key"])
 
@@ -410,7 +442,7 @@ def _render_schedule(session_id, completed_games, user_team):
         all_teams_in_log.add(g.get("away_team", ""))
         all_phases.add(entry["phase"])
 
-    fc1, fc2, fc3 = st.columns(3)
+    fc1, fc2, fc3, fc4 = st.columns(4)
     with fc1:
         team_options = ["All Teams"] + sorted(all_teams_in_log)
         if user_team:
@@ -420,8 +452,11 @@ def _render_schedule(session_id, completed_games, user_team):
         phase_options = ["All Phases"] + sorted(all_phases)
         filter_phase = st.selectbox("Filter by Phase", phase_options, key="league_game_filter_phase")
     with fc3:
-        reg_weeks = sorted(set(g.get("week", 0) for g in completed_games))
-        filter_week = st.selectbox("Filter by Week (Reg Season)", ["All Weeks"] + reg_weeks, key="league_game_filter_week")
+        all_weeks = sorted(set(g.get("week", 0) for g in all_reg_games))
+        filter_week = st.selectbox("Filter by Week", ["All Weeks"] + all_weeks, key="league_game_filter_week")
+    with fc4:
+        status_options = ["All", "Upcoming", "Played"]
+        filter_status = st.selectbox("Status", status_options, key="league_game_filter_status")
 
     filtered_entries = all_game_entries
     if filter_team == "My Team" and user_team:
@@ -432,36 +467,61 @@ def _render_schedule(session_id, completed_games, user_team):
         filtered_entries = [e for e in filtered_entries if e["phase"] == filter_phase]
     if filter_week != "All Weeks":
         filtered_entries = [e for e in filtered_entries if e["phase"] == "Regular Season" and e["game"].get("week") == filter_week]
+    if filter_status != "All":
+        filtered_entries = [e for e in filtered_entries if e["status"] == filter_status]
 
     schedule_data = []
     game_labels = []
     filtered_games = []
     for entry in filtered_entries:
         g = entry["game"]
+        is_completed = g.get("completed", False)
         hs = g.get("home_score") or 0
         aws = g.get("away_score") or 0
         home = g.get("home_team", "")
         away = g.get("away_team", "")
-        winner = home if hs > aws else away
-        schedule_data.append({
-            "Phase": entry["phase"],
-            "Round": entry["label_prefix"],
+
+        if is_completed:
+            winner = home if hs > aws else away
+            home_score_str = fmt_vb_score(hs)
+            away_score_str = fmt_vb_score(aws)
+            winner_str = _team_label(winner, user_team)
+        else:
+            home_score_str = "—"
+            away_score_str = "—"
+            winner_str = "—"
+
+        row = {
+            "Week": entry["label_prefix"],
+            "Type": entry.get("game_type", ""),
+            "Status": entry["status"],
             "Home": _team_label(home, user_team),
             "Away": _team_label(away, user_team),
-            "Home Score": fmt_vb_score(hs),
-            "Away Score": fmt_vb_score(aws),
-            "Winner": _team_label(winner, user_team),
-        })
-        game_labels.append(f"{entry['label_prefix']}: {home} {fmt_vb_score(hs)} vs {away} {fmt_vb_score(aws)}")
+            "Home Score": home_score_str,
+            "Away Score": away_score_str,
+            "Winner": winner_str,
+        }
+        schedule_data.append(row)
+
+        if is_completed:
+            game_labels.append(f"{entry['label_prefix']}: {home} {fmt_vb_score(hs)} vs {away} {fmt_vb_score(aws)}")
+        else:
+            game_labels.append(f"{entry['label_prefix']}: {home} vs {away} (Upcoming)")
         filtered_games.append(g)
 
     if schedule_data:
-        st.dataframe(pd.DataFrame(schedule_data), hide_index=True, use_container_width=True, height=300)
+        st.dataframe(pd.DataFrame(schedule_data), hide_index=True, use_container_width=True, height=400)
+    else:
+        st.info("No games scheduled yet.")
 
-    if game_labels:
-        selected_game_label = st.selectbox("Select a game to view details", game_labels, key="league_game_detail_select")
-        game_idx = game_labels.index(selected_game_label)
-        selected_game = filtered_games[game_idx]
+    # Game detail viewer (only for completed games)
+    completed_labels = [(i, label) for i, label in enumerate(game_labels) if filtered_games[i].get("completed")]
+    if completed_labels:
+        detail_options = [label for _, label in completed_labels]
+        selected_detail = st.selectbox("Select a completed game to view details", detail_options, key="league_game_detail_select")
+        detail_idx = detail_options.index(selected_detail)
+        actual_idx = completed_labels[detail_idx][0]
+        selected_game = filtered_games[actual_idx]
         full_result = selected_game.get("full_result")
         if not full_result and selected_game.get("has_full_result"):
             try:
@@ -479,7 +539,7 @@ def _render_schedule(session_id, completed_games, user_team):
                 pass
         if full_result:
             with st.expander("Game Details", expanded=True):
-                render_game_detail(full_result, key_prefix=f"league_gd_{game_idx}")
+                render_game_detail(full_result, key_prefix=f"league_gd_{actual_idx}")
         else:
             st.caption("Detailed game data not available for this game.")
 

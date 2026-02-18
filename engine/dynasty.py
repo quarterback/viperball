@@ -17,7 +17,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from collections import defaultdict
 
-from engine.season import Season, TeamRecord, Game, load_teams_from_directory, create_season
+from engine.season import Season, TeamRecord, Game, load_teams_from_directory, create_season, is_buy_game, BUY_GAME_NIL_BONUS
 from engine.awards import SeasonHonors, compute_season_awards
 from engine.injuries import InjuryTracker
 from engine.development import apply_team_development, apply_redshirt_decisions, get_preseason_breakout_candidates, DevelopmentReport
@@ -726,6 +726,31 @@ class Dynasty:
             )
             self._nil_programs[team_name] = program
             nil_summary[team_name] = program.get_deal_summary()
+
+        # ── 2b. Buy-game NIL bonuses ──
+        # Teams that played buy games (visited a much higher-prestige team)
+        # get a flat NIL pool bonus.
+        buy_game_bonuses = {}
+        for game in season.schedule:
+            if game.is_conference_game or not game.completed:
+                continue
+            home_p = self.team_prestige.get(game.home_team, 50)
+            away_p = self.team_prestige.get(game.away_team, 50)
+            # Away team traveled to play higher-prestige home team
+            if is_buy_game(away_p, home_p):
+                buy_game_bonuses[game.away_team] = buy_game_bonuses.get(game.away_team, 0) + BUY_GAME_NIL_BONUS
+            # Home team played a much higher-prestige away team (less common)
+            if is_buy_game(home_p, away_p):
+                buy_game_bonuses[game.home_team] = buy_game_bonuses.get(game.home_team, 0) + BUY_GAME_NIL_BONUS
+
+        for team_name, bonus in buy_game_bonuses.items():
+            if team_name in self._nil_programs:
+                prog = self._nil_programs[team_name]
+                prog.annual_budget += bonus
+                prog.recruiting_pool += bonus * 0.5
+                prog.portal_pool += bonus * 0.3
+                prog.retention_pool += bonus * 0.2
+        result["buy_game_bonuses"] = buy_game_bonuses
 
         self.nil_history[prev_year] = nil_summary
         result["nil"] = nil_summary

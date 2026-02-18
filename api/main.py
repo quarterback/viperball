@@ -17,7 +17,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES
 from engine.season import (
     Season, TeamRecord, Game, WeeklyPoll, PollRanking,
-    load_teams_from_directory, load_teams_with_states, create_season, get_recommended_bowl_count, BOWL_TIERS
+    load_teams_from_directory, load_teams_with_states, create_season, get_recommended_bowl_count, BOWL_TIERS,
+    get_non_conference_slots, get_available_non_conference_opponents,
+    estimate_team_prestige_from_roster, is_buy_game, BUY_GAME_NIL_BONUS,
+    MAX_CONFERENCE_GAMES,
 )
 from engine.dynasty import create_dynasty, Dynasty
 from engine.conference_names import generate_conference_names
@@ -85,6 +88,7 @@ class CreateSeasonRequest(BaseModel):
     conferences: Optional[Dict[str, List[str]]] = None
     style_configs: Optional[Dict[str, Dict[str, str]]] = None
     history_years: int = 0
+    pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
 
 
 class CreateDynastyRequest(BaseModel):
@@ -111,6 +115,7 @@ class DynastyStartSeasonRequest(BaseModel):
     offense_style: str = "balanced"
     defense_style: str = "base_defense"
     ai_seed: Optional[int] = None
+    pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
 
 
 class QuickGameRequest(BaseModel):
@@ -286,6 +291,8 @@ def _serialize_dynasty_status(session: dict) -> dict:
     team_count = len(dynasty.team_histories)
     seasons_played = len(dynasty.seasons)
 
+    conf_dict = dynasty.get_conferences_dict() if dynasty.conferences else {}
+
     return {
         "dynasty_name": dynasty.dynasty_name,
         "current_year": dynasty.current_year,
@@ -302,6 +309,7 @@ def _serialize_dynasty_status(session: dict) -> dict:
         "team_count": team_count,
         "seasons_played": seasons_played,
         "phase": session.get("phase", "setup"),
+        "conferences": conf_dict,
     }
 
 
@@ -384,6 +392,72 @@ def conference_defaults():
     team_names = list(teams.keys())
     defaults = get_geographic_conference_defaults(TEAMS_DIR, team_names, 10)
     return {"conferences": defaults}
+
+
+@app.get("/non-conference-opponents")
+def non_conference_opponents(
+    team: str = Query(..., description="Team name to get opponents for"),
+    conferences: Optional[str] = Query(None, description="JSON-encoded conference dict"),
+    num_conferences: int = Query(10, description="Number of conferences if no explicit dict"),
+):
+    """Get available non-conference opponents for a team, grouped by prestige tier."""
+    all_teams = load_teams_from_directory(TEAMS_DIR)
+    team_names = sorted(all_teams.keys())
+
+    if team not in all_teams:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+
+    if conferences:
+        import json as _json
+        try:
+            conf_dict = _json.loads(conferences)
+        except Exception:
+            conf_dict = get_geographic_conference_defaults(TEAMS_DIR, team_names, num_conferences)
+    else:
+        conf_dict = get_geographic_conference_defaults(TEAMS_DIR, team_names, num_conferences)
+
+    team_conf_map = {}
+    for conf_name, conf_teams in conf_dict.items():
+        for t in conf_teams:
+            team_conf_map[t] = conf_name
+
+    opponents = get_available_non_conference_opponents(
+        team_name=team,
+        all_teams=all_teams,
+        conferences=conf_dict,
+        team_conferences=team_conf_map,
+    )
+
+    my_conf = team_conf_map.get(team, "")
+    my_conf_size = 0
+    for conf_name, conf_teams in conf_dict.items():
+        if team in conf_teams:
+            my_conf_size = len(conf_teams)
+            break
+
+    return {
+        "team": team,
+        "conference": my_conf,
+        "conference_size": my_conf_size,
+        "opponents": opponents,
+        "total_opponents": len(opponents),
+    }
+
+
+@app.get("/non-conference-slots")
+def non_conference_slots_endpoint(
+    games_per_team: int = Query(10),
+    conference_size: int = Query(13),
+):
+    """Calculate how many non-conference slots a team has given league settings."""
+    slots = get_non_conference_slots(games_per_team, conference_size)
+    conf_games = min(conference_size - 1, MAX_CONFERENCE_GAMES)
+    return {
+        "non_conference_slots": slots,
+        "conference_games": conf_games,
+        "total_games": games_per_team,
+        "max_conference_games": MAX_CONFERENCE_GAMES,
+    }
 
 
 @app.get("/bowl-tiers")
@@ -537,6 +611,10 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
                 tname, {"offense_style": "balanced", "defense_style": "base_defense"}
             )
 
+    pinned = None
+    if req.pinned_matchups:
+        pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
+
     season = create_season(
         req.name,
         teams,
@@ -544,6 +622,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         conferences=conferences,
         games_per_team=req.games_per_team,
         team_states=team_states,
+        pinned_matchups=pinned,
     )
 
     history_results = []
@@ -1123,6 +1202,59 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     return _serialize_dynasty_status(session)
 
 
+@app.get("/sessions/{session_id}/dynasty/non-conference-opponents")
+def dynasty_non_conference_opponents(
+    session_id: str,
+    team: Optional[str] = Query(None, description="Team name (defaults to coach team)"),
+    games_per_team: int = Query(10),
+):
+    """Get available non-conference opponents for a dynasty team, using dynasty prestige."""
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+
+    team_name = team or dynasty.coach.team_name
+    all_teams = load_teams_from_directory(TEAMS_DIR)
+    if team_name not in all_teams:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
+    conf_dict = dynasty.get_conferences_dict()
+    team_conf_map = {}
+    for conf_name, conf_teams in conf_dict.items():
+        for t in conf_teams:
+            team_conf_map[t] = conf_name
+
+    # Use dynasty prestige if available, otherwise estimate from roster
+    prestige_map = dynasty.team_prestige if dynasty.team_prestige else None
+
+    opponents = get_available_non_conference_opponents(
+        team_name=team_name,
+        all_teams=all_teams,
+        conferences=conf_dict,
+        team_conferences=team_conf_map,
+        team_prestige=prestige_map,
+    )
+
+    my_conf = team_conf_map.get(team_name, "")
+    my_conf_size = 0
+    for conf_name, conf_teams in conf_dict.items():
+        if team_name in conf_teams:
+            my_conf_size = len(conf_teams)
+            break
+
+    nc_slots = get_non_conference_slots(games_per_team, my_conf_size)
+    my_prestige = dynasty.get_team_prestige(team_name)
+
+    return {
+        "team": team_name,
+        "conference": my_conf,
+        "conference_size": my_conf_size,
+        "non_conference_slots": nc_slots,
+        "team_prestige": my_prestige,
+        "opponents": opponents,
+        "total_opponents": len(opponents),
+    }
+
+
 @app.post("/sessions/{session_id}/dynasty/start-season")
 def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     session = _get_session(session_id)
@@ -1152,6 +1284,10 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             tname, {"offense_style": "balanced", "defense_style": "base_defense"}
         )
 
+    pinned = None
+    if req.pinned_matchups:
+        pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
+
     conf_dict = dynasty.get_conferences_dict()
     season = create_season(
         f"{dynasty.current_year} CVL Season",
@@ -1160,6 +1296,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         conferences=conf_dict,
         games_per_team=req.games_per_team,
         team_states=team_states,
+        pinned_matchups=pinned,
     )
 
     session["season"] = season

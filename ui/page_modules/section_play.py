@@ -10,7 +10,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from engine.season import load_teams_from_directory, get_recommended_bowl_count, BOWL_TIERS
+from engine.season import (
+    load_teams_from_directory, get_recommended_bowl_count, BOWL_TIERS,
+    get_non_conference_slots, get_available_non_conference_opponents,
+    estimate_team_prestige_from_roster, is_buy_game, BUY_GAME_NIL_BONUS,
+    MAX_CONFERENCE_GAMES,
+)
 from engine.conference_names import generate_conference_names
 from engine.geography import get_geographic_conference_defaults
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
@@ -41,6 +46,221 @@ def _ensure_session_id():
         resp = api_client.create_session()
         st.session_state["api_session_id"] = resp["session_id"]
     return st.session_state["api_session_id"]
+
+
+# ── Non-conference scheduling UI helper ──
+
+TIER_LABELS = {
+    "elite": "Elite",
+    "strong": "Strong",
+    "mid": "Mid-Tier",
+    "low": "Lower",
+    "cupcake": "Cupcake",
+}
+
+TIER_HELP = {
+    "elite": "Top programs — marquee matchups that boost your strength of schedule",
+    "strong": "Solid programs — competitive non-conference games",
+    "mid": "Average programs — reasonable opponents",
+    "low": "Below-average programs — easier games",
+    "cupcake": "Weakest programs — buy-game candidates that give NIL pool bonuses in dynasty",
+}
+
+
+def _render_non_conference_picker(
+    user_teams: list,
+    all_teams: dict,
+    conferences: dict,
+    games_per_team: int,
+    team_prestige: dict = None,
+    key_prefix: str = "nc",
+    is_dynasty: bool = False,
+):
+    """Render a non-conference matchup picker for one or more user-controlled teams.
+
+    Args:
+        user_teams: List of team names the user controls.
+        all_teams: Dict of team_name -> Team objects.
+        conferences: Dict of conference_name -> [team_names].
+        games_per_team: Total regular-season games per team.
+        team_prestige: Optional prestige map (dynasty mode).
+        key_prefix: Streamlit key prefix for unique widgets.
+        is_dynasty: Whether this is dynasty mode (enables buy-game info).
+
+    Returns:
+        List of [home, away] pairs selected by the user.
+    """
+    if not user_teams:
+        return []
+
+    # Build team -> conference map
+    team_conf_map = {}
+    for conf_name, conf_teams in conferences.items():
+        for t in conf_teams:
+            team_conf_map[t] = conf_name
+
+    st.divider()
+    st.subheader("Non-Conference Schedule")
+    st.caption(
+        f"Conference games are capped at {MAX_CONFERENCE_GAMES} per team. "
+        "Select your non-conference opponents below, then AI fills the rest when the season starts."
+    )
+
+    all_pinned = []
+
+    for user_team in user_teams:
+        my_conf = team_conf_map.get(user_team, "")
+        my_conf_size = 0
+        for conf_name, conf_teams in conferences.items():
+            if user_team in conf_teams:
+                my_conf_size = len(conf_teams)
+                break
+
+        nc_slots = get_non_conference_slots(games_per_team, my_conf_size)
+        conf_games = min(my_conf_size - 1 if my_conf_size > 0 else 0, MAX_CONFERENCE_GAMES)
+
+        if len(user_teams) > 1:
+            st.markdown(f"**{user_team}**")
+
+        info_col1, info_col2, info_col3 = st.columns(3)
+        info_col1.metric("Conference Games", conf_games)
+        info_col2.metric("Non-Conference Slots", nc_slots)
+        info_col3.metric("Total Games", games_per_team)
+
+        if nc_slots <= 0:
+            st.info("No non-conference slots available with current settings.")
+            continue
+
+        # Get available opponents
+        opponents = get_available_non_conference_opponents(
+            team_name=user_team,
+            all_teams=all_teams,
+            conferences=conferences,
+            team_conferences=team_conf_map,
+            team_prestige=team_prestige,
+        )
+
+        if not opponents:
+            st.info("No non-conference opponents available.")
+            continue
+
+        # Group by tier for display
+        tier_groups = {}
+        for opp in opponents:
+            tier = opp["tier"]
+            tier_groups.setdefault(tier, []).append(opp)
+
+        # Show tier summary
+        tier_summary = []
+        for tier in ["elite", "strong", "mid", "low", "cupcake"]:
+            if tier in tier_groups:
+                tier_summary.append(f"{TIER_LABELS[tier]}: {len(tier_groups[tier])}")
+        st.caption("Available opponents — " + " | ".join(tier_summary))
+
+        # Initialize session state for this team's picks
+        state_key = f"{key_prefix}_picks_{user_team}"
+        if state_key not in st.session_state:
+            st.session_state[state_key] = []
+
+        current_picks = st.session_state[state_key]
+
+        # Show current selections
+        if current_picks:
+            st.markdown("**Your Non-Conference Schedule:**")
+            for i, pick in enumerate(current_picks):
+                opp_data = next((o for o in opponents if o["name"] == pick), None)
+                if opp_data:
+                    tier_label = TIER_LABELS.get(opp_data["tier"], "")
+                    buy_note = ""
+                    if is_dynasty and team_prestige:
+                        my_p = team_prestige.get(user_team, 50)
+                        if is_buy_game(my_p, opp_data["prestige"]):
+                            buy_note = f" — Buy Game (+${BUY_GAME_NIL_BONUS:,} NIL bonus)"
+                    st.markdown(
+                        f"  {i+1}. **{pick}** ({opp_data['conference']}) "
+                        f"— {tier_label} (Prestige: {opp_data['prestige']}){buy_note}"
+                    )
+
+            if st.button("Clear All Selections", key=f"{key_prefix}_clear_{user_team}"):
+                st.session_state[state_key] = []
+                st.rerun()
+
+        slots_remaining = nc_slots - len(current_picks)
+        if slots_remaining > 0:
+            st.markdown(f"**Select opponents** ({slots_remaining} slot{'s' if slots_remaining != 1 else ''} remaining)")
+
+            # Tier filter
+            tier_filter = st.selectbox(
+                "Filter by tier",
+                ["All Tiers"] + [TIER_LABELS[t] for t in ["elite", "strong", "mid", "low", "cupcake"] if t in tier_groups],
+                key=f"{key_prefix}_tier_filter_{user_team}",
+                help="Filter available opponents by program strength",
+            )
+
+            # Map filter back to tier key
+            reverse_tier = {v: k for k, v in TIER_LABELS.items()}
+            active_tier = reverse_tier.get(tier_filter, None) if tier_filter != "All Tiers" else None
+
+            # Filter opponents
+            filtered_opps = opponents
+            if active_tier:
+                filtered_opps = [o for o in opponents if o["tier"] == active_tier]
+            # Exclude already picked
+            filtered_opps = [o for o in filtered_opps if o["name"] not in current_picks]
+
+            if filtered_opps:
+                opp_options = [f"{o['name']} ({o['conference']}) — {TIER_LABELS[o['tier']]} (P:{o['prestige']})" for o in filtered_opps]
+                selected_idx = st.selectbox(
+                    "Choose opponent",
+                    range(len(opp_options)),
+                    format_func=lambda i: opp_options[i],
+                    key=f"{key_prefix}_opp_select_{user_team}",
+                )
+                selected_opp = filtered_opps[selected_idx]
+
+                # Show info about selected opponent
+                if is_dynasty and team_prestige:
+                    my_p = team_prestige.get(user_team, 50)
+                    if is_buy_game(my_p, selected_opp["prestige"]):
+                        st.info(
+                            f"This is a **buy game** — playing at {selected_opp['name']} "
+                            f"(prestige {selected_opp['prestige']}) earns your program "
+                            f"+${BUY_GAME_NIL_BONUS:,} NIL pool bonus."
+                        )
+
+                add_col, home_col = st.columns(2)
+                with home_col:
+                    home_away = st.radio(
+                        "Home/Away",
+                        ["Home", "Away"],
+                        horizontal=True,
+                        key=f"{key_prefix}_ha_{user_team}",
+                    )
+                with add_col:
+                    if st.button(
+                        f"Add {selected_opp['name']}",
+                        type="primary",
+                        key=f"{key_prefix}_add_{user_team}",
+                    ):
+                        st.session_state[state_key].append(selected_opp["name"])
+                        pair = [user_team, selected_opp["name"]] if home_away == "Home" else [selected_opp["name"], user_team]
+                        # Store the home/away pairing in a separate state key
+                        pairs_key = f"{key_prefix}_pairs_{user_team}"
+                        if pairs_key not in st.session_state:
+                            st.session_state[pairs_key] = []
+                        st.session_state[pairs_key].append(pair)
+                        st.rerun()
+            else:
+                st.caption("No more opponents available in this tier.")
+        elif slots_remaining == 0:
+            st.success(f"All {nc_slots} non-conference slots filled!")
+
+        # Build final matchup list from stored pairs
+        pairs_key = f"{key_prefix}_pairs_{user_team}"
+        if pairs_key in st.session_state:
+            all_pinned.extend(st.session_state[pairs_key])
+
+    return all_pinned
 
 
 def render_play_section(shared):
@@ -380,6 +600,19 @@ def _render_new_season(shared):
     rec_bowls = get_recommended_bowl_count(len(all_team_names), playoff_size)
     bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, (len(all_team_names) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
 
+    # Non-conference scheduling for human-controlled teams
+    season_pinned = []
+    if human_teams and auto_conferences:
+        season_pinned = _render_non_conference_picker(
+            user_teams=human_teams,
+            all_teams=all_teams,
+            conferences=auto_conferences,
+            games_per_team=season_games,
+            key_prefix="season_nc",
+            is_dynasty=False,
+        )
+
+    st.divider()
     start_season = st.button("Start Season", type="primary", use_container_width=True, key="run_season")
 
     if start_season:
@@ -396,6 +629,7 @@ def _render_new_season(shared):
                     conferences=auto_conferences if auto_conferences else None,
                     style_configs=style_configs,
                     ai_seed=actual_seed,
+                    pinned_matchups=season_pinned if season_pinned else None,
                 )
                 st.session_state["api_mode"] = "season"
                 st.session_state["season_human_teams_list"] = human_teams
@@ -934,6 +1168,58 @@ def _render_dynasty_play(shared):
             season_phase = phase
 
         if season_phase == "setup":
+            # Non-conference scheduling for dynasty
+            dyn_pinned = []
+            try:
+                nc_resp = api_client.get_dynasty_non_conference_opponents(
+                    session_id, team=user_team, games_per_team=games_per_team,
+                )
+                dyn_conferences = {}
+                # Rebuild conference dict from dynasty
+                for opp in nc_resp.get("opponents", []):
+                    conf = opp.get("conference", "")
+                    if conf:
+                        dyn_conferences.setdefault(conf, [])
+                # Also add user team's conference
+                user_dyn_conf = nc_resp.get("conference", "")
+                if user_dyn_conf:
+                    dyn_conferences.setdefault(user_dyn_conf, [])
+
+                # Get full conference dict from dynasty status
+                dyn_status_confs = dynasty_status.get("conferences", {})
+                if dyn_status_confs:
+                    dyn_conferences = dyn_status_confs
+                else:
+                    # Fallback: use team identities to build conference map
+                    dyn_conferences = {}
+                    for tname in all_teams:
+                        ident = team_identities.get(tname, {})
+                        c = ident.get("conference", "")
+                        if c:
+                            dyn_conferences.setdefault(c, []).append(tname)
+                    dyn_conferences = {k: v for k, v in dyn_conferences.items() if len(v) >= 2}
+
+                # Get dynasty prestige map
+                dyn_prestige = {}
+                for opp in nc_resp.get("opponents", []):
+                    dyn_prestige[opp["name"]] = opp["prestige"]
+                my_prestige = nc_resp.get("team_prestige", 50)
+                dyn_prestige[user_team] = my_prestige
+
+                if dyn_conferences:
+                    dyn_pinned = _render_non_conference_picker(
+                        user_teams=[user_team],
+                        all_teams=all_teams,
+                        conferences=dyn_conferences,
+                        games_per_team=games_per_team,
+                        team_prestige=dyn_prestige,
+                        key_prefix=f"dyn_nc_{current_year}",
+                        is_dynasty=True,
+                    )
+            except api_client.APIError:
+                pass  # Non-conference picker unavailable; proceed without it
+
+            st.divider()
             if st.button(f"Start {current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
                 with st.spinner("Starting season..."):
                     try:
@@ -945,6 +1231,7 @@ def _render_dynasty_play(shared):
                             offense_style=user_off,
                             defense_style=user_def,
                             ai_seed=ai_seed,
+                            pinned_matchups=dyn_pinned if dyn_pinned else None,
                         )
                         st.rerun()
                     except api_client.APIError as e:

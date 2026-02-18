@@ -248,6 +248,114 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
     return min(best, remaining // 2)
 
 
+MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
+
+
+def get_non_conference_slots(
+    games_per_team: int,
+    conference_size: int,
+) -> int:
+    """Calculate how many non-conference game slots a team has.
+
+    Conference games are capped at MAX_CONFERENCE_GAMES (8). If the conference
+    round-robin is smaller than that cap, conference games = conf_size - 1.
+    All remaining game slots are non-conference.
+
+    Args:
+        games_per_team: Total regular-season games each team plays.
+        conference_size: Number of teams in the team's conference (including itself).
+
+    Returns:
+        Number of non-conference game slots available.
+    """
+    if games_per_team <= 0:
+        return 0
+    conf_opponents = conference_size - 1
+    conf_games = min(conf_opponents, MAX_CONFERENCE_GAMES)
+    return max(0, games_per_team - conf_games)
+
+
+# Prestige tier thresholds for non-conference matchup display
+PRESTIGE_TIERS = {
+    "elite": 80,      # 80-99: top-tier programs
+    "strong": 60,      # 60-79: solid programs
+    "mid": 40,         # 40-59: mid-tier
+    "low": 20,         # 20-39: lower programs
+    "cupcake": 0,       # 0-19: cupcake / buy-game territory
+}
+
+
+def classify_prestige_tier(prestige: int) -> str:
+    """Return a label for the prestige tier."""
+    if prestige >= PRESTIGE_TIERS["elite"]:
+        return "elite"
+    elif prestige >= PRESTIGE_TIERS["strong"]:
+        return "strong"
+    elif prestige >= PRESTIGE_TIERS["mid"]:
+        return "mid"
+    elif prestige >= PRESTIGE_TIERS["low"]:
+        return "low"
+    return "cupcake"
+
+
+def estimate_team_prestige_from_roster(team: "Team") -> int:
+    """Estimate a rough prestige score from average player overall.
+
+    Used in single-season mode where no dynasty history exists.
+    Maps average team overall (typically 55-85) to a 10-99 prestige scale.
+    """
+    if not team.players:
+        return 50
+    avg_ovr = sum(p.overall for p in team.players) / len(team.players)
+    # Map ~55-85 range to 10-99 prestige
+    prestige = int((avg_ovr - 50) * 2.5 + 10)
+    return max(10, min(99, prestige))
+
+
+def get_available_non_conference_opponents(
+    team_name: str,
+    all_teams: Dict[str, "Team"],
+    conferences: Dict[str, List[str]],
+    team_conferences: Dict[str, str],
+    team_prestige: Optional[Dict[str, int]] = None,
+) -> List[Dict]:
+    """Get a list of available non-conference opponents for a team.
+
+    Returns a list of dicts with keys: name, conference, prestige, tier, overall.
+    Sorted by prestige descending (best opponents first).
+    """
+    my_conf = team_conferences.get(team_name, "")
+    opponents = []
+    for opp_name, opp_team in all_teams.items():
+        if opp_name == team_name:
+            continue
+        opp_conf = team_conferences.get(opp_name, "")
+        if opp_conf and opp_conf == my_conf:
+            continue  # Same conference — skip
+        if team_prestige and opp_name in team_prestige:
+            prestige = team_prestige[opp_name]
+        else:
+            prestige = estimate_team_prestige_from_roster(opp_team)
+        opponents.append({
+            "name": opp_name,
+            "conference": opp_conf,
+            "prestige": prestige,
+            "tier": classify_prestige_tier(prestige),
+            "overall": round(sum(p.overall for p in opp_team.players) / max(1, len(opp_team.players))),
+        })
+    opponents.sort(key=lambda x: x["prestige"], reverse=True)
+    return opponents
+
+
+# NIL bonus for buy games (low-prestige team plays at a high-prestige team)
+BUY_GAME_NIL_BONUS = 50_000  # flat NIL pool bonus for playing a buy game
+
+
+def is_buy_game(team_prestige: int, opponent_prestige: int) -> bool:
+    """A buy game is when a lower-tier team plays a much higher-prestige team."""
+    return (opponent_prestige - team_prestige) >= 25
+
+
 @dataclass
 class BowlGame:
     name: str
@@ -295,7 +403,13 @@ class Season:
                 conference=conf
             )
 
-    def generate_schedule(self, games_per_team: int = 0, conference_weight: float = 0.6, non_conf_weeks: int = 3):
+    def generate_schedule(
+        self,
+        games_per_team: int = 0,
+        conference_weight: float = 0.6,
+        non_conf_weeks: int = 3,
+        pinned_matchups: Optional[List[Tuple[str, str]]] = None,
+    ):
         """
         Generate a season schedule with configurable game count.
 
@@ -304,6 +418,8 @@ class Season:
             conference_weight: Proportion of games that should be conference games (0.0-1.0).
                              Only applies when conferences exist and games_per_team > 0.
             non_conf_weeks: Number of early weeks reserved for non-conference games (1-4).
+            pinned_matchups: Optional list of (home, away) tuples for user-selected
+                           non-conference games. These are guaranteed to appear in the schedule.
         """
         team_names = list(self.teams.keys())
         num_teams = len(team_names)
@@ -311,7 +427,10 @@ class Season:
         if games_per_team <= 0 or games_per_team >= num_teams - 1:
             self._generate_round_robin(team_names)
         else:
-            self._generate_partial_schedule(team_names, games_per_team, conference_weight)
+            self._generate_partial_schedule(
+                team_names, games_per_team, conference_weight,
+                pinned_matchups=pinned_matchups or [],
+            )
 
         self._assign_weeks_by_type(non_conf_weeks)
 
@@ -370,58 +489,87 @@ class Season:
 
         self.schedule = games
 
-    def _generate_partial_schedule(self, team_names: List[str], games_per_team: int,
-                                    conference_weight: float):
+    def _generate_partial_schedule(
+        self,
+        team_names: List[str],
+        games_per_team: int,
+        conference_weight: float,
+        pinned_matchups: Optional[List[Tuple[str, str]]] = None,
+    ):
         """Generate a schedule: conference round-robin first, then non-conference fill.
 
-        Conference games: full round-robin within conference. If conference is too
-        large (more opponents than games_per_team), each team plays a random subset
-        of conference opponents.
+        Conference games are capped at MAX_CONFERENCE_GAMES (8) per team. If the
+        conference round-robin is smaller than that, each team plays all conference
+        opponents. All remaining game slots are non-conference.
 
-        Non-conference games: remaining slots filled with cross-conference matchups.
+        Pinned matchups (user-selected non-conference games) are added first and
+        guaranteed to appear in the schedule. AI teams' remaining non-conference
+        slots are auto-filled.
         """
         game_counts = {name: 0 for name in team_names}
+        conf_game_counts = {name: 0 for name in team_names}
         scheduled_pairs = set()
         games = []
 
         has_conferences = bool(self.conferences) and len(self.conferences) > 1
 
-        def _add_game(home, away, is_conf):
-            if random.random() < 0.5:
+        def _add_game(home, away, is_conf, preserve_home_away=False):
+            if not preserve_home_away and random.random() < 0.5:
                 home, away = away, home
             games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
             scheduled_pairs.add(tuple(sorted([home, away])))
             game_counts[home] += 1
             game_counts[away] += 1
+            if is_conf:
+                conf_game_counts[home] += 1
+                conf_game_counts[away] += 1
 
+        # ── Step 1: Add pinned non-conference matchups (user selections) ──
+        for home, away in (pinned_matchups or []):
+            if home not in self.teams or away not in self.teams:
+                continue
+            pair = tuple(sorted([home, away]))
+            if pair in scheduled_pairs:
+                continue
+            if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
+                continue
+            _add_game(home, away, False, preserve_home_away=True)
+
+        # ── Step 2: Conference games (capped at MAX_CONFERENCE_GAMES per team) ──
         if has_conferences:
             for conf_name, conf_teams in self.conferences.items():
                 conf_team_list = [t for t in conf_teams if t in self.teams]
                 if len(conf_team_list) < 2:
                     continue
 
-                conf_size = len(conf_team_list) - 1
+                conf_opponents = len(conf_team_list) - 1
+                max_conf = min(conf_opponents, MAX_CONFERENCE_GAMES)
 
-                if conf_size <= games_per_team:
+                if conf_opponents <= MAX_CONFERENCE_GAMES:
+                    # Full round-robin within conference
                     for i in range(len(conf_team_list)):
                         for j in range(i + 1, len(conf_team_list)):
                             h, a = conf_team_list[i], conf_team_list[j]
                             pair = tuple(sorted([h, a]))
                             if pair not in scheduled_pairs:
-                                _add_game(h, a, True)
+                                if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
+                                    _add_game(h, a, True)
                 else:
-                    max_conf_games = games_per_team - 2
+                    # Conference too large — each team plays a random subset capped at max_conf
                     for team in conf_team_list:
                         opponents = [t for t in conf_team_list if t != team]
                         random.shuffle(opponents)
-                        for opp in opponents[:max_conf_games]:
+                        for opp in opponents[:max_conf]:
                             pair = tuple(sorted([team, opp]))
                             if pair in scheduled_pairs:
+                                continue
+                            if conf_game_counts[team] >= max_conf or conf_game_counts[opp] >= max_conf:
                                 continue
                             if game_counts[team] >= games_per_team or game_counts[opp] >= games_per_team:
                                 continue
                             _add_game(team, opp, True)
 
+            # ── Step 3: Fill remaining non-conference slots (AI auto-fill) ──
             nonconf_matchups = []
             for i in range(len(team_names)):
                 for j in range(i + 1, len(team_names)):
@@ -1224,6 +1372,7 @@ def create_season(
     conferences: Optional[Dict[str, List[str]]] = None,
     games_per_team: int = 0,
     team_states: Optional[Dict[str, str]] = None,
+    pinned_matchups: Optional[List[Tuple[str, str]]] = None,
 ) -> Season:
     """
     Create a season with teams and optional style configurations
@@ -1235,6 +1384,8 @@ def create_season(
         conferences: Optional dictionary of conference_name -> [team_names]
         games_per_team: Games per team (0 = full round-robin)
         team_states: Optional dict of team_name -> US state abbreviation for geo-aware weather
+        pinned_matchups: Optional list of (home, away) tuples for user-selected
+                        non-conference games that are locked into the schedule.
 
     Returns:
         Season object ready for simulation
@@ -1254,6 +1405,9 @@ def create_season(
         team_states=team_states or {},
     )
 
-    season.generate_schedule(games_per_team=games_per_team)
+    season.generate_schedule(
+        games_per_team=games_per_team,
+        pinned_matchups=pinned_matchups,
+    )
 
     return season
