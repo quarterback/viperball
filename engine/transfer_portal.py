@@ -499,9 +499,9 @@ def estimate_prestige_from_roster(roster: list) -> int:
     avg_ovr = sum(overalls) / len(overalls)
     avg_pot = sum(potentials) / len(potentials)
 
-    # Scale: OVR 65 → ~30 prestige, OVR 80 → ~65, OVR 90 → ~90
+    # Scale: OVR maps roughly linearly to prestige across the full 0-100 range.
     # Potential gives a small bonus (3.0 avg → 0, 5.0 avg → +10)
-    ovr_score = max(0, (avg_ovr - 60) * 2.25)
+    ovr_score = avg_ovr * 0.9
     pot_bonus = max(0, (avg_pot - 3.0)) * 5.0
 
     return max(10, min(99, int(ovr_score + pot_bonus)))

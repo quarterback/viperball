@@ -4308,7 +4308,8 @@ class ViperballEngine:
         return d
 
 
-def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
+def load_team_from_json(filepath: str, fresh: bool = False,
+                        program_archetype: Optional[str] = None) -> Team:
     """Load a team from its JSON metadata file.
 
     Args:
@@ -4317,6 +4318,8 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
                recruiting_pipeline and philosophy (dynamic mode).  If False,
                load the stored static roster when one is present; fall back to
                dynamic generation when there is no roster section.
+        program_archetype: Optional program archetype for fresh generation
+                          (e.g. "doormat", "blue_blood"). Only used when fresh=True.
     """
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -4355,6 +4358,7 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
             defense_style=defense_style,
             philosophy=philosophy,
             recruiting_pipeline=recruiting_pipeline,
+            program_archetype=program_archetype,
         )
 
     _POSITION_MIGRATION = {
@@ -4432,11 +4436,17 @@ def generate_team_on_the_fly(
     defense_style: str = "base_defense",
     philosophy: str = "hybrid",
     recruiting_pipeline: Optional[Dict] = None,
+    program_archetype: Optional[str] = None,
 ) -> Team:
     """
     Generate a fresh Team with unique women players using the name/attribute generators.
     Used when no pre-built roster JSON exists, or to create dynamic teams in season/dynasty mode.
     Players are women only; archetypes are assigned from stats.
+
+    Args:
+        program_archetype: Optional program archetype key (e.g. "doormat", "blue_blood").
+                          Affects talent distribution, potential ratings, and hidden gems.
+                          None defaults to "regional_power" (matches original behavior).
     """
     import sys
     from pathlib import Path as _Path
@@ -4445,7 +4455,7 @@ def generate_team_on_the_fly(
         sys.path.insert(0, _root)
 
     from scripts.generate_names import generate_player_name
-    from scripts.generate_rosters import generate_player_attributes, assign_archetype
+    from scripts.generate_rosters import generate_player_attributes, assign_archetype, PROGRAM_ARCHETYPES, DEFAULT_ARCHETYPE
 
     ROSTER_TEMPLATE = [
         ("Viper", True),
@@ -4509,7 +4519,8 @@ def generate_team_on_the_fly(
             school_recruiting_pipeline=recruiting_pipeline,
             year=year,
         )
-        attrs = generate_player_attributes(position, philosophy, year, is_viper)
+        attrs = generate_player_attributes(position, philosophy, year, is_viper,
+                                           program_archetype=program_archetype)
         archetype = assign_archetype(
             position,
             attrs["speed"], attrs["stamina"],
@@ -4545,6 +4556,35 @@ def generate_team_on_the_fly(
             potential=attrs.get("potential", 3),
             development=attrs.get("development", "normal"),
         ))
+
+    # ── Hidden gem boosts ──
+    # Every program has a few players whose hidden abilities outstrip their
+    # ratings.  Instead of boosting ALL stats (which inflates OVR uniformly),
+    # each gem gets 2-4 *targeted* stats boosted heavily.  This means their
+    # overall rating stays modest, but they shine in specific areas — a true
+    # "hidden gem" whose game-day impact exceeds their number.
+    _GEM_STAT_NAMES = [
+        "speed", "stamina", "kicking", "lateral_skill", "tackling",
+        "agility", "power", "awareness", "hands", "kick_power", "kick_accuracy",
+    ]
+    arch_key = program_archetype or DEFAULT_ARCHETYPE
+    arch_data = PROGRAM_ARCHETYPES.get(arch_key, PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
+    gem_min, gem_max = arch_data["hidden_gem_count"]
+    boost_min, boost_max = arch_data["hidden_gem_boost"]
+    gem_stat_range = arch_data.get("hidden_gem_stats", (2, 3))
+    num_gems = random.randint(gem_min, gem_max)
+    gem_indices = random.sample(range(len(players)), min(num_gems, len(players)))
+    for gi in gem_indices:
+        p = players[gi]
+        boost = random.randint(boost_min, boost_max)
+        # Pick a handful of stats to be this player's hidden strengths
+        num_elite = random.randint(gem_stat_range[0], gem_stat_range[1])
+        elite_stats = random.sample(_GEM_STAT_NAMES, num_elite)
+        for stat_name in elite_stats:
+            current = getattr(p, stat_name)
+            setattr(p, stat_name, min(100, current + boost))
+        # Hidden gems also get better potential
+        p.potential = min(5, p.potential + random.randint(1, 2))
 
     avg_speed = sum(p.speed for p in players) // len(players)
     avg_stamina = sum(p.stamina for p in players) // len(players)
