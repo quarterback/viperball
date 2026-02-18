@@ -1,0 +1,32 @@
+Dynasty mode gets a full offseason recruiting cycle:
+
+National recruit class — 300 high-school prospects generated each year with star ratings (1-5★), hidden attributes, positions, hometowns, and decision preferences
+Scouting — Two levels: basic (reveals top 3 attributes + fuzzy potential, costs 1 point) and full (reveals everything, costs 3 points). Each team gets 30 scouting points per cycle
+Recruiting board — Each team manages up to 15 offers from a limited scholarship pool (8 open spots by default)
+Recruit decisions — Recruits weigh three factors: prestige (team's historical record), geography (how close to home), and NIL money. Higher-star recruits decide first
+AI auto-recruiting — CPU teams automatically target recruits based on their prestige tier and home region, and spread their NIL budget across top targets
+2. Transfer Portal (engine/transfer_portal.py)
+Dynasty mode: After each season, players enter the portal based on:
+
+Class year (60% of Graduates enter; Seniors rarely)
+Team record (losing teams lose more players)
+Player potential vs current rating (high-potential underperformers leave more)
+Teams make offers, players decide based on prestige/NIL/geography, and commitments are resolved.
+
+One-off season mode: generate_quick_portal() creates a synthetic portal of 40 experienced players (Sophomores through Graduates, OVR 65-93). Users browse by position or overall rating and instant_commit() to add players to their roster before the season starts — no multi-step negotiation needed.
+
+3. NIL System (engine/nil_system.py)
+Budget generation — Tied to prestige (0-100), market size (small/medium/large/mega based on state), prior wins, and championship bonuses. A high-prestige program in CA might get $2M+; a small market program with a losing record might get $300K
+Three-pool allocation — Budget is split across recruiting (50%), portal (30%), and retention (20%) by default, or manually adjusted
+Individual deals — Make NIL deals from any pool with budget enforcement (slight 10% overspend tolerance with warnings)
+Retention risk — Identifies which current roster players might enter the portal without NIL retention money, with suggested amounts based on their overall/potential
+Dynasty Integration
+Dynasty.run_offseason() chains everything together:
+
+Update team prestige ratings
+Generate NIL programs for all teams
+Assess retention risks for the human team
+Populate the transfer portal from existing rosters
+Resolve portal offers
+Run full recruiting cycle
+Store all history (recruiting classes, portal transfers, NIL summaries, prestige)

@@ -1,0 +1,36 @@
+How Recruiting Works (Dynasty Mode)
+The recruiting cycle runs during the offseason via Dynasty.run_offseason(). Here's the flow:
+
+1. Recruit Pool Generation — A national class of 300 high-school prospects is generated each year. Each recruit has:
+
+A star rating (1-5★) visible to everyone — distribution is roughly 3% five-star, 12% four-star, 35% three-star, 35% two-star, 15% one-star
+Hidden true attributes (speed, agility, kicking, etc.) that are only revealed through scouting
+A position, hometown, high school, and personality preferences
+2. Scouting — You spend scouting points (30 per cycle) to reveal hidden info:
+
+Basic scout (1 point): reveals their top 3 attributes (with ±3 noise) and a fuzzy potential range like "High (4-5★)"
+Full scout (3 points): reveals all 11 attributes, exact potential, development trait, and true overall
+3. Offers — You can extend up to 15 scholarship offers from 8 open roster spots. CPU teams auto-target recruits matching their prestige tier and region.
+
+4. Recruit Decisions — Each recruit weighs three factors based on their randomized personality:
+
+Prestige (20-60% weight) — your team's historical win%, championships, recent record
+Geography (10-40% weight) — bonus if you're in their home region
+NIL money (remainder) — how much you're offering vs. the market
+Top-star recruits decide first. This means elite programs with high prestige and big NIL budgets land the 5-stars, while lower-prestige programs compete for 3-star gems.
+
+How the Transfer Portal Works
+Let me show you the decision logic:
+
+
+Examined transfer portal scoring logic in engine code
+
+Why players enter the portal (_should_enter_portal in transfer_portal.py:313):
+
+Graduates: 60% chance to enter as a grad transfer
+Seniors: only 5% (they're about to graduate anyway)
+Everyone else: ~8% base rate, increased by losing record (+10% if team wins < 40%), and increased for high-potential players stuck on bad teams. Low-potential players are less likely to transfer (nowhere better to go)
+Where they go — Same weighted formula as recruits: prestige × their prestige preference + geography × their geo preference + NIL × their NIL preference + random noise. Best players pick first.
+
+Single Season Mode — Already Works
+The quick portal is purpose-built for this. Here's how it plays:
