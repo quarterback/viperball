@@ -404,6 +404,342 @@ def _render_new_season(shared):
                 st.error(f"Failed to create season: {e.detail}")
 
 
+def _render_offseason_flow(session_id, coach_team, current_year):
+    try:
+        off_status = api_client.get_offseason_status(session_id)
+    except api_client.APIError as e:
+        st.error(f"Could not load offseason data: {e.detail}")
+        return
+
+    off_phase = off_status.get("phase", "nil")
+
+    phase_labels = {
+        "nil": "1. NIL Budget Allocation",
+        "portal": "2. Transfer Portal",
+        "recruiting": "3. Recruiting",
+        "ready": "4. Finalize Offseason",
+    }
+    current_label = phase_labels.get(off_phase, off_phase)
+
+    st.subheader(f"Offseason — Year {current_year}")
+
+    phase_order = ["nil", "portal", "recruiting", "ready"]
+    current_idx = phase_order.index(off_phase) if off_phase in phase_order else 0
+    progress = (current_idx + 1) / len(phase_order)
+    st.progress(progress, text=f"Phase: {current_label}")
+
+    if off_phase == "nil":
+        _render_offseason_nil(session_id, off_status)
+    elif off_phase == "portal":
+        _render_offseason_portal(session_id, coach_team)
+    elif off_phase == "recruiting":
+        _render_offseason_recruiting(session_id, coach_team)
+    elif off_phase == "ready":
+        _render_offseason_finalize(session_id, current_year)
+
+
+def _render_offseason_nil(session_id, off_status):
+    st.markdown("### NIL Budget Allocation")
+    st.caption("Allocate your NIL budget across recruiting, transfer portal, and player retention.")
+
+    try:
+        nil_data = api_client.get_offseason_nil(session_id)
+    except api_client.APIError:
+        st.warning("Could not load NIL data.")
+        return
+
+    budget = nil_data.get("annual_budget", 0)
+
+    bm1, bm2, bm3 = st.columns(3)
+    bm1.metric("Annual Budget", f"${budget:,.0f}")
+    bm2.metric("Retention Risks", off_status.get("retention_risks_count", 0))
+    bm3.metric("Portal Players", off_status.get("portal_count", 0))
+
+    st.markdown("**Set Pool Allocations**")
+    st.caption("Split your budget between recruiting new high school players, transfer portal acquisitions, and retaining current roster players.")
+
+    default_recruit = int(budget * 0.50)
+    default_portal = int(budget * 0.30)
+    default_retain = budget - default_recruit - default_portal
+
+    rc1, rc2, rc3 = st.columns(3)
+    with rc1:
+        recruit_pool = st.number_input(
+            "Recruiting Pool ($)",
+            min_value=0, max_value=budget, value=default_recruit,
+            step=10000, key="nil_recruit_pool",
+        )
+    with rc2:
+        portal_pool = st.number_input(
+            "Portal Pool ($)",
+            min_value=0, max_value=budget, value=default_portal,
+            step=10000, key="nil_portal_pool",
+        )
+    with rc3:
+        retain_pool = st.number_input(
+            "Retention Pool ($)",
+            min_value=0, max_value=budget, value=default_retain,
+            step=10000, key="nil_retain_pool",
+        )
+
+    total_alloc = recruit_pool + portal_pool + retain_pool
+    remaining = budget - total_alloc
+
+    am1, am2 = st.columns(2)
+    am1.metric("Total Allocated", f"${total_alloc:,.0f}")
+    if remaining >= 0:
+        am2.metric("Remaining", f"${remaining:,.0f}")
+    else:
+        am2.metric("Over Budget", f"${abs(remaining):,.0f}", delta=f"-${abs(remaining):,.0f}", delta_color="inverse")
+
+    if total_alloc > budget:
+        st.error(f"Total allocation (${total_alloc:,.0f}) exceeds budget (${budget:,.0f}). Reduce allocations.")
+    else:
+        if st.button("Confirm NIL Allocation & Continue to Portal", type="primary", use_container_width=True, key="nil_confirm"):
+            with st.spinner("Allocating NIL budget..."):
+                try:
+                    api_client.offseason_nil_allocate(session_id, recruit_pool, portal_pool, retain_pool)
+                    st.rerun()
+                except api_client.APIError as e:
+                    st.error(f"Allocation failed: {e.detail}")
+
+
+def _render_offseason_portal(session_id, coach_team):
+    st.markdown("### Transfer Portal")
+    st.caption("Browse available transfer players, make offers, and commit players to your roster.")
+
+    pf1, pf2 = st.columns(2)
+    with pf1:
+        pos_filter = st.selectbox("Position Filter", ["All", "Viper", "Halfback", "Wingback", "Lineman", "Back", "Zeroback"], key="portal_pos")
+    with pf2:
+        ovr_filter = st.number_input("Min Overall", min_value=0, max_value=99, value=0, key="portal_min_ovr")
+
+    pos_param = pos_filter if pos_filter != "All" else None
+    ovr_param = ovr_filter if ovr_filter > 0 else None
+
+    try:
+        portal_resp = api_client.get_offseason_portal(session_id, position=pos_param, min_overall=ovr_param)
+        entries = portal_resp.get("entries", [])
+        total = portal_resp.get("total_entries", 0)
+        available = portal_resp.get("total_available", 0)
+    except api_client.APIError as e:
+        st.warning(f"Could not load portal: {e.detail}")
+        return
+
+    pm1, pm2 = st.columns(2)
+    pm1.metric("Total Portal Entries", total)
+    pm2.metric("Available", available)
+
+    if entries:
+        portal_data = []
+        for i, e in enumerate(entries):
+            portal_data.append({
+                "idx": i,
+                "Name": e.get("name", ""),
+                "Position": e.get("position", ""),
+                "OVR": e.get("overall", 0),
+                "Year": e.get("year", ""),
+                "From": e.get("origin_team", ""),
+                "Reason": e.get("reason", "").replace("_", " ").title(),
+                "Stars": e.get("potential", 0),
+                "Offers": e.get("offers_count", 0),
+            })
+
+        st.dataframe(
+            pd.DataFrame(portal_data).drop(columns=["idx"]),
+            hide_index=True, use_container_width=True, height=350,
+        )
+
+        st.markdown("**Make an Offer / Commit**")
+        player_options = [f"{e['Name']} ({e['Position']}, OVR {e['OVR']}) — from {e['From']}" for e in portal_data]
+        selected_idx = st.selectbox("Select Player", range(len(player_options)), format_func=lambda i: player_options[i], key="portal_select")
+
+        selected_entry = entries[selected_idx]
+        global_idx = selected_entry.get("global_index", -1)
+
+        if global_idx < 0:
+            st.warning("Cannot interact with this player — index unavailable. Try refreshing.")
+        else:
+            oc1, oc2 = st.columns(2)
+            with oc1:
+                nil_offer = st.number_input("NIL Offer ($)", min_value=0, max_value=500000, value=25000, step=5000, key="portal_nil_offer")
+                if st.button("Make Offer", use_container_width=True, key="portal_offer_btn"):
+                    try:
+                        api_client.offseason_portal_offer(session_id, entry_index=global_idx, nil_amount=nil_offer)
+                        st.success(f"Offer sent to {selected_entry['name']}")
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Offer failed: {e.detail}")
+
+            with oc2:
+                st.caption("Instantly commit (bypasses decision sim)")
+                if st.button("Commit Player", type="primary", use_container_width=True, key="portal_commit_btn"):
+                    try:
+                        api_client.offseason_portal_commit(session_id, entry_index=global_idx)
+                        st.success(f"Committed {selected_entry['name']} to {coach_team}!")
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Commit failed: {e.detail}")
+    else:
+        st.info("No available portal players matching your filters.")
+
+    st.divider()
+    if st.button("Resolve Portal & Continue to Recruiting", type="primary", use_container_width=True, key="portal_resolve"):
+        with st.spinner("Resolving transfer portal (AI teams making decisions)..."):
+            try:
+                result = api_client.offseason_portal_resolve(session_id)
+                total_transfers = result.get("total_transfers", 0)
+                human_transfers = result.get("human_transfers", [])
+                st.success(f"Portal resolved! {total_transfers} total transfers completed.")
+                if human_transfers:
+                    st.markdown(f"**Your incoming transfers ({len(human_transfers)}):**")
+                    for t in human_transfers:
+                        st.markdown(f"- {t.get('name', '')} ({t.get('position', '')}, OVR {t.get('overall', 0)})")
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Portal resolution failed: {e.detail}")
+
+
+
+def _render_offseason_recruiting(session_id, coach_team):
+    st.markdown("### Recruiting")
+    st.caption("Scout, evaluate, and offer scholarships to high school recruits.")
+
+    try:
+        rec_resp = api_client.get_offseason_recruiting(session_id)
+        recruits = rec_resp.get("recruits", [])
+        total_pool = rec_resp.get("total_pool", 0)
+        board = rec_resp.get("board", {})
+    except api_client.APIError as e:
+        st.warning(f"Could not load recruiting: {e.detail}")
+        return
+
+    bm1, bm2, bm3, bm4 = st.columns(4)
+    bm1.metric("Recruit Pool", total_pool)
+    bm2.metric("Available", len(recruits))
+    if board:
+        bm3.metric("Scholarships", board.get("scholarships_available", 0))
+        bm4.metric("Scouting Pts", board.get("scouting_points", 0))
+
+    rf1, rf2 = st.columns(2)
+    with rf1:
+        star_filter = st.selectbox("Min Stars", [0, 1, 2, 3, 4, 5], index=0, key="rec_star_filter")
+    with rf2:
+        pos_filter = st.selectbox("Position", ["All", "Viper", "Halfback", "Wingback", "Lineman", "Back", "Zeroback", "Safety", "Corner"], key="rec_pos_filter")
+
+    filtered = recruits
+    if star_filter > 0:
+        filtered = [r for r in filtered if r.get("stars", 0) >= star_filter]
+    if pos_filter != "All":
+        filtered = [r for r in filtered if pos_filter.lower() in r.get("position", "").lower()]
+
+    if filtered:
+        rec_data = []
+        for r in filtered[:50]:
+            scouted = r.get("scouted", {})
+            row = {
+                "Name": r.get("name", ""),
+                "Position": r.get("position", ""),
+                "Stars": "+" * r.get("stars", 0),
+                "Region": r.get("region", "").replace("_", " ").title(),
+                "Hometown": r.get("hometown", ""),
+                "HS": r.get("high_school", ""),
+            }
+            if scouted:
+                row["SPD"] = scouted.get("speed", "?")
+                row["AGI"] = scouted.get("agility", "?")
+                row["PWR"] = scouted.get("power", "?")
+                row["HND"] = scouted.get("hands", "?")
+            if "true_overall" in r:
+                row["OVR"] = r["true_overall"]
+            if "potential" in r:
+                row["Pot"] = r["potential"]
+            elif "potential_range" in r:
+                row["Pot"] = r["potential_range"]
+            rec_data.append(row)
+
+        st.dataframe(pd.DataFrame(rec_data), hide_index=True, use_container_width=True, height=400)
+
+        st.markdown("**Scout / Offer a Recruit**")
+        recruit_options = [f"{r.get('name', '')} ({r.get('position', '')}, {'+'*r.get('stars',0)})" for r in filtered[:50]]
+        sel_rec_idx = st.selectbox("Select Recruit", range(len(recruit_options)), format_func=lambda i: recruit_options[i], key="rec_select")
+
+        sel_recruit = filtered[sel_rec_idx]
+        pool_idx = sel_recruit.get("pool_index", 0)
+
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            scout_level = st.selectbox("Scout Level", ["basic", "full"], key="rec_scout_level")
+            if st.button("Scout", use_container_width=True, key="rec_scout_btn"):
+                try:
+                    result = api_client.offseason_recruiting_scout(session_id, recruit_index=pool_idx, level=scout_level)
+                    pts_left = result.get("scouting_points_remaining", 0)
+                    st.success(f"Scouted! ({pts_left} scouting pts remaining)")
+                    st.rerun()
+                except api_client.APIError as e:
+                    st.error(f"Scouting failed: {e.detail}")
+        with sc2:
+            if st.button("Offer Scholarship", type="primary", use_container_width=True, key="rec_offer_btn"):
+                try:
+                    result = api_client.offseason_recruiting_offer(session_id, recruit_index=pool_idx)
+                    offers_made = result.get("offers_made", 0)
+                    max_offers = result.get("max_offers", 0)
+                    st.success(f"Offered! ({offers_made}/{max_offers} offers used)")
+                    st.rerun()
+                except api_client.APIError as e:
+                    st.error(f"Offer failed: {e.detail}")
+        with sc3:
+            pass
+
+        if board and board.get("offered"):
+            st.markdown("**Your Offer Board**")
+            offer_data = []
+            for offered_id in board.get("offered", []):
+                for r in recruits:
+                    if r.get("name", "") in offered_id or offered_id in r.get("name", ""):
+                        offer_data.append({
+                            "Name": r.get("name", ""),
+                            "Position": r.get("position", ""),
+                            "Stars": "+" * r.get("stars", 0),
+                        })
+                        break
+            if offer_data:
+                st.dataframe(pd.DataFrame(offer_data), hide_index=True, use_container_width=True)
+    else:
+        st.info("No recruits match your filters.")
+
+    st.divider()
+    if st.button("Run Signing Day & Continue", type="primary", use_container_width=True, key="rec_resolve"):
+        with st.spinner("Simulating signing day (all teams making decisions)..."):
+            try:
+                result = api_client.offseason_recruiting_resolve(session_id)
+                human_signed = result.get("human_signed", [])
+                total_signed = result.get("total_signed", 0)
+                st.success(f"Signing day complete! {total_signed} total recruits signed.")
+                if human_signed:
+                    st.markdown(f"**Your signing class ({len(human_signed)}):**")
+                    for r in human_signed:
+                        st.markdown(f"- {r.get('name', '')} ({r.get('position', '')}, {'+'*r.get('stars',0)})")
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Signing day failed: {e.detail}")
+
+
+
+def _render_offseason_finalize(session_id, current_year):
+    st.markdown("### Offseason Complete")
+    st.success("All offseason phases are done! Your roster has been updated with portal transfers and incoming recruits.")
+    st.caption(f"Click below to finalize the offseason and prepare for the {current_year} season.")
+
+    if st.button(f"Start {current_year} Season Setup", type="primary", use_container_width=True, key="off_complete"):
+        with st.spinner("Finalizing offseason..."):
+            try:
+                api_client.offseason_complete(session_id)
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Finalize failed: {e.detail}")
+
+
 def _render_quick_game(shared):
     teams = shared["teams"]
     styles = shared["styles"]
@@ -743,16 +1079,19 @@ def _render_dynasty_play(shared):
             except api_client.APIError:
                 pass
 
-            st.subheader(f"Advance Dynasty to {current_year + 1}")
-            st.caption("This will process offseason development, update records, and move to next year.")
+            st.subheader(f"Begin Offseason for {current_year + 1}")
+            st.caption("This will process development, graduation, and start the offseason — NIL allocation, transfer portal, and recruiting.")
 
-            if st.button("Advance to Next Season", type="primary", use_container_width=True, key="dyn_advance"):
-                with st.spinner("Advancing dynasty..."):
+            if st.button("Start Offseason", type="primary", use_container_width=True, key="dyn_advance"):
+                with st.spinner("Processing offseason..."):
                     try:
                         api_client.dynasty_advance(session_id)
                         st.rerun()
                     except api_client.APIError as e:
-                        st.error(f"Dynasty advance failed: {e.detail}")
+                        st.error(f"Offseason start failed: {e.detail}")
+
+        elif season_phase == "offseason":
+            _render_offseason_flow(session_id, coach_team, current_year)
 
     with play_tabs[1]:
         _render_quick_game(shared)

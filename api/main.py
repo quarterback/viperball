@@ -1497,15 +1497,29 @@ def offseason_portal(
     if portal is None:
         raise HTTPException(status_code=400, detail="No portal found")
 
-    entries = portal.get_available()
+    available = portal.get_available()
+    indexed = []
+    for e in available:
+        try:
+            global_idx = portal.entries.index(e)
+        except ValueError:
+            global_idx = -1
+        indexed.append((global_idx, e))
+
     if position:
-        entries = [e for e in entries if position.lower() in e.position.lower()]
+        indexed = [(i, e) for i, e in indexed if position.lower() in e.position.lower()]
     if min_overall is not None:
-        entries = [e for e in entries if e.overall >= min_overall]
+        indexed = [(i, e) for i, e in indexed if e.overall >= min_overall]
+
+    result_entries = []
+    for gi, e in indexed:
+        d = _serialize_portal_entry(e)
+        d["global_index"] = gi
+        result_entries.append(d)
 
     return {
-        "entries": [_serialize_portal_entry(e) for e in entries],
-        "total_available": len(entries),
+        "entries": result_entries,
+        "total_available": len(indexed),
         "total_entries": len(portal.entries),
     }
 
@@ -1612,10 +1626,15 @@ def offseason_recruiting(session_id: str):
     recruit_pool = offseason.get("recruit_pool", [])
     recruit_board = offseason.get("recruit_board")
 
-    available = [r for r in recruit_pool if r.committed_to is None and not r.signed]
+    available = []
+    for idx, r in enumerate(recruit_pool):
+        if r.committed_to is None and not r.signed:
+            d = _serialize_recruit(r)
+            d["pool_index"] = idx
+            available.append(d)
 
     return {
-        "recruits": [_serialize_recruit(r) for r in available],
+        "recruits": available,
         "total_available": len(available),
         "total_pool": len(recruit_pool),
         "board": recruit_board.to_dict() if recruit_board else None,

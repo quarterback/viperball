@@ -287,6 +287,77 @@ def get_team_schedule(session_id: str, team_name: str) -> list:
     return _get(f"/sessions/{session_id}/team/{team_name}/schedule")
 
 
+def get_offseason_status(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/offseason/status")
+
+
+def get_offseason_nil(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/offseason/nil")
+
+
+def offseason_nil_allocate(session_id: str, recruiting_pool: float,
+                           portal_pool: float, retention_pool: float) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/nil/allocate", json={
+        "recruiting_pool": recruiting_pool,
+        "portal_pool": portal_pool,
+        "retention_pool": retention_pool,
+    })
+
+
+def get_offseason_portal(session_id: str, position: Optional[str] = None,
+                         min_overall: Optional[int] = None) -> dict:
+    params: dict = {}
+    if position:
+        params["position"] = position
+    if min_overall is not None:
+        params["min_overall"] = min_overall
+    return _get(f"/sessions/{session_id}/offseason/portal", params=params)
+
+
+def offseason_portal_offer(session_id: str, entry_index: int,
+                           nil_amount: float = 0.0) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/portal/offer", json={
+        "entry_index": entry_index,
+        "nil_amount": nil_amount,
+    })
+
+
+def offseason_portal_commit(session_id: str, entry_index: int) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/portal/commit", json={
+        "entry_index": entry_index,
+    })
+
+
+def offseason_portal_resolve(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/portal/resolve")
+
+
+def get_offseason_recruiting(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/offseason/recruiting")
+
+
+def offseason_recruiting_scout(session_id: str, recruit_index: int,
+                               level: str = "basic") -> dict:
+    return _post(f"/sessions/{session_id}/offseason/recruiting/scout", json={
+        "recruit_index": recruit_index,
+        "level": level,
+    })
+
+
+def offseason_recruiting_offer(session_id: str, recruit_index: int) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/recruiting/offer", json={
+        "recruit_index": recruit_index,
+    })
+
+
+def offseason_recruiting_resolve(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/recruiting/resolve")
+
+
+def offseason_complete(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/offseason/complete")
+
+
 def simulate_quick_game(home: str, away: str,
                         home_offense: str = "balanced",
                         home_defense: str = "base_defense",
