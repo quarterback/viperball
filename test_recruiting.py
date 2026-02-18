@@ -36,6 +36,8 @@ from engine.transfer_portal import (
     populate_portal,
     generate_quick_portal,
     auto_portal_offers,
+    portal_cap_for_prestige,
+    estimate_prestige_from_roster,
 )
 from engine.nil_system import (
     NILProgram,
@@ -284,10 +286,13 @@ def test_quick_portal():
     rng = random.Random(99)
     team_names = ["Alpha Uni", "Beta College", "Gamma State"]
 
-    portal = generate_quick_portal(team_names, year=2027, size=40, rng=rng)
+    # High prestige → cap of 6
+    portal = generate_quick_portal(team_names, year=2027, size=40, prestige=80, rng=rng)
 
     print(f"  Quick portal generated: {len(portal.entries)} players")
+    print(f"  Transfer cap: {portal.transfer_cap}")
     assert len(portal.entries) == 40
+    assert portal.transfer_cap == 6, f"Prestige 80 should give cap 6, got {portal.transfer_cap}"
 
     # Check portal is sorted by overall
     overalls = [e.overall for e in portal.entries]
@@ -302,7 +307,9 @@ def test_quick_portal():
     success = portal.instant_commit("Alpha Uni", portal.entries[0])
     assert success, "Instant commit should succeed"
     assert portal.entries[0].committed_to == "Alpha Uni"
+    assert portal.transfers_remaining("Alpha Uni") == 5
     print(f"\n  Instant commit: {portal.entries[0].player_name} → Alpha Uni")
+    print(f"  Remaining transfers: {portal.transfers_remaining('Alpha Uni')}")
 
     # Can't commit same player again
     assert not portal.instant_commit("Beta College", portal.entries[0])
@@ -319,6 +326,124 @@ def test_quick_portal():
     print(f"  Players OVR 80+: {len(elite)}")
 
     print("  ✓ Quick portal passed")
+
+
+# ──────────────────────────────────────────────
+# TEST 5b: Transfer Cap Enforcement
+# ──────────────────────────────────────────────
+
+def test_transfer_cap():
+    divider("TEST 5b: Transfer Cap Enforcement")
+
+    rng = random.Random(42)
+    team_names = ["Test Team"]
+
+    # Low prestige (30) → cap of 3
+    portal = generate_quick_portal(team_names, year=2027, size=20, prestige=30, rng=rng)
+    cap = portal.transfer_cap
+    print(f"  Prestige 30 → cap {cap}")
+    assert cap == 3, f"Expected cap 3, got {cap}"
+    assert portal.transfers_remaining("Test Team") == 3
+
+    # Commit up to cap
+    available = portal.get_available()
+    for i in range(cap):
+        ok = portal.instant_commit("Test Team", available[i])
+        assert ok, f"Commit {i+1} should succeed"
+        print(f"    Commit {i+1}/{cap}: {available[i].player_name} (remaining: {portal.transfers_remaining('Test Team')})")
+
+    # Next commit should be blocked
+    assert portal.transfers_remaining("Test Team") == 0
+    blocked = portal.instant_commit("Test Team", available[cap])
+    assert not blocked, "Should be blocked at cap"
+    print(f"  Commit {cap+1} blocked — at cap")
+
+    # Verify the prestige→cap table
+    print(f"\n  Prestige → Cap table:")
+    for pres in [10, 30, 45, 60, 75, 90, 99]:
+        c = portal_cap_for_prestige(pres)
+        print(f"    Prestige {pres:3d} → {c} transfers")
+
+    assert portal_cap_for_prestige(95) == 7
+    assert portal_cap_for_prestige(75) == 6
+    assert portal_cap_for_prestige(60) == 5
+    assert portal_cap_for_prestige(45) == 4
+    assert portal_cap_for_prestige(30) == 3
+    assert portal_cap_for_prestige(15) == 2
+
+    # Dynasty mode (cap=0) should be unlimited
+    dynasty_portal = TransferPortal(year=2027, transfer_cap=0)
+    assert dynasty_portal.transfers_remaining("Any Team") == -1
+    print(f"\n  Dynasty mode (cap=0): unlimited → {dynasty_portal.transfers_remaining('Any Team')}")
+
+    print("  ✓ Transfer cap enforcement passed")
+
+
+# ──────────────────────────────────────────────
+# TEST 5c: Roster-Based Prestige Estimation
+# ──────────────────────────────────────────────
+
+def test_roster_prestige_estimation():
+    divider("TEST 5c: Roster-Based Prestige Estimation")
+
+    rng = random.Random(55)
+
+    def make_card(ovr, potential):
+        return PlayerCard(
+            player_id=f"P-{rng.randint(1,9999)}",
+            first_name="Test", last_name="Player",
+            number=1, position="Viper/Back", archetype="none",
+            nationality="American",
+            hometown_city="", hometown_state="", hometown_country="USA",
+            high_school="", height="5-10", weight=170, year="Junior",
+            speed=ovr, stamina=ovr, agility=ovr, power=ovr,
+            awareness=ovr, hands=ovr, kicking=ovr, kick_power=ovr,
+            kick_accuracy=ovr, lateral_skill=ovr, tackling=ovr,
+            potential=potential, development="normal",
+        )
+
+    # Elite roster
+    elite_roster = [make_card(90, 5) for _ in range(10)]
+    elite_pres = estimate_prestige_from_roster(elite_roster)
+    print(f"  Elite roster (OVR ~90, 5★ pot): prestige {elite_pres}")
+
+    # Average roster
+    avg_roster = [make_card(73, 3) for _ in range(10)]
+    avg_pres = estimate_prestige_from_roster(avg_roster)
+    print(f"  Average roster (OVR ~73, 3★ pot): prestige {avg_pres}")
+
+    # Weak roster
+    weak_roster = [make_card(63, 2) for _ in range(10)]
+    weak_pres = estimate_prestige_from_roster(weak_roster)
+    print(f"  Weak roster (OVR ~63, 2★ pot): prestige {weak_pres}")
+
+    assert elite_pres > avg_pres > weak_pres, (
+        f"Expected elite > avg > weak: {elite_pres} > {avg_pres} > {weak_pres}"
+    )
+    assert elite_pres >= 70, f"Elite prestige should be ≥70, got {elite_pres}"
+    assert weak_pres <= 30, f"Weak prestige should be ≤30, got {weak_pres}"
+
+    # Works with raw team JSON format (dicts with "stats" and "potential")
+    dict_roster = [
+        {"stats": {"speed": 80, "stamina": 80, "kicking": 80}, "potential": 4},
+        {"stats": {"speed": 75, "stamina": 75, "kicking": 75}, "potential": 3},
+    ]
+    dict_pres = estimate_prestige_from_roster(dict_roster)
+    print(f"  Dict roster (avg ~78, 3.5★ pot): prestige {dict_pres}")
+    assert 10 <= dict_pres <= 99
+
+    # Empty roster
+    empty_pres = estimate_prestige_from_roster([])
+    assert empty_pres == 50, "Empty roster should default to 50"
+    print(f"  Empty roster: prestige {empty_pres}")
+
+    # Show what caps these produce
+    print(f"\n  Resulting portal caps:")
+    for label, pres in [("Elite", elite_pres), ("Average", avg_pres), ("Weak", weak_pres)]:
+        cap = portal_cap_for_prestige(pres)
+        print(f"    {label:8s} (prestige {pres:2d}) → {cap} portal transfers")
+
+    print("  ✓ Roster prestige estimation passed")
 
 
 # ──────────────────────────────────────────────
@@ -580,6 +705,8 @@ def main():
         test_recruiting_board,
         test_transfer_portal_dynasty,
         test_quick_portal,
+        test_transfer_cap,
+        test_roster_prestige_estimation,
         test_nil_system,
         test_prestige_and_market,
         test_retention_risk,
