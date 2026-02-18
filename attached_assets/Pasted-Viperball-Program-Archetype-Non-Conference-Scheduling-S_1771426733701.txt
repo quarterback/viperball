@@ -1,0 +1,139 @@
+Viperball — Program Archetype & Non-Conference Scheduling Spec
+Purpose
+This document defines the roster generation, talent distribution, hidden gem, non-conference scheduling, and prestige systems. Any code that touches roster generation, player attributes, schedule creation, prestige estimation, or team loading must respect these contracts.
+
+1. Program Archetypes
+Every team has a program archetype that controls its roster talent level. The user picks their own team's archetype at season/dynasty start. AI teams are assigned archetypes randomly from a weighted distribution.
+
+1.1 OVR Ranges (Non-Negotiable)
+These are the player overall rating ranges each archetype produces. OVR is a weighted average of 11 stats (speed×1.2, stamina×1.0, kicking×0.8, lateral_skill×1.1, tackling×0.9, agility×1.0, power×0.8, awareness×1.1, hands×0.9, kick_power×0.6, kick_accuracy×0.6) divided by 10.0. All stats are integers clamped to [1, 100].
+
+Archetype	Key	Target OVR Range	Avg OVR	talent_offset	floor_adjust
+Doormat	doormat	10–30	~22	-57	-70
+Underdogs	underdog	30–50	~42	-37	-55
+Punching Above Their Weight	punching_above	40–60	~51	-27	-45
+Regional Power	regional_power	50–75	~64	-15	-30
+National Power	national_power	70–90	~81	+3	0
+Blue Blood	blue_blood	85–99	~92	+15	+10
+How it works: Base stat rolls (e.g. randint(75, 92) for speed) are shifted by talent_offset. Stat floors are max(1, base_floor + floor_adjust) — this lets low-tier archetypes have genuinely low stats instead of being clamped to artificial minimums.
+
+Do not compress these ranges. The entire point is that a Doormat team is dramatically worse than a Blue Blood team. If you change talent_offset or floor_adjust, re-run the OVR range test and confirm the ranges still hold.
+
+1.2 AI Archetype Distribution
+When fresh=True and a team has no user-assigned archetype, it gets a random archetype from AI_ARCHETYPE_WEIGHTS:
+
+doormat:        8%
+underdog:      18%
+punching_above: 25%
+regional_power: 27%
+national_power: 15%
+blue_blood:     7%
+
+This is implemented in _pick_ai_archetype() in engine/season.py and called by load_teams_from_directory() and load_teams_with_states(). Do not default unassigned AI teams to regional_power — that makes every team mid-tier and removes league variety.
+
+1.3 Canonical Source
+PROGRAM_ARCHETYPES dict in scripts/generate_rosters.py is the single source of truth. It contains per-archetype: talent_offset, floor_adjust, hidden_gem_count, hidden_gem_boost, hidden_gem_stats, potential_weights, dev_weights, prestige_range.
+
+DEFAULT_ARCHETYPE = "regional_power" — used only as fallback when archetype key is invalid, not for AI team assignment.
+
+2. Hidden Gem System
+2.1 Design Intent
+Hidden gems are players whose specific abilities outstrip their overall rating. A Doormat player with OVR 22 might have speed 88 and hands 89. Their OVR stays low because most stats are terrible, but they dominate in specific situations during gameplay. This is the core fun of grinding with a bad team.
+
+2.2 Implementation (in generate_team_on_the_fly(), engine/game_engine.py)
+For each hidden gem player:
+
+Pick N random stats from the 11 core stats, where N is drawn from hidden_gem_stats range (e.g. 2–3 for Doormat)
+Boost only those N stats by a random amount from hidden_gem_boost range
+Cap at 100
+Bump potential by +1 or +2
+2.3 Per-Archetype Gem Parameters
+Archetype	Gem Count	Boost Per Stat	Stats Boosted
+Doormat	1–2	+40 to +55	2–3
+Underdogs	2–3	+30 to +45	2–3
+Punching Above	2–4	+20 to +35	2–4
+Regional Power	3–5	+12 to +22	2–4
+National Power	3–5	+5 to +12	2–3
+Blue Blood	4–6	+3 to +8	2–3
+2.4 What NOT To Do
+Do not boost all 11 stats uniformly. That just raises OVR and defeats the purpose.
+Do not remove the hidden gem system. The user explicitly wants it.
+Do not increase gem counts for low-tier archetypes beyond 1–3. The point is scarcity — you treasure the one gem on your Doormat roster.
+3. Stat Generation (generate_player_attributes())
+Located in scripts/generate_rosters.py. Called once per player.
+
+3.1 Flow
+base_stat = randint(low, high) + talent_offset
+modifier = position_mod + philosophy_mod + year_mod + viper_bonus
+stat_floor = max(1, archetype_base_floor + floor_adjust)
+final_stat = max(1, min(100, max(stat_floor, base_stat + modifier)))
+
+3.2 Invariants
+No stat below 1. The _clamp() helper enforces max(1, ...).
+No stat above 100. Enforced by min(100, ...).
+Position modifiers, philosophy modifiers, and year modifiers are additive on top of the archetype-shifted base. They should be small (+/- 3 to 8 range) and must not override the archetype's intended OVR range.
+Potential and development traits are drawn from archetype-specific weight tables, not hardcoded.
+4. Prestige Estimation
+Two formulas exist for estimating prestige from roster OVR. Both must handle the full 10–100 OVR range.
+
+4.1 Season Mode (engine/season.py)
+prestige = int(avg_ovr * 0.9 + 5)
+return max(10, min(99, prestige))
+
+4.2 Dynasty/Portal Mode (engine/transfer_portal.py)
+ovr_score = avg_ovr * 0.9
+pot_bonus = max(0, (avg_pot - 3.0)) * 5.0
+return max(10, min(99, int(ovr_score + pot_bonus)))
+
+4.3 What NOT To Do
+Do not use avg_ovr - 60 or any formula that assumes a 55–85 OVR baseline. Doormat teams have avg OVR ~22. Subtracting 60 gives negative values and breaks prestige.
+Both formulas must produce sensible prestige for the full range: Doormat (~18–23 prestige), Blue Blood (~80–93 prestige).
+5. Non-Conference Scheduling
+5.1 Conference Game Cap
+MAX_CONFERENCE_GAMES = 8. No team plays more than 8 conference games regardless of conference size. Remaining game slots are non-conference.
+
+5.2 NC Slot Calculation
+nc_slots = max(0, games_per_team - min(conference_size - 1, MAX_CONFERENCE_GAMES))
+
+5.3 User Flow
+User sees their NC slot count based on league size
+User picks opponents from other conferences (grouped by prestige tier)
+User chooses home/away for each matchup
+These are stored as pinned_matchups: List[Tuple[str, str]] (home, away)
+AI auto-fills remaining NC slots after user picks
+Full schedule (upcoming + completed) is visible immediately after creation
+5.4 Buy Games
+A "buy game" occurs when a low-prestige team (away) plays a much higher-prestige team (home) with a prestige gap ≥ 25. In dynasty mode, the lower-prestige team earns a $50,000 NIL bonus split: 50% recruiting, 30% portal, 20% retention.
+
+5.5 Prestige Tiers (for NC opponent display)
+elite:  80+ prestige
+strong: 60–79
+mid:    40–59
+low:    20–39
+cupcake: 0–19
+
+6. Schedule Visibility
+The schedule screen (section_league.py) shows ALL games immediately — not just completed ones. Upcoming games display "—" for scores. A status filter lets users toggle between All/Upcoming/Played. Game detail viewer only opens for completed games.
+
+7. Key Files
+File	What It Owns
+scripts/generate_rosters.py	PROGRAM_ARCHETYPES, AI_ARCHETYPE_WEIGHTS, generate_player_attributes(), DEFAULT_ARCHETYPE
+engine/game_engine.py	generate_team_on_the_fly() — hidden gem application, team construction
+engine/season.py	_pick_ai_archetype(), load_teams_from_directory(), load_teams_with_states(), estimate_team_prestige_from_roster(), NC scheduling, create_season() with pinned_matchups
+engine/transfer_portal.py	estimate_prestige_from_roster() — dynasty prestige formula
+engine/dynasty.py	Buy-game NIL bonus logic in run_offseason()
+api/main.py	Endpoints: GET /non-conference-opponents, GET /non-conference-slots, GET /program-archetypes; request models with pinned_matchups, team_archetypes, program_archetype
+ui/page_modules/section_play.py	NC picker widget, archetype selector UI
+ui/page_modules/section_league.py	Full schedule display (upcoming + completed)
+8. Testing Checklist
+If you modify any of the above systems, verify:
+
+ Each archetype produces OVR in its target range (sample 200 players per archetype)
+ Hidden gems have 2–4 outlier stats significantly above their OVR, not uniformly inflated stats
+ AI teams get a spread of archetypes (not all regional_power)
+ Prestige formulas return 10–99 for teams at every archetype level
+ Doormat prestige ≠ Underdog prestige ≠ Punching Above prestige (no bunching at floor)
+ NC slots = games_per_team - min(conf_size - 1, 8)
+ Pinned matchups appear in generated schedule
+ Schedule shows upcoming games before they're played
+ No stat is ever < 1 or > 100
