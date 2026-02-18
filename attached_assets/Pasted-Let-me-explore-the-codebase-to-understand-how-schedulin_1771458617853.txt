@@ -1,0 +1,54 @@
+Let me explore the codebase to understand how scheduling, team data, and game mechanics currently work so I can give you grounded recommendations.
+
+
+Explored viperball game structure for rivalry system design
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+Show more
+
+Good deep dive on my end. Here's what I think based on how the engine actually works:
+
+On the boost strength
+The game runs on 50-100 stat scales. A "rivalry boost" of ~5-10% to the underdog translates to roughly +3-7 points on key stats (speed, stamina, awareness, tackling). Given that the engine already has a lot of built-in variance — fumble rates range 1-3%, explosive play chances range 8-28%, weather modifiers swing things further — a +5 point boost is meaningful but not game-breaking. It makes the upset plausible, not likely.
+
+I'd suggest scaling it to the gap:
+
+Prestige Gap	Underdog Boost
+0-10 pts	+2 (barely noticeable)
+11-20 pts	+5 (scrappy game)
+21-30 pts	+7 (real upset potential)
+31+ pts	+9 (max — Cinderella energy)
+This maps cleanly onto the existing estimate_team_prestige_from_roster() function in engine/season.py. The boost would apply inside game_engine.py as a pre-game modifier to the underdog's effective stats.
+
+On rivalry history tracking
+Absolutely yes. The dynasty system (engine/dynasty.py) already tracks season-by-season records and award histories. Adding a head_to_head ledger per rivalry pair is natural. Structure could look like:
+
+rivalry_history = {
+    ("cornell", "colgate"): {
+        "series": [2026, 2027, ...],  # seasons played
+        "wins": {"cornell": 3, "colgate": 1},
+        "current_streak": {"team": "cornell", "count": 2},
+        "last_result": {"winner": "cornell", "score": "45-27", "season": 2028},
+    }
+}
+
+That feeds the My Team history tab perfectly, and could power a "Rivalry Recap" segment in the season summary.
+
+On implementation — where it hooks in
+The existing code has natural integration points:
+
+Team data — add rivalries: {conference: str|null, non_conference: str|null} to each team JSON's team_info block
+Schedule gen — engine/season.py already has a pinned matchups system. Rivalry games slot right in as auto-pinned. The non-conference rival takes one of the non-conference slots that _generate_partial_schedule() already calculates
+Game engine — the boost applies as a stat modifier in game_engine.py before simulation starts, similar to how weather modifiers already work
+Dynasty tracking — the dynasty.py historical records system gets a new rivalry_ledger dict
+AI auto-assignment — geographic proximity (city/state data already on every team) + conference membership makes auto-pairing straightforward
+One design question back to you
+Should the rivalry boost be symmetrical (both teams play harder, but the underdog gets a bigger bump), or underdog-only? A symmetrical version where both teams get +2 "intensity" and the underdog gets the additional gap-based boost would feel more like "both teams are locked in, but the underdog has less to lose." That maps to real sports psychology pretty well.
