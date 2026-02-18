@@ -232,16 +232,16 @@ def test_transfer_portal_dynasty():
 
     teams = {
         "Team A": [
-            make_card("Alice Johnson", "Viper/Back", "Senior", 85, "Team A"),
-            make_card("Beth Smith", "Halfback/Back", "Junior", 78, "Team A"),
-            make_card("Cora Davis", "Lineman", "Graduate", 80, "Team A"),
-            make_card("Diana Brown", "Zeroback/Back", "Sophomore", 72, "Team A"),
+            make_card("Alice Johnson", "Viper", "Senior", 85, "Team A"),
+            make_card("Beth Smith", "Halfback", "Junior", 78, "Team A"),
+            make_card("Cora Davis", "Offensive Line", "Graduate", 80, "Team A"),
+            make_card("Diana Brown", "Zeroback", "Sophomore", 72, "Team A"),
         ],
         "Team B": [
-            make_card("Eve Wilson", "Viper/Back", "Junior", 82, "Team B"),
-            make_card("Faye Clark", "Back/Safety", "Graduate", 77, "Team B"),
-            make_card("Gina Lee", "Wingback/End", "Senior", 75, "Team B"),
-            make_card("Hana Kim", "Halfback/Back", "Sophomore", 70, "Team B"),
+            make_card("Eve Wilson", "Viper", "Junior", 82, "Team B"),
+            make_card("Faye Clark", "Keeper", "Graduate", 77, "Team B"),
+            make_card("Gina Lee", "Wingback", "Senior", 75, "Team B"),
+            make_card("Hana Kim", "Halfback", "Sophomore", 70, "Team B"),
         ],
     }
 
@@ -392,7 +392,7 @@ def test_roster_prestige_estimation():
         return PlayerCard(
             player_id=f"P-{rng.randint(1,9999)}",
             first_name="Test", last_name="Player",
-            number=1, position="Viper/Back", archetype="none",
+            number=1, position="Viper", archetype="none",
             nationality="American",
             hometown_city="", hometown_state="", hometown_country="USA",
             high_school="", height="5-10", weight=170, year="Junior",
@@ -559,7 +559,7 @@ def test_retention_risk():
             first_name=name.split()[0],
             last_name=name.split()[-1],
             number=rng.randint(1, 99),
-            position="Viper/Back",
+            position="Viper",
             archetype="none",
             nationality="American",
             hometown_city="",

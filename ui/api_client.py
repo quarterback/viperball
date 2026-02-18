@@ -377,6 +377,28 @@ def offseason_complete(session_id: str) -> dict:
     return _post(f"/sessions/{session_id}/offseason/complete")
 
 
+def season_portal_generate(session_id: str, human_team: str = "",
+                           size: int = 40) -> dict:
+    params: dict = {"size": size}
+    if human_team:
+        params["human_team"] = human_team
+    return _post(f"/sessions/{session_id}/season/portal/generate", json=params)
+
+
+def season_portal_get(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/season/portal")
+
+
+def season_portal_commit(session_id: str, team_name: str,
+                         entry_index: int) -> dict:
+    return _post(f"/sessions/{session_id}/season/portal/commit",
+                 json={"team_name": team_name, "entry_index": entry_index})
+
+
+def season_portal_skip(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/season/portal/skip")
+
+
 def simulate_quick_game(home: str, away: str,
                         home_offense: str = "balanced",
                         home_defense: str = "base_defense",

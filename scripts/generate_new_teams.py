@@ -3,28 +3,24 @@ import random
 import os
 
 POSITIONS = [
-    "Zeroback/Back", "Viper/Back", "Halfback/Back", "Shiftback/Back",
-    "Wing/End", "Wingback/End", "Back/Corner", "Back/Safety",
-    "Wedge/Line", "Lineman"
+    "Zeroback", "Viper", "Halfback", "Wingback", "Slotback",
+    "Keeper", "Offensive Line", "Defensive Line"
 ]
 
 POSITION_WEIGHTS = {
-    "Zeroback/Back": 2, "Viper/Back": 4, "Halfback/Back": 3, "Shiftback/Back": 3,
-    "Wing/End": 4, "Wingback/End": 3, "Back/Corner": 4, "Back/Safety": 3,
-    "Wedge/Line": 5, "Lineman": 5
+    "Zeroback": 3, "Viper": 3, "Halfback": 4, "Wingback": 4, "Slotback": 4,
+    "Keeper": 3, "Offensive Line": 8, "Defensive Line": 7
 }
 
 ARCHETYPES_BY_POS = {
-    "Zeroback/Back": ["distributor_zb", "dual_threat_zb", "kicking_zb", "running_zb"],
-    "Viper/Back": ["receiving_viper", "power_viper", "hybrid_viper", "decoy_viper"],
-    "Halfback/Back": ["power_flanker", "speed_flanker", "elusive_flanker", "reliable_flanker"],
-    "Shiftback/Back": ["speed_flanker", "elusive_flanker", "reliable_flanker", "power_flanker"],
-    "Wing/End": ["speed_flanker", "reliable_flanker", "elusive_flanker", "power_flanker"],
-    "Wingback/End": ["speed_flanker", "reliable_flanker", "elusive_flanker", "power_flanker"],
-    "Back/Corner": ["tackle_keeper", "return_keeper", "sure_hands_keeper", "reliable_flanker"],
-    "Back/Safety": ["tackle_keeper", "return_keeper", "sure_hands_keeper", "reliable_flanker"],
-    "Wedge/Line": ["none"],
-    "Lineman": ["none"],
+    "Zeroback": ["distributor_zb", "dual_threat_zb", "kicking_zb", "running_zb"],
+    "Viper": ["receiving_viper", "power_viper", "hybrid_viper", "decoy_viper"],
+    "Halfback": ["power_flanker", "speed_flanker", "elusive_flanker", "reliable_flanker"],
+    "Wingback": ["speed_flanker", "reliable_flanker", "elusive_flanker", "power_flanker"],
+    "Slotback": ["speed_flanker", "elusive_flanker", "reliable_flanker", "power_flanker"],
+    "Keeper": ["tackle_keeper", "return_keeper", "sure_hands_keeper"],
+    "Offensive Line": ["none"],
+    "Defensive Line": ["none"],
 }
 
 YEARS = ["Freshman", "Sophomore", "Junior", "Senior"]

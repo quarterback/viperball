@@ -834,9 +834,8 @@ def generate_quick_portal(
 
     # Position pool mirroring recruit generation
     positions_pool = [
-        "Zeroback/Back", "Halfback/Back", "Wingback/End", "Shiftback/Back",
-        "Viper/Back", "Lineman", "Back/Safety", "Back/Corner",
-        "Wedge/Line", "Wing/End",
+        "Zeroback", "Halfback", "Wingback", "Slotback",
+        "Viper", "Keeper", "Offensive Line", "Defensive Line",
     ]
 
     for i in range(size):
@@ -877,16 +876,16 @@ def generate_quick_portal(
         lateral_skill = _stat()
         tackling = _stat()
 
-        if "Viper" in pos or "Back" in pos:
+        if pos in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback"):
             speed = min(99, speed + rng.randint(2, 5))
             lateral_skill = min(99, lateral_skill + rng.randint(1, 4))
-        elif "Lineman" in pos or "Wedge" in pos:
+        elif pos in ("Offensive Line", "Defensive Line"):
             tackling = min(99, tackling + rng.randint(3, 6))
             power = min(99, power + rng.randint(3, 6))
             speed = max(55, speed - rng.randint(2, 4))
 
         # Height / weight
-        if "Lineman" in pos or "Wedge" in pos:
+        if pos in ("Offensive Line", "Defensive Line"):
             ht_in = rng.randint(69, 75)
             wt = rng.randint(185, 215)
         else:
@@ -973,7 +972,7 @@ def auto_portal_offers(
         portal:        The transfer portal.
         team_name:     Team making offers.
         team_prestige: 0-100 prestige rating.
-        needs:         List of position keywords (e.g. ["Viper", "Lineman"]).
+        needs:         List of position keywords (e.g. ["Viper", "Offensive Line"]).
         nil_budget:    NIL dollars available for portal players.
         max_targets:   Maximum number of offers.
         rng:           Seeded Random.

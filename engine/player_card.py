@@ -189,12 +189,22 @@ _POSITION_WEIGHTS: Dict[str, Dict[str, float]] = {
         "tackling": 0.6, "agility": 1.2, "power": 0.8, "awareness": 0.9,
         "hands": 1.1, "kick_power": 0.4, "kick_accuracy": 0.4,
     },
-    "Lineman": {
+    "Slotback": {
+        "speed": 1.2, "stamina": 1.0, "kicking": 0.6, "lateral_skill": 1.3,
+        "tackling": 0.6, "agility": 1.2, "power": 0.9, "awareness": 1.0,
+        "hands": 1.1, "kick_power": 0.4, "kick_accuracy": 0.4,
+    },
+    "Offensive Line": {
         "speed": 0.7, "stamina": 1.2, "kicking": 0.5, "lateral_skill": 0.8,
         "tackling": 1.6, "agility": 0.7, "power": 1.6, "awareness": 0.9,
         "hands": 0.6, "kick_power": 0.3, "kick_accuracy": 0.3,
     },
-    "Safety": {
+    "Defensive Line": {
+        "speed": 0.8, "stamina": 1.1, "kicking": 0.5, "lateral_skill": 0.8,
+        "tackling": 1.5, "agility": 0.8, "power": 1.5, "awareness": 1.0,
+        "hands": 0.6, "kick_power": 0.3, "kick_accuracy": 0.3,
+    },
+    "Keeper": {
         "speed": 1.2, "stamina": 1.0, "kicking": 0.6, "lateral_skill": 1.0,
         "tackling": 1.3, "agility": 1.1, "power": 0.9, "awareness": 1.3,
         "hands": 0.9, "kick_power": 0.4, "kick_accuracy": 0.4,
@@ -208,9 +218,8 @@ _POSITION_WEIGHTS: Dict[str, Dict[str, float]] = {
 
 
 def _get_position_weights(position: str) -> Dict[str, float]:
-    for key in _POSITION_WEIGHTS:
-        if key.lower() in position.lower():
-            return _POSITION_WEIGHTS[key]
+    if position in _POSITION_WEIGHTS:
+        return _POSITION_WEIGHTS[position]
     return _POSITION_WEIGHTS["default"]
 
 

@@ -39,30 +39,26 @@ from engine.player_card import PlayerCard, _get_position_weights
 # ──────────────────────────────────────────────
 
 POSITIONS = [
-    "Zeroback/Back",
-    "Halfback/Back",
-    "Wingback/End",
-    "Shiftback/Back",
-    "Viper/Back",
-    "Lineman",
-    "Back/Safety",
-    "Back/Corner",
-    "Wedge/Line",
-    "Wing/End",
+    "Zeroback",
+    "Halfback",
+    "Wingback",
+    "Slotback",
+    "Viper",
+    "Keeper",
+    "Offensive Line",
+    "Defensive Line",
 ]
 
 # Position distribution for a recruit class (roughly mirrors roster needs)
 _POSITION_WEIGHTS_POOL: List[Tuple[str, float]] = [
-    ("Lineman", 0.14),
-    ("Back/Safety", 0.08),
-    ("Back/Corner", 0.08),
-    ("Wingback/End", 0.10),
-    ("Wing/End", 0.06),
-    ("Halfback/Back", 0.14),
-    ("Shiftback/Back", 0.08),
-    ("Zeroback/Back", 0.12),
-    ("Viper/Back", 0.12),
-    ("Wedge/Line", 0.08),
+    ("Offensive Line", 0.22),
+    ("Defensive Line", 0.19),
+    ("Halfback", 0.11),
+    ("Wingback", 0.11),
+    ("Slotback", 0.11),
+    ("Zeroback", 0.08),
+    ("Viper", 0.08),
+    ("Keeper", 0.10),
 ]
 
 _REGIONS = [
@@ -476,18 +472,23 @@ def generate_single_recruit(
     lateral_skill = _stat()
     tackling = _stat()
 
-    if "Viper" in position or "Back" in position:
+    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
         speed = min(99, speed + rng.randint(2, 6))
         lateral_skill = min(99, lateral_skill + rng.randint(2, 5))
         agility = min(99, agility + rng.randint(1, 4))
-    elif "Lineman" in position or "Wedge" in position:
+    elif position in ("Offensive Line", "Defensive Line"):
         tackling = min(99, tackling + rng.randint(3, 7))
         power = min(99, power + rng.randint(3, 7))
         speed = max(55, speed - rng.randint(2, 5))
-    elif "Zeroback" in position:
+    elif position == "Zeroback":
         awareness = min(99, awareness + rng.randint(3, 6))
         kick_power = min(99, kick_power + rng.randint(2, 5))
         kick_accuracy = min(99, kick_accuracy + rng.randint(2, 5))
+    elif position == "Keeper":
+        speed = min(99, speed + rng.randint(2, 6))
+        tackling = min(99, tackling + rng.randint(3, 7))
+        awareness = min(99, awareness + rng.randint(2, 5))
+        hands = min(99, hands + rng.randint(2, 5))
 
     # Potential and development
     true_potential = rng.randint(max(1, stars - 1), min(5, stars + 1))
@@ -495,10 +496,10 @@ def generate_single_recruit(
     true_dev = rng.choices(dev_options, weights=dev_weights, k=1)[0]
 
     # Height / weight
-    if "Lineman" in position or "Wedge" in position:
+    if position in ("Offensive Line", "Defensive Line"):
         ht_in = rng.randint(69, 75)
         wt = rng.randint(185, 215)
-    elif "Viper" in position:
+    elif position == "Viper":
         ht_in = rng.randint(65, 72)
         wt = rng.randint(155, 185)
     else:

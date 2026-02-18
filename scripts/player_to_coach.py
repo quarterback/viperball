@@ -496,7 +496,7 @@ if __name__ == "__main__":
     sample_player = {
         'number': 1,
         'name': 'Sarah Martinez',
-        'position': 'Viper/Back',
+        'position': 'Viper',
         'height': '5-9',
         'weight': 175,
         'year': 'Senior',

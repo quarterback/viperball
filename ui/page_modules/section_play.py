@@ -1445,6 +1445,153 @@ def _render_week_results_api(session_id, week_num, label=None):
             st.markdown(f"{marker}{home_team}{marker} {fmt_vb_score(home_score)} — {fmt_vb_score(away_score)} {marker2}{away_team}{marker2}")
 
 
+def _render_season_portal(session_id, shared):
+    st.title("Transfer Portal")
+    st.caption("Browse available transfer players and add them to your roster before the season begins.")
+
+    human_teams = st.session_state.get("season_human_teams_list", [])
+    if not human_teams:
+        st.info("No human-coached teams — skipping portal.")
+        try:
+            api_client.season_portal_skip(session_id)
+            st.rerun()
+        except api_client.APIError:
+            pass
+        return
+
+    active_team = human_teams[0]
+    if len(human_teams) > 1:
+        active_team = st.selectbox("Manage Portal For", human_teams, key="portal_team_select")
+
+    try:
+        portal_resp = api_client.season_portal_get(session_id)
+    except api_client.APIError:
+        try:
+            portal_resp = api_client.season_portal_generate(session_id, human_team=active_team)
+        except api_client.APIError as e:
+            st.error(f"Could not load portal: {e.detail}")
+            return
+
+    entries = portal_resp.get("entries", [])
+    committed = portal_resp.get("committed", [])
+    cap = portal_resp.get("transfer_cap", 0)
+    remaining = portal_resp.get("transfers_remaining", 0)
+    if remaining == -1:
+        remaining = cap
+
+    pm1, pm2, pm3 = st.columns(3)
+    pm1.metric("Available Players", len(entries))
+    pm2.metric("Transfer Cap", cap)
+    pm3.metric("Slots Remaining", remaining)
+
+    if committed:
+        st.subheader("Your Incoming Transfers")
+        committed_data = []
+        for c in committed:
+            committed_data.append({
+                "Name": c.get("name", ""),
+                "Position": c.get("position", ""),
+                "OVR": c.get("overall", 0),
+                "Year": c.get("year", ""),
+                "From": c.get("origin_team", ""),
+            })
+        st.dataframe(pd.DataFrame(committed_data), hide_index=True, use_container_width=True)
+
+    st.divider()
+
+    pf1, pf2 = st.columns(2)
+    with pf1:
+        pos_filter = st.selectbox(
+            "Position Filter",
+            ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"],
+            key="season_portal_pos",
+        )
+    with pf2:
+        ovr_filter = st.number_input("Min Overall", min_value=0, max_value=99, value=0, key="season_portal_ovr")
+
+    filtered = entries
+    if pos_filter != "All":
+        filtered = [e for e in filtered if e.get("position", "") == pos_filter]
+    if ovr_filter > 0:
+        filtered = [e for e in filtered if e.get("overall", 0) >= ovr_filter]
+
+    if filtered:
+        portal_data = []
+        for e in filtered:
+            reason_label = e.get("reason", "").replace("_", " ").title()
+            portal_data.append({
+                "Name": e.get("name", ""),
+                "Position": e.get("position", ""),
+                "OVR": e.get("overall", 0),
+                "Year": e.get("year", ""),
+                "From": e.get("origin_team", ""),
+                "Reason": reason_label,
+                "Stars": e.get("potential", 0),
+            })
+
+        st.dataframe(
+            pd.DataFrame(portal_data),
+            hide_index=True, use_container_width=True, height=350,
+        )
+
+        if remaining > 0:
+            st.subheader("Commit a Player")
+            player_options = [
+                f"{e.get('name', '')} ({e.get('position', '')}, OVR {e.get('overall', 0)}) — from {e.get('origin_team', '')}"
+                for e in filtered
+            ]
+            selected_idx = st.selectbox(
+                "Select Player", range(len(player_options)),
+                format_func=lambda i: player_options[i],
+                key="season_portal_select",
+            )
+
+            selected_entry = filtered[selected_idx]
+            global_idx = selected_entry.get("global_index", -1)
+
+            if global_idx >= 0:
+                if st.button(
+                    f"Commit {selected_entry.get('name', '')} to {active_team}",
+                    type="primary", use_container_width=True,
+                    key="season_portal_commit_btn",
+                ):
+                    try:
+                        result = api_client.season_portal_commit(
+                            session_id, team_name=active_team,
+                            entry_index=global_idx,
+                        )
+                        st.success(
+                            f"Committed {result.get('player', {}).get('name', '')} to {active_team}! "
+                            f"({result.get('transfers_remaining', 0)} slots remaining)"
+                        )
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Commit failed: {e.detail}")
+            else:
+                st.warning("Cannot interact with this player — try refreshing.")
+        else:
+            st.info("You've used all your transfer slots.")
+    else:
+        st.info("No available portal players matching your filters.")
+
+    st.divider()
+    dc1, dc2 = st.columns(2)
+    with dc1:
+        if st.button("Done with Portal — Start Season", type="primary", use_container_width=True, key="portal_done_btn"):
+            try:
+                api_client.season_portal_skip(session_id)
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Could not advance: {e.detail}")
+    with dc2:
+        if st.button("Skip Portal", use_container_width=True, key="portal_skip_btn"):
+            try:
+                api_client.season_portal_skip(session_id)
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Could not skip: {e.detail}")
+
+
 def _render_season_play(shared):
     session_id = st.session_state["api_session_id"]
 
@@ -1462,6 +1609,10 @@ def _render_season_play(shared):
     games_played = status.get("games_played", 0)
     total_games = status.get("total_games", 0)
     champion = status.get("champion")
+
+    if phase == "portal":
+        _render_season_portal(session_id, shared)
+        return
 
     st.title(f"Play — {season_name}")
 

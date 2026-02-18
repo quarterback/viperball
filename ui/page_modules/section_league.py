@@ -689,7 +689,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
 
 def _render_team_browser(session_id, standings, conferences, has_conferences):
     st.markdown("### Team Browser")
-    st.caption("View any team's full roster and player details")
+    st.caption("Browse any team's roster, view individual player cards with full attributes and season stats")
 
     bc1, bc2 = st.columns(2)
     with bc1:
@@ -768,12 +768,27 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
             ic2.markdown(f"**Archetype:** {p.get('archetype', 'None')}")
             ic3.markdown(f"**Overall:** {p.get('overall', 0)}")
 
-            if p.get("height") or p.get("weight"):
-                hc1, hc2 = st.columns(2)
-                if p.get("height"):
-                    hc1.markdown(f"**Height:** {p['height']}")
-                if p.get("weight"):
-                    hc2.markdown(f"**Weight:** {p['weight']} lbs")
+            bio_parts = []
+            if p.get("height"):
+                bio_parts.append(f"**Height:** {p['height']}")
+            if p.get("weight"):
+                bio_parts.append(f"**Weight:** {p['weight']} lbs")
+            hometown_parts = []
+            if p.get("hometown_city"):
+                hometown_parts.append(p["hometown_city"])
+            if p.get("hometown_state"):
+                hometown_parts.append(p["hometown_state"])
+            elif p.get("hometown_country") and p["hometown_country"] != "USA":
+                hometown_parts.append(p["hometown_country"])
+            if hometown_parts:
+                bio_parts.append(f"**Hometown:** {', '.join(hometown_parts)}")
+            if p.get("potential"):
+                dev_label = p.get("development", "normal").replace("_", " ").title()
+                bio_parts.append(f"**Potential:** {'*' * p['potential']} ({dev_label})")
+            if bio_parts:
+                bc = st.columns(len(bio_parts))
+                for i, part in enumerate(bio_parts):
+                    bc[i].markdown(part)
 
             st.markdown("**Attributes**")
             attrs = {

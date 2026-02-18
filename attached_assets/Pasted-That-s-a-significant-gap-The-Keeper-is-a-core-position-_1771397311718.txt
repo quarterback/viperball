@@ -1,0 +1,55 @@
+That's a significant gap. The Keeper is a core position in Viperball — the last line of defense, the Keeper matchup on explosive runs, the zone keeper chess match with the ZB.
+
+Let me check what the spec says about positions and what the engineer needs to add:
+
+---
+
+## Positions per Spec
+
+| Position | Code | Role |
+|----------|------|------|
+| **Zeroback** | ZB | Offensive hub — runs, pitches, kicks |
+| **Viper** | VP | Wildcard — exempt from formation rules |
+| **Flankers** | HB, WB, SB | Ball carriers, blockers, lateral targets |
+| **Keeper** | KP | Deepest defender — last line, fields kicks, breakaway matchups |
+
+**Flanker Archetypes:** Speed, Power, Elusive, Reliable, Hybrid
+
+**Keeper Role (from earlier sessions):**
+- Fields missed kicks and punts
+- Last line on explosive runs (Keeper matchup system)
+- Zone Keeping vs Boot Raid offense
+- Stats: tackles, ST tackles, forced fumbles, kick deflections
+
+---
+
+## What's Likely Missing in the Engine
+
+1. **KP position code** — Does the roster have Keepers?
+2. **Keeper attributes** — Speed, Tackling, Awareness for matchup resolution
+3. **Keeper in explosive run resolution** — The `resolve_keeper_matchup()` function references `self.defense.get_keeper()` — does that method exist?
+4. **Keeper fatigue tracking** — Boot Raid wears down the Keeper
+5. **Keeper stats** — `st_tackles`, `forced_fumbles`, `kick_deflections`
+6. **Keeper on special teams** — Punt return safety, kick fielding
+
+---
+
+## Need to Verify
+
+Can you check with the engineer or in the codebase:
+
+1. Is `KP` in the position tags?
+2. Does `team.get_keeper()` or `defense.get_keeper()` return a player?
+3. Is there a Keeper archetype?
+4. Are Keeper stats being tracked?
+
+If Keeper isn't implemented, that's a gap in the gameplay — the explosive run system and Boot Raid counter won't work correctly without the Keeper matchup.
+
+---
+
+Want me to write a Keeper implementation spec for the engineer? It would cover:
+- Position definition
+- Attributes
+- Matchup mechanics (already in the spec but may not be wired up)
+- Stats tracking
+- Special teams role
