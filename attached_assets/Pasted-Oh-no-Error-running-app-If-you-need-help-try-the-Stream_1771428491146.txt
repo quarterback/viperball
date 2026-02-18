@@ -1,0 +1,139 @@
+Oh no.
+Error running app. If you need help, try the Streamlit docs and forums.
+
+[     UTC     ] Logs for viperball.streamlit.app/
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[15:27:35] 🖥 Provisioning machine...
+
+[15:27:35] 🎛 Preparing system...
+
+[15:27:35] ⛓ Spinning up manager process...
+
+[15:27:36] 🚀 Starting up repository: 'viperball', branch: 'main', main module: 'ui/app.py'
+
+[15:27:36] 🐙 Cloning repository...
+
+[15:27:38] 🐙 Cloning into '/mount/src/viperball'...
+
+[15:27:38] 🐙 Cloned repository!
+
+[15:27:38] 🐙 Pulling code changes from Github...
+
+[15:27:39] 📦 Processing dependencies...
+
+Prepared 48 packages in 2.05s
+
+Installed 48 packages in 149ms
+
+ + altair==6.0.0
+
+ + annotated-doc==0.0.4
+
+ + annotated-types==0.7.0
+
+ + anyio==4.12.1
+
+ + attrs==25.4.0
+
+ + blinker==1.9.0
+
+ + cachetools==6.2.6
+
+ + certifi==2026.1.4
+
+ + charset-normalizer==3.4.4
+
+ + click==8.3.1
+
+ + fastapi==0.129.0
+
+ + gitdb==4.0.12
+
+ + gitpython==3.1.46
+
+ + h11==0.16.0
+
+ + idna==3.11
+
+ + jinja2==3.1.6
+
+ +[2026-02-18 15:27:42.091205]  jsonschema==4.26.0
+
+ + jsonschema-specifications==2025.9.1
+
+ + markupsafe==3.0.3
+
+ + narwhals==2.16.0
+
+ + numpy==2.4.2
+
+ + packaging==26.0
+
+ + pandas==2.3.3
+
+ + pillow==12.1.1
+
+ [2026-02-18 15:27:42.091665] + plotly==6.5.2
+
+ + protobuf==6.33.5
+
+ + pyarrow==23.0.0
+
+ + pydantic==2.12.5
+
+ +[2026-02-18 15:27:42.092006]  pydantic-core==2.41.5
+
+ + pydeck==0.9.1
+
+ + python-dateutil==2.9.0.post0
+
+ + pytz==2025.2
+
+ + referencing==[2026-02-18 15:27:42.092201] 0.37.0
+
+ + requests==2.32.5
+
+ + rpds-py==0.30.0
+
+ + six==1.17.0
+
+ + smmap==5.0.2[2026-02-18 15:27:42.092320] 
+
+ + starlette==0.52.1
+
+ + streamlit==1.54.0
+
+ + tenacity==9.1.4
+
+ + toml==0.10.2
+
+ +[2026-02-18 15:27:42.092442]  tornado==6.5.4
+
+ + typing-extensions==4.15.0
+
+ + typing-inspection==0.4.2
+
+ + tzdata==2025.3
+
+ + urllib3==2.6.3
+
+ + [2026-02-18 15:27:42.092560] uvicorn==0.40.0
+
+ + watchdog==6.0.0
+
+[15:27:43] 🐍 Python dependencies were installed from /mount/src/viperball/uv.lock using uv-sync.
+
+[15:27:43] 📦 WARN: More than one requirements file detected in the repository. Available options: uv-sync /mount/src/viperball/uv.lock, uv /mount/src/viperball/requirements.txt, poetry /mount/src/viperball/pyproject.toml. Used: uv-sync with /mount/src/viperball/uv.lock
+
+Check if streamlit is installed
+
+Streamlit is already installed
+
+[15:27:44] 📦 Processed dependencies!
+
+
+
+
+[15:27:48] ❗️ The service has encountered an error while checking the health of the Streamlit app: Get "http://localhost:8501/healthz": dial tcp 127.0.0.1:8501: connect: connection refused
