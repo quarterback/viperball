@@ -32,10 +32,12 @@ The project uses a **FastAPI backend as the single source of truth** for all sim
 - The UI stores only `api_session_id` and `api_mode` in `st.session_state`, fetching all data via HTTP.
 - `main.py` launches both FastAPI (port 8000, internal) and Streamlit (port 5000, public) as dual processes.
 
-**API endpoints (39+):**
+**API endpoints (45+):**
 - Session lifecycle: create, get, delete sessions
-- Season: create, simulate week/range/rest, run playoffs, run bowls, get status/standings/schedule/polls/conferences/awards/playoff-bracket/bowl-results
-- Dynasty: create, start season, advance year, get status/team-histories/awards/record-book
+- Season: create (with optional history_years), simulate week/range/rest, run playoffs, run bowls, get status/standings/schedule/polls/conferences/awards/playoff-bracket/bowl-results/history
+- Roster: get team roster, update team roster (number/position changes)
+- Injuries: get active injuries (league-wide or per-team), season injury log and counts
+- Dynasty: create, start season, advance year (with roster maintenance), get status/team-histories/awards/record-book
 - Data: teams, styles, weather conditions, conference defaults, bowl tiers
 - Quick game simulation (stateless)
 
@@ -49,7 +51,7 @@ The project uses a **FastAPI backend as the single source of truth** for all sim
 ### Technical Implementations
 The project follows a clear separation of concerns:
 - **`engine/`**: Contains core Python simulation logic, including game simulation, offense/defense styles, play families, weather, penalty systems, player archetypes, box score generation, polling, EPA calculations, season and dynasty simulations, and custom Viperball metrics.
-- **`api/main.py`**: FastAPI backend with 39+ REST endpoints managing session-based state. All simulation operations route through here. Serializers convert engine objects to JSON for the UI.
+- **`api/main.py`**: FastAPI backend with 45+ REST endpoints managing session-based state. All simulation operations route through here. Serializers convert engine objects to JSON for the UI.
 - **`ui/api_client.py`**: Typed Python wrapper for all API HTTP calls. Uses `requests` with configurable timeouts (120s GET, 300s POST). Custom `APIError` exception for error handling.
 - **`ui/`**: Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`). All page modules fetch data via `api_client` instead of importing engine directly.
 - **`data/teams/`**: Stores team configuration in JSON files (125 teams total, including D3, metro, legacy, women's, and international programs). 12 geographic conferences: Capital Athletic, Moonshine League, Gateway League, Great Lakes Union, Metro Atlantic, New England Athletic, Pacific Rim, Skyline Conference, Southern Athletic, Sun Country, West Coast Conference, Yankee Conference.
@@ -81,7 +83,9 @@ The project follows a clear separation of concerns:
     - **Stat Tracking**: Per-player lateral_assists, lateral_receptions, lateral_tds. Special teams: kick_returns, kick_return_yards, kick_return_tds, punt_returns, punt_return_yards, punt_return_tds, muffs, st_tackles. Rushing/lateral yard split (game_rushing_yards vs game_lateral_yards).
 - **Drive Tracking**: Logs every possession with detailed outcomes.
 - **Position Tag System**: Players identified by position abbreviation + jersey number (e.g., VB1, HB13). Actual tags: HB, WB, SB, ZB, VP, LB, CB, LA, KP, ED, BK.
-- **Dynasty Mode Enhancements**: Integrated injury tracking (3-tier severity, history, reports), player development (breakout/decline tracking, offseason trends), awards system (individual trophies, All-CVL/Conference teams, historical data), and CSV export for various season and dynasty data.
+- **Dynamic Roster System**: 36-player rosters generated fresh for every new season/dynasty using ROSTER_TEMPLATE position distribution (2 Vipers, 4 Halfbacks, 4 Wingbacks, 5 Linemen, etc.) with balanced class year mix (9 Freshmen/Sophomores/Juniors/Seniors). Dynasty mode includes automatic roster maintenance: Graduates removed after development, new Freshmen recruited to maintain 36-player rosters. Geographic name pipelines produce region-appropriate player names.
+- **Pre-Season History**: Standalone Season mode supports `history_years` parameter (0-100) to simulate prior seasons before the main season, providing historical context (past champions, top-5 finishes).
+- **Dynasty Mode Enhancements**: Integrated injury tracking (3-tier severity, history, reports), player development (breakout/decline tracking, offseason trends), awards system (individual trophies, All-CVL/Conference teams, historical data), roster maintenance (graduation/recruitment cycles), and CSV export for various season and dynasty data.
 - **Power Index System**: Comprehensive 100-point ranking system replacing simple poll scores. Components: Win % (30pts), Strength of Schedule with 2-level depth (20pts), Quality Wins weighted by opponent rank (20pts), Non-conference record (10pts), Conference Strength based on non-conf performance (10pts), Point Differential (10pts), minus Loss Quality penalties (bad losses penalized more). Used for weekly Power Rankings, playoff selection, and conference standings.
 - **Playoff Selection**: Conference champion auto-bids (best conference record wins the auto-bid for each conference) plus at-large bids filled by highest Power Index. Teams seeded by Power Index regardless of bid type. Bid types (AUTO/AT-LARGE) displayed in playoff field table.
 - **CFL Rouge/Pindown Overhaul**: Comprehensive implementation following CFL rules, affecting punts, missed kicks, and kickoffs, with detailed return chance formulas and ball placement.

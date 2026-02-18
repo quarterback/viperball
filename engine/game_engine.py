@@ -4437,30 +4437,63 @@ def generate_team_on_the_fly(
     from scripts.generate_names import generate_player_name
     from scripts.generate_rosters import generate_player_attributes, assign_archetype
 
-    GAME_POSITIONS = [
-        "Viper/Back",
-        "Zeroback/Back",
-        "Halfback/Back",
-        "Wingback/End",
-        "Shiftback/Back",
-        "Back/Safety",
-        "Back/Corner",
-        "Lineman",
-        "Wing/End",
-        "Wedge/Line",
+    ROSTER_TEMPLATE = [
+        ("Viper/Back", True),
+        ("Viper/Back", False),
+        ("Zeroback/Back", False),
+        ("Zeroback/Back", False),
+        ("Halfback/Back", False),
+        ("Halfback/Back", False),
+        ("Halfback/Back", False),
+        ("Halfback/Back", False),
+        ("Wingback/End", False),
+        ("Wingback/End", False),
+        ("Wingback/End", False),
+        ("Wingback/End", False),
+        ("Shiftback/Back", False),
+        ("Shiftback/Back", False),
+        ("Lineman", False),
+        ("Lineman", False),
+        ("Lineman", False),
+        ("Lineman", False),
+        ("Lineman", False),
+        ("Wedge/Line", False),
+        ("Wedge/Line", False),
+        ("Wedge/Line", False),
+        ("Back/Safety", False),
+        ("Back/Safety", False),
+        ("Back/Safety", False),
+        ("Back/Safety", False),
+        ("Back/Corner", False),
+        ("Back/Corner", False),
+        ("Back/Corner", False),
+        ("Back/Corner", False),
+        ("Wing/End", False),
+        ("Wing/End", False),
+        ("Wing/End", False),
+        ("Wing/End", False),
+        ("Back/Safety", False),
+        ("Back/Corner", False),
     ]
+
+    class_distribution = (
+        ["freshman"] * 9
+        + ["sophomore"] * 9
+        + ["junior"] * 9
+        + ["senior"] * 9
+    )
+    random.shuffle(class_distribution)
 
     players = []
     used_numbers: set = set()
-    # Viper always #1
-    for i, position in enumerate(GAME_POSITIONS):
-        number = 1 if i == 0 else None
+
+    for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
+        number = 1 if is_viper and i == 0 else None
         while number is None or number in used_numbers:
             number = random.randint(2, 99)
         used_numbers.add(number)
 
-        year = random.choice(["freshman", "sophomore", "junior", "senior"])
-        is_viper = (i == 0)
+        year = class_distribution[i] if i < len(class_distribution) else random.choice(["freshman", "sophomore", "junior", "senior"])
 
         name_data = generate_player_name(
             school_recruiting_pipeline=recruiting_pipeline,

@@ -40,6 +40,10 @@ def _post(path: str, json: Optional[dict] = None, timeout: int = 300) -> Any:
     return _handle(requests.post(_url(path), json=json, timeout=timeout))
 
 
+def _put(path: str, json: Optional[Any] = None, timeout: int = 120) -> Any:
+    return _handle(requests.put(_url(path), json=json, timeout=timeout))
+
+
 def _delete(path: str, timeout: int = 30) -> Any:
     return _handle(requests.delete(_url(path), timeout=timeout))
 
@@ -86,7 +90,8 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
                   human_configs: Optional[Dict[str, Dict[str, str]]] = None,
                   num_conferences: int = 10, ai_seed: int = 0,
                   conferences: Optional[Dict[str, List[str]]] = None,
-                  style_configs: Optional[Dict[str, Dict[str, str]]] = None) -> dict:
+                  style_configs: Optional[Dict[str, Dict[str, str]]] = None,
+                  history_years: int = 0) -> dict:
     body = {
         "name": name,
         "games_per_team": games_per_team,
@@ -96,6 +101,7 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
         "human_configs": human_configs or {},
         "num_conferences": num_conferences,
         "ai_seed": ai_seed,
+        "history_years": history_years,
     }
     if conferences:
         body["conferences"] = conferences
@@ -130,8 +136,28 @@ def get_season_status(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/season/status")
 
 
+def get_season_history(session_id: str) -> list:
+    data = _get(f"/sessions/{session_id}/season/history")
+    return data.get("history", [])
+
+
 def get_standings(session_id: str) -> list:
     return _get(f"/sessions/{session_id}/season/standings")
+
+
+def get_injuries(session_id: str, team: Optional[str] = None) -> dict:
+    params = {}
+    if team:
+        params["team"] = team
+    return _get(f"/sessions/{session_id}/season/injuries", params=params)
+
+
+def get_roster(session_id: str, team_name: str) -> dict:
+    return _get(f"/sessions/{session_id}/season/roster/{team_name}")
+
+
+def update_roster(session_id: str, team_name: str, updates: list) -> dict:
+    return _put(f"/sessions/{session_id}/season/roster/{team_name}", json=updates)
 
 
 def get_schedule(session_id: str, week: Optional[int] = None,

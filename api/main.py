@@ -71,6 +71,7 @@ class CreateSeasonRequest(BaseModel):
     ai_seed: int = 0
     conferences: Optional[Dict[str, List[str]]] = None
     style_configs: Optional[Dict[str, Dict[str, str]]] = None
+    history_years: int = 0
 
 
 class CreateDynastyRequest(BaseModel):
@@ -452,7 +453,7 @@ def get_session(session_id: str):
 def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     session = _get_session(session_id)
 
-    teams, team_states = load_teams_with_states(TEAMS_DIR)
+    teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
     team_names = list(teams.keys())
 
     if req.conferences:
@@ -485,6 +486,44 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         team_states=team_states,
     )
 
+    history_results = []
+    history_years = max(0, min(100, req.history_years))
+    if history_years > 0:
+        history_rng = random.Random(req.ai_seed if req.ai_seed else 42)
+        for hy in range(history_years):
+            hist_year = 2026 - history_years + hy
+            hist_teams_copy, hist_states = load_teams_with_states(TEAMS_DIR, fresh=True)
+            hist_ai = auto_assign_all_teams(
+                TEAMS_DIR,
+                human_teams=[],
+                human_configs={},
+                seed=history_rng.randint(0, 999999),
+            )
+            hist_styles = {}
+            for tname in hist_teams_copy:
+                hist_styles[tname] = hist_ai.get(
+                    tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+                )
+            hist_season = create_season(
+                f"Year {hist_year}",
+                hist_teams_copy,
+                hist_styles,
+                conferences=conferences,
+                games_per_team=req.games_per_team,
+                team_states=hist_states,
+            )
+            for w in range(1, req.games_per_team + 1):
+                hist_season.simulate_week(rng=history_rng)
+            hist_season.run_playoffs(num_teams=req.playoff_size, rng=history_rng)
+            hist_season.run_bowl_games(num_bowls=req.bowl_count, rng=history_rng)
+            standings = hist_season.get_standings_sorted()
+            champ = hist_season.champion or (standings[0].team_name if standings else "N/A")
+            history_results.append({
+                "year": hist_year,
+                "champion": champ,
+                "top_5": [r.team_name for r in standings[:5]],
+            })
+
     session["season"] = season
     session["phase"] = "regular"
     session["config"] = {
@@ -493,8 +532,12 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    session["history"] = history_results
 
-    return _serialize_season_status(session)
+    result = _serialize_season_status(session)
+    if history_results:
+        result["history"] = history_results
+    return result
 
 
 @app.post("/sessions/{session_id}/season/simulate-week")
@@ -652,11 +695,107 @@ def season_status(session_id: str):
     return _serialize_season_status(session)
 
 
+@app.get("/sessions/{session_id}/season/history")
+def season_history(session_id: str):
+    session = _get_session(session_id)
+    _require_season(session)
+    return {"history": session.get("history", [])}
+
+
 @app.get("/sessions/{session_id}/season/standings")
 def season_standings(session_id: str):
     session = _get_session(session_id)
     season = _require_season(session)
     return {"standings": _serialize_standings(season)}
+
+
+@app.get("/sessions/{session_id}/season/injuries")
+def season_injuries(session_id: str, team: Optional[str] = Query(None)):
+    session = _get_session(session_id)
+    season = _require_season(session)
+    tracker = session.get("injury_tracker")
+    if tracker is None:
+        return {"active": [], "season_log": [], "counts": {}}
+
+    current_week = season.current_week
+    if team:
+        active = tracker.get_active_injuries(team, current_week)
+        active_list = [inj.to_dict() for inj in active]
+        team_log = [inj.to_dict() for inj in tracker.season_log if inj.team_name == team]
+        return {"active": active_list, "season_log": team_log}
+    else:
+        all_active = []
+        for team_name in season.teams:
+            for inj in tracker.get_active_injuries(team_name, current_week):
+                all_active.append(inj.to_dict())
+        counts = tracker.get_season_injury_counts()
+        return {"active": all_active, "season_log": [inj.to_dict() for inj in tracker.season_log], "counts": counts}
+
+
+@app.get("/sessions/{session_id}/season/roster/{team_name}")
+def get_team_roster(session_id: str, team_name: str):
+    session = _get_session(session_id)
+    season = _require_season(session)
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    return {
+        "team_name": team_name,
+        "roster": [_serialize_player(p) for p in team.players],
+        "roster_size": len(team.players),
+    }
+
+
+class UpdatePlayerRequest(BaseModel):
+    player_name: str
+    number: Optional[int] = None
+    position: Optional[str] = None
+
+
+VALID_POSITIONS = {
+    "Viper/Back", "Zeroback/Back", "Halfback/Back", "Wingback/End",
+    "Shiftback/Back", "Lineman", "Wedge/Line", "Back/Safety",
+    "Back/Corner", "Wing/End",
+}
+
+
+@app.put("/sessions/{session_id}/season/roster/{team_name}")
+def update_team_roster(session_id: str, team_name: str, updates: List[UpdatePlayerRequest]):
+    session = _get_session(session_id)
+    season = _require_season(session)
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
+    used_numbers = {p.number for p in team.players}
+    updated = []
+    errors = []
+    for upd in updates:
+        player = next((p for p in team.players if p.name == upd.player_name), None)
+        if not player:
+            errors.append(f"Player '{upd.player_name}' not found")
+            continue
+        if upd.number is not None:
+            if upd.number < 1 or upd.number > 99:
+                errors.append(f"Invalid number {upd.number} for {upd.player_name} (must be 1-99)")
+                continue
+            if upd.number != player.number and upd.number in used_numbers:
+                errors.append(f"Number {upd.number} already taken on roster")
+                continue
+            used_numbers.discard(player.number)
+            player.number = upd.number
+            used_numbers.add(upd.number)
+        if upd.position is not None:
+            if upd.position not in VALID_POSITIONS:
+                errors.append(f"Invalid position '{upd.position}' for {upd.player_name}")
+                continue
+            player.position = upd.position
+        updated.append(upd.player_name)
+
+    result = {"updated": updated, "roster": [_serialize_player(p) for p in team.players]}
+    if errors:
+        result["errors"] = errors
+    return result
 
 
 @app.get("/sessions/{session_id}/season/schedule")
@@ -797,7 +936,7 @@ def season_awards(session_id: str):
 def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     session = _get_session(session_id)
 
-    teams = load_teams_from_directory(TEAMS_DIR)
+    teams = load_teams_from_directory(TEAMS_DIR, fresh=True)
     team_names = list(teams.keys())
 
     if req.coach_team not in teams:
@@ -838,7 +977,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     if session["phase"] not in ("setup", "finalize"):
         raise HTTPException(status_code=400, detail=f"Cannot start season in phase '{session['phase']}'")
 
-    teams, team_states = load_teams_with_states(TEAMS_DIR)
+    teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
 
     seed = req.ai_seed if req.ai_seed is not None else random.randint(0, 999999)
     ai_configs = auto_assign_all_teams(

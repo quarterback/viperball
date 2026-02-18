@@ -260,6 +260,136 @@ class Dynasty:
                 return conf_name
         return ""
 
+    def _roster_maintenance(self, season: Season, rng: Optional[random.Random] = None):
+        """Remove graduated players and recruit new freshmen for all teams.
+
+        Called after development (which advances class years) so that
+        players who just became 'Graduate' after their Senior year are removed,
+        and new Freshman players are recruited to fill the roster back to 36.
+        Uses ROSTER_TEMPLATE from game_engine for position distribution.
+        """
+        from engine.game_engine import Player
+        from scripts.generate_names import generate_player_name, build_geo_pipeline
+        from scripts.generate_rosters import generate_player_attributes, assign_archetype
+
+        if rng is None:
+            rng = random.Random()
+
+        ROSTER_TARGET = 36
+        ROSTER_TEMPLATE = [
+            ("Viper/Back", True), ("Viper/Back", False),
+            ("Zeroback/Back", False), ("Zeroback/Back", False),
+            ("Halfback/Back", False), ("Halfback/Back", False),
+            ("Halfback/Back", False), ("Halfback/Back", False),
+            ("Wingback/End", False), ("Wingback/End", False),
+            ("Wingback/End", False), ("Wingback/End", False),
+            ("Shiftback/Back", False), ("Shiftback/Back", False),
+            ("Lineman", False), ("Lineman", False), ("Lineman", False),
+            ("Lineman", False), ("Lineman", False),
+            ("Wedge/Line", False), ("Wedge/Line", False), ("Wedge/Line", False),
+            ("Back/Safety", False), ("Back/Safety", False),
+            ("Back/Safety", False), ("Back/Safety", False),
+            ("Back/Corner", False), ("Back/Corner", False),
+            ("Back/Corner", False), ("Back/Corner", False),
+            ("Wing/End", False), ("Wing/End", False),
+            ("Wing/End", False), ("Wing/End", False),
+            ("Back/Safety", False), ("Back/Corner", False),
+        ]
+
+        import os
+        teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        team_state_cache = {}
+        try:
+            for f in os.listdir(teams_dir):
+                if f.endswith(".json"):
+                    with open(os.path.join(teams_dir, f)) as fh:
+                        td = json.load(fh)
+                    tn = td.get("team_info", {}).get("school") or td.get("team_info", {}).get("school_name", "")
+                    if tn:
+                        team_state_cache[tn] = td.get("team_info", {}).get("state", "")
+        except Exception:
+            pass
+
+        for team_name, team in season.teams.items():
+            graduated = [p for p in team.players if getattr(p, 'year', '') == 'Graduate']
+            remaining = [p for p in team.players if getattr(p, 'year', '') != 'Graduate']
+            team.players = remaining
+
+            slots_to_fill = max(0, ROSTER_TARGET - len(remaining))
+            if slots_to_fill == 0:
+                continue
+
+            current_positions = {}
+            for p in remaining:
+                current_positions[p.position] = current_positions.get(p.position, 0) + 1
+
+            template_counts = {}
+            for pos, _ in ROSTER_TEMPLATE:
+                template_counts[pos] = template_counts.get(pos, 0) + 1
+
+            recruit_positions = []
+            for pos, target in template_counts.items():
+                current = current_positions.get(pos, 0)
+                deficit = target - current
+                for _ in range(max(0, deficit)):
+                    if len(recruit_positions) < slots_to_fill:
+                        recruit_positions.append(pos)
+
+            while len(recruit_positions) < slots_to_fill:
+                recruit_positions.append(rng.choice([p for p, _ in ROSTER_TEMPLATE]))
+
+            used_numbers = {p.number for p in remaining}
+            state_str = team_state_cache.get(team_name, "")
+            pipeline = build_geo_pipeline(state_str) if state_str else None
+            philosophy = getattr(team, 'philosophy', 'hybrid') if hasattr(team, 'philosophy') else 'hybrid'
+
+            for pos in recruit_positions:
+                number = None
+                while number is None or number in used_numbers:
+                    number = rng.randint(2, 99)
+                used_numbers.add(number)
+
+                is_viper = "Viper" in pos
+                name_data = generate_player_name(
+                    school_recruiting_pipeline=pipeline,
+                    year="freshman",
+                )
+                attrs = generate_player_attributes(pos, philosophy, "freshman", is_viper)
+                archetype = assign_archetype(
+                    pos,
+                    attrs["speed"], attrs["stamina"],
+                    attrs["kicking"], attrs["lateral_skill"], attrs["tackling"],
+                )
+                hometown = name_data.get("hometown", {})
+
+                team.players.append(Player(
+                    number=number,
+                    name=name_data["full_name"],
+                    position=pos,
+                    speed=attrs["speed"],
+                    stamina=attrs["stamina"],
+                    kicking=attrs["kicking"],
+                    lateral_skill=attrs["lateral_skill"],
+                    tackling=attrs["tackling"],
+                    agility=attrs.get("agility", 75),
+                    power=attrs.get("power", 75),
+                    awareness=attrs.get("awareness", 75),
+                    hands=attrs.get("hands", 75),
+                    kick_power=attrs.get("kick_power", 75),
+                    kick_accuracy=attrs.get("kick_accuracy", 75),
+                    archetype=archetype,
+                    player_id=name_data.get("player_id", ""),
+                    nationality=name_data.get("nationality", "American"),
+                    hometown_city=hometown.get("city", ""),
+                    hometown_country=hometown.get("country", "USA"),
+                    high_school=name_data.get("high_school", ""),
+                    height=attrs.get("height", "5-10"),
+                    weight=attrs.get("weight", 170),
+                    year="Freshman",
+                    potential=attrs.get("potential", 3),
+                    development=attrs.get("development", "normal"),
+                ))
+
     def advance_season(
         self,
         season: Season,
@@ -410,6 +540,9 @@ class Dynasty:
                     })
             self.development_history[year] = dev_events
 
+        # Roster maintenance: graduate seniors, recruit freshmen
+        self._roster_maintenance(season, rng=rng or random.Random(year + 99))
+
         # Update record book
         self._update_record_book(year, season)
 
@@ -559,7 +692,7 @@ class Dynasty:
             playoff_size:       Playoff field size (default 8)
             progress_callback:  Optional callable(year, total) for UI updates
         """
-        all_teams = load_teams_from_directory(teams_dir)
+        all_teams = load_teams_from_directory(teams_dir, fresh=True)
         conf_dict = self.get_conferences_dict()
 
         original_year = self.current_year

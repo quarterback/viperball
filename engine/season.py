@@ -1150,21 +1150,31 @@ class Season:
             self.bowl_games.append(bowl)
 
 
-def load_teams_from_directory(directory: str) -> Dict[str, Team]:
-    """Load all teams from a directory"""
+def load_teams_from_directory(directory: str, fresh: bool = False) -> Dict[str, Team]:
+    """Load all teams from a directory.
+
+    Args:
+        directory: Path to team JSON directory.
+        fresh: If True, generate brand-new rosters for every team (new season/dynasty).
+               If False, load stored rosters from JSON files (saved game).
+    """
     teams = {}
     team_dir = Path(directory)
 
     for team_file in team_dir.glob("*.json"):
-        team = load_team_from_json(str(team_file))
+        team = load_team_from_json(str(team_file), fresh=fresh)
         teams[team.name] = team
 
     return teams
 
 
-def load_teams_with_states(directory: str) -> tuple:
+def load_teams_with_states(directory: str, fresh: bool = False) -> tuple:
     """
     Load all teams from a directory and also return a state map for weather.
+
+    Args:
+        directory: Path to team JSON directory.
+        fresh: If True, generate brand-new rosters for every team.
 
     Returns:
         (teams_dict, team_states_dict) where team_states maps team_name -> state
@@ -1178,7 +1188,7 @@ def load_teams_with_states(directory: str) -> tuple:
         with open(team_file) as f:
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
-        team = load_team_from_json(str(team_file))
+        team = load_team_from_json(str(team_file), fresh=fresh)
         teams[team.name] = team
         if state:
             team_states[team.name] = state
