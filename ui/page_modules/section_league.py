@@ -90,7 +90,7 @@ def render_league_section(shared):
     tab_names = ["Standings", "Power Rankings"]
     if has_conferences:
         tab_names.append("Conferences")
-    tab_names.extend(["Postseason", "Schedule", "Awards & Stats"])
+    tab_names.extend(["Player Stats", "Team Browser", "Postseason", "Schedule", "Awards & Stats"])
     league_tabs = st.tabs(tab_names)
     tab_idx = 0
 
@@ -106,6 +106,14 @@ def render_league_section(shared):
         with league_tabs[tab_idx]:
             tab_idx += 1
             _render_conferences(session_id, conferences, user_team)
+
+    with league_tabs[tab_idx]:
+        tab_idx += 1
+        _render_player_stats(session_id, standings, conferences, has_conferences)
+
+    with league_tabs[tab_idx]:
+        tab_idx += 1
+        _render_team_browser(session_id, standings, conferences, has_conferences)
 
     with league_tabs[tab_idx]:
         tab_idx += 1
@@ -474,6 +482,292 @@ def _render_schedule(session_id, completed_games, user_team):
                 render_game_detail(full_result, key_prefix=f"league_gd_{game_idx}")
         else:
             st.caption("Detailed game data not available for this game.")
+
+
+def _render_player_stats(session_id, standings, conferences, has_conferences):
+    st.markdown("### Individual Player Statistics")
+
+    fc1, fc2, fc3 = st.columns(3)
+    with fc1:
+        conf_options = ["All Conferences"] + sorted(conferences.keys()) if has_conferences else ["All"]
+        sel_conf = st.selectbox("Conference", conf_options, key="ps_conf_filter")
+    with fc2:
+        team_names = sorted(r["team_name"] for r in standings)
+        team_options = ["All Teams"] + team_names
+        sel_team = st.selectbox("Team", team_options, key="ps_team_filter")
+    with fc3:
+        pos_options = ["All Positions", "HB", "WB", "SB", "ZB", "VP", "LB", "CB", "LA", "KP", "ED", "BK"]
+        sel_pos = st.selectbox("Position", pos_options, key="ps_pos_filter")
+
+    min_t = st.slider("Minimum touches", 0, 50, 1, key="ps_min_touches")
+
+    conf_param = sel_conf if sel_conf != "All Conferences" and sel_conf != "All" else None
+    team_param = sel_team if sel_team != "All Teams" else None
+    pos_param = sel_pos if sel_pos != "All Positions" else None
+
+    try:
+        resp = api_client.get_player_stats(
+            session_id,
+            conference=conf_param,
+            team=team_param,
+            position=pos_param,
+            min_touches=min_t,
+        )
+        players = resp.get("players", [])
+    except api_client.APIError:
+        st.warning("Could not load player stats. Simulate some games first.")
+        return
+
+    if not players:
+        st.info("No player stats available. Simulate some games to see individual statistics.")
+        return
+
+    st.caption(f"Showing {len(players)} players")
+
+    stat_views = st.tabs(["Rushing & Scoring", "Lateral Game", "Kicking", "Returns & Special Teams"])
+
+    with stat_views[0]:
+        rush_data = []
+        for p in sorted(players, key=lambda x: x["yards"], reverse=True)[:100]:
+            rush_data.append({
+                "Player": p["name"],
+                "Team": p["team"],
+                "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                "GP": p["games_played"],
+                "Touches": p["touches"],
+                "Rush Yds": p["rushing_yards"],
+                "Lat Yds": p["lateral_yards"],
+                "Total Yds": p["yards"],
+                "Yds/Touch": p["yards_per_touch"],
+                "TDs": p["tds"],
+                "Fumbles": p["fumbles"],
+            })
+        if rush_data:
+            st.dataframe(pd.DataFrame(rush_data), hide_index=True, use_container_width=True, height=500)
+
+    with stat_views[1]:
+        lat_data = []
+        lat_sorted = sorted(players, key=lambda x: x["lateral_yards"] + x["lateral_assists"] * 5, reverse=True)
+        for p in lat_sorted[:100]:
+            if p["laterals_thrown"] > 0 or p["lateral_receptions"] > 0 or p["lateral_assists"] > 0:
+                lat_data.append({
+                    "Player": p["name"],
+                    "Team": p["team"],
+                    "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                    "GP": p["games_played"],
+                    "Lat Thrown": p["laterals_thrown"],
+                    "Lat Rec": p["lateral_receptions"],
+                    "Lat Assists": p["lateral_assists"],
+                    "Lat Yds": p["lateral_yards"],
+                    "Lat TDs": p["lateral_tds"],
+                })
+        if lat_data:
+            st.dataframe(pd.DataFrame(lat_data), hide_index=True, use_container_width=True, height=500)
+        else:
+            st.caption("No lateral stats available yet.")
+
+    with stat_views[2]:
+        kick_data = []
+        kick_sorted = sorted(players, key=lambda x: x["kick_att"], reverse=True)
+        for p in kick_sorted[:100]:
+            if p["kick_att"] > 0:
+                kick_data.append({
+                    "Player": p["name"],
+                    "Team": p["team"],
+                    "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                    "GP": p["games_played"],
+                    "Kick Att": p["kick_att"],
+                    "Kick Made": p["kick_made"],
+                    "Kick %": f"{p['kick_pct']:.1f}%",
+                    "Deflections": p["kick_deflections"],
+                })
+        if kick_data:
+            st.dataframe(pd.DataFrame(kick_data), hide_index=True, use_container_width=True, height=500)
+        else:
+            st.caption("No kicking stats available yet.")
+
+    with stat_views[3]:
+        ret_data = []
+        ret_sorted = sorted(players, key=lambda x: x["total_return_yards"], reverse=True)
+        for p in ret_sorted[:100]:
+            if p["kick_returns"] > 0 or p["punt_returns"] > 0 or p["st_tackles"] > 0:
+                ret_data.append({
+                    "Player": p["name"],
+                    "Team": p["team"],
+                    "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                    "GP": p["games_played"],
+                    "KR": p["kick_returns"],
+                    "KR Yds": p["kick_return_yards"],
+                    "KR TDs": p["kick_return_tds"],
+                    "PR": p["punt_returns"],
+                    "PR Yds": p["punt_return_yards"],
+                    "PR TDs": p["punt_return_tds"],
+                    "Muffs": p["muffs"],
+                    "ST Tackles": p["st_tackles"],
+                    "Coverage": p["coverage_snaps"],
+                    "Keeper Tackles": p["keeper_tackles"],
+                    "Keeper Bells": p["keeper_bells"],
+                })
+        if ret_data:
+            st.dataframe(pd.DataFrame(ret_data), hide_index=True, use_container_width=True, height=500)
+        else:
+            st.caption("No return/special teams stats available yet.")
+
+    with st.expander("Stat Leaders Summary"):
+        if players:
+            leaders = [
+                ("Rushing Yards Leader", max(players, key=lambda x: x["rushing_yards"]), "rushing_yards"),
+                ("Total Yards Leader", max(players, key=lambda x: x["yards"]), "yards"),
+                ("Touchdown Leader", max(players, key=lambda x: x["tds"]), "tds"),
+                ("Lateral Yards Leader", max(players, key=lambda x: x["lateral_yards"]), "lateral_yards"),
+                ("Return Yards Leader", max(players, key=lambda x: x["total_return_yards"]), "total_return_yards"),
+            ]
+            lcols = st.columns(len(leaders))
+            for i, (label, player, stat_key) in enumerate(leaders):
+                lcols[i].metric(label, player["name"], f"{player['team']} — {player[stat_key]}")
+
+
+def _render_team_browser(session_id, standings, conferences, has_conferences):
+    st.markdown("### Team Browser")
+    st.caption("View any team's full roster and player details")
+
+    bc1, bc2 = st.columns(2)
+    with bc1:
+        if has_conferences:
+            conf_options = ["All Conferences"] + sorted(conferences.keys())
+            browse_conf = st.selectbox("Conference", conf_options, key="tb_conf")
+        else:
+            browse_conf = "All Conferences"
+
+    filtered_teams = sorted(r["team_name"] for r in standings)
+    if has_conferences and browse_conf != "All Conferences":
+        conf_team_set = set(conferences.get(browse_conf, []))
+        filtered_teams = [t for t in filtered_teams if t in conf_team_set]
+
+    with bc2:
+        browse_team = st.selectbox("Select Team", filtered_teams, key="tb_team")
+
+    if not browse_team:
+        return
+
+    team_record = next((r for r in standings if r["team_name"] == browse_team), None)
+    if team_record:
+        rc1, rc2, rc3, rc4, rc5 = st.columns(5)
+        rc1.metric("Record", f"{team_record['wins']}-{team_record['losses']}")
+        if has_conferences:
+            rc2.metric("Conf Record", f"{team_record.get('conf_wins', 0)}-{team_record.get('conf_losses', 0)}")
+        else:
+            rc2.metric("Win%", f"{team_record.get('win_percentage', 0):.3f}")
+        rc3.metric("PF", fmt_vb_score(team_record.get("points_for", 0)))
+        rc4.metric("PA", fmt_vb_score(team_record.get("points_against", 0)))
+        rc5.metric("OPI", f"{team_record.get('avg_opi', 0):.1f}")
+
+    try:
+        roster_resp = api_client.get_roster(session_id, browse_team)
+        roster = roster_resp.get("roster", [])
+    except api_client.APIError:
+        st.warning("Could not load roster for this team.")
+        return
+
+    if not roster:
+        st.info("No roster data available.")
+        return
+
+    st.markdown(f"**{browse_team} Roster** ({len(roster)} players)")
+
+    roster_data = []
+    for p in roster:
+        roster_data.append({
+            "#": p.get("number", ""),
+            "Name": p["name"],
+            "Position": p["position"],
+            "Year": p.get("year_abbr", p.get("year", "")),
+            "Archetype": p.get("archetype", ""),
+            "OVR": p.get("overall", 0),
+            "SPD": p.get("speed", 0),
+            "PWR": p.get("power", 0),
+            "AGI": p.get("agility", 0),
+            "HND": p.get("hands", 0),
+            "AWR": p.get("awareness", 0),
+            "STA": p.get("stamina", 0),
+            "KCK": p.get("kicking", 0),
+            "LAT": p.get("lateral_skill", 0),
+            "TKL": p.get("tackling", 0),
+            "GP": p.get("season_games_played", 0),
+        })
+    st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=500)
+
+    player_names = [p["name"] for p in roster]
+    selected_player = st.selectbox("View Player Card", ["—"] + player_names, key="tb_player_card")
+    if selected_player and selected_player != "—":
+        p = next((pl for pl in roster if pl["name"] == selected_player), None)
+        if p:
+            st.markdown(f"#### {p['name']} — #{p.get('number', '')} {p['position']}")
+            ic1, ic2, ic3 = st.columns(3)
+            ic1.markdown(f"**Year:** {p.get('year_abbr', p.get('year', ''))}")
+            ic2.markdown(f"**Archetype:** {p.get('archetype', 'None')}")
+            ic3.markdown(f"**Overall:** {p.get('overall', 0)}")
+
+            if p.get("height") or p.get("weight"):
+                hc1, hc2 = st.columns(2)
+                if p.get("height"):
+                    hc1.markdown(f"**Height:** {p['height']}")
+                if p.get("weight"):
+                    hc2.markdown(f"**Weight:** {p['weight']} lbs")
+
+            st.markdown("**Attributes**")
+            attrs = {
+                "Speed": p.get("speed", 0),
+                "Power": p.get("power", 0),
+                "Agility": p.get("agility", 0),
+                "Hands": p.get("hands", 0),
+                "Awareness": p.get("awareness", 0),
+                "Stamina": p.get("stamina", 0),
+                "Kicking": p.get("kicking", 0),
+                "Kick Power": p.get("kick_power", 0),
+                "Kick Accuracy": p.get("kick_accuracy", 0),
+                "Lateral Skill": p.get("lateral_skill", 0),
+                "Tackling": p.get("tackling", 0),
+            }
+            attr_cols = st.columns(4)
+            for i, (attr_name, attr_val) in enumerate(attrs.items()):
+                col = attr_cols[i % 4]
+                color = "green" if attr_val >= 80 else ("orange" if attr_val >= 60 else "red")
+                col.markdown(f"**{attr_name}:** :{color}[{attr_val}]")
+
+            try:
+                ps_resp = api_client.get_player_stats(session_id, team=browse_team)
+                team_players = ps_resp.get("players", [])
+                player_season = next((tp for tp in team_players if tp["name"] == selected_player), None)
+                if player_season and player_season.get("games_played", 0) > 0:
+                    st.markdown("**Season Stats**")
+                    sc1, sc2, sc3, sc4, sc5 = st.columns(5)
+                    sc1.metric("Games", player_season["games_played"])
+                    sc2.metric("Touches", player_season["touches"])
+                    sc3.metric("Total Yards", player_season["yards"])
+                    sc4.metric("TDs", player_season["tds"])
+                    sc5.metric("Fumbles", player_season["fumbles"])
+
+                    if player_season["rushing_yards"] > 0 or player_season["lateral_yards"] > 0:
+                        sc6, sc7, sc8 = st.columns(3)
+                        sc6.metric("Rush Yards", player_season["rushing_yards"])
+                        sc7.metric("Lateral Yards", player_season["lateral_yards"])
+                        sc8.metric("Yds/Touch", player_season["yards_per_touch"])
+
+                    if player_season["kick_att"] > 0:
+                        kc1, kc2, kc3 = st.columns(3)
+                        kc1.metric("Kick Att", player_season["kick_att"])
+                        kc2.metric("Kick Made", player_season["kick_made"])
+                        kc3.metric("Kick %", f"{player_season['kick_pct']:.1f}%")
+
+                    if player_season["total_return_yards"] > 0 or player_season["st_tackles"] > 0:
+                        rt1, rt2, rt3, rt4 = st.columns(4)
+                        rt1.metric("KR Yards", player_season["kick_return_yards"])
+                        rt2.metric("PR Yards", player_season["punt_return_yards"])
+                        rt3.metric("Return TDs", player_season["total_return_tds"])
+                        rt4.metric("ST Tackles", player_season["st_tackles"])
+            except api_client.APIError:
+                pass
 
 
 def _render_awards_stats(session_id, standings, user_team):

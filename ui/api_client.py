@@ -156,6 +156,21 @@ def get_roster(session_id: str, team_name: str) -> dict:
     return _get(f"/sessions/{session_id}/season/roster/{team_name}")
 
 
+def get_player_stats(session_id: str, conference: Optional[str] = None,
+                     team: Optional[str] = None, position: Optional[str] = None,
+                     min_touches: int = 0) -> dict:
+    params: dict = {}
+    if conference:
+        params["conference"] = conference
+    if team:
+        params["team"] = team
+    if position:
+        params["position"] = position
+    if min_touches > 0:
+        params["min_touches"] = min_touches
+    return _get(f"/sessions/{session_id}/season/player-stats", params=params)
+
+
 def update_roster(session_id: str, team_name: str, updates: list) -> dict:
     return _put(f"/sessions/{session_id}/season/roster/{team_name}", json=updates)
 

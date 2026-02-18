@@ -856,6 +856,100 @@ def update_team_roster(session_id: str, team_name: str, updates: List[UpdatePlay
     return result
 
 
+@app.get("/sessions/{session_id}/season/player-stats")
+def season_player_stats(
+    session_id: str,
+    conference: Optional[str] = Query(None),
+    team: Optional[str] = Query(None),
+    position: Optional[str] = Query(None),
+    min_touches: int = Query(0),
+):
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    player_agg: dict = {}
+
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        fr = game.full_result
+        ps = fr.get("player_stats", {})
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            conf = season.team_conferences.get(team_name, "")
+            if conference and conf != conference:
+                continue
+            if team and team_name != team:
+                continue
+            for p in ps.get(side, []):
+                key = f"{team_name}|{p['name']}"
+                if key not in player_agg:
+                    player_agg[key] = {
+                        "name": p["name"],
+                        "team": team_name,
+                        "conference": conf,
+                        "tag": p.get("tag", ""),
+                        "archetype": p.get("archetype", ""),
+                        "games_played": 0,
+                        "touches": 0,
+                        "yards": 0,
+                        "rushing_yards": 0,
+                        "lateral_yards": 0,
+                        "tds": 0,
+                        "fumbles": 0,
+                        "laterals_thrown": 0,
+                        "lateral_receptions": 0,
+                        "lateral_assists": 0,
+                        "lateral_tds": 0,
+                        "kick_att": 0,
+                        "kick_made": 0,
+                        "kick_deflections": 0,
+                        "keeper_bells": 0,
+                        "coverage_snaps": 0,
+                        "keeper_tackles": 0,
+                        "kick_returns": 0,
+                        "kick_return_yards": 0,
+                        "kick_return_tds": 0,
+                        "punt_returns": 0,
+                        "punt_return_yards": 0,
+                        "punt_return_tds": 0,
+                        "muffs": 0,
+                        "st_tackles": 0,
+                    }
+                agg = player_agg[key]
+                agg["games_played"] += 1
+                if not agg["tag"]:
+                    agg["tag"] = p.get("tag", "")
+                if not agg["archetype"] or agg["archetype"] == "—":
+                    agg["archetype"] = p.get("archetype", "")
+                for stat in [
+                    "touches", "yards", "rushing_yards", "lateral_yards",
+                    "tds", "fumbles", "laterals_thrown", "lateral_receptions",
+                    "lateral_assists", "lateral_tds", "kick_att", "kick_made",
+                    "kick_deflections", "keeper_bells", "coverage_snaps",
+                    "keeper_tackles", "kick_returns", "kick_return_yards",
+                    "kick_return_tds", "punt_returns", "punt_return_yards",
+                    "punt_return_tds", "muffs", "st_tackles",
+                ]:
+                    agg[stat] += p.get(stat, 0)
+
+    results = list(player_agg.values())
+    if position:
+        pos_upper = position.upper()
+        results = [r for r in results if pos_upper in r["tag"].upper()]
+    if min_touches > 0:
+        results = [r for r in results if r["touches"] >= min_touches]
+
+    for r in results:
+        r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
+        r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
+        r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
+        r["total_return_tds"] = r["kick_return_tds"] + r["punt_return_tds"]
+
+    results.sort(key=lambda x: x["yards"], reverse=True)
+
+    return {"players": results, "count": len(results)}
+
+
 @app.get("/sessions/{session_id}/season/schedule")
 def season_schedule(
     session_id: str,
