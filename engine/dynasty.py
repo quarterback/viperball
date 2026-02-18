@@ -22,7 +22,31 @@ from engine.awards import SeasonHonors, compute_season_awards
 from engine.injuries import InjuryTracker
 from engine.development import apply_team_development, get_preseason_breakout_candidates, DevelopmentReport
 from engine.ai_coach import auto_assign_all_teams
-from engine.player_card import player_to_card
+from engine.player_card import PlayerCard, player_to_card
+from engine.recruiting import (
+    generate_recruit_class,
+    RecruitingBoard,
+    Recruit,
+    run_full_recruiting_cycle,
+    auto_recruit_team,
+    simulate_recruit_decisions,
+)
+from engine.transfer_portal import (
+    TransferPortal,
+    PortalEntry,
+    populate_portal,
+    auto_portal_offers,
+)
+from engine.nil_system import (
+    NILProgram,
+    NILDeal,
+    auto_nil_program,
+    generate_nil_budget,
+    compute_team_prestige,
+    estimate_market_tier,
+    assess_retention_risks,
+    RetentionRisk,
+)
 
 
 # ========================================
@@ -238,6 +262,21 @@ class Dynasty:
     # Development history: year -> list of notable development event dicts
     development_history: Dict[int, List[dict]] = field(default_factory=dict)
 
+    # Recruiting history: year -> recruiting cycle results (class rankings, signed recruits)
+    recruiting_history: Dict[int, dict] = field(default_factory=dict)
+
+    # Transfer portal history: year -> portal summary (transfers completed)
+    portal_history: Dict[int, dict] = field(default_factory=dict)
+
+    # NIL history: year -> NIL program summary per team
+    nil_history: Dict[int, dict] = field(default_factory=dict)
+
+    # Team prestige ratings (updated each offseason)
+    team_prestige: Dict[str, int] = field(default_factory=dict)
+
+    # Team NIL programs for current year (not serialised, rebuilt each offseason)
+    _nil_programs: Dict[str, NILProgram] = field(default_factory=dict, repr=False)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
 
@@ -415,6 +454,240 @@ class Dynasty:
 
         # Advance year
         self.current_year += 1
+
+    def run_offseason(
+        self,
+        season: Season,
+        player_cards: Dict[str, list],
+        human_board: Optional[RecruitingBoard] = None,
+        human_nil_offers: Optional[Dict[str, float]] = None,
+        human_portal_picks: Optional[List[str]] = None,
+        pool_size: int = 300,
+        rng: Optional[random.Random] = None,
+    ) -> dict:
+        """
+        Run the full offseason cycle: prestige → NIL → portal → recruiting.
+
+        This method should be called AFTER advance_season() to handle the
+        between-seasons roster movement.  For the human team, the caller
+        can provide pre-selected board/offers/portal picks (from the UI).
+        If not provided, the human team is auto-managed like CPU teams.
+
+        Args:
+            season:             The just-completed Season object.
+            player_cards:       Dict of team_name -> list[PlayerCard].
+            human_board:        Optional pre-built RecruitingBoard for the human team.
+            human_nil_offers:   Optional dict of recruit_id -> NIL amount for human team.
+            human_portal_picks: Optional list of PortalEntry player_names the human picked.
+            pool_size:          National recruit class size.
+            rng:                Seeded Random for reproducibility.
+
+        Returns:
+            Dict with keys: "recruiting", "portal", "nil", "retention_risks",
+            "graduating", "prestige".
+        """
+        if rng is None:
+            rng = random.Random(self.current_year + 7)
+
+        year = self.current_year  # already advanced by advance_season
+        prev_year = year - 1
+        result: dict = {}
+
+        # ── 1. Update team prestige ──
+        for team_name, history in self.team_histories.items():
+            recent_wins = 5
+            if prev_year in history.season_records:
+                recent_wins = history.season_records[prev_year].get("wins", 5)
+            self.team_prestige[team_name] = compute_team_prestige(
+                all_time_wins=history.total_wins,
+                all_time_losses=history.total_losses,
+                championships=history.total_championships,
+                recent_wins=recent_wins,
+            )
+        result["prestige"] = dict(self.team_prestige)
+
+        # ── 2. Build NIL programs ──
+        self._nil_programs = {}
+        nil_summary = {}
+        for team_name in self.team_histories:
+            prestige = self.team_prestige.get(team_name, 50)
+            # Determine market from conference data (simplified)
+            state = ""
+            for conf in self.conferences.values():
+                if team_name in conf.teams:
+                    break
+            market = estimate_market_tier(state) if state else "medium"
+
+            prev_wins = 5
+            champ = False
+            if prev_year in self.awards_history:
+                awards = self.awards_history[prev_year]
+                if team_name == awards.champion:
+                    champ = True
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            prev_wins = sr.get("wins", 5)
+
+            program = auto_nil_program(
+                team_name=team_name,
+                prestige=prestige,
+                market=market,
+                previous_wins=prev_wins,
+                championship=champ,
+                rng=rng,
+            )
+            self._nil_programs[team_name] = program
+            nil_summary[team_name] = program.get_deal_summary()
+
+        self.nil_history[prev_year] = nil_summary
+        result["nil"] = nil_summary
+
+        # ── 3. Retention risks (for human team) ──
+        human_team = self.coach.team_name
+        retention_risks: List[RetentionRisk] = []
+        if human_team in player_cards:
+            ht_prestige = self.team_prestige.get(human_team, 50)
+            sr = self.team_histories.get(human_team, TeamHistory(team_name=human_team))
+            hw = sr.season_records.get(prev_year, {}).get("wins", 5)
+            retention_risks = assess_retention_risks(
+                roster=player_cards[human_team],
+                team_prestige=ht_prestige,
+                team_wins=hw,
+                rng=rng,
+            )
+        result["retention_risks"] = [r.to_dict() for r in retention_risks]
+
+        # ── 4. Graduating players ──
+        graduating: Dict[str, List[str]] = {}
+        for team_name, cards in player_cards.items():
+            grads = [c.full_name for c in cards if c.year == "Graduate"]
+            if grads:
+                graduating[team_name] = grads
+        result["graduating"] = graduating
+
+        # ── 5. Transfer portal ──
+        team_records: Dict[str, tuple] = {}
+        for team_name in player_cards:
+            sr = self.team_histories.get(team_name, TeamHistory(team_name=team_name))
+            rec = sr.season_records.get(prev_year, {"wins": 5, "losses": 5})
+            team_records[team_name] = (rec.get("wins", 5), rec.get("losses", 5))
+
+        portal = TransferPortal(year=year)
+        populate_portal(portal, player_cards, team_records, rng=rng)
+
+        # CPU teams make portal offers
+        team_regions = self._estimate_team_regions()
+        for team_name in self.team_histories:
+            if team_name == human_team:
+                continue
+            prestige = self.team_prestige.get(team_name, 50)
+            nil_prog = self._nil_programs.get(team_name)
+            portal_budget = nil_prog.portal_pool if nil_prog else 150_000
+            auto_portal_offers(
+                portal=portal,
+                team_name=team_name,
+                team_prestige=prestige,
+                needs=["Viper", "Halfback", "Lineman"],  # generic needs
+                nil_budget=portal_budget,
+                max_targets=4,
+                rng=rng,
+            )
+
+        # Human portal picks (instant commit)
+        if human_portal_picks:
+            for pname in human_portal_picks:
+                for entry in portal.get_available():
+                    if entry.player_name == pname:
+                        portal.instant_commit(human_team, entry)
+                        break
+
+        # Resolve remaining portal entries
+        portal_result = portal.resolve_all(
+            team_prestige=self.team_prestige,
+            team_regions=team_regions,
+            rng=rng,
+        )
+        self.portal_history[prev_year] = {
+            "transfers": portal.get_class_summary(),
+            "total_entries": len(portal.entries),
+        }
+        result["portal"] = self.portal_history[prev_year]
+
+        # ── 6. Recruiting ──
+        scholarships: Dict[str, int] = {}
+        nil_budgets: Dict[str, float] = {}
+        for team_name in self.team_histories:
+            # Rough scholarship count: roster target (36) minus current players
+            # minus portal additions plus graduating players
+            portal_adds = len(portal_result.get(team_name, []))
+            grads = len(graduating.get(team_name, []))
+            portal_losses = sum(
+                1 for e in portal.entries
+                if e.origin_team == team_name and e.committed_to and e.committed_to != team_name
+            )
+            open_spots = max(3, min(12, grads + portal_losses - portal_adds))
+            scholarships[team_name] = open_spots
+
+            nil_prog = self._nil_programs.get(team_name)
+            nil_budgets[team_name] = nil_prog.recruiting_pool if nil_prog else 300_000
+
+        recruit_result = run_full_recruiting_cycle(
+            year=year,
+            team_names=list(self.team_histories.keys()),
+            human_team=human_team,
+            human_board=human_board,
+            human_nil_offers=human_nil_offers,
+            team_prestige=self.team_prestige,
+            team_regions=team_regions,
+            scholarships_per_team=scholarships,
+            nil_budgets=nil_budgets,
+            pool_size=pool_size,
+            rng=rng,
+        )
+
+        self.recruiting_history[year] = {
+            "class_rankings": recruit_result["class_rankings"],
+            "signed_count": {t: len(r) for t, r in recruit_result["signed"].items()},
+            "pool_size": pool_size,
+        }
+        result["recruiting"] = self.recruiting_history[year]
+
+        return result
+
+    def _estimate_team_regions(self) -> Dict[str, str]:
+        """Estimate each team's geographic region from conference data."""
+        # Simplified: map conference name to a region
+        conf_region_map = {
+            "Yankee Conference": "northeast",
+            "Metro Atlantic": "mid_atlantic",
+            "Great Lakes Union": "midwest",
+            "Colonial Athletic": "south",
+            "Gateway League": "midwest",
+            "Sun Country": "texas_southwest",
+            "Skyline Conference": "west_coast",
+            "Pacific Rim": "west_coast",
+        }
+        result = {}
+        for conf_name, conf in self.conferences.items():
+            region = conf_region_map.get(conf_name, "midwest")
+            for team in conf.teams:
+                result[team] = region
+        return result
+
+    def get_recruiting_history(self, year: int) -> Optional[dict]:
+        """Return recruiting class results for a given year."""
+        return self.recruiting_history.get(year)
+
+    def get_portal_history(self, year: int) -> Optional[dict]:
+        """Return transfer portal results for a given year."""
+        return self.portal_history.get(year)
+
+    def get_nil_history(self, year: int) -> Optional[dict]:
+        """Return NIL program summaries for a given year."""
+        return self.nil_history.get(year)
+
+    def get_team_prestige(self, team_name: str) -> int:
+        """Return current prestige rating for a team."""
+        return self.team_prestige.get(team_name, 50)
 
     def get_honors(self, year: int) -> Optional[dict]:
         """Return the full SeasonHonors dict for a given year."""
