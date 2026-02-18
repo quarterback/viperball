@@ -26,7 +26,7 @@ from engine.injuries import InjuryTracker
 from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
-from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
+from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, Player, assign_archetype
 from engine.nil_system import (
     NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
     assess_retention_risks, estimate_market_tier, compute_team_prestige,
@@ -39,6 +39,7 @@ from engine.recruiting import (
 from engine.transfer_portal import (
     TransferPortal, PortalEntry, populate_portal,
     auto_portal_offers, generate_quick_portal,
+    estimate_prestige_from_roster,
 )
 
 
@@ -344,6 +345,12 @@ def _serialize_player(player) -> dict:
         "season_games_played": getattr(player, "season_games_played", 0),
         "height": getattr(player, "height", ""),
         "weight": getattr(player, "weight", 0),
+        "hometown_city": getattr(player, "hometown_city", ""),
+        "hometown_state": getattr(player, "hometown_state", ""),
+        "hometown_country": getattr(player, "hometown_country", "USA"),
+        "nationality": getattr(player, "nationality", "American"),
+        "potential": getattr(player, "potential", 3),
+        "development": getattr(player, "development", "normal"),
     }
 
 
@@ -585,7 +592,9 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
             })
 
     session["season"] = season
-    session["phase"] = "regular"
+    session["human_teams"] = req.human_teams or []
+    has_human = bool(req.human_teams)
+    session["phase"] = "portal" if has_human else "regular"
     session["config"] = {
         "playoff_size": req.playoff_size,
         "bowl_count": req.bowl_count,
@@ -593,6 +602,19 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     }
     session["injury_tracker"] = InjuryTracker()
     session["history"] = history_results
+
+    if has_human:
+        ht = req.human_teams[0]
+        prestige = 0
+        if ht in season.teams:
+            prestige = estimate_prestige_from_roster(season.teams[ht].players)
+        rng = random.Random(42 + len(req.human_teams))
+        portal = generate_quick_portal(
+            team_names=list(season.teams.keys()), year=2027,
+            size=40, prestige=prestige, rng=rng,
+        )
+        session["quick_portal"] = portal
+        session["portal_human_team"] = ht
 
     result = _serialize_season_status(session)
     if history_results:
@@ -1793,18 +1815,50 @@ def offseason_complete(session_id: str):
 
 
 @app.post("/sessions/{session_id}/season/portal/generate")
-def season_portal_generate(session_id: str, size: int = Query(40)):
+def season_portal_generate(
+    session_id: str,
+    size: int = Query(40),
+    human_team: str = Query(""),
+):
     session = _get_session(session_id)
     season = _require_season(session)
 
     team_names = list(season.teams.keys())
     rng = random.Random(size + 99)
-    portal = generate_quick_portal(team_names=team_names, size=size, rng=rng)
+
+    prestige = 0
+    if human_team and human_team in season.teams:
+        prestige = estimate_prestige_from_roster(season.teams[human_team].players)
+        session["portal_human_team"] = human_team
+    else:
+        human_teams = session.get("human_teams", [])
+        if human_teams:
+            ht = human_teams[0]
+            if ht in season.teams:
+                prestige = estimate_prestige_from_roster(season.teams[ht].players)
+                session["portal_human_team"] = ht
+
+    portal = generate_quick_portal(
+        team_names=team_names, year=2027, size=size,
+        prestige=prestige, rng=rng,
+    )
     session["quick_portal"] = portal
+    session["phase"] = "portal"
+
+    remaining = portal.transfers_remaining(session.get("portal_human_team", ""))
+
+    entries_serialized = []
+    for i, e in enumerate(portal.entries):
+        d = _serialize_portal_entry(e)
+        d["global_index"] = i
+        entries_serialized.append(d)
 
     return {
-        "entries": [_serialize_portal_entry(e) for e in portal.entries],
+        "entries": entries_serialized,
         "total": len(portal.entries),
+        "transfer_cap": portal.transfer_cap,
+        "transfers_remaining": remaining,
+        "prestige": prestige,
     }
 
 
@@ -1815,16 +1869,37 @@ def season_portal_get(session_id: str):
     if portal is None:
         raise HTTPException(status_code=400, detail="No quick portal generated. POST to /season/portal/generate first.")
 
+    human_team = session.get("portal_human_team", "")
+    remaining = portal.transfers_remaining(human_team)
+
+    available = portal.get_available()
+    avail_serialized = []
+    for e in available:
+        idx = portal.entries.index(e)
+        d = _serialize_portal_entry(e)
+        d["global_index"] = idx
+        avail_serialized.append(d)
+
+    committed = [e for e in portal.entries if e.committed_to == human_team]
+    committed_serialized = []
+    for e in committed:
+        d = _serialize_portal_entry(e)
+        committed_serialized.append(d)
+
     return {
-        "entries": [_serialize_portal_entry(e) for e in portal.entries],
-        "available": [_serialize_portal_entry(e) for e in portal.get_available()],
+        "entries": avail_serialized,
+        "committed": committed_serialized,
         "total": len(portal.entries),
+        "available_count": len(available),
+        "transfer_cap": portal.transfer_cap,
+        "transfers_remaining": remaining,
     }
 
 
 @app.post("/sessions/{session_id}/season/portal/commit")
 def season_portal_commit(session_id: str, team_name: str = Query(...), entry_index: int = Query(...)):
     session = _get_session(session_id)
+    season = _require_season(session)
     portal = session.get("quick_portal")
     if portal is None:
         raise HTTPException(status_code=400, detail="No quick portal generated. POST to /season/portal/generate first.")
@@ -1835,10 +1910,57 @@ def season_portal_commit(session_id: str, team_name: str = Query(...), entry_ind
     entry = portal.entries[entry_index]
     success = portal.instant_commit(team_name, entry)
     if not success:
+        remaining = portal.transfers_remaining(team_name)
+        if remaining == 0:
+            raise HTTPException(status_code=400, detail="Transfer cap reached — no more portal slots available.")
         raise HTTPException(status_code=400, detail="Cannot commit this player (already committed or withdrawn)")
+
+    if team_name in season.teams:
+        card = entry.player_card
+        new_player = Player(
+            number=max((p.number for p in season.teams[team_name].players), default=0) + 1,
+            name=card.full_name,
+            position=card.position,
+            speed=card.speed,
+            stamina=card.stamina,
+            kicking=card.kicking,
+            lateral_skill=card.lateral_skill,
+            tackling=card.tackling,
+            agility=card.agility,
+            power=card.power,
+            awareness=card.awareness,
+            hands=card.hands,
+            kick_power=card.kick_power,
+            kick_accuracy=card.kick_accuracy,
+            player_id=card.player_id,
+            nationality=card.nationality,
+            hometown_city=card.hometown_city,
+            hometown_state=card.hometown_state,
+            hometown_country=card.hometown_country,
+            high_school=card.high_school,
+            height=card.height,
+            weight=card.weight,
+            year=card.year,
+            potential=card.potential,
+            development=card.development,
+        )
+        new_player.archetype = assign_archetype(new_player)
+        season.teams[team_name].players.append(new_player)
+
+    remaining = portal.transfers_remaining(team_name)
 
     return {
         "committed": True,
         "player": _serialize_portal_entry(entry),
         "team": team_name,
+        "transfers_remaining": remaining,
+        "transfer_cap": portal.transfer_cap,
     }
+
+
+@app.post("/sessions/{session_id}/season/portal/skip")
+def season_portal_skip(session_id: str):
+    session = _get_session(session_id)
+    _require_season(session)
+    session["phase"] = "regular"
+    return {"phase": "regular", "skipped": True}

@@ -549,6 +549,7 @@ class Player:
     player_id: str = ""
     nationality: str = "American"
     hometown_city: str = ""
+    hometown_state: str = ""
     hometown_country: str = "USA"
     high_school: str = ""
     height: str = "5-10"
@@ -4391,6 +4392,7 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
                 player_id=p_data.get("player_id", ""),
                 nationality=p_data.get("nationality", "American"),
                 hometown_city=hometown.get("city", ""),
+                hometown_state=hometown.get("state", ""),
                 hometown_country=hometown.get("country", "USA"),
                 high_school=p_data.get("high_school", ""),
                 height=p_data.get("height", "5-10"),
@@ -4528,6 +4530,7 @@ def generate_team_on_the_fly(
             player_id=name_data.get("player_id", ""),
             nationality=name_data.get("nationality", "American"),
             hometown_city=hometown.get("city", ""),
+            hometown_state=hometown.get("state", ""),
             hometown_country=hometown.get("country", "USA"),
             high_school=name_data.get("high_school", ""),
             height=attrs.get("height", "5-10"),
