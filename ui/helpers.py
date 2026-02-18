@@ -195,6 +195,176 @@ def generate_box_score_markdown(result):
     return "\n".join(lines)
 
 
+def generate_forum_box_score(result):
+    """Generate a plain-text box score suitable for pasting into forums."""
+    home = result["final_score"]["home"]
+    away = result["final_score"]["away"]
+    hs = result["stats"]["home"]
+    as_ = result["stats"]["away"]
+    plays = result["play_by_play"]
+
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    for p in plays:
+        q = p.get("quarter", 0)
+        if q not in home_q:
+            continue
+        if p["result"] in ("touchdown", "punt_return_td"):
+            if p["possession"] == "home":
+                home_q[q] += 9
+            else:
+                away_q[q] += 9
+        elif p["result"] == "successful_kick":
+            pts = 5 if p.get("play_type") == "drop_kick" else 3
+            if p["possession"] == "home":
+                home_q[q] += pts
+            else:
+                away_q[q] += pts
+        elif p["result"] == "pindown":
+            if p["possession"] == "home":
+                home_q[q] += 1
+            else:
+                away_q[q] += 1
+        elif p["result"] == "safety":
+            if p["possession"] == "home":
+                away_q[q] += 2
+            else:
+                home_q[q] += 2
+        elif p["result"] == "fumble":
+            if p["possession"] == "home":
+                away_q[q] += 0.5
+            else:
+                home_q[q] += 0.5
+
+    winner = home['team'] if home['score'] > away['score'] else away['team']
+    w_score = max(home['score'], away['score'])
+    l_score = min(home['score'], away['score'])
+    loser = away['team'] if winner == home['team'] else home['team']
+
+    weather = result.get("weather", "clear").title()
+    seed = result.get("seed", "N/A")
+
+    lines = []
+    lines.append("=" * 60)
+    lines.append("COLLEGIATE VIPERBALL LEAGUE — OFFICIAL BOX SCORE")
+    lines.append("=" * 60)
+    lines.append("")
+    lines.append(f"  {winner} {fmt_vb_score(w_score)}, {loser} {fmt_vb_score(l_score)}")
+    lines.append(f"  Weather: {weather} | Seed: {seed}")
+    lines.append("")
+
+    lines.append("-" * 60)
+    lines.append("SCORING BY QUARTER")
+    lines.append("-" * 60)
+    col_w = max(len(home['team']), len(away['team']), 4) + 2
+    lines.append(f"  {'Team':<{col_w}}  Q1    Q2    Q3    Q4    Final")
+    lines.append(f"  {'-'*col_w}  ----  ----  ----  ----  -----")
+    lines.append(f"  {home['team']:<{col_w}}  {fmt_vb_score(home_q[1]):>4}  {fmt_vb_score(home_q[2]):>4}  {fmt_vb_score(home_q[3]):>4}  {fmt_vb_score(home_q[4]):>4}  {fmt_vb_score(home['score']):>5}")
+    lines.append(f"  {away['team']:<{col_w}}  {fmt_vb_score(away_q[1]):>4}  {fmt_vb_score(away_q[2]):>4}  {fmt_vb_score(away_q[3]):>4}  {fmt_vb_score(away_q[4]):>4}  {fmt_vb_score(away['score']):>5}")
+    lines.append("")
+
+    lines.append("-" * 60)
+    lines.append("TEAM STATISTICS")
+    lines.append("-" * 60)
+    stat_w = max(len(home['team']), len(away['team']), 6) + 2
+    def _stat_line(label, h_val, a_val):
+        return f"  {label:<22} {str(h_val):>{stat_w}}  {str(a_val):>{stat_w}}"
+
+    lines.append(f"  {'':22} {home['team']:>{stat_w}}  {away['team']:>{stat_w}}")
+    lines.append(f"  {'':22} {'-'*stat_w}  {'-'*stat_w}")
+    lines.append(_stat_line("Touchdowns (9pts)", f"{hs['touchdowns']} ({hs['touchdowns']*9}pts)", f"{as_['touchdowns']} ({as_['touchdowns']*9}pts)"))
+    lines.append(_stat_line("Snap Kicks (5pts)", f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)}", f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)}"))
+    lines.append(_stat_line("Field Goals (3pts)", f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)}", f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)}"))
+    lines.append(_stat_line("Pindowns (1pt)", hs.get('pindowns', 0), as_.get('pindowns', 0)))
+    lines.append(_stat_line("Strikes (1/2pt)", hs.get('fumble_recoveries', 0), as_.get('fumble_recoveries', 0)))
+    lines.append(_stat_line("Total Yards", hs['total_yards'], as_['total_yards']))
+    lines.append(_stat_line("Rushing Yards", hs.get('rushing_yards', 0), as_.get('rushing_yards', 0)))
+    lines.append(_stat_line("Lateral Yards", hs.get('lateral_yards', 0), as_.get('lateral_yards', 0)))
+    lines.append(_stat_line("Yards/Play", hs['yards_per_play'], as_['yards_per_play']))
+    lines.append(_stat_line("Total Plays", hs['total_plays'], as_['total_plays']))
+    lines.append(_stat_line("Lateral Chains", f"{hs['lateral_chains']} ({hs['lateral_efficiency']}%)", f"{as_['lateral_chains']} ({as_['lateral_efficiency']}%)"))
+    lines.append(_stat_line("Fumbles Lost", hs['fumbles_lost'], as_['fumbles_lost']))
+    lines.append(_stat_line("Turnovers on Downs", hs['turnovers_on_downs'], as_['turnovers_on_downs']))
+    lines.append(_stat_line("Penalties", f"{hs.get('penalties',0)} / {hs.get('penalty_yards',0)}yds", f"{as_.get('penalties',0)} / {as_.get('penalty_yards',0)}yds"))
+    lines.append("")
+
+    ps = result.get("player_stats", {})
+    for side_key, side_name in [("home", home['team']), ("away", away['team'])]:
+        side_ps = ps.get(side_key, [])
+        if not side_ps:
+            continue
+
+        lines.append("-" * 60)
+        lines.append(f"INDIVIDUAL STATS — {side_name.upper()}")
+        lines.append("-" * 60)
+
+        rushers = [p for p in side_ps if p.get("touches", 0) > 0]
+        if rushers:
+            lines.append("")
+            lines.append("  Rushing & Laterals")
+            lines.append(f"  {'Player':<28} TCH  YDS  RUSH  LAT   TD  FUM  L.Thr L.Rec")
+            lines.append(f"  {'-'*28} ---  ---  ----  ---   --  ---  ----- -----")
+            for p in rushers:
+                name = f"{p['tag']} {p['name']}"
+                if len(name) > 28:
+                    name = name[:27] + "."
+                lines.append(f"  {name:<28} {p['touches']:>3}  {p['yards']:>3}  {p.get('rushing_yards',0):>4}  {p.get('lateral_yards',0):>3}   {p['tds']:>2}  {p['fumbles']:>3}  {p.get('laterals_thrown',0):>5} {p.get('lateral_receptions',0):>5}")
+
+        kickers = [p for p in side_ps if p.get("kick_att", 0) > 0]
+        if kickers:
+            lines.append("")
+            lines.append("  Kicking")
+            lines.append(f"  {'Player':<28} ATT  MADE  PCT")
+            lines.append(f"  {'-'*28} ---  ----  ---")
+            for p in kickers:
+                name = f"{p['tag']} {p['name']}"
+                if len(name) > 28:
+                    name = name[:27] + "."
+                pct = f"{(p['kick_made']/p['kick_att']*100):.0f}%" if p['kick_att'] > 0 else "—"
+                lines.append(f"  {name:<28} {p['kick_att']:>3}  {p['kick_made']:>4}  {pct:>3}")
+
+        st_players = [p for p in side_ps if (p.get("kick_returns", 0) + p.get("punt_returns", 0) + p.get("st_tackles", 0)) > 0]
+        if st_players:
+            lines.append("")
+            lines.append("  Special Teams")
+            lines.append(f"  {'Player':<28} KR  KRYds KRTD  PR  PRYds PRTD  Tkl")
+            lines.append(f"  {'-'*28} --  ----- ----  --  ----- ----  ---")
+            for p in st_players:
+                name = f"{p['tag']} {p['name']}"
+                if len(name) > 28:
+                    name = name[:27] + "."
+                lines.append(f"  {name:<28} {p.get('kick_returns',0):>2}  {p.get('kick_return_yards',0):>5} {p.get('kick_return_tds',0):>4}  {p.get('punt_returns',0):>2}  {p.get('punt_return_yards',0):>5} {p.get('punt_return_tds',0):>4}  {p.get('st_tackles',0):>3}")
+        lines.append("")
+
+    key_plays = []
+    for p in plays:
+        if p["result"] in ("touchdown", "punt_return_td"):
+            key_plays.append(p)
+        elif p.get("yards", 0) >= 20:
+            key_plays.append(p)
+        elif p.get("play_type") in ("drop_kick", "place_kick") and p["result"] == "successful_kick":
+            key_plays.append(p)
+
+    if key_plays:
+        lines.append("-" * 60)
+        lines.append("KEY PLAYS")
+        lines.append("-" * 60)
+        for p in key_plays[:12]:
+            q = p["quarter"]
+            tr = p["time_remaining"]
+            m, s = tr // 60, tr % 60
+            side = "HOME" if p["possession"] == "home" else "AWAY"
+            lines.append(f"  Q{q} {m:02d}:{s:02d} [{side}] {p['description']}")
+        lines.append("")
+
+    lines.append("=" * 60)
+    lines.append("CVL Official Box Score | 6-down, 20-yard system")
+    lines.append("Scoring: TD 9 | SK 5 | FG 3 | Safety 2 | Pindown 1 | Strike 1/2")
+    lines.append("=" * 60)
+
+    return "\n".join(lines)
+
+
 def generate_play_log_csv(result):
     plays = result["play_by_play"]
     home_name = result["final_score"]["home"]["team"]
@@ -383,6 +553,73 @@ def render_game_detail(result, key_prefix="gd"):
     ]
     st.dataframe(pd.DataFrame(stat_rows), hide_index=True, use_container_width=True)
 
+    ps = result.get("player_stats", {})
+    home_ps = ps.get("home", [])
+    away_ps = ps.get("away", [])
+
+    if home_ps or away_ps:
+        with st.expander("Individual Player Stats", expanded=True):
+            for side_label, side_ps, side_name in [("Home", home_ps, home_name), ("Away", away_ps, away_name)]:
+                if not side_ps:
+                    continue
+                st.markdown(f"**{side_name}**")
+
+                rush_rows = [p for p in side_ps if p.get("touches", 0) > 0]
+                if rush_rows:
+                    st.caption("Rushing & Laterals")
+                    rush_df = []
+                    for p in rush_rows:
+                        rush_df.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "Arch": p.get("archetype", ""),
+                            "TCH": p["touches"],
+                            "YDS": p["yards"],
+                            "RUSH": p.get("rushing_yards", 0),
+                            "LAT": p.get("lateral_yards", 0),
+                            "TD": p["tds"],
+                            "FUM": p["fumbles"],
+                            "L.Thr": p.get("laterals_thrown", 0),
+                            "L.Rec": p.get("lateral_receptions", 0),
+                            "L.Ast": p.get("lateral_assists", 0),
+                            "L.TD": p.get("lateral_tds", 0),
+                        })
+                    st.dataframe(pd.DataFrame(rush_df), hide_index=True, use_container_width=True)
+
+                kick_rows = [p for p in side_ps if p.get("kick_att", 0) > 0]
+                if kick_rows:
+                    st.caption("Kicking")
+                    kick_df = []
+                    for p in kick_rows:
+                        kick_df.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "ATT": p["kick_att"],
+                            "MADE": p["kick_made"],
+                            "PCT": f"{(p['kick_made']/p['kick_att']*100):.0f}%" if p["kick_att"] > 0 else "—",
+                            "BLK": p.get("kick_deflections", 0),
+                        })
+                    st.dataframe(pd.DataFrame(kick_df), hide_index=True, use_container_width=True)
+
+                st_rows = [p for p in side_ps if (p.get("kick_returns", 0) + p.get("punt_returns", 0) + p.get("st_tackles", 0) + p.get("keeper_bells", 0) + p.get("coverage_snaps", 0)) > 0]
+                if st_rows:
+                    st.caption("Special Teams & Defense")
+                    st_df = []
+                    for p in st_rows:
+                        st_df.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "KR": p.get("kick_returns", 0),
+                            "KR Yds": p.get("kick_return_yards", 0),
+                            "KR TD": p.get("kick_return_tds", 0),
+                            "PR": p.get("punt_returns", 0),
+                            "PR Yds": p.get("punt_return_yards", 0),
+                            "PR TD": p.get("punt_return_tds", 0),
+                            "Muffs": p.get("muffs", 0),
+                            "ST Tkl": p.get("st_tackles", 0),
+                            "Bells": p.get("keeper_bells", 0),
+                            "Cov": p.get("coverage_snaps", 0),
+                        })
+                    st.dataframe(pd.DataFrame(st_df), hide_index=True, use_container_width=True)
+                st.divider()
+
     drives = result.get("drive_summary", [])
     if drives:
         with st.expander("Drive Summary", expanded=False):
@@ -430,6 +667,15 @@ def render_game_detail(result, key_prefix="gd"):
             st.download_button("Download Drives (CSV)", generate_drives_csv(result),
                                file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_drives.csv",
                                mime="text/csv", key=f"{key_prefix}_dl_drives")
+
+        st.divider()
+        st.markdown("**Forum-Ready Box Score**")
+        st.caption("Copy the text below and paste it into any forum or message board.")
+        forum_text = generate_forum_box_score(result)
+        st.text_area("Box Score (select all, copy)", forum_text, height=400, key=f"{key_prefix}_forum_box")
+        st.download_button("Download Box Score (.txt)", forum_text,
+                           file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_boxscore.txt",
+                           mime="text/plain", key=f"{key_prefix}_dl_forum")
 
 
 @st.cache_resource
