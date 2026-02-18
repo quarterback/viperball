@@ -16,7 +16,8 @@ I want iterative development. Ask before making major changes. I prefer detailed
 The user interface is built with Streamlit and features a 6-page sandbox:
 - **Game Simulator**: Allows configuration of offense/defense styles and weather, displaying real-time box scores, play distributions, drive outcomes, penalty tracking, player archetype performance, and a detailed play log. Includes a debug panel for granular data.
 - **Season Simulator**: Configurable for various season and playoff formats, featuring standings, radar charts, and score distributions.
-- **Dynasty Mode**: A multi-season career mode with customizable conference setups, season lengths, and scheduling. It includes 9 tabs for simulating seasons, tracking standings, coach dashboard, team history, record book, awards, injury reports, player development, and CSV export functionalities.
+- **Dynasty Mode**: A multi-season career mode with customizable conference setups, season lengths, and scheduling. It includes 9 tabs for simulating seasons, tracking standings, coach dashboard, team history, record book, awards, injury reports, player development, and CSV export functionalities. Supports pre-dynasty history simulation (1-100 years) to generate an established league backstory with champions, records, and team legacies before the coach begins their tenure.
+- **Season Simulator**: All 125 teams are always included. Human coach picks up to 4 teams to manage; rest are AI-controlled.
 - **Debug Tools**: Facilitates batch simulations for averaging, analyzing fatigue curves, turnover rates, and drive outcome aggregations.
 - **Play Inspector**: Enables repeated execution of single plays under controlled conditions for detailed analysis.
 - **Team Roster**: Browse and inspect individual team rosters, player archetypes, and stats.

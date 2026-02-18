@@ -133,6 +133,16 @@ def render_dynasty_mode(shared):
                             conf_assignments[tname] = assigned
 
         st.divider()
+        st.subheader("League History")
+        st.caption("Generate past seasons so your dynasty has an established history with champions, records, and rivalries.")
+        history_col1, history_col2 = st.columns(2)
+        with history_col1:
+            history_years = st.slider("Years of History to Simulate", min_value=0, max_value=100, value=0, key="history_years",
+                                       help="0 = start fresh with no history. Higher values take longer to generate.")
+        with history_col2:
+            history_games = st.slider("Games Per Team (History Seasons)", min_value=8, max_value=12, value=10, key="history_games")
+
+        st.divider()
         load_col1, load_col2 = st.columns(2)
         with load_col1:
             create_btn = st.button("Create Dynasty", type="primary", use_container_width=True, key="create_dynasty")
@@ -148,6 +158,20 @@ def render_dynasty_mode(shared):
                 conf_team_lists[cname].append(tname)
             for cname, cteams in conf_team_lists.items():
                 dynasty.add_conference(cname, cteams)
+
+            if history_years > 0:
+                progress_bar = st.progress(0, text=f"Simulating league history (0/{history_years} seasons)...")
+                def _update_progress(done, total):
+                    progress_bar.progress(done / total, text=f"Simulating league history ({done}/{total} seasons)...")
+                dynasty.simulate_history(
+                    num_years=history_years,
+                    teams_dir=teams_dir,
+                    games_per_team=history_games,
+                    playoff_size=8,
+                    progress_callback=_update_progress,
+                )
+                progress_bar.progress(1.0, text=f"History complete! {history_years} seasons generated.")
+
             st.session_state["dynasty"] = dynasty
             st.session_state["dynasty_teams"] = setup_teams
             st.rerun()

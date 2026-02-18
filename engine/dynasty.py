@@ -17,10 +17,12 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from collections import defaultdict
 
-from engine.season import Season, TeamRecord, Game
+from engine.season import Season, TeamRecord, Game, load_teams_from_directory, create_season
 from engine.awards import SeasonHonors, compute_season_awards
 from engine.injuries import InjuryTracker
 from engine.development import apply_team_development, get_preseason_breakout_candidates, DevelopmentReport
+from engine.ai_coach import auto_assign_all_teams
+from engine.player_card import player_to_card
 
 
 # ========================================
@@ -531,6 +533,102 @@ class Dynasty:
                 "coach": self.coach.name,
                 "championships": self.coach.championships,
             }
+
+    def simulate_history(
+        self,
+        num_years: int,
+        teams_dir: str,
+        games_per_team: int = 10,
+        playoff_size: int = 8,
+        progress_callback=None,
+    ):
+        """
+        Simulate N years of league history before the coach's tenure begins.
+
+        This creates a rich backstory: champions, records, team legacies, and
+        an established record book that the player can browse before starting
+        their own dynasty.
+
+        The coach does NOT accumulate wins/losses during history simulation.
+        History years run from (current_year - num_years) to (current_year - 1).
+
+        Args:
+            num_years:          How many seasons of history to generate (1-100)
+            teams_dir:          Path to data/teams/ directory
+            games_per_team:     Games per team each season (default 10)
+            playoff_size:       Playoff field size (default 8)
+            progress_callback:  Optional callable(year, total) for UI updates
+        """
+        all_teams = load_teams_from_directory(teams_dir)
+        conf_dict = self.get_conferences_dict()
+
+        original_year = self.current_year
+        history_start = original_year - num_years
+
+        saved_coach_wins = self.coach.career_wins
+        saved_coach_losses = self.coach.career_losses
+        saved_coach_years = list(self.coach.years_coached)
+        saved_coach_championships = self.coach.championships
+        saved_coach_playoff = self.coach.playoff_appearances
+        saved_coach_records = dict(self.coach.season_records)
+        saved_coach_first_year = self.coach.first_year
+        saved_coach_current_year = self.coach.current_year
+
+        for i, year in enumerate(range(history_start, original_year)):
+            self.current_year = year
+
+            seed = hash(f"history_{self.dynasty_name}_{year}") % 999999
+            ai_configs = auto_assign_all_teams(teams_dir, human_teams=[], seed=seed)
+
+            style_configs = {}
+            for tname in all_teams:
+                style_configs[tname] = ai_configs.get(
+                    tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+                )
+
+            season = create_season(
+                f"{year} CVL Season",
+                all_teams,
+                style_configs,
+                conferences=conf_dict,
+                games_per_team=games_per_team,
+            )
+            season.simulate_season(generate_polls=True)
+
+            effective_playoff = min(playoff_size, len(all_teams))
+            if effective_playoff >= 4:
+                season.simulate_playoff(num_teams=effective_playoff)
+
+            injury_tracker = InjuryTracker()
+            injury_tracker.seed(hash(f"history_{self.dynasty_name}_{year}_inj") % 999999)
+            max_week = max((g.week for g in season.schedule if g.completed), default=0)
+            for wk in range(1, max_week + 1):
+                injury_tracker.process_week(wk, season.teams, season.standings)
+                injury_tracker.resolve_week(wk)
+
+            player_cards = {}
+            for t_name, t_obj in season.teams.items():
+                player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
+
+            self.advance_season(season, injury_tracker=injury_tracker, player_cards=player_cards)
+
+            if progress_callback:
+                progress_callback(i + 1, num_years)
+
+        self.coach.career_wins = saved_coach_wins
+        self.coach.career_losses = saved_coach_losses
+        self.coach.years_coached = saved_coach_years
+        self.coach.championships = saved_coach_championships
+        self.coach.playoff_appearances = saved_coach_playoff
+        self.coach.season_records = saved_coach_records
+        self.coach.first_year = saved_coach_first_year
+        self.coach.current_year = saved_coach_current_year
+
+        for year in range(history_start, original_year):
+            if year in self.seasons:
+                del self.seasons[year]
+
+        self.current_year = original_year
 
     def get_team_history(self, team_name: str) -> Optional[TeamHistory]:
         """Get historical record for a team"""

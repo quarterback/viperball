@@ -50,14 +50,15 @@ def render_season_simulator(shared):
             help="Pick up to 4 teams to coach yourself. Everyone else is AI-controlled."
         )
         
+        def _reroll_season_ai():
+            st.session_state["season_ai_seed"] = random.randint(1, 999999)
+
         ai_seed_col, reroll_col = st.columns([3, 1])
         with ai_seed_col:
             ai_seed = st.number_input("AI Coaching Seed (0 = random)", min_value=0, max_value=999999, value=0, key="season_ai_seed")
         with reroll_col:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("Re-roll AI", key="reroll_ai_season"):
-                st.session_state["season_ai_seed"] = random.randint(1, 999999)
-                st.rerun()
+            st.button("Re-roll AI", key="reroll_ai_season", on_click=_reroll_season_ai)
         
         actual_seed = ai_seed if ai_seed > 0 else hash(season_name) % 999999
         
