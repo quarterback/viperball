@@ -318,13 +318,12 @@ def estimate_team_prestige_from_roster(team: "Team") -> int:
     """Estimate a rough prestige score from average player overall.
 
     Used in single-season mode where no dynasty history exists.
-    Maps average team overall (typically 55-85) to a 10-99 prestige scale.
+    Maps average team overall (full 10-100 range) to a 10-99 prestige scale.
     """
     if not team.players:
         return 50
     avg_ovr = sum(p.overall for p in team.players) / len(team.players)
-    # Map ~55-85 range to 10-99 prestige
-    prestige = int((avg_ovr - 50) * 2.5 + 10)
+    prestige = int(avg_ovr * 0.9 + 5)
     return max(10, min(99, prestige))
 
 
@@ -1335,6 +1334,18 @@ class Season:
             self.bowl_games.append(bowl)
 
 
+def _pick_ai_archetype() -> str:
+    """Pick a random archetype for an AI team from a weighted distribution.
+
+    Creates a realistic league where most teams are mid-tier with a few
+    elite programs and a handful of weak ones.
+    """
+    from scripts.generate_rosters import AI_ARCHETYPE_WEIGHTS
+    keys = list(AI_ARCHETYPE_WEIGHTS.keys())
+    weights = [AI_ARCHETYPE_WEIGHTS[k] for k in keys]
+    return random.choices(keys, weights=weights)[0]
+
+
 def load_teams_from_directory(
     directory: str,
     fresh: bool = False,
@@ -1348,7 +1359,7 @@ def load_teams_from_directory(
                If False, load stored rosters from JSON files (saved game).
         team_archetypes: Optional dict of team_name -> program archetype key.
                         Only used when fresh=True. Teams not in the dict get
-                        the default archetype ("regional_power").
+                        a random archetype from a weighted distribution.
     """
     teams = {}
     team_dir = Path(directory)
@@ -1362,6 +1373,8 @@ def load_teams_from_directory(
             raw = _json.load(f)
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
         arch = archetypes.get(team_name)
+        if arch is None and fresh:
+            arch = _pick_ai_archetype()
         team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
         teams[team.name] = team
 
@@ -1380,6 +1393,7 @@ def load_teams_with_states(
         directory: Path to team JSON directory.
         fresh: If True, generate brand-new rosters for every team.
         team_archetypes: Optional dict of team_name -> program archetype key.
+                        Teams not in the dict get a random archetype when fresh.
 
     Returns:
         (teams_dict, team_states_dict) where team_states maps team_name -> state
@@ -1396,6 +1410,8 @@ def load_teams_with_states(
         state = raw.get("team_info", {}).get("state", "")
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
         arch = archetypes.get(team_name)
+        if arch is None and fresh:
+            arch = _pick_ai_archetype()
         team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
         teams[team.name] = team
         if state:

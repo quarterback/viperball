@@ -4549,29 +4549,31 @@ def generate_team_on_the_fly(
         ))
 
     # ── Hidden gem boosts ──
-    # Every program has a few players who are better than their archetype suggests.
-    # Lower-tier programs get fewer gems but with bigger individual boosts.
+    # Every program has a few players whose hidden abilities outstrip their
+    # ratings.  Instead of boosting ALL stats (which inflates OVR uniformly),
+    # each gem gets 2-4 *targeted* stats boosted heavily.  This means their
+    # overall rating stays modest, but they shine in specific areas — a true
+    # "hidden gem" whose game-day impact exceeds their number.
+    _GEM_STAT_NAMES = [
+        "speed", "stamina", "kicking", "lateral_skill", "tackling",
+        "agility", "power", "awareness", "hands", "kick_power", "kick_accuracy",
+    ]
     arch_key = program_archetype or DEFAULT_ARCHETYPE
     arch_data = PROGRAM_ARCHETYPES.get(arch_key, PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
     gem_min, gem_max = arch_data["hidden_gem_count"]
     boost_min, boost_max = arch_data["hidden_gem_boost"]
+    gem_stat_range = arch_data.get("hidden_gem_stats", (2, 3))
     num_gems = random.randint(gem_min, gem_max)
     gem_indices = random.sample(range(len(players)), min(num_gems, len(players)))
     for gi in gem_indices:
         p = players[gi]
         boost = random.randint(boost_min, boost_max)
-        # Boost all core stats for this hidden gem
-        p.speed = min(100, p.speed + boost)
-        p.stamina = min(100, p.stamina + int(boost * 0.7))
-        p.kicking = min(100, p.kicking + int(boost * 0.6))
-        p.lateral_skill = min(100, p.lateral_skill + boost)
-        p.tackling = min(100, p.tackling + int(boost * 0.7))
-        p.agility = min(100, p.agility + boost)
-        p.power = min(100, p.power + int(boost * 0.8))
-        p.awareness = min(100, p.awareness + boost)
-        p.hands = min(100, p.hands + int(boost * 0.8))
-        p.kick_power = min(100, p.kick_power + int(boost * 0.6))
-        p.kick_accuracy = min(100, p.kick_accuracy + int(boost * 0.6))
+        # Pick a handful of stats to be this player's hidden strengths
+        num_elite = random.randint(gem_stat_range[0], gem_stat_range[1])
+        elite_stats = random.sample(_GEM_STAT_NAMES, num_elite)
+        for stat_name in elite_stats:
+            current = getattr(p, stat_name)
+            setattr(p, stat_name, min(100, current + boost))
         # Hidden gems also get better potential
         p.potential = min(5, p.potential + random.randint(1, 2))
 

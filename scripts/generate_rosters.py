@@ -35,100 +35,118 @@ from scripts.generate_coach_names import generate_coach_name
 PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
-        "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "talent_offset": -12,         # big penalty to all base rolls
-        "floor_adjust": -8,           # lower the stat floor too
-        "hidden_gem_count": (1, 2),   # 1-2 players get a big boost
-        "hidden_gem_boost": (10, 18), # those players get +10 to +18
-        "potential_weights": {         # mostly low-potential players
-            "freshman": [20, 10, 2, 28, 40],    # [5,4,3,2,1]-star weights
-            "sophomore": [15, 8, 2, 30, 45],
-            "junior": [8, 5, 0, 35, 52],
-            "senior": [0, 5, 30, 30, 35],
+        "description": "Bottom-tier program (OVR ~10-30). Talent is scarce but a hidden gem or two keeps hope alive.",
+        "talent_offset": -57,          # target avg stat ~20
+        "floor_adjust": -70,           # floors effectively 1 (no artificial floor)
+        "hidden_gem_count": (1, 2),    # 1-2 players have hidden elite skills
+        "hidden_gem_boost": (40, 55),  # massive boost on targeted stats only
+        "hidden_gem_stats": (2, 3),    # boost 2-3 stats per gem (not all)
+        "potential_weights": {          # mostly low-potential players
+            "freshman": [5, 5, 10, 35, 45],     # [5,4,3,2,1]-star weights
+            "sophomore": [3, 5, 8, 34, 50],
+            "junior": [2, 3, 5, 35, 55],
+            "senior": [0, 2, 10, 33, 55],
         },
-        "dev_weights": [50, 10, 30, 10],  # normal, quick, slow, late_bloomer
-        "prestige_range": (10, 25),
+        "dev_weights": [40, 5, 45, 10],   # normal, quick, slow, late_bloomer
+        "prestige_range": (5, 20),
     },
     "underdog": {
         "label": "Underdogs",
-        "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "talent_offset": -7,
-        "floor_adjust": -4,
+        "description": "Below average but scrappy (OVR ~30-50). A few solid players make them competitive on any given day.",
+        "talent_offset": -37,
+        "floor_adjust": -55,
         "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (8, 14),
+        "hidden_gem_boost": (30, 45),
+        "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [25, 18, 5, 25, 27],
-            "sophomore": [20, 15, 5, 28, 32],
-            "junior": [12, 10, 3, 30, 45],
-            "senior": [0, 10, 30, 30, 30],
+            "freshman": [10, 12, 15, 30, 33],
+            "sophomore": [8, 10, 12, 32, 38],
+            "junior": [5, 8, 10, 35, 42],
+            "senior": [0, 5, 15, 35, 45],
         },
-        "dev_weights": [55, 15, 20, 10],
-        "prestige_range": (22, 40),
+        "dev_weights": [45, 10, 35, 10],
+        "prestige_range": (18, 35),
     },
     "punching_above": {
         "label": "Punching Above Their Weight",
-        "description": "Mid-tier program with surprising talent. Well-coached and greater than the sum of their parts.",
-        "talent_offset": -3,
-        "floor_adjust": -2,
+        "description": "Mid-tier program with surprising talent (OVR ~40-60). Well-coached and greater than the sum of their parts.",
+        "talent_offset": -27,
+        "floor_adjust": -45,
         "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (6, 12),
+        "hidden_gem_boost": (20, 35),
+        "hidden_gem_stats": (2, 4),
         "potential_weights": {
-            "freshman": [30, 25, 10, 20, 15],
-            "sophomore": [25, 22, 8, 25, 20],
-            "junior": [18, 18, 5, 30, 29],
-            "senior": [0, 15, 35, 30, 20],
+            "freshman": [15, 20, 20, 25, 20],
+            "sophomore": [12, 18, 18, 28, 24],
+            "junior": [8, 15, 15, 32, 30],
+            "senior": [0, 10, 25, 35, 30],
         },
-        "dev_weights": [55, 22, 13, 10],
-        "prestige_range": (38, 55),
+        "dev_weights": [50, 18, 22, 10],
+        "prestige_range": (32, 50),
     },
     "regional_power": {
         "label": "Regional Power",
-        "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "talent_offset": 0,
-        "floor_adjust": 0,
+        "description": "Strong program that dominates their region (OVR ~50-75). Solid roster top to bottom.",
+        "talent_offset": -15,
+        "floor_adjust": -30,
         "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (5, 10),
+        "hidden_gem_boost": (12, 22),
+        "hidden_gem_stats": (2, 4),
         "potential_weights": {
-            "freshman": [35, 30, 15, 15, 5],
-            "sophomore": [30, 28, 10, 20, 12],
-            "junior": [25, 25, 8, 25, 17],
-            "senior": [0, 20, 35, 30, 15],
+            "freshman": [25, 25, 20, 18, 12],
+            "sophomore": [20, 22, 18, 22, 18],
+            "junior": [15, 20, 15, 28, 22],
+            "senior": [0, 15, 30, 30, 25],
         },
-        "dev_weights": [60, 20, 12, 8],
-        "prestige_range": (52, 72),
+        "dev_weights": [55, 22, 15, 8],
+        "prestige_range": (45, 68),
     },
     "national_power": {
         "label": "National Power",
-        "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "talent_offset": 5,
-        "floor_adjust": 3,
-        "hidden_gem_count": (4, 6),
-        "hidden_gem_boost": (4, 8),
+        "description": "Top-tier program that competes for championships (OVR ~70-90). Deep roster with multiple stars.",
+        "talent_offset": 3,
+        "floor_adjust": 0,
+        "hidden_gem_count": (3, 5),
+        "hidden_gem_boost": (5, 12),
+        "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [40, 32, 18, 8, 2],
-            "sophomore": [35, 30, 15, 15, 5],
-            "junior": [28, 28, 12, 22, 10],
-            "senior": [0, 25, 40, 25, 10],
+            "freshman": [35, 30, 18, 12, 5],
+            "sophomore": [30, 28, 18, 15, 9],
+            "junior": [25, 25, 15, 22, 13],
+            "senior": [0, 22, 35, 28, 15],
         },
-        "dev_weights": [55, 28, 10, 7],
-        "prestige_range": (68, 85),
+        "dev_weights": [50, 28, 12, 10],
+        "prestige_range": (65, 82),
     },
     "blue_blood": {
         "label": "Blue Blood",
-        "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "talent_offset": 10,
-        "floor_adjust": 5,
-        "hidden_gem_count": (5, 8),
-        "hidden_gem_boost": (3, 7),
+        "description": "Elite program (OVR ~85-99). Loaded with talent across every position. The standard everyone else chases.",
+        "talent_offset": 15,
+        "floor_adjust": 10,
+        "hidden_gem_count": (4, 6),
+        "hidden_gem_boost": (3, 8),
+        "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [45, 35, 15, 4, 1],
-            "sophomore": [40, 32, 18, 8, 2],
-            "junior": [32, 30, 15, 18, 5],
-            "senior": [0, 30, 40, 22, 8],
+            "freshman": [42, 32, 16, 8, 2],
+            "sophomore": [38, 30, 18, 10, 4],
+            "junior": [30, 28, 18, 16, 8],
+            "senior": [0, 28, 38, 24, 10],
         },
-        "dev_weights": [50, 32, 10, 8],
-        "prestige_range": (82, 99),
+        "dev_weights": [45, 32, 13, 10],
+        "prestige_range": (78, 99),
     },
+}
+
+# Weighted distribution for assigning archetypes to AI teams.
+# Creates a realistic league where most teams are mid-tier with a few
+# elite programs and a handful of weak ones.
+AI_ARCHETYPE_WEIGHTS = {
+    "doormat": 8,
+    "underdog": 18,
+    "punching_above": 25,
+    "regional_power": 27,
+    "national_power": 15,
+    "blue_blood": 7,
 }
 
 # Default archetype (matches existing generation behavior)
@@ -281,18 +299,21 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
     else:
         modifier = 0
 
-    # Apply modifier and cap — floors adjusted by archetype
-    speed = min(100, max(60 + floor_adj, base_speed + modifier))
-    stamina = min(100, max(70 + floor_adj, base_stamina + modifier))
-    kicking = min(100, max(50 + floor_adj, base_kicking + modifier))
-    lateral_skill = min(100, max(55 + floor_adj, base_lateral_skill + modifier))
-    tackling = min(100, max(55 + floor_adj, base_tackling + modifier))
-    agility = min(100, max(55 + floor_adj, base_agility + modifier))
-    power = min(100, max(55 + floor_adj, base_power + modifier))
-    awareness = min(100, max(55 + floor_adj, base_awareness + modifier))
-    hands = min(100, max(55 + floor_adj, base_hands + modifier))
-    kick_power = min(100, max(50 + floor_adj, base_kick_power + modifier))
-    kick_accuracy = min(100, max(50 + floor_adj, base_kick_accuracy + modifier))
+    # Apply modifier and cap — floors adjusted by archetype (hard minimum 1)
+    def _clamp(val, base_floor):
+        return max(1, min(100, max(base_floor + floor_adj, val)))
+
+    speed = _clamp(base_speed + modifier, 60)
+    stamina = _clamp(base_stamina + modifier, 70)
+    kicking = _clamp(base_kicking + modifier, 50)
+    lateral_skill = _clamp(base_lateral_skill + modifier, 55)
+    tackling = _clamp(base_tackling + modifier, 55)
+    agility = _clamp(base_agility + modifier, 55)
+    power = _clamp(base_power + modifier, 55)
+    awareness = _clamp(base_awareness + modifier, 55)
+    hands = _clamp(base_hands + modifier, 55)
+    kick_power = _clamp(base_kick_power + modifier, 50)
+    kick_accuracy = _clamp(base_kick_accuracy + modifier, 50)
 
     # Generate height and weight (women's athletes)
     if "Lineman" in position or "Wedge" in position:
