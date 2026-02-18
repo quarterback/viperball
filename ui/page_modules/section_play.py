@@ -405,26 +405,18 @@ def _render_new_season(shared):
     rec_bowls = get_recommended_bowl_count(len(all_team_names), playoff_size)
     bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, (len(all_team_names) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
 
-    run_season = st.button("Simulate Season", type="primary", use_container_width=True, key="run_season")
+    start_season = st.button("Start Season", type="primary", use_container_width=True, key="run_season")
 
-    if run_season:
+    if start_season:
         season = create_season(season_name, all_teams, style_configs,
                                conferences=auto_conferences if auto_conferences else None,
                                games_per_team=season_games)
 
-        with st.spinner(f"Simulating {len(season.schedule)} games..."):
-            season.simulate_season(generate_polls=True)
-
-        if playoff_size > 0 and len(all_team_names) >= playoff_size:
-            with st.spinner("Running playoffs..."):
-                season.simulate_playoff(num_teams=min(playoff_size, len(all_team_names)))
-
-        if bowl_count > 0:
-            with st.spinner("Running bowl games..."):
-                season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size)
-
         st.session_state["active_season"] = season
         st.session_state["season_human_teams_list"] = human_teams
+        st.session_state["season_phase"] = "regular"
+        st.session_state["season_playoff_size"] = playoff_size
+        st.session_state["season_bowl_count"] = bowl_count
         st.rerun()
 
 
@@ -602,101 +594,333 @@ def _render_dynasty_play(shared):
                 })
             st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
 
-        if st.button(f"Simulate {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
-            conf_dict = dynasty.get_conferences_dict()
-            season = create_season(
-                f"{dynasty.current_year} CVL Season",
-                all_dynasty_teams,
-                dyn_style_configs,
-                conferences=conf_dict,
-                games_per_team=games_per_team
-            )
+        dyn_phase = st.session_state.get("dyn_season_phase", "setup")
 
+        if dyn_phase == "setup":
+            if st.button(f"Start {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
+                conf_dict = dynasty.get_conferences_dict()
+                season = create_season(
+                    f"{dynasty.current_year} CVL Season",
+                    all_dynasty_teams,
+                    dyn_style_configs,
+                    conferences=conf_dict,
+                    games_per_team=games_per_team
+                )
+
+                injury_tracker = InjuryTracker()
+                injury_tracker.seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
+
+                st.session_state["active_season"] = season
+                st.session_state["last_dynasty_season"] = season
+                st.session_state["last_dynasty_injury_tracker"] = injury_tracker
+                st.session_state["dyn_season_phase"] = "regular"
+                st.session_state["dyn_playoff_size"] = min(playoff_format, len(all_dynasty_teams))
+                st.session_state["dyn_bowl_count"] = dyn_bowl_count
+                st.rerun()
+
+        elif dyn_phase in ("regular", "playoffs_pending", "bowls_pending"):
+            season = st.session_state.get("last_dynasty_season")
+            injury_tracker = st.session_state.get("last_dynasty_injury_tracker")
+            dyn_playoff = st.session_state.get("dyn_playoff_size", 8)
+            dyn_bowls = st.session_state.get("dyn_bowl_count", 0)
+
+            if season is None:
+                st.session_state["dyn_season_phase"] = "setup"
+                st.rerun()
+
+            total_weeks = season.get_total_weeks()
+            completed_week = season.get_last_completed_week()
+            next_week = season.get_next_unplayed_week()
+            total_games_played = sum(1 for g in season.schedule if g.completed)
             total_games = len(season.schedule)
-            injury_tracker = InjuryTracker()
-            injury_tracker.seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
 
-            with st.spinner(f"Simulating {dynasty.current_year} season ({total_games} games, {games_per_team}/team)..."):
-                season.simulate_season(generate_polls=True)
+            if dyn_phase == "regular" and next_week is not None:
+                sm1, sm2, sm3 = st.columns(3)
+                sm1.metric("Current Week", f"Week {next_week} of {total_weeks}")
+                sm2.metric("Games Played", f"{total_games_played} / {total_games}")
+                progress_pct = total_games_played / total_games if total_games > 0 else 0
+                sm3.metric("Progress", f"{progress_pct:.0%}")
+                st.progress(progress_pct)
 
-                max_week = max((g.week for g in season.schedule if g.completed), default=0)
-                for wk in range(1, max_week + 1):
-                    injury_tracker.process_week(wk, season.teams, season.standings)
-                    injury_tracker.resolve_week(wk)
+                btn_col1, btn_col2, btn_col3 = st.columns(3)
+                with btn_col1:
+                    if st.button("Sim Next Week", type="primary", use_container_width=True, key="dyn_sim_next_week"):
+                        prev_completed = season.get_last_completed_week()
+                        with st.spinner(f"Simulating Week {next_week}..."):
+                            season.simulate_week(next_week, generate_polls=True)
+                        if injury_tracker:
+                            injury_tracker.process_week(next_week, season.teams, season.standings)
+                            injury_tracker.resolve_week(next_week)
+                        st.session_state["last_dynasty_season"] = season
+                        st.session_state["active_season"] = season
+                        st.rerun()
 
-            playoff_count = min(playoff_format, len(all_dynasty_teams))
-            if playoff_count >= 4:
-                with st.spinner("Running playoffs..."):
-                    season.simulate_playoff(num_teams=playoff_count)
+                with btn_col2:
+                    remaining_weeks = sorted(set(g.week for g in season.schedule if not g.completed))
+                    if len(remaining_weeks) > 1:
+                        target = st.selectbox("Sim through week...", remaining_weeks[1:],
+                                               format_func=lambda w: f"Week {w}",
+                                               key="dyn_sim_to_week_select")
+                        if st.button("Sim to Week", use_container_width=True, key="dyn_sim_to_week_btn"):
+                            with st.spinner(f"Simulating through Week {target}..."):
+                                weeks_to_sim = [w for w in remaining_weeks if w <= target]
+                                for w in weeks_to_sim:
+                                    season.simulate_week(w, generate_polls=True)
+                                    if injury_tracker:
+                                        injury_tracker.process_week(w, season.teams, season.standings)
+                                        injury_tracker.resolve_week(w)
+                            st.session_state["last_dynasty_season"] = season
+                            st.session_state["active_season"] = season
+                            st.rerun()
 
-            if dyn_bowl_count > 0:
-                with st.spinner("Running bowl games..."):
-                    season.simulate_bowls(bowl_count=dyn_bowl_count, playoff_size=playoff_count)
+                with btn_col3:
+                    if st.button("Sim Rest of Season", use_container_width=True, key="dyn_sim_rest"):
+                        with st.spinner(f"Simulating remaining games..."):
+                            while True:
+                                nw = season.get_next_unplayed_week()
+                                if nw is None:
+                                    break
+                                season.simulate_week(nw, generate_polls=True)
+                                if injury_tracker:
+                                    injury_tracker.process_week(nw, season.teams, season.standings)
+                                    injury_tracker.resolve_week(nw)
+                        st.session_state["last_dynasty_season"] = season
+                        st.session_state["active_season"] = season
+                        st.session_state["dyn_season_phase"] = "playoffs_pending"
+                        st.rerun()
 
-            player_cards = {}
-            for t_name, t_obj in season.teams.items():
-                player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
+                if completed_week > 0:
+                    st.divider()
+                    standings = season.get_standings_sorted()
+                    user_rec = next((r for r in standings if r.team_name == dynasty.coach.team_name), None)
+                    if user_rec:
+                        ur_rank = next((i for i, r in enumerate(standings, 1) if r.team_name == dynasty.coach.team_name), 0)
+                        ur1, ur2, ur3 = st.columns(3)
+                        ur1.metric("Your Record", f"{user_rec.wins}-{user_rec.losses}", f"#{ur_rank} overall")
+                        ur2.metric("Points For", fmt_vb_score(user_rec.points_for))
+                        ur3.metric("Points Against", fmt_vb_score(user_rec.points_against))
 
-            dynasty.advance_season(season, injury_tracker=injury_tracker, player_cards=player_cards)
-            st.session_state["dynasty"] = dynasty
-            st.session_state["last_dynasty_season"] = season
-            st.session_state["last_dynasty_injury_tracker"] = injury_tracker
-            st.rerun()
+                    st.divider()
+                    st.subheader("Recent Results")
+                    show_weeks = range(max(1, completed_week - 2), completed_week + 1)
+                    for w in show_weeks:
+                        _render_week_results(season, w)
 
-        if "last_dynasty_season" in st.session_state:
-            season = st.session_state["last_dynasty_season"]
-            prev_year = dynasty.current_year - 1
+            elif dyn_phase == "regular" and next_week is None:
+                st.session_state["dyn_season_phase"] = "playoffs_pending"
+                st.rerun()
 
-            st.divider()
-            st.subheader(f"{prev_year} Season Results")
+            elif dyn_phase == "playoffs_pending":
+                st.success("Regular season complete!")
+                standings = season.get_standings_sorted()
+                user_rec = next((r for r in standings if r.team_name == dynasty.coach.team_name), None)
+                if user_rec:
+                    ur_rank = next((i for i, r in enumerate(standings, 1) if r.team_name == dynasty.coach.team_name), 0)
+                    st.metric("Your Final Record", f"{user_rec.wins}-{user_rec.losses} (#{ur_rank})")
 
-            if season.champion:
+                if dyn_playoff >= 4:
+                    st.subheader(f"Playoff ({dyn_playoff} teams)")
+                    if st.button("Run Playoffs", type="primary", use_container_width=True, key="dyn_run_playoffs"):
+                        with st.spinner("Running playoffs..."):
+                            season.simulate_playoff(num_teams=dyn_playoff)
+                        st.session_state["last_dynasty_season"] = season
+                        st.session_state["active_season"] = season
+                        st.session_state["dyn_season_phase"] = "bowls_pending" if dyn_bowls > 0 else "finalize"
+                        st.rerun()
+                else:
+                    st.session_state["dyn_season_phase"] = "bowls_pending" if dyn_bowls > 0 else "finalize"
+                    st.rerun()
+
+            elif dyn_phase == "bowls_pending":
+                if season.champion:
+                    if season.champion == dynasty.coach.team_name:
+                        st.success(f"YOUR TEAM {season.champion} ARE THE NATIONAL CHAMPIONS!")
+                    else:
+                        st.info(f"National Champions: {season.champion}")
+                st.subheader(f"Bowl Games ({dyn_bowls} bowls)")
+                if st.button("Run Bowl Games", type="primary", use_container_width=True, key="dyn_run_bowls"):
+                    with st.spinner("Running bowl games..."):
+                        season.simulate_bowls(bowl_count=dyn_bowls, playoff_size=dyn_playoff)
+                    st.session_state["last_dynasty_season"] = season
+                    st.session_state["active_season"] = season
+                    st.session_state["dyn_season_phase"] = "finalize"
+                    st.rerun()
+
+        elif dyn_phase == "finalize":
+            season = st.session_state.get("last_dynasty_season")
+            injury_tracker = st.session_state.get("last_dynasty_injury_tracker")
+
+            if season and season.champion:
                 if season.champion == dynasty.coach.team_name:
                     st.balloons()
                     st.success(f"YOUR TEAM {season.champion} ARE THE NATIONAL CHAMPIONS!")
                 else:
                     st.info(f"National Champions: {season.champion}")
 
-            standings = season.get_standings_sorted()
-            user_rec = next((r for r in standings if r.team_name == dynasty.coach.team_name), None)
-            if user_rec:
-                ur1, ur2, ur3 = st.columns(3)
-                ur_rank = next((i for i, r in enumerate(standings, 1) if r.team_name == dynasty.coach.team_name), 0)
-                ur1.metric("Your Record", f"{user_rec.wins}-{user_rec.losses}", f"#{ur_rank} overall")
-                ur2.metric("Points For", fmt_vb_score(user_rec.points_for))
-                ur3.metric("Points Against", fmt_vb_score(user_rec.points_against))
+            st.subheader(f"Advance Dynasty to {dynasty.current_year + 1}")
+            st.caption("This will process offseason development, update records, and move to next year.")
+
+            if st.button("Advance to Next Season", type="primary", use_container_width=True, key="dyn_advance"):
+                player_cards = {}
+                if season:
+                    for t_name, t_obj in season.teams.items():
+                        player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
+
+                dynasty.advance_season(season, injury_tracker=injury_tracker, player_cards=player_cards)
+                st.session_state["dynasty"] = dynasty
+                st.session_state["last_dynasty_season"] = season
+                st.session_state["last_dynasty_injury_tracker"] = injury_tracker
+                st.session_state["dyn_season_phase"] = "setup"
+                st.rerun()
 
     with play_tabs[1]:
         _render_quick_game(shared)
 
 
+def _render_week_results(season, week_num, label=None):
+    week_games = [g for g in season.schedule if g.week == week_num and g.completed]
+    if not week_games:
+        return
+    header = label or f"Week {week_num} Results"
+    with st.expander(header, expanded=(week_num == season.get_last_completed_week())):
+        for g in week_games:
+            home_score = g.home_score or 0
+            away_score = g.away_score or 0
+            winner = g.home_team if home_score > away_score else g.away_team
+            marker = "**" if winner == g.home_team else ""
+            marker2 = "**" if winner == g.away_team else ""
+            st.markdown(f"{marker}{g.home_team}{marker} {fmt_vb_score(home_score)} — {fmt_vb_score(away_score)} {marker2}{g.away_team}{marker2}")
+
+
 def _render_season_play(shared):
     season = st.session_state["active_season"]
+    default_phase = "regular" if not season.is_regular_season_complete() else "complete"
+    phase = st.session_state.get("season_phase", default_phase)
+    playoff_size = st.session_state.get("season_playoff_size", 8)
+    bowl_count = st.session_state.get("season_bowl_count", 0)
 
     st.title(f"Play — {season.name}")
 
-    if season.champion:
-        st.success(f"**National Champions: {season.champion}**")
+    total_weeks = season.get_total_weeks()
+    completed_week = season.get_last_completed_week()
+    next_week = season.get_next_unplayed_week()
+    total_games_played = sum(1 for g in season.schedule if g.completed)
+    total_games = len(season.schedule)
 
-    standings = season.get_standings_sorted()
-    total_games = sum(1 for g in season.schedule if g.completed)
-    all_scores = []
-    for g in season.schedule:
-        if g.completed:
-            all_scores.extend([g.home_score or 0, g.away_score or 0])
-    avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+    if phase == "regular":
+        if next_week is not None:
+            sm1, sm2, sm3 = st.columns(3)
+            sm1.metric("Current Week", f"Week {next_week} of {total_weeks}")
+            sm2.metric("Games Played", f"{total_games_played} / {total_games}")
+            progress_pct = total_games_played / total_games if total_games > 0 else 0
+            sm3.metric("Progress", f"{progress_pct:.0%}")
 
-    sm1, sm2, sm3, sm4 = st.columns(4)
-    sm1.metric("Teams", len(standings))
-    sm2.metric("Games Played", total_games)
-    sm3.metric("Avg Score", f"{avg_score:.1f}")
-    best = standings[0] if standings else None
-    sm4.metric("Top Team", f"{best.team_name}" if best else "—", f"{best.wins}-{best.losses}" if best else "")
+            st.progress(progress_pct)
 
-    st.divider()
-    st.caption("Season is complete. Browse results in the League tab, or start a new session from Play.")
+            st.subheader("Advance Season")
+
+            btn_col1, btn_col2, btn_col3 = st.columns(3)
+            with btn_col1:
+                if st.button("Sim Next Week", type="primary", use_container_width=True, key="sim_next_week"):
+                    with st.spinner(f"Simulating Week {next_week}..."):
+                        season.simulate_week(next_week, generate_polls=True)
+                    st.session_state["active_season"] = season
+                    st.rerun()
+
+            with btn_col2:
+                remaining_weeks = sorted(set(g.week for g in season.schedule if not g.completed))
+                if len(remaining_weeks) > 1:
+                    target = st.selectbox("Sim through week...", remaining_weeks[1:],
+                                           format_func=lambda w: f"Week {w}",
+                                           key="sim_to_week_select")
+                    if st.button("Sim to Week", use_container_width=True, key="sim_to_week_btn"):
+                        with st.spinner(f"Simulating through Week {target}..."):
+                            season.simulate_through_week(target, generate_polls=True)
+                        st.session_state["active_season"] = season
+                        st.rerun()
+
+            with btn_col3:
+                if st.button("Sim Rest of Season", use_container_width=True, key="sim_rest_season"):
+                    with st.spinner(f"Simulating remaining {total_games - total_games_played} games..."):
+                        season.simulate_season(generate_polls=True)
+                    st.session_state["active_season"] = season
+                    st.session_state["season_phase"] = "playoffs_pending"
+                    st.rerun()
+
+            if completed_week > 0:
+                st.divider()
+                standings = season.get_standings_sorted()
+                top5 = standings[:5]
+                st.subheader("Current Standings (Top 5)")
+                for i, rec in enumerate(top5, 1):
+                    st.markdown(f"{i}. **{rec.team_name}** — {rec.wins}-{rec.losses} (PF: {fmt_vb_score(rec.points_for)})")
+                st.caption("See full standings in the League tab.")
+
+                st.divider()
+                st.subheader("Recent Results")
+                show_weeks = range(max(1, completed_week - 2), completed_week + 1)
+                for w in show_weeks:
+                    _render_week_results(season, w)
+        else:
+            st.session_state["season_phase"] = "playoffs_pending"
+            st.rerun()
+
+    elif phase == "playoffs_pending":
+        st.success("Regular season complete!")
+        standings = season.get_standings_sorted()
+        sm1, sm2, sm3 = st.columns(3)
+        sm1.metric("Games Played", total_games_played)
+        best = standings[0] if standings else None
+        sm2.metric("#1 Team", best.team_name if best else "—")
+        sm3.metric("Record", f"{best.wins}-{best.losses}" if best else "—")
+
+        if playoff_size > 0:
+            st.subheader(f"Playoff ({playoff_size} teams)")
+            st.caption("Conference champions get auto-bids, remaining spots filled by Power Index.")
+            if st.button("Run Playoffs", type="primary", use_container_width=True, key="run_playoffs_btn"):
+                with st.spinner("Running playoffs..."):
+                    season.simulate_playoff(num_teams=min(playoff_size, len(season.teams)))
+                st.session_state["active_season"] = season
+                st.session_state["season_phase"] = "bowls_pending" if bowl_count > 0 else "complete"
+                st.rerun()
+        else:
+            st.session_state["season_phase"] = "bowls_pending" if bowl_count > 0 else "complete"
+            st.rerun()
+
+    elif phase == "bowls_pending":
+        if season.champion:
+            st.success(f"**National Champions: {season.champion}**")
+        st.subheader(f"Bowl Games ({bowl_count} bowls)")
+        if st.button("Run Bowl Games", type="primary", use_container_width=True, key="run_bowls_btn"):
+            with st.spinner("Running bowl games..."):
+                season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size)
+            st.session_state["active_season"] = season
+            st.session_state["season_phase"] = "complete"
+            st.rerun()
+
+    elif phase == "complete":
+        if season.champion:
+            st.success(f"**National Champions: {season.champion}**")
+
+        standings = season.get_standings_sorted()
+        all_scores = []
+        for g in season.schedule:
+            if g.completed:
+                all_scores.extend([g.home_score or 0, g.away_score or 0])
+        avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+
+        sm1, sm2, sm3, sm4 = st.columns(4)
+        sm1.metric("Teams", len(standings))
+        sm2.metric("Games Played", total_games_played)
+        sm3.metric("Avg Score", f"{avg_score:.1f}")
+        best = standings[0] if standings else None
+        sm4.metric("Top Team", f"{best.team_name}" if best else "—", f"{best.wins}-{best.losses}" if best else "")
+
+        st.divider()
+        st.caption("Season is complete. Browse results in the League tab, or start a new session.")
 
     if st.button("End Season & Start New", key="end_season_btn"):
-        for key in ["active_season", "season_human_teams_list"]:
+        for key in ["active_season", "season_human_teams_list", "season_phase",
+                     "season_playoff_size", "season_bowl_count"]:
             st.session_state.pop(key, None)
         st.rerun()

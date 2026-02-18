@@ -514,17 +514,83 @@ class Season:
 
         return result
 
+    def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
+                      generate_polls: bool = True) -> List[Game]:
+        """Simulate a single week of games. Returns list of games played.
+
+        Args:
+            week: Specific week number to simulate. If None, simulates the next
+                  unplayed week.
+            generate_polls: Whether to generate a poll after this week.
+            verbose: Enable verbose output.
+
+        Returns:
+            List of Game objects that were simulated this week, or empty list
+            if no games remain.
+        """
+        if week is None:
+            week = self.get_next_unplayed_week()
+            if week is None:
+                return []
+
+        week_games = [g for g in self.schedule if g.week == week and not g.completed]
+        for game in week_games:
+            self.simulate_game(game, verbose=verbose)
+
+        if generate_polls and week_games:
+            self._generate_weekly_poll(week)
+
+        return week_games
+
+    def simulate_through_week(self, target_week: int, verbose: bool = False,
+                              generate_polls: bool = True) -> List[Game]:
+        """Simulate all unplayed weeks up to and including target_week.
+
+        Returns all games simulated across those weeks.
+        """
+        all_games = []
+        while True:
+            next_week = self.get_next_unplayed_week()
+            if next_week is None or next_week > target_week:
+                break
+            games = self.simulate_week(next_week, verbose=verbose,
+                                       generate_polls=generate_polls)
+            all_games.extend(games)
+        return all_games
+
+    def get_next_unplayed_week(self) -> Optional[int]:
+        """Return the earliest week number with unplayed games, or None if all done."""
+        unplayed_weeks = sorted(set(g.week for g in self.schedule if not g.completed))
+        return unplayed_weeks[0] if unplayed_weeks else None
+
+    def get_last_completed_week(self) -> int:
+        """Return the highest week number that has been fully completed, or 0."""
+        completed_weeks = set()
+        all_weeks = set()
+        for g in self.schedule:
+            all_weeks.add(g.week)
+            if g.completed:
+                completed_weeks.add(g.week)
+
+        last = 0
+        for w in sorted(all_weeks):
+            week_games = [g for g in self.schedule if g.week == w]
+            if all(g.completed for g in week_games):
+                last = w
+            else:
+                break
+        return last
+
+    def is_regular_season_complete(self) -> bool:
+        """Return True if all scheduled regular-season games have been played."""
+        return all(g.completed for g in self.schedule)
+
     def simulate_season(self, verbose: bool = False, generate_polls: bool = True):
-        """Simulate all regular season games, optionally generating weekly polls"""
-        weeks = sorted(set(g.week for g in self.schedule if not g.completed))
-
-        for week in weeks:
-            week_games = [g for g in self.schedule if g.week == week and not g.completed]
-            for game in week_games:
-                self.simulate_game(game, verbose=verbose)
-
-            if generate_polls:
-                self._generate_weekly_poll(week)
+        """Simulate all remaining regular season games, optionally generating weekly polls"""
+        while True:
+            games = self.simulate_week(verbose=verbose, generate_polls=generate_polls)
+            if not games:
+                break
 
     def _calculate_sos(self, team_name: str) -> float:
         """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts"""

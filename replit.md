@@ -14,7 +14,7 @@ I want iterative development. Ask before making major changes. I prefer detailed
 
 ### UI/UX Decisions — New Information Architecture (Feb 2026)
 The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings:
-- **Play** (tab): Mode selection when no session active (New Dynasty, New Season, Quick Game). During an active session, shows simulation controls and season advancement. Quick Game available in all modes.
+- **Play** (tab): Mode selection when no session active (New Dynasty, New Season, Quick Game). During an active session, shows week-by-week simulation controls (Sim Next Week, Sim to Week X, Sim Rest of Season) with progress bar, current standings, and recent results. After regular season, transitions through playoffs and bowls as separate phases. Dynasty mode adds per-week injury tracking and explicit "Advance to Next Season" step. Quick Game available in all modes.
 - **League** (tab): Read-only league-wide data from the active season/dynasty. Sub-tabs: Standings, Power Rankings, Conferences, Postseason, Schedule, Awards & Stats. Supports both standalone season and dynasty modes.
 - **My Team** (tab): Focused view of the user's coached team(s). Sub-tabs: Dashboard (metrics, radar chart), Roster (player attributes), Schedule (team game log with detail viewer), History (dynasty only — career stats, record book, team history).
 - **Export** (tab): Data export tools. Season Data tab has CSV standings, CSV schedule, and comprehensive JSON context (for LLM analysis). Dynasty Data tab adds dynasty-wide CSV exports (standings, awards, injuries, development, All-CVL, All-Conference) plus dynasty save/load.

@@ -189,7 +189,9 @@ with st.sidebar:
         if st.button("End Session", key="end_session_sidebar", use_container_width=True):
             for key in ["dynasty", "dynasty_teams", "last_dynasty_season",
                         "last_dynasty_injury_tracker", "active_season",
-                        "season_human_teams_list"]:
+                        "season_human_teams_list", "season_phase",
+                        "season_playoff_size", "season_bowl_count",
+                        "dyn_season_phase", "dyn_playoff_size", "dyn_bowl_count"]:
                 st.session_state.pop(key, None)
             st.rerun()
 
