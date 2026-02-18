@@ -530,7 +530,10 @@ NEW_SCHOOLS = [
     {"id": "oswego", "name": "SUNY Oswego", "abbrev": "OSWE", "mascot": "Lakers", "city": "Oswego", "state": "NY", "colors": ["Green", "Gold"], "conference": "Yankee Fourteen", "tier": 67},
     {"id": "rochester", "name": "University of Rochester", "abbrev": "ROCH", "mascot": "Yellowjackets", "city": "Rochester", "state": "NY", "colors": ["Dandelion", "Blue"], "conference": "Yankee Fourteen", "tier": 75},
     {"id": "carnegie_mellon", "name": "Carnegie Mellon University", "abbrev": "CMU", "mascot": "Tartans", "city": "Pittsburgh", "state": "PA", "colors": ["Cardinal", "Gray"], "conference": "Potomac Athletic Conference", "tier": 75},
-    {"id": "caltech", "name": "California Institute of Technology", "abbrev": "CALT", "mascot": "Beavers", "city": "Pasadena", "state": "CA", "colors": ["Orange", "White"], "conference": "Far West Athletic Conference", "tier": 60},
+    {"id": "caltech", "name": "California Institute of Technology", "abbrev": "CALT", "mascot": "Beavers", "city": "Pasadena", "state": "CA", "colors": ["Orange", "White"], "conference": "Outlands Coast Conference", "tier": 60},
+    # ── Fictional military academies ──
+    {"id": "marine_corps", "name": "United States Marine Corps Academy", "abbrev": "USMC", "mascot": "Bulldogs", "city": "Milton", "state": "FL", "colors": ["Scarlet", "Gold"], "conference": "Southern Sun Conference", "tier": 78},
+    {"id": "space_force", "name": "United States Space Force Academy", "abbrev": "USSF", "mascot": "Guardians", "city": "Fallon", "state": "NV", "colors": ["Dark Blue", "Silver"], "conference": "Pioneer Athletic Association", "tier": 76},
 ]
 
 if __name__ == "__main__":
