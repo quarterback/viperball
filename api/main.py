@@ -616,7 +616,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         prestige = 0
         if ht in season.teams:
             prestige = estimate_prestige_from_roster(season.teams[ht].players)
-        rng = random.Random(42 + len(req.human_teams))
+        rng = random.Random()
         portal = generate_quick_portal(
             team_names=list(season.teams.keys()), year=2027,
             size=40, prestige=prestige, rng=rng,
@@ -1832,7 +1832,7 @@ def season_portal_generate(
     season = _require_season(session)
 
     team_names = list(season.teams.keys())
-    rng = random.Random(size + 99)
+    rng = random.Random()
 
     prestige = 0
     if human_team and human_team in season.teams:
