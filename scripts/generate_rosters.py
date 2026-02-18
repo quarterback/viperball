@@ -49,7 +49,7 @@ def assign_archetype(position: str, speed: int, stamina: int,
             return "decoy_viper"
         else:
             return "hybrid_viper"
-    elif any(p in position for p in ["Halfback", "Wingback", "Shiftback", "Wing"]):
+    elif any(p in position for p in ["Halfback", "Wingback", "Slotback"]):
         if spd >= 93:
             return "speed_flanker"
         elif tck >= 80 and stam >= 88:
@@ -58,7 +58,7 @@ def assign_archetype(position: str, speed: int, stamina: int,
             return "elusive_flanker"
         else:
             return "reliable_flanker"
-    elif any(p in position for p in ["Safety", "Keeper", "Corner"]):
+    elif "Keeper" in position:
         if spd >= 90 and spd > tck:
             return "return_keeper"
         elif lat >= 85 and stam >= 85:
@@ -71,16 +71,14 @@ def assign_archetype(position: str, speed: int, stamina: int,
 DATA_DIR = Path(__file__).parent.parent / 'data'
 
 POSITIONS = [
-    "Zeroback/Back",
-    "Halfback/Back",
-    "Wingback/End",
-    "Shiftback/Back",
-    "Viper/Back",
-    "Lineman",
-    "Back/Safety",
-    "Back/Corner",
-    "Wedge/Line",
-    "Wing/End"
+    "Zeroback",
+    "Halfback",
+    "Wingback",
+    "Slotback",
+    "Viper",
+    "Keeper",
+    "Offensive Line",
+    "Defensive Line",
 ]
 
 def generate_player_attributes(position, team_philosophy, year, is_viper=False):
@@ -102,28 +100,27 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False):
     base_kick_accuracy = random.randint(60, 85)
 
     # Adjust for position
-    if "Viper" in position or "Back" in position:
+    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
         base_speed += random.randint(3, 8)
         base_lateral_skill += random.randint(3, 8)
         base_agility += random.randint(3, 8)
         base_hands += random.randint(3, 7)
-    elif "Lineman" in position or "Wedge" in position:
+    elif position in ("Offensive Line", "Defensive Line"):
         base_tackling += random.randint(3, 8)
         base_stamina += random.randint(2, 5)
         base_power += random.randint(5, 10)
         base_speed -= random.randint(3, 7)
         base_agility -= random.randint(2, 5)
-    elif "Wing" in position:
-        base_speed += random.randint(2, 5)
-        base_lateral_skill += random.randint(2, 5)
-        base_agility += random.randint(2, 5)
     elif "Zeroback" in position:
         base_awareness += random.randint(4, 8)
         base_kick_power += random.randint(3, 7)
         base_kick_accuracy += random.randint(3, 7)
-    elif any(p in position for p in ["Safety", "Keeper", "Corner"]):
+    elif position == "Keeper":
+        base_speed += random.randint(2, 6)
+        base_tackling += random.randint(5, 10)
         base_awareness += random.randint(3, 7)
-        base_tackling += random.randint(2, 6)
+        base_power += random.randint(2, 5)
+        base_hands += random.randint(3, 7)
 
     # Adjust for team philosophy
     if team_philosophy == 'kick_heavy':
@@ -172,10 +169,10 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False):
     kick_accuracy = min(100, max(50, base_kick_accuracy + modifier))
 
     # Generate height and weight (women's athletes)
-    if "Lineman" in position or "Wedge" in position:
+    if position in ("Offensive Line", "Defensive Line"):
         height_inches = random.randint(69, 75)  # 5'9" to 6'3"
         weight = random.randint(185, 215)
-    elif "Viper" in position or "Back" in position:
+    elif position in ("Viper", "Halfback", "Wingback", "Slotback", "Keeper"):
         height_inches = random.randint(65, 72)  # 5'5" to 6'0"
         weight = random.randint(160, 190)
     else:
@@ -270,26 +267,31 @@ def generate_roster(school_data):
         'freshman': current_year
     }
 
-    for i in range(36):
-        # Assign position
-        if i < 5:
-            position = "Lineman"
-        elif i < 10:
-            position = random.choice(["Back/Safety", "Back/Corner"])
-        elif i < 15:
-            position = random.choice(["Wingback/End", "Wing/End"])
-        elif i < 20:
-            position = random.choice(["Halfback/Back", "Shiftback/Back"])
-        elif i < 25:
-            position = random.choice(["Zeroback/Back", "Viper/Back"])
-        else:
-            position = random.choice(POSITIONS)
+    ROSTER_TEMPLATE = [
+        ("Viper", True), ("Viper", False), ("Viper", False),
+        ("Zeroback", False), ("Zeroback", False), ("Zeroback", False),
+        ("Halfback", False), ("Halfback", False),
+        ("Halfback", False), ("Halfback", False),
+        ("Wingback", False), ("Wingback", False),
+        ("Wingback", False), ("Wingback", False),
+        ("Slotback", False), ("Slotback", False),
+        ("Slotback", False), ("Slotback", False),
+        ("Keeper", False), ("Keeper", False), ("Keeper", False),
+        ("Offensive Line", False), ("Offensive Line", False),
+        ("Offensive Line", False), ("Offensive Line", False),
+        ("Offensive Line", False), ("Offensive Line", False),
+        ("Offensive Line", False), ("Offensive Line", False),
+        ("Defensive Line", False), ("Defensive Line", False),
+        ("Defensive Line", False), ("Defensive Line", False),
+        ("Defensive Line", False), ("Defensive Line", False),
+        ("Defensive Line", False),
+    ]
 
+    for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
         # Special handling for Viper (jersey #1 or low number)
-        is_viper = (i == 0)  # First player is Viper
-        if is_viper:
-            position = "Viper/Back"
+        if is_viper and i == 0:
             number = 1
+            used_numbers.add(number)
         else:
             # Generate jersey number
             while True:

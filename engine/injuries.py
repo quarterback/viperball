@@ -55,12 +55,14 @@ _INJURY_FLAVORS = {
 
 # Base weekly injury probability per player by position group
 _BASE_INJURY_PROB = {
-    "Lineman":  0.040,
+    "Offensive Line":  0.040,
+    "Defensive Line":  0.038,
     "Zeroback": 0.030,
     "Halfback": 0.035,
     "Wingback": 0.035,
+    "Slotback": 0.033,
     "Viper":    0.028,
-    "Safety":   0.025,
+    "Keeper":   0.025,
     "default":  0.032,
 }
 
@@ -125,9 +127,8 @@ class InjuryTracker:
         self.rng.seed(s)
 
     def _base_prob_for_position(self, position: str) -> float:
-        for key in _BASE_INJURY_PROB:
-            if key.lower() in position.lower():
-                return _BASE_INJURY_PROB[key]
+        if position in _BASE_INJURY_PROB:
+            return _BASE_INJURY_PROB[position]
         return _BASE_INJURY_PROB["default"]
 
     def _roll_tier(self) -> str:

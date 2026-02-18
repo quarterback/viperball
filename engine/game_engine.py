@@ -205,24 +205,14 @@ VIPER_ALIGNMENT_BONUS = {
 }
 
 POSITION_TAGS = {
-    "Lineman": "LM",
-    "Zeroback/Back": "ZB",
-    "Halfback/Back": "HB",
-    "Wingback/End": "WB",
-    "Wing/End": "WB",
-    "Shiftback/Back": "SB",
-    "Viper/Back": "VP",
-    "Back/Safety": "LB",
-    "Back/Corner": "CB",
-    "Wedge/Line": "LA",
+    "Zeroback": "ZB",
     "Viper": "VP",
-    "Back": "BK",
-    "Wing": "WB",
-    "Wedge": "LA",
-    "Safety": "KP",
-    "End": "ED",
-    "Line": "LA",
-    "Corner": "CB",
+    "Halfback": "HB",
+    "Wingback": "WB",
+    "Slotback": "SB",
+    "Keeper": "KP",
+    "Offensive Line": "OL",
+    "Defensive Line": "DL",
 }
 
 WEATHER_CONDITIONS = {
@@ -471,7 +461,7 @@ def assign_archetype(player) -> str:
             return "decoy_viper"
         else:
             return "hybrid_viper"
-    elif any(p in pos for p in ["Halfback", "Wingback", "Shiftback", "Wing"]):
+    elif any(p in pos for p in ["Halfback", "Wingback", "Slotback"]):
         if spd >= 93:
             return "speed_flanker"
         elif tck >= 80 and stam >= 88:
@@ -480,7 +470,7 @@ def assign_archetype(player) -> str:
             return "elusive_flanker"
         else:
             return "reliable_flanker"
-    elif any(p in pos for p in ["Safety", "Keeper"]):
+    elif "Keeper" in pos:
         if spd >= 90 and spd > tck:
             return "return_keeper"
         elif lat >= 85 and stam >= 85:
@@ -2399,14 +2389,14 @@ class ViperballEngine:
 
     def _pick_returner(self, team):
         eligible = [p for p in team.players if p.position in
-                    ("Halfback/Back", "Wingback/End", "Wing/End", "Shiftback/Back", "Viper/Back", "Viper")]
+                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
         if not eligible:
-            eligible = [p for p in team.players if p.position not in ("Wedge/Line", "Line", "Wedge")]
+            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
         return random.choice(eligible) if eligible else None
 
     def _pick_tackler(self, team):
         eligible = [p for p in team.players if p.position in
-                    ("Back/Safety", "Back/Corner", "Wedge/Line", "End", "Line")]
+                    ("Keeper", "Defensive Line")]
         if not eligible:
             eligible = team.players
         return random.choice(eligible) if eligible else None
@@ -2533,7 +2523,7 @@ class ViperballEngine:
         if yards_so_far < 8:
             return yards_so_far, ""
         def_team = self.get_defensive_team()
-        keepers = [p for p in def_team.players if any(k in p.position for k in ["Safety", "Keeper"])]
+        keepers = [p for p in def_team.players if p.position == "Keeper"]
         if not keepers:
             keepers = [max(def_team.players[:5], key=lambda p: p.tackling)]
         keeper = keepers[0]
@@ -2576,7 +2566,7 @@ class ViperballEngine:
     def _resolve_explosive_run(self, carrier, yards_at_break):
         remaining = max(1, 100 - self.state.field_position - yards_at_break)
         def_team = self.get_defensive_team()
-        keepers = [p for p in def_team.players if any(k in p.position for k in ["Safety", "Keeper"])]
+        keepers = [p for p in def_team.players if p.position == "Keeper"]
         if not keepers:
             keepers = [max(def_team.players[:5], key=lambda p: p.tackling)]
         keeper = keepers[0]
@@ -3606,7 +3596,7 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         keeper = None
         for p in def_team.players:
-            if any(k in p.position for k in ["Safety", "Keeper"]):
+            if p.position == "Keeper":
                 keeper = p
                 break
         if keeper is None:
@@ -4367,16 +4357,32 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
             recruiting_pipeline=recruiting_pipeline,
         )
 
+    _POSITION_MIGRATION = {
+        "Zeroback/Back": "Zeroback",
+        "Halfback/Back": "Halfback",
+        "Wingback/End": "Wingback",
+        "Wing/End": "Wingback",
+        "Shiftback/Back": "Slotback",
+        "Viper/Back": "Viper",
+        "Back/Safety": "Keeper",
+        "Back/Corner": "Keeper",
+        "Safety": "Keeper",
+        "Wedge/Line": "Offensive Line",
+        "Lineman": "Offensive Line",
+    }
+
     # Load the stored roster (static path — used when loading a saved game)
     players = []
     for p_data in data["roster"]["players"][:10]:
         stats = p_data.get("stats", {})
         hometown = p_data.get("hometown", {})
+        raw_pos = p_data["position"]
+        position = _POSITION_MIGRATION.get(raw_pos, raw_pos)
         players.append(
             Player(
                 number=p_data["number"],
                 name=p_data["name"],
-                position=p_data["position"],
+                position=position,
                 speed=stats.get("speed", 80),
                 stamina=stats.get("stamina", 82),
                 kicking=stats.get("kicking", 72),
@@ -4442,42 +4448,42 @@ def generate_team_on_the_fly(
     from scripts.generate_rosters import generate_player_attributes, assign_archetype
 
     ROSTER_TEMPLATE = [
-        ("Viper/Back", True),
-        ("Viper/Back", False),
-        ("Zeroback/Back", False),
-        ("Zeroback/Back", False),
-        ("Halfback/Back", False),
-        ("Halfback/Back", False),
-        ("Halfback/Back", False),
-        ("Halfback/Back", False),
-        ("Wingback/End", False),
-        ("Wingback/End", False),
-        ("Wingback/End", False),
-        ("Wingback/End", False),
-        ("Shiftback/Back", False),
-        ("Shiftback/Back", False),
-        ("Lineman", False),
-        ("Lineman", False),
-        ("Lineman", False),
-        ("Lineman", False),
-        ("Lineman", False),
-        ("Wedge/Line", False),
-        ("Wedge/Line", False),
-        ("Wedge/Line", False),
-        ("Back/Safety", False),
-        ("Back/Safety", False),
-        ("Back/Safety", False),
-        ("Back/Safety", False),
-        ("Back/Corner", False),
-        ("Back/Corner", False),
-        ("Back/Corner", False),
-        ("Back/Corner", False),
-        ("Wing/End", False),
-        ("Wing/End", False),
-        ("Wing/End", False),
-        ("Wing/End", False),
-        ("Back/Safety", False),
-        ("Back/Corner", False),
+        ("Viper", True),
+        ("Viper", False),
+        ("Viper", False),
+        ("Zeroback", False),
+        ("Zeroback", False),
+        ("Zeroback", False),
+        ("Halfback", False),
+        ("Halfback", False),
+        ("Halfback", False),
+        ("Halfback", False),
+        ("Wingback", False),
+        ("Wingback", False),
+        ("Wingback", False),
+        ("Wingback", False),
+        ("Slotback", False),
+        ("Slotback", False),
+        ("Slotback", False),
+        ("Slotback", False),
+        ("Keeper", False),
+        ("Keeper", False),
+        ("Keeper", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Offensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
+        ("Defensive Line", False),
     ]
 
     class_distribution = (

@@ -835,9 +835,8 @@ class UpdatePlayerRequest(BaseModel):
 
 
 VALID_POSITIONS = {
-    "Viper/Back", "Zeroback/Back", "Halfback/Back", "Wingback/End",
-    "Shiftback/Back", "Lineman", "Wedge/Line", "Back/Safety",
-    "Back/Corner", "Wing/End",
+    "Viper", "Zeroback", "Halfback", "Wingback",
+    "Slotback", "Keeper", "Offensive Line", "Defensive Line",
 }
 
 
