@@ -143,6 +143,14 @@ class PortalOfferRequest(BaseModel):
 class PortalCommitRequest(BaseModel):
     entry_index: int
 
+class SeasonPortalGenerateRequest(BaseModel):
+    size: int = 40
+    human_team: str = ""
+
+class SeasonPortalCommitRequest(BaseModel):
+    team_name: str
+    entry_index: int
+
 class ScoutRequest(BaseModel):
     recruit_index: int
     level: str = "basic"
@@ -1816,9 +1824,10 @@ def offseason_complete(session_id: str):
 @app.post("/sessions/{session_id}/season/portal/generate")
 def season_portal_generate(
     session_id: str,
-    size: int = Query(40),
-    human_team: str = Query(""),
+    req: SeasonPortalGenerateRequest = SeasonPortalGenerateRequest(),
 ):
+    size = req.size
+    human_team = req.human_team
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -1896,7 +1905,9 @@ def season_portal_get(session_id: str):
 
 
 @app.post("/sessions/{session_id}/season/portal/commit")
-def season_portal_commit(session_id: str, team_name: str = Query(...), entry_index: int = Query(...)):
+def season_portal_commit(session_id: str, req: SeasonPortalCommitRequest):
+    team_name = req.team_name
+    entry_index = req.entry_index
     session = _get_session(session_id)
     season = _require_season(session)
     portal = session.get("quick_portal")
