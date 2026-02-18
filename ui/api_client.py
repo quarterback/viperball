@@ -363,7 +363,7 @@ def season_portal_generate(session_id: str, human_team: str = "",
     params: dict = {"size": size}
     if human_team:
         params["human_team"] = human_team
-    return _post(f"/sessions/{session_id}/season/portal/generate", params=params)
+    return _post(f"/sessions/{session_id}/season/portal/generate", json=params)
 
 
 def season_portal_get(session_id: str) -> dict:
@@ -373,7 +373,7 @@ def season_portal_get(session_id: str) -> dict:
 def season_portal_commit(session_id: str, team_name: str,
                          entry_index: int) -> dict:
     return _post(f"/sessions/{session_id}/season/portal/commit",
-                 params={"team_name": team_name, "entry_index": entry_index})
+                 json={"team_name": team_name, "entry_index": entry_index})
 
 
 def season_portal_skip(session_id: str) -> dict:
