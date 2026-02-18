@@ -24,7 +24,7 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stApp { max-width: 100%; }
-    .block-container { padding-top: 1rem; padding-bottom: 2rem; }
+    .block-container { padding-top: 2.5rem; padding-bottom: 2rem; }
 
     section[data-testid="stSidebar"] {
         background-color: #0f172a;
@@ -125,11 +125,22 @@ st.markdown("""
     .drive-punt { color: #94a3b8; }
 
     .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
+        gap: 8px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0;
     }
-    .stTabs [data-baseweb="tab"] {
-        padding: 8px 20px;
-        font-weight: 500;
+    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"] {
+        padding: 10px 24px;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #64748b;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+    }
+    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] {
+        color: #0f172a;
+        border-bottom-color: #dc2626;
+        font-weight: 700;
     }
 
     .stDataFrame {
