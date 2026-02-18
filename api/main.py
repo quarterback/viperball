@@ -27,6 +27,19 @@ from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
 from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES
+from engine.nil_system import (
+    NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
+    assess_retention_risks, estimate_market_tier, compute_team_prestige,
+)
+from engine.recruiting import (
+    generate_recruit_class, RecruitingBoard, Recruit,
+    run_full_recruiting_cycle, auto_recruit_team, simulate_recruit_decisions,
+    scout_recruit,
+)
+from engine.transfer_portal import (
+    TransferPortal, PortalEntry, populate_portal,
+    auto_portal_offers, generate_quick_portal,
+)
 
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
@@ -109,6 +122,35 @@ class QuickGameRequest(BaseModel):
     away_defense: str = "base_defense"
     weather: str = "clear"
     seed: Optional[int] = None
+
+
+class NILAllocateRequest(BaseModel):
+    recruiting_pool: float
+    portal_pool: float
+    retention_pool: float
+
+class NILDealRequest(BaseModel):
+    pool: str
+    player_id: str
+    player_name: str
+    amount: float
+
+class PortalOfferRequest(BaseModel):
+    entry_index: int
+    nil_amount: float = 0.0
+
+class PortalCommitRequest(BaseModel):
+    entry_index: int
+
+class ScoutRequest(BaseModel):
+    recruit_index: int
+    level: str = "basic"
+
+class RecruitOfferRequest(BaseModel):
+    recruit_index: int
+
+class OffseasonStartRequest(BaseModel):
+    pool_size: int = 300
 
 
 def _load_team(key: str):
@@ -1050,13 +1092,122 @@ def dynasty_advance(session_id: str):
         player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
 
     tracker = session.get("injury_tracker")
-    dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards)
+    rng = random.Random(dynasty.current_year + 7)
 
+    dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng)
+
+    year = dynasty.current_year
+    prev_year = year - 1
+    human_team = dynasty.coach.team_name
+
+    for team_name, history in dynasty.team_histories.items():
+        recent_wins = 5
+        if prev_year in history.season_records:
+            recent_wins = history.season_records[prev_year].get("wins", 5)
+        dynasty.team_prestige[team_name] = compute_team_prestige(
+            all_time_wins=history.total_wins,
+            all_time_losses=history.total_losses,
+            championships=history.total_championships,
+            recent_wins=recent_wins,
+        )
+
+    dynasty._nil_programs = {}
+    for team_name in dynasty.team_histories:
+        prestige = dynasty.team_prestige.get(team_name, 50)
+        state = ""
+        for conf in dynasty.conferences.values():
+            if team_name in conf.teams:
+                break
+        market = estimate_market_tier(state) if state else "medium"
+        prev_wins = 5
+        champ = False
+        if prev_year in dynasty.awards_history:
+            awards = dynasty.awards_history[prev_year]
+            if team_name == awards.champion:
+                champ = True
+        sr = dynasty.team_histories[team_name].season_records.get(prev_year, {})
+        prev_wins = sr.get("wins", 5)
+
+        if team_name == human_team:
+            budget = generate_nil_budget(
+                prestige=prestige, market=market,
+                previous_season_wins=prev_wins, championship=champ, rng=rng,
+            )
+            program = NILProgram(team_name=team_name, annual_budget=budget)
+        else:
+            program = auto_nil_program(
+                team_name=team_name, prestige=prestige, market=market,
+                previous_wins=prev_wins, championship=champ, rng=rng,
+            )
+        dynasty._nil_programs[team_name] = program
+
+    last_season = dynasty.seasons.get(prev_year, season)
+    offseason_player_cards = {}
+    for t_name, t_obj in last_season.teams.items():
+        offseason_player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
+
+    retention_risks = []
+    if human_team in offseason_player_cards:
+        ht_prestige = dynasty.team_prestige.get(human_team, 50)
+        sr = dynasty.team_histories.get(human_team)
+        hw = sr.season_records.get(prev_year, {}).get("wins", 5) if sr else 5
+        from engine.nil_system import RetentionRisk
+        retention_risks = assess_retention_risks(
+            roster=offseason_player_cards[human_team],
+            team_prestige=ht_prestige,
+            team_wins=hw,
+            rng=rng,
+        )
+
+    graduating = {}
+    for team_name, cards in offseason_player_cards.items():
+        grads = [c.full_name for c in cards if c.year == "Graduate"]
+        if grads:
+            graduating[team_name] = grads
+
+    team_records = {}
+    for team_name in offseason_player_cards:
+        sr = dynasty.team_histories.get(team_name)
+        if sr:
+            rec = sr.season_records.get(prev_year, {"wins": 5, "losses": 5})
+            team_records[team_name] = (rec.get("wins", 5), rec.get("losses", 5))
+        else:
+            team_records[team_name] = (5, 5)
+
+    portal = TransferPortal(year=year)
+    populate_portal(portal, offseason_player_cards, team_records, rng=rng)
+
+    recruit_pool = generate_recruit_class(year=year, size=300, rng=random.Random(year))
+    recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
+
+    human_nil = dynasty._nil_programs.get(human_team)
+
+    session["offseason"] = {
+        "portal": portal,
+        "recruit_pool": recruit_pool,
+        "recruit_board": recruit_board,
+        "nil_program": human_nil,
+        "nil_offers": {},
+        "retention_risks": retention_risks,
+        "graduating": graduating,
+        "prestige": dict(dynasty.team_prestige),
+        "phase": "nil",
+        "player_cards": offseason_player_cards,
+    }
+    session["phase"] = "offseason"
     session["season"] = None
     session["injury_tracker"] = None
-    session["phase"] = "setup"
 
-    return _serialize_dynasty_status(session)
+    return {
+        "dynasty": _serialize_dynasty_status(session),
+        "offseason_phase": "nil",
+        "prestige": {human_team: dynasty.team_prestige.get(human_team, 50)},
+        "nil_budget": human_nil.annual_budget if human_nil else 0,
+        "retention_risks": [r.to_dict() for r in retention_risks],
+        "graduating": graduating.get(human_team, []),
+        "portal_entries": len(portal.entries),
+        "recruit_pool_size": len(recruit_pool),
+    }
 
 
 @app.get("/sessions/{session_id}/dynasty/status")
@@ -1169,3 +1320,403 @@ def team_schedule(session_id: str, team_name: str):
 
     games = [g for g in season.schedule if g.home_team == team_name or g.away_team == team_name]
     return {"team": team_name, "games": [_serialize_game(g) for g in games], "count": len(games)}
+
+
+def _require_offseason(session: dict) -> dict:
+    offseason = session.get("offseason")
+    if offseason is None or session.get("phase") != "offseason":
+        raise HTTPException(status_code=400, detail="No active offseason in this session")
+    return offseason
+
+
+def _serialize_portal_entry(entry: PortalEntry) -> dict:
+    return entry.get_summary()
+
+
+def _serialize_recruit(recruit: Recruit) -> dict:
+    return recruit.get_visible_attrs()
+
+
+@app.get("/sessions/{session_id}/offseason/status")
+def offseason_status(session_id: str):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    nil_prog = offseason.get("nil_program")
+    portal = offseason.get("portal")
+    recruit_pool = offseason.get("recruit_pool", [])
+    return {
+        "phase": offseason["phase"],
+        "nil_budget": nil_prog.annual_budget if nil_prog else 0,
+        "nil_allocated": nil_prog.total_allocated if nil_prog else 0,
+        "portal_count": len(portal.entries) if portal else 0,
+        "portal_available": len(portal.get_available()) if portal else 0,
+        "recruit_pool_size": len(recruit_pool),
+        "retention_risks_count": len(offseason.get("retention_risks", [])),
+        "graduating_count": sum(len(v) for v in offseason.get("graduating", {}).values()),
+    }
+
+
+@app.get("/sessions/{session_id}/offseason/nil")
+def offseason_nil(session_id: str):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    nil_prog = offseason.get("nil_program")
+    if nil_prog is None:
+        raise HTTPException(status_code=400, detail="No NIL program found")
+    return nil_prog.get_deal_summary()
+
+
+@app.post("/sessions/{session_id}/offseason/nil/allocate")
+def offseason_nil_allocate(session_id: str, req: NILAllocateRequest):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    nil_prog = offseason.get("nil_program")
+    if nil_prog is None:
+        raise HTTPException(status_code=400, detail="No NIL program found")
+
+    total = req.recruiting_pool + req.portal_pool + req.retention_pool
+    if total > nil_prog.annual_budget:
+        raise HTTPException(status_code=400, detail=f"Total allocation ${total:,.0f} exceeds budget ${nil_prog.annual_budget:,.0f}")
+
+    nil_prog.recruiting_pool = req.recruiting_pool
+    nil_prog.portal_pool = req.portal_pool
+    nil_prog.retention_pool = req.retention_pool
+
+    offseason["phase"] = "portal"
+
+    return {
+        "allocated": True,
+        "summary": nil_prog.get_deal_summary(),
+        "offseason_phase": "portal",
+    }
+
+
+@app.get("/sessions/{session_id}/offseason/portal")
+def offseason_portal(
+    session_id: str,
+    position: Optional[str] = Query(None),
+    min_overall: Optional[int] = Query(None),
+):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    portal = offseason.get("portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No portal found")
+
+    entries = portal.get_available()
+    if position:
+        entries = [e for e in entries if position.lower() in e.position.lower()]
+    if min_overall is not None:
+        entries = [e for e in entries if e.overall >= min_overall]
+
+    return {
+        "entries": [_serialize_portal_entry(e) for e in entries],
+        "total_available": len(entries),
+        "total_entries": len(portal.entries),
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/portal/offer")
+def offseason_portal_offer(session_id: str, req: PortalOfferRequest):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    offseason = _require_offseason(session)
+    portal = offseason.get("portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No portal found")
+
+    if req.entry_index < 0 or req.entry_index >= len(portal.entries):
+        raise HTTPException(status_code=400, detail="Invalid entry index")
+
+    entry = portal.entries[req.entry_index]
+    human_team = dynasty.coach.team_name
+    success = portal.make_offer(human_team, entry, nil_amount=req.nil_amount)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot make offer to this player")
+
+    return {
+        "offered": True,
+        "player": _serialize_portal_entry(entry),
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/portal/commit")
+def offseason_portal_commit(session_id: str, req: PortalCommitRequest):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    offseason = _require_offseason(session)
+    portal = offseason.get("portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No portal found")
+
+    if req.entry_index < 0 or req.entry_index >= len(portal.entries):
+        raise HTTPException(status_code=400, detail="Invalid entry index")
+
+    entry = portal.entries[req.entry_index]
+    human_team = dynasty.coach.team_name
+    success = portal.instant_commit(human_team, entry)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot commit this player")
+
+    return {
+        "committed": True,
+        "player": _serialize_portal_entry(entry),
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/portal/resolve")
+def offseason_portal_resolve(session_id: str):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    offseason = _require_offseason(session)
+    portal = offseason.get("portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No portal found")
+
+    human_team = dynasty.coach.team_name
+    rng = random.Random(dynasty.current_year + 11)
+    team_regions = dynasty._estimate_team_regions()
+
+    for team_name in dynasty.team_histories:
+        if team_name == human_team:
+            continue
+        prestige = dynasty.team_prestige.get(team_name, 50)
+        nil_prog = dynasty._nil_programs.get(team_name)
+        portal_budget = nil_prog.portal_pool if nil_prog else 150_000
+        auto_portal_offers(
+            portal=portal,
+            team_name=team_name,
+            team_prestige=prestige,
+            needs=["Viper", "Halfback", "Lineman"],
+            nil_budget=portal_budget,
+            max_targets=4,
+            rng=rng,
+        )
+
+    portal_result = portal.resolve_all(
+        team_prestige=dynasty.team_prestige,
+        team_regions=team_regions,
+        rng=rng,
+    )
+
+    offseason["phase"] = "recruiting"
+
+    human_transfers = portal_result.get(human_team, [])
+    return {
+        "resolved": True,
+        "total_transfers": len(portal.transfers_completed),
+        "human_transfers": [_serialize_portal_entry(e) for e in human_transfers],
+        "all_transfers": portal.get_class_summary(),
+        "offseason_phase": "recruiting",
+    }
+
+
+@app.get("/sessions/{session_id}/offseason/recruiting")
+def offseason_recruiting(session_id: str):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    recruit_board = offseason.get("recruit_board")
+
+    available = [r for r in recruit_pool if r.committed_to is None and not r.signed]
+
+    return {
+        "recruits": [_serialize_recruit(r) for r in available],
+        "total_available": len(available),
+        "total_pool": len(recruit_pool),
+        "board": recruit_board.to_dict() if recruit_board else None,
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/recruiting/scout")
+def offseason_recruiting_scout(session_id: str, req: ScoutRequest):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    recruit_board = offseason.get("recruit_board")
+
+    if recruit_board is None:
+        raise HTTPException(status_code=400, detail="No recruiting board found")
+    if req.recruit_index < 0 or req.recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+
+    recruit = recruit_pool[req.recruit_index]
+    result = recruit_board.scout(recruit, level=req.level)
+    if result is None:
+        raise HTTPException(status_code=400, detail="Not enough scouting points")
+
+    return {
+        "scouted": True,
+        "recruit": result,
+        "scouting_points_remaining": recruit_board.scouting_points,
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/recruiting/offer")
+def offseason_recruiting_offer(session_id: str, req: RecruitOfferRequest):
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    recruit_board = offseason.get("recruit_board")
+
+    if recruit_board is None:
+        raise HTTPException(status_code=400, detail="No recruiting board found")
+    if req.recruit_index < 0 or req.recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+
+    recruit = recruit_pool[req.recruit_index]
+    success = recruit_board.offer(recruit)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot offer this recruit (at limit, already offered, or recruit committed)")
+
+    return {
+        "offered": True,
+        "recruit": _serialize_recruit(recruit),
+        "offers_made": len(recruit_board.offered),
+        "max_offers": recruit_board.max_offers,
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/recruiting/resolve")
+def offseason_recruiting_resolve(session_id: str):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    recruit_board = offseason.get("recruit_board")
+
+    if recruit_board is None:
+        raise HTTPException(status_code=400, detail="No recruiting board found")
+
+    human_team = dynasty.coach.team_name
+    rng = random.Random(dynasty.current_year + 13)
+    team_regions = dynasty._estimate_team_regions()
+
+    boards = {human_team: recruit_board}
+    all_nil = {human_team: offseason.get("nil_offers", {})}
+
+    graduating = offseason.get("graduating", {})
+    portal = offseason.get("portal")
+
+    for team_name in dynasty.team_histories:
+        if team_name == human_team:
+            continue
+        prestige = dynasty.team_prestige.get(team_name, 50)
+        nil_prog = dynasty._nil_programs.get(team_name)
+        nil_budget = nil_prog.recruiting_pool if nil_prog else 300_000
+
+        portal_adds = 0
+        if portal:
+            portal_adds = sum(1 for e in portal.entries if e.committed_to == team_name)
+        grads = len(graduating.get(team_name, []))
+        portal_losses = 0
+        if portal:
+            portal_losses = sum(
+                1 for e in portal.entries
+                if e.origin_team == team_name and e.committed_to and e.committed_to != team_name
+            )
+        open_spots = max(3, min(12, grads + portal_losses - portal_adds))
+
+        board, nil = auto_recruit_team(
+            team_name=team_name,
+            pool=recruit_pool,
+            team_prestige=prestige,
+            team_region=team_regions.get(team_name, "midwest"),
+            scholarships=open_spots,
+            nil_budget=nil_budget,
+            rng=rng,
+        )
+        boards[team_name] = board
+        all_nil[team_name] = nil
+
+    signed = simulate_recruit_decisions(
+        pool=recruit_pool,
+        team_boards=boards,
+        team_prestige=dynasty.team_prestige,
+        team_regions=team_regions,
+        nil_offers=all_nil,
+        rng=rng,
+    )
+
+    rankings = []
+    for team, recruits in signed.items():
+        if recruits:
+            avg = sum(r.stars for r in recruits) / len(recruits)
+            rankings.append({"team": team, "avg_stars": round(avg, 2), "count": len(recruits)})
+    rankings.sort(key=lambda x: (-x["avg_stars"], -x["count"]))
+
+    offseason["phase"] = "ready"
+
+    human_signed = signed.get(human_team, [])
+    return {
+        "resolved": True,
+        "class_rankings": rankings,
+        "human_signed": [_serialize_recruit(r) for r in human_signed],
+        "human_signed_count": len(human_signed),
+        "total_signed": sum(len(v) for v in signed.values()),
+        "offseason_phase": "ready",
+    }
+
+
+@app.post("/sessions/{session_id}/offseason/complete")
+def offseason_complete(session_id: str):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    _require_offseason(session)
+
+    session.pop("offseason", None)
+    session["phase"] = "setup"
+
+    return _serialize_dynasty_status(session)
+
+
+@app.post("/sessions/{session_id}/season/portal/generate")
+def season_portal_generate(session_id: str, size: int = Query(40)):
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    team_names = list(season.teams.keys())
+    rng = random.Random(size + 99)
+    portal = generate_quick_portal(team_names=team_names, size=size, rng=rng)
+    session["quick_portal"] = portal
+
+    return {
+        "entries": [_serialize_portal_entry(e) for e in portal.entries],
+        "total": len(portal.entries),
+    }
+
+
+@app.get("/sessions/{session_id}/season/portal")
+def season_portal_get(session_id: str):
+    session = _get_session(session_id)
+    portal = session.get("quick_portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No quick portal generated. POST to /season/portal/generate first.")
+
+    return {
+        "entries": [_serialize_portal_entry(e) for e in portal.entries],
+        "available": [_serialize_portal_entry(e) for e in portal.get_available()],
+        "total": len(portal.entries),
+    }
+
+
+@app.post("/sessions/{session_id}/season/portal/commit")
+def season_portal_commit(session_id: str, team_name: str = Query(...), entry_index: int = Query(...)):
+    session = _get_session(session_id)
+    portal = session.get("quick_portal")
+    if portal is None:
+        raise HTTPException(status_code=400, detail="No quick portal generated. POST to /season/portal/generate first.")
+
+    if entry_index < 0 or entry_index >= len(portal.entries):
+        raise HTTPException(status_code=400, detail="Invalid entry index")
+
+    entry = portal.entries[entry_index]
+    success = portal.instant_commit(team_name, entry)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot commit this player (already committed or withdrawn)")
+
+    return {
+        "committed": True,
+        "player": _serialize_portal_entry(entry),
+        "team": team_name,
+    }
