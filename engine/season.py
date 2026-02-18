@@ -316,7 +316,12 @@ class Season:
         self._assign_weeks_by_type(non_conf_weeks)
 
     def _assign_weeks_by_type(self, non_conf_weeks: int = 3):
-        """Assign week numbers: non-conference games fill early weeks, conference games fill later weeks."""
+        """Assign week numbers ensuring no team plays more than once per week.
+
+        Non-conference games fill early weeks (1..non_conf_weeks), conference
+        games fill later weeks.  Uses greedy slot assignment: each game goes
+        into the earliest eligible week where neither team already has a game.
+        """
         if not self.schedule:
             return
 
@@ -325,18 +330,29 @@ class Season:
         random.shuffle(non_conf)
         random.shuffle(conf)
 
-        team_names = list(self.teams.keys())
-        games_per_slot = max(1, len(team_names) // 2)
+        week_teams: dict[int, set] = {}
 
-        max_early_games = non_conf_weeks * games_per_slot
-        early_non_conf = non_conf[:max_early_games]
-        overflow_non_conf = non_conf[max_early_games:]
+        def _assign(game, min_week):
+            week = min_week
+            while True:
+                if week not in week_teams:
+                    week_teams[week] = set()
+                slot = week_teams[week]
+                if game.home_team not in slot and game.away_team not in slot:
+                    game.week = week
+                    slot.add(game.home_team)
+                    slot.add(game.away_team)
+                    return
+                week += 1
 
-        ordered = early_non_conf + conf + overflow_non_conf
+        for game in non_conf:
+            _assign(game, 1)
 
-        for i, game in enumerate(ordered):
-            game.week = (i // games_per_slot) + 1
-        self.schedule = ordered
+        conf_start = non_conf_weeks + 1
+        for game in conf:
+            _assign(game, conf_start)
+
+        self.schedule = sorted(non_conf + conf, key=lambda g: g.week)
 
     def _generate_round_robin(self, team_names: List[str]):
         """Full round-robin: each team plays each other once"""

@@ -1,4 +1,6 @@
 import os
+import io
+import csv
 
 import streamlit as st
 import pandas as pd
@@ -6,7 +8,10 @@ import plotly.graph_objects as go
 
 from engine.season import BOWL_TIERS
 from ui import api_client
-from ui.helpers import fmt_vb_score, render_game_detail
+from ui.helpers import (
+    fmt_vb_score, render_game_detail, generate_box_score_markdown,
+    generate_play_log_csv, generate_drives_csv, safe_filename,
+)
 
 
 def _get_session_id():
@@ -78,6 +83,30 @@ def render_my_team_section(shared):
     if mode == "dynasty" and len(tabs) > 3:
         with tabs[3]:
             _render_history(session_id)
+
+
+def _build_dashboard_text(team_name, record, rank, mode):
+    lines = [f"{team_name} Team Summary", "=" * 40, ""]
+    lines.append(f"Record: {record['wins']}-{record['losses']}")
+    lines.append(f"Power Ranking: #{rank}" if rank else "Power Ranking: N/A")
+    if record.get("conference"):
+        lines.append(f"Conference: {record.get('conference', '')}")
+        lines.append(f"Conference Record: {record.get('conf_wins', 0)}-{record.get('conf_losses', 0)}")
+    lines.append(f"Points For: {fmt_vb_score(record['points_for'])}")
+    lines.append(f"Points Against: {fmt_vb_score(record['points_against'])}")
+    lines.append(f"Point Differential: {fmt_vb_score(record.get('point_differential', 0))}")
+    lines.append("")
+    lines.append("Viperball Metrics:")
+    lines.append(f"  OPI: {record.get('avg_opi', 0):.1f}")
+    lines.append(f"  Territory: {record.get('avg_territory', 0):.1f}")
+    lines.append(f"  Pressure: {record.get('avg_pressure', 0):.1f}")
+    lines.append(f"  Chaos: {record.get('avg_chaos', 0):.1f}")
+    lines.append(f"  Kicking: {record.get('avg_kicking', 0):.1f}")
+    if record.get("offense_style"):
+        lines.append(f"\nOffense: {record.get('offense_style', '')}")
+    if record.get("defense_style"):
+        lines.append(f"Defense: {record.get('defense_style', '')}")
+    return "\n".join(lines)
 
 
 def _render_dashboard(session_id, mode, team_name, standings):
@@ -169,6 +198,65 @@ def _render_dashboard(session_id, mode, team_name, standings):
         except api_client.APIError:
             pass
 
+    st.divider()
+    summary = _build_dashboard_text(team_name, record, rank, mode)
+    ex1, ex2 = st.columns(2)
+    with ex1:
+        st.download_button(
+            "Download Team Summary (Text)",
+            summary,
+            file_name=f"{safe_filename(team_name)}_summary.txt",
+            mime="text/plain",
+            key="myteam_dash_txt",
+        )
+    with ex2:
+        if st.button("Copy Team Summary", key="myteam_dash_copy"):
+            st.code(summary, language=None)
+            st.caption("Select all and copy the text above.")
+
+
+def _build_roster_csv(team_name, players):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["#", "Name", "Position", "Archetype", "Year", "OVR",
+                     "Speed", "Power", "Agility", "Hands", "Awareness", "Kicking", "Stamina"])
+    for p in players:
+        ovr = int(round((p.get("speed", 0) + p.get("stamina", 0) + p.get("agility", 0) +
+                          p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6))
+        writer.writerow([
+            p.get("number", ""),
+            p.get("name", ""),
+            p.get("position", ""),
+            p.get("archetype", ""),
+            p.get("year_abbrev", p.get("year", "")),
+            ovr,
+            p.get("speed", 0),
+            p.get("power", 0),
+            p.get("agility", 0),
+            p.get("hands", 0),
+            p.get("awareness", 0),
+            p.get("kicking", 0),
+            p.get("stamina", 0),
+        ])
+    return buf.getvalue()
+
+
+def _build_roster_text(team_name, players):
+    lines = [f"{team_name} Roster", "=" * len(f"{team_name} Roster"), ""]
+    lines.append(f"{'#':>3} {'Name':<24} {'Pos':<6} {'Archetype':<18} {'Yr':<6} {'OVR':>3} {'SPD':>3} {'PWR':>3} {'AGI':>3} {'HND':>3} {'AWR':>3} {'KCK':>3} {'STM':>3}")
+    lines.append("-" * 100)
+    for p in players:
+        ovr = int(round((p.get("speed", 0) + p.get("stamina", 0) + p.get("agility", 0) +
+                          p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6))
+        lines.append(
+            f"{p.get('number', ''):>3} {p.get('name', ''):<24} {p.get('position', ''):<6} "
+            f"{p.get('archetype', ''):<18} {p.get('year_abbrev', p.get('year', '')):<6} "
+            f"{ovr:>3} {p.get('speed', 0):>3} {p.get('power', 0):>3} "
+            f"{p.get('agility', 0):>3} {p.get('hands', 0):>3} "
+            f"{p.get('awareness', 0):>3} {p.get('kicking', 0):>3} {p.get('stamina', 0):>3}"
+        )
+    return "\n".join(lines)
+
 
 def _render_roster(session_id, team_name):
     try:
@@ -184,6 +272,7 @@ def _render_roster(session_id, team_name):
                           p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6))
         roster_data.append({
             "Name": f"{p.get('name', '')} ({p.get('position', '')} #{p.get('number', '')})",
+            "Year": p.get("year_abbrev", p.get("year", "")),
             "Archetype": p.get("archetype", ""),
             "Position": p.get("position", ""),
             "OVR": ovr,
@@ -198,8 +287,55 @@ def _render_roster(session_id, team_name):
 
     if roster_data:
         st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=600)
+
+        st.divider()
+        ex1, ex2, ex3 = st.columns(3)
+        with ex1:
+            st.download_button(
+                "Download Roster CSV",
+                _build_roster_csv(team_name, players),
+                file_name=f"{safe_filename(team_name)}_roster.csv",
+                mime="text/csv",
+                key="myteam_roster_csv",
+            )
+        with ex2:
+            roster_text = _build_roster_text(team_name, players)
+            st.download_button(
+                "Download Roster (Text)",
+                roster_text,
+                file_name=f"{safe_filename(team_name)}_roster.txt",
+                mime="text/plain",
+                key="myteam_roster_txt",
+            )
+        with ex3:
+            if st.button("Copy Roster to Clipboard", key="myteam_roster_copy"):
+                roster_text = _build_roster_text(team_name, players)
+                st.code(roster_text, language=None)
+                st.caption("Select all and copy the text above.")
     else:
         st.info("No players found on this roster.")
+
+
+def _build_team_schedule_csv(team_name, entries):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Week", "Opponent", "Result", "Score", "Location", "Phase"])
+    for e in entries:
+        writer.writerow([e["label"], e["opponent"], e["result"], e["score"], e["location"], e["phase"]])
+    return buf.getvalue()
+
+
+def _build_team_schedule_text(team_name, entries, wins, losses):
+    lines = [f"{team_name} Schedule ({wins}-{losses})", "=" * 50, ""]
+    lines.append(f"{'Week':<20} {'Opponent':<28} {'Result':<4} {'Score':<14} {'Loc':<6} {'Phase'}")
+    lines.append("-" * 85)
+    for e in entries:
+        lines.append(
+            f"{e['label']:<20} {e['opponent']:<28} {e['result']:<4} {e['score']:<14} {e['location']:<6} {e['phase']}"
+        )
+    lines.append("")
+    lines.append(f"Season Record: {wins}-{losses}")
+    return "\n".join(lines)
 
 
 def _render_schedule(session_id, mode, team_name):
@@ -291,6 +427,9 @@ def _render_schedule(session_id, mode, team_name):
         st.info("No games found for this team in the current season.")
         return
 
+    wins = sum(1 for e in entries if e["result"] == "W")
+    losses = len(entries) - wins
+
     sched_data = []
     for e in entries:
         sched_data.append({
@@ -303,6 +442,32 @@ def _render_schedule(session_id, mode, team_name):
         })
     st.dataframe(pd.DataFrame(sched_data), hide_index=True, use_container_width=True)
 
+    st.divider()
+    sched_csv = _build_team_schedule_csv(team_name, entries)
+    sched_text = _build_team_schedule_text(team_name, entries, wins, losses)
+    ex1, ex2, ex3 = st.columns(3)
+    with ex1:
+        st.download_button(
+            "Download Schedule CSV",
+            sched_csv,
+            file_name=f"{safe_filename(team_name)}_schedule.csv",
+            mime="text/csv",
+            key="myteam_sched_csv",
+        )
+    with ex2:
+        st.download_button(
+            "Download Schedule (Text)",
+            sched_text,
+            file_name=f"{safe_filename(team_name)}_schedule.txt",
+            mime="text/plain",
+            key="myteam_sched_txt",
+        )
+    with ex3:
+        if st.button("Copy Schedule to Clipboard", key="myteam_sched_copy"):
+            st.code(sched_text, language=None)
+            st.caption("Select all and copy the text above.")
+
+    st.divider()
     game_labels = [f"{e['label']}: vs {e['opponent']} ({e['result']}) {e['score']}" for e in entries]
     selected = st.selectbox("Select a game to view details", game_labels, key="myteam_game_select")
     if selected:
@@ -312,6 +477,38 @@ def _render_schedule(session_id, mode, team_name):
         if full_result:
             with st.expander("Game Details", expanded=True):
                 render_game_detail(full_result, key_prefix=f"myteam_gd_{idx}")
+
+            box_md = generate_box_score_markdown(full_result)
+            with st.expander("Share This Game", expanded=False):
+                st.caption("Copy the box score below to share on forums or elsewhere.")
+                dl1, dl2, dl3 = st.columns(3)
+                with dl1:
+                    st.download_button(
+                        "Download Box Score (Markdown)",
+                        box_md,
+                        file_name=f"{safe_filename(team_name)}_wk{entries[idx]['week']}_boxscore.md",
+                        mime="text/markdown",
+                        key=f"myteam_box_md_{idx}",
+                    )
+                with dl2:
+                    st.download_button(
+                        "Download Play Log (CSV)",
+                        generate_play_log_csv(full_result),
+                        file_name=f"{safe_filename(team_name)}_wk{entries[idx]['week']}_plays.csv",
+                        mime="text/csv",
+                        key=f"myteam_box_plays_{idx}",
+                    )
+                with dl3:
+                    st.download_button(
+                        "Download Drives (CSV)",
+                        generate_drives_csv(full_result),
+                        file_name=f"{safe_filename(team_name)}_wk{entries[idx]['week']}_drives.csv",
+                        mime="text/csv",
+                        key=f"myteam_box_drives_{idx}",
+                    )
+                if st.button("Show Box Score for Copying", key=f"myteam_box_copy_{idx}"):
+                    st.code(box_md, language="markdown")
+                    st.caption("Select all and copy the text above.")
 
 
 def _render_history(session_id):
