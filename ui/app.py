@@ -8,10 +8,10 @@ import streamlit as st
 from engine import get_available_teams, get_available_styles, DEFENSE_STYLES
 
 from ui.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS
-from ui.page_modules.game_simulator import render_game_simulator
-from ui.page_modules.season_simulator import render_season_simulator
-from ui.page_modules.dynasty_mode import render_dynasty_mode
-from ui.page_modules.team_roster import render_team_roster
+from ui.page_modules.section_play import render_play_section
+from ui.page_modules.section_league import render_league_section
+from ui.page_modules.section_my_team import render_my_team_section
+from ui.page_modules.section_export import render_export_section
 from ui.page_modules.debug_tools import render_debug_tools
 from ui.page_modules.play_inspector import render_play_inspector
 
@@ -27,7 +27,6 @@ st.markdown("""
     .stApp { max-width: 100%; }
     .block-container { padding-top: 1rem; padding-bottom: 2rem; }
 
-    /* Sidebar branding */
     section[data-testid="stSidebar"] {
         background-color: #0f172a;
     }
@@ -81,7 +80,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Metric cards */
     div[data-testid="stMetric"] {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
@@ -105,7 +103,6 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
 
-    /* Score display */
     .score-big {
         font-size: 2.8rem;
         font-weight: 800;
@@ -122,14 +119,12 @@ st.markdown("""
         margin-bottom: 2px;
     }
 
-    /* Drive result colors */
     .drive-td { color: #16a34a; font-weight: 700; }
     .drive-kick { color: #2563eb; font-weight: 700; }
     .drive-fumble { color: #dc2626; font-weight: 700; }
     .drive-downs { color: #d97706; font-weight: 700; }
     .drive-punt { color: #94a3b8; }
 
-    /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
     }
@@ -138,13 +133,11 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* Better table styling */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
     }
 
-    /* Section headers */
     h2 {
         color: #0f172a !important;
         font-weight: 700 !important;
@@ -152,7 +145,6 @@ st.markdown("""
         padding-bottom: 0.3rem;
     }
 
-    /* Expander styling */
     .streamlit-expanderHeader {
         font-weight: 600;
         color: #334155;
@@ -178,26 +170,58 @@ shared = {
     "DEFENSE_TOOLTIPS": DEFENSE_TOOLTIPS,
 }
 
+def _mode_label():
+    if "dynasty" in st.session_state:
+        d = st.session_state["dynasty"]
+        return f"Dynasty: {d.dynasty_name} ({d.current_year})"
+    if "active_season" in st.session_state:
+        return f"Season: {st.session_state['active_season'].name}"
+    return "No Active Session"
+
 with st.sidebar:
     st.markdown('<p class="sidebar-brand">Viperball Sandbox</p>', unsafe_allow_html=True)
     st.markdown('<p class="sidebar-tagline">Collegiate Viperball League Simulator</p>', unsafe_allow_html=True)
     st.divider()
 
-PAGES = {
-    "Game Simulator": ("single_game", render_game_simulator),
-    "Season Simulator": ("season", render_season_simulator),
-    "Dynasty Mode": ("dynasty", render_dynasty_mode),
-    "Team Roster": ("roster", render_team_roster),
-    "Debug Tools": ("debug", render_debug_tools),
-    "Play Inspector": ("inspector", render_play_inspector),
-}
+    st.markdown(f"**{_mode_label()}**")
 
-page = st.sidebar.radio("Pages", list(PAGES.keys()), index=0, label_visibility="collapsed")
+    if "dynasty" in st.session_state or "active_season" in st.session_state:
+        if st.button("End Session", key="end_session_sidebar", use_container_width=True):
+            for key in ["dynasty", "dynasty_teams", "last_dynasty_season",
+                        "last_dynasty_injury_tracker", "active_season",
+                        "season_human_teams_list"]:
+                st.session_state.pop(key, None)
+            st.rerun()
 
-with st.sidebar:
+    st.divider()
+    st.markdown("**Settings**")
+    settings_page = st.radio(
+        "Settings", ["Debug Tools", "Play Inspector"],
+        index=None,
+        label_visibility="collapsed",
+        key="settings_page",
+    )
+
     st.divider()
     st.caption("v0.9 Beta — CVL Engine")
     st.caption(f"{len(teams)} teams across 12 conferences")
 
-_, render_fn = PAGES[page]
-render_fn(shared)
+if settings_page:
+    if settings_page == "Debug Tools":
+        render_debug_tools(shared)
+    elif settings_page == "Play Inspector":
+        render_play_inspector(shared)
+else:
+    main_tabs = st.tabs(["Play", "League", "My Team", "Export"])
+
+    with main_tabs[0]:
+        render_play_section(shared)
+
+    with main_tabs[1]:
+        render_league_section(shared)
+
+    with main_tabs[2]:
+        render_my_team_section(shared)
+
+    with main_tabs[3]:
+        render_export_section(shared)

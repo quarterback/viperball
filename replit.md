@@ -12,15 +12,17 @@ I want iterative development. Ask before making major changes. I prefer detailed
 
 ## System Architecture
 
-### UI/UX Decisions
-The user interface is built with Streamlit and features a 6-page sandbox:
-- **Game Simulator**: Allows configuration of offense/defense styles and weather, displaying real-time box scores, play distributions, drive outcomes, penalty tracking, player archetype performance, and a detailed play log. Includes a debug panel for granular data.
-- **Season Simulator**: Configurable for various season and playoff formats, featuring standings, radar charts, and score distributions.
-- **Dynasty Mode**: A multi-season career mode with customizable conference setups, season lengths, and scheduling. It includes 9 tabs for simulating seasons, tracking standings, coach dashboard, team history, record book, awards, injury reports, player development, and CSV export functionalities. Supports pre-dynasty history simulation (1-100 years) to generate an established league backstory with champions, records, and team legacies before the coach begins their tenure.
-- **Season Simulator**: All 125 teams are always included. Human coach picks up to 4 teams to manage; rest are AI-controlled.
-- **Debug Tools**: Facilitates batch simulations for averaging, analyzing fatigue curves, turnover rates, and drive outcome aggregations.
-- **Play Inspector**: Enables repeated execution of single plays under controlled conditions for detailed analysis.
-- **Team Roster**: Browse and inspect individual team rosters, player archetypes, and stats.
+### UI/UX Decisions — New Information Architecture (Feb 2026)
+The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings:
+- **Play** (tab): Mode selection when no session active (New Dynasty, New Season, Quick Game). During an active session, shows simulation controls and season advancement. Quick Game available in all modes.
+- **League** (tab): Read-only league-wide data from the active season/dynasty. Sub-tabs: Standings, Power Rankings, Conferences, Postseason, Schedule, Awards & Stats. Supports both standalone season and dynasty modes.
+- **My Team** (tab): Focused view of the user's coached team(s). Sub-tabs: Dashboard (metrics, radar chart), Roster (player attributes), Schedule (team game log with detail viewer), History (dynasty only — career stats, record book, team history).
+- **Export** (tab): Data export tools. Season Data tab has CSV standings, CSV schedule, and comprehensive JSON context (for LLM analysis). Dynasty Data tab adds dynasty-wide CSV exports (standings, awards, injuries, development, All-CVL, All-Conference) plus dynasty save/load.
+- **Settings** (sidebar): Debug Tools and Play Inspector, accessible without leaving the main tabs.
+- **Session Management**: Sidebar shows current mode (No Active Session / Season name / Dynasty name + year). End Session button clears state.
+- All 125 teams always included in seasons. Human coach picks up to 4 teams; rest AI-controlled.
+- Dynasty supports pre-dynasty history simulation (1-100 years).
+- Old 6-page sidebar navigation (Game Simulator, Season Simulator, Dynasty Mode, Team Roster, Debug Tools, Play Inspector) replaced by this IA structure. Legacy page modules preserved but no longer routed from app.py.
 
 ### Technical Implementations
 The project follows a clear separation of concerns:
