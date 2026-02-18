@@ -1,0 +1,129 @@
+but for single season mode, you should be capped on how many you can have and it should be prestige dependent?
+
+
+
+That makes sense — prestige gates how many portal players you can grab. Let me see how single-season mode currently sets up teams so I know where to pull prestige from.
+
+
+Read transfer_portal.py to examine player selection logic
+Show more
+
+Now let me look at where team data comes from in single-season context — specifically if there's roster size or team-level metadata we can use for prestige.
+
+
+Read Gonzaga team player archetype and stats data
+
+Good — there's no prestige field in the team JSON currently. In single-season mode there's no historical record to compute it from either. So we need to estimate prestige from the roster itself — the idea being a team stacked with high-overall, high-potential players is clearly a strong program. That's clean and works without dynasty history.
+
+Let me make the changes.
+
+
+Read transfer portal offer logic in engine
+
+Now I have the full picture. I need to:
+
+Add a prestige-based transfer cap to TransferPortal so instant_commit enforces it
+Add a helper to estimate prestige from a roster (no dynasty history needed)
+Update the quick portal to accept prestige and enforce the cap
+Add tests
+
+Updated transfer portal dataclass with new fields and logic
+
+Now update instant_commit to enforce the cap, and add a helper to check remaining slots:
+
+
+Updated transfer portal instant commit logic in engine
+
+Now add a roster-based prestige estimator and update generate_quick_portal to accept prestige and set the cap:
+
+
+Updated todo list with completed transfer cap and prestige tasks
+
+Now update the tests. I need to fix the existing quick portal test and add new tests for the cap and prestige estimation.
+
+
+Updated import statements in test_recruiting.py file
+
+Now update the quick portal test and add the new tests:
+
+
+Updated test_recruiting.py with mock portal data
+
+Now add the two new tests to the test runner:
+
+
+Edited a file
+the transfers should have their hometowns listed and they should come from schools that aren't in teh game at all, showing their location and at least ome of them should be international recruits as that'll feel more realistic
+
+
+
+Ran recruiting test suite successfully with new cap/prestige tests
+Show more
+
+All 12 tests pass. Now let me address your second request — portal players need real hometowns, should come from schools NOT in the game, and some should be international.
+
+
+Updated todo list with completed transfer cap and prestige tasks
+
+Let me check what schools are in the game so I know what to avoid, then update the portal generation with proper origin schools, hometowns, and international players.
+
+
+Listed 97 team data files in Viperball project
+Show more
+
+Now let me update the quick portal's player generation to have proper hometowns, non-game origin schools, and international players.
+
+
+Examined transfer portal player generation code for height/weight attributes
+
+Now I'll replace the entire quick portal generation with proper hometowns, non-game origin schools (D1 football programs, NAIA, etc.), international players with appropriate names, and realistic transfer reasons.
+
+
+Updated transfer portal logic in engine file
+
+Now add the origin data pools — real schools NOT in the game, proper hometowns, and international pools:
+
+
+Read transfer portal sorting logic in transfer_portal.py
+
+I need to add the _pick_portal_origin function and its data before generate_quick_portal. Let me add it right before that function.
+
+
+Updated transfer_portal.py with portal origin data
+
+Now let me run the tests to make sure the portal generation still works with the new data:
+
+
+Ran recruiting test suite successfully with portal origin data
+Show more
+
+All 12 tests pass. Look at the portal output now — you can see it's working exactly as intended:
+
+Kendall Miller from Ohio State (a real school not in the CVL)
+Fatima Afolabi from Nairobi Cheetahs VB (international, African)
+Manaia Williams in the cap test (New Zealand/Pacific name)
+Camila Cruz (Latin American origin)
+Let me commit and push.
+
+
+Updated todo list with completed transfer cap and prestige tasks
+Show more
+
+Done. Here's a summary of the two changes:
+
+Prestige-based transfer cap — In single-season mode, you can't just vacuum up the whole portal. The cap scales with prestige:
+
+Prestige	Max Transfers
+90+	7
+75-89	6
+60-74	5
+45-59	4
+30-44	3
+0-29	2
+Since single-season mode has no dynasty history, estimate_prestige_from_roster() computes prestige from the roster's average overall and potential — a stacked team gets a high prestige, a rebuilding team gets a low one.
+
+Realistic portal players — Portal players now come from:
+
+Domestic schools not in the CVL — split between big D1 programs (Ohio State, Alabama, Oregon, etc.) and smaller FCS/D2 programs (Montana, North Dakota State, Towson, Appalachian State, etc.)
+International clubs (~25%) — Australian (Sydney Uni, Melbourne Chargers), British/European (London Blitz, Edinburgh Wolves), Canadian (UBC Thunderbirds, Laval Rouge et Or), NZ/Pacific (Auckland Uni, Fiji Academy), Latin American (UNAM Pumas, São Paulo Vipers), and African (Lagos Academy, Nairobi Cheetahs)
+Each player has a real hometown with city/state/country and culturally appropriate names for their origin region.
