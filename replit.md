@@ -7,6 +7,8 @@ The Viperball Simulation Sandbox is a browser-accessible platform for the Colleg
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
 - **Snap kick (DK) rate**: User confirmed 1.78-2.23/game is PERFECT. Do NOT lower snap kicks — the old 0.5-1.5 target was too low. Updated target range: 1.5-2.5 DK per team per game.
 - **Place kick philosophy**: User wants more PK attempts — teams should try field goals instead of punting when drives stall, even from 40+ yards. PK attempts target: 3-5 per team per game. Success rate is secondary to attempt frequency.
+- **Stat variance**: User wants all stat categories to produce a natural low-to-high range across seasons, NOT predictive clustering. Per-game rhythm/intensity factors (0.65-1.35 range) create this variance.
+- **Lateral chain risk**: User wants laterals to be genuinely risky. Target fumble rate ~25% (was 7%). Per-exchange fumble 0.035 with chain-length scaling.
 
 ## System Architecture
 
