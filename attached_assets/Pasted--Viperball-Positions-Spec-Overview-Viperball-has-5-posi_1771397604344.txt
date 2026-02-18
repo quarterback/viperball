@@ -1,0 +1,697 @@
+# Viperball Positions Spec
+
+## Overview
+
+Viperball has 5 position groups with 12 archetypes. Every team needs all positions filled for the game mechanics to work correctly.
+
+---
+
+## Position Summary
+
+| Position | Code | Count/Team | Role |
+|----------|------|------------|------|
+| Zeroback | ZB | 1-2 | Offensive hub — touches ball every play |
+| Viper | VP | 1-2 | Wildcard — exempt from formation rules |
+| Flankers | HB, WB, SB | 4-6 | Ball carriers, blockers, lateral targets |
+| Keeper | KP | 1-2 | Deepest defender — last line, fields kicks |
+| Linemen | OL, DL | 6-10 | Blocking, run defense (simplified in sim) |
+
+**Minimum Roster:** 15 players
+**Typical Roster:** 20-25 players
+
+---
+
+## 1. ZEROBACK (ZB)
+
+### Role
+The offensive hub. Part quarterback, part running back, part kicker. Touches the ball on nearly every offensive play.
+
+### Responsibilities
+- Takes every snap
+- Runs the ball (dive, draw, speed option)
+- Pitches laterals to start chains
+- Kicks (snap kicks, place kicks, punts)
+- Reads defense on option plays
+- Calls plays / audibles
+
+### Key Attributes
+
+| Attribute | Description | Impact |
+|-----------|-------------|--------|
+| **Speed** | Straight-line speed | Rush yards, breakaway chance |
+| **Power** | Breaking tackles | Short yardage, goal line |
+| **Awareness** | Reading defense | Option read accuracy, audibles |
+| **Kicking** | Kick accuracy/power | PK%, DK%, punt distance |
+| **Hands** | Ball security | Fumble rate on runs |
+| **Distribution** | Lateral accuracy | Chain completion rate |
+
+### Archetypes
+
+| Archetype | Description | Strengths | Weaknesses |
+|-----------|-------------|-----------|------------|
+| **Running ZB** | Ground-and-pound style | High speed/power, good hands | Average kicking |
+| **Kicking ZB** | Boot Raid specialist | Elite kicking, good awareness | Below-average rushing |
+| **Distributor ZB** | Chain Gang style | Elite distribution, high awareness | Average speed/power |
+| **Dual-Threat ZB** | Balanced | Good at everything | Elite at nothing |
+
+### Stats to Track
+
+```
+Rushing: attempts, yards, tds, long, fumbles
+Kicking: pk_att, pk_made, dk_att, dk_made, punts, punt_avg, pindowns
+Laterals: assists (pitches that lead to yards)
+```
+
+### Implementation Notes
+
+```python
+class Zeroback:
+    position_code = 'ZB'
+    
+    # Required attributes
+    speed: int        # 1-100
+    power: int        # 1-100
+    awareness: int    # 1-100
+    kicking: int      # 1-100
+    hands: int        # 1-100 (ball security)
+    distribution: int # 1-100 (lateral accuracy)
+    
+    # Archetype determines attribute weights
+    archetype: str    # 'Running', 'Kicking', 'Distributor', 'Dual-Threat'
+```
+
+---
+
+## 2. VIPER (VP)
+
+### Role
+The wildcard. Exempt from formation rules — can line up anywhere on the field. Creates mismatches and chaos.
+
+### Responsibilities
+- Pre-snap motion and alignment to pull defenders
+- Receive laterals in space
+- Viper Jet runs (jet motion handoff)
+- Block on running plays
+- Create misdirection
+
+### Key Attributes
+
+| Attribute | Description | Impact |
+|-----------|-------------|--------|
+| **Speed** | Straight-line speed | Explosive plays, jet motion |
+| **Elusiveness** | Making defenders miss | YAC, broken tackles |
+| **Awareness** | Reading blocks, finding lanes | Route efficiency |
+| **Blocking** | Run blocking | Team rush yards |
+| **Hands** | Ball security | Fumble rate |
+
+### Archetypes
+
+| Archetype | Description | Strengths | Weaknesses |
+|-----------|-------------|-----------|------------|
+| **Receiving Viper** | Chain specialist | Elite elusiveness, good hands | Weak blocking |
+| **Blocking Viper** | Run support | Elite blocking, good power | Average speed |
+| **Hybrid Viper** | Do-it-all | Good at everything | Not elite anywhere |
+
+### Special Mechanics
+
+**Viper Alignment Advantage:**
+Running to the opposite side of where Viper lines up = +18% yards (defense pulled out of position).
+
+```python
+VIPER_ALIGNMENT_BONUS = {
+    ('left', 'right'): 0.18,
+    ('right', 'left'): 0.18,
+    ('slot_left', 'right'): 0.12,
+    ('slot_right', 'left'): 0.12,
+    ('left', 'left'): -0.05,
+    ('right', 'right'): -0.05,
+    ('backfield', 'any'): 0.05,
+}
+```
+
+**Viper Jet:**
+Highest risk/reward run play. Viper only. 28% explosive chance, 2.8% fumble rate.
+
+### Stats to Track
+
+```
+Rushing: attempts, yards, tds, long, fumbles (from Viper Jet)
+Laterals: receptions, yards, tds, fumbles
+Assists: lateral_assists (pitches to teammates)
+Blocking: pancakes, whiffs (optional)
+```
+
+### Implementation Notes
+
+```python
+class Viper:
+    position_code = 'VP'
+    
+    speed: int
+    elusiveness: int
+    awareness: int
+    blocking: int
+    hands: int
+    
+    archetype: str  # 'Receiving', 'Blocking', 'Hybrid'
+    
+    # Pre-snap alignment (set each play)
+    alignment: str  # 'left', 'right', 'slot_left', 'slot_right', 'backfield', 'motion'
+```
+
+---
+
+## 3. FLANKERS (HB, WB, SB)
+
+### Role
+The workhorses. Carry the ball, catch laterals, block. Multiple sub-positions with different roles.
+
+### Sub-Positions
+
+| Code | Name | Primary Role |
+|------|------|--------------|
+| **HB** | Halfback | Primary ball carrier, inside runs |
+| **WB** | Wingback | Versatile — runs, laterals, blocking |
+| **SB** | Slotback | Lateral specialist, speed plays |
+
+### Responsibilities
+- Carry the ball on run plays
+- Receive and pitch laterals in chains
+- Block for other carriers
+- Return kicks and punts
+
+### Key Attributes
+
+| Attribute | Description | Impact |
+|-----------|-------------|--------|
+| **Speed** | Straight-line speed | Explosive plays, sweeps |
+| **Power** | Breaking tackles | Short yardage, inside runs |
+| **Elusiveness** | Making defenders miss | YAC, broken tackles |
+| **Hands** | Ball security | Fumble rate |
+| **Blocking** | Run blocking | Team rush yards |
+
+### Archetypes
+
+| Archetype | Description | Best For | Strengths | Weaknesses |
+|-----------|-------------|----------|-----------|------------|
+| **Speed Flanker** | Burner | Sweeps, returns | Elite speed, good elusiveness | Weak power/blocking |
+| **Power Flanker** | Bruiser | Dives, goal line | Elite power, good hands | Below-average speed |
+| **Elusive Flanker** | Shifty | Laterals, space | Elite elusiveness | Average power |
+| **Reliable Flanker** | Safe | Any situation | Good hands, consistent | Not explosive |
+| **Hybrid Flanker** | Versatile | Rotation | Balanced | Not elite |
+
+### Carrier Selection by Play
+
+```python
+CARRIER_BY_PLAY = {
+    'dive': {'positions': ['HB', 'WB'], 'archetype_bonus': {'Power Flanker': 1.4}},
+    'power': {'positions': ['HB', 'WB'], 'archetype_bonus': {'Power Flanker': 1.4}},
+    'sweep': {'positions': ['SB', 'WB'], 'archetype_bonus': {'Speed Flanker': 1.4}},
+    'speed_option': {'positions': ['WB', 'SB'], 'archetype_bonus': {'Speed Flanker': 1.3}},
+    'counter': {'positions': ['HB', 'WB'], 'archetype_bonus': {'Elusive Flanker': 1.3}},
+    'draw': {'positions': ['HB', 'WB'], 'archetype_bonus': {'Power Flanker': 1.2}},
+}
+```
+
+### Stats to Track
+
+```
+Rushing: attempts, yards, tds, long, fumbles
+Laterals: receptions, yards, tds, assists, fumbles
+Returns: kick_returns, kick_return_yards, kick_return_tds,
+         punt_returns, punt_return_yards, punt_return_tds, muffs
+```
+
+### Implementation Notes
+
+```python
+class Flanker:
+    position_code: str  # 'HB', 'WB', or 'SB'
+    
+    speed: int
+    power: int
+    elusiveness: int
+    hands: int
+    blocking: int
+    
+    archetype: str  # 'Speed', 'Power', 'Elusive', 'Reliable', 'Hybrid'
+```
+
+---
+
+## 4. KEEPER (KP)
+
+### Role
+The deepest defender. Last line of defense against breakaway runs. Fields kicks. The "goalkeeper" of Viperball.
+
+### Responsibilities
+- Make tackles on explosive runs (Keeper matchup)
+- Field punts and missed kicks
+- Defend snap kicks (zone keeping)
+- Prevent breakaway TDs
+- Force fumbles on big hits
+- Cover deep against lateral chains
+
+### Key Attributes
+
+| Attribute | Description | Impact |
+|-----------|-------------|--------|
+| **Speed** | Closing speed | Catching ball carriers, pursuit angles |
+| **Tackling** | Tackle success | Stopping explosive runs |
+| **Awareness** | Reading plays | Positioning, zone keeping |
+| **Power** | Hit power | Forced fumbles, stopping power backs |
+| **Hands** | Fielding kicks | Muff rate on punt/kick returns |
+
+### Special Mechanics
+
+**Keeper Matchup (Explosive Runs):**
+When a carrier breaks free (8+ yards gained), it becomes a 1-on-1 with the Keeper.
+
+```python
+def resolve_keeper_matchup(carrier, keeper, yards_at_break):
+    carrier_score = carrier.speed * 0.5 + carrier.elusiveness * 0.3 + carrier.power * 0.2
+    keeper_score = keeper.speed * 0.4 + keeper.tackling * 0.4 + keeper.awareness * 0.2
+    
+    # Keeper fatigue matters (Boot Raid wears them down)
+    if keeper_fatigue > 70:
+        keeper_score *= 0.80
+    
+    differential = carrier_score - keeper_score
+    
+    if differential > 15:
+        td_chance = 0.85  # Carrier blows by
+    elif differential > 5:
+        td_chance = 0.60  # Carrier has edge
+    elif differential > -5:
+        td_chance = 0.40  # Contested
+    else:
+        td_chance = 0.20  # Keeper has angle
+```
+
+**Zone Keeping (vs Boot Raid):**
+Against kicking-heavy teams, Keeper plays deep to defend snap kicks. This creates a chess match:
+- Keeper deep → offense runs laterals into vacated space
+- Keeper creeps up → offense kicks over their head
+
+**Keeper Fatigue:**
+Boot Raid offenses wear down the Keeper by forcing them to sprint to the uprights on every snap kick threat.
+
+```python
+def update_keeper_fatigue(play_type, offensive_style):
+    if offensive_style == 'boot_raid':
+        if play_type in ['snap_kick', 'territory_kick']:
+            keeper_fatigue += 8
+        else:
+            keeper_fatigue += 3
+    else:
+        keeper_fatigue += 2
+```
+
+### Archetypes
+
+| Archetype | Description | Strengths | Best Against |
+|-----------|-------------|-----------|--------------|
+| **Return Keeper** | Playmaker, returns kicks | Speed, hands, return yards | Boot Raid (fields and returns kicks) |
+| **Sure Hands Keeper** | Reliable, positioning | Hands, awareness, no muffs | Any (prevents special teams disasters) |
+| **Tackle Keeper** | Enforcer, big hits | Tackling, power, forced fumbles | Chain Gang (stops explosive runs) |
+
+### Stats to Track
+
+```
+Defense: tackles, solo_tackles, assisted_tackles, forced_fumbles, fumble_recoveries
+Special Teams: st_tackles, punts_fielded, kicks_fielded, muffs, return_yards, return_tds
+Keeper-Specific: 
+  - explosive_stops (tackled carrier on breakaway)
+  - explosive_tds_allowed (carrier beat keeper)
+  - kick_deflections (blocked/tipped snap kicks)
+  - bells_generated (forced fumbles recovered by team)
+```
+
+### Implementation Notes
+
+```python
+class Keeper:
+    position_code = 'KP'
+    
+    speed: int
+    tackling: int
+    awareness: int
+    power: int
+    hands: int
+    
+    archetype: str  # 'return_keeper', 'sure_hands_keeper', 'tackle_keeper'
+    
+    # Game state
+    current_fatigue: int  # 0-100, increases during game
+
+def get_keeper(team) -> Keeper:
+    """Return the team's primary Keeper."""
+    # Look for KP tag first
+    keepers = [p for p in team.players if p.position_tag == 'KP']
+    
+    if keepers:
+        # Return highest-rated Keeper by tackling + speed
+        return max(keepers, key=lambda p: p.tackling + p.speed)
+    
+    # Fallback: find anyone with "Keeper" or "Safety" in position name
+    fallback = [p for p in team.players if 'Keeper' in p.position or 'Safety' in p.position]
+    if fallback:
+        return fallback[0]
+    
+    # Last resort: best defensive player
+    return max(team.players, key=lambda p: getattr(p, 'tackling', 0))
+```
+
+### Archetype Attribute Templates
+
+```python
+KEEPER_TEMPLATES = {
+    'return_keeper': {'speed': 88, 'tackling': 72, 'awareness': 78, 'power': 68, 'hands': 85},
+    'sure_hands_keeper': {'speed': 78, 'tackling': 78, 'awareness': 88, 'power': 72, 'hands': 90},
+    'tackle_keeper': {'speed': 80, 'tackling': 90, 'awareness': 75, 'power': 85, 'hands': 72},
+}
+```
+
+---
+
+## 5. LINEMEN (OL, DL)
+
+### Role
+Blocking and run defense. Simplified in the simulation — no individual lineman mechanics, just team-level ratings.
+
+### Sub-Positions
+
+| Code | Name | Role |
+|------|------|------|
+| **OL** | Offensive Line | Run blocking, kick protection |
+| **DL** | Defensive Line | Run stopping, kick blocking |
+
+### Team-Level Attributes
+
+Instead of individual lineman stats, use team ratings:
+
+```python
+class TeamLineRatings:
+    oline_run_blocking: int   # 1-100, affects rush yards
+    oline_pass_pro: int       # 1-100, affects kick protection (not used much)
+    dline_run_stop: int       # 1-100, affects opponent rush yards
+    dline_pressure: int       # 1-100, affects opponent kick attempts
+```
+
+### Implementation Notes
+
+Linemen exist on the roster but don't have individual play-by-play impact. Their ratings roll up to team-level modifiers.
+
+```python
+def calculate_team_oline_rating(team):
+    linemen = [p for p in team.players if p.position_code == 'OL']
+    if not linemen:
+        return 50  # Default
+    return sum(p.blocking for p in linemen) / len(linemen)
+```
+
+---
+
+## Roster Construction
+
+### Minimum Viable Roster (15)
+
+| Position | Count |
+|----------|-------|
+| ZB | 1 |
+| VP | 1 |
+| HB | 2 |
+| WB | 2 |
+| SB | 1 |
+| KP | 1 |
+| OL | 4 |
+| DL | 3 |
+
+### Recommended Roster (22)
+
+| Position | Count |
+|----------|-------|
+| ZB | 2 |
+| VP | 2 |
+| HB | 3 |
+| WB | 3 |
+| SB | 2 |
+| KP | 2 |
+| OL | 5 |
+| DL | 3 |
+
+### Position Validation
+
+```python
+def validate_roster(team):
+    """Ensure team has required positions."""
+    required = {
+        'ZB': 1,
+        'VP': 1,
+        'KP': 1,
+        'HB': 1,
+        'WB': 1,
+    }
+    
+    counts = {}
+    for player in team.players:
+        code = player.position_code
+        counts[code] = counts.get(code, 0) + 1
+    
+    missing = []
+    for pos, min_count in required.items():
+        if counts.get(pos, 0) < min_count:
+            missing.append(pos)
+    
+    if missing:
+        raise ValueError(f"Team {team.name} missing required positions: {missing}")
+```
+
+---
+
+## Attribute Ranges
+
+All attributes are 1-100.
+
+| Range | Description |
+|-------|-------------|
+| 90-100 | Elite (top 5% in league) |
+| 80-89 | Excellent (starter quality) |
+| 70-79 | Good (solid contributor) |
+| 60-69 | Average |
+| 50-59 | Below average |
+| 40-49 | Poor |
+| 1-39 | Replacement level |
+
+### Archetype Attribute Templates
+
+```python
+ARCHETYPE_TEMPLATES = {
+    # Zeroback
+    'Running ZB': {'speed': 82, 'power': 80, 'awareness': 70, 'kicking': 60, 'hands': 78, 'distribution': 70},
+    'Kicking ZB': {'speed': 68, 'power': 62, 'awareness': 78, 'kicking': 90, 'hands': 72, 'distribution': 75},
+    'Distributor ZB': {'speed': 72, 'power': 65, 'awareness': 85, 'kicking': 70, 'hands': 75, 'distribution': 88},
+    'Dual-Threat ZB': {'speed': 76, 'power': 74, 'awareness': 76, 'kicking': 76, 'hands': 76, 'distribution': 76},
+    
+    # Viper
+    'Receiving Viper': {'speed': 88, 'elusiveness': 90, 'awareness': 75, 'blocking': 55, 'hands': 82},
+    'Blocking Viper': {'speed': 72, 'elusiveness': 65, 'awareness': 70, 'blocking': 88, 'hands': 70},
+    'Hybrid Viper': {'speed': 80, 'elusiveness': 78, 'awareness': 75, 'blocking': 72, 'hands': 76},
+    
+    # Flanker
+    'Speed Flanker': {'speed': 92, 'power': 60, 'elusiveness': 82, 'hands': 74, 'blocking': 58},
+    'Power Flanker': {'speed': 70, 'power': 90, 'elusiveness': 65, 'hands': 80, 'blocking': 78},
+    'Elusive Flanker': {'speed': 82, 'power': 65, 'elusiveness': 90, 'hands': 76, 'blocking': 62},
+    'Reliable Flanker': {'speed': 75, 'power': 75, 'elusiveness': 72, 'hands': 88, 'blocking': 75},
+    'Hybrid Flanker': {'speed': 78, 'power': 76, 'elusiveness': 76, 'hands': 78, 'blocking': 72},
+    
+    # Keeper (no archetypes, but baseline)
+    'Keeper': {'speed': 82, 'tackling': 85, 'awareness': 80, 'power': 75, 'hands': 78},
+}
+```
+
+---
+
+## Player Generation
+
+```python
+def generate_player(position_code: str, archetype: str = None, variance: int = 8):
+    """Generate a player with archetype-based attributes plus random variance."""
+    
+    if archetype is None:
+        archetype = random.choice(ARCHETYPES_BY_POSITION[position_code])
+    
+    template = ARCHETYPE_TEMPLATES[archetype]
+    
+    attributes = {}
+    for attr, base_value in template.items():
+        # Add random variance (-variance to +variance)
+        value = base_value + random.randint(-variance, variance)
+        # Clamp to 1-100
+        attributes[attr] = max(1, min(100, value))
+    
+    return Player(
+        position_code=position_code,
+        archetype=archetype,
+        **attributes
+    )
+```
+
+---
+
+## Summary Table
+
+| Position | Code | Archetypes | Key Attributes | Primary Stats |
+|----------|------|------------|----------------|---------------|
+| Zeroback | ZB | Running, Kicking, Distributor, Dual-Threat | Speed, Power, Awareness, Kicking, Hands, Distribution | Rush yds, TDs, PKs, DKs, Assists |
+| Viper | VP | Receiving, Blocking, Hybrid | Speed, Elusiveness, Awareness, Blocking, Hands | Lateral yds, TDs, Assists, Rush yds |
+| Flanker | HB, WB, SB | Speed, Power, Elusive, Reliable, Hybrid | Speed, Power, Elusiveness, Hands, Blocking | Rush yds, Lateral yds, TDs, Returns |
+| Keeper | KP | Return, Sure Hands, Tackle | Speed, Tackling, Awareness, Power, Hands | Tackles, Explosive stops, ST tackles, Bells |
+| Linemen | OL, DL | None | Blocking (OL), Run stop (DL) | Team-level only |
+
+---
+
+## IMPLEMENTATION CHECKLIST
+
+### Known Gaps (Current State)
+
+| Issue | Current | Should Be |
+|-------|---------|-----------|
+| Keeper roster slot | None (works by accident via "Back/Safety") | Dedicated `Keeper` position with 2 slots |
+| Position tag mapping | `"Safety"` → `KP`, but roster uses `"Back/Safety"` → `LB` | `"Keeper"` → `KP` explicit mapping |
+| Defensive Line | Lumped with OL as "Lineman" | Separate `DL` position |
+| Back/Safety, Back/Corner | Exist on roster, not in spec | Replace with Keeper + proper defensive positions |
+
+### Fix Tasks
+
+#### 1. Add Keeper to Roster Template
+
+```python
+ROSTER_TEMPLATE = {
+    'Zeroback': 2,
+    'Viper': 2,
+    'Halfback': 3,
+    'Wingback': 3,
+    'Slotback': 2,
+    'Keeper': 2,        # ADD THIS
+    'Offensive Line': 5,
+    'Defensive Line': 3, # SEPARATE FROM OL
+}
+```
+
+#### 2. Fix Position Tag Mapping
+
+```python
+POSITION_TAGS = {
+    'Zeroback': 'ZB',
+    'Viper': 'VP',
+    'Halfback': 'HB',
+    'Wingback': 'WB',
+    'Slotback': 'SB',
+    'Keeper': 'KP',           # ADD - explicit
+    'Safety': 'KP',           # KEEP - backward compat
+    'Offensive Line': 'OL',
+    'Defensive Line': 'DL',   # ADD - separate from OL
+    # REMOVE or remap these:
+    # 'Back/Safety': 'LB',    # This was the accidental Keeper
+    # 'Back/Corner': '??',    # Not in spec
+}
+```
+
+#### 3. Update Roster Generation
+
+```python
+def generate_roster(team_config):
+    roster = []
+    
+    # ... existing positions ...
+    
+    # Keepers (2 per team)
+    for i in range(2):
+        archetype = random.choice(['return_keeper', 'sure_hands_keeper', 'tackle_keeper'])
+        keeper = generate_player(
+            position='Keeper',
+            position_code='KP',
+            archetype=archetype
+        )
+        roster.append(keeper)
+    
+    # Defensive Line (3 per team)
+    for i in range(3):
+        dl = generate_player(
+            position='Defensive Line',
+            position_code='DL',
+            archetype=None  # No archetypes for linemen
+        )
+        roster.append(dl)
+    
+    return roster
+```
+
+#### 4. Migration Script for Existing Rosters
+
+```python
+def migrate_roster(team):
+    """Add Keepers to existing teams that don't have them."""
+    
+    # Check if team has actual Keepers
+    keepers = [p for p in team.players if p.position_tag == 'KP']
+    
+    if len(keepers) < 2:
+        # Find "Back/Safety" players to convert
+        back_safety = [p for p in team.players if 'Back/Safety' in p.position]
+        
+        for i, player in enumerate(back_safety[:2]):
+            # Convert to Keeper
+            player.position = 'Keeper'
+            player.position_tag = 'KP'
+            player.archetype = random.choice(['return_keeper', 'sure_hands_keeper', 'tackle_keeper'])
+        
+        # If still not enough, generate new Keepers
+        while len([p for p in team.players if p.position_tag == 'KP']) < 2:
+            keeper = generate_player(position='Keeper', position_code='KP')
+            team.players.append(keeper)
+    
+    return team
+```
+
+#### 5. Clean Up Defensive Positions
+
+| Remove | Replace With |
+|--------|--------------|
+| Back/Safety | Keeper (KP) |
+| Back/Corner | Remove or convert to Keeper |
+| Wedge/Line (if exists) | Split into OL and DL |
+
+### Validation After Fix
+
+```python
+def validate_roster(team):
+    """Ensure team has all required positions."""
+    required = {
+        'ZB': 1,  # At least 1 Zeroback
+        'VP': 1,  # At least 1 Viper
+        'KP': 1,  # At least 1 Keeper  <-- THIS WAS MISSING
+        'HB': 1,  # At least 1 Halfback
+        'WB': 1,  # At least 1 Wingback
+    }
+    
+    counts = {}
+    for player in team.players:
+        tag = player.position_tag
+        counts[tag] = counts.get(tag, 0) + 1
+    
+    missing = []
+    for pos, min_count in required.items():
+        if counts.get(pos, 0) < min_count:
+            missing.append(pos)
+    
+    if missing:
+        raise ValueError(f"Team {team.name} missing: {missing}")
+    
+    # Check Keeper specifically
+    if counts.get('KP', 0) == 0:
+        raise ValueError(f"Team {team.name} has no Keeper! Keeper matchup system will fail.")
+    
+    return True
+```

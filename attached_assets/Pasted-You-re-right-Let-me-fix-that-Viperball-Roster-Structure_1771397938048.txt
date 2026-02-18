@@ -1,0 +1,422 @@
+You're right. Let me fix that:
+
+---
+
+## Viperball Roster Structure — Make It All Work
+
+The roster system has positions that don't match the spec, mappings that work by accident, and defensive positions that don't exist properly. Fix all of it.
+
+---
+
+### The Correct Roster Structure
+
+Every team has 36 players across these positions:
+
+| Position | Code | Starters | Backups | Total | Archetypes |
+|----------|------|----------|---------|-------|------------|
+| Zeroback | ZB | 1 | 2 | 3 | Running, Kicking, Distributor, Dual-Threat |
+| Viper | VP | 1 | 2 | 3 | Receiving, Blocking, Hybrid |
+| Halfback | HB | 2 | 2 | 4 | Speed, Power, Elusive, Reliable, Hybrid |
+| Wingback | WB | 2 | 2 | 4 | Speed, Power, Elusive, Reliable, Hybrid |
+| Slotback | SB | 2 | 2 | 4 | Speed, Power, Elusive, Reliable, Hybrid |
+| Keeper | KP | 1 | 2 | 3 | Return, Sure Hands, Tackle |
+| Offensive Line | OL | 5 | 3 | 8 | None |
+| Defensive Line | DL | 4 | 3 | 7 | None |
+
+**Total: 36 players**
+
+Depth chart order matters — first player at each position is the starter, rest are backups. Backups play when starters are injured or fatigued.
+
+---
+
+### What to Remove
+
+These positions should not exist:
+
+- `Back/Safety` — Replace with Keeper
+- `Back/Corner` — Remove entirely
+- `Wedge/Line` — Split into OL and DL
+- `Lineman` (generic) — Split into OL and DL
+- `Safety` (standalone) — Use Keeper instead
+- `LB` (Linebacker) — Doesn't exist in Viperball
+
+---
+
+### Position Tag Mapping
+
+This is the complete, correct mapping:
+
+```python
+POSITION_TAGS = {
+    'Zeroback': 'ZB',
+    'Viper': 'VP',
+    'Halfback': 'HB',
+    'Wingback': 'WB',
+    'Slotback': 'SB',
+    'Keeper': 'KP',
+    'Offensive Line': 'OL',
+    'Defensive Line': 'DL',
+}
+```
+
+Nothing else. No `LB`, no `Safety`, no `Back/Safety`. Those don't exist in Viperball.
+
+---
+
+### Archetype Assignments
+
+Each position has specific archetypes. When generating players, assign one:
+
+**Zeroback (ZB):**
+- `running_zb` — Speed 82, Power 80, Kicking 60
+- `kicking_zb` — Speed 68, Power 62, Kicking 90
+- `distributor_zb` — Speed 72, Power 65, Distribution 88
+- `dual_threat_zb` — Speed 76, Power 74, Kicking 76
+
+**Viper (VP):**
+- `receiving_viper` — Speed 88, Elusiveness 90, Blocking 55
+- `blocking_viper` — Speed 72, Elusiveness 65, Blocking 88
+- `hybrid_viper` — Speed 80, Elusiveness 78, Blocking 72
+
+**Flankers (HB, WB, SB):**
+- `speed_flanker` — Speed 92, Power 60, Elusiveness 82
+- `power_flanker` — Speed 70, Power 90, Elusiveness 65
+- `elusive_flanker` — Speed 82, Power 65, Elusiveness 90
+- `reliable_flanker` — Speed 75, Power 75, Hands 88
+- `hybrid_flanker` — Speed 78, Power 76, Elusiveness 76
+
+**Keeper (KP):**
+- `return_keeper` — Speed 88, Tackling 72, Hands 85
+- `sure_hands_keeper` — Speed 78, Tackling 78, Hands 90
+- `tackle_keeper` — Speed 80, Tackling 90, Power 85
+
+**Linemen (OL, DL):**
+- No archetypes. Use team-level ratings for blocking and run stop.
+
+---
+
+### Roster Generation
+
+When creating a new team roster:
+
+```python
+def generate_roster():
+    roster = []
+    
+    # Zerobacks (3: 1 starter + 2 backups)
+    for i in range(3):
+        archetype = random.choice(['running_zb', 'kicking_zb', 'distributor_zb', 'dual_threat_zb'])
+        player = generate_player('Zeroback', 'ZB', archetype)
+        player.depth_chart = i + 1  # 1 = starter, 2+ = backup
+        roster.append(player)
+    
+    # Vipers (3: 1 starter + 2 backups)
+    for i in range(3):
+        archetype = random.choice(['receiving_viper', 'blocking_viper', 'hybrid_viper'])
+        player = generate_player('Viper', 'VP', archetype)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Halfbacks (4: 2 starters + 2 backups)
+    for i in range(4):
+        archetype = random.choice(['speed_flanker', 'power_flanker', 'elusive_flanker', 'reliable_flanker', 'hybrid_flanker'])
+        player = generate_player('Halfback', 'HB', archetype)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Wingbacks (4: 2 starters + 2 backups)
+    for i in range(4):
+        archetype = random.choice(['speed_flanker', 'power_flanker', 'elusive_flanker', 'reliable_flanker', 'hybrid_flanker'])
+        player = generate_player('Wingback', 'WB', archetype)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Slotbacks (4: 2 starters + 2 backups)
+    for i in range(4):
+        archetype = random.choice(['speed_flanker', 'power_flanker', 'elusive_flanker', 'reliable_flanker', 'hybrid_flanker'])
+        player = generate_player('Slotback', 'SB', archetype)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Keepers (3: 1 starter + 2 backups)
+    for i in range(3):
+        archetype = random.choice(['return_keeper', 'sure_hands_keeper', 'tackle_keeper'])
+        player = generate_player('Keeper', 'KP', archetype)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Offensive Line (8: 5 starters + 3 backups)
+    for i in range(8):
+        player = generate_player('Offensive Line', 'OL', None)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    # Defensive Line (7: 4 starters + 3 backups)
+    for i in range(7):
+        player = generate_player('Defensive Line', 'DL', None)
+        player.depth_chart = i + 1
+        roster.append(player)
+    
+    return roster  # 36 players
+```
+
+---
+
+### Depth Chart Logic
+
+Starters vs backups should be determined by depth chart position and availability:
+
+```python
+def get_starter(team, position_tag):
+    """Get the available starter at a position."""
+    players = [p for p in team.players if p.position_tag == position_tag]
+    players = sorted(players, key=lambda p: p.depth_chart)
+    
+    for player in players:
+        if not player.is_injured and player.fatigue < 90:
+            return player
+    
+    # Everyone injured/exhausted — return best available anyway
+    return players[0] if players else None
+
+def get_available_players(team, position_tag, count=1):
+    """Get available players at a position, respecting depth chart."""
+    players = [p for p in team.players if p.position_tag == position_tag]
+    players = sorted(players, key=lambda p: p.depth_chart)
+    
+    available = [p for p in players if not p.is_injured and p.fatigue < 90]
+    return available[:count]
+```
+
+---
+
+### Migrate Existing Rosters
+
+For every existing team, run this migration:
+
+1. **Find all `Back/Safety` players** → Convert to `Keeper` with `KP` tag, assign keeper archetype
+2. **Find all `Back/Corner` players** → Convert to `Keeper` if team needs more, otherwise remove
+3. **Find all `Lineman` or `Wedge/Line` players** → Keep first 8 as `OL`, convert rest to `DL`
+4. **Find all `LB` (Linebacker) players** → Convert to `DL`
+5. **If team has fewer than 3 Keepers** → Generate new ones to reach 3
+6. **If team has fewer than 7 DL** → Generate new ones to reach 7
+7. **If team has fewer than 8 OL** → Generate new ones to reach 8
+8. **Remove any position tags that aren't in the approved list**
+9. **Assign depth chart numbers** — Sort by overall rating within each position, best player = 1
+
+```python
+def migrate_roster(team):
+    # Step 1: Convert Back/Safety to Keeper
+    for player in team.players:
+        if player.position in ['Back/Safety', 'Safety']:
+            player.position = 'Keeper'
+            player.position_tag = 'KP'
+            player.archetype = random.choice(['return_keeper', 'sure_hands_keeper', 'tackle_keeper'])
+    
+    # Step 2: Convert Back/Corner to Keeper or remove
+    keepers = [p for p in team.players if p.position_tag == 'KP']
+    for player in team.players[:]:  # Copy list to allow removal
+        if player.position == 'Back/Corner':
+            if len(keepers) < 3:
+                player.position = 'Keeper'
+                player.position_tag = 'KP'
+                player.archetype = random.choice(['return_keeper', 'sure_hands_keeper', 'tackle_keeper'])
+                keepers.append(player)
+            else:
+                team.players.remove(player)
+    
+    # Step 3: Split Linemen into OL and DL
+    linemen = [p for p in team.players if p.position in ['Lineman', 'Wedge/Line'] or p.position_tag == 'LB']
+    for i, player in enumerate(linemen):
+        if i < 8:
+            player.position = 'Offensive Line'
+            player.position_tag = 'OL'
+        else:
+            player.position = 'Defensive Line'
+            player.position_tag = 'DL'
+        player.archetype = None
+    
+    # Step 4: Fill missing positions
+    position_targets = {
+        'ZB': 3, 'VP': 3, 'HB': 4, 'WB': 4, 'SB': 4,
+        'KP': 3, 'OL': 8, 'DL': 7
+    }
+    
+    for tag, target in position_targets.items():
+        current = [p for p in team.players if p.position_tag == tag]
+        while len(current) < target:
+            new_player = generate_player_for_tag(tag)
+            team.players.append(new_player)
+            current.append(new_player)
+    
+    # Step 5: Assign depth chart numbers
+    for tag in position_targets.keys():
+        players_at_pos = [p for p in team.players if p.position_tag == tag]
+        players_at_pos.sort(key=lambda p: get_overall_rating(p), reverse=True)
+        for i, player in enumerate(players_at_pos):
+            player.depth_chart = i + 1
+    
+    # Step 6: Validate
+    validate_roster(team)
+    
+    return team
+```
+
+---
+
+### Helper Functions
+
+These must work correctly after the fix:
+
+```python
+def get_keeper(team):
+    """Returns the team's starting Keeper (or best available)."""
+    keepers = [p for p in team.players if p.position_tag == 'KP']
+    if not keepers:
+        raise ValueError(f"{team.name} has no Keeper")
+    
+    # Get starter (depth_chart == 1) if available
+    keepers = sorted(keepers, key=lambda p: p.depth_chart)
+    for keeper in keepers:
+        if not keeper.is_injured and keeper.fatigue < 90:
+            return keeper
+    
+    return keepers[0]  # Fallback to #1 even if injured/tired
+
+def get_zeroback(team):
+    """Returns the team's starting Zeroback."""
+    zbs = [p for p in team.players if p.position_tag == 'ZB']
+    if not zbs:
+        raise ValueError(f"{team.name} has no Zeroback")
+    zbs = sorted(zbs, key=lambda p: p.depth_chart)
+    for zb in zbs:
+        if not zb.is_injured and zb.fatigue < 90:
+            return zb
+    return zbs[0]
+
+def get_viper(team):
+    """Returns the team's starting Viper."""
+    vipers = [p for p in team.players if p.position_tag == 'VP']
+    if not vipers:
+        raise ValueError(f"{team.name} has no Viper")
+    vipers = sorted(vipers, key=lambda p: p.depth_chart)
+    for viper in vipers:
+        if not viper.is_injured and viper.fatigue < 90:
+            return viper
+    return vipers[0]
+
+def get_flankers(team):
+    """Returns all Flankers (HB, WB, SB), sorted by depth chart."""
+    flankers = [p for p in team.players if p.position_tag in ['HB', 'WB', 'SB']]
+    return sorted(flankers, key=lambda p: (p.position_tag, p.depth_chart))
+
+def get_skill_players(team):
+    """Returns all ball carriers (ZB, VP, HB, WB, SB)."""
+    return [p for p in team.players if p.position_tag in ['ZB', 'VP', 'HB', 'WB', 'SB']]
+
+def get_available_flankers(team, count=5):
+    """Returns available flankers for a play, respecting fatigue and injury."""
+    flankers = get_flankers(team)
+    available = [p for p in flankers if not p.is_injured and p.fatigue < 90]
+    return available[:count]
+```
+
+---
+
+### Validation
+
+After roster generation or migration, validate:
+
+```python
+def validate_roster(team):
+    required_minimums = {
+        'ZB': 1,
+        'VP': 1,
+        'HB': 2,
+        'WB': 2,
+        'SB': 1,
+        'KP': 1,
+        'OL': 5,
+        'DL': 3,
+    }
+    
+    target_counts = {
+        'ZB': 3,
+        'VP': 3,
+        'HB': 4,
+        'WB': 4,
+        'SB': 4,
+        'KP': 3,
+        'OL': 8,
+        'DL': 7,
+    }
+    
+    counts = {}
+    for player in team.players:
+        tag = player.position_tag
+        counts[tag] = counts.get(tag, 0) + 1
+    
+    # Check minimums (hard fail)
+    for pos, minimum in required_minimums.items():
+        if counts.get(pos, 0) < minimum:
+            raise ValueError(f"{team.name} needs at least {minimum} {pos}, has {counts.get(pos, 0)}")
+    
+    # Check targets (warning)
+    for pos, target in target_counts.items():
+        if counts.get(pos, 0) < target:
+            print(f"Warning: {team.name} has {counts.get(pos, 0)} {pos}, recommended {target}")
+    
+    # Check for invalid position tags
+    valid_tags = {'ZB', 'VP', 'HB', 'WB', 'SB', 'KP', 'OL', 'DL'}
+    for player in team.players:
+        if player.position_tag not in valid_tags:
+            raise ValueError(f"{team.name} has invalid position tag: {player.position_tag}")
+    
+    # Check total roster size
+    if len(team.players) < 30:
+        print(f"Warning: {team.name} has only {len(team.players)} players, recommended 36")
+    
+    # Check depth chart assignments
+    for tag in valid_tags:
+        players_at_pos = [p for p in team.players if p.position_tag == tag]
+        depth_numbers = [p.depth_chart for p in players_at_pos]
+        if depth_numbers and depth_numbers != sorted(depth_numbers):
+            print(f"Warning: {team.name} {tag} depth chart out of order")
+    
+    return True
+```
+
+---
+
+### What This Fixes
+
+| Problem | Solution |
+|---------|----------|
+| Keeper matchup uses wrong players | Real KP players exist, `get_keeper()` returns them |
+| Keeper fatigue doesn't track | KP players have fatigue, Boot Raid counter works |
+| Keeper archetypes never assigned | Generated with return/sure_hands/tackle archetype |
+| Back/Safety confusion | Position removed, replaced with Keeper |
+| Back/Corner exists | Position removed |
+| OL/DL lumped together | Separate positions with separate tags |
+| Invalid position tags (LB, etc.) | Only 8 valid tags, everything else rejected |
+| Carrier selection finds wrong players | `get_flankers()` returns HB/WB/SB only |
+| No depth chart logic | Starters vs backups clearly defined |
+| No backup rotation | Fatigue/injury triggers backup usage |
+
+---
+
+### After This Is Done
+
+- Every team has 36 players
+- Every player has one of 8 valid position tags (ZB, VP, HB, WB, SB, KP, OL, DL)
+- Every skill player has an archetype
+- Every player has a depth chart position (1 = starter)
+- `get_keeper()`, `get_zeroback()`, `get_viper()`, `get_flankers()` all return correct players
+- Keeper matchup system works with actual Keepers
+- Defensive line is separate from offensive line
+- No legacy positions remain (Back/Safety, Back/Corner, Wedge/Line, Lineman, LB)
+- Backups rotate in when starters are injured or fatigued
+
+---
+
+Do all of it. Make it work correctly.
