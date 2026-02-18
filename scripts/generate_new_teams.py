@@ -505,6 +505,32 @@ NEW_SCHOOLS = [
     # ── Swaps: Maine→Bowdoin, Suffolk→Holy Cross ──
     {"id": "bowdoin", "name": "Bowdoin College", "abbrev": "BOWD", "mascot": "Polar Bears", "city": "Brunswick", "state": "ME", "colors": ["Black", "White"], "conference": "Yankee Eight", "tier": 73},
     {"id": "holy_cross", "name": "College of the Holy Cross", "abbrev": "HC", "mascot": "Crusaders", "city": "Worcester", "state": "MA", "colors": ["Purple", "White"], "conference": "Collegiate Commonwealth", "tier": 75},
+    # ── Hockey/ECAC schools → Yankee Eleven ──
+    {"id": "cornell", "name": "Cornell University", "abbrev": "COR", "mascot": "Big Red", "city": "Ithaca", "state": "NY", "colors": ["Carnelian", "White"], "conference": "Yankee Eleven", "tier": 78},
+    {"id": "colgate", "name": "Colgate University", "abbrev": "COLG", "mascot": "Raiders", "city": "Hamilton", "state": "NY", "colors": ["Maroon", "White"], "conference": "Yankee Eleven", "tier": 74},
+    {"id": "union_ny", "name": "Union College", "abbrev": "UNON", "mascot": "Dutchmen", "city": "Schenectady", "state": "NY", "colors": ["Garnet", "White"], "conference": "Yankee Eleven", "tier": 72},
+    {"id": "rpi", "name": "Rensselaer Polytechnic Institute", "abbrev": "RPI", "mascot": "Engineers", "city": "Troy", "state": "NY", "colors": ["Cherry", "White"], "conference": "Yankee Eleven", "tier": 73},
+    {"id": "niagara", "name": "Niagara University", "abbrev": "NIAG", "mascot": "Purple Eagles", "city": "Lewiston", "state": "NY", "colors": ["Purple", "White"], "conference": "Yankee Eleven", "tier": 70},
+    {"id": "canisius", "name": "Canisius University", "abbrev": "CANI", "mascot": "Golden Griffins", "city": "Buffalo", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Yankee Eleven", "tier": 69},
+    # ── Border NY schools → Northern Shield ──
+    {"id": "clarkson", "name": "Clarkson University", "abbrev": "CLRK", "mascot": "Golden Knights", "city": "Potsdam", "state": "NY", "colors": ["Green", "Gold"], "conference": "Northern Shield", "tier": 72},
+    {"id": "st_lawrence", "name": "St. Lawrence University", "abbrev": "SLU", "mascot": "Saints", "city": "Canton", "state": "NY", "colors": ["Scarlet", "Brown"], "conference": "Northern Shield", "tier": 71},
+    # ── Canadian additions → Northern Shield ──
+    {"id": "alberta", "name": "University of Alberta", "abbrev": "ALTA", "mascot": "Golden Bears", "city": "Edmonton", "state": "AB", "colors": ["Green", "Gold"], "conference": "Northern Shield", "tier": 70},
+    {"id": "calgary", "name": "University of Calgary", "abbrev": "CALG", "mascot": "Dinos", "city": "Calgary", "state": "AB", "colors": ["Red", "Gold"], "conference": "Northern Shield", "tier": 69},
+    {"id": "saskatchewan", "name": "University of Saskatchewan", "abbrev": "SASK", "mascot": "Huskies", "city": "Saskatoon", "state": "SK", "colors": ["Green", "White"], "conference": "Northern Shield", "tier": 68},
+    # ── NYC addition ──
+    {"id": "liu", "name": "Long Island University", "abbrev": "LIU", "mascot": "Sharks", "city": "Brooklyn", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Metropolitan Athletic Union", "tier": 67},
+    # ── UAA-style schools ──
+    {"id": "johns_hopkins", "name": "Johns Hopkins University", "abbrev": "JHU", "mascot": "Blue Jays", "city": "Baltimore", "state": "MD", "colors": ["Blue", "Black"], "conference": "Potomac Athletic Conference", "tier": 76},
+    {"id": "wash_u", "name": "Washington University in St. Louis", "abbrev": "WUSTL", "mascot": "Bears", "city": "St. Louis", "state": "MO", "colors": ["Red", "Green"], "conference": "Big Inland", "tier": 76},
+    # ── Additional NY hockey / UAA / tech schools ──
+    {"id": "ithaca", "name": "Ithaca College", "abbrev": "ITHA", "mascot": "Bombers", "city": "Ithaca", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Yankee Fourteen", "tier": 71},
+    {"id": "plattsburgh", "name": "SUNY Plattsburgh", "abbrev": "PLAT", "mascot": "Cardinals", "city": "Plattsburgh", "state": "NY", "colors": ["Red", "White"], "conference": "Northern Shield", "tier": 68},
+    {"id": "oswego", "name": "SUNY Oswego", "abbrev": "OSWE", "mascot": "Lakers", "city": "Oswego", "state": "NY", "colors": ["Green", "Gold"], "conference": "Yankee Fourteen", "tier": 67},
+    {"id": "rochester", "name": "University of Rochester", "abbrev": "ROCH", "mascot": "Yellowjackets", "city": "Rochester", "state": "NY", "colors": ["Dandelion", "Blue"], "conference": "Yankee Fourteen", "tier": 75},
+    {"id": "carnegie_mellon", "name": "Carnegie Mellon University", "abbrev": "CMU", "mascot": "Tartans", "city": "Pittsburgh", "state": "PA", "colors": ["Cardinal", "Gray"], "conference": "Potomac Athletic Conference", "tier": 75},
+    {"id": "caltech", "name": "California Institute of Technology", "abbrev": "CALT", "mascot": "Beavers", "city": "Pasadena", "state": "CA", "colors": ["Orange", "White"], "conference": "Far West Athletic Conference", "tier": 60},
 ]
 
 if __name__ == "__main__":
