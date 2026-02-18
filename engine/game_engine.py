@@ -1036,23 +1036,24 @@ DEFENSE_STYLES = {
         "label": "Pressure Defense",
         "description": "Aggressive blitzing, high risk/high reward",
         "play_family_modifiers": {
-            "dive_option": 0.95,
-            "speed_option": 0.80,
-            "sweep_option": 0.90,
-            "power": 0.90,
-            "counter": 1.10,
-            "draw": 1.15,
-            "viper_jet": 0.85,
-            "lateral_spread": 1.20,
-            "territory_kick": 0.95,
+            "dive_option": 0.85,
+            "speed_option": 0.70,
+            "sweep_option": 0.80,
+            "power": 0.80,
+            "counter": 1.15,
+            "draw": 1.20,
+            "viper_jet": 0.75,
+            "lateral_spread": 1.25,
+            "territory_kick": 0.90,
         },
-        "read_success_rate": 0.40,
+        "read_success_rate": 0.45,
         "pressure_factor": 1.00,
-        "turnover_bonus": 0.20,
+        "turnover_bonus": 0.30,
         "explosive_suppression": 1.10,
         "kick_suppression": 1.05,
         "pindown_defense": 0.95,
         "fatigue_resistance": -0.05,
+        "gap_breakdown_bonus": 0.06,
         "gameplan_bias": {
             "dive_option": 0.05,
             "speed_option": 0.10,
@@ -1069,23 +1070,24 @@ DEFENSE_STYLES = {
         "label": "Contain Defense",
         "description": "Anti-chaos, prevents lateral chains and explosive plays",
         "play_family_modifiers": {
-            "dive_option": 1.00,
-            "speed_option": 0.90,
-            "sweep_option": 0.95,
-            "power": 1.05,
-            "counter": 0.90,
-            "draw": 1.00,
-            "viper_jet": 0.85,
-            "lateral_spread": 0.80,
+            "dive_option": 0.95,
+            "speed_option": 0.80,
+            "sweep_option": 0.85,
+            "power": 1.00,
+            "counter": 0.80,
+            "draw": 0.95,
+            "viper_jet": 0.75,
+            "lateral_spread": 0.65,
             "territory_kick": 1.00,
         },
-        "read_success_rate": 0.35,
+        "read_success_rate": 0.40,
         "pressure_factor": 0.20,
-        "turnover_bonus": 0.05,
-        "explosive_suppression": 0.75,
+        "turnover_bonus": 0.10,
+        "explosive_suppression": 0.60,
         "kick_suppression": 1.00,
         "pindown_defense": 1.00,
         "fatigue_resistance": 0.05,
+        "gap_breakdown_bonus": 0.03,
         "gameplan_bias": {
             "dive_option": 0.00,
             "speed_option": 0.05,
@@ -1102,23 +1104,24 @@ DEFENSE_STYLES = {
         "label": "Run-Stop Defense",
         "description": "Stacks the box, elite vs run game",
         "play_family_modifiers": {
-            "dive_option": 0.75,
-            "speed_option": 0.85,
-            "sweep_option": 0.80,
-            "power": 0.80,
-            "counter": 0.85,
-            "draw": 0.90,
-            "viper_jet": 0.90,
-            "lateral_spread": 1.10,
+            "dive_option": 0.60,
+            "speed_option": 0.75,
+            "sweep_option": 0.70,
+            "power": 0.65,
+            "counter": 0.75,
+            "draw": 0.80,
+            "viper_jet": 0.80,
+            "lateral_spread": 1.15,
             "territory_kick": 1.00,
         },
-        "read_success_rate": 0.40,
+        "read_success_rate": 0.45,
         "pressure_factor": 0.30,
-        "turnover_bonus": 0.05,
-        "explosive_suppression": 0.85,
+        "turnover_bonus": 0.10,
+        "explosive_suppression": 0.75,
         "kick_suppression": 1.00,
         "pindown_defense": 1.00,
         "fatigue_resistance": 0.00,
+        "gap_breakdown_bonus": 0.08,
         "gameplan_bias": {
             "dive_option": 0.10,
             "speed_option": 0.10,
@@ -1141,17 +1144,18 @@ DEFENSE_STYLES = {
             "power": 1.10,
             "counter": 1.05,
             "draw": 1.05,
-            "viper_jet": 1.00,
-            "lateral_spread": 1.00,
-            "territory_kick": 0.85,
+            "viper_jet": 0.90,
+            "lateral_spread": 0.90,
+            "territory_kick": 0.80,
         },
-        "read_success_rate": 0.30,
+        "read_success_rate": 0.35,
         "pressure_factor": 0.40,
-        "turnover_bonus": 0.15,
-        "explosive_suppression": 0.95,
-        "kick_suppression": 0.85,
-        "pindown_defense": 0.80,
+        "turnover_bonus": 0.20,
+        "explosive_suppression": 0.85,
+        "kick_suppression": 0.80,
+        "pindown_defense": 0.75,
         "fatigue_resistance": 0.025,
+        "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
             "dive_option": 0.00,
             "speed_option": 0.00,
@@ -2244,9 +2248,9 @@ class ViperballEngine:
         family_modifier = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
         yards_gained = int(yards_gained * family_modifier)
 
-        # 3. If defense read the play, reduce yards by 20-40%
+        # 3. If defense read the play, reduce yards significantly
         if defense_read:
-            read_reduction = random.uniform(0.70, 0.88)
+            read_reduction = random.uniform(0.55, 0.80)
             yards_gained = int(yards_gained * read_reduction)
 
         # 4. Apply explosive play suppression (if play is explosive)
@@ -2367,9 +2371,15 @@ class ViperballEngine:
         defense = self._current_defense()
         pressure = defense.get("pressure_factor", 0.50)
         if pressure >= 0.80:
-            base_fumble += 0.010
+            base_fumble += 0.012
+        elif pressure >= 0.50:
+            base_fumble += 0.005
         turnover_bonus = defense.get("turnover_bonus", 0.0)
         base_fumble *= (1 + turnover_bonus)
+
+        def_intensity = self.away_def_intensity if self.state.possession == "home" else self.home_def_intensity
+        def_fumble_boost = max(0, (def_intensity - 1.0)) * 0.5
+        base_fumble *= (1.0 + def_fumble_boost)
 
         if self.weather in ['rain', 'snow', 'sleet']:
             base_fumble *= 1.40
@@ -2735,7 +2745,8 @@ class ViperballEngine:
         off_rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
         def_intensity = self.away_def_intensity if self.state.possession == "home" else self.home_def_intensity
 
-        gap_breakdown_chance = 0.08 * def_intensity
+        def_gap_bonus = defense.get("gap_breakdown_bonus", 0.0)
+        gap_breakdown_chance = (0.08 + def_gap_bonus) * def_intensity
         if random.random() < gap_breakdown_chance:
             yards_gained = random.randint(-3, 1)
         elif random.random() < 0.15:
