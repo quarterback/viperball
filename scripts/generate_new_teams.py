@@ -456,6 +456,20 @@ NEW_SCHOOLS = [
     {"id": "delaware", "name": "University of Delaware", "abbrev": "DEL", "mascot": "Fightin' Blue Hens", "city": "Newark", "state": "DE", "colors": ["Blue", "Gold"], "conference": "Capital Athletic", "tier": 73},
     {"id": "portland_state", "name": "Portland State University", "abbrev": "PSU", "mascot": "Vikings", "city": "Portland", "state": "OR", "colors": ["Green", "White"], "conference": "Pacific Rim", "tier": 69},
     {"id": "hawaii", "name": "University of Hawaii", "abbrev": "HAW", "mascot": "Rainbow Warriors", "city": "Honolulu", "state": "HI", "colors": ["Green", "White", "Black"], "conference": "Pacific Rim", "tier": 72},
+    # ── Geographic Expansion: individual additions ──
+    {"id": "linfield", "name": "Linfield University", "abbrev": "LINF", "mascot": "Wildcats", "city": "McMinnville", "state": "OR", "colors": ["Cardinal", "Purple"], "conference": "Pacific Rim", "tier": 71},
+    {"id": "carroll_college", "name": "Carroll College", "abbrev": "CROL", "mascot": "Fighting Saints", "city": "Helena", "state": "MT", "colors": ["Purple", "Gold"], "conference": "Skyline Conference", "tier": 70},
+    # ── D3 Midwest Conference (full 2026-27 membership) ──
+    {"id": "beloit", "name": "Beloit College", "abbrev": "BELT", "mascot": "Buccaneers", "city": "Beloit", "state": "WI", "colors": ["Blue", "Gold"], "conference": "Midwest Conference", "tier": 69},
+    {"id": "cornell_college", "name": "Cornell College", "abbrev": "CORN", "mascot": "Rams", "city": "Mount Vernon", "state": "IA", "colors": ["Purple", "White"], "conference": "Midwest Conference", "tier": 70},
+    {"id": "grinnell", "name": "Grinnell College", "abbrev": "GRIN", "mascot": "Pioneers", "city": "Grinnell", "state": "IA", "colors": ["Scarlet", "Black"], "conference": "Midwest Conference", "tier": 72},
+    {"id": "illinois_college", "name": "Illinois College", "abbrev": "ILCO", "mascot": "Blueboys", "city": "Jacksonville", "state": "IL", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 68},
+    {"id": "knox", "name": "Knox College", "abbrev": "KNOX", "mascot": "Prairie Fire", "city": "Galesburg", "state": "IL", "colors": ["Purple", "Gold"], "conference": "Midwest Conference", "tier": 69},
+    {"id": "lake_forest", "name": "Lake Forest College", "abbrev": "LFC", "mascot": "Foresters", "city": "Lake Forest", "state": "IL", "colors": ["Black", "Red"], "conference": "Midwest Conference", "tier": 68},
+    {"id": "lawrence", "name": "Lawrence University", "abbrev": "LAWR", "mascot": "Vikings", "city": "Appleton", "state": "WI", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 70},
+    {"id": "monmouth_il", "name": "Monmouth College", "abbrev": "MNTH", "mascot": "Fighting Scots", "city": "Monmouth", "state": "IL", "colors": ["Scarlet", "White"], "conference": "Midwest Conference", "tier": 69},
+    {"id": "ripon", "name": "Ripon College", "abbrev": "RIPN", "mascot": "Red Hawks", "city": "Ripon", "state": "WI", "colors": ["Crimson", "White"], "conference": "Midwest Conference", "tier": 68},
+    {"id": "luther", "name": "Luther College", "abbrev": "LTHR", "mascot": "Norse", "city": "Decorah", "state": "IA", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 70},
 ]
 
 if __name__ == "__main__":
