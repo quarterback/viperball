@@ -22,27 +22,16 @@ def _ensure_api_server():
     process manager to launch the API server, so we spin it up here.
     Guarded by a module-level lock + flag to prevent duplicate threads.
     Only starts an embedded server when the API URL points to localhost.
+    Non-blocking: starts the server thread and returns immediately so
+    Streamlit's health check endpoint can respond in time.
     """
     global _api_server_started
-    import requests as _req
 
     api_base = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8000")
     if "127.0.0.1" not in api_base and "localhost" not in api_base:
         return
 
-    try:
-        _req.get(f"{api_base}/teams", timeout=2)
-        return
-    except Exception:
-        pass
-
     if _port_in_use(8000):
-        for _ in range(20):
-            try:
-                _req.get(f"{api_base}/teams", timeout=2)
-                return
-            except Exception:
-                time.sleep(0.5)
         return
 
     with _api_server_lock:
@@ -58,13 +47,7 @@ def _ensure_api_server():
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
-
-    for _ in range(30):
-        try:
-            _req.get(f"{api_base}/teams", timeout=2)
-            return
-        except Exception:
-            time.sleep(0.5)
+    time.sleep(3)
 
 
 _ensure_api_server()
