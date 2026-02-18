@@ -16,6 +16,7 @@ from engine.season import (
     estimate_team_prestige_from_roster, is_buy_game, BUY_GAME_NIL_BONUS,
     MAX_CONFERENCE_GAMES,
 )
+from scripts.generate_rosters import PROGRAM_ARCHETYPES
 from engine.conference_names import generate_conference_names
 from engine.geography import get_geographic_conference_defaults
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
@@ -318,6 +319,24 @@ def _render_new_dynasty(shared):
         start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
 
     st.divider()
+    st.subheader("Program Archetype")
+    st.caption("Choose your starting program level. This determines your roster talent and affects the challenge.")
+    arch_keys = list(PROGRAM_ARCHETYPES.keys())
+    arch_labels = [PROGRAM_ARCHETYPES[k]["label"] for k in arch_keys]
+    arch_descs = [PROGRAM_ARCHETYPES[k]["description"] for k in arch_keys]
+    default_arch_idx = arch_keys.index("regional_power")
+    selected_arch_idx = st.radio(
+        "Program Level",
+        range(len(arch_keys)),
+        index=default_arch_idx,
+        format_func=lambda i: f"{arch_labels[i]}",
+        key="dyn_program_archetype",
+        horizontal=True,
+    )
+    st.caption(arch_descs[selected_arch_idx])
+    dyn_archetype = arch_keys[selected_arch_idx]
+
+    st.divider()
     st.subheader("Conference Setup")
     teams_dir = _teams_dir()
     setup_teams = load_teams_from_directory(teams_dir)
@@ -430,8 +449,10 @@ def _render_new_dynasty(shared):
                     starting_year=start_year,
                     num_conferences=num_conferences,
                     history_years=history_years,
+                    program_archetype=dyn_archetype,
                 )
                 st.session_state["api_mode"] = "dynasty"
+                st.session_state["dyn_program_archetype_selected"] = dyn_archetype
                 st.rerun()
             except api_client.APIError as e:
                 st.error(f"Failed to create dynasty: {e.detail}")
@@ -489,9 +510,16 @@ def _render_new_season(shared):
     team_identities = load_team_identity(teams_dir_path)
 
     style_configs = {}
+    season_team_archetypes = {}
 
     if human_teams:
         st.subheader("Your Team Configuration")
+
+        # Program archetype selection for each human team
+        arch_keys = list(PROGRAM_ARCHETYPES.keys())
+        arch_labels = [PROGRAM_ARCHETYPES[k]["label"] for k in arch_keys]
+        default_arch_idx = arch_keys.index("regional_power")
+
         h_cols_per_row = min(len(human_teams), 3)
         h_chunks = [human_teams[i:i + h_cols_per_row] for i in range(0, len(human_teams), h_cols_per_row)]
         for chunk in h_chunks:
@@ -507,6 +535,15 @@ def _render_new_season(shared):
                     st.markdown(f"**{tname}**")
                     if mascot or conf:
                         st.caption(f"{mascot} | {conf}" + (f" | {color_str}" if color_str else ""))
+
+                    sel_arch = st.selectbox(
+                        "Program Level",
+                        range(len(arch_keys)),
+                        index=default_arch_idx,
+                        format_func=lambda i: f"{arch_labels[i]} — {PROGRAM_ARCHETYPES[arch_keys[i]]['description'][:50]}...",
+                        key=f"season_arch_{tname}",
+                    )
+                    season_team_archetypes[tname] = arch_keys[sel_arch]
 
                     off_style = st.selectbox("Offense", style_keys,
                                               format_func=lambda x: styles[x]["label"],
@@ -630,6 +667,7 @@ def _render_new_season(shared):
                     style_configs=style_configs,
                     ai_seed=actual_seed,
                     pinned_matchups=season_pinned if season_pinned else None,
+                    team_archetypes=season_team_archetypes if season_team_archetypes else None,
                 )
                 st.session_state["api_mode"] = "season"
                 st.session_state["season_human_teams_list"] = human_teams
@@ -1232,6 +1270,7 @@ def _render_dynasty_play(shared):
                             defense_style=user_def,
                             ai_seed=ai_seed,
                             pinned_matchups=dyn_pinned if dyn_pinned else None,
+                            program_archetype=st.session_state.get("dyn_program_archetype_selected"),
                         )
                         st.rerun()
                     except api_client.APIError as e:

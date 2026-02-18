@@ -298,6 +298,22 @@ def classify_prestige_tier(prestige: int) -> str:
     return "cupcake"
 
 
+def prestige_from_archetype(archetype_key: str) -> int:
+    """Return a representative prestige value for a program archetype.
+
+    Uses the midpoint of the archetype's prestige_range.
+    """
+    try:
+        from scripts.generate_rosters import PROGRAM_ARCHETYPES
+        arch = PROGRAM_ARCHETYPES.get(archetype_key)
+        if arch:
+            lo, hi = arch["prestige_range"]
+            return (lo + hi) // 2
+    except ImportError:
+        pass
+    return 50
+
+
 def estimate_team_prestige_from_roster(team: "Team") -> int:
     """Estimate a rough prestige score from average player overall.
 
@@ -1319,31 +1335,51 @@ class Season:
             self.bowl_games.append(bowl)
 
 
-def load_teams_from_directory(directory: str, fresh: bool = False) -> Dict[str, Team]:
+def load_teams_from_directory(
+    directory: str,
+    fresh: bool = False,
+    team_archetypes: Optional[Dict[str, str]] = None,
+) -> Dict[str, Team]:
     """Load all teams from a directory.
 
     Args:
         directory: Path to team JSON directory.
         fresh: If True, generate brand-new rosters for every team (new season/dynasty).
                If False, load stored rosters from JSON files (saved game).
+        team_archetypes: Optional dict of team_name -> program archetype key.
+                        Only used when fresh=True. Teams not in the dict get
+                        the default archetype ("regional_power").
     """
     teams = {}
     team_dir = Path(directory)
+    archetypes = team_archetypes or {}
 
     for team_file in team_dir.glob("*.json"):
-        team = load_team_from_json(str(team_file), fresh=fresh)
+        # We need the team name to look up archetype, but load_team_from_json
+        # extracts it internally. Do a quick peek at the JSON for the name.
+        import json as _json
+        with open(team_file) as f:
+            raw = _json.load(f)
+        team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        arch = archetypes.get(team_name)
+        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
         teams[team.name] = team
 
     return teams
 
 
-def load_teams_with_states(directory: str, fresh: bool = False) -> tuple:
+def load_teams_with_states(
+    directory: str,
+    fresh: bool = False,
+    team_archetypes: Optional[Dict[str, str]] = None,
+) -> tuple:
     """
     Load all teams from a directory and also return a state map for weather.
 
     Args:
         directory: Path to team JSON directory.
         fresh: If True, generate brand-new rosters for every team.
+        team_archetypes: Optional dict of team_name -> program archetype key.
 
     Returns:
         (teams_dict, team_states_dict) where team_states maps team_name -> state
@@ -1352,12 +1388,15 @@ def load_teams_with_states(directory: str, fresh: bool = False) -> tuple:
     teams = {}
     team_states = {}
     team_dir = Path(directory)
+    archetypes = team_archetypes or {}
 
     for team_file in team_dir.glob("*.json"):
         with open(team_file) as f:
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
-        team = load_team_from_json(str(team_file), fresh=fresh)
+        team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        arch = archetypes.get(team_name)
+        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
         teams[team.name] = team
         if state:
             team_states[team.name] = state

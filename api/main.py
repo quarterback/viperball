@@ -30,6 +30,7 @@ from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
 from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
+from scripts.generate_rosters import PROGRAM_ARCHETYPES
 from engine.nil_system import (
     NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
     assess_retention_risks, estimate_market_tier, compute_team_prestige,
@@ -89,6 +90,7 @@ class CreateSeasonRequest(BaseModel):
     style_configs: Optional[Dict[str, Dict[str, str]]] = None
     history_years: int = 0
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
+    team_archetypes: Optional[Dict[str, str]] = None  # team_name -> archetype key
 
 
 class CreateDynastyRequest(BaseModel):
@@ -98,6 +100,7 @@ class CreateDynastyRequest(BaseModel):
     starting_year: int = 2026
     num_conferences: int = 10
     history_years: int = 0
+    program_archetype: Optional[str] = None  # archetype for coach's team
 
 
 class SimulateWeekRequest(BaseModel):
@@ -116,6 +119,7 @@ class DynastyStartSeasonRequest(BaseModel):
     defense_style: str = "base_defense"
     ai_seed: Optional[int] = None
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
+    program_archetype: Optional[str] = None  # archetype for human team
 
 
 class QuickGameRequest(BaseModel):
@@ -460,6 +464,21 @@ def non_conference_slots_endpoint(
     }
 
 
+@app.get("/program-archetypes")
+def program_archetypes():
+    """List all available program archetypes with descriptions."""
+    return {
+        "archetypes": {
+            key: {
+                "label": data["label"],
+                "description": data["description"],
+                "prestige_range": data["prestige_range"],
+            }
+            for key, data in PROGRAM_ARCHETYPES.items()
+        }
+    }
+
+
 @app.get("/bowl-tiers")
 def bowl_tiers():
     return {"tiers": BOWL_TIERS}
@@ -587,7 +606,10 @@ def get_session(session_id: str):
 def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     session = _get_session(session_id)
 
-    teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
+    teams, team_states = load_teams_with_states(
+        TEAMS_DIR, fresh=True,
+        team_archetypes=req.team_archetypes,
+    )
     team_names = list(teams.keys())
 
     if req.conferences:
@@ -1198,6 +1220,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     session["phase"] = "setup"
     session["injury_tracker"] = None
     session["season"] = None
+    session["program_archetype"] = req.program_archetype
 
     return _serialize_dynasty_status(session)
 
@@ -1263,7 +1286,17 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     if session["phase"] not in ("setup", "finalize"):
         raise HTTPException(status_code=400, detail=f"Cannot start season in phase '{session['phase']}'")
 
-    teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
+    # Build archetype map: human team gets the user's chosen archetype,
+    # falling back to the archetype stored when the dynasty was created
+    arch = req.program_archetype or session.get("program_archetype")
+    dyn_archetypes = None
+    if arch:
+        dyn_archetypes = {dynasty.coach.team_name: arch}
+
+    teams, team_states = load_teams_with_states(
+        TEAMS_DIR, fresh=True,
+        team_archetypes=dyn_archetypes,
+    )
 
     seed = req.ai_seed if req.ai_seed is not None else random.randint(0, 999999)
     ai_configs = auto_assign_all_teams(

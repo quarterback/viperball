@@ -4317,7 +4317,8 @@ class ViperballEngine:
         return d
 
 
-def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
+def load_team_from_json(filepath: str, fresh: bool = False,
+                        program_archetype: Optional[str] = None) -> Team:
     """Load a team from its JSON metadata file.
 
     Args:
@@ -4326,6 +4327,8 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
                recruiting_pipeline and philosophy (dynamic mode).  If False,
                load the stored static roster when one is present; fall back to
                dynamic generation when there is no roster section.
+        program_archetype: Optional program archetype for fresh generation
+                          (e.g. "doormat", "blue_blood"). Only used when fresh=True.
     """
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -4364,6 +4367,7 @@ def load_team_from_json(filepath: str, fresh: bool = False) -> Team:
             defense_style=defense_style,
             philosophy=philosophy,
             recruiting_pipeline=recruiting_pipeline,
+            program_archetype=program_archetype,
         )
 
     # Load the stored roster (static path — used when loading a saved game)
@@ -4424,11 +4428,17 @@ def generate_team_on_the_fly(
     defense_style: str = "base_defense",
     philosophy: str = "hybrid",
     recruiting_pipeline: Optional[Dict] = None,
+    program_archetype: Optional[str] = None,
 ) -> Team:
     """
     Generate a fresh Team with unique women players using the name/attribute generators.
     Used when no pre-built roster JSON exists, or to create dynamic teams in season/dynasty mode.
     Players are women only; archetypes are assigned from stats.
+
+    Args:
+        program_archetype: Optional program archetype key (e.g. "doormat", "blue_blood").
+                          Affects talent distribution, potential ratings, and hidden gems.
+                          None defaults to "regional_power" (matches original behavior).
     """
     import sys
     from pathlib import Path as _Path
@@ -4437,7 +4447,7 @@ def generate_team_on_the_fly(
         sys.path.insert(0, _root)
 
     from scripts.generate_names import generate_player_name
-    from scripts.generate_rosters import generate_player_attributes, assign_archetype
+    from scripts.generate_rosters import generate_player_attributes, assign_archetype, PROGRAM_ARCHETYPES, DEFAULT_ARCHETYPE
 
     ROSTER_TEMPLATE = [
         ("Viper/Back", True),
@@ -4501,7 +4511,8 @@ def generate_team_on_the_fly(
             school_recruiting_pipeline=recruiting_pipeline,
             year=year,
         )
-        attrs = generate_player_attributes(position, philosophy, year, is_viper)
+        attrs = generate_player_attributes(position, philosophy, year, is_viper,
+                                           program_archetype=program_archetype)
         archetype = assign_archetype(
             position,
             attrs["speed"], attrs["stamina"],
@@ -4536,6 +4547,33 @@ def generate_team_on_the_fly(
             potential=attrs.get("potential", 3),
             development=attrs.get("development", "normal"),
         ))
+
+    # ── Hidden gem boosts ──
+    # Every program has a few players who are better than their archetype suggests.
+    # Lower-tier programs get fewer gems but with bigger individual boosts.
+    arch_key = program_archetype or DEFAULT_ARCHETYPE
+    arch_data = PROGRAM_ARCHETYPES.get(arch_key, PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
+    gem_min, gem_max = arch_data["hidden_gem_count"]
+    boost_min, boost_max = arch_data["hidden_gem_boost"]
+    num_gems = random.randint(gem_min, gem_max)
+    gem_indices = random.sample(range(len(players)), min(num_gems, len(players)))
+    for gi in gem_indices:
+        p = players[gi]
+        boost = random.randint(boost_min, boost_max)
+        # Boost all core stats for this hidden gem
+        p.speed = min(100, p.speed + boost)
+        p.stamina = min(100, p.stamina + int(boost * 0.7))
+        p.kicking = min(100, p.kicking + int(boost * 0.6))
+        p.lateral_skill = min(100, p.lateral_skill + boost)
+        p.tackling = min(100, p.tackling + int(boost * 0.7))
+        p.agility = min(100, p.agility + boost)
+        p.power = min(100, p.power + int(boost * 0.8))
+        p.awareness = min(100, p.awareness + boost)
+        p.hands = min(100, p.hands + int(boost * 0.8))
+        p.kick_power = min(100, p.kick_power + int(boost * 0.6))
+        p.kick_accuracy = min(100, p.kick_accuracy + int(boost * 0.6))
+        # Hidden gems also get better potential
+        p.potential = min(5, p.potential + random.randint(1, 2))
 
     avg_speed = sum(p.speed for p in players) // len(players)
     avg_stamina = sum(p.stamina for p in players) // len(players)

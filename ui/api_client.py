@@ -68,6 +68,10 @@ def get_conference_defaults() -> dict:
     return _get("/conference-defaults")
 
 
+def get_program_archetypes() -> dict:
+    return _get("/program-archetypes")
+
+
 def get_bowl_tiers() -> list:
     return _get("/bowl-tiers")
 
@@ -92,7 +96,8 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
                   conferences: Optional[Dict[str, List[str]]] = None,
                   style_configs: Optional[Dict[str, Dict[str, str]]] = None,
                   history_years: int = 0,
-                  pinned_matchups: Optional[List[List[str]]] = None) -> dict:
+                  pinned_matchups: Optional[List[List[str]]] = None,
+                  team_archetypes: Optional[Dict[str, str]] = None) -> dict:
     body = {
         "name": name,
         "games_per_team": games_per_team,
@@ -110,6 +115,8 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
         body["style_configs"] = style_configs
     if pinned_matchups:
         body["pinned_matchups"] = pinned_matchups
+    if team_archetypes:
+        body["team_archetypes"] = team_archetypes
     return _post(f"/sessions/{session_id}/season", json=body)
 
 
@@ -229,7 +236,8 @@ def get_bowl_results(session_id: str) -> list:
 
 def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
                    coach_team: str, starting_year: int = 2026,
-                   num_conferences: int = 10, history_years: int = 0) -> dict:
+                   num_conferences: int = 10, history_years: int = 0,
+                   program_archetype: Optional[str] = None) -> dict:
     body = {
         "dynasty_name": dynasty_name,
         "coach_name": coach_name,
@@ -238,6 +246,8 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
         "num_conferences": num_conferences,
         "history_years": history_years,
     }
+    if program_archetype:
+        body["program_archetype"] = program_archetype
     return _post(f"/sessions/{session_id}/dynasty", json=body)
 
 
@@ -246,7 +256,8 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
                          offense_style: str = "balanced",
                          defense_style: str = "base_defense",
                          ai_seed: Optional[int] = None,
-                         pinned_matchups: Optional[List[List[str]]] = None) -> dict:
+                         pinned_matchups: Optional[List[List[str]]] = None,
+                         program_archetype: Optional[str] = None) -> dict:
     body = {
         "games_per_team": games_per_team,
         "playoff_size": playoff_size,
@@ -258,6 +269,8 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
         body["ai_seed"] = ai_seed
     if pinned_matchups:
         body["pinned_matchups"] = pinned_matchups
+    if program_archetype:
+        body["program_archetype"] = program_archetype
     return _post(f"/sessions/{session_id}/dynasty/start-season", json=body)
 
 
