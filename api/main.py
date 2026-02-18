@@ -26,7 +26,7 @@ from engine.injuries import InjuryTracker
 from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
-from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES
+from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
 from engine.nil_system import (
     NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
     assess_retention_risks, estimate_market_tier, compute_team_prestige,
@@ -319,10 +319,12 @@ def _serialize_player(player) -> dict:
     redshirt = getattr(player, "redshirt", False)
     if redshirt:
         year_abbr = f"RS {year_abbr}"
+    pos_tag = POSITION_TAGS.get(player.position, player.position[:2].upper() if player.position else "??")
     return {
         "name": player.name,
         "number": player.number,
-        "position": player.position,
+        "position": pos_tag,
+        "position_full": player.position,
         "archetype": player.archetype,
         "overall": player.overall,
         "speed": player.speed,
@@ -1424,11 +1426,17 @@ def _require_offseason(session: dict) -> dict:
 
 
 def _serialize_portal_entry(entry: PortalEntry) -> dict:
-    return entry.get_summary()
+    d = entry.get_summary()
+    d["position_full"] = d.get("position", "")
+    d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
+    return d
 
 
 def _serialize_recruit(recruit: Recruit) -> dict:
-    return recruit.get_visible_attrs()
+    d = recruit.get_visible_attrs()
+    d["position_full"] = d.get("position", "")
+    d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
+    return d
 
 
 @app.get("/sessions/{session_id}/offseason/status")
@@ -1507,7 +1515,8 @@ def offseason_portal(
         indexed.append((global_idx, e))
 
     if position:
-        indexed = [(i, e) for i, e in indexed if position.lower() in e.position.lower()]
+        pos_upper = position.upper()
+        indexed = [(i, e) for i, e in indexed if POSITION_TAGS.get(e.position, e.position[:2].upper()) == pos_upper or position.lower() in e.position.lower()]
     if min_overall is not None:
         indexed = [(i, e) for i, e in indexed if e.overall >= min_overall]
 

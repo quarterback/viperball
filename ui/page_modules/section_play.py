@@ -510,7 +510,7 @@ def _render_offseason_portal(session_id, coach_team):
 
     pf1, pf2 = st.columns(2)
     with pf1:
-        pos_filter = st.selectbox("Position Filter", ["All", "Viper", "Halfback", "Wingback", "Lineman", "Back", "Zeroback"], key="portal_pos")
+        pos_filter = st.selectbox("Position Filter", ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"], key="portal_pos")
     with pf2:
         ovr_filter = st.number_input("Min Overall", min_value=0, max_value=99, value=0, key="portal_min_ovr")
 
@@ -625,13 +625,13 @@ def _render_offseason_recruiting(session_id, coach_team):
     with rf1:
         star_filter = st.selectbox("Min Stars", [0, 1, 2, 3, 4, 5], index=0, key="rec_star_filter")
     with rf2:
-        pos_filter = st.selectbox("Position", ["All", "Viper", "Halfback", "Wingback", "Lineman", "Back", "Zeroback", "Safety", "Corner"], key="rec_pos_filter")
+        pos_filter = st.selectbox("Position", ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"], key="rec_pos_filter")
 
     filtered = recruits
     if star_filter > 0:
         filtered = [r for r in filtered if r.get("stars", 0) >= star_filter]
     if pos_filter != "All":
-        filtered = [r for r in filtered if pos_filter.lower() in r.get("position", "").lower()]
+        filtered = [r for r in filtered if r.get("position", "") == pos_filter]
 
     if filtered:
         rec_data = []
