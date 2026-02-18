@@ -213,7 +213,7 @@ CONFERENCES_D3 = [
 
 def get_local_region(state):
     ne = ["MA", "CT", "RI", "NH", "VT", "ME", "NY", "NJ"]
-    ma = ["PA", "MD", "DE", "DC", "VA"]
+    ma = ["PA", "MD", "DE", "DC", "VA", "WV"]
     south = ["GA", "NC", "SC", "FL", "TN", "AL", "KY", "LA", "MS", "AR"]
     mw = ["IL", "OH", "MI", "IN", "WI", "MN", "MO", "IA", "NE", "KS", "ND", "SD"]
     tx = ["TX", "AZ", "NM", "CO", "NV", "UT", "OK"]
@@ -434,6 +434,28 @@ NEW_SCHOOLS = [
     {"id": "point_loma", "name": "Point Loma Nazarene University", "abbrev": "PLNU", "mascot": "Sea Lions", "city": "San Diego", "state": "CA", "colors": ["Green", "Gold"], "conference": "Pioneer League", "tier": 69},
     {"id": "biola", "name": "Biola University", "abbrev": "BIOL", "mascot": "Eagles", "city": "La Mirada", "state": "CA", "colors": ["Red", "White"], "conference": "Pioneer League", "tier": 70},
     {"id": "ubc", "name": "University of British Columbia", "abbrev": "UBC", "mascot": "Thunderbirds", "city": "Vancouver", "state": "BC", "colors": ["Blue", "Gold"], "conference": "Independence Conference", "tier": 75},
+    # ── Geographic Expansion: Gulf States Conference (new) ──
+    {"id": "north_florida", "name": "University of North Florida", "abbrev": "UNF", "mascot": "Ospreys", "city": "Jacksonville", "state": "FL", "colors": ["Blue", "Gray"], "conference": "Gulf States", "tier": 70},
+    {"id": "fgcu", "name": "Florida Gulf Coast University", "abbrev": "FGCU", "mascot": "Eagles", "city": "Fort Myers", "state": "FL", "colors": ["Green", "Blue"], "conference": "Gulf States", "tier": 69},
+    {"id": "stetson", "name": "Stetson University", "abbrev": "STET", "mascot": "Hatters", "city": "DeLand", "state": "FL", "colors": ["Green", "White"], "conference": "Gulf States", "tier": 71},
+    {"id": "jacksonville", "name": "Jacksonville University", "abbrev": "JU", "mascot": "Dolphins", "city": "Jacksonville", "state": "FL", "colors": ["Green", "White"], "conference": "Gulf States", "tier": 68},
+    {"id": "samford", "name": "Samford University", "abbrev": "SAM", "mascot": "Bulldogs", "city": "Birmingham", "state": "AL", "colors": ["Red", "Blue"], "conference": "Gulf States", "tier": 72},
+    {"id": "south_alabama", "name": "University of South Alabama", "abbrev": "USA", "mascot": "Jaguars", "city": "Mobile", "state": "AL", "colors": ["Red", "Blue", "White"], "conference": "Gulf States", "tier": 70},
+    {"id": "uab", "name": "University of Alabama at Birmingham", "abbrev": "UAB", "mascot": "Blazers", "city": "Birmingham", "state": "AL", "colors": ["Green", "Gold"], "conference": "Gulf States", "tier": 73},
+    {"id": "loyola_new_orleans", "name": "Loyola University New Orleans", "abbrev": "LYNO", "mascot": "Wolf Pack", "city": "New Orleans", "state": "LA", "colors": ["Maroon", "Gold"], "conference": "Gulf States", "tier": 69},
+    {"id": "new_orleans", "name": "University of New Orleans", "abbrev": "UNO", "mascot": "Privateers", "city": "New Orleans", "state": "LA", "colors": ["Silver", "Blue"], "conference": "Gulf States", "tier": 68},
+    {"id": "tulane", "name": "Tulane University", "abbrev": "TULN", "mascot": "Green Wave", "city": "New Orleans", "state": "LA", "colors": ["Olive Green", "Sky Blue"], "conference": "Gulf States", "tier": 74},
+    {"id": "southern_miss", "name": "University of Southern Mississippi", "abbrev": "USM", "mascot": "Golden Eagles", "city": "Hattiesburg", "state": "MS", "colors": ["Black", "Gold"], "conference": "Gulf States", "tier": 71},
+    {"id": "georgia_state", "name": "Georgia State University", "abbrev": "GSU", "mascot": "Panthers", "city": "Atlanta", "state": "GA", "colors": ["Blue", "White", "Red"], "conference": "Gulf States", "tier": 72},
+    {"id": "kennesaw_state", "name": "Kennesaw State University", "abbrev": "KSU", "mascot": "Owls", "city": "Kennesaw", "state": "GA", "colors": ["Black", "Gold"], "conference": "Gulf States", "tier": 70},
+    # ── Geographic Expansion: filling remaining gaps ──
+    {"id": "st_thomas", "name": "University of St. Thomas", "abbrev": "STMN", "mascot": "Tommies", "city": "St. Paul", "state": "MN", "colors": ["Purple", "Gray"], "conference": "Great Lakes Union", "tier": 71},
+    {"id": "oakland", "name": "Oakland University", "abbrev": "OAK", "mascot": "Golden Grizzlies", "city": "Rochester", "state": "MI", "colors": ["Black", "Gold"], "conference": "Great Lakes Union", "tier": 69},
+    {"id": "unlv", "name": "University of Nevada Las Vegas", "abbrev": "UNLV", "mascot": "Rebels", "city": "Las Vegas", "state": "NV", "colors": ["Scarlet", "Gray"], "conference": "Sun Country", "tier": 73},
+    {"id": "marshall", "name": "Marshall University", "abbrev": "MRSH", "mascot": "Thundering Herd", "city": "Huntington", "state": "WV", "colors": ["Green", "White"], "conference": "Moonshine League", "tier": 72},
+    {"id": "delaware", "name": "University of Delaware", "abbrev": "DEL", "mascot": "Fightin' Blue Hens", "city": "Newark", "state": "DE", "colors": ["Blue", "Gold"], "conference": "Capital Athletic", "tier": 73},
+    {"id": "portland_state", "name": "Portland State University", "abbrev": "PSU", "mascot": "Vikings", "city": "Portland", "state": "OR", "colors": ["Green", "White"], "conference": "Pacific Rim", "tier": 69},
+    {"id": "hawaii", "name": "University of Hawaii", "abbrev": "HAW", "mascot": "Rainbow Warriors", "city": "Honolulu", "state": "HI", "colors": ["Green", "White", "Black"], "conference": "Pacific Rim", "tier": 72},
 ]
 
 if __name__ == "__main__":
