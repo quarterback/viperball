@@ -1,5 +1,6 @@
 import io
 import csv
+import json
 import os
 import random
 
@@ -50,12 +51,15 @@ def render_season_simulator(shared):
             help="Pick up to 4 teams to coach yourself. Everyone else is AI-controlled."
         )
         
+        if "season_ai_seed" not in st.session_state:
+            st.session_state["season_ai_seed"] = 0
+
         def _reroll_season_ai():
             st.session_state["season_ai_seed"] = random.randint(1, 999999)
 
         ai_seed_col, reroll_col = st.columns([3, 1])
         with ai_seed_col:
-            ai_seed = st.number_input("AI Coaching Seed (0 = random)", min_value=0, max_value=999999, value=0, key="season_ai_seed")
+            ai_seed = st.number_input("AI Coaching Seed (0 = random)", min_value=0, max_value=999999, key="season_ai_seed")
         with reroll_col:
             st.markdown("<br>", unsafe_allow_html=True)
             st.button("Re-roll AI", key="reroll_ai_season", on_click=_reroll_season_ai)
@@ -571,7 +575,8 @@ def render_season_simulator(shared):
             with season_tabs[tab_idx]:
                 tab_idx += 1
 
-                st.markdown("Download season data in CSV format.")
+                st.markdown("Export season data for analysis or sharing with external tools.")
+
                 exp_col1, exp_col2 = st.columns(2)
                 with exp_col1:
                     standings_csv = io.StringIO()
@@ -598,3 +603,180 @@ def render_season_simulator(shared):
                     st.download_button("Download Schedule (CSV)", schedule_csv.getvalue(),
                                        file_name="season_schedule.csv", mime="text/csv",
                                        use_container_width=True)
+
+                st.divider()
+                st.markdown("**Full Season Context (JSON)**")
+                st.caption("Comprehensive export with all season data — standings, box scores, playoffs, awards, power rankings, and statistical leaders. Ideal for feeding to an LLM for analysis or narrative generation.")
+
+                def _build_full_season_json(season_obj, standings_list):
+                    export = {
+                        "season_name": season_obj.name,
+                        "national_champion": season_obj.champion or None,
+                        "total_teams": len(standings_list),
+                        "total_games": sum(1 for g in season_obj.schedule if g.completed),
+                    }
+
+                    export["standings"] = []
+                    for i, r in enumerate(standings_list, 1):
+                        pi = season_obj.calculate_power_index(r.team_name)
+                        export["standings"].append({
+                            "rank": i,
+                            "team": r.team_name,
+                            "conference": r.conference,
+                            "wins": r.wins,
+                            "losses": r.losses,
+                            "win_pct": round(r.win_percentage, 4),
+                            "conf_record": f"{r.conf_wins}-{r.conf_losses}",
+                            "points_for": round(r.points_for, 1),
+                            "points_against": round(r.points_against, 1),
+                            "point_differential": round(r.point_differential, 1),
+                            "power_index": round(pi, 1),
+                            "offense_style": r.offense_style,
+                            "defense_style": r.defense_style,
+                            "metrics": {
+                                "opi": round(r.avg_opi, 2),
+                                "territory": round(r.avg_territory, 2),
+                                "pressure": round(r.avg_pressure, 2),
+                                "chaos": round(r.avg_chaos, 2),
+                                "kicking": round(r.avg_kicking, 2),
+                                "drive_quality": round(r.avg_drive_quality, 2),
+                                "turnover_impact": round(r.avg_turnover_impact, 2),
+                            },
+                        })
+
+                    if season_obj.conferences:
+                        export["conferences"] = {}
+                        champions = season_obj.get_conference_champions()
+                        for conf_name in sorted(season_obj.conferences.keys()):
+                            conf_standings = season_obj.get_conference_standings(conf_name)
+                            export["conferences"][conf_name] = {
+                                "champion": champions.get(conf_name, ""),
+                                "teams": [
+                                    {"team": cr.team_name, "conf_record": f"{cr.conf_wins}-{cr.conf_losses}",
+                                     "overall_record": f"{cr.wins}-{cr.losses}"}
+                                    for cr in conf_standings
+                                ],
+                            }
+
+                    export["games"] = []
+                    for g in season_obj.schedule:
+                        if not g.completed:
+                            continue
+                        hs = g.home_score or 0
+                        aws = g.away_score or 0
+                        winner = g.home_team if hs > aws else g.away_team
+                        game_data = {
+                            "week": g.week,
+                            "home_team": g.home_team,
+                            "away_team": g.away_team,
+                            "home_score": round(hs, 1),
+                            "away_score": round(aws, 1),
+                            "winner": winner,
+                            "margin": round(abs(hs - aws), 1),
+                            "conference_game": g.is_conference_game,
+                        }
+                        if g.full_result and "stats" in g.full_result:
+                            for side in ["home", "away"]:
+                                s = g.full_result["stats"].get(side, {})
+                                game_data[f"{side}_stats"] = {
+                                    "total_yards": s.get("total_yards", 0),
+                                    "rushing_yards": s.get("rushing_yards", 0),
+                                    "lateral_yards": s.get("lateral_yards", 0),
+                                    "plays": s.get("total_plays", 0),
+                                    "yards_per_play": round(s.get("yards_per_play", 0), 1),
+                                    "turnovers": s.get("turnovers", 0),
+                                    "penalties": s.get("penalties", 0),
+                                    "touchdowns": s.get("touchdowns", 0),
+                                    "snap_kicks": s.get("snap_kicks", 0),
+                                    "field_goals": s.get("field_goals_made", 0),
+                                    "drives": s.get("total_drives", 0),
+                                }
+                        export["games"].append(game_data)
+
+                    if season_obj.playoff_bracket:
+                        round_names = {996: "Opening Round", 997: "First Round",
+                                       998: "National Quarterfinals", 999: "National Semi-Finals",
+                                       1000: "National Championship"}
+                        export["playoffs"] = []
+                        for pg in season_obj.playoff_bracket:
+                            if pg.completed:
+                                phs = pg.home_score or 0
+                                paws = pg.away_score or 0
+                                pw = pg.home_team if phs > paws else pg.away_team
+                                export["playoffs"].append({
+                                    "round": round_names.get(pg.week, f"Round {pg.week}"),
+                                    "home_team": pg.home_team,
+                                    "away_team": pg.away_team,
+                                    "home_score": round(phs, 1),
+                                    "away_score": round(paws, 1),
+                                    "winner": pw,
+                                })
+
+                    if season_obj.bowl_games:
+                        export["bowl_games"] = []
+                        for bowl in season_obj.bowl_games:
+                            bg = bowl.game
+                            bhs = bg.home_score or 0
+                            baws = bg.away_score or 0
+                            bw = bg.home_team if bhs > baws else bg.away_team
+                            export["bowl_games"].append({
+                                "name": bowl.name,
+                                "tier": BOWL_TIERS.get(bowl.tier, "Standard"),
+                                "home_team": bg.home_team,
+                                "away_team": bg.away_team,
+                                "home_score": round(bhs, 1),
+                                "away_score": round(baws, 1),
+                                "winner": bw,
+                            })
+
+                    final_poll = season_obj.get_latest_poll()
+                    if final_poll:
+                        export["power_rankings"] = [
+                            {"rank": pr.rank, "team": pr.team_name, "record": pr.record,
+                             "conference": pr.conference, "power_index": round(pr.power_index, 1),
+                             "quality_wins": pr.quality_wins, "sos_rank": pr.sos_rank}
+                            for pr in final_poll.rankings[:25]
+                        ]
+
+                    export["statistical_leaders"] = {}
+                    if standings_list:
+                        top_scoring = max(standings_list, key=lambda r: r.points_for / max(1, r.games_played))
+                        best_def = min(standings_list, key=lambda r: r.points_against / max(1, r.games_played))
+                        top_opi = max(standings_list, key=lambda r: r.avg_opi)
+                        top_chaos = max(standings_list, key=lambda r: r.avg_chaos)
+                        top_kicking = max(standings_list, key=lambda r: r.avg_kicking)
+                        export["statistical_leaders"] = {
+                            "highest_scoring": {"team": top_scoring.team_name, "ppg": round(top_scoring.points_for / max(1, top_scoring.games_played), 1)},
+                            "best_defense": {"team": best_def.team_name, "ppg_allowed": round(best_def.points_against / max(1, best_def.games_played), 1)},
+                            "highest_opi": {"team": top_opi.team_name, "opi": round(top_opi.avg_opi, 1)},
+                            "most_chaotic": {"team": top_chaos.team_name, "chaos": round(top_chaos.avg_chaos, 1)},
+                            "best_kicking": {"team": top_kicking.team_name, "kicking": round(top_kicking.avg_kicking, 1)},
+                        }
+
+                    try:
+                        from engine.awards import compute_season_awards
+                        conf_d = {cn: list(ct) for cn, ct in season_obj.conferences.items()} if season_obj.conferences else None
+                        honors = compute_season_awards(season_obj, year=2026, conferences=conf_d)
+                        if honors.individual_awards:
+                            export["awards"] = [
+                                {"award": a.award_name, "player": a.player_name,
+                                 "position": a.position, "team": a.team_name,
+                                 "overall_rating": a.overall_rating}
+                                for a in honors.individual_awards
+                            ]
+                        if honors.coach_of_year:
+                            export["coach_of_the_year"] = honors.coach_of_year
+                    except Exception:
+                        pass
+
+                    return export
+
+                full_json = _build_full_season_json(season, standings)
+                json_str = json.dumps(full_json, indent=2, ensure_ascii=False)
+                st.download_button(
+                    "Download Full Season Context (JSON)",
+                    json_str,
+                    file_name=f"{season.name.replace(' ', '_').lower()}_full_context.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
