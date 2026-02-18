@@ -27,7 +27,7 @@ The project follows a clear separation of concerns:
 - **`engine/`**: Contains core Python simulation logic, including game simulation, offense/defense styles, play families, weather, penalty systems, player archetypes, box score generation, polling, EPA calculations, season and dynasty simulations, and custom Viperball metrics.
 - **`api/`**: Implements FastAPI REST endpoints for programmatic access to simulation functionalities, supporting requests for single simulations, batch simulations, play debugging, and team data, with a weather parameter.
 - **`ui/`**: Hosts the Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`).
-- **`data/teams/`**: Stores team configuration in JSON files (125 teams total, including D3, metro, legacy, women's, and international programs). 12 geographic conferences: Capital Athletic, Colonial Athletic, Gateway League, Great Lakes Union, Metro Atlantic, New England Athletic, Pacific Rim, Skyline Conference, Southern Athletic, Sun Country, West Coast Conference, Yankee Conference.
+- **`data/teams/`**: Stores team configuration in JSON files (125 teams total, including D3, metro, legacy, women's, and international programs). 12 geographic conferences: Capital Athletic, Moonshine League, Gateway League, Great Lakes Union, Metro Atlantic, New England Athletic, Pacific Rim, Skyline Conference, Southern Athletic, Sun Country, West Coast Conference, Yankee Conference.
 - **`scripts/generate_new_teams.py`**: Team generation script for adding new schools with proper rosters, stats, and metadata.
 - **`main.py`**: The application's entry point, launching Streamlit.
 

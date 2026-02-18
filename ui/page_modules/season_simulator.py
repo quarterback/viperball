@@ -215,7 +215,7 @@ def render_season_simulator(shared):
             avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
 
             if season.champion:
-                st.success(f"**Season Champion: {season.champion}**")
+                st.success(f"**National Champions: {season.champion}**")
 
             sm1, sm2, sm3, sm4, sm5 = st.columns(5)
             sm1.metric("Teams", len(standings))
@@ -345,6 +345,7 @@ def render_season_simulator(shared):
 
                 if season.playoff_bracket:
                     st.markdown("**Playoff Field**")
+                    num_playoff = len(set(g.home_team for g in season.playoff_bracket) | set(g.away_team for g in season.playoff_bracket))
                     playoff_teams = season.get_playoff_teams(num_playoff)
                     pf_data = []
                     for i, t in enumerate(playoff_teams, 1):
@@ -378,8 +379,8 @@ def render_season_simulator(shared):
 
                     _render_round("Opening Round", 996)
                     _render_round("First Round", 997)
-                    _render_round("Quarterfinals", 998)
-                    _render_round("Semifinals", 999)
+                    _render_round("National Quarterfinals", 998)
+                    _render_round("National Semi-Finals", 999)
 
                     championship = [g for g in season.playoff_bracket if g.week == 1000]
                     if championship:
@@ -390,7 +391,7 @@ def render_season_simulator(shared):
                         loser = game.away_team if hs > aws else game.home_team
                         w_score = max(hs, aws)
                         l_score = min(hs, aws)
-                        st.success(f"**CHAMPION: {winner}** {fmt_vb_score(w_score)} def. {loser} {fmt_vb_score(l_score)}")
+                        st.success(f"**NATIONAL CHAMPIONS: {winner}** {fmt_vb_score(w_score)} def. {loser} {fmt_vb_score(l_score)}")
                 else:
                     st.caption("No playoffs ran this season.")
 
@@ -490,7 +491,7 @@ def render_season_simulator(shared):
                         all_game_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
                 if season.playoff_bracket:
-                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "Quarterfinals", 999: "Semifinals", 1000: "Championship"}
+                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "National Quarterfinals", 999: "National Semi-Finals", 1000: "National Championship"}
                     for g in season.playoff_bracket:
                         if g.completed:
                             round_label = playoff_round_names.get(g.week, f"Playoff R{g.week}")

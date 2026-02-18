@@ -340,9 +340,9 @@ def render_dynasty_mode(shared):
                 if season.champion:
                     if season.champion == dynasty.coach.team_name:
                         st.balloons()
-                        st.success(f"YOUR TEAM {season.champion} WON THE CHAMPIONSHIP!")
+                        st.success(f"YOUR TEAM {season.champion} ARE THE NATIONAL CHAMPIONS!")
                     else:
-                        st.info(f"Champion: {season.champion}")
+                        st.info(f"National Champions: {season.champion}")
 
                 standings = season.get_standings_sorted()
                 standings_data = []
@@ -392,7 +392,7 @@ def render_dynasty_mode(shared):
                         dyn_all_entries.append({"game": g, "phase": "Regular Season", "label_prefix": f"Wk {g.week}", "sort_key": g.week})
 
                 if season.playoff_bracket:
-                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "Quarterfinals", 999: "Semifinals", 1000: "Championship"}
+                    playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "National Quarterfinals", 999: "National Semi-Finals", 1000: "National Championship"}
                     for g in season.playoff_bracket:
                         if g.completed:
                             round_label = playoff_round_names.get(g.week, f"Playoff R{g.week}")
