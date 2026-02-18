@@ -36,18 +36,18 @@ def render_season_simulator(shared):
     st.subheader("Season Setup")
     season_name = st.text_input("Season Name", value="2026 CVL Season", key="season_name")
 
-    selected_teams = st.multiselect("Select Teams", all_team_names, default=all_team_names, key="season_teams")
+    selected_teams = all_team_names
 
     if len(selected_teams) < 2:
-        st.warning("Select at least 2 teams to run a season.")
+        st.warning("Not enough teams loaded to run a season.")
     else:
         human_teams = st.multiselect(
-            "Human-Controlled Teams (configure manually)", 
+            "Your Teams (human-coached)", 
             selected_teams,
             default=[],
             max_selections=4,
             key="season_human_teams",
-            help="Select teams you want to configure manually. All others get AI-assigned schemes."
+            help="Pick up to 4 teams to coach yourself. Everyone else is AI-controlled."
         )
         
         ai_seed_col, reroll_col = st.columns([3, 1])
