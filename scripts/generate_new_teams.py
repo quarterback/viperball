@@ -534,6 +534,7 @@ NEW_SCHOOLS = [
     # ── Fictional military academies ──
     {"id": "marine_corps", "name": "United States Marine Corps Academy", "abbrev": "USMC", "mascot": "Bulldogs", "city": "Milton", "state": "FL", "colors": ["Scarlet", "Gold"], "conference": "Southern Sun Conference", "tier": 78},
     {"id": "space_force", "name": "United States Space Force Academy", "abbrev": "USSF", "mascot": "Guardians", "city": "Fallon", "state": "NV", "colors": ["Dark Blue", "Silver"], "conference": "Pioneer Athletic Association", "tier": 76},
+    {"id": "coast_guard", "name": "United States Coast Guard Academy", "abbrev": "USCG", "mascot": "Bears", "city": "New London", "state": "CT", "colors": ["Blue", "White", "Orange"], "conference": "Collegiate Commonwealth", "tier": 74},
 ]
 
 if __name__ == "__main__":
