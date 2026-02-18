@@ -1,0 +1,637 @@
+# Viperball Streamlit Design Specification
+
+## Overview
+Transform the Viperball Streamlit app to have a modern SaaS-like interface inspired by Notion, Figma, and Linear, while maintaining sports management game UX patterns from Football Manager and OOTP Baseball.
+
+## Design Philosophy
+- **Clean & Modern**: SaaS-style interface with generous whitespace
+- **Card-based layouts**: Group related information in cards
+- **Dark theme**: Professional dark mode with subtle gradients
+- **Clear hierarchy**: Strong visual distinction between sections
+- **Sports-focused**: Red accent colors, trophy icons, team-centric design
+
+---
+
+## Global Styling
+
+### Color Palette
+```python
+# Add to your Streamlit app via st.markdown with custom CSS
+
+PRIMARY_RED = "#DC2626"  # Accent color for CTAs, selected states
+PRIMARY_RED_DARK = "#B91C1C"  # Hover states
+BG_DARK = "#0F172A"  # Main background
+BG_CARD = "#1E293B"  # Card backgrounds
+BG_CARD_HOVER = "#334155"  # Hover states
+BORDER = "#334155"  # Border color
+TEXT_PRIMARY = "#FFFFFF"  # Main text
+TEXT_SECONDARY = "#94A3B8"  # Secondary text
+TEXT_MUTED = "#64748B"  # Muted text
+SUCCESS = "#10B981"  # Win indicators
+ERROR = "#EF4444"  # Loss indicators
+WARNING = "#F59E0B"  # Warning states
+```
+
+### Custom CSS Template
+```css
+/* Add this via st.markdown() */
+<style>
+/* Hide Streamlit branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Global styles */
+.stApp {
+    background: linear-gradient(to bottom right, #0F172A, #1E293B);
+}
+
+/* Card styling */
+.card {
+    background-color: rgba(30, 41, 59, 0.5);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+}
+
+.card:hover {
+    border-color: #475569;
+}
+
+/* Headers */
+h1, h2, h3 {
+    color: #FFFFFF !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(to right, #DC2626, #B91C1C);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(to right, #B91C1C, #991B1B);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Secondary buttons */
+.stButton.secondary > button {
+    background: transparent;
+    border: 1px solid #475569;
+    color: #CBD5E1;
+}
+
+.stButton.secondary > button:hover {
+    background: #1E293B;
+    border-color: #64748B;
+}
+
+/* Inputs */
+.stTextInput > div > div > input,
+.stSelectbox > div > div > select {
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: white;
+}
+
+/* Metrics/Stats */
+.metric-card {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(185, 28, 28, 0.05));
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+/* Team selection cards */
+.team-card {
+    background-color: rgba(30, 41, 59, 0.3);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.team-card:hover {
+    background-color: rgba(30, 41, 59, 0.5);
+    border-color: #475569;
+}
+
+.team-card.selected {
+    background-color: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.5);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+/* Sidebar */
+.css-1d391kg {
+    background-color: rgba(30, 41, 59, 0.3);
+    border-right: 1px solid #334155;
+}
+
+/* Remove extra padding */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+</style>
+```
+
+---
+
+## Page Structure
+
+### Navigation
+Use `st.sidebar` for navigation with custom styling:
+
+```python
+import streamlit as st
+
+def render_sidebar():
+    with st.sidebar:
+        st.markdown("## 🏆 Viperball")
+        st.caption("College Sports Manager")
+        
+        st.markdown("---")
+        
+        # Navigation items
+        page = st.radio(
+            "Navigation",
+            ["Dashboard", "Dynasty Mode", "Season", "Team", "Standings"],
+            label_visibility="collapsed"
+        )
+        
+        return page
+```
+
+---
+
+## Page Specifications
+
+### 1. Dashboard Page
+
+**Layout:**
+- Header section with welcome message
+- 4-column metrics grid
+- 2-column layout: Quick Actions (left) + Recent Games (right)
+- Full-width standings table
+
+**Components:**
+
+```python
+def dashboard():
+    # Header
+    st.title("Welcome back, Coach")
+    st.caption("United States Air Force Academy")
+    
+    # Stats Grid (4 columns)
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown("""
+        <div class="metric-card">
+            <p style="color: #94A3B8; font-size: 14px;">Active Dynasty</p>
+            <h3 style="color: white; margin-top: 8px;">My Viperball Dynasty</h3>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Repeat for other metrics...
+    
+    # Quick Actions & Recent Games (2 columns)
+    col_left, col_right = st.columns([1, 1])
+    
+    with col_left:
+        st.markdown("### Quick Actions")
+        st.button("🎮 Continue Season", key="continue", use_container_width=True)
+        st.button("➕ Start New Dynasty", key="new_dynasty", type="secondary", use_container_width=True)
+        st.button("👥 Manage Team", key="manage", type="secondary", use_container_width=True)
+    
+    with col_right:
+        st.markdown("### Recent Games")
+        # Use custom HTML for game cards
+        games = [
+            {"opponent": "Boston University", "result": "W", "score": "31-24"},
+            {"opponent": "Davidson College", "result": "W", "score": "28-14"},
+        ]
+        
+        for game in games:
+            result_color = "#10B981" if game["result"] == "W" else "#EF4444"
+            st.markdown(f"""
+            <div class="team-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: {result_color}; width: 32px; height: 32px; 
+                                    border-radius: 6px; display: flex; align-items: center; 
+                                    justify-content: center; font-weight: bold; color: white;">
+                            {game["result"]}
+                        </div>
+                        <div>
+                            <div style="color: white; font-weight: 500;">{game["opponent"]}</div>
+                        </div>
+                    </div>
+                    <div style="color: #CBD5E1; font-weight: bold;">{game["score"]}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+```
+
+---
+
+### 2. Season Simulator (New Season) Page
+
+**Layout:**
+- Header
+- 3-column grid: Settings (1 col) + Team Selection (2 cols)
+- Sticky bottom action bar
+
+**Components:**
+
+```python
+def season_simulator():
+    st.title("New Season")
+    st.caption("Start a new season and choose your team")
+    
+    # Main grid layout
+    col_settings, col_teams = st.columns([1, 2])
+    
+    with col_settings:
+        st.markdown("### ⚙️ Season Details")
+        
+        # Use containers for card-like grouping
+        with st.container():
+            season_name = st.text_input("Season Name", "2026 Season")
+            league = st.selectbox("League", ["College Viperball League", "FCS Division", "FBS Division"])
+            year = st.selectbox("Starting Year", [2024, 2025, 2026, 2027], index=2)
+            
+            st.markdown("---")
+            
+            playoff_format = st.selectbox("Playoff Format", ["2-Team Playoff", "4-Team Playoff", "8-Team Playoff"], index=1)
+            difficulty = st.selectbox("Difficulty", ["Easy", "Normal", "Hard", "Legendary"], index=1)
+        
+        # League info box
+        st.markdown("""
+        <div class="card" style="margin-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span style="color: #94A3B8;">👥 League Info</span>
+            </div>
+            <div style="font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #94A3B8;">Total Teams</span>
+                    <span style="color: white; font-weight: 500;">124</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #94A3B8;">Conferences</span>
+                    <span style="color: white; font-weight: 500;">2</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #94A3B8;">Regular Season Games</span>
+                    <span style="color: white; font-weight: 500;">10</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_teams:
+        st.markdown("### 🏆 Choose Your Team")
+        st.caption("Select which team you want to manage this season")
+        
+        # Search box
+        search = st.text_input("Search teams...", "", key="team_search", label_visibility="collapsed", placeholder="🔍 Search teams...")
+        
+        # Team selection (scrollable container)
+        teams = [
+            {"name": "United States Air Force Academy", "conference": "CVL East", "record": "8-2"},
+            {"name": "Boston University", "conference": "CVL East", "record": "7-3"},
+            {"name": "Creighton University", "conference": "CVL West", "record": "9-1"},
+            # ... more teams
+        ]
+        
+        # Filter teams by search
+        filtered_teams = [t for t in teams if search.lower() in t["name"].lower()] if search else teams
+        
+        # Use session state to track selection
+        if 'selected_team' not in st.session_state:
+            st.session_state.selected_team = teams[0]["name"]
+        
+        # Render team cards
+        for team in filtered_teams:
+            is_selected = st.session_state.selected_team == team["name"]
+            card_class = "team-card selected" if is_selected else "team-card"
+            
+            if st.button(
+                f"{team['name']} • {team['conference']} • {team['record']}",
+                key=team["name"],
+                use_container_width=True,
+                type="primary" if is_selected else "secondary"
+            ):
+                st.session_state.selected_team = team["name"]
+                st.rerun()
+    
+    # Bottom action bar
+    st.markdown("---")
+    col_info, col_cancel, col_start = st.columns([3, 1, 1])
+    
+    with col_info:
+        st.markdown(f"**Selected:** {st.session_state.selected_team}")
+    
+    with col_cancel:
+        st.button("Cancel", type="secondary", use_container_width=True)
+    
+    with col_start:
+        st.button("▶️ Start Season", type="primary", use_container_width=True)
+```
+
+---
+
+### 3. Dynasty Mode Page
+
+**Layout:**
+- Header with action button
+- Full-width configuration card
+- Conference setup card
+- Bottom action buttons
+
+**Key Elements:**
+```python
+def dynasty_mode():
+    # Header with button
+    col_title, col_action = st.columns([3, 1])
+    with col_title:
+        st.title("Dynasty Mode")
+        st.caption("Multi-season career mode with historical tracking")
+    with col_action:
+        st.button("📁 Load Saved Dynasty", type="secondary")
+    
+    # Configuration card
+    st.markdown("### 🏆 Create New Dynasty")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("Dynasty Name", "My Viperball Dynasty")
+        st.text_input("Coach Name", "Coach")
+    
+    with col2:
+        st.selectbox("Your Team", ["United States Air Force Academy", "Boston University"])
+        
+        # Year selector with +/- buttons
+        col_minus, col_year, col_plus = st.columns([1, 2, 1])
+        with col_minus:
+            st.button("➖")
+        with col_year:
+            st.markdown("<h2 style='text-align: center;'>2026</h2>", unsafe_allow_html=True)
+        with col_plus:
+            st.button("➕")
+```
+
+---
+
+### 4. Team Management Page
+
+**Layout:**
+- Header with action buttons
+- 3-column stat cards
+- Tabbed roster view with search
+- Player cards in scrollable list
+
+**Key Elements:**
+```python
+def team_management():
+    st.title("Team Management")
+    st.caption("United States Air Force Academy")
+    
+    # Stats cards
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Team Overall", "83", delta=None)
+        st.progress(83)
+    
+    with col2:
+        st.metric("Offense Rating", "85", delta=None)
+        st.progress(85)
+    
+    with col3:
+        st.metric("Defense Rating", "81", delta=None)
+        st.progress(81)
+    
+    # Roster section
+    st.markdown("---")
+    st.markdown("### 👥 Roster")
+    
+    # Tabs and search
+    col_search, col_tabs = st.columns([2, 3])
+    with col_search:
+        st.text_input("Search players...", "", key="player_search", label_visibility="collapsed", placeholder="🔍 Search players...")
+    
+    with col_tabs:
+        tab = st.radio("", ["All", "Offense", "Defense", "Special Teams"], horizontal=True, label_visibility="collapsed")
+    
+    # Player cards
+    players = [
+        {"name": "Marcus Johnson", "position": "QB", "overall": 87, "year": "SR", "stats": "2450 YDS, 18 TD, 5 INT"},
+        {"name": "Tyler Williams", "position": "RB", "overall": 84, "year": "JR", "stats": "1250 YDS, 12 TD, 5.8 AVG"},
+    ]
+    
+    for player in players:
+        ovr_color = "#10B981" if player["overall"] >= 85 else "#3B82F6" if player["overall"] >= 75 else "#F59E0B"
+        
+        st.markdown(f"""
+        <div class="team-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="text-align: center;">
+                        <div style="color: {ovr_color}; font-size: 24px; font-weight: bold;">{player["overall"]}</div>
+                        <div style="color: #64748B; font-size: 12px;">OVR</div>
+                    </div>
+                    <div>
+                        <div style="color: white; font-weight: 500; margin-bottom: 4px;">
+                            {player["name"]} 
+                            <span style="background: #DC2626; color: white; padding: 2px 8px; 
+                                         border-radius: 4px; font-size: 12px; margin-left: 8px;">
+                                {player["position"]}
+                            </span>
+                            <span style="border: 1px solid #475569; color: #CBD5E1; padding: 2px 8px; 
+                                         border-radius: 4px; font-size: 12px; margin-left: 4px;">
+                                {player["year"]}
+                            </span>
+                        </div>
+                        <div style="color: #94A3B8; font-size: 14px;">{player["stats"]}</div>
+                    </div>
+                </div>
+                <button style="background: transparent; border: 1px solid #475569; color: #CBD5E1; 
+                               padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    View Details
+                </button>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+```
+
+---
+
+### 5. Standings Page
+
+**Layout:**
+- Header with league info
+- 3-column leader cards
+- Tabbed standings tables (CVL East, CVL West, National)
+
+**Key Elements:**
+```python
+def standings():
+    st.title("Standings")
+    st.caption("2026 CVL Season - Week 11")
+    
+    # Leader cards
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="metric-card">
+            <p style="color: #94A3B8; font-size: 14px;">Highest Scoring</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <span style="color: white;">Creighton University</span>
+                <span style="color: #10B981; font-weight: bold;">35.6</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Standings table with tabs
+    tab = st.tabs(["CVL East", "CVL West", "National Top 25"])
+    
+    with tab[0]:
+        standings_data = [
+            {"rank": 1, "team": "United States Air Force Academy", "wins": 8, "losses": 2, "is_user": True},
+            {"rank": 2, "team": "Boston University", "wins": 7, "losses": 3, "is_user": False},
+        ]
+        
+        # Table header
+        st.markdown("""
+        <div style="display: grid; grid-template-columns: 60px 3fr 60px 60px 120px; 
+                    padding: 12px; border-bottom: 1px solid #334155; color: #64748B; font-size: 12px;">
+            <div style="text-align: center;">RK</div>
+            <div>TEAM</div>
+            <div style="text-align: center;">W</div>
+            <div style="text-align: center;">L</div>
+            <div style="text-align: center;">CONF</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Table rows
+        for team in standings_data:
+            card_class = "selected" if team["is_user"] else ""
+            st.markdown(f"""
+            <div class="team-card {card_class}" style="display: grid; 
+                 grid-template-columns: 60px 3fr 60px 60px 120px; align-items: center;">
+                <div style="text-align: center; font-weight: bold; color: #94A3B8;">{team["rank"]}</div>
+                <div style="color: white;">{"🏆 " if team["rank"] <= 4 else ""}{team["team"]}</div>
+                <div style="text-align: center; color: #10B981; font-weight: bold;">{team["wins"]}</div>
+                <div style="text-align: center; color: #EF4444; font-weight: bold;">{team["losses"]}</div>
+                <div style="text-align: center; color: #CBD5E1;">6-0</div>
+            </div>
+            """, unsafe_allow_html=True)
+```
+
+---
+
+## State Management
+
+Use `st.session_state` for persistent data:
+
+```python
+# Initialize session state
+if 'selected_team' not in st.session_state:
+    st.session_state.selected_team = None
+
+if 'current_season' not in st.session_state:
+    st.session_state.current_season = None
+
+if 'dynasty_data' not in st.session_state:
+    st.session_state.dynasty_data = None
+```
+
+---
+
+## Implementation Checklist
+
+- [ ] Add custom CSS for dark theme and card styling
+- [ ] Create sidebar navigation
+- [ ] Build Dashboard page with metrics grid
+- [ ] Build Season Simulator with 3-column layout and team selection
+- [ ] Build Dynasty Mode with form inputs and collapsible sections
+- [ ] Build Team Management with tabs and player cards
+- [ ] Build Standings with tabs and sortable tables
+- [ ] Implement session state for team selection
+- [ ] Add search functionality for teams and players
+- [ ] Style buttons with primary/secondary variants
+- [ ] Add hover states and transitions
+- [ ] Test responsive behavior on different screen sizes
+
+---
+
+## Tips for Streamlit Implementation
+
+1. **Use `st.markdown()` with `unsafe_allow_html=True`** for custom HTML/CSS when Streamlit components are too limited
+
+2. **Leverage containers and columns** for layout control:
+   ```python
+   col1, col2, col3 = st.columns([1, 2, 1])  # Different widths
+   ```
+
+3. **Use `st.session_state`** to persist data across reruns
+
+4. **Add custom classes** via HTML and reference them in your CSS
+
+5. **Hide Streamlit defaults** (hamburger menu, footer) via CSS
+
+6. **Use emojis** for icons where lucide-react icons aren't available (🏆 ⚙️ 👥 📊)
+
+7. **Create reusable functions** for repeated components (stat cards, team cards, etc.)
+
+8. **Use `st.rerun()`** to refresh page after state changes
+
+---
+
+## Example File Structure
+
+```
+viperball/
+├── app.py                 # Main entry point
+├── pages/
+│   ├── dashboard.py
+│   ├── dynasty_mode.py
+│   ├── season_simulator.py
+│   ├── team_management.py
+│   └── standings.py
+├── components/
+│   ├── sidebar.py
+│   ├── stat_card.py
+│   ├── team_card.py
+│   └── player_card.py
+├── styles/
+│   └── custom.css
+└── data/
+    ├── teams.py
+    └── players.py
+```
+
+---
+
+## Final Notes
+
+- Keep the UI clean and uncluttered - embrace whitespace
+- Use consistent spacing (16px, 24px, 32px)
+- Maintain the dark theme throughout
+- Red accent for primary actions and selections
+- Green for wins/positive stats, red for losses/negative stats
+- Make team selection feel smooth and responsive
+- Group related settings together in cards
+- Use clear labels and helper text
