@@ -1,7 +1,73 @@
 import sys
 import os
+import threading
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+_api_server_lock = threading.Lock()
+_api_server_started = False
+
+
+def _port_in_use(port: int) -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _ensure_api_server():
+    """Start the FastAPI backend in a background thread if it isn't already running.
+
+    On Streamlit Cloud (or any single-process host) there is no external
+    process manager to launch the API server, so we spin it up here.
+    Guarded by a module-level lock + flag to prevent duplicate threads.
+    Only starts an embedded server when the API URL points to localhost.
+    """
+    global _api_server_started
+    import requests as _req
+
+    api_base = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8000")
+    if "127.0.0.1" not in api_base and "localhost" not in api_base:
+        return
+
+    try:
+        _req.get(f"{api_base}/teams", timeout=2)
+        return
+    except Exception:
+        pass
+
+    if _port_in_use(8000):
+        for _ in range(20):
+            try:
+                _req.get(f"{api_base}/teams", timeout=2)
+                return
+            except Exception:
+                time.sleep(0.5)
+        return
+
+    with _api_server_lock:
+        if _api_server_started:
+            return
+        _api_server_started = True
+
+    import uvicorn
+    from api.main import app as fastapi_app
+
+    def _run():
+        uvicorn.run(fastapi_app, host="127.0.0.1", port=8000, log_level="warning")
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    for _ in range(30):
+        try:
+            _req.get(f"{api_base}/teams", timeout=2)
+            return
+        except Exception:
+            time.sleep(0.5)
+
+
+_ensure_api_server()
 
 import streamlit as st
 
