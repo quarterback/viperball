@@ -5,8 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import streamlit as st
 
-from engine import get_available_teams, get_available_styles, DEFENSE_STYLES
-
+from ui import api_client
 from ui.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS
 from ui.page_modules.section_play import render_play_section
 from ui.page_modules.section_league import render_league_section
@@ -152,12 +151,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-teams = get_available_teams()
-styles = get_available_styles()
+try:
+    teams_resp = api_client.get_teams()
+    teams = teams_resp.get("teams", [])
+except api_client.APIError:
+    teams = []
+
+try:
+    styles_resp = api_client.get_styles()
+    styles = styles_resp.get("offense_styles", {})
+    defense_styles = styles_resp.get("defense_styles", {})
+except api_client.APIError:
+    styles = {}
+    defense_styles = {}
+
 team_names = {t["key"]: t["name"] for t in teams}
 style_keys = list(styles.keys())
-defense_style_keys = list(DEFENSE_STYLES.keys())
-defense_styles = DEFENSE_STYLES
+defense_style_keys = list(defense_styles.keys())
 
 shared = {
     "teams": teams,
@@ -171,11 +181,24 @@ shared = {
 }
 
 def _mode_label():
-    if "dynasty" in st.session_state:
-        d = st.session_state["dynasty"]
-        return f"Dynasty: {d.dynasty_name} ({d.current_year})"
-    if "active_season" in st.session_state:
-        return f"Season: {st.session_state['active_season'].name}"
+    mode = st.session_state.get("api_mode")
+    session_id = st.session_state.get("api_session_id")
+    if not session_id or not mode:
+        return "No Active Session"
+    if mode == "dynasty":
+        try:
+            dyn_status = api_client.get_dynasty_status(session_id)
+            dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
+            current_year = dyn_status.get("current_year", "")
+            return f"Dynasty: {dynasty_name} ({current_year})"
+        except api_client.APIError:
+            return "Dynasty (loading...)"
+    if mode == "season":
+        try:
+            status = api_client.get_season_status(session_id)
+            return f"Season: {status.get('name', 'Season')}"
+        except api_client.APIError:
+            return "Season (loading...)"
     return "No Active Session"
 
 with st.sidebar:
@@ -185,13 +208,19 @@ with st.sidebar:
 
     st.markdown(f"**{_mode_label()}**")
 
-    if "dynasty" in st.session_state or "active_season" in st.session_state:
+    if st.session_state.get("api_session_id") and st.session_state.get("api_mode"):
         if st.button("End Session", key="end_session_sidebar", use_container_width=True):
-            for key in ["dynasty", "dynasty_teams", "last_dynasty_season",
-                        "last_dynasty_injury_tracker", "active_season",
-                        "season_human_teams_list", "season_phase",
+            session_id = st.session_state.get("api_session_id")
+            if session_id:
+                try:
+                    api_client.delete_session(session_id)
+                except api_client.APIError:
+                    pass
+            for key in ["api_session_id", "api_mode", "season_human_teams_list",
                         "season_playoff_size", "season_bowl_count",
-                        "dyn_season_phase", "dyn_playoff_size", "dyn_bowl_count"]:
+                        "dynasty", "dynasty_teams", "last_dynasty_season",
+                        "last_dynasty_injury_tracker", "active_season",
+                        "season_phase", "dyn_season_phase", "dyn_playoff_size", "dyn_bowl_count"]:
                 st.session_state.pop(key, None)
             st.rerun()
 

@@ -4,95 +4,133 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-from engine.season import load_teams_from_directory, BOWL_TIERS
+from engine.season import BOWL_TIERS
+from ui import api_client
 from ui.helpers import fmt_vb_score, render_game_detail
 
 
-def _get_season_and_dynasty():
-    dynasty = st.session_state.get("dynasty", None)
-    if dynasty and "last_dynasty_season" in st.session_state:
-        return st.session_state["last_dynasty_season"], dynasty
-    if "active_season" in st.session_state:
-        return st.session_state["active_season"], None
-    return None, None
+def _get_session_id():
+    return st.session_state.get("api_session_id")
 
 
-def _get_human_teams(dynasty):
-    if dynasty:
-        return [dynasty.coach.team_name]
-    return st.session_state.get("season_human_teams_list", [])
+def _get_mode():
+    return st.session_state.get("api_mode")
 
 
-def _get_team_rank(season, team_name):
-    standings = season.get_standings_sorted()
-    for i, r in enumerate(standings, 1):
-        if r.team_name == team_name:
-            return i
-    return None
+def render_my_team_section(shared):
+    session_id = _get_session_id()
+    mode = _get_mode()
 
+    if not session_id or not mode:
+        st.title("My Team")
+        st.info("No active session found. Go to **Play** to start a new season or dynasty.")
+        return
 
-def _get_conference_standing(season, team_name):
-    record = season.standings.get(team_name)
-    if not record or not record.conference:
-        return None
-    conf_standings = season.get_conference_standings(record.conference)
-    for i, r in enumerate(conf_standings, 1):
-        if r.team_name == team_name:
-            return i
-    return None
+    if mode == "dynasty":
+        try:
+            dyn_status = api_client.get_dynasty_status(session_id)
+            human_teams = [dyn_status.get("coach", {}).get("team", "")]
+        except api_client.APIError:
+            st.title("My Team")
+            st.error("Could not load dynasty data.")
+            return
+    else:
+        human_teams = st.session_state.get("season_human_teams_list", [])
 
+    if not human_teams or not any(human_teams):
+        st.title("My Team")
+        st.info("No human-coached teams in this session. Go to **Play** to start a new one with your team selected.")
+        return
 
-def _league_averages(season):
-    standings = season.get_standings_sorted()
+    try:
+        standings_resp = api_client.get_standings(session_id)
+        standings = standings_resp.get("standings", [])
+    except api_client.APIError:
+        st.title("My Team")
+        st.info("No season data available yet. Simulate a season from **Play** to see your team's data.")
+        return
+
     if not standings:
-        return {}
-    n = len(standings)
-    return {
-        "OPI": sum(r.avg_opi for r in standings) / n,
-        "Territory": sum(r.avg_territory for r in standings) / n,
-        "Pressure": sum(r.avg_pressure for r in standings) / n,
-        "Chaos": sum(r.avg_chaos for r in standings) / n,
-        "Kicking": sum(r.avg_kicking for r in standings) / n,
-    }
+        st.title("My Team")
+        st.info("No season data available yet. Simulate a season from **Play** to see your team's data.")
+        return
+
+    if len(human_teams) > 1:
+        selected_team = st.selectbox("Select Team", human_teams, key="myteam_team_selector")
+    else:
+        selected_team = human_teams[0]
+
+    tab_names = ["Dashboard", "Roster", "Schedule"]
+    if mode == "dynasty":
+        tab_names.append("History")
+
+    tabs = st.tabs(tab_names)
+
+    with tabs[0]:
+        _render_dashboard(session_id, mode, selected_team, standings)
+
+    with tabs[1]:
+        _render_roster(session_id, selected_team)
+
+    with tabs[2]:
+        _render_schedule(session_id, mode, selected_team)
+
+    if mode == "dynasty" and len(tabs) > 3:
+        with tabs[3]:
+            _render_history(session_id)
 
 
-def _render_dashboard(season, dynasty, team_name):
-    record = season.standings.get(team_name)
+def _render_dashboard(session_id, mode, team_name, standings):
+    record = next((r for r in standings if r["team_name"] == team_name), None)
     if not record:
         st.warning(f"No standings data found for {team_name}.")
         return
 
-    pi = season.calculate_power_index(team_name)
-    rank = _get_team_rank(season, team_name)
+    rank = next((i for i, r in enumerate(standings, 1) if r["team_name"] == team_name), None)
 
     st.subheader(f"{team_name}")
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Record", f"{record.wins}-{record.losses}")
-    m2.metric("Power Index", f"{pi:.1f}", f"Rank #{rank}" if rank else None)
-    if record.conference:
-        m3.metric("Conference", f"{record.conf_wins}-{record.conf_losses}")
-        conf_standing = _get_conference_standing(season, team_name)
-        m4.metric("Conf Standing", f"#{conf_standing}" if conf_standing else "—")
+    m1.metric("Record", f"{record['wins']}-{record['losses']}")
+    m2.metric("Power Index", f"—", f"Rank #{rank}" if rank else None)
+    if record.get("conference"):
+        m3.metric("Conference", f"{record.get('conf_wins', 0)}-{record.get('conf_losses', 0)}")
+        try:
+            conf_resp = api_client.get_conference_standings(session_id)
+            conf_standings_data = conf_resp.get("conference_standings", {})
+            team_conf = record.get("conference", "")
+            conf_teams = conf_standings_data.get(team_conf, [])
+            conf_standing = next((i for i, r in enumerate(conf_teams, 1) if r["team_name"] == team_name), None)
+            m4.metric("Conf Standing", f"#{conf_standing}" if conf_standing else "—")
+        except api_client.APIError:
+            m4.metric("Conf Standing", "—")
     else:
-        m3.metric("Win %", f"{record.win_percentage:.3f}")
-        m4.metric("Games", str(record.games_played))
+        m3.metric("Win %", f"{record.get('win_percentage', 0):.3f}")
+        m4.metric("Games", str(record.get("games_played", 0)))
 
     p1, p2 = st.columns(2)
-    p1.metric("Points For", fmt_vb_score(record.points_for))
-    p2.metric("Points Against", fmt_vb_score(record.points_against))
+    p1.metric("Points For", fmt_vb_score(record["points_for"]))
+    p2.metric("Points Against", fmt_vb_score(record["points_against"]))
 
     mc1, mc2, mc3, mc4, mc5 = st.columns(5)
-    mc1.metric("OPI", f"{record.avg_opi:.1f}")
-    mc2.metric("Territory", f"{record.avg_territory:.1f}")
-    mc3.metric("Pressure", f"{record.avg_pressure:.1f}")
-    mc4.metric("Chaos", f"{record.avg_chaos:.1f}")
-    mc5.metric("Kicking", f"{record.avg_kicking:.1f}")
+    mc1.metric("OPI", f"{record.get('avg_opi', 0):.1f}")
+    mc2.metric("Territory", f"{record.get('avg_territory', 0):.1f}")
+    mc3.metric("Pressure", f"{record.get('avg_pressure', 0):.1f}")
+    mc4.metric("Chaos", f"{record.get('avg_chaos', 0):.1f}")
+    mc5.metric("Kicking", f"{record.get('avg_kicking', 0):.1f}")
 
-    avgs = _league_averages(season)
-    if avgs:
+    if standings:
+        n = len(standings)
+        avgs = {
+            "OPI": sum(r.get("avg_opi", 0) for r in standings) / n,
+            "Territory": sum(r.get("avg_territory", 0) for r in standings) / n,
+            "Pressure": sum(r.get("avg_pressure", 0) for r in standings) / n,
+            "Chaos": sum(r.get("avg_chaos", 0) for r in standings) / n,
+            "Kicking": sum(r.get("avg_kicking", 0) for r in standings) / n,
+        }
         categories = list(avgs.keys())
-        team_values = [record.avg_opi, record.avg_territory, record.avg_pressure, record.avg_chaos, record.avg_kicking]
+        team_values = [record.get("avg_opi", 0), record.get("avg_territory", 0), record.get("avg_pressure", 0),
+                        record.get("avg_chaos", 0), record.get("avg_kicking", 0)]
         avg_values = [avgs[c] for c in categories]
 
         fig = go.Figure()
@@ -117,40 +155,45 @@ def _render_dashboard(season, dynasty, team_name):
         )
         st.plotly_chart(fig, use_container_width=True, key="myteam_radar")
 
-    if dynasty:
+    if mode == "dynasty":
         st.divider()
         st.subheader("Coach Profile")
-        coach = dynasty.coach
-        cc1, cc2, cc3, cc4 = st.columns(4)
-        cc1.metric("Career Record", f"{coach.career_wins}-{coach.career_losses}")
-        cc2.metric("Win %", f"{coach.win_percentage:.3f}")
-        cc3.metric("Championships", str(coach.championships))
-        cc4.metric("Years Experience", str(coach.years_experience))
+        try:
+            dyn_status = api_client.get_dynasty_status(session_id)
+            coach = dyn_status.get("coach", {})
+            cc1, cc2, cc3, cc4 = st.columns(4)
+            cc1.metric("Career Record", f"{coach.get('career_wins', 0)}-{coach.get('career_losses', 0)}")
+            cc2.metric("Win %", f"{coach.get('win_percentage', 0):.3f}")
+            cc3.metric("Championships", str(coach.get("championships", 0)))
+            cc4.metric("Years Experience", str(coach.get("years_experience", 0)))
+        except api_client.APIError:
+            pass
 
 
-def _render_roster(team_name):
-    teams_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "teams")
-    all_teams = load_teams_from_directory(teams_dir)
-    team_obj = all_teams.get(team_name)
-    if not team_obj:
+def _render_roster(session_id, team_name):
+    try:
+        roster_resp = api_client.get_team_roster(session_id, team_name)
+        players = roster_resp.get("players", [])
+    except api_client.APIError:
         st.warning(f"Could not load roster for {team_name}.")
         return
 
     roster_data = []
-    for p in team_obj.players:
-        ovr = int(round((p.speed + p.stamina + p.agility + p.power + p.awareness + p.hands) / 6))
+    for p in players:
+        ovr = int(round((p.get("speed", 0) + p.get("stamina", 0) + p.get("agility", 0) +
+                          p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6))
         roster_data.append({
-            "Name": f"{p.name} ({p.position} #{p.number})",
-            "Archetype": getattr(p, 'archetype', ''),
-            "Position": p.position,
+            "Name": f"{p.get('name', '')} ({p.get('position', '')} #{p.get('number', '')})",
+            "Archetype": p.get("archetype", ""),
+            "Position": p.get("position", ""),
             "OVR": ovr,
-            "Speed": p.speed,
-            "Power": p.power,
-            "Agility": p.agility,
-            "Hands": p.hands,
-            "Awareness": p.awareness,
-            "Kicking": p.kicking,
-            "Stamina": p.stamina,
+            "Speed": p.get("speed", 0),
+            "Power": p.get("power", 0),
+            "Agility": p.get("agility", 0),
+            "Hands": p.get("hands", 0),
+            "Awareness": p.get("awareness", 0),
+            "Kicking": p.get("kicking", 0),
+            "Stamina": p.get("stamina", 0),
         })
 
     if roster_data:
@@ -159,58 +202,76 @@ def _render_roster(team_name):
         st.info("No players found on this roster.")
 
 
-def _render_schedule(season, dynasty, team_name):
+def _render_schedule(session_id, mode, team_name):
+    try:
+        sched_resp = api_client.get_schedule(session_id, team=team_name, completed_only=True, include_full_result=True)
+        team_games = sched_resp.get("games", [])
+    except api_client.APIError:
+        team_games = []
+
+    try:
+        bracket_resp = api_client.get_playoff_bracket(session_id)
+        bracket = bracket_resp.get("bracket", [])
+    except api_client.APIError:
+        bracket = []
+
+    try:
+        bowls_resp = api_client.get_bowl_results(session_id)
+        bowl_results = bowls_resp.get("bowl_results", [])
+    except api_client.APIError:
+        bowl_results = []
+
     entries = []
 
-    for g in season.schedule:
-        if g.completed and (g.home_team == team_name or g.away_team == team_name):
-            is_home = g.home_team == team_name
-            opponent = g.away_team if is_home else g.home_team
-            team_score = g.home_score if is_home else g.away_score
-            opp_score = g.away_score if is_home else g.home_score
+    for g in team_games:
+        if g.get("completed") and (g.get("home_team") == team_name or g.get("away_team") == team_name):
+            is_home = g.get("home_team") == team_name
+            opponent = g.get("away_team") if is_home else g.get("home_team")
+            team_score = g.get("home_score") if is_home else g.get("away_score")
+            opp_score = g.get("away_score") if is_home else g.get("home_score")
             won = (team_score or 0) > (opp_score or 0)
             entries.append({
                 "game": g,
-                "week": g.week,
+                "week": g.get("week", 0),
                 "opponent": opponent,
                 "result": "W" if won else "L",
                 "score": f"{fmt_vb_score(team_score or 0)} - {fmt_vb_score(opp_score or 0)}",
                 "location": "Home" if is_home else "Away",
                 "phase": "Regular Season",
-                "sort_key": g.week,
-                "label": f"Wk {g.week}",
+                "sort_key": g.get("week", 0),
+                "label": f"Wk {g.get('week', 0)}",
             })
 
-    if season.playoff_bracket:
+    if bracket:
         playoff_round_names = {996: "Opening Round", 997: "First Round", 998: "Quarterfinals", 999: "Semi-Finals", 1000: "Championship"}
-        for g in season.playoff_bracket:
-            if g.completed and (g.home_team == team_name or g.away_team == team_name):
-                is_home = g.home_team == team_name
-                opponent = g.away_team if is_home else g.home_team
-                team_score = g.home_score if is_home else g.away_score
-                opp_score = g.away_score if is_home else g.home_score
+        for g in bracket:
+            if g.get("completed") and (g.get("home_team") == team_name or g.get("away_team") == team_name):
+                is_home = g.get("home_team") == team_name
+                opponent = g.get("away_team") if is_home else g.get("home_team")
+                team_score = g.get("home_score") if is_home else g.get("away_score")
+                opp_score = g.get("away_score") if is_home else g.get("home_score")
                 won = (team_score or 0) > (opp_score or 0)
-                round_label = playoff_round_names.get(g.week, f"Playoff R{g.week}")
+                round_label = playoff_round_names.get(g.get("week", 0), f"Playoff R{g.get('week', 0)}")
                 entries.append({
                     "game": g,
-                    "week": 900 + g.week,
+                    "week": 900 + g.get("week", 0),
                     "opponent": opponent,
                     "result": "W" if won else "L",
                     "score": f"{fmt_vb_score(team_score or 0)} - {fmt_vb_score(opp_score or 0)}",
                     "location": "Home" if is_home else "Away",
                     "phase": "Playoff",
-                    "sort_key": 900 + g.week,
+                    "sort_key": 900 + g.get("week", 0),
                     "label": round_label,
                 })
 
-    if season.bowl_games:
-        for i, bowl in enumerate(season.bowl_games):
-            bg = bowl.game
-            if bg.completed and (bg.home_team == team_name or bg.away_team == team_name):
-                is_home = bg.home_team == team_name
-                opponent = bg.away_team if is_home else bg.home_team
-                team_score = bg.home_score if is_home else bg.away_score
-                opp_score = bg.away_score if is_home else bg.home_score
+    if bowl_results:
+        for i, bowl in enumerate(bowl_results):
+            bg = bowl.get("game", {})
+            if bg.get("completed") and (bg.get("home_team") == team_name or bg.get("away_team") == team_name):
+                is_home = bg.get("home_team") == team_name
+                opponent = bg.get("away_team") if is_home else bg.get("home_team")
+                team_score = bg.get("home_score") if is_home else bg.get("away_score")
+                opp_score = bg.get("away_score") if is_home else bg.get("home_score")
                 won = (team_score or 0) > (opp_score or 0)
                 entries.append({
                     "game": bg,
@@ -221,7 +282,7 @@ def _render_schedule(season, dynasty, team_name):
                     "location": "Home" if is_home else "Away",
                     "phase": "Bowl",
                     "sort_key": 800 + i,
-                    "label": bowl.name,
+                    "label": bowl.get("name", f"Bowl {i+1}"),
                 })
 
     entries.sort(key=lambda e: e["sort_key"])
@@ -247,28 +308,37 @@ def _render_schedule(season, dynasty, team_name):
     if selected:
         idx = game_labels.index(selected)
         g = entries[idx]["game"]
-        if g.full_result:
+        full_result = g.get("full_result")
+        if full_result:
             with st.expander("Game Details", expanded=True):
-                render_game_detail(g.full_result, key_prefix=f"myteam_gd_{idx}")
+                render_game_detail(full_result, key_prefix=f"myteam_gd_{idx}")
 
 
-def _render_history(dynasty):
-    coach = dynasty.coach
+def _render_history(session_id):
+    try:
+        dyn_status = api_client.get_dynasty_status(session_id)
+        coach = dyn_status.get("coach", {})
+    except api_client.APIError:
+        st.error("Could not load dynasty data.")
+        return
+
+    team_name = coach.get("team", "")
 
     st.subheader("Coach Career")
     hc1, hc2, hc3, hc4 = st.columns(4)
-    hc1.metric("Career Record", f"{coach.career_wins}-{coach.career_losses}")
-    hc2.metric("Win %", f"{coach.win_percentage:.3f}")
-    hc3.metric("Championships", str(coach.championships))
-    hc4.metric("Seasons", str(coach.years_experience))
+    hc1.metric("Career Record", f"{coach.get('career_wins', 0)}-{coach.get('career_losses', 0)}")
+    hc2.metric("Win %", f"{coach.get('win_percentage', 0):.3f}")
+    hc3.metric("Championships", str(coach.get("championships", 0)))
+    hc4.metric("Seasons", str(coach.get("years_experience", 0)))
 
-    if coach.season_records:
+    season_records = coach.get("season_records", {})
+    if season_records:
         season_rows = []
-        for year in sorted(coach.season_records.keys()):
-            sr = coach.season_records[year]
+        for year in sorted(season_records.keys(), key=lambda y: int(y)):
+            sr = season_records[year]
             season_rows.append({
                 "Year": year,
-                "W-L": f"{sr['wins']}-{sr['losses']}",
+                "W-L": f"{sr.get('wins', 0)}-{sr.get('losses', 0)}",
                 "PF": fmt_vb_score(sr.get("points_for", 0)),
                 "PA": fmt_vb_score(sr.get("points_against", 0)),
                 "Playoff": "Y" if sr.get("playoff") else "N",
@@ -276,7 +346,7 @@ def _render_history(dynasty):
             })
         st.dataframe(pd.DataFrame(season_rows), hide_index=True, use_container_width=True)
 
-        wins_data = [{"Year": str(y), "Wins": coach.season_records[y]["wins"]} for y in sorted(coach.season_records.keys())]
+        wins_data = [{"Year": str(y), "Wins": season_records[y].get("wins", 0)} for y in sorted(season_records.keys(), key=lambda y: int(y))]
         if wins_data:
             import plotly.express as px
             fig = px.bar(pd.DataFrame(wins_data), x="Year", y="Wins", title="Wins Per Season")
@@ -285,95 +355,65 @@ def _render_history(dynasty):
 
     st.divider()
     st.subheader("Team History")
-    team_hist = dynasty.team_histories.get(coach.team_name)
+    try:
+        histories_resp = api_client.get_dynasty_team_histories(session_id)
+        team_hist = histories_resp.get("team_histories", {}).get(team_name, {})
+    except api_client.APIError:
+        team_hist = {}
+
     if team_hist:
         th1, th2, th3, th4 = st.columns(4)
-        th1.metric("All-Time Record", f"{team_hist.total_wins}-{team_hist.total_losses}")
-        th2.metric("Win %", f"{team_hist.win_percentage:.3f}")
-        th3.metric("Championships", str(team_hist.total_championships))
-        th4.metric("Playoff Appearances", str(team_hist.total_playoff_appearances))
+        th1.metric("All-Time Record", f"{team_hist.get('total_wins', 0)}-{team_hist.get('total_losses', 0)}")
+        th2.metric("Win %", f"{team_hist.get('win_percentage', 0):.3f}")
+        th3.metric("Championships", str(team_hist.get("total_championships", 0)))
+        th4.metric("Playoff Appearances", str(team_hist.get("total_playoff_appearances", 0)))
 
-        if team_hist.championship_years:
-            st.caption(f"Championship Years: {', '.join(str(y) for y in sorted(team_hist.championship_years))}")
+        champ_years = team_hist.get("championship_years", [])
+        if champ_years:
+            st.caption(f"Championship Years: {', '.join(str(y) for y in sorted(champ_years))}")
 
     st.divider()
     st.subheader("Record Book")
-    rb = dynasty.record_book
+    try:
+        rb = api_client.get_dynasty_record_book(session_id)
+    except api_client.APIError:
+        rb = {}
 
     st.markdown("**Single-Season Records**")
     ss_records = []
-    if rb.most_wins_season.get("team"):
-        ss_records.append({"Record": "Most Wins", "Team": rb.most_wins_season["team"], "Value": str(rb.most_wins_season["wins"]), "Year": str(rb.most_wins_season.get("year", ""))})
-    if rb.most_points_season.get("team"):
-        ss_records.append({"Record": "Most Points", "Team": rb.most_points_season["team"], "Value": fmt_vb_score(rb.most_points_season["points"]), "Year": str(rb.most_points_season.get("year", ""))})
-    if rb.best_defense_season.get("team"):
-        ss_records.append({"Record": "Best Defense (PPG)", "Team": rb.best_defense_season["team"], "Value": f"{rb.best_defense_season['ppg_allowed']:.1f}", "Year": str(rb.best_defense_season.get("year", ""))})
-    if rb.highest_opi_season.get("team"):
-        ss_records.append({"Record": "Highest OPI", "Team": rb.highest_opi_season["team"], "Value": f"{rb.highest_opi_season['opi']:.1f}", "Year": str(rb.highest_opi_season.get("year", ""))})
-    if rb.most_chaos_season.get("team"):
-        ss_records.append({"Record": "Most Chaos", "Team": rb.most_chaos_season["team"], "Value": f"{rb.most_chaos_season['chaos']:.1f}", "Year": str(rb.most_chaos_season.get("year", ""))})
+    most_wins = rb.get("most_wins_season", {})
+    if most_wins.get("team"):
+        ss_records.append({"Record": "Most Wins", "Team": most_wins["team"], "Value": str(most_wins.get("wins", 0)), "Year": str(most_wins.get("year", ""))})
+    most_points = rb.get("most_points_season", {})
+    if most_points.get("team"):
+        ss_records.append({"Record": "Most Points", "Team": most_points["team"], "Value": fmt_vb_score(most_points.get("points", 0)), "Year": str(most_points.get("year", ""))})
+    best_def = rb.get("best_defense_season", {})
+    if best_def.get("team"):
+        ss_records.append({"Record": "Best Defense (PPG)", "Team": best_def["team"], "Value": f"{best_def.get('ppg_allowed', 0):.1f}", "Year": str(best_def.get("year", ""))})
+    highest_opi = rb.get("highest_opi_season", {})
+    if highest_opi.get("team"):
+        ss_records.append({"Record": "Highest OPI", "Team": highest_opi["team"], "Value": f"{highest_opi.get('opi', 0):.1f}", "Year": str(highest_opi.get("year", ""))})
+    most_chaos = rb.get("most_chaos_season", {})
+    if most_chaos.get("team"):
+        ss_records.append({"Record": "Most Chaos", "Team": most_chaos["team"], "Value": f"{most_chaos.get('chaos', 0):.1f}", "Year": str(most_chaos.get("year", ""))})
 
     if ss_records:
         st.dataframe(pd.DataFrame(ss_records), hide_index=True, use_container_width=True)
 
     st.markdown("**All-Time Records**")
     at_records = []
-    if rb.most_championships.get("team"):
-        at_records.append({"Record": "Most Championships", "Team/Coach": rb.most_championships["team"], "Value": str(rb.most_championships["championships"])})
-    if rb.highest_win_percentage.get("team"):
-        at_records.append({"Record": "Highest Win %", "Team/Coach": rb.highest_win_percentage["team"], "Value": f"{rb.highest_win_percentage['win_pct']:.3f}"})
-    if rb.most_coaching_wins.get("coach"):
-        at_records.append({"Record": "Most Coaching Wins", "Team/Coach": rb.most_coaching_wins["coach"], "Value": str(rb.most_coaching_wins["wins"])})
-    if rb.most_coaching_championships.get("coach"):
-        at_records.append({"Record": "Most Coaching Championships", "Team/Coach": rb.most_coaching_championships["coach"], "Value": str(rb.most_coaching_championships["championships"])})
+    most_champs = rb.get("most_championships", {})
+    if most_champs.get("team"):
+        at_records.append({"Record": "Most Championships", "Team/Coach": most_champs["team"], "Value": str(most_champs.get("championships", 0))})
+    highest_win = rb.get("highest_win_percentage", {})
+    if highest_win.get("team"):
+        at_records.append({"Record": "Highest Win %", "Team/Coach": highest_win["team"], "Value": f"{highest_win.get('win_pct', 0):.3f}"})
+    most_coaching = rb.get("most_coaching_wins", {})
+    if most_coaching.get("coach"):
+        at_records.append({"Record": "Most Coaching Wins", "Team/Coach": most_coaching["coach"], "Value": str(most_coaching.get("wins", 0))})
+    most_coach_champs = rb.get("most_coaching_championships", {})
+    if most_coach_champs.get("coach"):
+        at_records.append({"Record": "Most Coaching Championships", "Team/Coach": most_coach_champs["coach"], "Value": str(most_coach_champs.get("championships", 0))})
 
     if at_records:
         st.dataframe(pd.DataFrame(at_records), hide_index=True, use_container_width=True)
-
-
-def render_my_team_section(shared):
-    season, dynasty = _get_season_and_dynasty()
-
-    if season is None and dynasty is None:
-        st.title("My Team")
-        st.info("No active session found. Go to **Play** to start a new season or dynasty.")
-        return
-
-    if dynasty:
-        human_teams = [dynasty.coach.team_name]
-    else:
-        human_teams = _get_human_teams(dynasty)
-
-    if not human_teams:
-        st.title("My Team")
-        st.info("No human-coached teams in this session. Go to **Play** to start a new one with your team selected.")
-        return
-
-    if season is None:
-        st.title("My Team")
-        st.info("No season data available yet. Simulate a season from **Play** to see your team's data.")
-        return
-
-    if len(human_teams) > 1:
-        selected_team = st.selectbox("Select Team", human_teams, key="myteam_team_selector")
-    else:
-        selected_team = human_teams[0]
-
-    tab_names = ["Dashboard", "Roster", "Schedule"]
-    if dynasty:
-        tab_names.append("History")
-
-    tabs = st.tabs(tab_names)
-
-    with tabs[0]:
-        _render_dashboard(season, dynasty, selected_team)
-
-    with tabs[1]:
-        _render_roster(selected_team)
-
-    with tabs[2]:
-        _render_schedule(season, dynasty, selected_team)
-
-    if dynasty and len(tabs) > 3:
-        with tabs[3]:
-            _render_history(dynasty)

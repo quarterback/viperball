@@ -24,14 +24,37 @@ The user interface is built with Streamlit using a 4-tab navigation system plus 
 - Dynasty supports pre-dynasty history simulation (1-100 years).
 - Old 6-page sidebar navigation (Game Simulator, Season Simulator, Dynasty Mode, Team Roster, Debug Tools, Play Inspector) replaced by this IA structure. Legacy page modules preserved but no longer routed from app.py.
 
+### API-First Architecture (Feb 2026 Refactor)
+The project uses a **FastAPI backend as the single source of truth** for all simulation logic. The Streamlit UI is a thin display layer that calls API endpoints via `ui/api_client.py`.
+
+**Session-based state management:**
+- All Season, Dynasty, and InjuryTracker objects live in-memory on the FastAPI server, keyed by session IDs.
+- The UI stores only `api_session_id` and `api_mode` in `st.session_state`, fetching all data via HTTP.
+- `main.py` launches both FastAPI (port 8000, internal) and Streamlit (port 5000, public) as dual processes.
+
+**API endpoints (39+):**
+- Session lifecycle: create, get, delete sessions
+- Season: create, simulate week/range/rest, run playoffs, run bowls, get status/standings/schedule/polls/conferences/awards/playoff-bracket/bowl-results
+- Dynasty: create, start season, advance year, get status/team-histories/awards/record-book
+- Data: teams, styles, weather conditions, conference defaults, bowl tiers
+- Quick game simulation (stateless)
+
+**Remaining local engine imports in UI:**
+- Read-only team identity loading for display (mascots, colors, conferences) before season creation
+- Conference name generation, geographic defaults (pre-creation UI)
+- AI coach assignment previews (display only)
+- BOWL_TIERS constant for tier label display
+- Debug Tools and Play Inspector (legacy, not yet converted)
+
 ### Technical Implementations
 The project follows a clear separation of concerns:
 - **`engine/`**: Contains core Python simulation logic, including game simulation, offense/defense styles, play families, weather, penalty systems, player archetypes, box score generation, polling, EPA calculations, season and dynasty simulations, and custom Viperball metrics.
-- **`api/`**: Implements FastAPI REST endpoints for programmatic access to simulation functionalities, supporting requests for single simulations, batch simulations, play debugging, and team data, with a weather parameter.
-- **`ui/`**: Hosts the Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`).
+- **`api/main.py`**: FastAPI backend with 39+ REST endpoints managing session-based state. All simulation operations route through here. Serializers convert engine objects to JSON for the UI.
+- **`ui/api_client.py`**: Typed Python wrapper for all API HTTP calls. Uses `requests` with configurable timeouts (120s GET, 300s POST). Custom `APIError` exception for error handling.
+- **`ui/`**: Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`). All page modules fetch data via `api_client` instead of importing engine directly.
 - **`data/teams/`**: Stores team configuration in JSON files (125 teams total, including D3, metro, legacy, women's, and international programs). 12 geographic conferences: Capital Athletic, Moonshine League, Gateway League, Great Lakes Union, Metro Atlantic, New England Athletic, Pacific Rim, Skyline Conference, Southern Athletic, Sun Country, West Coast Conference, Yankee Conference.
 - **`scripts/generate_new_teams.py`**: Team generation script for adding new schools with proper rosters, stats, and metadata.
-- **`main.py`**: The application's entry point, launching Streamlit.
+- **`main.py`**: The application's entry point, launching dual processes (FastAPI + Streamlit).
 
 ### Feature Specifications
 - **Engine Mechanics**:

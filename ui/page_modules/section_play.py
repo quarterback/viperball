@@ -10,16 +10,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from engine.season import load_teams_from_directory, create_season, get_recommended_bowl_count, BOWL_TIERS
-from engine.dynasty import create_dynasty, Dynasty
+from engine.season import load_teams_from_directory, get_recommended_bowl_count, BOWL_TIERS
 from engine.conference_names import generate_conference_names
 from engine.geography import get_geographic_conference_defaults
-from engine.injuries import InjuryTracker
-from engine.awards import compute_season_awards
-from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
-from engine import ViperballEngine, OFFENSE_STYLES
 from engine.game_engine import WEATHER_CONDITIONS
+from ui import api_client
 from ui.helpers import (
     load_team, format_time, fmt_vb_score,
     generate_box_score_markdown, generate_play_log_csv,
@@ -33,11 +29,18 @@ def _teams_dir():
 
 
 def _get_active_session():
-    if "dynasty" in st.session_state:
-        return "dynasty"
-    if "active_season" in st.session_state:
-        return "season"
-    return None
+    mode = st.session_state.get("api_mode")
+    session_id = st.session_state.get("api_session_id")
+    if not session_id or not mode:
+        return None
+    return mode
+
+
+def _ensure_session_id():
+    if "api_session_id" not in st.session_state:
+        resp = api_client.create_session()
+        st.session_state["api_session_id"] = resp["session_id"]
+    return st.session_state["api_session_id"]
 
 
 def render_play_section(shared):
@@ -61,13 +64,6 @@ def render_play_section(shared):
 
 
 def _render_mode_selection(shared):
-    teams = shared["teams"]
-    styles = shared["styles"]
-    team_names = shared["team_names"]
-    style_keys = shared["style_keys"]
-    defense_style_keys = shared["defense_style_keys"]
-    defense_styles = shared["defense_styles"]
-
     st.title("Play")
     st.caption("Start a new dynasty, season, or play a quick exhibition game")
 
@@ -203,46 +199,25 @@ def _render_new_dynasty(shared):
         uploaded = st.file_uploader("Load Saved Dynasty", type=["json"], key="load_dynasty")
 
     if create_btn:
-        dynasty = create_dynasty(dynasty_name, coach_name, coach_team, start_year)
-        conf_team_lists = {}
-        for tname, cname in conf_assignments.items():
-            if cname not in conf_team_lists:
-                conf_team_lists[cname] = []
-            conf_team_lists[cname].append(tname)
-        for cname, cteams in conf_team_lists.items():
-            dynasty.add_conference(cname, cteams)
-
-        if history_years > 0:
-            progress_bar = st.progress(0, text=f"Simulating league history (0/{history_years} seasons)...")
-            def _update_progress(done, total):
-                progress_bar.progress(done / total, text=f"Simulating league history ({done}/{total} seasons)...")
-            dynasty.simulate_history(
-                num_years=history_years,
-                teams_dir=teams_dir,
-                games_per_team=history_games,
-                playoff_size=8,
-                progress_callback=_update_progress,
-            )
-            progress_bar.progress(1.0, text=f"History complete! {history_years} seasons generated.")
-
-        setup_teams_loaded = load_teams_from_directory(teams_dir)
-        st.session_state["dynasty"] = dynasty
-        st.session_state["dynasty_teams"] = setup_teams_loaded
-        st.rerun()
+        session_id = _ensure_session_id()
+        with st.spinner("Creating dynasty..."):
+            try:
+                api_client.create_dynasty(
+                    session_id,
+                    dynasty_name=dynasty_name,
+                    coach_name=coach_name,
+                    coach_team=coach_team,
+                    starting_year=start_year,
+                    num_conferences=num_conferences,
+                    history_years=history_years,
+                )
+                st.session_state["api_mode"] = "dynasty"
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Failed to create dynasty: {e.detail}")
 
     if uploaded:
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
-                tmp.write(uploaded.read().decode())
-                tmp_path = tmp.name
-            dynasty = Dynasty.load(tmp_path)
-            all_teams_loaded = load_teams_from_directory(_teams_dir())
-            st.session_state["dynasty"] = dynasty
-            st.session_state["dynasty_teams"] = all_teams_loaded
-            os.unlink(tmp_path)
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to load dynasty: {e}")
+        st.warning("Dynasty save file loading is not yet supported through the API. This feature is coming soon.")
 
 
 def _render_new_season(shared):
@@ -408,16 +383,25 @@ def _render_new_season(shared):
     start_season = st.button("Start Season", type="primary", use_container_width=True, key="run_season")
 
     if start_season:
-        season = create_season(season_name, all_teams, style_configs,
-                               conferences=auto_conferences if auto_conferences else None,
-                               games_per_team=season_games)
-
-        st.session_state["active_season"] = season
-        st.session_state["season_human_teams_list"] = human_teams
-        st.session_state["season_phase"] = "regular"
-        st.session_state["season_playoff_size"] = playoff_size
-        st.session_state["season_bowl_count"] = bowl_count
-        st.rerun()
+        session_id = _ensure_session_id()
+        with st.spinner("Creating season..."):
+            try:
+                api_client.create_season(
+                    session_id,
+                    name=season_name,
+                    games_per_team=season_games,
+                    playoff_size=playoff_size,
+                    bowl_count=bowl_count,
+                    human_teams=human_teams,
+                    conferences=auto_conferences if auto_conferences else None,
+                    style_configs=style_configs,
+                    ai_seed=actual_seed,
+                )
+                st.session_state["api_mode"] = "season"
+                st.session_state["season_human_teams_list"] = human_teams
+                st.rerun()
+            except api_client.APIError as e:
+                st.error(f"Failed to create season: {e.detail}")
 
 
 def _render_quick_game(shared):
@@ -482,22 +466,25 @@ def _render_quick_game(shared):
 
     if run_game:
         actual_seed = seed if seed > 0 else random.randint(1, 999999)
-        home_team = load_team(home_key)
-        away_team = load_team(away_key)
-
-        style_overrides = {}
-        style_overrides[home_team.name] = home_style
-        style_overrides[away_team.name] = away_style
-        style_overrides[f"{home_team.name}_defense"] = home_def_style
-        style_overrides[f"{away_team.name}_defense"] = away_def_style
-
-        engine = ViperballEngine(home_team, away_team, seed=actual_seed, style_overrides=style_overrides, weather=weather)
+        home_name = team_names[home_key]
+        away_name = team_names[away_key]
 
         with st.spinner("Simulating game..."):
-            result = engine.simulate_game()
-
-        st.session_state["last_result"] = result
-        st.session_state["last_seed"] = actual_seed
+            try:
+                result = api_client.simulate_quick_game(
+                    home=home_key,
+                    away=away_key,
+                    home_offense=home_style,
+                    home_defense=home_def_style,
+                    away_offense=away_style,
+                    away_defense=away_def_style,
+                    weather=weather,
+                    seed=actual_seed,
+                )
+                st.session_state["last_result"] = result
+                st.session_state["last_seed"] = actual_seed
+            except api_client.APIError as e:
+                st.error(f"Simulation failed: {e.detail}")
 
     if "last_result" in st.session_state:
         result = st.session_state["last_result"]
@@ -511,42 +498,56 @@ def _render_dynasty_play(shared):
     defense_style_keys = shared["defense_style_keys"]
     defense_styles = shared["defense_styles"]
 
-    dynasty = st.session_state["dynasty"]
-    all_dynasty_teams = st.session_state["dynasty_teams"]
+    session_id = st.session_state["api_session_id"]
 
-    st.title(f"Play — {dynasty.dynasty_name}")
-    st.caption(f"Season {dynasty.current_year} | Coach {dynasty.coach.name} | {dynasty.coach.team_name}")
+    try:
+        dynasty_status = api_client.get_dynasty_status(session_id)
+    except api_client.APIError:
+        st.error("Could not load dynasty data.")
+        return
+
+    coach = dynasty_status.get("coach", {})
+    current_year = dynasty_status.get("current_year", 2026)
+    dynasty_name = dynasty_status.get("dynasty_name", "Dynasty")
+    coach_team = coach.get("team", "")
+    coach_name_str = coach.get("name", "Coach")
+
+    st.title(f"Play — {dynasty_name}")
+    st.caption(f"Season {current_year} | Coach {coach_name_str} | {coach_team}")
 
     play_tabs = st.tabs(["Simulate Season", "Quick Game"])
 
     with play_tabs[0]:
-        st.subheader(f"Season {dynasty.current_year}")
+        st.subheader(f"Season {current_year}")
+
+        teams_dir = _teams_dir()
+        all_teams = load_teams_from_directory(teams_dir)
+        total_teams = len(all_teams)
 
         setup_col1, setup_col2 = st.columns(2)
         with setup_col1:
-            total_teams = len(all_dynasty_teams)
             games_per_team = st.slider(
                 "Regular Season Games Per Team",
                 min_value=8, max_value=12, value=10,
-                key=f"dyn_games_{dynasty.current_year}"
+                key=f"dyn_games_{current_year}"
             )
         with setup_col2:
             dyn_playoff_options = [p for p in [4, 8, 12, 16, 24, 32] if p <= total_teams]
             if not dyn_playoff_options:
                 dyn_playoff_options = [total_teams]
             playoff_format = st.radio("Playoff Format", dyn_playoff_options, index=0, horizontal=True,
-                                      key=f"dyn_playoff_{dynasty.current_year}")
+                                      key=f"dyn_playoff_{current_year}")
 
         dyn_rec = get_recommended_bowl_count(total_teams, playoff_format)
         dyn_max_bowls = max(0, (total_teams - playoff_format) // 2)
         dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, dyn_max_bowls), value=min(dyn_rec, min(12, dyn_max_bowls)),
-                                    key=f"dyn_bowls_{dynasty.current_year}")
+                                    key=f"dyn_bowls_{current_year}")
 
         teams_dir_path = _teams_dir()
         team_identities = load_team_identity(teams_dir_path)
 
         st.markdown("**Your Team**")
-        user_team = dynasty.coach.team_name
+        user_team = coach_team
         user_identity = team_identities.get(user_team, {})
         user_mascot = user_identity.get("mascot", "")
         user_conf = user_identity.get("conference", "")
@@ -559,13 +560,13 @@ def _render_dynasty_play(shared):
         user_off_col, user_def_col = st.columns(2)
         with user_off_col:
             user_off = st.selectbox("Offense Style", style_keys, format_func=lambda x: styles[x]["label"],
-                                     key=f"dyn_user_off_{dynasty.current_year}")
+                                     key=f"dyn_user_off_{current_year}")
         with user_def_col:
             user_def = st.selectbox("Defense Style", defense_style_keys,
                                      format_func=lambda x: defense_styles[x]["label"],
-                                     key=f"dyn_user_def_{dynasty.current_year}")
+                                     key=f"dyn_user_def_{current_year}")
 
-        ai_seed = hash(f"{dynasty.dynasty_name}_{dynasty.current_year}") % 999999
+        ai_seed = hash(f"{dynasty_name}_{current_year}") % 999999
         ai_configs = auto_assign_all_teams(
             teams_dir_path,
             human_teams=[user_team],
@@ -573,17 +574,11 @@ def _render_dynasty_play(shared):
             seed=ai_seed,
         )
 
-        dyn_style_configs = {}
-        dyn_style_configs[user_team] = {"offense_style": user_off, "defense_style": user_def}
-        for tname in all_dynasty_teams:
-            if tname != user_team:
-                dyn_style_configs[tname] = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
-
-        ai_opponent_teams = sorted([t for t in all_dynasty_teams if t != user_team])
+        ai_opponent_teams = sorted([t for t in all_teams if t != user_team])
         with st.expander(f"AI Coach Assignments ({len(ai_opponent_teams)} teams)", expanded=False):
             ai_data = []
             for tname in ai_opponent_teams:
-                cfg = dyn_style_configs[tname]
+                cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
                 identity = team_identities.get(tname, {})
                 mascot = identity.get("mascot", "")
                 ai_data.append({
@@ -594,225 +589,223 @@ def _render_dynasty_play(shared):
                 })
             st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
 
-        dyn_phase = st.session_state.get("dyn_season_phase", "setup")
+        phase = dynasty_status.get("phase", "setup")
 
-        if dyn_phase == "setup":
-            if st.button(f"Start {dynasty.current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
-                conf_dict = dynasty.get_conferences_dict()
-                season = create_season(
-                    f"{dynasty.current_year} CVL Season",
-                    all_dynasty_teams,
-                    dyn_style_configs,
-                    conferences=conf_dict,
-                    games_per_team=games_per_team
-                )
+        try:
+            season_status = api_client.get_season_status(session_id)
+            season_phase = season_status.get("phase", phase)
+        except api_client.APIError:
+            season_phase = phase
 
-                injury_tracker = InjuryTracker()
-                injury_tracker.seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
+        if season_phase == "setup":
+            if st.button(f"Start {current_year} Season", type="primary", use_container_width=True, key="sim_dynasty_season"):
+                with st.spinner("Starting season..."):
+                    try:
+                        api_client.dynasty_start_season(
+                            session_id,
+                            games_per_team=games_per_team,
+                            playoff_size=playoff_format,
+                            bowl_count=dyn_bowl_count,
+                            offense_style=user_off,
+                            defense_style=user_def,
+                            ai_seed=ai_seed,
+                        )
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Failed to start season: {e.detail}")
 
-                st.session_state["active_season"] = season
-                st.session_state["last_dynasty_season"] = season
-                st.session_state["last_dynasty_injury_tracker"] = injury_tracker
-                st.session_state["dyn_season_phase"] = "regular"
-                st.session_state["dyn_playoff_size"] = min(playoff_format, len(all_dynasty_teams))
-                st.session_state["dyn_bowl_count"] = dyn_bowl_count
-                st.rerun()
+        elif season_phase in ("regular",):
+            status = season_status
+            total_weeks = status.get("total_weeks", 0)
+            current_week = status.get("current_week", 0)
+            next_week = status.get("next_week")
+            games_played = status.get("games_played", 0)
+            total_games = status.get("total_games", 0)
 
-        elif dyn_phase in ("regular", "playoffs_pending", "bowls_pending"):
-            season = st.session_state.get("last_dynasty_season")
-            injury_tracker = st.session_state.get("last_dynasty_injury_tracker")
-            dyn_playoff = st.session_state.get("dyn_playoff_size", 8)
-            dyn_bowls = st.session_state.get("dyn_bowl_count", 0)
-
-            if season is None:
-                st.session_state["dyn_season_phase"] = "setup"
-                st.rerun()
-
-            total_weeks = season.get_total_weeks()
-            completed_week = season.get_last_completed_week()
-            next_week = season.get_next_unplayed_week()
-            total_games_played = sum(1 for g in season.schedule if g.completed)
-            total_games = len(season.schedule)
-
-            if dyn_phase == "regular" and next_week is not None:
+            if next_week is not None:
                 sm1, sm2, sm3 = st.columns(3)
                 sm1.metric("Current Week", f"Week {next_week} of {total_weeks}")
-                sm2.metric("Games Played", f"{total_games_played} / {total_games}")
-                progress_pct = total_games_played / total_games if total_games > 0 else 0
+                sm2.metric("Games Played", f"{games_played} / {total_games}")
+                progress_pct = games_played / total_games if total_games > 0 else 0
                 sm3.metric("Progress", f"{progress_pct:.0%}")
                 st.progress(progress_pct)
 
                 btn_col1, btn_col2, btn_col3 = st.columns(3)
                 with btn_col1:
                     if st.button("Sim Next Week", type="primary", use_container_width=True, key="dyn_sim_next_week"):
-                        prev_completed = season.get_last_completed_week()
                         with st.spinner(f"Simulating Week {next_week}..."):
-                            season.simulate_week(next_week, generate_polls=True)
-                        if injury_tracker:
-                            injury_tracker.process_week(next_week, season.teams, season.standings)
-                            injury_tracker.resolve_week(next_week)
-                        st.session_state["last_dynasty_season"] = season
-                        st.session_state["active_season"] = season
-                        st.rerun()
+                            try:
+                                api_client.simulate_week(session_id, week=next_week)
+                                st.rerun()
+                            except api_client.APIError as e:
+                                st.error(f"Simulation failed: {e.detail}")
 
                 with btn_col2:
-                    remaining_weeks = sorted(set(g.week for g in season.schedule if not g.completed))
-                    if len(remaining_weeks) > 1:
-                        target = st.selectbox("Sim through week...", remaining_weeks[1:],
+                    remaining = list(range(next_week + 1, total_weeks + 1))
+                    if remaining:
+                        target = st.selectbox("Sim through week...", remaining,
                                                format_func=lambda w: f"Week {w}",
                                                key="dyn_sim_to_week_select")
                         if st.button("Sim to Week", use_container_width=True, key="dyn_sim_to_week_btn"):
                             with st.spinner(f"Simulating through Week {target}..."):
-                                weeks_to_sim = [w for w in remaining_weeks if w <= target]
-                                for w in weeks_to_sim:
-                                    season.simulate_week(w, generate_polls=True)
-                                    if injury_tracker:
-                                        injury_tracker.process_week(w, season.teams, season.standings)
-                                        injury_tracker.resolve_week(w)
-                            st.session_state["last_dynasty_season"] = season
-                            st.session_state["active_season"] = season
-                            st.rerun()
+                                try:
+                                    api_client.simulate_through_week(session_id, target)
+                                    st.rerun()
+                                except api_client.APIError as e:
+                                    st.error(f"Simulation failed: {e.detail}")
 
                 with btn_col3:
                     if st.button("Sim Rest of Season", use_container_width=True, key="dyn_sim_rest"):
-                        with st.spinner(f"Simulating remaining games..."):
-                            while True:
-                                nw = season.get_next_unplayed_week()
-                                if nw is None:
-                                    break
-                                season.simulate_week(nw, generate_polls=True)
-                                if injury_tracker:
-                                    injury_tracker.process_week(nw, season.teams, season.standings)
-                                    injury_tracker.resolve_week(nw)
-                        st.session_state["last_dynasty_season"] = season
-                        st.session_state["active_season"] = season
-                        st.session_state["dyn_season_phase"] = "playoffs_pending"
-                        st.rerun()
+                        with st.spinner("Simulating remaining games..."):
+                            try:
+                                api_client.simulate_rest(session_id)
+                                st.rerun()
+                            except api_client.APIError as e:
+                                st.error(f"Simulation failed: {e.detail}")
 
-                if completed_week > 0:
+                if current_week > 0:
                     st.divider()
-                    standings = season.get_standings_sorted()
-                    user_rec = next((r for r in standings if r.team_name == dynasty.coach.team_name), None)
-                    if user_rec:
-                        ur_rank = next((i for i, r in enumerate(standings, 1) if r.team_name == dynasty.coach.team_name), 0)
-                        ur1, ur2, ur3 = st.columns(3)
-                        ur1.metric("Your Record", f"{user_rec.wins}-{user_rec.losses}", f"#{ur_rank} overall")
-                        ur2.metric("Points For", fmt_vb_score(user_rec.points_for))
-                        ur3.metric("Points Against", fmt_vb_score(user_rec.points_against))
+                    try:
+                        standings_resp = api_client.get_standings(session_id)
+                        standings = standings_resp.get("standings", [])
+                        user_rec = next((r for r in standings if r["team_name"] == coach_team), None)
+                        if user_rec:
+                            ur_rank = next((i for i, r in enumerate(standings, 1) if r["team_name"] == coach_team), 0)
+                            ur1, ur2, ur3 = st.columns(3)
+                            ur1.metric("Your Record", f"{user_rec['wins']}-{user_rec['losses']}", f"#{ur_rank} overall")
+                            ur2.metric("Points For", fmt_vb_score(user_rec['points_for']))
+                            ur3.metric("Points Against", fmt_vb_score(user_rec['points_against']))
+                    except api_client.APIError:
+                        pass
 
                     st.divider()
                     st.subheader("Recent Results")
-                    show_weeks = range(max(1, completed_week - 2), completed_week + 1)
+                    show_weeks = range(max(1, current_week - 2), current_week + 1)
                     for w in show_weeks:
-                        _render_week_results(season, w)
+                        _render_week_results_api(session_id, w)
 
-            elif dyn_phase == "regular" and next_week is None:
-                st.session_state["dyn_season_phase"] = "playoffs_pending"
+            else:
                 st.rerun()
 
-            elif dyn_phase == "playoffs_pending":
-                st.success("Regular season complete!")
-                standings = season.get_standings_sorted()
-                user_rec = next((r for r in standings if r.team_name == dynasty.coach.team_name), None)
+        elif season_phase == "playoffs_pending":
+            st.success("Regular season complete!")
+            try:
+                standings_resp = api_client.get_standings(session_id)
+                standings = standings_resp.get("standings", [])
+                user_rec = next((r for r in standings if r["team_name"] == coach_team), None)
                 if user_rec:
-                    ur_rank = next((i for i, r in enumerate(standings, 1) if r.team_name == dynasty.coach.team_name), 0)
-                    st.metric("Your Final Record", f"{user_rec.wins}-{user_rec.losses} (#{ur_rank})")
+                    ur_rank = next((i for i, r in enumerate(standings, 1) if r["team_name"] == coach_team), 0)
+                    st.metric("Your Final Record", f"{user_rec['wins']}-{user_rec['losses']} (#{ur_rank})")
+            except api_client.APIError:
+                pass
 
-                if dyn_playoff >= 4:
-                    st.subheader(f"Playoff ({dyn_playoff} teams)")
-                    if st.button("Run Playoffs", type="primary", use_container_width=True, key="dyn_run_playoffs"):
-                        with st.spinner("Running playoffs..."):
-                            season.simulate_playoff(num_teams=dyn_playoff)
-                        st.session_state["last_dynasty_season"] = season
-                        st.session_state["active_season"] = season
-                        st.session_state["dyn_season_phase"] = "bowls_pending" if dyn_bowls > 0 else "finalize"
-                        st.rerun()
-                else:
-                    st.session_state["dyn_season_phase"] = "bowls_pending" if dyn_bowls > 0 else "finalize"
-                    st.rerun()
+            if playoff_format >= 4:
+                st.subheader(f"Playoff ({playoff_format} teams)")
+                if st.button("Run Playoffs", type="primary", use_container_width=True, key="dyn_run_playoffs"):
+                    with st.spinner("Running playoffs..."):
+                        try:
+                            api_client.run_playoffs(session_id)
+                            st.rerun()
+                        except api_client.APIError as e:
+                            st.error(f"Playoffs failed: {e.detail}")
 
-            elif dyn_phase == "bowls_pending":
-                if season.champion:
-                    if season.champion == dynasty.coach.team_name:
-                        st.success(f"YOUR TEAM {season.champion} ARE THE NATIONAL CHAMPIONS!")
+        elif season_phase == "bowls_pending":
+            try:
+                bracket_resp = api_client.get_playoff_bracket(session_id)
+                champion = bracket_resp.get("champion")
+                if champion:
+                    if champion == coach_team:
+                        st.success(f"YOUR TEAM {champion} ARE THE NATIONAL CHAMPIONS!")
                     else:
-                        st.info(f"National Champions: {season.champion}")
-                st.subheader(f"Bowl Games ({dyn_bowls} bowls)")
-                if st.button("Run Bowl Games", type="primary", use_container_width=True, key="dyn_run_bowls"):
-                    with st.spinner("Running bowl games..."):
-                        season.simulate_bowls(bowl_count=dyn_bowls, playoff_size=dyn_playoff)
-                    st.session_state["last_dynasty_season"] = season
-                    st.session_state["active_season"] = season
-                    st.session_state["dyn_season_phase"] = "finalize"
-                    st.rerun()
+                        st.info(f"National Champions: {champion}")
+            except api_client.APIError:
+                pass
 
-        elif dyn_phase == "finalize":
-            season = st.session_state.get("last_dynasty_season")
-            injury_tracker = st.session_state.get("last_dynasty_injury_tracker")
+            st.subheader(f"Bowl Games ({dyn_bowl_count} bowls)")
+            if st.button("Run Bowl Games", type="primary", use_container_width=True, key="dyn_run_bowls"):
+                with st.spinner("Running bowl games..."):
+                    try:
+                        api_client.run_bowls(session_id)
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Bowl games failed: {e.detail}")
 
-            if season and season.champion:
-                if season.champion == dynasty.coach.team_name:
-                    st.balloons()
-                    st.success(f"YOUR TEAM {season.champion} ARE THE NATIONAL CHAMPIONS!")
-                else:
-                    st.info(f"National Champions: {season.champion}")
+        elif season_phase in ("complete", "finalize"):
+            try:
+                bracket_resp = api_client.get_playoff_bracket(session_id)
+                champion = bracket_resp.get("champion")
+                if champion:
+                    if champion == coach_team:
+                        st.balloons()
+                        st.success(f"YOUR TEAM {champion} ARE THE NATIONAL CHAMPIONS!")
+                    else:
+                        st.info(f"National Champions: {champion}")
+            except api_client.APIError:
+                pass
 
-            st.subheader(f"Advance Dynasty to {dynasty.current_year + 1}")
+            st.subheader(f"Advance Dynasty to {current_year + 1}")
             st.caption("This will process offseason development, update records, and move to next year.")
 
             if st.button("Advance to Next Season", type="primary", use_container_width=True, key="dyn_advance"):
-                player_cards = {}
-                if season:
-                    for t_name, t_obj in season.teams.items():
-                        player_cards[t_name] = [player_to_card(p, t_name) for p in t_obj.players]
-
-                dynasty.advance_season(season, injury_tracker=injury_tracker, player_cards=player_cards)
-                st.session_state["dynasty"] = dynasty
-                st.session_state["last_dynasty_season"] = season
-                st.session_state["last_dynasty_injury_tracker"] = injury_tracker
-                st.session_state["dyn_season_phase"] = "setup"
-                st.rerun()
+                with st.spinner("Advancing dynasty..."):
+                    try:
+                        api_client.dynasty_advance(session_id)
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Dynasty advance failed: {e.detail}")
 
     with play_tabs[1]:
         _render_quick_game(shared)
 
 
-def _render_week_results(season, week_num, label=None):
-    week_games = [g for g in season.schedule if g.week == week_num and g.completed]
+def _render_week_results_api(session_id, week_num, label=None):
+    try:
+        resp = api_client.get_schedule(session_id, week=week_num, completed_only=True)
+        week_games = resp.get("games", [])
+    except api_client.APIError:
+        return
+
     if not week_games:
         return
     header = label or f"Week {week_num} Results"
-    with st.expander(header, expanded=(week_num == season.get_last_completed_week())):
+    with st.expander(header, expanded=True):
         for g in week_games:
-            home_score = g.home_score or 0
-            away_score = g.away_score or 0
-            winner = g.home_team if home_score > away_score else g.away_team
-            marker = "**" if winner == g.home_team else ""
-            marker2 = "**" if winner == g.away_team else ""
-            st.markdown(f"{marker}{g.home_team}{marker} {fmt_vb_score(home_score)} — {fmt_vb_score(away_score)} {marker2}{g.away_team}{marker2}")
+            home_score = g.get("home_score") or 0
+            away_score = g.get("away_score") or 0
+            home_team = g.get("home_team", "")
+            away_team = g.get("away_team", "")
+            winner = home_team if home_score > away_score else away_team
+            marker = "**" if winner == home_team else ""
+            marker2 = "**" if winner == away_team else ""
+            st.markdown(f"{marker}{home_team}{marker} {fmt_vb_score(home_score)} — {fmt_vb_score(away_score)} {marker2}{away_team}{marker2}")
 
 
 def _render_season_play(shared):
-    season = st.session_state["active_season"]
-    default_phase = "regular" if not season.is_regular_season_complete() else "complete"
-    phase = st.session_state.get("season_phase", default_phase)
-    playoff_size = st.session_state.get("season_playoff_size", 8)
-    bowl_count = st.session_state.get("season_bowl_count", 0)
+    session_id = st.session_state["api_session_id"]
 
-    st.title(f"Play — {season.name}")
+    try:
+        status = api_client.get_season_status(session_id)
+    except api_client.APIError:
+        st.error("Could not load season data.")
+        return
 
-    total_weeks = season.get_total_weeks()
-    completed_week = season.get_last_completed_week()
-    next_week = season.get_next_unplayed_week()
-    total_games_played = sum(1 for g in season.schedule if g.completed)
-    total_games = len(season.schedule)
+    phase = status.get("phase", "regular")
+    season_name = status.get("name", "Season")
+    total_weeks = status.get("total_weeks", 0)
+    current_week = status.get("current_week", 0)
+    next_week = status.get("next_week")
+    games_played = status.get("games_played", 0)
+    total_games = status.get("total_games", 0)
+    champion = status.get("champion")
+
+    st.title(f"Play — {season_name}")
 
     if phase == "regular":
         if next_week is not None:
             sm1, sm2, sm3 = st.columns(3)
             sm1.metric("Current Week", f"Week {next_week} of {total_weeks}")
-            sm2.metric("Games Played", f"{total_games_played} / {total_games}")
-            progress_pct = total_games_played / total_games if total_games > 0 else 0
+            sm2.metric("Games Played", f"{games_played} / {total_games}")
+            progress_pct = games_played / total_games if total_games > 0 else 0
             sm3.metric("Progress", f"{progress_pct:.0%}")
 
             st.progress(progress_pct)
@@ -823,104 +816,126 @@ def _render_season_play(shared):
             with btn_col1:
                 if st.button("Sim Next Week", type="primary", use_container_width=True, key="sim_next_week"):
                     with st.spinner(f"Simulating Week {next_week}..."):
-                        season.simulate_week(next_week, generate_polls=True)
-                    st.session_state["active_season"] = season
-                    st.rerun()
+                        try:
+                            api_client.simulate_week(session_id, week=next_week)
+                            st.rerun()
+                        except api_client.APIError as e:
+                            st.error(f"Simulation failed: {e.detail}")
 
             with btn_col2:
-                remaining_weeks = sorted(set(g.week for g in season.schedule if not g.completed))
-                if len(remaining_weeks) > 1:
-                    target = st.selectbox("Sim through week...", remaining_weeks[1:],
+                remaining = list(range(next_week + 1, total_weeks + 1))
+                if remaining:
+                    target = st.selectbox("Sim through week...", remaining,
                                            format_func=lambda w: f"Week {w}",
                                            key="sim_to_week_select")
                     if st.button("Sim to Week", use_container_width=True, key="sim_to_week_btn"):
                         with st.spinner(f"Simulating through Week {target}..."):
-                            season.simulate_through_week(target, generate_polls=True)
-                        st.session_state["active_season"] = season
-                        st.rerun()
+                            try:
+                                api_client.simulate_through_week(session_id, target)
+                                st.rerun()
+                            except api_client.APIError as e:
+                                st.error(f"Simulation failed: {e.detail}")
 
             with btn_col3:
                 if st.button("Sim Rest of Season", use_container_width=True, key="sim_rest_season"):
-                    with st.spinner(f"Simulating remaining {total_games - total_games_played} games..."):
-                        season.simulate_season(generate_polls=True)
-                    st.session_state["active_season"] = season
-                    st.session_state["season_phase"] = "playoffs_pending"
-                    st.rerun()
+                    with st.spinner(f"Simulating remaining {total_games - games_played} games..."):
+                        try:
+                            api_client.simulate_rest(session_id)
+                            st.rerun()
+                        except api_client.APIError as e:
+                            st.error(f"Simulation failed: {e.detail}")
 
-            if completed_week > 0:
+            if current_week > 0:
                 st.divider()
-                standings = season.get_standings_sorted()
-                top5 = standings[:5]
-                st.subheader("Current Standings (Top 5)")
-                for i, rec in enumerate(top5, 1):
-                    st.markdown(f"{i}. **{rec.team_name}** — {rec.wins}-{rec.losses} (PF: {fmt_vb_score(rec.points_for)})")
-                st.caption("See full standings in the League tab.")
+                try:
+                    standings_resp = api_client.get_standings(session_id)
+                    standings = standings_resp.get("standings", [])
+                    top5 = standings[:5]
+                    st.subheader("Current Standings (Top 5)")
+                    for i, rec in enumerate(top5, 1):
+                        st.markdown(f"{i}. **{rec['team_name']}** — {rec['wins']}-{rec['losses']} (PF: {fmt_vb_score(rec['points_for'])})")
+                    st.caption("See full standings in the League tab.")
+                except api_client.APIError:
+                    pass
 
                 st.divider()
                 st.subheader("Recent Results")
-                show_weeks = range(max(1, completed_week - 2), completed_week + 1)
+                show_weeks = range(max(1, current_week - 2), current_week + 1)
                 for w in show_weeks:
-                    _render_week_results(season, w)
+                    _render_week_results_api(session_id, w)
         else:
-            st.session_state["season_phase"] = "playoffs_pending"
             st.rerun()
 
     elif phase == "playoffs_pending":
         st.success("Regular season complete!")
-        standings = season.get_standings_sorted()
-        sm1, sm2, sm3 = st.columns(3)
-        sm1.metric("Games Played", total_games_played)
-        best = standings[0] if standings else None
-        sm2.metric("#1 Team", best.team_name if best else "—")
-        sm3.metric("Record", f"{best.wins}-{best.losses}" if best else "—")
+        try:
+            standings_resp = api_client.get_standings(session_id)
+            standings = standings_resp.get("standings", [])
+            sm1, sm2, sm3 = st.columns(3)
+            sm1.metric("Games Played", games_played)
+            best = standings[0] if standings else None
+            sm2.metric("#1 Team", best["team_name"] if best else "—")
+            sm3.metric("Record", f"{best['wins']}-{best['losses']}" if best else "—")
+        except api_client.APIError:
+            pass
 
+        playoff_size = st.session_state.get("season_playoff_size", 8)
         if playoff_size > 0:
             st.subheader(f"Playoff ({playoff_size} teams)")
             st.caption("Conference champions get auto-bids, remaining spots filled by Power Index.")
             if st.button("Run Playoffs", type="primary", use_container_width=True, key="run_playoffs_btn"):
                 with st.spinner("Running playoffs..."):
-                    season.simulate_playoff(num_teams=min(playoff_size, len(season.teams)))
-                st.session_state["active_season"] = season
-                st.session_state["season_phase"] = "bowls_pending" if bowl_count > 0 else "complete"
-                st.rerun()
-        else:
-            st.session_state["season_phase"] = "bowls_pending" if bowl_count > 0 else "complete"
-            st.rerun()
+                    try:
+                        api_client.run_playoffs(session_id)
+                        st.rerun()
+                    except api_client.APIError as e:
+                        st.error(f"Playoffs failed: {e.detail}")
 
     elif phase == "bowls_pending":
-        if season.champion:
-            st.success(f"**National Champions: {season.champion}**")
+        if champion:
+            st.success(f"**National Champions: {champion}**")
+        bowl_count = st.session_state.get("season_bowl_count", 0)
         st.subheader(f"Bowl Games ({bowl_count} bowls)")
         if st.button("Run Bowl Games", type="primary", use_container_width=True, key="run_bowls_btn"):
             with st.spinner("Running bowl games..."):
-                season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size)
-            st.session_state["active_season"] = season
-            st.session_state["season_phase"] = "complete"
-            st.rerun()
+                try:
+                    api_client.run_bowls(session_id)
+                    st.rerun()
+                except api_client.APIError as e:
+                    st.error(f"Bowl games failed: {e.detail}")
 
     elif phase == "complete":
-        if season.champion:
-            st.success(f"**National Champions: {season.champion}**")
+        if champion:
+            st.success(f"**National Champions: {champion}**")
 
-        standings = season.get_standings_sorted()
-        all_scores = []
-        for g in season.schedule:
-            if g.completed:
-                all_scores.extend([g.home_score or 0, g.away_score or 0])
-        avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+        try:
+            standings_resp = api_client.get_standings(session_id)
+            standings = standings_resp.get("standings", [])
+            schedule_resp = api_client.get_schedule(session_id, completed_only=True)
+            all_games = schedule_resp.get("games", [])
+            all_scores = []
+            for g in all_games:
+                all_scores.extend([g.get("home_score") or 0, g.get("away_score") or 0])
+            avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
 
-        sm1, sm2, sm3, sm4 = st.columns(4)
-        sm1.metric("Teams", len(standings))
-        sm2.metric("Games Played", total_games_played)
-        sm3.metric("Avg Score", f"{avg_score:.1f}")
-        best = standings[0] if standings else None
-        sm4.metric("Top Team", f"{best.team_name}" if best else "—", f"{best.wins}-{best.losses}" if best else "")
+            sm1, sm2, sm3, sm4 = st.columns(4)
+            sm1.metric("Teams", len(standings))
+            sm2.metric("Games Played", len(all_games))
+            sm3.metric("Avg Score", f"{avg_score:.1f}")
+            best = standings[0] if standings else None
+            sm4.metric("Top Team", f"{best['team_name']}" if best else "—", f"{best['wins']}-{best['losses']}" if best else "")
+        except api_client.APIError:
+            pass
 
         st.divider()
         st.caption("Season is complete. Browse results in the League tab, or start a new session.")
 
     if st.button("End Season & Start New", key="end_season_btn"):
-        for key in ["active_season", "season_human_teams_list", "season_phase",
+        try:
+            api_client.delete_session(session_id)
+        except api_client.APIError:
+            pass
+        for key in ["api_session_id", "api_mode", "season_human_teams_list",
                      "season_playoff_size", "season_bowl_count"]:
             st.session_state.pop(key, None)
         st.rerun()
