@@ -252,8 +252,12 @@ def apply_offseason_development(
         event_type = "breakout"
         event_desc = f"High-potential breakout (+{total_gain} total attributes)"
 
-    # Advance year
-    card.year = _next_year(year)
+    # Advance year (skip if redshirted)
+    if getattr(card, '_redshirt_this_season', False):
+        card._was_redshirted = True
+        card.redshirt = True
+    else:
+        card.year = _next_year(year)
 
     if event_type:
         return DevelopmentEvent(
@@ -263,6 +267,60 @@ def apply_offseason_development(
             attr_changes=attr_changes,
         )
     return None
+
+
+REDSHIRT_AI_RATE = 0.22
+
+
+def apply_redshirt_decisions(
+    players: list,
+    injured_players: Optional[list] = None,
+    is_human: bool = False,
+    rng: Optional[random.Random] = None,
+) -> List[str]:
+    """
+    Decide which players get redshirted this offseason.
+
+    Eligibility:
+    - Injured players (season-ending injury) are always eligible
+    - Players who played 4 or fewer games are eligible
+    - Only non-Graduate players can be redshirted
+
+    AI teams redshirt ~22% of eligible players.
+    Human teams must set redshirt manually (not handled here).
+
+    Returns list of redshirted player names.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    if injured_players is None:
+        injured_players = []
+
+    injured_names = set(injured_players)
+    redshirted = []
+
+    for card in players:
+        year = card.year
+        if year in ("Graduate", "graduate"):
+            continue
+
+        games = getattr(card, 'season_games_played', getattr(card, '_season_games', 99))
+        is_injured = card.full_name in injured_names if hasattr(card, 'full_name') else False
+
+        eligible = is_injured or games <= 4
+
+        if not eligible:
+            continue
+
+        if is_human:
+            continue
+
+        if rng.random() < REDSHIRT_AI_RATE:
+            card._redshirt_this_season = True
+            redshirted.append(card.full_name if hasattr(card, 'full_name') else str(card))
+
+    return redshirted
 
 
 def apply_team_development(

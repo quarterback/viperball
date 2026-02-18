@@ -263,7 +263,20 @@ def _serialize_dynasty_status(session: dict) -> dict:
     }
 
 
+_YEAR_ABBREV = {
+    "Freshman": "Fr.", "Sophomore": "So.", "Junior": "Jr.",
+    "Senior": "Sr.", "Graduate": "Gr.",
+    "freshman": "Fr.", "sophomore": "So.", "junior": "Jr.",
+    "senior": "Sr.", "graduate": "Gr.",
+}
+
+
 def _serialize_player(player) -> dict:
+    year_full = getattr(player, "year", "")
+    year_abbr = _YEAR_ABBREV.get(year_full, year_full[:2] + "." if year_full else "")
+    redshirt = getattr(player, "redshirt", False)
+    if redshirt:
+        year_abbr = f"RS {year_abbr}"
     return {
         "name": player.name,
         "number": player.number,
@@ -281,7 +294,10 @@ def _serialize_player(player) -> dict:
         "kick_accuracy": player.kick_accuracy,
         "lateral_skill": player.lateral_skill,
         "tackling": player.tackling,
-        "year": getattr(player, "year", ""),
+        "year": year_full,
+        "year_abbr": year_abbr,
+        "redshirt": redshirt,
+        "season_games_played": getattr(player, "season_games_played", 0),
         "height": getattr(player, "height", ""),
         "weight": getattr(player, "weight", 0),
     }

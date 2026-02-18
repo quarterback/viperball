@@ -262,6 +262,10 @@ class PlayerCard:
     potential: int     # 1-5 stars
     development: str   # normal / quick / slow / late_bloomer
 
+    # ── Redshirt tracking ──
+    redshirt: bool = False
+    season_games_played: int = 0
+
     # ── Career history ──
     career_seasons: List[SeasonStats] = field(default_factory=list)
     current_team: str = ""
@@ -379,6 +383,8 @@ class PlayerCard:
             "potential": self.potential,
             "star_rating": self.star_rating,
             "development": self.development,
+            "redshirt": self.redshirt,
+            "season_games_played": self.season_games_played,
             "current_team": self.current_team,
             "career_totals": {
                 "games": self.career_games,
@@ -426,6 +432,8 @@ class PlayerCard:
             tackling=ratings.get("tackling", 75),
             potential=d.get("potential", 3),
             development=d.get("development", "normal"),
+            redshirt=d.get("redshirt", False),
+            season_games_played=d.get("season_games_played", 0),
             career_seasons=career,
             current_team=d.get("current_team", ""),
         )
@@ -481,6 +489,8 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
         tackling=player.tackling,
         potential=getattr(player, "potential", 3),
         development=getattr(player, "development", "normal"),
+        redshirt=getattr(player, "redshirt", False),
+        season_games_played=getattr(player, "season_games_played", 0),
         current_team=team_name,
     )
 

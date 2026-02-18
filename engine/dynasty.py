@@ -20,7 +20,7 @@ from collections import defaultdict
 from engine.season import Season, TeamRecord, Game, load_teams_from_directory, create_season
 from engine.awards import SeasonHonors, compute_season_awards
 from engine.injuries import InjuryTracker
-from engine.development import apply_team_development, get_preseason_breakout_candidates, DevelopmentReport
+from engine.development import apply_team_development, apply_redshirt_decisions, get_preseason_breakout_candidates, DevelopmentReport
 from engine.ai_coach import auto_assign_all_teams
 from engine.player_card import player_to_card
 
@@ -524,11 +524,46 @@ class Dynasty:
         if injury_tracker is not None:
             self.injury_history[year] = injury_tracker.get_season_injury_report()
 
-        # Apply player development (offseason)
+        # Apply redshirt decisions + player development (offseason)
         if player_cards is not None:
             dev_events = []
+            redshirt_events = []
             dev_rng = rng or random.Random(year + 42)
+
+            season_injured = {}
+            if injury_tracker is not None:
+                for inj in injury_tracker.season_log:
+                    if inj.is_season_ending:
+                        team_inj = season_injured.setdefault(inj.team_name, [])
+                        team_inj.append(inj.player_name)
+
+            human_teams = set()
+            if self.coach and self.coach.team_name:
+                human_teams.add(self.coach.team_name)
+
             for team_name, cards in player_cards.items():
+                for card in cards:
+                    team = season.teams.get(team_name)
+                    if team:
+                        player_match = next(
+                            (p for p in team.players if p.name == card.full_name), None
+                        )
+                        if player_match:
+                            card.season_games_played = getattr(player_match, 'season_games_played', 99)
+                        else:
+                            card.season_games_played = 99
+
+                team_injured = season_injured.get(team_name, [])
+                is_human = team_name in human_teams
+                rs_names = apply_redshirt_decisions(
+                    cards,
+                    injured_players=team_injured,
+                    is_human=is_human,
+                    rng=dev_rng,
+                )
+                for name in rs_names:
+                    redshirt_events.append({"team": team_name, "player": name})
+
                 report = apply_team_development(cards, rng=dev_rng)
                 for ev in report.notable_events:
                     dev_events.append({
@@ -538,7 +573,28 @@ class Dynasty:
                         "description": ev.description,
                         "attr_changes": ev.attr_changes,
                     })
+
+                for card in cards:
+                    if hasattr(card, '_redshirt_this_season'):
+                        del card._redshirt_this_season
+
+            for team_name, cards in player_cards.items():
+                team = season.teams.get(team_name)
+                if team:
+                    card_map = {c.full_name: c for c in cards}
+                    for player in team.players:
+                        card = card_map.get(player.name)
+                        if card:
+                            player.year = card.year
+                            player.redshirt = card.redshirt
+                            player.season_games_played = 0
+                            card.season_games_played = 0
+                            if hasattr(card, '_was_redshirted'):
+                                del card._was_redshirted
+
             self.development_history[year] = dev_events
+            if redshirt_events:
+                self.development_history[f"{year}_redshirts"] = redshirt_events
 
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))

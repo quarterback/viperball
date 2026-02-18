@@ -482,6 +482,11 @@ class Season:
         )
         result = engine.simulate_game()
 
+        for p in home_team.players:
+            p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+        for p in away_team.players:
+            p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+
         game.home_score = result['final_score']['home']['score']
         game.away_score = result['final_score']['away']['score']
         game.completed = True
