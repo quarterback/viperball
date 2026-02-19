@@ -847,6 +847,19 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
                 color = "green" if attr_val >= 80 else ("orange" if attr_val >= 60 else "red")
                 col.markdown(f"**{attr_name}:** :{color}[{attr_val}]")
 
+            p_awards = p.get("career_awards", [])
+            if p_awards:
+                st.markdown("**Career Awards**")
+                award_rows = []
+                for aw in p_awards:
+                    award_rows.append({
+                        "Year": aw.get("year", ""),
+                        "Award": aw.get("award", ""),
+                        "Level": aw.get("level", "").title(),
+                        "Team": aw.get("team", ""),
+                    })
+                st.dataframe(pd.DataFrame(award_rows), hide_index=True, use_container_width=True)
+
             try:
                 ps_resp = api_client.get_player_stats(session_id, team=browse_team)
                 team_players = ps_resp.get("players", [])
@@ -885,26 +898,86 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 def _render_awards_stats(session_id, standings, user_team):
     try:
         awards = api_client.get_season_awards(session_id)
-        indiv_awards = awards.get("individual_awards", [])
-        if indiv_awards:
-            st.markdown("**Individual Awards**")
-            award_cols = st.columns(min(3, len(indiv_awards)))
-            for i, award in enumerate(indiv_awards):
-                col = award_cols[i % len(award_cols)]
-                col.metric(
-                    award.get("award_name", ""),
-                    award.get("player_name", ""),
-                    f"{award.get('team_name', '')} — {award.get('position', '')}"
-                )
-            st.markdown("---")
-            st.markdown("**Team Awards**")
-            team_aw1, team_aw2 = st.columns(2)
-            if awards.get("coach_of_year"):
-                team_aw1.metric("Coach of the Year", awards["coach_of_year"])
-            if awards.get("most_improved"):
-                team_aw2.metric("Most Improved Program", awards["most_improved"])
     except api_client.APIError:
-        pass
+        awards = {}
+
+    indiv_awards = awards.get("individual_awards", [])
+    if indiv_awards:
+        st.markdown("### National Individual Awards")
+        award_cols = st.columns(min(3, len(indiv_awards)))
+        for i, award in enumerate(indiv_awards):
+            col = award_cols[i % len(award_cols)]
+            col.metric(
+                award.get("award_name", ""),
+                award.get("player_name", ""),
+                f"{award.get('team_name', '')} — {award.get('position', '')}"
+            )
+        st.markdown("---")
+        st.markdown("**Team Awards**")
+        team_aw1, team_aw2 = st.columns(2)
+        if awards.get("coach_of_year"):
+            team_aw1.metric("Coach of the Year", awards["coach_of_year"])
+        if awards.get("most_improved"):
+            team_aw2.metric("Most Improved Program", awards["most_improved"])
+
+    for tier_key, tier_label in [
+        ("all_american_first", "All-CVL First Team"),
+        ("all_american_second", "All-CVL Second Team"),
+        ("all_american_third", "All-CVL Third Team"),
+        ("honorable_mention", "All-CVL Honorable Mention"),
+        ("all_freshman", "All-Freshman Team"),
+    ]:
+        tier_data = awards.get(tier_key)
+        if tier_data and tier_data.get("slots"):
+            with st.expander(f"**{tier_label}**"):
+                rows = []
+                for slot in tier_data["slots"]:
+                    rows.append({
+                        "Position": slot.get("position", ""),
+                        "Player": slot.get("player_name", ""),
+                        "Team": slot.get("team_name", ""),
+                        "Year": slot.get("year_in_school", ""),
+                        "Rating": slot.get("overall_rating", 0),
+                    })
+                if rows:
+                    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    ac_teams = awards.get("all_conference_teams", {})
+    conf_awards = awards.get("conference_awards", {})
+    if ac_teams or conf_awards:
+        st.markdown("### Conference Awards")
+        conf_names = sorted(set(list(ac_teams.keys()) + list(conf_awards.keys())))
+        selected_conf = st.selectbox("Select Conference", conf_names, key="awards_conf_select") if conf_names else None
+        if selected_conf:
+            c_indiv = conf_awards.get(selected_conf, [])
+            if c_indiv:
+                st.markdown(f"**{selected_conf} Individual Awards**")
+                ci_cols = st.columns(min(3, len(c_indiv)))
+                for i, ca in enumerate(c_indiv):
+                    ci_cols[i % len(ci_cols)].metric(
+                        ca.get("award_name", ""),
+                        ca.get("player_name", ""),
+                        f"{ca.get('team_name', '')} — {ca.get('position', '')}"
+                    )
+            conf_tiers = ac_teams.get(selected_conf, {})
+            for tier_key in ["first", "second"]:
+                tier = conf_tiers.get(tier_key)
+                if tier and tier.get("slots"):
+                    label = "First Team" if tier_key == "first" else "Second Team"
+                    with st.expander(f"All-{selected_conf} {label}"):
+                        rows = []
+                        for slot in tier["slots"]:
+                            rows.append({
+                                "Position": slot.get("position", ""),
+                                "Player": slot.get("player_name", ""),
+                                "Team": slot.get("team_name", ""),
+                                "Year": slot.get("year_in_school", ""),
+                                "Rating": slot.get("overall_rating", 0),
+                            })
+                        if rows:
+                            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    st.markdown("---")
 
     st.markdown("**Statistical Leaders**")
     if standings:

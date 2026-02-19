@@ -550,6 +550,9 @@ class Dynasty:
         )
         self.honors_history[year] = honors.to_dict()
 
+        if player_cards is not None:
+            self._record_awards_to_cards(honors, player_cards, year)
+
         self.awards_history[year] = SeasonAwards(
             year=year,
             champion=season.champion or "N/A",
@@ -907,6 +910,30 @@ class Dynasty:
     def get_team_prestige(self, team_name: str) -> int:
         """Return current prestige rating for a team."""
         return self.team_prestige.get(team_name, 50)
+
+    def _record_awards_to_cards(
+        self,
+        honors: "SeasonHonors",
+        player_cards: Dict[str, list],
+        year: int,
+    ) -> None:
+        card_lookup: Dict[str, "PlayerCard"] = {}
+        for team_name, cards in player_cards.items():
+            for card in cards:
+                key = f"{card.full_name}|{team_name}"
+                card_lookup[key] = card
+
+        for winner, level in honors.all_winners():
+            key = f"{winner.player_name}|{winner.team_name}"
+            card = card_lookup.get(key)
+            if card is not None:
+                card.career_awards.append({
+                    "year": year,
+                    "award": winner.award_name,
+                    "level": level,
+                    "team": winner.team_name,
+                    "position": winner.position,
+                })
 
     def get_honors(self, year: int) -> Optional[dict]:
         """Return the full SeasonHonors dict for a given year."""

@@ -334,6 +334,7 @@ class PlayerCard:
 
     # ── Career history ──
     career_seasons: List[SeasonStats] = field(default_factory=list)
+    career_awards: List[Dict] = field(default_factory=list)
     current_team: str = ""
 
     # ── Computed ──
@@ -462,6 +463,7 @@ class PlayerCard:
                 "kick_pct": self.career_kick_pct,
             },
             "career_seasons": [s.to_dict() for s in self.career_seasons],
+            "career_awards": self.career_awards,
         }
 
     @classmethod
@@ -501,6 +503,7 @@ class PlayerCard:
             redshirt=d.get("redshirt", False),
             season_games_played=d.get("season_games_played", 0),
             career_seasons=career,
+            career_awards=d.get("career_awards", []),
             current_team=d.get("current_team", ""),
         )
 

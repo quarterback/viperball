@@ -388,6 +388,7 @@ def _serialize_player(player) -> dict:
         "nationality": getattr(player, "nationality", "American"),
         "potential": getattr(player, "potential", 3),
         "development": getattr(player, "development", "normal"),
+        "career_awards": getattr(player, "career_awards", []),
     }
 
 
@@ -1242,18 +1243,7 @@ def season_awards(session_id: str):
             season, year=2025,
             conferences=season.conferences if hasattr(season, 'conferences') else None,
         )
-        result = {"individual_awards": [], "coach_of_year": None, "most_improved": None}
-        if season_honors.individual_awards:
-            for a in season_honors.individual_awards:
-                result["individual_awards"].append({
-                    "award_name": a.award_name,
-                    "player_name": a.player_name,
-                    "position": a.position,
-                    "team_name": a.team_name,
-                    "overall_rating": a.overall_rating,
-                })
-        result["coach_of_year"] = season_honors.coach_of_year
-        result["most_improved"] = season_honors.most_improved
+        result = season_honors.to_dict()
         return result
     except Exception as e:
         return {"individual_awards": [], "coach_of_year": None, "most_improved": None, "error": str(e)}

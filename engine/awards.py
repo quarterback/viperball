@@ -150,6 +150,9 @@ class SeasonHonors:
     coach_of_year: str = ""
     most_improved: str = ""
 
+    # Conference-level individual awards: conf_name -> list of AwardWinner
+    conference_awards: Dict[str, List[AwardWinner]] = field(default_factory=dict)
+
     # ── helpers ──
     def get_award(self, award_name: str) -> Optional[AwardWinner]:
         for a in self.individual_awards:
@@ -157,10 +160,54 @@ class SeasonHonors:
                 return a
         return None
 
+    def all_winners(self) -> List[Tuple[AwardWinner, str]]:
+        """Return all award winners with their level ('national'/'conference')."""
+        results = []
+        for a in self.individual_awards:
+            results.append((a, "national"))
+        for tier_name, tier_obj in [
+            ("All-CVL First Team", self.all_american_first),
+            ("All-CVL Second Team", self.all_american_second),
+            ("All-CVL Third Team", self.all_american_third),
+            ("All-CVL Honorable Mention", self.honorable_mention),
+            ("All-Freshman Team", self.all_freshman),
+        ]:
+            if tier_obj:
+                for slot in tier_obj.slots:
+                    results.append((AwardWinner(
+                        award_name=tier_name,
+                        player_name=slot.player_name,
+                        team_name=slot.team_name,
+                        position=slot.position,
+                        year_in_school=slot.year_in_school,
+                        overall_rating=slot.overall_rating,
+                        reason=slot.reason,
+                    ), "national"))
+        for conf_name, tiers in self.all_conference_teams.items():
+            for tier_key, tier_obj in tiers.items():
+                tier_label = f"All-{conf_name} {'First' if tier_key == 'first' else 'Second'} Team"
+                for slot in tier_obj.slots:
+                    results.append((AwardWinner(
+                        award_name=tier_label,
+                        player_name=slot.player_name,
+                        team_name=slot.team_name,
+                        position=slot.position,
+                        year_in_school=slot.year_in_school,
+                        overall_rating=slot.overall_rating,
+                        reason=slot.reason,
+                    ), "conference"))
+        for conf_name, awards_list in self.conference_awards.items():
+            for a in awards_list:
+                results.append((a, "conference"))
+        return results
+
     def to_dict(self) -> dict:
         ac = {}
         for conf, tiers in self.all_conference_teams.items():
             ac[conf] = {tier: obj.to_dict() for tier, obj in tiers.items()}
+        ca = {}
+        for conf, awards_list in self.conference_awards.items():
+            ca[conf] = [a.to_dict() for a in awards_list]
         return {
             "year": self.year,
             "individual_awards": [a.to_dict() for a in self.individual_awards],
@@ -170,6 +217,7 @@ class SeasonHonors:
             "honorable_mention":    self.honorable_mention.to_dict()   if self.honorable_mention   else None,
             "all_freshman":         self.all_freshman.to_dict()         if self.all_freshman        else None,
             "all_conference_teams": ac,
+            "conference_awards": ca,
             "coach_of_year": self.coach_of_year,
             "most_improved": self.most_improved,
         }
@@ -521,6 +569,133 @@ def _select_all_conference_both(
 
 
 # ──────────────────────────────────────────────
+# CONFERENCE INDIVIDUAL AWARDS
+# ──────────────────────────────────────────────
+
+def _select_conference_individual_awards(
+    conference_name: str,
+    conf_teams: List[str],
+    all_teams: Dict[str, Team],
+    standings: dict,
+    prev_season_wins: Dict[str, int] = None,
+) -> List[AwardWinner]:
+    """Select conference-level individual awards mirroring national trophies."""
+    conf_team_objs = {t: all_teams[t] for t in conf_teams if t in all_teams}
+    if not conf_team_objs:
+        return []
+
+    awards: List[AwardWinner] = []
+    seen: set = set()
+
+    def _add(player, team_name, award_name, reason):
+        seen.add(f"{team_name}::{player.name}")
+        awards.append(AwardWinner(
+            award_name=award_name,
+            player_name=player.name,
+            team_name=team_name,
+            position=player.position,
+            year_in_school=getattr(player, "year", ""),
+            overall_rating=player.overall,
+            reason=reason,
+        ))
+
+    # Conference MVP
+    best_poy = None
+    best_poy_score = -1.0
+    for t_name, t in conf_team_objs.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            if f"{t_name}::{p.name}" in seen:
+                continue
+            s = _national_poy_score(p, mult)
+            if s > best_poy_score:
+                best_poy_score = s
+                best_poy = (p, t_name)
+    if best_poy:
+        _add(best_poy[0], best_poy[1], f"{conference_name} MVP",
+             f"{conference_name} Player of the Year ({best_poy[1]})")
+
+    # Conference Offensive Player of the Year
+    off_groups = {"zeroback", "viper", "back"}
+    best_off = None
+    best_off_score = -1.0
+    for t_name, t in conf_team_objs.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen:
+                continue
+            if _pos_group(p.position) not in off_groups:
+                continue
+            s = _player_score(p, mult)
+            if s > best_off_score:
+                best_off_score = s
+                best_off = (p, t_name)
+    if best_off:
+        _add(best_off[0], best_off[1], f"{conference_name} Offensive POY",
+             f"{conference_name} Offensive Player of the Year ({best_off[1]})")
+
+    # Conference Defensive Player of the Year
+    def_groups = {"lineman", "safety"}
+    best_def = None
+    best_def_score = -1.0
+    for t_name, t in conf_team_objs.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen:
+                continue
+            if _pos_group(p.position) not in def_groups:
+                continue
+            s = _defensive_score(p, mult)
+            if s > best_def_score:
+                best_def_score = s
+                best_def = (p, t_name)
+    if best_def:
+        _add(best_def[0], best_def[1], f"{conference_name} Defensive POY",
+             f"{conference_name} Defensive Player of the Year ({best_def[1]})")
+
+    # Conference Freshman of the Year
+    best_fresh = None
+    best_fresh_score = -1.0
+    for t_name, t in conf_team_objs.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen:
+                continue
+            if getattr(p, "year", "") != "Freshman":
+                continue
+            s = _player_score(p, mult)
+            if s > best_fresh_score:
+                best_fresh_score = s
+                best_fresh = (p, t_name)
+    if best_fresh:
+        _add(best_fresh[0], best_fresh[1], f"{conference_name} Freshman of the Year",
+             f"{conference_name} Top Freshman ({best_fresh[1]})")
+
+    # Conference Coach of the Year
+    conf_standings = {t: standings[t] for t in conf_teams if t in standings}
+    if conf_standings:
+        coy_scores = {
+            t_name: r.win_percentage * 0.7 + r.avg_opi * 0.003
+            for t_name, r in conf_standings.items()
+        }
+        coy_team = max(coy_scores, key=coy_scores.get)
+        awards.append(AwardWinner(
+            award_name=f"{conference_name} Coach of the Year",
+            player_name=coy_team,
+            team_name=coy_team,
+            position="Coach",
+            year_in_school="",
+            overall_rating=0,
+            reason=f"{conference_name} Coach of the Year",
+        ))
+
+    return awards
+
+
+# ──────────────────────────────────────────────
 # TEAM-LEVEL AWARDS
 # ──────────────────────────────────────────────
 
@@ -611,6 +786,9 @@ def compute_season_awards(
         for conf_name, conf_teams in conferences.items():
             honors.all_conference_teams[conf_name] = _select_all_conference_both(
                 conf_name, conf_teams, teams, standings, year
+            )
+            honors.conference_awards[conf_name] = _select_conference_individual_awards(
+                conf_name, conf_teams, teams, standings, prev_season_wins
             )
 
     # ── Team-level awards ─────────────────────────────────────────────────
