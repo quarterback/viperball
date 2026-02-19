@@ -6,7 +6,8 @@ The Viperball Simulation Sandbox is a browser-accessible platform for the Colleg
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
 - **Snap kick (DK) rate**: User confirmed 1.78-2.23/game is PERFECT. Do NOT lower snap kicks — the old 0.5-1.5 target was too low. Updated target range: 1.5-2.5 DK per team per game.
-- **Place kick philosophy**: User wants more PK attempts — teams should try field goals instead of punting when drives stall, even from 40+ yards. PK attempts target: 3-5 per team per game. Success rate is secondary to attempt frequency.
+- **Place kick philosophy**: User wants more PK attempts — teams should try field goals instead of punting when drives stall, even from 40+ yards. PK attempts target: 3-5 per team per game. Max FG range: 71 yards. Success rate is secondary to attempt frequency.
+- **Snap kick philosophy**: Drop kicks (snap kicks) should be preferred over place kicks from close range (≤25 yards: why take 3 when you can get 5?). Common at 25-40 yards, plausible at 40-55 yards. Kicking specialists (kicking_zb archetype or skill ≥82) get significant DK preference boosts. Target DK rate: 1.78-2.23 per team per game.
 - **Stat variance**: User wants all stat categories to produce a natural low-to-high range across seasons, NOT predictive clustering. Per-game rhythm/intensity factors (0.65-1.35 range) create this variance.
 - **Lateral chain risk**: User wants laterals to be genuinely risky. Target fumble rate ~25% (was 7%). Per-exchange fumble 0.035 with chain-length scaling.
 
@@ -40,7 +41,7 @@ The project maintains a clear separation of concerns:
 - **`main.py`**: The application's entry point, initiating both FastAPI and Streamlit processes.
 
 ### Feature Specifications
-- **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
+- **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and game stat tracking.
 - **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays with unique mechanics, Viper and Defensive Alignment systems, and a detailed Run Fumble System with recovery contests.
 - **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, special teams, and defensive stats (tackles, TFL, sacks, hurries). Player Stats UI has 5 tabs: Rushing & Scoring, Lateral Game, Kicking, Defense, Returns & Special Teams.

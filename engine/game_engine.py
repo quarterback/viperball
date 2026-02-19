@@ -1499,8 +1499,10 @@ class ViperballEngine:
             return 0.84
         elif distance <= 54:
             return 0.72
+        elif distance <= 65:
+            return max(0.25, 0.52 - (distance - 55) * 0.02)
         else:
-            return max(0.20, 0.52 - (distance - 55) * 0.02)
+            return max(0.12, 0.30 - (distance - 65) * 0.03)
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         if kicker_skill >= 85:
@@ -1513,22 +1515,24 @@ class ViperballEngine:
             tier = 3
 
         table = [
-            [0.94, 0.82, 0.72, 0.57, 0.42],
-            [0.84, 0.72, 0.61, 0.45, 0.31],
-            [0.74, 0.62, 0.51, 0.35, 0.22],
-            [0.64, 0.52, 0.41, 0.27, 0.14],
+            [0.96, 0.88, 0.76, 0.60, 0.42, 0.28],
+            [0.90, 0.80, 0.66, 0.48, 0.31, 0.18],
+            [0.82, 0.70, 0.55, 0.37, 0.22, 0.11],
+            [0.72, 0.58, 0.44, 0.28, 0.14, 0.06],
         ]
 
-        if distance <= 25:
+        if distance <= 20:
             col = 0
-        elif distance <= 34:
+        elif distance <= 30:
             col = 1
-        elif distance <= 44:
+        elif distance <= 40:
             col = 2
-        elif distance <= 54:
+        elif distance <= 48:
             col = 3
-        else:
+        elif distance <= 55:
             col = 4
+        else:
+            col = 5
 
         return table[tier][col]
 
@@ -1567,6 +1571,7 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
         kicker_skill = kicker.kicking
+        is_specialist = kicker.archetype == "kicking_zb" or kicker_skill >= 82
 
         pk_success = self._place_kick_success(fg_distance)
         pk_miss_cost = (1 - pk_success) * tod_value * 0.3
@@ -1577,13 +1582,27 @@ class ViperballEngine:
         dk_recovery = 0.35
         dk_miss_value = dk_recovery * (self._fp_value(fp) * 0.5) + (1 - dk_recovery) * (-tod_value * 0.3)
         ev_drop_kick = dk_success * 5 + (1 - dk_success) * dk_miss_value
-        ev_drop_kick *= 1.0
+
+        if fg_distance <= 20:
+            ev_drop_kick *= 4.00
+        elif fg_distance <= 25:
+            ev_drop_kick *= 3.20
+        elif fg_distance <= 30:
+            ev_drop_kick *= 2.50
+        elif fg_distance <= 35:
+            ev_drop_kick *= 1.90
+        elif fg_distance <= 40:
+            ev_drop_kick *= 1.55
+        elif fg_distance <= 48:
+            ev_drop_kick *= 1.25
+        else:
+            ev_drop_kick *= 1.00
 
         arch_info = get_archetype_info(kicker.archetype)
-        if kicker.archetype == "kicking_zb":
-            ev_drop_kick *= 1.20
+        if is_specialist:
+            ev_drop_kick *= 1.45
             snapkick_boost = arch_info.get("snapkick_trigger_boost", 0.0)
-            ev_drop_kick *= (1.0 + snapkick_boost * 0.4)
+            ev_drop_kick *= (1.0 + snapkick_boost * 0.5)
 
         if fp <= 25:
             punt_distance = random.gauss(55, 8)
@@ -1613,8 +1632,10 @@ class ViperballEngine:
         failure_cost = (1 - conversion_rate) * tod_value * 0.5
         ev_go_for_it = conversion_rate * (continuation_value + drive_ep * 0.6 + td_prob_boost) - failure_cost
 
-        aggression = {4: 1.25, 5: 1.05, 6: 0.92}.get(down, 1.0)
+        aggression = {4: 1.40, 5: 1.10, 6: 0.92}.get(down, 1.0)
         ev_go_for_it *= aggression
+        if fp >= 35 and fp < 52 and down <= 5 and ytg <= 5:
+            ev_go_for_it *= 1.30
 
         score_diff = self._get_score_diff()
         quarter = self.state.quarter
@@ -1646,6 +1667,8 @@ class ViperballEngine:
             ev_place_kick *= 1.20
         elif fg_distance <= 65:
             ev_place_kick *= 1.05
+        elif fg_distance <= 71:
+            ev_place_kick *= 0.85
 
         style = self._current_style()
         kick_rate = style.get("kick_rate", 0.2)
@@ -1656,7 +1679,7 @@ class ViperballEngine:
             ev_drop_kick *= 1.08
 
         options = {}
-        if fg_distance <= 65:
+        if fg_distance <= 71:
             options['place_kick'] = ev_place_kick
         if fg_distance <= 55:
             options['drop_kick'] = ev_drop_kick
@@ -1666,12 +1689,32 @@ class ViperballEngine:
 
         best = max(options, key=options.get)
 
-        if best == 'punt' and 'place_kick' in options and fg_distance <= 58:
+        if fg_distance <= 25 and 'drop_kick' in options and down >= 4:
+            if is_specialist:
+                best = 'drop_kick'
+            elif random.random() < 0.75:
+                best = 'drop_kick'
+
+        if fg_distance <= 35 and 'drop_kick' in options and down >= 5:
+            if is_specialist:
+                if random.random() < 0.85:
+                    best = 'drop_kick'
+            elif random.random() < 0.50:
+                best = 'drop_kick'
+
+        if best == 'punt' and 'place_kick' in options and fg_distance <= 62:
             best = 'place_kick'
 
-        if best == 'punt' and 'place_kick' in options and fg_distance <= 65:
+        if best == 'punt' and 'place_kick' in options and fg_distance <= 71:
             if random.random() < 0.55:
                 best = 'place_kick'
+
+        if best == 'punt' and 'drop_kick' in options and fg_distance <= 50:
+            best = 'drop_kick'
+
+        if best == 'punt' and 'drop_kick' in options and fg_distance <= 55:
+            if random.random() < 0.40:
+                best = 'drop_kick'
 
         if best == 'go_for_it' and 'place_kick' in options and fg_distance <= 45 and down >= 4:
             conservative_prob = 0.0
@@ -1686,7 +1729,18 @@ class ViperballEngine:
             if random.random() < conservative_prob:
                 best = 'place_kick'
 
-        if 'place_kick' in options and fg_distance <= 50 and down >= 5 and ytg >= 3:
+        if best == 'place_kick' and 'drop_kick' in options and fg_distance <= 25:
+            if is_specialist:
+                best = 'drop_kick'
+            elif random.random() < 0.70:
+                best = 'drop_kick'
+        elif best == 'place_kick' and 'drop_kick' in options and fg_distance <= 35:
+            if is_specialist and random.random() < 0.65:
+                best = 'drop_kick'
+            elif random.random() < 0.35:
+                best = 'drop_kick'
+
+        if 'place_kick' in options and fg_distance <= 55 and down >= 5 and ytg >= 3:
             coach_kick_prob = 0.0
             if down == 6 and ytg >= 5:
                 coach_kick_prob = 0.92
@@ -1701,46 +1755,68 @@ class ViperballEngine:
             if fg_distance <= 35:
                 coach_kick_prob += 0.12
             if random.random() < coach_kick_prob:
-                best = 'place_kick'
+                if fg_distance <= 30 and 'drop_kick' in options:
+                    best = 'drop_kick'
+                else:
+                    best = 'place_kick'
 
-        if down == 6 and fg_distance <= 50 and 'place_kick' in options:
-            if score_diff < 0 and abs(score_diff) <= 4 and 'drop_kick' in options:
+        if down == 6 and fg_distance <= 55 and ('place_kick' in options or 'drop_kick' in options):
+            if fg_distance <= 25 and 'drop_kick' in options:
                 best = 'drop_kick'
-            else:
+            elif fg_distance <= 40 and 'drop_kick' in options and (is_specialist or random.random() < 0.50):
+                best = 'drop_kick'
+            elif score_diff < 0 and abs(score_diff) <= 4 and 'drop_kick' in options:
+                best = 'drop_kick'
+            elif 'place_kick' in options:
                 best = 'place_kick'
 
         if fp >= 90:
             if ytg <= 1 and down <= 4:
                 best = 'go_for_it'
-            elif down >= 5 and 'place_kick' in options and fg_distance <= 25:
+            elif down >= 4 and 'drop_kick' in options and fg_distance <= 25:
+                best = 'drop_kick'
+            elif down >= 5 and 'place_kick' in options and fg_distance <= 27:
                 best = 'place_kick'
         elif fp >= 80:
             if ytg <= 1 and down <= 3:
                 best = 'go_for_it'
+            elif down >= 4 and 'drop_kick' in options and fg_distance <= 30:
+                if is_specialist or random.random() < 0.65:
+                    best = 'drop_kick'
             elif down >= 5 and 'place_kick' in options:
                 best = 'place_kick'
         else:
             if ytg <= 2 and fp >= 30 and down <= 3:
                 best = 'go_for_it'
 
-            if fp >= 55 and best == 'punt':
-                if fg_distance <= 62 and 'place_kick' in options:
+            if fp >= 50 and best == 'punt':
+                if 'drop_kick' in options and fg_distance <= 50:
+                    best = 'drop_kick'
+                elif fg_distance <= 67 and 'place_kick' in options:
                     best = 'place_kick'
                 elif 'go_for_it' in options:
                     best = 'go_for_it'
 
-            if down == 6 and 'place_kick' in options and fg_distance <= 65:
-                best = 'place_kick'
-
-            if down == 5 and 'place_kick' in options and fg_distance <= 62:
-                best = 'place_kick'
-            elif down == 4 and 'place_kick' in options and fg_distance <= 50 and ytg >= 3:
-                if random.random() < 0.65:
+            if down == 6 and 'place_kick' in options and fg_distance <= 71:
+                if fg_distance <= 35 and 'drop_kick' in options:
+                    best = 'drop_kick'
+                else:
                     best = 'place_kick'
-            elif down == 4 and 'place_kick' in options and fg_distance <= 45 and ytg >= 8:
+
+            if down == 5 and 'place_kick' in options and fg_distance <= 67:
+                if fg_distance <= 30 and 'drop_kick' in options:
+                    best = 'drop_kick'
+                else:
+                    best = 'place_kick'
+            elif down == 4 and 'place_kick' in options and fg_distance <= 55 and ytg >= 3:
+                if fg_distance <= 25 and 'drop_kick' in options:
+                    best = 'drop_kick'
+                elif random.random() < 0.65:
+                    best = 'place_kick'
+            elif down == 4 and 'place_kick' in options and fg_distance <= 50 and ytg >= 8:
                 best = 'place_kick'
 
-            if 'place_kick' in options and fg_distance <= 65:
+            if 'place_kick' in options and fg_distance <= 71:
                 take_points_prob = 0.0
                 if down == 6 and ytg >= 4:
                     take_points_prob = 0.95
@@ -1770,20 +1846,32 @@ class ViperballEngine:
                     take_points_prob += 0.08
                 if fg_distance <= 40:
                     take_points_prob += 0.10
+                if fg_distance >= 66:
+                    take_points_prob *= 0.50
                 if random.random() < take_points_prob:
-                    best = 'place_kick'
+                    if fg_distance <= 30 and 'drop_kick' in options:
+                        best = 'drop_kick'
+                    else:
+                        best = 'place_kick'
 
-            if 'drop_kick' in options and fp < 80 and best != 'place_kick':
-                if score_diff < -6 and fg_distance <= 45 and kicker_skill >= 65:
+            if 'drop_kick' in options and fp < 80:
+                if fg_distance <= 25:
+                    if is_specialist or random.random() < 0.80:
+                        best = 'drop_kick'
+                elif fg_distance <= 35 and (is_specialist or down >= 4):
+                    if random.random() < 0.55:
+                        best = 'drop_kick'
+                elif fg_distance <= 45 and is_specialist and down >= 4:
+                    if random.random() < 0.35:
+                        best = 'drop_kick'
+                elif score_diff < -6 and fg_distance <= 48 and kicker_skill >= 65:
                     best = 'drop_kick'
-                elif score_diff < -3 and fg_distance <= 38 and down >= 5:
+                elif score_diff < -3 and fg_distance <= 40 and down >= 5:
                     best = 'drop_kick'
-                if kicker.archetype == "kicking_zb" and fg_distance <= 42 and down >= 4:
-                    best = 'drop_kick'
-                if down >= 4 and fg_distance <= 35 and random.random() < 0.20:
+                elif down >= 4 and fg_distance <= 38 and random.random() < 0.25:
                     best = 'drop_kick'
 
-        if down <= 3 and best != 'place_kick':
+        if down <= 3 and best not in ('place_kick', 'drop_kick'):
             return None
 
         type_map = {
@@ -2012,7 +2100,7 @@ class ViperballEngine:
             should_evaluate_kick = False
             if self.state.down >= 5:
                 should_evaluate_kick = True
-            elif self.state.down == 4 and (fg_distance <= 65 or self.state.yards_to_go >= 4):
+            elif self.state.down == 4 and (fg_distance <= 71 or self.state.yards_to_go >= 4):
                 should_evaluate_kick = True
             elif self.state.down == 3 and fg_distance <= 55 and self.state.yards_to_go >= 10:
                 should_evaluate_kick = True
