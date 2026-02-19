@@ -3438,28 +3438,29 @@ class ViperballEngine:
         receiver_lbl = player_label(receiver)
 
         # Kick distance: how far the kick travels in the air
-        kick_distance = random.randint(8, 35)
+        # Biased toward shorter kicks — kickers aim for completable distances
+        kick_distance = min(random.randint(8, 32), random.randint(8, 28))
         kick_pass_bonus = style.get("kick_pass_bonus", 0.0)
 
         # Completion probability — kick passes are inherently harder than thrown passes.
         # A ball off the foot is less accurate and harder to catch cleanly.
-        kicker_factor = (kicker.kick_accuracy / 85) * 0.6 + (kicker.kicking / 85) * 0.4
-        receiver_factor = (receiver.hands / 85) * 0.5 + (receiver.agility / 85) * 0.3 + (receiver.speed / 85) * 0.2
+        kicker_factor = (kicker.kick_accuracy / 80) * 0.6 + (kicker.kicking / 80) * 0.4
+        receiver_factor = (receiver.hands / 80) * 0.5 + (receiver.agility / 80) * 0.3 + (receiver.speed / 80) * 0.2
         weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
 
         if kick_distance <= 12:
-            base_completion = 0.45
+            base_completion = 0.68
         elif kick_distance <= 18:
-            base_completion = 0.35
+            base_completion = 0.55
         elif kick_distance <= 25:
-            base_completion = 0.24
-        elif kick_distance <= 32:
-            base_completion = 0.15
+            base_completion = 0.40
+        elif kick_distance <= 30:
+            base_completion = 0.25
         else:
-            base_completion = 0.08
+            base_completion = 0.14
 
         completion_prob = base_completion * kicker_factor * receiver_factor * (1.0 + kick_pass_bonus + weather_mod)
-        completion_prob = min(0.55, max(0.05, completion_prob))
+        completion_prob = min(0.70, max(0.08, completion_prob))
 
         # Defensive coverage impact
         defense = self._current_defense()
@@ -3469,20 +3470,20 @@ class ViperballEngine:
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
 
-        # Interception check — kicked balls hang in the air and are very readable.
-        # Defenders with good awareness and hands are more likely to pick it off.
-        base_int_chance = 0.12
+        # Interception check — kicked balls hang in the air and are more readable,
+        # but defenses are still not used to this unconventional play.
+        base_int_chance = 0.05
         int_mod = defense.get("turnover_bonus", 0.0)
         coverage_int = defense.get("kick_pass_coverage", 0.0)
         int_chance = base_int_chance * (1 + int_mod + coverage_int)
-        # Good kicker accuracy reduces INT chance slightly
-        int_chance *= max(0.70, 1.0 - (kicker_factor - 1.0) * 0.3)
+        # Good kicker accuracy reduces INT chance
+        int_chance *= max(0.60, 1.0 - (kicker_factor - 1.0) * 0.4)
         # Longer kicks are easier to read and intercept
         if kick_distance >= 25:
-            int_chance += 0.05
+            int_chance += 0.03
         elif kick_distance >= 18:
-            int_chance += 0.02
-        int_chance = max(0.05, min(0.25, int_chance))
+            int_chance += 0.01
+        int_chance = max(0.03, min(0.15, int_chance))
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
