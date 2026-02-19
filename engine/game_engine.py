@@ -1388,7 +1388,7 @@ class ViperballEngine:
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
         pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
         return_chance = (return_speed / 200) * (1.0 - pindown_bonus) / pindown_defense_factor
-        return_chance = max(0.10, min(0.45, return_chance))
+        return_chance = max(0.0, return_chance)
         can_return_out = random.random() < return_chance
         return not can_return_out
 
@@ -1403,7 +1403,7 @@ class ViperballEngine:
     def kickoff(self, receiving_team: str):
         self.state.possession = receiving_team
         kick_distance = int(random.gauss(62, 10))
-        kick_distance = max(40, min(85, kick_distance))
+        kick_distance = max(20, kick_distance)
 
         receiving_team_obj = self.home_team if receiving_team == "home" else self.away_team
         kicking_team_str = "away" if receiving_team == "home" else "home"
@@ -1420,7 +1420,7 @@ class ViperballEngine:
                 return
 
         return_yards = random.randint(10, 30)
-        start_position = max(10, min(40, return_yards))
+        start_position = max(1, return_yards)
 
         returner = self._pick_returner(receiving_team_obj)
         if returner:
@@ -2397,7 +2397,7 @@ class ViperballEngine:
         # Apply modifiers
         block_prob = base_prob * offense_modifier * defense_modifier
 
-        return min(0.20, max(0.01, block_prob))  # Cap at 20%, floor at 1%
+        return max(0.0, block_prob)
 
     def calculate_muff_probability(self) -> float:
         """
@@ -2417,7 +2417,7 @@ class ViperballEngine:
         muff_prob = BASE_MUFF_PUNT * coverage_modifier
         muff_prob += self.weather_info.get("muff_modifier", 0.0)
 
-        return min(0.15, max(0.02, muff_prob))
+        return max(0.0, muff_prob)
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
         """
@@ -2653,7 +2653,7 @@ class ViperballEngine:
         off_chance -= pressure * 0.05
         turnover_bonus = defense.get("turnover_bonus", 0.0)
         off_chance -= turnover_bonus * 0.10
-        off_chance = max(0.15, min(0.85, off_chance))
+        off_chance = max(0.0, off_chance)
         if random.random() >= off_chance:
             return 'defense', True
         else:
@@ -3824,7 +3824,7 @@ class ViperballEngine:
         kick_suppression = defense.get("kick_suppression", 1.0)
 
         distance = int(base_distance * kicking_factor * kick_suppression)
-        distance = max(20, min(distance, 85))
+        distance = max(5, distance)
 
         if random.random() < 0.04:
             tipped_distance = random.randint(5, 15)
