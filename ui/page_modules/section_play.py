@@ -264,6 +264,60 @@ def _render_non_conference_picker(
     return all_pinned
 
 
+CONFERENCE_TIERS = {
+    "Giant 14": 85,
+    "Big Pacific": 80,
+    "Collegiate Commonwealth": 78,
+    "Interstate Athletic Association": 75,
+    "Southern Sun Conference": 73,
+    "Yankee Fourteen": 70,
+    "Potomac Athletic Conference": 67,
+    "Metropolitan Athletic Union": 65,
+    "Midwest States Interscholastic Association": 62,
+    "Northern Shield": 58,
+    "Pioneer Athletic Association": 55,
+    "Outlands Coast Conference": 52,
+    "Prairie Athletic Union": 50,
+    "Border Conference": 48,
+    "Moonshine League": 45,
+    "National Collegiate League": 42,
+}
+
+PRESTIGE_LABELS = {
+    (80, 100): "Elite",
+    (65, 79): "Strong",
+    (50, 64): "Mid-Tier",
+    (35, 49): "Developing",
+    (0, 34): "Rebuilding",
+}
+
+
+def _get_team_prestige(team: dict) -> int:
+    import hashlib
+    conf = team.get("conference", "Independent")
+    base = CONFERENCE_TIERS.get(conf, 50)
+    name_bytes = team.get("name", "").encode("utf-8")
+    name_hash = int(hashlib.md5(name_bytes).hexdigest(), 16) % 21 - 10
+    return max(10, min(99, base + name_hash))
+
+
+def _get_prestige_label(prestige: int) -> str:
+    for (lo, hi), label in PRESTIGE_LABELS.items():
+        if lo <= prestige <= hi:
+            return label
+    return "Unknown"
+
+
+def _format_team_option(team: dict, show_conference: bool = True) -> str:
+    name = team.get("name", team.get("key", "Unknown"))
+    prestige = _get_team_prestige(team)
+    plabel = _get_prestige_label(prestige)
+    if show_conference:
+        conf = team.get("conference", "")
+        return f"{name} ({conf}) — {plabel} [{prestige}]"
+    return f"{name} — {plabel} [{prestige}]"
+
+
 def _build_conference_team_map(teams):
     conf_map = {}
     for t in teams:
@@ -306,13 +360,12 @@ def _render_team_picker_single(
         default_idx = team_options.index(default_team)
 
     with team_col:
-        conf_labels = {t["name"]: t.get("conference", "") for t in filtered_teams}
-        state_labels = {t["name"]: t.get("state", "") for t in filtered_teams}
+        team_lookup = {t["name"]: t for t in filtered_teams}
         selected = st.selectbox(
             label,
             team_options,
             index=default_idx,
-            format_func=lambda x: f"{x} ({conf_labels.get(x, '')})" if conf_filter == "All Conferences" else f"{x} — {state_labels.get(x, '')}",
+            format_func=lambda x: _format_team_option(team_lookup.get(x, {}), conf_filter == "All Conferences"),
             key=f"{key_prefix}_team_select",
         )
     return selected
@@ -367,11 +420,11 @@ def _render_team_picker_multi(
     if available:
         add_col1, add_col2 = st.columns([3, 1])
         with add_col1:
-            conf_labels = {t["name"]: t.get("conference", "") for t in teams}
+            team_lookup = {t["name"]: t for t in teams}
             selected = st.selectbox(
                 f"Add team ({len(available)} available)",
                 available,
-                format_func=lambda x: f"{x} ({conf_labels.get(x, '')})" if browse_mode != "Conference" else x,
+                format_func=lambda x: _format_team_option(team_lookup.get(x, {}), browse_mode != "Conference"),
                 key=f"{key_prefix}_add_select",
             )
         with add_col2:
@@ -410,15 +463,14 @@ def _render_team_picker_quick(
         return teams[default_idx]["key"] if teams else ""
 
     keys = [t["key"] for t in filtered_teams]
-    names = {t["key"]: t["name"] for t in filtered_teams}
-    confs = {t["key"]: t.get("conference", "") for t in filtered_teams}
+    team_by_key = {t["key"]: t for t in filtered_teams}
 
     sel_idx = min(default_idx, len(keys) - 1)
     selected_key = st.selectbox(
         label,
         keys,
         index=sel_idx,
-        format_func=lambda k: f"{names[k]} ({confs[k]})" if conf_filter == "All Conferences" else names[k],
+        format_func=lambda k: _format_team_option(team_by_key.get(k, {}), conf_filter == "All Conferences"),
         key=f"{key_prefix}_team_select",
     )
     return selected_key
@@ -545,7 +597,7 @@ def _render_new_dynasty(shared):
     st.markdown("**Choose Your Team**")
     coach_team = _render_team_picker_single(teams, label="Your Team", key_prefix="dyn_team")
 
-    start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
+    start_year = st.number_input("Starting Year", min_value=1906, max_value=2050, value=2026, key="start_year")
 
     st.divider()
     st.subheader("Program Archetype")
