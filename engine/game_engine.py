@@ -603,6 +603,7 @@ class Player:
     game_tfl: int = 0
     game_sacks: int = 0
     game_hurries: int = 0
+    game_kick_pass_ints: int = 0
 
     @property
     def overall(self) -> int:
@@ -3405,24 +3406,25 @@ class ViperballEngine:
         kick_distance = random.randint(8, 35)
         kick_pass_bonus = style.get("kick_pass_bonus", 0.0)
 
-        # Completion probability based on distance and player attributes
-        kicker_factor = (kicker.kick_accuracy / 80) * 0.6 + (kicker.kicking / 80) * 0.4
-        receiver_factor = (receiver.hands / 80) * 0.5 + (receiver.agility / 80) * 0.3 + (receiver.speed / 80) * 0.2
+        # Completion probability — kick passes are inherently harder than thrown passes.
+        # A ball off the foot is less accurate and harder to catch cleanly.
+        kicker_factor = (kicker.kick_accuracy / 85) * 0.6 + (kicker.kicking / 85) * 0.4
+        receiver_factor = (receiver.hands / 85) * 0.5 + (receiver.agility / 85) * 0.3 + (receiver.speed / 85) * 0.2
         weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
 
         if kick_distance <= 12:
-            base_completion = 0.72
-        elif kick_distance <= 18:
-            base_completion = 0.60
-        elif kick_distance <= 25:
             base_completion = 0.45
+        elif kick_distance <= 18:
+            base_completion = 0.35
+        elif kick_distance <= 25:
+            base_completion = 0.24
         elif kick_distance <= 32:
-            base_completion = 0.30
+            base_completion = 0.15
         else:
-            base_completion = 0.20
+            base_completion = 0.08
 
         completion_prob = base_completion * kicker_factor * receiver_factor * (1.0 + kick_pass_bonus + weather_mod)
-        completion_prob = min(0.92, max(0.08, completion_prob))
+        completion_prob = min(0.55, max(0.05, completion_prob))
 
         # Defensive coverage impact
         defense = self._current_defense()
@@ -3432,13 +3434,20 @@ class ViperballEngine:
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
 
-        # Interception check (defense reads the kick)
-        base_int_chance = 0.06
+        # Interception check — kicked balls hang in the air and are very readable.
+        # Defenders with good awareness and hands are more likely to pick it off.
+        base_int_chance = 0.12
         int_mod = defense.get("turnover_bonus", 0.0)
-        int_chance = base_int_chance * (1 + int_mod) * (1.0 - (kicker_factor - 1.0) * 0.3)
+        coverage_int = defense.get("kick_pass_coverage", 0.0)
+        int_chance = base_int_chance * (1 + int_mod + coverage_int)
+        # Good kicker accuracy reduces INT chance slightly
+        int_chance *= max(0.70, 1.0 - (kicker_factor - 1.0) * 0.3)
+        # Longer kicks are easier to read and intercept
         if kick_distance >= 25:
-            int_chance += 0.03
-        int_chance = max(0.02, min(0.15, int_chance))
+            int_chance += 0.05
+        elif kick_distance >= 18:
+            int_chance += 0.02
+        int_chance = max(0.05, min(0.25, int_chance))
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -3451,8 +3460,12 @@ class ViperballEngine:
             self.state.down = 1
             self.state.yards_to_go = 20
 
+            # Pick interceptor weighted by awareness + hands (defensive prowess)
             def_team = self.get_defensive_team()
-            interceptor = random.choice(def_team.players[:6])
+            def_candidates = def_team.players[:6]
+            int_weights = [p.awareness + p.hands for p in def_candidates]
+            interceptor = random.choices(def_candidates, weights=int_weights)[0]
+            interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
 
             self.apply_stamina_drain(4)
@@ -4641,7 +4654,9 @@ class ViperballEngine:
                                p.game_kick_deflections > 0 or p.game_coverage_snaps > 0 or
                                p.game_punt_returns > 0 or p.game_kick_returns > 0 or
                                p.game_st_tackles > 0 or p.game_tackles > 0 or
-                               p.game_sacks > 0 or p.game_hurries > 0)
+                               p.game_sacks > 0 or p.game_hurries > 0 or
+                               p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
+                               p.game_kick_pass_receptions > 0)
                 if has_activity:
                     stat_entry = {
                         "tag": player_tag(p),
@@ -4676,10 +4691,17 @@ class ViperballEngine:
                         "punt_return_tds": p.game_punt_return_tds,
                         "muffs": p.game_muffs,
                         "st_tackles": p.game_st_tackles,
+                        "kick_passes_thrown": p.game_kick_passes_thrown,
+                        "kick_passes_completed": p.game_kick_passes_completed,
+                        "kick_pass_yards": p.game_kick_pass_yards,
+                        "kick_pass_tds": p.game_kick_pass_tds,
+                        "kick_pass_receptions": p.game_kick_pass_receptions,
+                        "kick_pass_interceptions_thrown": p.game_kick_pass_interceptions,
                         "tackles": p.game_tackles,
                         "tfl": p.game_tfl,
                         "sacks": p.game_sacks,
                         "hurries": p.game_hurries,
+                        "kick_pass_ints": p.game_kick_pass_ints,
                     }
                     stats.append(stat_entry)
             return sorted(stats, key=lambda x: x["touches"] + x["kick_att"] + x["tackles"], reverse=True)
@@ -4737,6 +4759,10 @@ class ViperballEngine:
         pindowns = [p for p in plays if p.result == "pindown"]
         punts = [p for p in plays if p.play_type == "punt"]
         chaos_recoveries = [p for p in plays if p.result == "chaos_recovery"]
+        kick_passes = [p for p in plays if p.play_type == "kick_pass"]
+        kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
+        kick_pass_ints = [p for p in kick_passes if p.result == "kick_pass_intercepted"]
+        kick_pass_yards = sum(max(0, p.yards_gained) for p in kick_pass_completions)
 
         kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
         kick_percentage = round(len(kick_plays) / max(1, total_plays) * 100, 1)
@@ -4788,6 +4814,10 @@ class ViperballEngine:
             "drop_kicks_attempted": len(drop_kicks_attempted),
             "place_kicks_made": len(place_kicks),
             "place_kicks_attempted": len(place_kicks_attempted),
+            "kick_passes_attempted": len(kick_passes),
+            "kick_passes_completed": len(kick_pass_completions),
+            "kick_pass_yards": kick_pass_yards,
+            "kick_pass_interceptions": len(kick_pass_ints),
             "punts": len(punts),
             "pindowns": len(pindowns),
             "chaos_recoveries": len(chaos_recoveries),
