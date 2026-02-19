@@ -1284,18 +1284,15 @@ class Dynasty:
                 conferences=conf_dict,
                 games_per_team=games_per_team,
             )
+            injury_tracker = InjuryTracker()
+            injury_tracker.seed(hash(f"history_{self.dynasty_name}_{year}_inj") % 999999)
+            season.injury_tracker = injury_tracker
+
             season.simulate_season(generate_polls=True)
 
             effective_playoff = min(playoff_size, len(all_teams))
             if effective_playoff >= 4:
                 season.simulate_playoff(num_teams=effective_playoff)
-
-            injury_tracker = InjuryTracker()
-            injury_tracker.seed(hash(f"history_{self.dynasty_name}_{year}_inj") % 999999)
-            max_week = max((g.week for g in season.schedule if g.completed), default=0)
-            for wk in range(1, max_week + 1):
-                injury_tracker.process_week(wk, season.teams, season.standings)
-                injury_tracker.resolve_week(wk)
 
             player_cards = {}
             for t_name, t_obj in season.teams.items():

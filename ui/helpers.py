@@ -664,6 +664,19 @@ def render_game_detail(result, key_prefix="gd"):
                     st.dataframe(pd.DataFrame(st_df), hide_index=True, use_container_width=True)
                 st.divider()
 
+    in_game_inj = result.get("in_game_injuries", [])
+    if in_game_inj:
+        with st.expander("In-Game Injuries & Substitutions", expanded=True):
+            for ig in in_game_inj:
+                severity = "OUT FOR SEASON" if ig.get("season_ending") else (ig.get("tier") or "").replace("_", "-").upper()
+                cat_labels = {"on_field_contact": "Contact", "on_field_noncontact": "Non-Contact", "practice": "Practice", "off_field": "Off-Field"}
+                cat = cat_labels.get(ig.get("category", ""), ig.get("category", ""))
+                line = f"**{ig['player']}** ({ig['position']}) — {ig['description']} [{severity}] *({cat})*"
+                if ig.get("substitute"):
+                    oop = " *(out of position)*" if ig.get("out_of_position") else ""
+                    line += f"  \n&emsp;-> {ig['substitute']} ({ig['sub_position']}) sub in{oop}"
+                st.markdown(line)
+
     drives = result.get("drive_summary", [])
     if drives:
         with st.expander("Drive Summary", expanded=False):
@@ -689,6 +702,7 @@ def render_game_detail(result, key_prefix="gd"):
             team_label = home_name if p['possession'] == 'home' else away_name
             play_rows.append({
                 "#": p['play_number'],
+                "INJ": "!" if "INJURY:" in p.get('description', '') else "",
                 "Team": team_label,
                 "Qtr": f"Q{p['quarter']}",
                 "Time": format_time(p['time_remaining']),

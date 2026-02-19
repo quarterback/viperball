@@ -34,6 +34,88 @@ from ui.helpers import (
 )
 
 
+def _render_pre_game_injury_report(session_id, coached_teams):
+    if not coached_teams:
+        return
+    try:
+        inj_resp = api_client.get_injuries(session_id)
+        active = inj_resp.get("active", [])
+    except api_client.APIError:
+        return
+    if not active:
+        return
+    team_injuries = {}
+    for inj in active:
+        t = inj.get("team", "")
+        if t in coached_teams:
+            team_injuries.setdefault(t, []).append(inj)
+    if not team_injuries:
+        return
+    with st.expander("Pre-Game Injury Report", expanded=False):
+        for team, injuries in sorted(team_injuries.items()):
+            st.markdown(f"**{team}** — {len(injuries)} active injury(ies)")
+            rows = []
+            for inj in injuries:
+                tier = inj.get("tier", "unknown")
+                if inj.get("is_season_ending") or tier == "severe":
+                    status = "OUT FOR SEASON"
+                elif tier in ("moderate", "major"):
+                    status = "OUT"
+                elif tier == "minor":
+                    status = "DOUBTFUL"
+                elif tier == "day_to_day":
+                    status = "QUESTIONABLE"
+                else:
+                    status = "OUT"
+                rows.append({
+                    "Player": inj.get("player_name", ""),
+                    "Position": inj.get("position", ""),
+                    "Injury": inj.get("description", ""),
+                    "Game Status": status,
+                    "Return": f"Wk {inj.get('week_return', '?')}" if not inj.get("is_season_ending") else "Season",
+                })
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+
+def _render_weekly_injury_feed(session_id, week_just_played):
+    try:
+        inj_resp = api_client.get_injuries(session_id)
+        active = inj_resp.get("active", [])
+        history = inj_resp.get("history", [])
+    except api_client.APIError:
+        return
+    new_injuries = [i for i in active if i.get("week_injured") == week_just_played]
+    returned = [i for i in history if i.get("week_return") == week_just_played and i.get("status") == "recovered"]
+    if not new_injuries and not returned:
+        return
+    with st.expander(f"Week {week_just_played} Injury Updates", expanded=True):
+        if new_injuries:
+            st.markdown(f"**New Injuries ({len(new_injuries)})**")
+            rows = []
+            for inj in new_injuries:
+                tier = inj.get("tier", "unknown")
+                if inj.get("is_season_ending") or tier == "severe":
+                    status = "OUT FOR SEASON"
+                elif tier in ("moderate", "major"):
+                    status = "OUT"
+                elif tier == "minor":
+                    status = "DOUBTFUL"
+                else:
+                    status = "QUESTIONABLE"
+                rows.append({
+                    "Team": inj.get("team", ""),
+                    "Player": inj.get("player_name", ""),
+                    "Injury": inj.get("description", ""),
+                    "Status": status,
+                    "Est. Return": f"Wk {inj.get('week_return', '?')}" if not inj.get("is_season_ending") else "Season",
+                })
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        if returned:
+            st.markdown(f"**Returning from Injury ({len(returned)})**")
+            ret_rows = [{"Team": i.get("team", ""), "Player": i.get("player_name", ""), "Injury": i.get("description", "")} for i in returned]
+            st.dataframe(pd.DataFrame(ret_rows), hide_index=True, use_container_width=True)
+
+
 def _teams_dir():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "teams")
 
@@ -1600,6 +1682,8 @@ def _render_dynasty_play(shared):
                 render_dq_bankroll_banner(session_id)
                 render_dq_pre_sim(session_id, next_week, key_prefix="dyn_")
 
+                _render_pre_game_injury_report(session_id, [coach_team] if coach_team else [])
+
                 btn_col1, btn_col2, btn_col3 = st.columns(3)
                 with btn_col1:
                     if st.button("Sim Next Week", type="primary", use_container_width=True, key="dyn_sim_next_week"):
@@ -1945,6 +2029,8 @@ def _render_season_play(shared):
 
             render_dq_bankroll_banner(session_id)
             render_dq_pre_sim(session_id, next_week, key_prefix="ssn_")
+
+            _render_pre_game_injury_report(session_id, st.session_state.get("season_human_teams_list", []))
 
             st.subheader("Advance Season")
 

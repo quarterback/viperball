@@ -204,23 +204,47 @@ def _render_dashboard(session_id, mode, team_name, standings):
         inj_resp = api_client.get_injuries(session_id, team=team_name)
         active_inj = inj_resp.get("active", [])
         team_log = inj_resp.get("season_log", [])
-        ic1, ic2 = st.columns(2)
+        penalties = inj_resp.get("penalties", {})
+
+        q_count = sum(1 for i in active_inj if i.get("tier") == "day_to_day")
+        out_count = sum(1 for i in active_inj if i.get("tier") not in ("day_to_day", "severe") and not i.get("is_season_ending"))
+        se_count = sum(1 for i in active_inj if i.get("is_season_ending") or i.get("tier") == "severe")
+
+        ic1, ic2, ic3, ic4, ic5 = st.columns(5)
         ic1.metric("Active Injuries", len(active_inj))
-        ic2.metric("Season Total", len(team_log))
+        ic2.metric("Questionable", q_count)
+        ic3.metric("Out", out_count)
+        ic4.metric("Season-Ending", se_count)
+        ic5.metric("Season Total", len(team_log))
+
         if active_inj:
             inj_rows = []
             for inj in active_inj:
+                status = "OUT FOR SEASON" if inj.get("is_season_ending") or inj.get("tier") == "severe" else (inj.get("game_status") or "OUT").upper()
                 inj_rows.append({
                     "Player": inj.get("player_name", ""),
                     "Position": inj.get("position", ""),
                     "Injury": inj.get("description", ""),
-                    "Severity": inj.get("tier", "").title(),
+                    "Body Part": (inj.get("body_part") or "").title(),
+                    "Category": {"on_field_contact": "Contact", "on_field_noncontact": "Non-Contact", "practice": "Practice", "off_field": "Off-Field"}.get(inj.get("category", ""), inj.get("category", "")),
+                    "Status": status,
                     "Week Out": inj.get("week_injured", ""),
-                    "Return": "Season-ending" if inj.get("is_season_ending") or inj.get("tier") == "severe" else f"Week {inj.get('week_return', '?')}",
+                    "Return": "Season-ending" if status == "OUT FOR SEASON" else f"Wk {inj.get('week_return', '?')}",
                 })
             st.dataframe(pd.DataFrame(inj_rows), hide_index=True, use_container_width=True)
         else:
             st.caption("No active injuries — full health!")
+
+        if penalties and any(v != 1.0 for v in penalties.values()):
+            st.markdown("**Injury Impact on Performance**")
+            p1, p2, p3 = st.columns(3)
+            yards_delta = round((penalties.get("yards_penalty", 1.0) - 1.0) * 100, 1)
+            kick_delta = round((penalties.get("kick_penalty", 1.0) - 1.0) * 100, 1)
+            lat_delta = round((penalties.get("lateral_penalty", 1.0) - 1.0) * 100, 1)
+            p1.metric("Yards Impact", f"{yards_delta:+.1f}%", delta=f"{yards_delta:.1f}%", delta_color="inverse")
+            p2.metric("Kicking Impact", f"{kick_delta:+.1f}%", delta=f"{kick_delta:.1f}%", delta_color="inverse")
+            p3.metric("Lateral Impact", f"{lat_delta:+.1f}%", delta=f"{lat_delta:.1f}%", delta_color="inverse")
+
         if team_log:
             with st.expander("Season Injury History"):
                 log_rows = []
@@ -229,7 +253,9 @@ def _render_dashboard(session_id, mode, team_name, standings):
                         "Week": inj.get("week_injured", ""),
                         "Player": inj.get("player_name", ""),
                         "Injury": inj.get("description", ""),
-                        "Severity": inj.get("tier", "").title(),
+                        "Body Part": (inj.get("body_part") or "").title(),
+                        "Severity": (inj.get("tier") or "").replace("_", "-").title(),
+                        "In-Game": "Yes" if inj.get("in_game") else "No",
                         "Weeks Out": inj.get("weeks_out", ""),
                     })
                 st.dataframe(pd.DataFrame(log_rows), hide_index=True, use_container_width=True)
@@ -304,6 +330,24 @@ def _render_roster(session_id, team_name):
         st.warning(f"Could not load roster for {team_name}.")
         return
 
+    inj_map = {}
+    try:
+        inj_resp = api_client.get_injuries(session_id, team=team_name)
+        for inj in inj_resp.get("active", []):
+            pname = inj.get("player_name", "")
+            if inj.get("is_season_ending") or inj.get("tier") == "severe":
+                inj_map[pname] = f"OUT FOR SEASON ({inj.get('description', '')})"
+            elif inj.get("tier") in ("moderate", "major"):
+                inj_map[pname] = f"OUT ({inj.get('description', '')}, Wk {inj.get('week_return', '?')})"
+            elif inj.get("tier") == "minor":
+                inj_map[pname] = f"DOUBTFUL ({inj.get('description', '')})"
+            elif inj.get("tier") == "day_to_day":
+                inj_map[pname] = f"QUESTIONABLE ({inj.get('description', '')})"
+            else:
+                inj_map[pname] = f"OUT ({inj.get('description', '')})"
+    except api_client.APIError:
+        pass
+
     view_mode = st.radio("View", ["Full Roster", "Depth Chart"], horizontal=True, key="myteam_roster_view")
 
     roster_data = []
@@ -319,9 +363,12 @@ def _render_roster(session_id, team_name):
             rs_status = "Used"
         elif p.get("redshirt_eligible", False):
             rs_status = "Eligible"
+        player_name = p.get("name", "")
+        health_status = inj_map.get(player_name, "HEALTHY")
         roster_data.append({
-            "Name": f"{p.get('name', '')} ({p.get('position', '')} #{p.get('number', '')})",
+            "Name": f"{player_name} ({p.get('position', '')} #{p.get('number', '')})",
             "Year": p.get("year_abbr", p.get("year_abbrev", p.get("year", ""))),
+            "Status": health_status,
             "Role": role,
             "RS": rs_status,
             "Archetype": p.get("archetype", ""),
@@ -349,7 +396,7 @@ def _render_roster(session_id, team_name):
             for pos in sorted(pos_groups.keys(), key=lambda x: positions_order.index(x) if x in positions_order else 99):
                 group = sorted(pos_groups[pos], key=lambda x: -x["OVR"])
                 st.markdown(f"**{pos}**")
-                dc_df = pd.DataFrame(group)[["Name", "Role", "Year", "RS", "OVR", "GP", "Archetype", "Speed", "Power", "Awareness"]]
+                dc_df = pd.DataFrame(group)[["Name", "Status", "Role", "Year", "RS", "OVR", "GP", "Archetype", "Speed", "Power", "Awareness"]]
                 st.dataframe(dc_df, hide_index=True, use_container_width=True)
         else:
             st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=600)

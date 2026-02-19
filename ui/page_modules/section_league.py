@@ -786,6 +786,24 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
     league_view = st.radio("View", ["Full Roster", "Depth Chart"], horizontal=True, key="league_roster_view")
 
+    inj_map = {}
+    try:
+        inj_resp = api_client.get_injuries(session_id, team=browse_team)
+        for inj in inj_resp.get("active", []):
+            pname = inj.get("player_name", "")
+            if inj.get("is_season_ending") or inj.get("tier") == "severe":
+                inj_map[pname] = f"OUT FOR SEASON ({inj.get('description', '')})"
+            elif inj.get("tier") in ("moderate", "major"):
+                inj_map[pname] = f"OUT ({inj.get('description', '')}, Wk {inj.get('week_return', '?')})"
+            elif inj.get("tier") == "minor":
+                inj_map[pname] = f"DOUBTFUL ({inj.get('description', '')})"
+            elif inj.get("tier") == "day_to_day":
+                inj_map[pname] = f"QUESTIONABLE ({inj.get('description', '')})"
+            else:
+                inj_map[pname] = f"OUT ({inj.get('description', '')})"
+    except api_client.APIError:
+        pass
+
     roster_data = []
     for p in roster:
         depth = p.get("depth_rank", 0)
@@ -797,10 +815,12 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
             rs_status = "Used"
         elif p.get("redshirt_eligible", False):
             rs_status = "Eligible"
+        health_status = inj_map.get(p["name"], "HEALTHY")
         roster_data.append({
             "#": p.get("number", ""),
             "Name": p["name"],
             "Position": p["position"],
+            "Status": health_status,
             "Role": role,
             "RS": rs_status,
             "Year": p.get("year_abbr", p.get("year", "")),
@@ -823,7 +843,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
         for pos in dc_positions:
             group = sorted([r for r in roster_data if r["Position"] == pos], key=lambda x: -x["OVR"])
             st.markdown(f"**{pos}**")
-            dc_df = pd.DataFrame(group)[["#", "Name", "Role", "RS", "Year", "OVR", "GP", "Archetype", "SPD", "PWR", "AWR"]]
+            dc_df = pd.DataFrame(group)[["#", "Name", "Status", "Role", "RS", "Year", "OVR", "GP", "Archetype", "SPD", "PWR", "AWR"]]
             st.dataframe(dc_df, hide_index=True, use_container_width=True)
     else:
         st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=500)
@@ -1106,6 +1126,28 @@ def _render_awards_stats(session_id, standings, user_team):
             st.plotly_chart(fig, use_container_width=True)
 
 
+_CATEGORY_LABELS = {
+    "on_field_contact": "Contact",
+    "on_field_noncontact": "Non-Contact",
+    "practice": "Practice",
+    "off_field": "Off-Field",
+}
+
+_STATUS_COLORS = {
+    "QUESTIONABLE": "#fbbf24",
+    "DOUBTFUL": "#f59e0b",
+    "OUT": "#dc2626",
+    "OUT FOR SEASON": "#991b1b",
+}
+
+def _game_status_label(inj):
+    if inj.get("is_season_ending") or inj.get("tier") == "severe":
+        return "OUT FOR SEASON"
+    return (inj.get("game_status") or "OUT").upper()
+
+def _tier_display(tier):
+    return (tier or "").replace("_", "-").title()
+
 def _render_injury_report(session_id, standings):
     try:
         inj_resp = api_client.get_injuries(session_id)
@@ -1117,24 +1159,33 @@ def _render_injury_report(session_id, standings):
     season_log = inj_resp.get("season_log", [])
     counts = inj_resp.get("counts", {})
 
-    a1, a2, a3 = st.columns(3)
-    a1.metric("Active Injuries", len(active))
-    a2.metric("Total Season Injuries", len(season_log))
+    dtd_count = sum(1 for i in active if i.get("tier") == "day_to_day")
+    out_count = sum(1 for i in active if i.get("tier") not in ("day_to_day", "severe") and not i.get("is_season_ending"))
+    se_count = sum(1 for i in active if i.get("is_season_ending") or i.get("tier") == "severe")
     most_injured = max(counts.items(), key=lambda x: x[1])[0] if counts else "—"
-    a3.metric("Most Affected Team", most_injured)
+
+    a1, a2, a3, a4, a5 = st.columns(5)
+    a1.metric("Active Injuries", len(active))
+    a2.metric("Day-to-Day", dtd_count)
+    a3.metric("Out (Minor+)", out_count)
+    a4.metric("Season-Ending", se_count)
+    a5.metric("Most Affected Team", most_injured)
 
     if active:
         st.markdown("### Currently Injured Players")
         active_rows = []
         for inj in active:
+            status = _game_status_label(inj)
             active_rows.append({
                 "Team": inj.get("team_name", ""),
                 "Player": inj.get("player_name", ""),
                 "Position": inj.get("position", ""),
                 "Injury": inj.get("description", ""),
-                "Severity": inj.get("tier", "").title(),
+                "Body Part": (inj.get("body_part") or "").title(),
+                "Category": _CATEGORY_LABELS.get(inj.get("category", ""), inj.get("category", "")),
+                "Status": status,
                 "Week Out": inj.get("week_injured", ""),
-                "Return Week": "Season-ending" if inj.get("is_season_ending") or inj.get("tier") == "severe" else f"Week {inj.get('week_return', '?')}",
+                "Return": "Season-ending" if status == "OUT FOR SEASON" else f"Wk {inj.get('week_return', '?')}",
             })
         team_filter = st.selectbox("Filter by Team", ["All"] + sorted(set(r["Team"] for r in active_rows)), key="inj_team_filter")
         if team_filter != "All":
@@ -1142,6 +1193,26 @@ def _render_injury_report(session_id, standings):
         st.dataframe(pd.DataFrame(active_rows), hide_index=True, use_container_width=True)
     else:
         st.caption("No active injuries.")
+
+    with st.expander("Injuries by Category"):
+        if season_log:
+            cat_tier_data = []
+            for inj in season_log:
+                cat_tier_data.append({
+                    "Category": _CATEGORY_LABELS.get(inj.get("category", ""), inj.get("category", "")),
+                    "Tier": _tier_display(inj.get("tier", "")),
+                })
+            if cat_tier_data:
+                fig_cat = px.histogram(pd.DataFrame(cat_tier_data), x="Category", color="Tier",
+                                       title="Injuries by Category",
+                                       color_discrete_map={
+                                           "Day-To-Day": "#22c55e", "Minor": "#fbbf24",
+                                           "Moderate": "#f59e0b", "Major": "#dc2626", "Severe": "#991b1b",
+                                       })
+                fig_cat.update_layout(height=350, template="plotly_white")
+                st.plotly_chart(fig_cat, use_container_width=True)
+        else:
+            st.caption("No injury data yet.")
 
     if counts:
         with st.expander("Injury Counts by Team"):
@@ -1152,13 +1223,18 @@ def _render_injury_report(session_id, standings):
         with st.expander("Full Season Injury Log"):
             log_rows = []
             for inj in season_log:
+                status = _game_status_label(inj)
                 log_rows.append({
                     "Week": inj.get("week_injured", ""),
                     "Team": inj.get("team_name", ""),
                     "Player": inj.get("player_name", ""),
                     "Position": inj.get("position", ""),
                     "Injury": inj.get("description", ""),
-                    "Severity": inj.get("tier", "").title(),
+                    "Body Part": (inj.get("body_part") or "").title(),
+                    "Category": _CATEGORY_LABELS.get(inj.get("category", ""), inj.get("category", "")),
+                    "Severity": _tier_display(inj.get("tier", "")),
+                    "In-Game": "Yes" if inj.get("in_game") else "No",
+                    "Status": status,
                     "Weeks Out": inj.get("weeks_out", ""),
                 })
             st.dataframe(pd.DataFrame(log_rows), hide_index=True, use_container_width=True, height=400)

@@ -951,14 +951,21 @@ def season_injuries(session_id: str, team: Optional[str] = Query(None)):
         active = tracker.get_active_injuries(team, current_week)
         active_list = [inj.to_dict() for inj in active]
         team_log = [inj.to_dict() for inj in tracker.season_log if inj.team_name == team]
-        return {"active": active_list, "season_log": team_log}
+        penalties = tracker.get_team_injury_penalties(team, current_week)
+        return {"active": active_list, "season_log": team_log, "penalties": penalties}
     else:
         all_active = []
         for team_name in season.teams:
             for inj in tracker.get_active_injuries(team_name, current_week):
                 all_active.append(inj.to_dict())
         counts = tracker.get_season_injury_counts()
-        return {"active": all_active, "season_log": [inj.to_dict() for inj in tracker.season_log], "counts": counts}
+        category_report = tracker.get_injury_report_by_category()
+        return {
+            "active": all_active,
+            "season_log": [inj.to_dict() for inj in tracker.season_log],
+            "counts": counts,
+            "category_report": category_report,
+        }
 
 
 @app.get("/sessions/{session_id}/season/roster/{team_name}")
