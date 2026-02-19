@@ -375,6 +375,9 @@ def assess_retention_risks(
         elif team_wins < 6:
             risk_score += 5.0
 
+        if getattr(card, 'redshirt_used', False) or getattr(card, 'redshirt', False):
+            risk_score += 15.0
+
         risk_score += rng.uniform(-5, 10)
 
         risk_score -= retention_boost

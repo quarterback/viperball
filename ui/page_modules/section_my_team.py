@@ -304,16 +304,30 @@ def _render_roster(session_id, team_name):
         st.warning(f"Could not load roster for {team_name}.")
         return
 
+    view_mode = st.radio("View", ["Full Roster", "Depth Chart"], horizontal=True, key="myteam_roster_view")
+
     roster_data = []
     for p in players:
-        ovr = int(round((p.get("speed", 0) + p.get("stamina", 0) + p.get("agility", 0) +
-                          p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6))
+        ovr = p.get("overall", int(round((p.get("speed", 0) + p.get("stamina", 0) + p.get("agility", 0) +
+                          p.get("power", 0) + p.get("awareness", 0) + p.get("hands", 0)) / 6)))
+        depth = p.get("depth_rank", 0)
+        role = "Starter" if depth == 1 else f"Backup #{depth}" if depth <= 3 else "Reserve"
+        rs_status = ""
+        if p.get("redshirt", False):
+            rs_status = "RS"
+        elif p.get("redshirt_used", False):
+            rs_status = "Used"
+        elif p.get("redshirt_eligible", False):
+            rs_status = "Eligible"
         roster_data.append({
             "Name": f"{p.get('name', '')} ({p.get('position', '')} #{p.get('number', '')})",
-            "Year": p.get("year_abbrev", p.get("year", "")),
+            "Year": p.get("year_abbr", p.get("year_abbrev", p.get("year", ""))),
+            "Role": role,
+            "RS": rs_status,
             "Archetype": p.get("archetype", ""),
             "Position": p.get("position", ""),
             "OVR": ovr,
+            "GP": p.get("season_games_played", 0),
             "Speed": p.get("speed", 0),
             "Power": p.get("power", 0),
             "Agility": p.get("agility", 0),
@@ -324,7 +338,21 @@ def _render_roster(session_id, team_name):
         })
 
     if roster_data:
-        st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=600)
+        if view_mode == "Depth Chart":
+            positions_order = ["Viper", "VP", "Zeroback", "ZB", "Halfback", "HB",
+                               "Wingback", "WB", "Slotback", "SB", "Keeper", "KP",
+                               "Offensive Line", "OL", "Defensive Line", "DL"]
+            pos_groups = {}
+            for r in roster_data:
+                pos = r["Position"]
+                pos_groups.setdefault(pos, []).append(r)
+            for pos in sorted(pos_groups.keys(), key=lambda x: positions_order.index(x) if x in positions_order else 99):
+                group = sorted(pos_groups[pos], key=lambda x: -x["OVR"])
+                st.markdown(f"**{pos}**")
+                dc_df = pd.DataFrame(group)[["Name", "Role", "Year", "RS", "OVR", "GP", "Archetype", "Speed", "Power", "Awareness"]]
+                st.dataframe(dc_df, hide_index=True, use_container_width=True)
+        else:
+            st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=600)
 
         st.divider()
         ex1, ex2, ex3 = st.columns(3)

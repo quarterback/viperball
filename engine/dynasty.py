@@ -637,6 +637,7 @@ class Dynasty:
                         if card:
                             player.year = card.year
                             player.redshirt = card.redshirt
+                            player.redshirt_used = card.redshirt_used
                             player.season_games_played = 0
                             card.season_games_played = 0
                             player.career_awards = list(card.career_awards)

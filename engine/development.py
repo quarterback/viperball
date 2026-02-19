@@ -259,6 +259,7 @@ def apply_offseason_development(
     if getattr(card, '_redshirt_this_season', False):
         card._was_redshirted = True
         card.redshirt = True
+        card.redshirt_used = True
     else:
         card.year = _next_year(year)
 
@@ -306,6 +307,10 @@ def apply_redshirt_decisions(
     for card in players:
         year = card.year
         if year in ("Graduate", "graduate"):
+            continue
+
+        already_used = getattr(card, 'redshirt_used', False)
+        if already_used:
             continue
 
         games = getattr(card, 'season_games_played', getattr(card, '_season_games', 99))

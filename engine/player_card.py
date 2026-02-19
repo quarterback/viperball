@@ -330,6 +330,7 @@ class PlayerCard:
 
     # ── Redshirt tracking ──
     redshirt: bool = False
+    redshirt_used: bool = False
     season_games_played: int = 0
 
     # ── Career history ──
@@ -451,6 +452,7 @@ class PlayerCard:
             "star_rating": self.star_rating,
             "development": self.development,
             "redshirt": self.redshirt,
+            "redshirt_used": self.redshirt_used,
             "season_games_played": self.season_games_played,
             "current_team": self.current_team,
             "career_totals": {
@@ -501,6 +503,7 @@ class PlayerCard:
             potential=d.get("potential", 3),
             development=d.get("development", "normal"),
             redshirt=d.get("redshirt", False),
+            redshirt_used=d.get("redshirt_used", False),
             season_games_played=d.get("season_games_played", 0),
             career_seasons=career,
             career_awards=d.get("career_awards", []),
@@ -559,6 +562,7 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
         potential=getattr(player, "potential", 3),
         development=getattr(player, "development", "normal"),
         redshirt=getattr(player, "redshirt", False),
+        redshirt_used=getattr(player, "redshirt_used", False),
         season_games_played=getattr(player, "season_games_played", 0),
         current_team=team_name,
     )

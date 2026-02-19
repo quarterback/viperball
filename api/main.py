@@ -974,9 +974,29 @@ def get_team_roster(session_id: str, team_name: str):
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    from engine.draftyqueenz import compute_depth_chart
+    depth = compute_depth_chart(team.players)
+    depth_rank_map = {}
+    for pos, entries in depth.items():
+        for p, rank in entries:
+            depth_rank_map[getattr(p, 'name', '')] = rank
+
+    serialized = []
+    for p in team.players:
+        d = _serialize_player(p)
+        d["depth_rank"] = depth_rank_map.get(p.name, 99)
+        d["redshirt_used"] = getattr(p, "redshirt_used", False)
+        d["redshirt_eligible"] = (
+            not getattr(p, "redshirt_used", False)
+            and getattr(p, "season_games_played", 0) <= 4
+            and getattr(p, "year", "") not in ("Graduate", "graduate")
+        )
+        serialized.append(d)
+
     return {
         "team_name": team_name,
-        "roster": [_serialize_player(p) for p in team.players],
+        "roster": serialized,
+        "players": serialized,
         "roster_size": len(team.players),
         "prestige": prestige,
     }
@@ -1685,7 +1705,25 @@ def team_roster(session_id: str, team_name: str):
         raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
 
     team = season.teams[team_name]
-    players = [_serialize_player(p) for p in team.players]
+
+    from engine.draftyqueenz import compute_depth_chart
+    depth = compute_depth_chart(team.players)
+    depth_rank_map = {}
+    for pos, entries in depth.items():
+        for p, rank in entries:
+            depth_rank_map[getattr(p, 'name', '')] = rank
+
+    players = []
+    for p in team.players:
+        d = _serialize_player(p)
+        d["depth_rank"] = depth_rank_map.get(p.name, 99)
+        d["redshirt_used"] = getattr(p, "redshirt_used", False)
+        d["redshirt_eligible"] = (
+            not getattr(p, "redshirt_used", False)
+            and getattr(p, "season_games_played", 0) <= 4
+            and getattr(p, "year", "") not in ("Graduate", "graduate")
+        )
+        players.append(d)
 
     record = season.standings.get(team_name)
     team_record = _serialize_team_record(record) if record else None

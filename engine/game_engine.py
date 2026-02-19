@@ -556,6 +556,7 @@ class Player:
     potential: int = 3        # 1–5 stars
     development: str = "normal"  # normal / quick / slow / late_bloomer
     redshirt: bool = False       # if True, player doesn't advance class year this season
+    redshirt_used: bool = False  # if True, player has already used their one-time redshirt
     season_games_played: int = 0 # games played this season (for redshirt eligibility)
 
     # --- Fatigue / game state ---

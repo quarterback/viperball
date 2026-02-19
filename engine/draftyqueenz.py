@@ -216,25 +216,70 @@ def _position_tag_from_full(tag: str) -> str:
     return "".join(c for c in tag if c.isalpha())
 
 
-def _salary_for_player(overall: int, position_tag: str) -> int:
-    """Compute weekly salary from overall rating and position.
+def _salary_for_player(overall: int, position_tag: str,
+                       games_played: int = 0, depth_rank: int = 1,
+                       seed: int = 0) -> int:
+    """Compute weekly salary from overall rating, position, usage, and depth.
 
-    VP commands a premium; KP gets a discount.  Values range ~4k–15k so
-    that a 50k cap forces real trade-offs.
+    Bench warmers and low-usage players are cheap (~500-2000).
+    Starters with high overalls command premiums.
+    Returns granular, non-rounded amounts for realistic arbitrage.
     """
-    base = 2_000 + int((overall / 100) * 12_000)
-    multiplier = {
-        "VP": 1.25,
-        "HB": 1.05,
-        "ZB": 1.10,
+    import hashlib
+    usage_factor = min(1.0, games_played / 12.0) if games_played > 0 else 0.05
+    depth_factor = {1: 1.0, 2: 0.65, 3: 0.40}.get(depth_rank, max(0.15, 0.50 - depth_rank * 0.08))
+
+    base = 400 + int((overall / 100) * 10_000 * usage_factor * depth_factor)
+
+    pos_mult = {
+        "VP": 1.28,
+        "HB": 1.07,
+        "ZB": 1.12,
         "WB": 1.00,
-        "SB": 0.90,
-        "KP": 0.80,
+        "SB": 0.88,
+        "KP": 0.78,
     }.get(position_tag, 1.0)
-    return int(base * multiplier / 500) * 500
+
+    raw = int(base * pos_mult)
+
+    h = int(hashlib.md5(f"{seed}-{overall}-{position_tag}-{depth_rank}".encode()).hexdigest()[:8], 16)
+    micro_var = 0.93 + (h % 1500) / 10000.0
+    salary = max(487, int(raw * micro_var))
+
+    return salary
 
 
-def build_player_pool(teams: Dict, week_schedule: list) -> List[FantasyPlayer]:
+def compute_depth_chart(players: list) -> Dict[str, list]:
+    """Compute depth chart for a team's players, grouped by position.
+
+    Returns dict of position -> list of (player, depth_rank) sorted by overall desc.
+    """
+    from engine.game_engine import player_tag
+    pos_groups: Dict[str, list] = {}
+    for p in players:
+        pos = getattr(p, "position", "Unknown")
+        pos_groups.setdefault(pos, []).append(p)
+
+    depth_chart: Dict[str, list] = {}
+    for pos, group in pos_groups.items():
+        sorted_group = sorted(group, key=lambda x: getattr(x, "overall", 0), reverse=True)
+        depth_chart[pos] = [(p, rank + 1) for rank, p in enumerate(sorted_group)]
+
+    return depth_chart
+
+
+def get_player_depth_rank(player, team_players: list) -> int:
+    """Get a player's depth rank within their position group."""
+    pos = getattr(player, "position", "Unknown")
+    same_pos = [p for p in team_players if getattr(p, "position", "") == pos]
+    same_pos.sort(key=lambda x: getattr(x, "overall", 0), reverse=True)
+    for i, p in enumerate(same_pos, 1):
+        if getattr(p, "name", "") == getattr(player, "name", ""):
+            return i
+    return len(same_pos)
+
+
+def build_player_pool(teams: Dict, week_schedule: list, week_seed: int = 0) -> List[FantasyPlayer]:
     """Build the weekly fantasy player pool from teams playing this week.
 
     Only includes players from teams that have a game scheduled this week.
@@ -251,13 +296,21 @@ def build_player_pool(teams: Dict, week_schedule: list) -> List[FantasyPlayer]:
         team = teams.get(tname)
         if team is None:
             continue
-        for p in team.players:
+        team_players = team.players
+        for p in team_players:
             from engine.game_engine import player_tag, POSITION_TAGS
             ptag = player_tag(p)
             pos_tag = _position_tag_from_full(ptag)
             if pos_tag not in FLEX_ELIGIBLE:
-                continue  # skip OL/DL — they don't accumulate individual stats
-            salary = _salary_for_player(p.overall, pos_tag)
+                continue
+            depth_rank = get_player_depth_rank(p, team_players)
+            games = getattr(p, "season_games_played", 0)
+            salary = _salary_for_player(
+                p.overall, pos_tag,
+                games_played=games,
+                depth_rank=depth_rank,
+                seed=week_seed + hash(p.name) % 10000,
+            )
             pool.append(FantasyPlayer(
                 tag=ptag,
                 name=p.name,
@@ -878,9 +931,10 @@ class WeeklyContest:
                 game.home_team, game.away_team, hp, ap, hr, ar, rng
             ))
 
-    def build_pool(self, teams: Dict, week_games: list, team_prestige: Dict[str, int]):
+    def build_pool(self, teams: Dict, week_games: list, team_prestige: Dict[str, int],
+                   week_seed: int = 0):
         """Build the fantasy player pool for this week."""
-        self.player_pool = build_player_pool(teams, week_games)
+        self.player_pool = build_player_pool(teams, week_games, week_seed=week_seed)
         for fp in self.player_pool:
             fp.projected_pts = project_player_points(
                 fp, team_prestige.get(fp.team_name, 50)

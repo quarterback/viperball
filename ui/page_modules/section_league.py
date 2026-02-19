@@ -784,12 +784,25 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
         header_parts.append(f"Program Prestige: **{team_prestige}** ({prestige_label})")
     st.markdown(" | ".join(header_parts))
 
+    league_view = st.radio("View", ["Full Roster", "Depth Chart"], horizontal=True, key="league_roster_view")
+
     roster_data = []
     for p in roster:
+        depth = p.get("depth_rank", 0)
+        role = "Starter" if depth == 1 else f"Backup #{depth}" if depth <= 3 else "Reserve"
+        rs_status = ""
+        if p.get("redshirt", False):
+            rs_status = "RS"
+        elif p.get("redshirt_used", False):
+            rs_status = "Used"
+        elif p.get("redshirt_eligible", False):
+            rs_status = "Eligible"
         roster_data.append({
             "#": p.get("number", ""),
             "Name": p["name"],
             "Position": p["position"],
+            "Role": role,
+            "RS": rs_status,
             "Year": p.get("year_abbr", p.get("year", "")),
             "Archetype": p.get("archetype", ""),
             "OVR": p.get("overall", 0),
@@ -804,7 +817,16 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
             "TKL": p.get("tackling", 0),
             "GP": p.get("season_games_played", 0),
         })
-    st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=500)
+
+    if league_view == "Depth Chart" and roster_data:
+        dc_positions = sorted(set(r["Position"] for r in roster_data))
+        for pos in dc_positions:
+            group = sorted([r for r in roster_data if r["Position"] == pos], key=lambda x: -x["OVR"])
+            st.markdown(f"**{pos}**")
+            dc_df = pd.DataFrame(group)[["#", "Name", "Role", "RS", "Year", "OVR", "GP", "Archetype", "SPD", "PWR", "AWR"]]
+            st.dataframe(dc_df, hide_index=True, use_container_width=True)
+    else:
+        st.dataframe(pd.DataFrame(roster_data), hide_index=True, use_container_width=True, height=500)
 
     player_names = [p["name"] for p in roster]
     selected_player = st.selectbox("View Player Card", ["—"] + player_names, key="tb_player_card")
