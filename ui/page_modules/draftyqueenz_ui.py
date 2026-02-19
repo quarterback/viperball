@@ -103,18 +103,26 @@ def _render_predictions_tab(session_id: str, week: int, kp: str):
     selected_odds = odds_list[game_idx] if game_idx is not None else None
 
     if selected_odds:
-        oc1, oc2 = st.columns(2)
+        oc1, oc2, oc3 = st.columns(3)
         oc1.markdown(f"**Spread:** {selected_odds['spread']:+.1f}")
         oc2.markdown(f"**O/U:** {selected_odds['over_under']:.1f}")
+        oc3.markdown(f"**KP O/U:** {selected_odds.get('kick_pass_ou', 14.5):.1f}")
 
-    pick_type = st.selectbox("Bet Type", ["winner", "spread", "over_under", "chaos"],
-                              format_func=lambda x: x.replace("_", "/").title(),
+    bet_type_labels = {
+        "winner": "Winner",
+        "spread": "Spread",
+        "over_under": "Over/Under",
+        "chaos": "Chaos Factor",
+        "kick_pass": "Kick Pass O/U",
+    }
+    pick_type = st.selectbox("Bet Type", list(bet_type_labels.keys()),
+                              format_func=lambda x: bet_type_labels.get(x, x),
                               key=f"{kp}dq_pick_type")
 
     if selected_odds:
         if pick_type in ("winner", "spread"):
             sel_options = [selected_odds["home_team"], selected_odds["away_team"]]
-        elif pick_type == "over_under":
+        elif pick_type in ("over_under", "chaos", "kick_pass"):
             sel_options = ["over", "under"]
         else:
             sel_options = ["over", "under"]

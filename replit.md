@@ -52,7 +52,7 @@ The project maintains a clear separation of concerns:
 - **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings, considering win %, Strength of Schedule, Quality Wins, Non-conference record, Conference Strength, and Point Differential.
 - **Playoff Selection**: Combines conference champion auto-bids with at-large bids based on Power Index.
 - **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games, in-game boosts, AI assignment, and historical tracking in Dynasty mode.
-- **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games, play fantasy football, and donate to unlock dynasty boosts.
+- **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games (winner, spread, O/U, chaos factor, kick pass O/U props), play fantasy football (with kick pass scoring), and donate to unlock dynasty boosts.
 
 ## External Dependencies
 - **Python 3.11**: Core programming language.
