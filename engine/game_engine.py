@@ -88,7 +88,7 @@ RUN_PLAY_CONFIG = {
         'action': 'power',
     },
     PlayFamily.SWEEP_OPTION: {
-        'base_yards': (4.0, 7.0),
+        'base_yards': (3.0, 6.0),
         'variance': 4.5,
         'fumble_rate': 0.016,
         'primary_positions': ['WB', 'HB', 'SB'],
@@ -97,7 +97,7 @@ RUN_PLAY_CONFIG = {
         'action': 'sweep',
     },
     PlayFamily.SPEED_OPTION: {
-        'base_yards': (4.5, 7.5),
+        'base_yards': (3.5, 6.5),
         'variance': 5.0,
         'fumble_rate': 0.018,
         'primary_positions': ['ZB', 'WB', 'SB'],
@@ -115,8 +115,8 @@ RUN_PLAY_CONFIG = {
         'action': 'counter',
     },
     PlayFamily.DRAW: {
-        'base_yards': (4.0, 7.5),
-        'variance': 5.5,
+        'base_yards': (3.0, 6.0),
+        'variance': 5.0,
         'fumble_rate': 0.014,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
@@ -124,8 +124,8 @@ RUN_PLAY_CONFIG = {
         'action': 'draw',
     },
     PlayFamily.VIPER_JET: {
-        'base_yards': (5.0, 9.0),
-        'variance': 6.0,
+        'base_yards': (3.5, 7.0),
+        'variance': 5.5,
         'fumble_rate': 0.028,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
@@ -188,14 +188,14 @@ ALIGNMENT_VS_PLAY = {
 }
 
 EXPLOSIVE_CHANCE = {
-    'dive_option': 0.08,
-    'power': 0.10,
-    'sweep_option': 0.18,
-    'speed_option': 0.15,
-    'counter': 0.20,
-    'draw': 0.12,
-    'viper_jet': 0.28,
-    'lateral_spread': 0.22,
+    'dive_option': 0.04,
+    'power': 0.05,
+    'sweep_option': 0.10,
+    'speed_option': 0.08,
+    'counter': 0.12,
+    'draw': 0.06,
+    'viper_jet': 0.15,
+    'lateral_spread': 0.12,
 }
 
 VIPER_ALIGNMENT_BONUS = {
@@ -748,7 +748,7 @@ OFFENSE_STYLES = {
         "lateral_risk": 0.6,
         "kick_rate": 0.08,
         "option_rate": 0.55,
-        "run_bonus": 0.12,
+        "run_bonus": 0.06,
         "fatigue_resistance": 0.08,
         "kick_accuracy_bonus": 0.0,
         "explosive_lateral_bonus": 0.0,
@@ -848,7 +848,7 @@ OFFENSE_STYLES = {
         "lateral_risk": 0.5,
         "kick_rate": 0.10,
         "option_rate": 0.30,
-        "run_bonus": 0.08,
+        "run_bonus": 0.04,
         "fatigue_resistance": 0.05,
         "kick_accuracy_bonus": 0.05,
         "explosive_lateral_bonus": 0.0,
@@ -909,7 +909,7 @@ OFFENSE_STYLES = {
         "lateral_risk": 0.6,
         "kick_rate": 0.35,
         "option_rate": 0.25,
-        "run_bonus": 0.05,
+        "run_bonus": 0.03,
         "fatigue_resistance": 0.05,
         "kick_accuracy_bonus": 0.05,
         "explosive_lateral_bonus": 0.0,
@@ -970,7 +970,7 @@ OFFENSE_STYLES = {
         "lateral_risk": 0.7,
         "kick_rate": 0.10,
         "option_rate": 0.45,
-        "run_bonus": 0.05,
+        "run_bonus": 0.03,
         "fatigue_resistance": 0.04,
         "kick_accuracy_bonus": 0.0,
         "explosive_lateral_bonus": 0.0,
@@ -999,7 +999,7 @@ OFFENSE_STYLES = {
         "lateral_risk": 1.0,
         "kick_rate": 0.22,
         "option_rate": 0.40,
-        "run_bonus": 0.05,
+        "run_bonus": 0.03,
         "fatigue_resistance": 0.025,
         "kick_accuracy_bonus": 0.05,
         "explosive_lateral_bonus": 0.05,
@@ -2818,7 +2818,7 @@ class ViperballEngine:
             td_chance = 0.20
         if remaining <= 20:
             td_chance += 0.15
-        td_chance = min(0.95, td_chance)
+        td_chance = min(0.98, td_chance)
         if random.random() < td_chance:
             return yards_at_break + remaining
         else:
@@ -2905,17 +2905,17 @@ class ViperballEngine:
 
         fp = self.state.field_position
         if fp <= 25:
-            territory_mod = 0.80
-        elif fp <= 40:
             territory_mod = 0.88
+        elif fp <= 40:
+            territory_mod = 0.94
         elif fp <= 55:
-            territory_mod = 0.95
+            territory_mod = 1.00
         elif fp <= 70:
-            territory_mod = 1.10
+            territory_mod = 1.02
         elif fp <= 85:
-            territory_mod = 1.20
+            territory_mod = 0.96
         else:
-            territory_mod = 1.30
+            territory_mod = 0.90
 
         defensive_stiffening = 1.0
         if self.state.field_position >= 85:
@@ -2981,7 +2981,7 @@ class ViperballEngine:
         else:
             yards_gained = int(base_yards * fatigue_factor * def_fatigue * run_bonus_factor * territory_mod * def_family_mod * defensive_stiffening * off_rhythm / def_intensity)
 
-        yards_gained = max(-5, min(yards_gained, 45))
+        yards_gained = max(-5, yards_gained)
 
         keeper_detail = ""
         yards_gained, keeper_detail = self._resolve_keeper_matchup(player, yards_gained)
@@ -3334,7 +3334,7 @@ class ViperballEngine:
             lat_territory_mod = 1.45
 
         yards_gained = int((base_yards + lateral_bonus) * fatigue_factor * viper_factor * def_fatigue * lat_territory_mod * off_rhythm / def_intensity)
-        yards_gained = max(-5, min(yards_gained, 55))
+        yards_gained = max(-5, yards_gained)
 
         # Check for explosive lateral play
         is_explosive = False
@@ -3460,7 +3460,6 @@ class ViperballEngine:
             base_completion = 0.14
 
         completion_prob = base_completion * kicker_factor * receiver_factor * (1.0 + kick_pass_bonus + weather_mod)
-        completion_prob = max(0.08, completion_prob)
 
         # Defensive coverage impact
         defense = self._current_defense()
@@ -3470,20 +3469,19 @@ class ViperballEngine:
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
 
-        # Interception check — kicked balls hang in the air and are more readable,
-        # but defenses are still not used to this unconventional play.
-        base_int_chance = 0.05
+        # Interception check — kicked balls hang in the air longer than thrown passes,
+        # but defenses are still adapting to this unconventional play.
+        base_int_chance = 0.025
         int_mod = defense.get("turnover_bonus", 0.0)
         coverage_int = defense.get("kick_pass_coverage", 0.0)
         int_chance = base_int_chance * (1 + int_mod + coverage_int)
-        # Good kicker accuracy reduces INT chance
-        int_chance *= max(0.60, 1.0 - (kicker_factor - 1.0) * 0.4)
-        # Longer kicks are easier to read and intercept
+        # Good kicker accuracy reduces INT chance (no artificial floor)
+        int_chance *= (1.0 - (kicker_factor - 1.0) * 0.4)
+        # Longer kicks are slightly easier to read
         if kick_distance >= 25:
-            int_chance += 0.03
+            int_chance += 0.015
         elif kick_distance >= 18:
-            int_chance += 0.01
-        int_chance = max(0.03, min(0.15, int_chance))
+            int_chance += 0.005
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
