@@ -566,6 +566,10 @@ class Player:
     game_laterals_thrown: int = 0
     game_kick_attempts: int = 0
     game_kick_makes: int = 0
+    game_pk_attempts: int = 0
+    game_pk_makes: int = 0
+    game_dk_attempts: int = 0
+    game_dk_makes: int = 0
     game_kick_deflections: int = 0
     game_keeper_bells: int = 0
     game_coverage_snaps: int = 0
@@ -3710,12 +3714,14 @@ class ViperballEngine:
         weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
         success_prob = base_prob * skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
         kicker.game_kick_attempts += 1
+        kicker.game_dk_attempts += 1
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
         if random.random() < success_prob:
             self.add_score(5)
             kicker.game_kick_makes += 1
+            kicker.game_dk_makes += 1
             weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
 
             return Play(
@@ -3924,12 +3930,14 @@ class ViperballEngine:
         weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
         success_prob *= skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
         kicker.game_kick_attempts += 1
+        kicker.game_pk_attempts += 1
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
         if random.random() < success_prob:
             self.add_score(3)
             kicker.game_kick_makes += 1
+            kicker.game_pk_makes += 1
             weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
 
             return Play(
@@ -4179,6 +4187,10 @@ class ViperballEngine:
                         "lateral_tds": p.game_lateral_tds,
                         "kick_att": p.game_kick_attempts,
                         "kick_made": p.game_kick_makes,
+                        "pk_att": p.game_pk_attempts,
+                        "pk_made": p.game_pk_makes,
+                        "dk_att": p.game_dk_attempts,
+                        "dk_made": p.game_dk_makes,
                         "kick_deflections": p.game_kick_deflections,
                         "keeper_bells": p.game_keeper_bells,
                         "coverage_snaps": p.game_coverage_snaps,

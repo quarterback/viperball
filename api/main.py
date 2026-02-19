@@ -1053,6 +1053,10 @@ def season_player_stats(
                         "lateral_tds": 0,
                         "kick_att": 0,
                         "kick_made": 0,
+                        "pk_att": 0,
+                        "pk_made": 0,
+                        "dk_att": 0,
+                        "dk_made": 0,
                         "kick_deflections": 0,
                         "keeper_bells": 0,
                         "coverage_snaps": 0,
@@ -1076,6 +1080,7 @@ def season_player_stats(
                     "touches", "yards", "rushing_yards", "lateral_yards",
                     "tds", "fumbles", "laterals_thrown", "lateral_receptions",
                     "lateral_assists", "lateral_tds", "kick_att", "kick_made",
+                    "pk_att", "pk_made", "dk_att", "dk_made",
                     "kick_deflections", "keeper_bells", "coverage_snaps",
                     "keeper_tackles", "kick_returns", "kick_return_yards",
                     "kick_return_tds", "punt_returns", "punt_return_yards",
@@ -1093,6 +1098,8 @@ def season_player_stats(
     for r in results:
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
         r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
+        r["pk_pct"] = round(r["pk_made"] / max(1, r["pk_att"]) * 100, 1)
+        r["dk_pct"] = round(r["dk_made"] / max(1, r["dk_att"]) * 100, 1)
         r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
         r["total_return_tds"] = r["kick_return_tds"] + r["punt_return_tds"]
 

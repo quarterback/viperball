@@ -343,6 +343,8 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                         "tds": "TDs", "fumbles": "Fum",
                         "laterals_thrown": "Lat Thr", "lateral_receptions": "Lat Rec",
                         "lateral_assists": "Lat Ast", "lateral_tds": "Lat TD",
+                        "pk_att": "FG Att", "pk_made": "FG Made",
+                        "dk_att": "DK Att", "dk_made": "DK Made",
                         "kick_att": "K Att", "kick_made": "K Made",
                         "kick_deflections": "Defl", "keeper_bells": "Bells",
                         "coverage_snaps": "Cov", "keeper_tackles": "KP Tkl",

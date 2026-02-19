@@ -37,6 +37,10 @@ class GameLog:
     laterals_thrown: int = 0
     kick_attempts: int = 0
     kick_makes: int = 0
+    pk_attempts: int = 0
+    pk_makes: int = 0
+    dk_attempts: int = 0
+    dk_makes: int = 0
     coverage_snaps: int = 0
     kick_deflections: int = 0
     keeper_tackles: int = 0
@@ -56,6 +60,10 @@ class GameLog:
             "laterals_thrown": self.laterals_thrown,
             "kick_attempts": self.kick_attempts,
             "kick_makes": self.kick_makes,
+            "pk_attempts": self.pk_attempts,
+            "pk_makes": self.pk_makes,
+            "dk_attempts": self.dk_attempts,
+            "dk_makes": self.dk_makes,
             "coverage_snaps": self.coverage_snaps,
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
@@ -88,6 +96,10 @@ class SeasonStats:
     laterals_thrown: int = 0
     kick_attempts: int = 0
     kick_makes: int = 0
+    pk_attempts: int = 0
+    pk_makes: int = 0
+    dk_attempts: int = 0
+    dk_makes: int = 0
     coverage_snaps: int = 0
     kick_deflections: int = 0
     keeper_tackles: int = 0
@@ -103,6 +115,14 @@ class SeasonStats:
     @property
     def kick_pct(self) -> float:
         return round(self.kick_makes / max(1, self.kick_attempts) * 100, 1)
+
+    @property
+    def pk_pct(self) -> float:
+        return round(self.pk_makes / max(1, self.pk_attempts) * 100, 1)
+
+    @property
+    def dk_pct(self) -> float:
+        return round(self.dk_makes / max(1, self.dk_attempts) * 100, 1)
 
     @property
     def points(self) -> float:
@@ -122,6 +142,10 @@ class SeasonStats:
         self.laterals_thrown += log.laterals_thrown
         self.kick_attempts += log.kick_attempts
         self.kick_makes += log.kick_makes
+        self.pk_attempts += log.pk_attempts
+        self.pk_makes += log.pk_makes
+        self.dk_attempts += log.dk_attempts
+        self.dk_makes += log.dk_makes
         self.coverage_snaps += log.coverage_snaps
         self.kick_deflections += log.kick_deflections
         self.keeper_tackles += log.keeper_tackles
@@ -142,6 +166,10 @@ class SeasonStats:
             "laterals_thrown": self.laterals_thrown,
             "kick_attempts": self.kick_attempts,
             "kick_makes": self.kick_makes,
+            "pk_attempts": self.pk_attempts,
+            "pk_makes": self.pk_makes,
+            "dk_attempts": self.dk_attempts,
+            "dk_makes": self.dk_makes,
             "coverage_snaps": self.coverage_snaps,
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
@@ -149,6 +177,8 @@ class SeasonStats:
             "return_yards": self.return_yards,
             "yards_per_touch": self.yards_per_touch,
             "kick_pct": self.kick_pct,
+            "pk_pct": self.pk_pct,
+            "dk_pct": self.dk_pct,
             "game_log": [g.to_dict() for g in self.game_log],
         }
 
@@ -157,6 +187,8 @@ class SeasonStats:
         logs = [GameLog.from_dict(g) for g in d.pop("game_log", [])]
         d.pop("yards_per_touch", None)
         d.pop("kick_pct", None)
+        d.pop("pk_pct", None)
+        d.pop("dk_pct", None)
         obj = cls(**{k: d.get(k, 0) if k not in ("team",) else d.get(k, "")
                      for k in cls.__dataclass_fields__ if k != "game_log"})
         obj.game_log = logs
@@ -518,6 +550,10 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         laterals_thrown=player.game_laterals_thrown,
         kick_attempts=player.game_kick_attempts,
         kick_makes=player.game_kick_makes,
+        pk_attempts=player.game_pk_attempts,
+        pk_makes=player.game_pk_makes,
+        dk_attempts=player.game_dk_attempts,
+        dk_makes=player.game_dk_makes,
         coverage_snaps=player.game_coverage_snaps,
         kick_deflections=player.game_kick_deflections,
         keeper_tackles=player.game_keeper_tackles,

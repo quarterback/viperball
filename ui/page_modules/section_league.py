@@ -642,9 +642,14 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
                     "Team": p["team"],
                     "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
                     "GP": p["games_played"],
-                    "Kick Att": p["kick_att"],
-                    "Kick Made": p["kick_made"],
-                    "Kick %": f"{p['kick_pct']:.1f}%",
+                    "FG Att": p.get("pk_att", 0),
+                    "FG Made": p.get("pk_made", 0),
+                    "FG %": f"{p.get('pk_pct', 0):.1f}%",
+                    "DK Att": p.get("dk_att", 0),
+                    "DK Made": p.get("dk_made", 0),
+                    "DK %": f"{p.get('dk_pct', 0):.1f}%",
+                    "Total Att": p["kick_att"],
+                    "Total Made": p["kick_made"],
                     "Deflections": p["kick_deflections"],
                 })
         if kick_data:
@@ -837,9 +842,9 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
                     if player_season["kick_att"] > 0:
                         kc1, kc2, kc3 = st.columns(3)
-                        kc1.metric("Kick Att", player_season["kick_att"])
-                        kc2.metric("Kick Made", player_season["kick_made"])
-                        kc3.metric("Kick %", f"{player_season['kick_pct']:.1f}%")
+                        kc1.metric("FG (PK)", f"{player_season.get('pk_made', 0)}/{player_season.get('pk_att', 0)}")
+                        kc2.metric("Snap Kick (DK)", f"{player_season.get('dk_made', 0)}/{player_season.get('dk_att', 0)}")
+                        kc3.metric("Total Kicks", f"{player_season['kick_made']}/{player_season['kick_att']} ({player_season['kick_pct']:.1f}%)")
 
                     if player_season["total_return_yards"] > 0 or player_season["st_tackles"] > 0:
                         rt1, rt2, rt3, rt4 = st.columns(4)
