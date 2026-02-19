@@ -15,8 +15,8 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ### UI/UX Decisions
 The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings:
 - **Play**: Manages game modes (New Dynasty, New Season, Quick Game) and simulation controls during active sessions.
-- **League**: Displays read-only league-wide data (Standings, Power Rankings, Conferences, Postseason, Schedule, Awards & Stats).
-- **My Team**: Provides a focused view of user-coached teams, including Dashboard, Roster, Schedule, and History (for dynasty mode).
+- **League**: Displays read-only league-wide data (Standings, Power Rankings, Conferences, Postseason, Schedule, Awards & Stats, Injury Report).
+- **My Team**: Provides a focused view of user-coached teams, including Dashboard (with Injury Report), Roster, Schedule, and History (for dynasty mode).
 - **Export**: Offers tools for exporting various season and dynasty data in CSV and JSON formats.
 - **Settings (sidebar)**: Contains Debug Tools and Play Inspector.
 - Session management is handled via the sidebar, indicating the current mode and an option to end the session.

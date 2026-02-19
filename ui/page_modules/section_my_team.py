@@ -199,6 +199,44 @@ def _render_dashboard(session_id, mode, team_name, standings):
             pass
 
     st.divider()
+    st.subheader("Injury Report")
+    try:
+        inj_resp = api_client.get_injuries(session_id, team=team_name)
+        active_inj = inj_resp.get("active", [])
+        team_log = inj_resp.get("season_log", [])
+        ic1, ic2 = st.columns(2)
+        ic1.metric("Active Injuries", len(active_inj))
+        ic2.metric("Season Total", len(team_log))
+        if active_inj:
+            inj_rows = []
+            for inj in active_inj:
+                inj_rows.append({
+                    "Player": inj.get("player_name", ""),
+                    "Position": inj.get("position", ""),
+                    "Injury": inj.get("description", ""),
+                    "Severity": inj.get("tier", "").title(),
+                    "Week Out": inj.get("week_injured", ""),
+                    "Return": "Season-ending" if inj.get("is_season_ending") or inj.get("tier") == "severe" else f"Week {inj.get('week_return', '?')}",
+                })
+            st.dataframe(pd.DataFrame(inj_rows), hide_index=True, use_container_width=True)
+        else:
+            st.caption("No active injuries — full health!")
+        if team_log:
+            with st.expander("Season Injury History"):
+                log_rows = []
+                for inj in team_log:
+                    log_rows.append({
+                        "Week": inj.get("week_injured", ""),
+                        "Player": inj.get("player_name", ""),
+                        "Injury": inj.get("description", ""),
+                        "Severity": inj.get("tier", "").title(),
+                        "Weeks Out": inj.get("weeks_out", ""),
+                    })
+                st.dataframe(pd.DataFrame(log_rows), hide_index=True, use_container_width=True)
+    except api_client.APIError:
+        st.caption("Injury data not available.")
+
+    st.divider()
     summary = _build_dashboard_text(team_name, record, rank, mode)
     ex1, ex2 = st.columns(2)
     with ex1:

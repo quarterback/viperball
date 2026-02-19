@@ -90,7 +90,7 @@ def render_league_section(shared):
     tab_names = ["Standings", "Power Rankings"]
     if has_conferences:
         tab_names.append("Conferences")
-    tab_names.extend(["Player Stats", "Team Browser", "Postseason", "Schedule", "Awards & Stats"])
+    tab_names.extend(["Player Stats", "Team Browser", "Postseason", "Schedule", "Awards & Stats", "Injury Report"])
     league_tabs = st.tabs(tab_names)
     tab_idx = 0
 
@@ -126,6 +126,10 @@ def render_league_section(shared):
     with league_tabs[tab_idx]:
         tab_idx += 1
         _render_awards_stats(session_id, standings, user_team)
+
+    with league_tabs[tab_idx]:
+        tab_idx += 1
+        _render_injury_report(session_id, standings)
 
 
 def _team_label(name, user_team):
@@ -1078,3 +1082,61 @@ def _render_awards_stats(session_id, standings, user_team):
                          title="Score Distribution by Team")
             fig.update_layout(showlegend=False, height=400, template="plotly_white")
             st.plotly_chart(fig, use_container_width=True)
+
+
+def _render_injury_report(session_id, standings):
+    try:
+        inj_resp = api_client.get_injuries(session_id)
+    except api_client.APIError:
+        st.caption("Injury data not available.")
+        return
+
+    active = inj_resp.get("active", [])
+    season_log = inj_resp.get("season_log", [])
+    counts = inj_resp.get("counts", {})
+
+    a1, a2, a3 = st.columns(3)
+    a1.metric("Active Injuries", len(active))
+    a2.metric("Total Season Injuries", len(season_log))
+    most_injured = max(counts.items(), key=lambda x: x[1])[0] if counts else "—"
+    a3.metric("Most Affected Team", most_injured)
+
+    if active:
+        st.markdown("### Currently Injured Players")
+        active_rows = []
+        for inj in active:
+            active_rows.append({
+                "Team": inj.get("team_name", ""),
+                "Player": inj.get("player_name", ""),
+                "Position": inj.get("position", ""),
+                "Injury": inj.get("description", ""),
+                "Severity": inj.get("tier", "").title(),
+                "Week Out": inj.get("week_injured", ""),
+                "Return Week": "Season-ending" if inj.get("is_season_ending") or inj.get("tier") == "severe" else f"Week {inj.get('week_return', '?')}",
+            })
+        team_filter = st.selectbox("Filter by Team", ["All"] + sorted(set(r["Team"] for r in active_rows)), key="inj_team_filter")
+        if team_filter != "All":
+            active_rows = [r for r in active_rows if r["Team"] == team_filter]
+        st.dataframe(pd.DataFrame(active_rows), hide_index=True, use_container_width=True)
+    else:
+        st.caption("No active injuries.")
+
+    if counts:
+        with st.expander("Injury Counts by Team"):
+            count_rows = [{"Team": t, "Injuries": c} for t, c in sorted(counts.items(), key=lambda x: -x[1])]
+            st.dataframe(pd.DataFrame(count_rows), hide_index=True, use_container_width=True, height=400)
+
+    if season_log:
+        with st.expander("Full Season Injury Log"):
+            log_rows = []
+            for inj in season_log:
+                log_rows.append({
+                    "Week": inj.get("week_injured", ""),
+                    "Team": inj.get("team_name", ""),
+                    "Player": inj.get("player_name", ""),
+                    "Position": inj.get("position", ""),
+                    "Injury": inj.get("description", ""),
+                    "Severity": inj.get("tier", "").title(),
+                    "Weeks Out": inj.get("weeks_out", ""),
+                })
+            st.dataframe(pd.DataFrame(log_rows), hide_index=True, use_container_width=True, height=400)

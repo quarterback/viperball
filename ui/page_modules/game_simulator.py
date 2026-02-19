@@ -226,69 +226,131 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     h_saf = hs.get('safeties_conceded', 0)
     a_saf = as_.get('safeties_conceded', 0)
 
-    st.markdown("**Scoring & Stats**")
-    scoring_data = {
-        "": ["Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
-             "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
-             "Punt Return TDs", "Chaos Recoveries",
-             "Punts", "Kick %",
-             "Total Yards", "Rushing Yards", "Lateral Yards",
-             "Yards/Play", "Total Plays",
-             "Lateral Chains", "Lateral Efficiency",
-             "Fumbles Lost", "Turnovers on Downs",
-             "Penalties", "Penalty Yards",
-             "Keeper Deflections", "Keeper Tackles",
-             "Longest Play", "Avg Fatigue"],
-        home_name: [
-            f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
-            f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
-            f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
-            f"{a_saf} ({a_saf * 2}pts)",
-            f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
-            f"{h_fr} ({h_frp:g}pts)",
-            str(hs.get("punt_return_tds", 0)),
-            str(hs.get("chaos_recoveries", 0)),
-            str(hs.get("punts", 0)),
-            f"{hs.get('kick_percentage', 0)}%",
-            str(hs["total_yards"]),
-            str(hs.get("rushing_yards", 0)),
-            str(hs.get("lateral_yards", 0)),
-            str(hs["yards_per_play"]), str(hs["total_plays"]),
-            str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
-            str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
-            str(hs.get("penalties", 0)),
-            str(hs.get("penalty_yards", 0)),
-            str(hs.get("keeper_deflections", 0)),
-            str(hs.get("keeper_tackles", 0)),
-            str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
-            f'{hs["avg_fatigue"]}%',
-        ],
-        away_name: [
-            f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
-            f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
-            f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
-            f"{h_saf} ({h_saf * 2}pts)",
-            f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
-            f"{a_fr} ({a_frp:g}pts)",
-            str(as_.get("punt_return_tds", 0)),
-            str(as_.get("chaos_recoveries", 0)),
-            str(as_.get("punts", 0)),
-            f"{as_.get('kick_percentage', 0)}%",
-            str(as_["total_yards"]),
-            str(as_.get("rushing_yards", 0)),
-            str(as_.get("lateral_yards", 0)),
-            str(as_["yards_per_play"]), str(as_["total_plays"]),
-            str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
-            str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
-            str(as_.get("penalties", 0)),
-            str(as_.get("penalty_yards", 0)),
-            str(as_.get("keeper_deflections", 0)),
-            str(as_.get("keeper_tackles", 0)),
-            str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
-            f'{as_["avg_fatigue"]}%',
-        ],
-    }
-    st.dataframe(pd.DataFrame(scoring_data), hide_index=True, use_container_width=True)
+    st.markdown("**Scoring**")
+    scoring_labels = [
+        "Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
+        "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
+        "Punt Return TDs", "Chaos Recoveries",
+    ]
+    scoring_home = [
+        f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
+        f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)} ({hs['drop_kicks_made'] * 5}pts)",
+        f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)} ({hs['place_kicks_made'] * 3}pts)",
+        f"{a_saf} ({a_saf * 2}pts)",
+        f"{hs.get('pindowns',0)} ({hs.get('pindowns',0)}pts)",
+        f"{h_fr} ({h_frp:g}pts)",
+        str(hs.get("punt_return_tds", 0)),
+        str(hs.get("chaos_recoveries", 0)),
+    ]
+    scoring_away = [
+        f"{as_['touchdowns']} ({as_['touchdowns'] * 9}pts)",
+        f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)} ({as_['drop_kicks_made'] * 5}pts)",
+        f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)} ({as_['place_kicks_made'] * 3}pts)",
+        f"{h_saf} ({h_saf * 2}pts)",
+        f"{as_.get('pindowns',0)} ({as_.get('pindowns',0)}pts)",
+        f"{a_fr} ({a_frp:g}pts)",
+        str(as_.get("punt_return_tds", 0)),
+        str(as_.get("chaos_recoveries", 0)),
+    ]
+    st.dataframe(pd.DataFrame({"": scoring_labels, home_name: scoring_home, away_name: scoring_away}),
+                 hide_index=True, use_container_width=True)
+
+    st.markdown("**Offensive Stats**")
+    off_labels = [
+        "Total Yards", "Rushing Yards", "Lateral Yards",
+        "Yards/Play", "Total Plays",
+        "Lateral Chains", "Lateral Efficiency",
+        "Longest Play",
+    ]
+    off_home = [
+        str(hs["total_yards"]),
+        str(hs.get("rushing_yards", 0)),
+        str(hs.get("lateral_yards", 0)),
+        str(hs["yards_per_play"]), str(hs["total_plays"]),
+        str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
+        str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
+    ]
+    off_away = [
+        str(as_["total_yards"]),
+        str(as_.get("rushing_yards", 0)),
+        str(as_.get("lateral_yards", 0)),
+        str(as_["yards_per_play"]), str(as_["total_plays"]),
+        str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
+        str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
+    ]
+    st.dataframe(pd.DataFrame({"": off_labels, home_name: off_home, away_name: off_away}),
+                 hide_index=True, use_container_width=True)
+
+    st.markdown("**Kicking & Special Teams**")
+    kick_labels = [
+        "Snap Kicks (Made/Att)", "Snap Kick %",
+        "Field Goals (Made/Att)", "Field Goal %",
+        "Punts", "Pindowns",
+        "Kick %",
+    ]
+    h_dk_pct = round(hs['drop_kicks_made'] / max(1, hs.get('drop_kicks_attempted', 0)) * 100, 1) if hs.get('drop_kicks_attempted', 0) else 0
+    a_dk_pct = round(as_['drop_kicks_made'] / max(1, as_.get('drop_kicks_attempted', 0)) * 100, 1) if as_.get('drop_kicks_attempted', 0) else 0
+    h_pk_pct = round(hs['place_kicks_made'] / max(1, hs.get('place_kicks_attempted', 0)) * 100, 1) if hs.get('place_kicks_attempted', 0) else 0
+    a_pk_pct = round(as_['place_kicks_made'] / max(1, as_.get('place_kicks_attempted', 0)) * 100, 1) if as_.get('place_kicks_attempted', 0) else 0
+    kick_home = [
+        f"{hs['drop_kicks_made']}/{hs.get('drop_kicks_attempted',0)}",
+        f"{h_dk_pct}%",
+        f"{hs['place_kicks_made']}/{hs.get('place_kicks_attempted',0)}",
+        f"{h_pk_pct}%",
+        str(hs.get("punts", 0)),
+        str(hs.get("pindowns", 0)),
+        f"{hs.get('kick_percentage', 0)}%",
+    ]
+    kick_away = [
+        f"{as_['drop_kicks_made']}/{as_.get('drop_kicks_attempted',0)}",
+        f"{a_dk_pct}%",
+        f"{as_['place_kicks_made']}/{as_.get('place_kicks_attempted',0)}",
+        f"{a_pk_pct}%",
+        str(as_.get("punts", 0)),
+        str(as_.get("pindowns", 0)),
+        f"{as_.get('kick_percentage', 0)}%",
+    ]
+    st.dataframe(pd.DataFrame({"": kick_labels, home_name: kick_home, away_name: kick_away}),
+                 hide_index=True, use_container_width=True)
+
+    st.markdown("**Turnovers & Discipline**")
+    turn_labels = [
+        "Fumbles Lost", "Turnovers on Downs",
+        "Penalties", "Penalty Yards",
+    ]
+    turn_home = [
+        str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
+        str(hs.get("penalties", 0)), str(hs.get("penalty_yards", 0)),
+    ]
+    turn_away = [
+        str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
+        str(as_.get("penalties", 0)), str(as_.get("penalty_yards", 0)),
+    ]
+    st.dataframe(pd.DataFrame({"": turn_labels, home_name: turn_home, away_name: turn_away}),
+                 hide_index=True, use_container_width=True)
+
+    st.markdown("**Keeper & Fatigue**")
+    keep_labels = [
+        "Keeper Deflections", "Keeper Tackles",
+        "Keeper Bells", "Fake TDs Allowed",
+        "Avg Fatigue",
+    ]
+    keep_home = [
+        str(hs.get("keeper_deflections", 0)),
+        str(hs.get("keeper_tackles", 0)),
+        str(hs.get("keeper_bells_generated", 0)),
+        str(hs.get("keeper_fake_tds_allowed", 0)),
+        f'{hs["avg_fatigue"]}%',
+    ]
+    keep_away = [
+        str(as_.get("keeper_deflections", 0)),
+        str(as_.get("keeper_tackles", 0)),
+        str(as_.get("keeper_bells_generated", 0)),
+        str(as_.get("keeper_fake_tds_allowed", 0)),
+        f'{as_["avg_fatigue"]}%',
+    ]
+    st.dataframe(pd.DataFrame({"": keep_labels, home_name: keep_home, away_name: keep_away}),
+                 hide_index=True, use_container_width=True)
 
     st.markdown("**Down Conversions**")
     h_dc = hs.get("down_conversions", {})
@@ -336,28 +398,111 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 pstats = player_stats.get(side, [])
                 if pstats:
                     pdf = pd.DataFrame(pstats)
-                    col_renames = {
-                        "tag": "Tag", "name": "Name", "archetype": "Archetype",
-                        "touches": "Touches", "yards": "Yards",
-                        "rushing_yards": "Rush", "lateral_yards": "Lat Yds",
-                        "tds": "TDs", "fumbles": "Fum",
-                        "laterals_thrown": "Lat Thr", "lateral_receptions": "Lat Rec",
-                        "lateral_assists": "Lat Ast", "lateral_tds": "Lat TD",
-                        "pk_att": "FG Att", "pk_made": "FG Made",
-                        "dk_att": "DK Att", "dk_made": "DK Made",
-                        "kick_att": "K Att", "kick_made": "K Made",
-                        "kick_deflections": "Defl", "keeper_bells": "Bells",
-                        "coverage_snaps": "Cov", "keeper_tackles": "KP Tkl",
-                        "keeper_return_yards": "KP Ret",
-                        "kick_returns": "KR", "kick_return_yards": "KR Yds",
-                        "kick_return_tds": "KR TD",
-                        "punt_returns": "PR", "punt_return_yards": "PR Yds",
-                        "punt_return_tds": "PR TD",
-                        "muffs": "Muffs", "st_tackles": "ST Tkl",
-                        "tackles": "Tkl", "tfl": "TFL", "sacks": "Sacks", "hurries": "Hurr",
-                    }
-                    pdf.rename(columns=col_renames, inplace=True)
-                    st.dataframe(pdf, hide_index=True, use_container_width=True)
+                    stab1, stab2, stab3, stab4, stab5 = st.tabs(
+                        ["Rushing & Scoring", "Lateral Game", "Kicking", "Defense", "Returns & Special Teams"]
+                    )
+                    with stab1:
+                        rush_cols = ["tag", "name", "archetype", "touches", "yards",
+                                     "rushing_yards", "tds", "fumbles"]
+                        rush_avail = [c for c in rush_cols if c in pdf.columns]
+                        rush_df = pdf[pdf["touches"] > 0][rush_avail].copy() if "touches" in pdf.columns else pdf[rush_avail].copy()
+                        rush_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "touches": "Touches", "yards": "Yards",
+                            "rushing_yards": "Rush Yds", "tds": "TDs", "fumbles": "Fum",
+                        }, inplace=True)
+                        if not rush_df.empty:
+                            st.dataframe(rush_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No rushing data.")
+                    with stab2:
+                        lat_cols = ["tag", "name", "archetype", "laterals_thrown",
+                                    "lateral_receptions", "lateral_assists",
+                                    "lateral_yards", "lateral_tds"]
+                        lat_avail = [c for c in lat_cols if c in pdf.columns]
+                        lat_df = pdf[lat_avail].copy()
+                        has_lat = lat_df.drop(columns=[c for c in ["tag", "name", "archetype"] if c in lat_df.columns], errors="ignore")
+                        lat_df = lat_df[has_lat.sum(axis=1) > 0] if not has_lat.empty else lat_df
+                        lat_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "laterals_thrown": "Thrown", "lateral_receptions": "Received",
+                            "lateral_assists": "Assists", "lateral_yards": "Lat Yds",
+                            "lateral_tds": "Lat TDs",
+                        }, inplace=True)
+                        if not lat_df.empty:
+                            st.dataframe(lat_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No lateral data.")
+                    with stab3:
+                        kick_cols = ["tag", "name", "archetype",
+                                     "pk_att", "pk_made", "dk_att", "dk_made",
+                                     "kick_att", "kick_made"]
+                        kick_avail = [c for c in kick_cols if c in pdf.columns]
+                        kick_df = pdf[kick_avail].copy()
+                        has_kick = pd.Series([0]*len(kick_df), index=kick_df.index)
+                        for kc in ["kick_att", "pk_att", "dk_att"]:
+                            if kc in kick_df.columns:
+                                has_kick = has_kick + kick_df[kc].fillna(0)
+                        kick_df = kick_df[has_kick > 0]
+                        kick_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "pk_att": "FG Att", "pk_made": "FG Made",
+                            "dk_att": "Snap Kick Att", "dk_made": "Snap Kick Made",
+                            "kick_att": "Total K Att", "kick_made": "Total K Made",
+                        }, inplace=True)
+                        if not kick_df.empty:
+                            for _, row in kick_df.iterrows():
+                                st.markdown(f"**{row.get('Name', '')}** ({row.get('Tag', '')})")
+                                kc1, kc2, kc3 = st.columns(3)
+                                kc1.metric("Field Goals (3pts)", f"{row.get('FG Made', 0)}/{row.get('FG Att', 0)}")
+                                kc2.metric("Snap Kicks (5pts)", f"{row.get('Snap Kick Made', 0)}/{row.get('Snap Kick Att', 0)}")
+                                kc3.metric("Total Kicks", f"{row.get('Total K Made', 0)}/{row.get('Total K Att', 0)}")
+                            st.divider()
+                            st.dataframe(kick_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No kicking data.")
+                    with stab4:
+                        def_cols = ["tag", "name", "archetype", "tackles", "tfl",
+                                    "sacks", "hurries"]
+                        def_avail = [c for c in def_cols if c in pdf.columns]
+                        def_df = pdf[def_avail].copy()
+                        has_def = def_df.drop(columns=[c for c in ["tag", "name", "archetype"] if c in def_df.columns], errors="ignore")
+                        def_df = def_df[has_def.sum(axis=1) > 0] if not has_def.empty else def_df
+                        def_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "tackles": "Tackles", "tfl": "TFL",
+                            "sacks": "Sacks", "hurries": "Hurries",
+                        }, inplace=True)
+                        if not def_df.empty:
+                            st.dataframe(def_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No defensive data.")
+                    with stab5:
+                        ret_cols = ["tag", "name", "archetype",
+                                    "kick_returns", "kick_return_yards", "kick_return_tds",
+                                    "punt_returns", "punt_return_yards", "punt_return_tds",
+                                    "muffs", "st_tackles",
+                                    "kick_deflections", "keeper_bells", "coverage_snaps",
+                                    "keeper_tackles", "keeper_return_yards"]
+                        ret_avail = [c for c in ret_cols if c in pdf.columns]
+                        ret_df = pdf[ret_avail].copy()
+                        has_ret = ret_df.drop(columns=[c for c in ["tag", "name", "archetype"] if c in ret_df.columns], errors="ignore")
+                        ret_df = ret_df[has_ret.sum(axis=1) > 0] if not has_ret.empty else ret_df
+                        ret_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "kick_returns": "KR", "kick_return_yards": "KR Yds",
+                            "kick_return_tds": "KR TD",
+                            "punt_returns": "PR", "punt_return_yards": "PR Yds",
+                            "punt_return_tds": "PR TD",
+                            "muffs": "Muffs", "st_tackles": "ST Tkl",
+                            "kick_deflections": "Defl", "keeper_bells": "Bells",
+                            "coverage_snaps": "Cov Snaps", "keeper_tackles": "KP Tkl",
+                            "keeper_return_yards": "KP Ret Yds",
+                        }, inplace=True)
+                        if not ret_df.empty:
+                            st.dataframe(ret_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No returns/special teams data.")
                 else:
                     st.caption("No player stat data available.")
 
