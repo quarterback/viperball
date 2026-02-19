@@ -221,30 +221,33 @@ def _salary_for_player(overall: int, position_tag: str,
                        seed: int = 0) -> int:
     """Compute weekly salary from overall rating, position, usage, and depth.
 
-    Bench warmers and low-usage players are cheap (~500-2000).
-    Starters with high overalls command premiums.
-    Returns granular, non-rounded amounts for realistic arbitrage.
+    Range: $750 – $7,500 in $1 increments.
+    Bench warmers and low-usage players sit near the floor.
+    Elite starters approach the ceiling.
     """
     import hashlib
     usage_factor = min(1.0, games_played / 12.0) if games_played > 0 else 0.05
     depth_factor = {1: 1.0, 2: 0.65, 3: 0.40}.get(depth_rank, max(0.15, 0.50 - depth_rank * 0.08))
 
-    base = 400 + int((overall / 100) * 10_000 * usage_factor * depth_factor)
+    norm = (overall / 100.0) * usage_factor * depth_factor
 
     pos_mult = {
-        "VP": 1.28,
-        "HB": 1.07,
-        "ZB": 1.12,
+        "VP": 1.15,
+        "HB": 1.05,
+        "ZB": 1.08,
         "WB": 1.00,
-        "SB": 0.88,
-        "KP": 0.78,
+        "SB": 0.92,
+        "KP": 0.85,
     }.get(position_tag, 1.0)
 
-    raw = int(base * pos_mult)
+    raw = norm * pos_mult
 
     h = int(hashlib.md5(f"{seed}-{overall}-{position_tag}-{depth_rank}".encode()).hexdigest()[:8], 16)
-    micro_var = 0.93 + (h % 1500) / 10000.0
-    salary = max(487, int(raw * micro_var))
+    micro_var = 0.94 + (h % 1200) / 10000.0
+
+    pct = min(1.0, raw * micro_var * 1.15)
+    salary = 750 + int((pct ** 1.4) * (7500 - 750))
+    salary = max(750, min(7500, salary))
 
     return salary
 

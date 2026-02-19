@@ -582,26 +582,33 @@ def _render_donate_tab(session_id: str, kp: str):
             dtype_keys = []
             dtype_idx = 0
 
-        max_donate = max(10000, balance)
-        dc1, dc2 = st.columns([3, 1])
-        with dc1:
-            donate_amount = st.slider(
-                "Amount (DQ$)",
-                min_value=10000,
-                max_value=max_donate,
-                value=min(10000, max_donate),
-                step=5000,
-                key=f"{kp}dq_donate_amount",
-            )
-        with dc2:
-            donate_amount = st.number_input(
-                "Exact",
-                min_value=10000,
-                max_value=max_donate,
-                value=donate_amount,
-                step=5000,
-                key=f"{kp}dq_donate_exact",
-            )
+        min_donate = 1000
+        if balance < min_donate:
+            st.info(f"You need at least DQ${min_donate:,} to donate. Current balance: DQ${balance:,}.")
+            donate_amount = 0
+        else:
+            max_donate = balance
+            default_donate = min(10000, max_donate)
+            slider_step = max(1, (max_donate - min_donate) // 100) if max_donate > min_donate else 1
+            dc1, dc2 = st.columns([3, 1])
+            with dc1:
+                donate_amount = st.slider(
+                    "Amount (DQ$)",
+                    min_value=min_donate,
+                    max_value=max_donate,
+                    value=default_donate,
+                    step=slider_step,
+                    key=f"{kp}dq_donate_amount",
+                )
+            with dc2:
+                donate_amount = st.number_input(
+                    "Exact",
+                    min_value=min_donate,
+                    max_value=max_donate,
+                    value=donate_amount,
+                    step=1,
+                    key=f"{kp}dq_donate_exact",
+                )
 
         donate_submitted = st.form_submit_button(
             f"Donate to {target_team if human_teams else '...'}",
@@ -609,7 +616,7 @@ def _render_donate_tab(session_id: str, kp: str):
             use_container_width=True,
         )
 
-    if donate_submitted and dtype_keys:
+    if donate_submitted and dtype_keys and donate_amount > 0:
         try:
             resp = api_client.dq_donate(
                 session_id, dtype_keys[dtype_idx], donate_amount,
