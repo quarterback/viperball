@@ -239,18 +239,35 @@ def _render_donate_tab(session_id: str, kp: str):
     if next_tier:
         st.caption(f"Next tier: {next_tier['name']} (${next_tier['amount_needed']:,} to go)")
 
-    boosts = portfolio.get("boosts", [])
-    if boosts:
-        st.markdown("**Active Boosts:**")
-        for b in boosts:
-            pct = b.get("progress_pct", 0)
-            bar_len = 10
-            filled = int(pct / 100 * bar_len)
-            bar = "█" * filled + "░" * (bar_len - filled)
-            st.markdown(f"- {b['label']}: +{b['current_value']:.1f} [{bar}] {pct:.0f}%")
+    human_teams = portfolio.get("human_teams", [])
+    team_boosts = portfolio.get("team_boosts", {})
+
+    if team_boosts:
+        st.markdown("**Active Boosts by Program:**")
+        for team_name, boosts_list in team_boosts.items():
+            active = [b for b in boosts_list if b.get("current_value", 0) > 0]
+            if active:
+                st.markdown(f"**{team_name}**")
+                for b in active:
+                    pct = b.get("progress_pct", 0)
+                    bar_len = 10
+                    filled = int(pct / 100 * bar_len)
+                    bar = "█" * filled + "░" * (bar_len - filled)
+                    st.markdown(f"- {b['label']}: +{b['current_value']:.1f} [{bar}] {pct:.0f}%")
+            else:
+                st.markdown(f"**{team_name}** — no active boosts yet")
+    elif human_teams:
+        st.info("No donations made yet. Donate your DQ$ winnings to boost your program!")
 
     st.divider()
     st.markdown(f"**Make a Donation** (Balance: ${balance:,} | Min: $10,000)")
+
+    if not human_teams:
+        st.warning("No coached team found. Start a season or dynasty to donate to a program.")
+        return
+
+    target_team = st.selectbox("Donate to Program", human_teams,
+                                key=f"{kp}dq_donate_team")
 
     dtype_options = portfolio.get("donation_types", {})
     if dtype_options:
@@ -265,13 +282,66 @@ def _render_donate_tab(session_id: str, kp: str):
                                           value=min(10000, balance) if balance >= 10000 else 10000,
                                           step=5000, key=f"{kp}dq_donate_amount")
 
-        if st.button("Donate", key=f"{kp}dq_donate_btn", disabled=balance < 10000):
+        if st.button(f"Donate to {target_team}", key=f"{kp}dq_donate_btn", disabled=balance < 10000):
             try:
-                resp = api_client.dq_donate(session_id, dtype_keys[dtype_idx], donate_amount)
-                st.success(f"Donated ${donate_amount:,}! Balance: ${resp['bankroll']:,}. Tier: {resp['booster_tier']}")
+                resp = api_client.dq_donate(session_id, dtype_keys[dtype_idx], donate_amount, target_team=target_team)
+                st.success(f"Donated ${donate_amount:,} to {target_team}! Balance: ${resp['bankroll']:,}. Tier: {resp['booster_tier']}")
                 st.rerun()
             except api_client.APIError as e:
                 st.error(e.detail)
+
+
+def render_dq_history(session_id: str, key_prefix: str = ""):
+    try:
+        summary = api_client.dq_summary(session_id)
+    except api_client.APIError:
+        st.info("DraftyQueenz season history not available yet.")
+        return
+
+    weeks = summary.get("weeks", [])
+    if not weeks:
+        st.info("No completed weeks yet.")
+        return
+
+    st.markdown("### Season History")
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("Balance", f"${summary.get('bankroll', 0):,}")
+    mc2.metric("Total Earned", f"${summary.get('total_earned', 0):,}")
+    mc3.metric("Accuracy", f"{summary.get('pick_accuracy', 0):.0f}%")
+    mc4.metric("ROI", f"{summary.get('roi', 0):+.1f}%")
+
+    st.markdown("**Week-by-Week Results:**")
+    header = "Week | Picks W/L | Pred $ | Fantasy Pts | Fantasy $ | Net"
+    divider = "---|---|---|---|---|---"
+    rows = [header, divider]
+    for w in weeks:
+        wk = w.get("week", "?")
+        pw = w.get("picks_won", 0)
+        pm = w.get("picks_made", 0)
+        pred_e = w.get("prediction_earnings", 0)
+        fpts = w.get("fantasy_points", 0)
+        fan_e = w.get("fantasy_earnings", 0)
+        net = pred_e + fan_e
+        rows.append(f"{wk} | {pw}/{pm} | ${pred_e:,} | {fpts:.1f} | ${fan_e:,} | ${net:,}")
+    st.markdown("\n".join(rows))
+
+    clipboard_text = "DraftyQueenz Season Report\n"
+    clipboard_text += f"Manager: {summary.get('manager', 'Coach')}\n"
+    clipboard_text += f"Balance: ${summary.get('bankroll', 0):,} | Earned: ${summary.get('total_earned', 0):,} | ROI: {summary.get('roi', 0):+.1f}%\n\n"
+    clipboard_text += "Wk  Picks  Pred$    FPts   Fan$    Net\n"
+    clipboard_text += "-" * 48 + "\n"
+    for w in weeks:
+        wk = w.get("week", "?")
+        pw = w.get("picks_won", 0)
+        pm = w.get("picks_made", 0)
+        pred_e = w.get("prediction_earnings", 0)
+        fpts = w.get("fantasy_points", 0)
+        fan_e = w.get("fantasy_earnings", 0)
+        net = pred_e + fan_e
+        clipboard_text += f"{wk:<4}{pw}/{pm:<5}${pred_e:<8,}{fpts:<7.1f}${fan_e:<7,}${net:,}\n"
+
+    st.text_area("Copy/Paste Export", clipboard_text, height=200,
+                   key=f"{key_prefix}dq_history_export")
 
 
 def render_dq_post_sim(session_id: str, week: int, key_prefix: str = ""):

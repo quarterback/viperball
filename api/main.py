@@ -776,7 +776,9 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
         raise HTTPException(status_code=400, detail=f"Cannot simulate week in phase '{session['phase']}'")
 
     week = req.week
-    games = season.simulate_week(week=week)
+    dq_mgr = session.get("dq_manager")
+    dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
+    games = season.simulate_week(week=week, dq_team_boosts=dq_boosts)
 
     if not games:
         return {"week": week, "games": [], "message": "No games to simulate"}
@@ -1459,7 +1461,12 @@ def dynasty_advance(session_id: str):
     tracker = session.get("injury_tracker")
     rng = random.Random(dynasty.current_year + 7)
 
-    dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng)
+    dq_manager_pre = session.get("dq_manager")
+    dq_team_boosts_map = None
+    if dq_manager_pre:
+        dq_team_boosts_map = dq_manager_pre.get_all_team_boosts()
+    dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng,
+                           dq_team_boosts=dq_team_boosts_map)
 
     year = dynasty.current_year
     prev_year = year - 1
@@ -1479,7 +1486,7 @@ def dynasty_advance(session_id: str):
     dq_manager = session.get("dq_manager")
     dq_boosts = {}
     if dq_manager:
-        dq_boosts = dq_manager.get_active_boosts()
+        dq_boosts = dq_manager.get_active_boosts(team_name=human_team)
         facilities_boost = dq_boosts.get("facilities", 0)
         if facilities_boost > 0 and human_team in dynasty.team_prestige:
             dynasty.team_prestige[human_team] = min(
@@ -1531,11 +1538,13 @@ def dynasty_advance(session_id: str):
         sr = dynasty.team_histories.get(human_team)
         hw = sr.season_records.get(prev_year, {}).get("wins", 5) if sr else 5
         from engine.nil_system import RetentionRisk
+        retention_bonus = dq_boosts.get("retention", 0)
         retention_risks = assess_retention_risks(
             roster=offseason_player_cards[human_team],
             team_prestige=ht_prestige,
             team_wins=hw,
             rng=rng,
+            retention_boost=retention_bonus,
         )
 
     graduating = {}
@@ -2048,6 +2057,11 @@ def offseason_recruiting_resolve(session_id: str):
         recruiting_prestige[human_team] = min(
             100, recruiting_prestige[human_team] + int(recruit_boost)
         )
+    recruit_nil_boost = dq_boosts_off.get("nil_topup", 0)
+    if recruit_nil_boost > 0:
+        human_nil_prog = dynasty._nil_programs.get(human_team)
+        if human_nil_prog:
+            human_nil_prog.recruiting_pool += int(recruit_nil_boost * 0.3)
 
     signed = simulate_recruit_decisions(
         pool=recruit_pool,
@@ -2337,6 +2351,7 @@ class DQRosterSlotRequest(BaseModel):
 class DQDonateRequest(BaseModel):
     donation_type: str
     amount: int
+    target_team: str = ""
 
 
 def _require_dq(session: dict) -> DraftyQueenzManager:
@@ -2643,7 +2658,7 @@ def dq_resolve_week(session_id: str, week: int):
 def dq_donate(session_id: str, req: DQDonateRequest):
     session = _get_session(session_id)
     mgr = _require_dq(session)
-    donation, err = mgr.donate(req.donation_type, req.amount)
+    donation, err = mgr.donate(req.donation_type, req.amount, target_team=req.target_team)
     if err:
         raise HTTPException(status_code=400, detail=err)
     return {
@@ -2652,6 +2667,7 @@ def dq_donate(session_id: str, req: DQDonateRequest):
         "career_donated": mgr.career_donated,
         "booster_tier": mgr.booster_tier[0],
         "active_boosts": mgr.get_active_boosts(),
+        "team_boosts": mgr.get_all_team_boosts(),
     }
 
 
@@ -2676,12 +2692,36 @@ def dq_portfolio(session_id: str):
             "progress_pct": round(pct, 1),
         })
 
+    human_teams = session.get("human_teams", [])
+
+    team_boost_details = {}
+    all_team_boosts = mgr.get_all_team_boosts()
+    for team_name in (list(all_team_boosts.keys()) + human_teams):
+        if team_name in team_boost_details:
+            continue
+        team_boosts = mgr.get_active_boosts(team_name=team_name)
+        details = []
+        for dtype, info in DONATION_TYPES.items():
+            val = team_boosts.get(dtype, 0)
+            pct = min(100, val / info["cap"] * 100) if info["cap"] > 0 else 0
+            details.append({
+                "type": dtype,
+                "label": info["label"],
+                "description": info["description"],
+                "current_value": round(val, 2),
+                "cap": info["cap"],
+                "progress_pct": round(pct, 1),
+            })
+        team_boost_details[team_name] = details
+
     return {
         "booster_tier": tier_name,
         "booster_tier_desc": tier_desc,
         "career_donated": mgr.career_donated,
         "next_tier": {"amount_needed": next_info[0], "name": next_info[1]} if next_info else None,
         "boosts": boost_details,
+        "team_boosts": team_boost_details,
+        "human_teams": human_teams,
         "donations": [d.to_dict() for d in mgr.donations],
         "donation_types": {
             k: {"label": v["label"], "description": v["description"], "per_10k": v["per_10k"], "cap": v["cap"]}

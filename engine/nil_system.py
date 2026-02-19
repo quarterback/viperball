@@ -327,16 +327,19 @@ def assess_retention_risks(
     team_prestige: int,
     team_wins: int,
     rng: Optional[random.Random] = None,
+    retention_boost: float = 0.0,
 ) -> List[RetentionRisk]:
     """
     Assess which roster players are at risk of entering the portal
     and suggest NIL retention amounts.
 
     Args:
-        roster:         List of PlayerCard objects.
-        team_prestige:  0-100 prestige.
-        team_wins:      Wins last season.
-        rng:            Seeded Random.
+        roster:           List of PlayerCard objects.
+        team_prestige:    0-100 prestige.
+        team_wins:        Wins last season.
+        rng:              Seeded Random.
+        retention_boost:  DraftyQueenz retention donation bonus (0-20).
+                          Directly reduces risk scores, making players less likely to leave.
 
     Returns:
         List of RetentionRisk objects for at-risk players.
@@ -347,39 +350,34 @@ def assess_retention_risks(
     risks: List[RetentionRisk] = []
 
     for card in roster:
-        # Skip freshmen (they just got here) and graduates (leaving anyway)
         if card.year in ("Freshman", "Graduate"):
             continue
 
-        # Base risk factors
         risk_score = 0.0
 
-        # High-overall players are targets for other programs
         if card.overall >= 82:
             risk_score += 25.0
         elif card.overall >= 75:
             risk_score += 15.0
 
-        # High potential = more attractive to other programs
         if card.potential >= 4:
             risk_score += 20.0
         elif card.potential >= 3:
             risk_score += 10.0
 
-        # Low prestige programs lose more players
         if team_prestige < 40:
             risk_score += 15.0
         elif team_prestige < 60:
             risk_score += 8.0
 
-        # Losing record
         if team_wins < 4:
             risk_score += 12.0
         elif team_wins < 6:
             risk_score += 5.0
 
-        # Random personality factor
         risk_score += rng.uniform(-5, 10)
+
+        risk_score -= retention_boost
 
         # Classify risk
         if risk_score >= 35:

@@ -24,6 +24,7 @@ from engine.game_engine import WEATHER_CONDITIONS
 from ui import api_client
 from ui.page_modules.draftyqueenz_ui import (
     render_dq_bankroll_banner, render_dq_pre_sim, render_dq_post_sim,
+    render_dq_history,
 )
 from ui.helpers import (
     load_team, format_time, fmt_vb_score,
@@ -1638,6 +1639,10 @@ def _render_dynasty_play(shared):
 
                 if current_week > 0:
                     render_dq_post_sim(session_id, current_week, key_prefix="dyn_")
+
+                    with st.expander("DraftyQueenz Season History", expanded=False):
+                        render_dq_history(session_id, key_prefix="dyn_")
+
                     st.divider()
                     try:
                         standings_resp = api_client.get_standings(session_id)
@@ -1982,6 +1987,10 @@ def _render_season_play(shared):
 
             if current_week > 0:
                 render_dq_post_sim(session_id, current_week, key_prefix="ssn_")
+
+                with st.expander("DraftyQueenz Season History", expanded=False):
+                    render_dq_history(session_id, key_prefix="ssn_")
+
                 st.divider()
                 try:
                     standings_resp = api_client.get_standings(session_id)

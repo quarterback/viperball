@@ -664,7 +664,7 @@ class Season:
         """Legacy method - generates full round-robin"""
         self.generate_schedule(games_per_team=0)
 
-    def simulate_game(self, game: Game, verbose: bool = False) -> Dict:
+    def simulate_game(self, game: Game, verbose: bool = False, dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None) -> Dict:
         """Simulate a single game and update standings"""
         home_team = self.teams[game.home_team]
         away_team = self.teams[game.away_team]
@@ -688,6 +688,8 @@ class Season:
             total_weeks=total_weeks,
         )
 
+        home_dq = dq_team_boosts.get(game.home_team, {}) if dq_team_boosts else {}
+        away_dq = dq_team_boosts.get(game.away_team, {}) if dq_team_boosts else {}
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -695,6 +697,8 @@ class Season:
             style_overrides=style_overrides,
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
+            home_dq_boosts=home_dq,
+            away_dq_boosts=away_dq,
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
@@ -737,7 +741,8 @@ class Season:
         return result
 
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
-                      generate_polls: bool = True) -> List[Game]:
+                      generate_polls: bool = True, rng=None,
+                      dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None) -> List[Game]:
         """Simulate a single week of games. Returns list of games played.
 
         Args:
@@ -745,6 +750,7 @@ class Season:
                   unplayed week.
             generate_polls: Whether to generate a poll after this week.
             verbose: Enable verbose output.
+            dq_team_boosts: Optional dict of team_name -> boost_type -> boost_amount.
 
         Returns:
             List of Game objects that were simulated this week, or empty list
@@ -757,7 +763,7 @@ class Season:
 
         week_games = [g for g in self.schedule if g.week == week and not g.completed]
         for game in week_games:
-            self.simulate_game(game, verbose=verbose)
+            self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts)
 
         if generate_polls and week_games:
             self._generate_weekly_poll(week)

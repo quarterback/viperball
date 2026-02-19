@@ -1266,10 +1266,14 @@ class ViperballEngine:
     def __init__(self, home_team: Team, away_team: Team, seed: Optional[int] = None,
                  style_overrides: Optional[Dict[str, str]] = None,
                  weather: str = "clear",
-                 is_rivalry: bool = False):
+                 is_rivalry: bool = False,
+                 home_dq_boosts: Optional[Dict[str, float]] = None,
+                 away_dq_boosts: Optional[Dict[str, float]] = None):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
+        self.home_dq_boosts = home_dq_boosts or {}
+        self.away_dq_boosts = away_dq_boosts or {}
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
@@ -1340,6 +1344,21 @@ class ViperballEngine:
 
         if self.is_rivalry:
             self._apply_rivalry_boost()
+
+        self._apply_dq_boosts()
+
+    def _apply_dq_boosts(self):
+        for boosts, team in [(self.home_dq_boosts, self.home_team),
+                             (self.away_dq_boosts, self.away_team)]:
+            if not boosts:
+                continue
+            dev_boost = boosts.get("development", 0)
+            facilities_boost = boosts.get("facilities", 0)
+            combined = int((dev_boost + facilities_boost) / 4)
+            if combined > 0:
+                for p in team.players:
+                    p.awareness = min(99, p.awareness + min(combined, 3))
+                    p.stamina = min(99, p.stamina + min(combined, 2))
 
     def _apply_rivalry_boost(self):
         home_avg = sum(p.overall for p in self.home_team.players) / max(1, len(self.home_team.players))

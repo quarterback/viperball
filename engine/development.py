@@ -173,6 +173,7 @@ def _clamp(val: int, lo: int = 40, hi: int = 99) -> int:
 def apply_offseason_development(
     card: PlayerCard,
     rng: Optional[random.Random] = None,
+    dev_boost: float = 0.0,
 ) -> DevelopmentEvent | None:
     """
     Apply one offseason of development to a PlayerCard.
@@ -180,6 +181,10 @@ def apply_offseason_development(
     Modifies attributes in-place and advances the player's year.
     Returns a DevelopmentEvent if the change is notable (breakout or decline),
     or None for routine development.
+
+    Args:
+        dev_boost: Extra development points from DraftyQueenz donations (0-8).
+                   Scales the upper bound of gains upward.
     """
     if rng is None:
         rng = random.Random()
@@ -189,18 +194,16 @@ def apply_offseason_development(
     potential = card.potential
     year_idx = _YEAR_INDEX.get(year, 1)
 
-    # Determine gain table
     if dev == "late_bloomer":
-        if year_idx <= 1:  # Freshman or Sophomore
+        if year_idx <= 1:
             gains = _GAINS_BY_PROFILE["late_bloomer"]["early"]
         else:
             gains = _GAINS_BY_PROFILE["late_bloomer"]["late"]
     else:
         gains = _GAINS_BY_PROFILE.get(dev, _GAINS_BY_PROFILE["normal"])
 
-    # Potential scales the upper bound of gains
-    # 5-star: gains at full ceiling; 1-star: gains capped at ~60% of ceiling
-    potential_scale = 0.6 + (potential - 1) * 0.1   # 0.6 to 1.0
+    potential_scale = 0.6 + (potential - 1) * 0.1
+    boost_scale = 1.0 + (dev_boost / 16.0)
 
     total_gain = 0
     attr_changes = {}
@@ -212,7 +215,7 @@ def apply_offseason_development(
 
     for attr in attrs_to_develop:
         lo, hi = gains[attr]
-        scaled_hi = max(lo, int(hi * potential_scale))
+        scaled_hi = max(lo, int(hi * potential_scale * boost_scale))
         delta = rng.randint(lo, scaled_hi)
 
         # Apply gain
@@ -326,6 +329,7 @@ def apply_redshirt_decisions(
 def apply_team_development(
     players: list,
     rng: Optional[random.Random] = None,
+    dev_boost: float = 0.0,
 ) -> DevelopmentReport:
     """
     Apply offseason development to a list of PlayerCard objects.
@@ -333,6 +337,7 @@ def apply_team_development(
     Args:
         players: list of PlayerCard objects
         rng: optional seeded Random instance for reproducibility
+        dev_boost: DraftyQueenz development boost (0-8) to amplify stat gains
 
     Returns:
         DevelopmentReport with notable events
@@ -343,7 +348,7 @@ def apply_team_development(
     report = DevelopmentReport()
 
     for card in players:
-        event = apply_offseason_development(card, rng=rng)
+        event = apply_offseason_development(card, rng=rng, dev_boost=dev_boost)
         if event:
             report.notable_events.append(event)
         report.year_updated[card.full_name] = card.year

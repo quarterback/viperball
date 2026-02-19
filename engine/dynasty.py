@@ -438,6 +438,7 @@ class Dynasty:
         injury_tracker: Optional["InjuryTracker"] = None,
         player_cards: Optional[Dict[str, list]] = None,
         rng: Optional[random.Random] = None,
+        dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         """
         Add a completed season to dynasty history.
@@ -610,7 +611,10 @@ class Dynasty:
                 for name in rs_names:
                     redshirt_events.append({"team": team_name, "player": name})
 
-                report = apply_team_development(cards, rng=dev_rng)
+                team_dev_boost = 0.0
+                if dq_team_boosts and team_name in dq_team_boosts:
+                    team_dev_boost = dq_team_boosts[team_name].get("development", 0.0)
+                report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost)
                 for ev in report.notable_events:
                     dev_events.append({
                         "team": team_name,

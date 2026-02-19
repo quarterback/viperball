@@ -222,16 +222,16 @@ def _salary_for_player(overall: int, position_tag: str) -> int:
     VP commands a premium; KP gets a discount.  Values range ~4k–15k so
     that a 50k cap forces real trade-offs.
     """
-    base = 3_000 + int((overall / 100) * 10_000)
+    base = 2_000 + int((overall / 100) * 12_000)
     multiplier = {
         "VP": 1.25,
         "HB": 1.05,
         "ZB": 1.10,
         "WB": 1.00,
-        "SB": 0.95,
-        "KP": 0.85,
+        "SB": 0.90,
+        "KP": 0.80,
     }.get(position_tag, 1.0)
-    return int(base * multiplier / 500) * 500  # round to nearest 500
+    return int(base * multiplier / 500) * 500
 
 
 def build_player_pool(teams: Dict, week_schedule: list) -> List[FantasyPlayer]:
@@ -760,6 +760,7 @@ class BoosterDonation:
     amount: int          # DQ$ spent
     boost_value: float   # computed effect value
     week: int = 0
+    target_team: str = ""
 
     def to_dict(self) -> Dict:
         info = DONATION_TYPES.get(self.donation_type, {})
@@ -769,6 +770,7 @@ class BoosterDonation:
             "amount": self.amount,
             "boost_value": self.boost_value,
             "week": self.week,
+            "target_team": self.target_team,
         }
 
 
@@ -806,8 +808,9 @@ def make_donation(
     donation_type: str,
     amount: int,
     week: int = 0,
+    target_team: str = "",
 ) -> Optional[BoosterDonation]:
-    """Attempt to make a booster donation.
+    """Attempt to make a booster donation to a specific team program.
 
     Returns the BoosterDonation on success, or None if insufficient funds
     or invalid type.
@@ -825,6 +828,7 @@ def make_donation(
         amount=amount,
         boost_value=boost,
         week=week,
+        target_team=target_team,
     )
 
 
@@ -911,6 +915,10 @@ class WeeklyContest:
             return None, "Invalid game index."
         if pick_type not in ("winner", "spread", "over_under", "chaos", "kick_pass"):
             return None, f"Invalid pick type '{pick_type}'."
+
+        for existing in self.picks:
+            if existing.pick_type == pick_type and existing.game_home == self.odds[game_idx].home_team and existing.game_away == self.odds[game_idx].away_team:
+                return None, f"You already placed a {pick_type} bet on this game."
 
         if not bankroll.withdraw(amount, reason=f"Bet: {pick_type}"):
             return None, "Insufficient DQ$ balance."
@@ -1140,28 +1148,50 @@ class DraftyQueenzManager:
 
         self.peak_bankroll = max(self.peak_bankroll, self.bankroll.balance)
 
-    def donate(self, donation_type: str, amount: int, week: int = 0) -> Tuple[Optional[BoosterDonation], str]:
-        """Make a booster donation.  Returns (donation, error_msg)."""
+    def donate(self, donation_type: str, amount: int, week: int = 0,
+               target_team: str = "") -> Tuple[Optional[BoosterDonation], str]:
+        """Make a booster donation to a specific program.  Returns (donation, error_msg)."""
         if donation_type not in DONATION_TYPES:
             types = ", ".join(DONATION_TYPES.keys())
             return None, f"Invalid type. Choose from: {types}"
         if amount < MIN_DONATION:
             return None, f"Minimum donation is {MIN_DONATION} DQ$."
-        donation = make_donation(self.bankroll, donation_type, amount, week)
+        if not target_team:
+            return None, "Must specify a target team for the donation."
+        donation = make_donation(self.bankroll, donation_type, amount, week, target_team=target_team)
         if donation is None:
             return None, f"Insufficient DQ$ (need {amount}, have {self.bankroll.balance})."
         self.donations.append(donation)
         self.career_donated += amount
         return donation, ""
 
-    def get_active_boosts(self) -> Dict[str, float]:
-        """Sum all donation boosts by type for the current season."""
+    def get_active_boosts(self, team_name: str = "") -> Dict[str, float]:
+        """Sum all donation boosts by type for the current season.
+
+        If team_name is provided, only include donations targeting that team.
+        If empty, returns all boosts across all teams (legacy behavior).
+        """
         boosts: Dict[str, float] = {}
         for d in self.donations:
+            if team_name and d.target_team != team_name:
+                continue
             cap = DONATION_TYPES.get(d.donation_type, {}).get("cap", 999)
             current = boosts.get(d.donation_type, 0.0)
             boosts[d.donation_type] = min(current + d.boost_value, cap)
         return boosts
+
+    def get_all_team_boosts(self) -> Dict[str, Dict[str, float]]:
+        """Return active boosts grouped by team name."""
+        teams: Dict[str, Dict[str, float]] = {}
+        for d in self.donations:
+            if not d.target_team:
+                continue
+            if d.target_team not in teams:
+                teams[d.target_team] = {}
+            cap = DONATION_TYPES.get(d.donation_type, {}).get("cap", 999)
+            current = teams[d.target_team].get(d.donation_type, 0.0)
+            teams[d.target_team][d.donation_type] = min(current + d.boost_value, cap)
+        return teams
 
     # ── Leaderboard / reporting ──
 
@@ -1243,6 +1273,7 @@ class DraftyQueenzManager:
             "booster_tier_description": tier_desc,
             "next_tier": {"amount_needed": next_info[0], "name": next_info[1]} if next_info else None,
             "active_boosts": self.get_active_boosts(),
+            "team_boosts": self.get_all_team_boosts(),
             "weeks": weekly_data,
             "donations": [d.to_dict() for d in self.donations],
         }
@@ -1298,6 +1329,7 @@ class DraftyQueenzManager:
                 amount=dd.get("amount", 0),
                 boost_value=dd.get("boost_value", 0),
                 week=dd.get("week", 0),
+                target_team=dd.get("target_team", ""),
             ))
         return mgr
 

@@ -536,10 +536,11 @@ def dq_resolve_week(session_id: str, week: int) -> dict:
     return _post(f"/sessions/{session_id}/dq/resolve/{week}")
 
 
-def dq_donate(session_id: str, donation_type: str, amount: int) -> dict:
+def dq_donate(session_id: str, donation_type: str, amount: int, target_team: str = "") -> dict:
     return _post(f"/sessions/{session_id}/dq/donate", json={
         "donation_type": donation_type,
         "amount": amount,
+        "target_team": target_team,
     })
 
 
