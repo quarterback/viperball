@@ -29,10 +29,10 @@ from typing import Dict, List, Optional, Tuple
 # ═══════════════════════════════════════════════════════════════════════
 
 STARTING_BANKROLL = 10_000
-FANTASY_ENTRY_FEE = 500
-MIN_BET = 100
-MAX_BET = 2_000
-MIN_DONATION = 1_000
+FANTASY_ENTRY_FEE = 2_500   # costs real money to enter — high risk
+MIN_BET = 250
+MAX_BET = 25_000             # you can bet your whole bankroll on one game
+MIN_DONATION = 10_000        # serious money to move the needle
 
 # Fantasy roster slots  (position tag → how many)
 ROSTER_SLOTS = {
@@ -49,35 +49,64 @@ FLEX_ELIGIBLE = {"VP", "HB", "ZB", "WB", "SB", "KP"}
 
 # AI fantasy manager archetypes
 AI_MANAGER_STYLES = ["stars_and_scrubs", "balanced", "contrarian", "chalk"]
-AI_MANAGER_COUNT = 7  # compete against 7 AI managers each week
+AI_MANAGER_COUNT = 9  # compete against 9 AI managers each week
 
-# Donation boost types and their dynasty effects
+# ── Booster tiers (cumulative career donations) ──
+BOOSTER_TIERS = [
+    (0,        "Sideline Pass",     "You're just a fan with a dream."),
+    (25_000,   "Bronze Booster",    "The program knows your name."),
+    (100_000,  "Silver Booster",    "You've got a parking spot near the stadium."),
+    (250_000,  "Gold Booster",      "The AD takes your calls."),
+    (500_000,  "Platinum Booster",  "The coach asks your opinion on recruits."),
+    (1_000_000, "Diamond Booster",  "They're naming a facility after you."),
+]
+
+# ── Donation boost types and their dynasty effects ──
+# These are EXPENSIVE — it takes multiple winning seasons to max out.
+# The per_10k rate means you need serious DQ$ to move the needle.
 DONATION_TYPES = {
     "recruiting": {
         "label": "Recruiting Boost",
         "description": "Improve pipeline quality for next recruiting cycle",
-        "per_1k": 0.5,   # +0.5 recruiting points per 1,000 DQ$
-        "cap": 10.0,
+        "per_10k": 1.0,      # +1.0 recruiting points per 10,000 DQ$
+        "cap": 15.0,         # need 150k DQ$ to max
     },
     "development": {
         "label": "Player Development",
         "description": "Extra coaching resources for offseason development",
-        "per_1k": 0.3,
-        "cap": 6.0,
+        "per_10k": 0.5,      # +0.5 dev points per 10k
+        "cap": 8.0,          # need 160k DQ$ to max
     },
     "nil_topup": {
         "label": "NIL Top-Up",
         "description": "Inject extra NIL budget for portal/retention",
-        "per_1k": 5_000,  # $5k real NIL per 1k DQ$
-        "cap": 100_000,
+        "per_10k": 10_000,   # $10k real NIL per 10k DQ$
+        "cap": 500_000,      # need 500k DQ$ to max — multi-season project
     },
     "retention": {
         "label": "Retention Bonus",
         "description": "Reduce transfer portal attrition risk",
-        "per_1k": 1.0,    # +1% retention modifier per 1k DQ$
-        "cap": 15.0,
+        "per_10k": 1.5,      # +1.5% retention modifier per 10k
+        "cap": 20.0,         # need ~133k DQ$ to max
+    },
+    "facilities": {
+        "label": "Facilities Upgrade",
+        "description": "Better facilities boost prestige and recruiting appeal",
+        "per_10k": 0.8,      # +0.8 prestige points per 10k
+        "cap": 12.0,         # need 150k DQ$ to max
     },
 }
+
+# ── Fantasy payout structure (purse tiers) ──
+# Entry = 2,500 DQ$.  Big purses mean high variance.
+FANTASY_PAYOUTS = {
+    1: 8,    # 1st place: 8x entry = 20,000 DQ$
+    2: 5,    # 2nd: 5x = 12,500 DQ$
+    3: 3,    # 3rd: 3x = 7,500 DQ$
+    4: 2,    # 4th: 2x = 5,000 DQ$
+    5: 1,    # 5th: break even = 2,500 DQ$
+}
+# 6th–10th = lose your entry fee
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -85,29 +114,34 @@ DONATION_TYPES = {
 # ═══════════════════════════════════════════════════════════════════════
 
 SCORING_RULES = {
-    # Offense
-    "yards":              (1.0, 15),    # 1 pt per 15 yards
-    "rushing_yards":      (0.5, 15),    # 0.5 bonus per 15 rushing yards (stacks with yards)
-    "lateral_yards":      (1.0, 12),    # 1 pt per 12 lateral yards (premium)
-    "tds":                9.0,
-    "lateral_tds":        3.0,          # bonus on top of td points
-    "laterals_thrown":    1.0,
-    "lateral_receptions": 0.5,
-    "lateral_assists":    0.75,
-    "fumbles":           -3.0,
-    # Kicking
-    "kick_made":          4.0,
-    "kick_att_miss":     -1.0,          # derived: att - made
-    # Keeper / special teams
-    "keeper_bells":       4.0,
-    "kick_deflections":   3.0,
-    "keeper_tackles":     2.0,
-    "st_tackles":         1.5,
-    "kick_return_yards":  (1.0, 20),
-    "punt_return_yards":  (1.0, 15),
+    # ── Offense ──
+    "yards":              (1.0, 10),    # 1 pt per 10 yards
+    "rushing_yards":      (0.5, 10),    # 0.5 bonus per 10 rushing yards (stacks)
+    "lateral_yards":      (1.0, 8),     # 1 pt per 8 lateral yards (premium — Viperball's signature)
+    "tds":                9.0,          # matches in-game TD value
+    "lateral_tds":        4.0,          # bonus on top of td — the highlight play
+    "laterals_thrown":    1.5,          # playmaking — like an assist
+    "lateral_receptions": 1.0,
+    "lateral_assists":    1.0,
+    "fumbles":           -4.0,         # costly — just like in-game
+
+    # ── Kicking ──
+    # Player stats combine drop kicks (5 pts in-game) and place kicks (3 pts).
+    # Fantasy rewards the made kick itself, not the point value — drop kicks are
+    # already rarer so kickers who attempt them produce fewer but each is worth more.
+    "kick_made":          6.0,          # big reward — kicks are hard and game-deciding
+    "kick_att_miss":     -2.0,          # derived: att - made; misses hurt
+
+    # ── Keeper / Special Teams ──
+    "keeper_bells":       5.0,          # signature defensive play
+    "kick_deflections":   4.0,
+    "keeper_tackles":     3.0,
+    "st_tackles":         2.0,
+    "kick_return_yards":  (1.0, 15),
+    "punt_return_yards":  (1.0, 12),
     "kick_return_tds":    9.0,
     "punt_return_tds":    9.0,
-    "muffs":             -2.0,
+    "muffs":             -3.0,         # costly turnover
 }
 
 
@@ -560,13 +594,76 @@ def resolve_pick(pick: Pick, game_result: Dict) -> Pick:
         else:
             won = chaos_val < line
         if won:
-            pick.payout = round(pick.amount + pick.amount * 1.5)  # prop pays 1.5:1
+            pick.payout = round(pick.amount + pick.amount * 3.0)  # prop pays 3:1 — hard to hit
             pick.result = "win"
         else:
             pick.payout = 0
             pick.result = "loss"
 
     return pick
+
+
+# ── Parlays: chain picks for multiplied payouts ──
+
+PARLAY_MULTIPLIERS = {
+    2: 2.6,    # 2-leg parlay
+    3: 6.0,    # 3-leg
+    4: 11.0,   # 4-leg
+    5: 20.0,   # 5-leg — lose your shirt or buy a building
+    6: 40.0,   # 6-leg — degenerate territory
+}
+MAX_PARLAY_LEGS = 6
+
+
+@dataclass
+class Parlay:
+    """A multi-game parlay bet.  All legs must hit to win."""
+    legs: List[Pick] = field(default_factory=list)
+    amount: int = 0
+    multiplier: float = 1.0
+    payout: float = 0.0
+    result: str = ""  # "win", "loss", "pending"
+
+    def to_dict(self) -> Dict:
+        return {
+            "legs": [p.to_dict() for p in self.legs],
+            "amount": self.amount,
+            "multiplier": self.multiplier,
+            "payout": self.payout,
+            "result": self.result,
+            "potential_payout": round(self.amount * self.multiplier),
+        }
+
+
+def resolve_parlay(parlay: Parlay, game_results: Dict[str, Dict]) -> Parlay:
+    """Resolve all legs of a parlay.  ALL must win for payout."""
+    for pick in parlay.legs:
+        key = f"{pick.game_home} vs {pick.game_away}"
+        result = game_results.get(key)
+        if result is None:
+            key = f"{pick.game_away} vs {pick.game_home}"
+            result = game_results.get(key)
+        if result:
+            # Resolve individually but ignore individual payout — parlay pays as unit
+            resolve_pick(pick, result)
+
+    all_won = all(p.result == "win" for p in parlay.legs)
+    any_push = any(p.result == "push" for p in parlay.legs)
+
+    if all_won:
+        parlay.payout = round(parlay.amount * parlay.multiplier)
+        parlay.result = "win"
+    elif any_push and all(p.result in ("win", "push") for p in parlay.legs):
+        # Push reduces parlay to next-lower multiplier
+        active_legs = sum(1 for p in parlay.legs if p.result == "win")
+        reduced_mult = PARLAY_MULTIPLIERS.get(active_legs, 1.0) if active_legs >= 2 else 1.0
+        parlay.payout = round(parlay.amount * reduced_mult)
+        parlay.result = "win" if active_legs >= 2 else "push"
+    else:
+        parlay.payout = 0
+        parlay.result = "loss"
+
+    return parlay
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -628,8 +725,25 @@ def calculate_donation_boost(donation_type: str, dq_amount: int) -> float:
     info = DONATION_TYPES.get(donation_type)
     if info is None:
         return 0.0
-    raw = (dq_amount / 1_000) * info["per_1k"]
+    raw = (dq_amount / 10_000) * info["per_10k"]
     return min(raw, info["cap"])
+
+
+def get_booster_tier(total_donated: int) -> Tuple[str, str]:
+    """Return (tier_name, description) based on cumulative career donations."""
+    tier_name, desc = BOOSTER_TIERS[0][1], BOOSTER_TIERS[0][2]
+    for threshold, name, description in BOOSTER_TIERS:
+        if total_donated >= threshold:
+            tier_name, desc = name, description
+    return tier_name, desc
+
+
+def get_next_booster_tier(total_donated: int) -> Optional[Tuple[int, str]]:
+    """Return (amount_needed, tier_name) for the next tier, or None if maxed."""
+    for threshold, name, _ in BOOSTER_TIERS:
+        if total_donated < threshold:
+            return (threshold - total_donated, name)
+    return None
 
 
 def make_donation(
@@ -669,6 +783,7 @@ class WeeklyContest:
     week: int
     odds: List[GameOdds] = field(default_factory=list)
     picks: List[Pick] = field(default_factory=list)
+    parlays: List[Parlay] = field(default_factory=list)
     player_pool: List[FantasyPlayer] = field(default_factory=list)
     user_roster: Optional[FantasyRoster] = None
     ai_rosters: List[FantasyRoster] = field(default_factory=list)
@@ -677,6 +792,7 @@ class WeeklyContest:
     # Earnings summary (filled after resolution)
     prediction_earnings: int = 0
     fantasy_earnings: int = 0
+    jackpot_bonus: int = 0
 
     def generate_odds(
         self,
@@ -756,6 +872,48 @@ class WeeklyContest:
         self.picks.append(pick)
         return pick, ""
 
+    def make_parlay(self, bankroll: Bankroll, legs: List[Tuple[str, int, str]],
+                    amount: int) -> Tuple[Optional[Parlay], str]:
+        """Place a parlay bet.
+
+        ``legs`` is a list of (pick_type, game_idx, selection) tuples.
+        Returns (Parlay, error_message).
+        """
+        if len(legs) < 2:
+            return None, "Parlay requires at least 2 legs."
+        if len(legs) > MAX_PARLAY_LEGS:
+            return None, f"Maximum {MAX_PARLAY_LEGS} legs per parlay."
+        if amount < MIN_BET:
+            return None, f"Minimum bet is {MIN_BET} DQ$."
+        if amount > MAX_BET:
+            return None, f"Maximum bet is {MAX_BET:,} DQ$."
+
+        multiplier = PARLAY_MULTIPLIERS.get(len(legs))
+        if multiplier is None:
+            return None, f"No multiplier for {len(legs)}-leg parlay."
+
+        if not bankroll.withdraw(amount, reason=f"Parlay ({len(legs)} legs)"):
+            return None, "Insufficient DQ$ balance."
+
+        parlay_picks = []
+        for pick_type, game_idx, selection in legs:
+            if game_idx < 0 or game_idx >= len(self.odds):
+                bankroll.deposit(amount, reason="Parlay refund — invalid game")
+                return None, f"Invalid game index {game_idx}."
+            odds = self.odds[game_idx]
+            parlay_picks.append(Pick(
+                pick_type=pick_type,
+                game_home=odds.home_team,
+                game_away=odds.away_team,
+                selection=selection,
+                amount=0,  # individual legs don't have separate amounts
+                odds_snapshot=odds.to_dict(),
+            ))
+
+        parlay = Parlay(legs=parlay_picks, amount=amount, multiplier=multiplier)
+        self.parlays.append(parlay)
+        return parlay, ""
+
     def resolve_week(self, game_results: Dict[str, Dict], bankroll: Bankroll):
         """Resolve all picks and fantasy scores after games are played.
 
@@ -764,25 +922,28 @@ class WeeklyContest:
         if self.resolved:
             return
 
-        # ── Resolve predictions ──
+        # ── Resolve straight picks ──
         total_prediction_payout = 0
         for pick in self.picks:
             key = f"{pick.game_home} vs {pick.game_away}"
             result = game_results.get(key)
             if result is None:
-                # Try reverse
                 key = f"{pick.game_away} vs {pick.game_home}"
                 result = game_results.get(key)
             if result:
                 resolve_pick(pick, result)
                 total_prediction_payout += pick.payout
 
+        # ── Resolve parlays ──
+        for parlay in self.parlays:
+            resolve_parlay(parlay, game_results)
+            total_prediction_payout += parlay.payout
+
         if total_prediction_payout > 0:
             bankroll.deposit(total_prediction_payout, reason=f"Week {self.week} prediction payouts")
         self.prediction_earnings = total_prediction_payout
 
         # ── Score fantasy rosters ──
-        # Build a lookup: (tag, team_name) → actual_pts from game results
         actual_scores: Dict[Tuple[str, str], float] = {}
         for key, result in game_results.items():
             for side in ("home", "away"):
@@ -791,7 +952,6 @@ class WeeklyContest:
                     score = score_player(ps)
                     actual_scores[(ps["tag"], team_name)] = score
 
-        # Apply scores to all rosters
         all_rosters = list(self.ai_rosters)
         if self.user_roster:
             all_rosters.append(self.user_roster)
@@ -801,24 +961,26 @@ class WeeklyContest:
                 pts = actual_scores.get((fp.tag, fp.team_name), 0.0)
                 fp.actual_pts = pts
 
-        # ── Fantasy payout ──
+        # ── Fantasy payout (big purses) ──
         if self.user_roster and self.user_roster.is_valid:
             user_pts = self.user_roster.total_points
             ai_scores = sorted([r.total_points for r in self.ai_rosters], reverse=True)
-            # Payout tiers: beat all = 3x entry, top 3 = 2x, top 5 = 1.5x, else = 0
             rank = sum(1 for s in ai_scores if s > user_pts) + 1
-            if rank == 1:
-                payout = FANTASY_ENTRY_FEE * 3
-            elif rank <= 3:
-                payout = FANTASY_ENTRY_FEE * 2
-            elif rank <= 5:
-                payout = int(FANTASY_ENTRY_FEE * 1.5)
-            else:
-                payout = 0
+            mult = FANTASY_PAYOUTS.get(rank, 0)
+            payout = FANTASY_ENTRY_FEE * mult  # 1st = 20k, 2nd = 12.5k, etc.
 
             if payout > 0:
-                bankroll.deposit(payout, reason=f"Week {self.week} fantasy finish (#{rank})")
+                bankroll.deposit(payout, reason=f"Week {self.week} fantasy #{rank} (×{mult})")
             self.fantasy_earnings = payout
+
+            # ── Jackpot bonus: perfect week ──
+            # Finish 1st in fantasy AND win all straight picks → jackpot
+            picks_won = sum(1 for p in self.picks if p.result == "win")
+            picks_total = len(self.picks)
+            if rank == 1 and picks_total >= 3 and picks_won == picks_total:
+                jackpot = FANTASY_ENTRY_FEE * 5  # 12,500 DQ$ bonus
+                bankroll.deposit(jackpot, reason=f"Week {self.week} JACKPOT — perfect week!")
+                self.jackpot_bonus = jackpot
 
         self.resolved = True
 
@@ -827,10 +989,12 @@ class WeeklyContest:
             "week": self.week,
             "odds": [o.to_dict() for o in self.odds],
             "picks": [p.to_dict() for p in self.picks],
+            "parlays": [p.to_dict() for p in self.parlays],
             "user_roster": self.user_roster.to_dict() if self.user_roster else None,
             "ai_rosters": [r.to_dict() for r in self.ai_rosters],
             "prediction_earnings": self.prediction_earnings,
             "fantasy_earnings": self.fantasy_earnings,
+            "jackpot_bonus": self.jackpot_bonus,
             "resolved": self.resolved,
         }
 
@@ -852,11 +1016,15 @@ class DraftyQueenzManager:
     donations: List[BoosterDonation] = field(default_factory=list)
     season_year: int = 1
 
-    # Cumulative stats
+    # Cumulative stats (career-spanning in dynasty mode)
     total_picks_made: int = 0
     total_picks_won: int = 0
+    total_parlays_made: int = 0
+    total_parlays_won: int = 0
     total_fantasy_entries: int = 0
     total_fantasy_top3: int = 0
+    total_jackpots: int = 0
+    career_donated: int = 0         # lifetime total across all seasons
     peak_bankroll: int = STARTING_BANKROLL
 
     def start_week(
@@ -901,11 +1069,19 @@ class DraftyQueenzManager:
             if pick.result == "win":
                 self.total_picks_won += 1
 
+        for parlay in contest.parlays:
+            self.total_parlays_made += 1
+            if parlay.result == "win":
+                self.total_parlays_won += 1
+
         if contest.user_roster:
             ai_scores = sorted([r.total_points for r in contest.ai_rosters], reverse=True)
             rank = sum(1 for s in ai_scores if s > contest.user_roster.total_points) + 1
             if rank <= 3:
                 self.total_fantasy_top3 += 1
+
+        if contest.jackpot_bonus > 0:
+            self.total_jackpots += 1
 
         self.peak_bankroll = max(self.peak_bankroll, self.bankroll.balance)
 
@@ -920,6 +1096,7 @@ class DraftyQueenzManager:
         if donation is None:
             return None, f"Insufficient DQ$ (need {amount}, have {self.bankroll.balance})."
         self.donations.append(donation)
+        self.career_donated += amount
         return donation, ""
 
     def get_active_boosts(self) -> Dict[str, float]:
@@ -947,12 +1124,23 @@ class DraftyQueenzManager:
 
     @property
     def total_earned(self) -> int:
-        return sum(c.prediction_earnings + c.fantasy_earnings
+        return sum(c.prediction_earnings + c.fantasy_earnings + c.jackpot_bonus
                    for c in self.weekly_contests.values())
 
     @property
     def total_wagered(self) -> int:
-        return sum(p.amount for c in self.weekly_contests.values() for p in c.picks)
+        straight = sum(p.amount for c in self.weekly_contests.values() for p in c.picks)
+        parlays = sum(p.amount for c in self.weekly_contests.values() for p in c.parlays)
+        entries = self.total_fantasy_entries * FANTASY_ENTRY_FEE
+        return straight + parlays + entries
+
+    @property
+    def booster_tier(self) -> Tuple[str, str]:
+        return get_booster_tier(self.career_donated)
+
+    @property
+    def next_tier(self) -> Optional[Tuple[int, str]]:
+        return get_next_booster_tier(self.career_donated)
 
     @property
     def total_donated(self) -> int:
@@ -979,6 +1167,8 @@ class DraftyQueenzManager:
                 "fantasy_earnings": c.fantasy_earnings,
             })
 
+        tier_name, tier_desc = self.booster_tier
+        next_info = self.next_tier
         return {
             "manager": self.manager_name,
             "season": self.season_year,
@@ -987,9 +1177,16 @@ class DraftyQueenzManager:
             "total_earned": self.total_earned,
             "total_wagered": self.total_wagered,
             "total_donated": self.total_donated,
+            "career_donated": self.career_donated,
             "roi": self.roi,
             "pick_accuracy": self.pick_accuracy,
+            "parlays_made": self.total_parlays_made,
+            "parlays_won": self.total_parlays_won,
+            "jackpots": self.total_jackpots,
             "fantasy_top3_rate": self.fantasy_top3_rate,
+            "booster_tier": tier_name,
+            "booster_tier_description": tier_desc,
+            "next_tier": {"amount_needed": next_info[0], "name": next_info[1]} if next_info else None,
             "active_boosts": self.get_active_boosts(),
             "weeks": weekly_data,
             "donations": [d.to_dict() for d in self.donations],
@@ -1003,8 +1200,12 @@ class DraftyQueenzManager:
             "season_year": self.season_year,
             "total_picks_made": self.total_picks_made,
             "total_picks_won": self.total_picks_won,
+            "total_parlays_made": self.total_parlays_made,
+            "total_parlays_won": self.total_parlays_won,
             "total_fantasy_entries": self.total_fantasy_entries,
             "total_fantasy_top3": self.total_fantasy_top3,
+            "total_jackpots": self.total_jackpots,
+            "career_donated": self.career_donated,
             "peak_bankroll": self.peak_bankroll,
             "donations": [d.to_dict() for d in self.donations],
             "weekly_contests": {
@@ -1028,8 +1229,12 @@ class DraftyQueenzManager:
         mgr.bankroll.history = br.get("history", [])
         mgr.total_picks_made = data.get("total_picks_made", 0)
         mgr.total_picks_won = data.get("total_picks_won", 0)
+        mgr.total_parlays_made = data.get("total_parlays_made", 0)
+        mgr.total_parlays_won = data.get("total_parlays_won", 0)
         mgr.total_fantasy_entries = data.get("total_fantasy_entries", 0)
         mgr.total_fantasy_top3 = data.get("total_fantasy_top3", 0)
+        mgr.total_jackpots = data.get("total_jackpots", 0)
+        mgr.career_donated = data.get("career_donated", 0)
         mgr.peak_bankroll = data.get("peak_bankroll", STARTING_BANKROLL)
 
         for dd in data.get("donations", []):
@@ -1083,32 +1288,66 @@ def format_roster_display(roster: FantasyRoster) -> List[str]:
 
 def format_leaderboard(manager: DraftyQueenzManager) -> List[str]:
     """Season leaderboard display."""
+    tier_name, tier_desc = manager.booster_tier
+    next_info = manager.next_tier
+
+    w = 56  # inner width
     lines = [
-        f"╔══════════════════════════════════════════════════╗",
-        f"║         DraftyQueenz Season {manager.season_year} Report          ║",
-        f"╠══════════════════════════════════════════════════╣",
-        f"║  Manager: {manager.manager_name:<38} ║",
-        f"║  Balance: {manager.bankroll.balance:>10,} DQ$                    ║",
-        f"║  Peak:    {manager.peak_bankroll:>10,} DQ$                    ║",
-        f"╠══════════════════════════════════════════════════╣",
-        f"║  PREDICTIONS                                     ║",
-        f"║    Picks: {manager.total_picks_made:<5}  Won: {manager.total_picks_won:<5}  "
-        f"Acc: {manager.pick_accuracy:>5.1f}%    ║",
-        f"║    Wagered: {manager.total_wagered:>8,}  Earned: {manager.total_earned:>8,}    ║",
-        f"║    ROI: {manager.roi:>+6.1f}%                                ║",
-        f"╠══════════════════════════════════════════════════╣",
-        f"║  FANTASY                                         ║",
-        f"║    Entries: {manager.total_fantasy_entries:<4}  Top-3: {manager.total_fantasy_top3:<4}  "
-        f"Rate: {manager.fantasy_top3_rate:>5.1f}%  ║",
-        f"╠══════════════════════════════════════════════════╣",
-        f"║  BOOSTER DONATIONS                               ║",
-        f"║    Total donated: {manager.total_donated:>8,} DQ$                ║",
+        f"╔{'═' * w}╗",
+        f"║{'DraftyQueenz Season ' + str(manager.season_year) + ' Report':^{w}}║",
+        f"╠{'═' * w}╣",
+        f"║  Manager: {manager.manager_name:<{w - 12}}║",
+        f"║  Tier:    {tier_name:<{w - 12}}║",
+        f"║           {tier_desc:<{w - 12}}║",
+        f"║  Balance: {manager.bankroll.balance:>10,} DQ${'':<{w - 18}}║",
+        f"║  Peak:    {manager.peak_bankroll:>10,} DQ${'':<{w - 18}}║",
+        f"╠{'═' * w}╣",
+        f"║{'PREDICTIONS':^{w}}║",
+        f"║  Straight — {manager.total_picks_made} picks, "
+        f"{manager.total_picks_won} won ({manager.pick_accuracy:.1f}%)"
+        f"{'':<{max(1, w - 42)}}║",
+        f"║  Parlays  — {manager.total_parlays_made} made, "
+        f"{manager.total_parlays_won} hit"
+        f"{'':<{max(1, w - 32)}}║",
+        f"║  Wagered: {manager.total_wagered:>10,}  "
+        f"Earned: {manager.total_earned:>10,}{'':<{max(1, w - 38)}}║",
+        f"║  ROI: {manager.roi:>+7.1f}%{'':<{w - 14}}║",
     ]
+
+    if manager.total_jackpots > 0:
+        lines.append(f"║  JACKPOTS: {manager.total_jackpots}{'':<{w - 13}}║")
+
+    lines += [
+        f"╠{'═' * w}╣",
+        f"║{'FANTASY':^{w}}║",
+        f"║  Entries: {manager.total_fantasy_entries:<5} "
+        f"Top-3: {manager.total_fantasy_top3:<5} "
+        f"Rate: {manager.fantasy_top3_rate:>5.1f}%{'':<{max(1, w - 42)}}║",
+        f"║  Entry fee: {FANTASY_ENTRY_FEE:,} DQ$   "
+        f"1st place purse: {FANTASY_ENTRY_FEE * FANTASY_PAYOUTS[1]:,} DQ${'':<{max(1, w - 48)}}║",
+        f"╠{'═' * w}╣",
+        f"║{'BOOSTER DONATIONS':^{w}}║",
+        f"║  This season: {manager.total_donated:>8,} DQ$"
+        f"   Career: {manager.career_donated:>10,} DQ${'':<{max(1, w - 44)}}║",
+    ]
+
+    if next_info:
+        lines.append(
+            f"║  Next tier: {next_info[1]} "
+            f"({next_info[0]:,} DQ$ to go){'':<{max(1, w - 35 - len(next_info[1]) - len(f'{next_info[0]:,}'))}}║"
+        )
+
     boosts = manager.get_active_boosts()
     for btype, val in boosts.items():
         label = DONATION_TYPES[btype]["label"]
-        lines.append(f"║    {label:<20} +{val:<8.1f}              ║")
+        cap = DONATION_TYPES[btype]["cap"]
+        pct = min(100, val / cap * 100)
+        bar_len = 10
+        filled = int(pct / 100 * bar_len)
+        bar = "█" * filled + "░" * (bar_len - filled)
+        lines.append(f"║  {label:<20} +{val:<6.1f} [{bar}] {pct:>3.0f}%{'':<{max(1, w - 48)}}║")
     if not boosts:
-        lines.append(f"║    (none yet)                                    ║")
-    lines.append(f"╚══════════════════════════════════════════════════╝")
+        lines.append(f"║  (no donations yet){'':<{w - 20}}║")
+
+    lines.append(f"╚{'═' * w}╝")
     return lines
