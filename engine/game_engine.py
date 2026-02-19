@@ -587,6 +587,10 @@ class Player:
     game_punt_return_tds: int = 0
     game_muffs: int = 0
     game_st_tackles: int = 0
+    game_tackles: int = 0
+    game_tfl: int = 0
+    game_sacks: int = 0
+    game_hurries: int = 0
 
     @property
     def overall(self) -> int:
@@ -1386,6 +1390,12 @@ class ViperballEngine:
         tackler = self._pick_tackler(kicking_team_obj)
         if tackler:
             tackler.game_st_tackles += 1
+            tackler.game_coverage_snaps += 1
+
+        coverage_unit = [p for p in kicking_team_obj.players if p.position in ("Keeper", "Defensive Line")]
+        if coverage_unit:
+            cov_player = random.choice(coverage_unit)
+            cov_player.game_coverage_snaps += 1
 
         self.state.field_position = start_position
         self.state.down = 1
@@ -2288,13 +2298,14 @@ class ViperballEngine:
         if defense_read:
             read_reduction = random.uniform(0.55, 0.80)
             yards_gained = int(yards_gained * read_reduction)
+            def_team = self.get_defensive_team()
+            hurry_player = self._pick_def_tackler(def_team, yards_gained)
+            hurry_player.game_hurries += 1
 
         # 4. Apply explosive play suppression (if play is explosive)
         if is_explosive:
             explosive_suppression = defense.get("explosive_suppression", 1.0)
-            # If suppression is 0.75, reduce explosive plays by 25%
             if random.random() > explosive_suppression:
-                # Explosive play was suppressed, reduce yards
                 yards_gained = int(yards_gained * 0.70)
 
         return yards_gained
@@ -2444,6 +2455,27 @@ class ViperballEngine:
             eligible = team.players
         return random.choice(eligible) if eligible else None
 
+    def _pick_def_tackler(self, def_team, yards_gained: int):
+        dl = [p for p in def_team.players if p.position == "Defensive Line"]
+        kp = [p for p in def_team.players if p.position == "Keeper"]
+        if yards_gained <= 0:
+            pool = dl * 4 + kp
+        elif yards_gained <= 4:
+            pool = dl * 3 + kp * 2
+        elif yards_gained <= 10:
+            pool = dl * 2 + kp * 3
+        else:
+            pool = dl + kp * 4
+        if not pool:
+            pool = def_team.players
+        weights = []
+        for p in pool:
+            w = p.tackling * 0.5 + p.speed * 0.3 + getattr(p, 'awareness', 75) * 0.2
+            stamina_pct = getattr(p, 'current_stamina', 100.0) / 100.0
+            w *= max(0.5, stamina_pct)
+            weights.append(max(1.0, w))
+        return random.choices(pool, weights=weights, k=1)[0]
+
     def _resolve_fumble_recovery(self, fumble_spot, fumbling_player=None):
         off_team = self.get_offensive_team()
         def_team = self.get_defensive_team()
@@ -2584,8 +2616,10 @@ class ViperballEngine:
             if random.random() < 0.28:
                 extra = random.randint(3, 10)
                 return yards_so_far + extra, f"eludes {ktag}"
+            keeper.game_keeper_tackles += 1
             return yards_so_far, f"{ktag} makes the stop"
         else:
+            keeper.game_keeper_tackles += 1
             return yards_so_far, f"{ktag} makes the stop"
 
     def _check_explosive_run(self, family, carrier, yards_after):
@@ -2783,8 +2817,10 @@ class ViperballEngine:
 
         def_gap_bonus = defense.get("gap_breakdown_bonus", 0.0)
         gap_breakdown_chance = (0.08 + def_gap_bonus) * def_intensity
+        gap_stuffed = False
         if random.random() < gap_breakdown_chance:
             yards_gained = random.randint(-3, 1)
+            gap_stuffed = True
         elif random.random() < 0.15:
             yards_gained = random.randint(1, 4)
         else:
@@ -2799,6 +2835,14 @@ class ViperballEngine:
         yards_gained, was_explosive = self._check_explosive_run(family, player, yards_gained)
 
         yards_gained = self.apply_defensive_modifiers(yards_gained, family, was_explosive)
+
+        def_team_for_tackle = self.get_defensive_team()
+        tackler = self._pick_def_tackler(def_team_for_tackle, yards_gained)
+        tackler.game_tackles += 1
+        if yards_gained <= 0:
+            tackler.game_tfl += 1
+            if gap_stuffed and yards_gained < 0:
+                tackler.game_sacks += 1
 
         fumble_family = family
         if family == PlayFamily.VIPER_JET:
@@ -3148,6 +3192,12 @@ class ViperballEngine:
 
         # DEFENSIVE SYSTEM: Apply all defensive modifiers
         yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
+
+        lat_def_team = self.get_defensive_team()
+        lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
+        lat_tackler.game_tackles += 1
+        if yards_gained <= 0:
+            lat_tackler.game_tfl += 1
 
         new_position = min(100, self.state.field_position + yards_gained)
 
@@ -3535,6 +3585,13 @@ class ViperballEngine:
                     return play
 
         new_position = 100 - min(99, self.state.field_position + distance)
+
+        punt_coverage_team = self.get_offensive_team()
+        punt_cov_eligible = [p for p in punt_coverage_team.players if p.position in ("Keeper", "Defensive Line")]
+        if punt_cov_eligible:
+            cov1 = random.choice(punt_cov_eligible)
+            cov1.game_coverage_snaps += 1
+            cov1.game_st_tackles += 1
 
         self.change_possession()
         self.state.field_position = max(1, new_position)
@@ -4169,7 +4226,8 @@ class ViperballEngine:
                 has_activity = (p.game_touches > 0 or p.game_kick_attempts > 0 or
                                p.game_kick_deflections > 0 or p.game_coverage_snaps > 0 or
                                p.game_punt_returns > 0 or p.game_kick_returns > 0 or
-                               p.game_st_tackles > 0)
+                               p.game_st_tackles > 0 or p.game_tackles > 0 or
+                               p.game_sacks > 0 or p.game_hurries > 0)
                 if has_activity:
                     stat_entry = {
                         "tag": player_tag(p),
@@ -4204,9 +4262,13 @@ class ViperballEngine:
                         "punt_return_tds": p.game_punt_return_tds,
                         "muffs": p.game_muffs,
                         "st_tackles": p.game_st_tackles,
+                        "tackles": p.game_tackles,
+                        "tfl": p.game_tfl,
+                        "sacks": p.game_sacks,
+                        "hurries": p.game_hurries,
                     }
                     stats.append(stat_entry)
-            return sorted(stats, key=lambda x: x["touches"] + x["kick_att"], reverse=True)
+            return sorted(stats, key=lambda x: x["touches"] + x["kick_att"] + x["tackles"], reverse=True)
 
         home_player_stats = collect_player_stats(self.home_team)
         away_player_stats = collect_player_stats(self.away_team)

@@ -354,6 +354,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                         "punt_returns": "PR", "punt_return_yards": "PR Yds",
                         "punt_return_tds": "PR TD",
                         "muffs": "Muffs", "st_tackles": "ST Tkl",
+                        "tackles": "Tkl", "tfl": "TFL", "sacks": "Sacks", "hurries": "Hurr",
                     }
                     pdf.rename(columns=col_renames, inplace=True)
                     st.dataframe(pdf, hide_index=True, use_container_width=True)

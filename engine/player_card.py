@@ -46,6 +46,11 @@ class GameLog:
     keeper_tackles: int = 0
     keeper_bells: int = 0
     return_yards: int = 0
+    tackles: int = 0
+    tfl: int = 0
+    sacks: int = 0
+    hurries: int = 0
+    st_tackles: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -69,6 +74,11 @@ class GameLog:
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
             "return_yards": self.return_yards,
+            "tackles": self.tackles,
+            "tfl": self.tfl,
+            "sacks": self.sacks,
+            "hurries": self.hurries,
+            "st_tackles": self.st_tackles,
         }
 
     @classmethod
@@ -105,6 +115,11 @@ class SeasonStats:
     keeper_tackles: int = 0
     keeper_bells: int = 0
     return_yards: int = 0
+    tackles: int = 0
+    tfl: int = 0
+    sacks: int = 0
+    hurries: int = 0
+    st_tackles: int = 0
     game_log: List[GameLog] = field(default_factory=list)
 
     # ── computed properties ──
@@ -151,6 +166,11 @@ class SeasonStats:
         self.keeper_tackles += log.keeper_tackles
         self.keeper_bells += log.keeper_bells
         self.return_yards += log.return_yards
+        self.tackles += log.tackles
+        self.tfl += log.tfl
+        self.sacks += log.sacks
+        self.hurries += log.hurries
+        self.st_tackles += log.st_tackles
 
     def to_dict(self) -> dict:
         return {
@@ -175,6 +195,11 @@ class SeasonStats:
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
             "return_yards": self.return_yards,
+            "tackles": self.tackles,
+            "tfl": self.tfl,
+            "sacks": self.sacks,
+            "hurries": self.hurries,
+            "st_tackles": self.st_tackles,
             "yards_per_touch": self.yards_per_touch,
             "kick_pct": self.kick_pct,
             "pk_pct": self.pk_pct,
@@ -559,4 +584,9 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         keeper_tackles=player.game_keeper_tackles,
         keeper_bells=player.game_keeper_bells,
         return_yards=player.game_keeper_return_yards,
+        tackles=player.game_tackles,
+        tfl=player.game_tfl,
+        sacks=player.game_sacks,
+        hurries=player.game_hurries,
+        st_tackles=player.game_st_tackles,
     )

@@ -590,7 +590,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
 
     st.caption(f"Showing {len(players)} players")
 
-    stat_views = st.tabs(["Rushing & Scoring", "Lateral Game", "Kicking", "Returns & Special Teams"])
+    stat_views = st.tabs(["Rushing & Scoring", "Lateral Game", "Kicking", "Defense", "Returns & Special Teams"])
 
     with stat_views[0]:
         rush_data = []
@@ -658,6 +658,31 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
             st.caption("No kicking stats available yet.")
 
     with stat_views[3]:
+        def_data = []
+        def_sorted = sorted(players, key=lambda x: x.get("tackles", 0), reverse=True)
+        for p in def_sorted[:100]:
+            tkl = p.get("tackles", 0)
+            tfl = p.get("tfl", 0)
+            sacks = p.get("sacks", 0)
+            hurries = p.get("hurries", 0)
+            if tkl > 0 or sacks > 0 or hurries > 0:
+                def_data.append({
+                    "Player": p["name"],
+                    "Team": p["team"],
+                    "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                    "GP": p["games_played"],
+                    "Tackles": tkl,
+                    "TFL": tfl,
+                    "Sacks": sacks,
+                    "Hurries": hurries,
+                    "Tkl/G": round(tkl / max(1, p["games_played"]), 1),
+                })
+        if def_data:
+            st.dataframe(pd.DataFrame(def_data), hide_index=True, use_container_width=True, height=500)
+        else:
+            st.caption("No defensive stats available yet.")
+
+    with stat_views[4]:
         ret_data = []
         ret_sorted = sorted(players, key=lambda x: x["total_return_yards"], reverse=True)
         for p in ret_sorted[:100]:
@@ -690,6 +715,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
                 ("Rushing Yards Leader", max(players, key=lambda x: x["rushing_yards"]), "rushing_yards"),
                 ("Total Yards Leader", max(players, key=lambda x: x["yards"]), "yards"),
                 ("Touchdown Leader", max(players, key=lambda x: x["tds"]), "tds"),
+                ("Tackle Leader", max(players, key=lambda x: x.get("tackles", 0)), "tackles"),
                 ("Lateral Yards Leader", max(players, key=lambda x: x["lateral_yards"]), "lateral_yards"),
                 ("Return Yards Leader", max(players, key=lambda x: x["total_return_yards"]), "total_return_yards"),
             ]

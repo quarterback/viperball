@@ -1081,6 +1081,10 @@ def season_player_stats(
                         "punt_return_tds": 0,
                         "muffs": 0,
                         "st_tackles": 0,
+                        "tackles": 0,
+                        "tfl": 0,
+                        "sacks": 0,
+                        "hurries": 0,
                     }
                 agg = player_agg[key]
                 agg["games_played"] += 1
@@ -1097,6 +1101,7 @@ def season_player_stats(
                     "keeper_tackles", "kick_returns", "kick_return_yards",
                     "kick_return_tds", "punt_returns", "punt_return_yards",
                     "punt_return_tds", "muffs", "st_tackles",
+                    "tackles", "tfl", "sacks", "hurries",
                 ]:
                     agg[stat] += p.get(stat, 0)
 
@@ -1105,7 +1110,7 @@ def season_player_stats(
         pos_upper = position.upper()
         results = [r for r in results if pos_upper in r["tag"].upper()]
     if min_touches > 0:
-        results = [r for r in results if r["touches"] >= min_touches]
+        results = [r for r in results if r["touches"] >= min_touches or r.get("tackles", 0) > 0 or r.get("sacks", 0) > 0 or r.get("st_tackles", 0) > 0]
 
     for r in results:
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
