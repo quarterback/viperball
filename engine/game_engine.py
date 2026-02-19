@@ -562,6 +562,8 @@ class Player:
     # --- Fatigue / game state ---
     current_stamina: float = 100.0
     archetype: str = "none"
+    injured_in_game: bool = False     # set True if injured during this game
+    is_dtd: bool = False              # day-to-day: playing through minor injury
 
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
@@ -1268,8 +1270,12 @@ class ViperballEngine:
                  style_overrides: Optional[Dict[str, str]] = None,
                  weather: str = "clear",
                  is_rivalry: bool = False,
-                 home_dq_boosts: Optional[Dict[str, float]] = None,
-                 away_dq_boosts: Optional[Dict[str, float]] = None):
+                 injury_tracker=None,
+                 game_week: int = 1,
+                 unavailable_home: Optional[set] = None,
+                 unavailable_away: Optional[set] = None,
+                 dtd_home: Optional[set] = None,
+                 dtd_away: Optional[set] = None):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -1283,6 +1289,32 @@ class ViperballEngine:
         self.drive_play_count = 0
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
+
+        # --- Injury / substitution state ---
+        self.injury_tracker = injury_tracker
+        self.game_week = game_week
+        self.in_game_injuries: List = []       # InGameInjuryEvent objects
+        self._home_injured_in_game: set = set()
+        self._away_injured_in_game: set = set()
+
+        # Filter out unavailable players (weekly injuries) and mark DTD
+        _unavailable_home = unavailable_home or set()
+        _unavailable_away = unavailable_away or set()
+        _dtd_home = dtd_home or set()
+        _dtd_away = dtd_away or set()
+
+        if _unavailable_home:
+            self.home_team.players = [p for p in self.home_team.players
+                                      if p.name not in _unavailable_home]
+        if _unavailable_away:
+            self.away_team.players = [p for p in self.away_team.players
+                                      if p.name not in _unavailable_away]
+        for p in self.home_team.players:
+            if p.name in _dtd_home:
+                p.is_dtd = True
+        for p in self.away_team.players:
+            if p.name in _dtd_away:
+                p.is_dtd = True
 
         for p in self.home_team.players:
             p.archetype = assign_archetype(p)
@@ -3175,6 +3207,15 @@ class ViperballEngine:
                 self.state.field_position = 100 - self.state.field_position
                 description += " — TURNOVER ON DOWNS"
 
+        # In-game injury checks on ball carrier and tackler
+        injury_note = ""
+        carrier_inj = self.check_in_game_injury(player, play_type="run")
+        if carrier_inj:
+            injury_note += f" | {carrier_inj.narrative}"
+        tackler_inj = self.check_defender_injury(tackler, play_type="tackle")
+        if tackler_inj:
+            injury_note += f" | {tackler_inj.narrative}"
+
         self.apply_stamina_drain(3)
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -3191,7 +3232,7 @@ class ViperballEngine:
             players_involved=[plabel],
             yards_gained=yards_gained,
             result=result.value,
-            description=description,
+            description=description + injury_note,
             fatigue=round(stamina, 1),
             play_signature=sig_detail,
         )
@@ -3419,6 +3460,15 @@ class ViperballEngine:
                 self.state.field_position = 100 - self.state.field_position
                 description += " — TURNOVER ON DOWNS"
 
+        # In-game injury check on ball carrier and tackler
+        injury_note = ""
+        carrier_inj = self.check_in_game_injury(ball_carrier, play_type="lateral")
+        if carrier_inj:
+            injury_note += f" | {carrier_inj.narrative}"
+        tackler_inj = self.check_defender_injury(lat_tackler, play_type="tackle")
+        if tackler_inj:
+            injury_note += f" | {tackler_inj.narrative}"
+
         self.apply_stamina_drain(5)
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -3435,7 +3485,7 @@ class ViperballEngine:
             players_involved=chain_labels,
             yards_gained=yards_gained,
             result=result.value,
-            description=description,
+            description=description + injury_note,
             fatigue=round(stamina, 1),
             laterals=chain_length,
         )
@@ -3685,6 +3735,12 @@ class ViperballEngine:
                     self.state.field_position = 100 - self.state.field_position
                     description += " — TURNOVER ON DOWNS"
 
+            # In-game injury check on receiver after catch
+            injury_note = ""
+            recv_inj = self.check_in_game_injury(receiver, play_type="kick_pass")
+            if recv_inj:
+                injury_note += f" | {recv_inj.narrative}"
+
             self.apply_stamina_drain(4)
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -3701,7 +3757,7 @@ class ViperballEngine:
                 players_involved=[kicker_lbl, receiver_lbl],
                 yards_gained=yards_gained,
                 result=result.value,
-                description=description,
+                description=description + injury_note,
                 fatigue=round(stamina, 1),
             )
 
@@ -4588,6 +4644,108 @@ class ViperballEngine:
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
 
+    def get_available_players(self, team: Team, top_n: int = 8) -> List:
+        """Return top_n players from team who are not injured in this game."""
+        injured = (self._home_injured_in_game if team == self.home_team
+                   else self._away_injured_in_game)
+        available = [p for p in team.players if p.name not in injured]
+        return available[:top_n]
+
+    def check_in_game_injury(self, player, play_type: str = "default") -> Optional[dict]:
+        """
+        Roll for an in-game injury on a player after a play.
+
+        Returns an injury event dict if injured, None otherwise.
+        Marks the player as injured and finds a substitute.
+        """
+        if self.injury_tracker is None:
+            return None
+        if player.injured_in_game:
+            return None
+
+        team = self.get_offensive_team()
+        team_name = team.name
+        is_home = (team == self.home_team)
+
+        injury = self.injury_tracker.roll_in_game_injury(
+            player, team_name, self.game_week, play_type
+        )
+        if injury is None:
+            return None
+
+        # Mark player as out for the rest of this game
+        player.injured_in_game = True
+        if is_home:
+            self._home_injured_in_game.add(player.name)
+        else:
+            self._away_injured_in_game.add(player.name)
+
+        # Find a substitute
+        from engine.injuries import find_substitute, InGameInjuryEvent
+        injured_set = (self._home_injured_in_game if is_home
+                       else self._away_injured_in_game)
+        sub, is_oop = find_substitute(
+            team.players, player, set(), injured_set
+        )
+
+        event = InGameInjuryEvent(
+            player_name=player.name,
+            position=player.position,
+            description=injury.description,
+            tier=injury.tier,
+            category=injury.category,
+            is_season_ending=injury.is_season_ending,
+            substitute_name=sub.name if sub else None,
+            substitute_position=sub.position if sub else None,
+            is_out_of_position=is_oop,
+        )
+        self.in_game_injuries.append(event)
+        return event
+
+    def check_defender_injury(self, player, play_type: str = "tackle") -> Optional[dict]:
+        """Roll for in-game injury on a defensive player."""
+        if self.injury_tracker is None:
+            return None
+        if player.injured_in_game:
+            return None
+
+        team = self.get_defensive_team()
+        team_name = team.name
+        is_home = (team == self.home_team)
+
+        injury = self.injury_tracker.roll_in_game_injury(
+            player, team_name, self.game_week, play_type
+        )
+        if injury is None:
+            return None
+
+        player.injured_in_game = True
+        if is_home:
+            self._home_injured_in_game.add(player.name)
+        else:
+            self._away_injured_in_game.add(player.name)
+
+        from engine.injuries import find_substitute, InGameInjuryEvent
+        injured_set = (self._home_injured_in_game if is_home
+                       else self._away_injured_in_game)
+        sub, is_oop = find_substitute(
+            team.players, player, set(), injured_set
+        )
+
+        event = InGameInjuryEvent(
+            player_name=player.name,
+            position=player.position,
+            description=injury.description,
+            tier=injury.tier,
+            category=injury.category,
+            is_season_ending=injury.is_season_ending,
+            substitute_name=sub.name if sub else None,
+            substitute_position=sub.position if sub else None,
+            is_out_of_position=is_oop,
+        )
+        self.in_game_injuries.append(event)
+        return event
+
     def get_fatigue_factor(self) -> float:
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
         if stamina >= 70:
@@ -4790,6 +4948,20 @@ class ViperballEngine:
             },
             "drive_summary": self.drive_log,
             "play_by_play": play_dicts,
+            "in_game_injuries": [
+                {
+                    "player": e.player_name,
+                    "position": e.position,
+                    "description": e.description,
+                    "tier": e.tier,
+                    "category": e.category,
+                    "season_ending": e.is_season_ending,
+                    "substitute": e.substitute_name,
+                    "sub_position": e.substitute_position,
+                    "out_of_position": e.is_out_of_position,
+                }
+                for e in self.in_game_injuries
+            ],
         }
 
         return summary

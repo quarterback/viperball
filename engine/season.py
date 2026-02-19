@@ -407,6 +407,9 @@ class Season:
 
     rivalries: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
 
+    # Injury tracker — when set, injuries affect game simulation
+    injury_tracker: Optional[object] = None
+
     def __post_init__(self):
         for team_name, team in self.teams.items():
             style_config = self.style_configs.get(team_name, {})
@@ -688,8 +691,20 @@ class Season:
             total_weeks=total_weeks,
         )
 
-        home_dq = dq_team_boosts.get(game.home_team, {}) if dq_team_boosts else {}
-        away_dq = dq_team_boosts.get(game.away_team, {}) if dq_team_boosts else {}
+        # Pass injury data to game engine if tracker is available
+        injury_kwargs = {}
+        if self.injury_tracker is not None:
+            injury_kwargs["injury_tracker"] = self.injury_tracker
+            injury_kwargs["game_week"] = game.week
+            injury_kwargs["unavailable_home"] = self.injury_tracker.get_unavailable_names(
+                game.home_team, game.week)
+            injury_kwargs["unavailable_away"] = self.injury_tracker.get_unavailable_names(
+                game.away_team, game.week)
+            injury_kwargs["dtd_home"] = self.injury_tracker.get_dtd_names(
+                game.home_team, game.week)
+            injury_kwargs["dtd_away"] = self.injury_tracker.get_dtd_names(
+                game.away_team, game.week)
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -697,8 +712,7 @@ class Season:
             style_overrides=style_overrides,
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
-            home_dq_boosts=home_dq,
-            away_dq_boosts=away_dq,
+            **injury_kwargs,
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
@@ -760,6 +774,11 @@ class Season:
             week = self.get_next_unplayed_week()
             if week is None:
                 return []
+
+        # Process weekly injuries/returns BEFORE games if tracker is connected
+        if self.injury_tracker is not None:
+            self.injury_tracker.resolve_week(week)
+            self.injury_tracker.process_week(week, self.teams, self.standings)
 
         week_games = [g for g in self.schedule if g.week == week and not g.completed]
         for game in week_games:
