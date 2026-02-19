@@ -303,13 +303,11 @@ def render_dynasty_mode(shared):
                 injury_tracker = InjuryTracker()
                 injury_tracker.seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
 
+                # Attach tracker to season so injuries affect each game
+                season.injury_tracker = injury_tracker
+
                 with st.spinner(f"Simulating {dynasty.current_year} season ({total_games} games, {games_per_team}/team)..."):
                     season.simulate_season(generate_polls=True)
-
-                    max_week = max((g.week for g in season.schedule if g.completed), default=0)
-                    for wk in range(1, max_week + 1):
-                        injury_tracker.process_week(wk, season.teams, season.standings)
-                        injury_tracker.resolve_week(wk)
 
                 playoff_count = min(playoff_format, len(all_dynasty_teams))
                 if playoff_count >= 4:
