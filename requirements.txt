@@ -4,3 +4,4 @@ plotly>=6.5.2
 streamlit>=1.54.0
 uvicorn>=0.40.0
 requests
+httpx

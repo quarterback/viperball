@@ -22,6 +22,9 @@ from engine.geography import get_geographic_conference_defaults
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
 from engine.game_engine import WEATHER_CONDITIONS
 from ui import api_client
+from ui.page_modules.draftyqueenz_ui import (
+    render_dq_bankroll_banner, render_dq_pre_sim, render_dq_post_sim,
+)
 from ui.helpers import (
     load_team, format_time, fmt_vb_score,
     generate_box_score_markdown, generate_play_log_csv,
@@ -1593,12 +1596,19 @@ def _render_dynasty_play(shared):
                 sm3.metric("Progress", f"{progress_pct:.0%}")
                 st.progress(progress_pct)
 
+                render_dq_bankroll_banner(session_id)
+                render_dq_pre_sim(session_id, next_week, key_prefix="dyn_")
+
                 btn_col1, btn_col2, btn_col3 = st.columns(3)
                 with btn_col1:
                     if st.button("Sim Next Week", type="primary", use_container_width=True, key="dyn_sim_next_week"):
                         with st.spinner(f"Simulating Week {next_week}..."):
                             try:
                                 api_client.simulate_week(session_id, week=next_week)
+                                try:
+                                    api_client.dq_resolve_week(session_id, next_week)
+                                except api_client.APIError:
+                                    pass
                                 st.rerun()
                             except api_client.APIError as e:
                                 st.error(f"Simulation failed: {e.detail}")
@@ -1627,6 +1637,7 @@ def _render_dynasty_play(shared):
                                 st.error(f"Simulation failed: {e.detail}")
 
                 if current_week > 0:
+                    render_dq_post_sim(session_id, current_week, key_prefix="dyn_")
                     st.divider()
                     try:
                         standings_resp = api_client.get_standings(session_id)
@@ -1927,6 +1938,9 @@ def _render_season_play(shared):
 
             st.progress(progress_pct)
 
+            render_dq_bankroll_banner(session_id)
+            render_dq_pre_sim(session_id, next_week, key_prefix="ssn_")
+
             st.subheader("Advance Season")
 
             btn_col1, btn_col2, btn_col3 = st.columns(3)
@@ -1935,6 +1949,10 @@ def _render_season_play(shared):
                     with st.spinner(f"Simulating Week {next_week}..."):
                         try:
                             api_client.simulate_week(session_id, week=next_week)
+                            try:
+                                api_client.dq_resolve_week(session_id, next_week)
+                            except api_client.APIError:
+                                pass
                             st.rerun()
                         except api_client.APIError as e:
                             st.error(f"Simulation failed: {e.detail}")
@@ -1963,6 +1981,7 @@ def _render_season_play(shared):
                             st.error(f"Simulation failed: {e.detail}")
 
             if current_week > 0:
+                render_dq_post_sim(session_id, current_week, key_prefix="ssn_")
                 st.divider()
                 try:
                     standings_resp = api_client.get_standings(session_id)

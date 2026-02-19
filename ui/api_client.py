@@ -469,3 +469,83 @@ def set_rivalry(session_id: str, team: str,
     if non_conference_rival is not None:
         body["non_conference_rival"] = non_conference_rival
     return _post(f"/sessions/{session_id}/rivalries", json=body)
+
+
+# ── DraftyQueenz ──
+
+def dq_status(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/dq/status")
+
+
+def dq_start_week(session_id: str, week: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/start-week/{week}")
+
+
+def dq_get_contest(session_id: str, week: int) -> dict:
+    return _get(f"/sessions/{session_id}/dq/contest/{week}")
+
+
+def dq_get_odds(session_id: str, week: int) -> dict:
+    return _get(f"/sessions/{session_id}/dq/odds/{week}")
+
+
+def dq_place_pick(session_id: str, week: int, pick_type: str, game_idx: int, selection: str, amount: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/pick/{week}", json={
+        "pick_type": pick_type,
+        "game_idx": game_idx,
+        "selection": selection,
+        "amount": amount,
+    })
+
+
+def dq_place_parlay(session_id: str, week: int, legs: list, amount: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/parlay/{week}", json={
+        "legs": legs,
+        "amount": amount,
+    })
+
+
+def dq_enter_fantasy(session_id: str, week: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/fantasy/enter/{week}")
+
+
+def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None) -> dict:
+    params = {}
+    if position:
+        params["position"] = position
+    return _get(f"/sessions/{session_id}/dq/fantasy/pool/{week}", params=params or None)
+
+
+def dq_set_roster_slot(session_id: str, week: int, slot: str, player_tag: str, team_name: str) -> dict:
+    return _post(f"/sessions/{session_id}/dq/fantasy/set-slot/{week}", json={
+        "slot": slot,
+        "player_tag": player_tag,
+        "team_name": team_name,
+    })
+
+
+def dq_clear_roster_slot(session_id: str, week: int, slot: str) -> dict:
+    return _delete(f"/sessions/{session_id}/dq/fantasy/clear-slot/{week}/{slot}")
+
+
+def dq_get_roster(session_id: str, week: int) -> dict:
+    return _get(f"/sessions/{session_id}/dq/fantasy/roster/{week}")
+
+
+def dq_resolve_week(session_id: str, week: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/resolve/{week}")
+
+
+def dq_donate(session_id: str, donation_type: str, amount: int) -> dict:
+    return _post(f"/sessions/{session_id}/dq/donate", json={
+        "donation_type": donation_type,
+        "amount": amount,
+    })
+
+
+def dq_portfolio(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/dq/portfolio")
+
+
+def dq_summary(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/dq/summary")

@@ -47,6 +47,12 @@ from engine.transfer_portal import (
     auto_portal_offers, generate_quick_portal,
     estimate_prestige_from_roster,
 )
+from engine.draftyqueenz import (
+    DraftyQueenzManager, DONATION_TYPES, BOOSTER_TIERS,
+    STARTING_BANKROLL, SALARY_CAP, FANTASY_ENTRY_FEE,
+    MIN_BET, MAX_BET, MIN_DONATION, PARLAY_MULTIPLIERS,
+    format_moneyline,
+)
 
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
@@ -596,6 +602,7 @@ def create_session():
         "season": None,
         "dynasty": None,
         "injury_tracker": None,
+        "dq_manager": None,
         "phase": "setup",
         "config": {},
         "created_at": now,
@@ -620,6 +627,7 @@ def get_session(session_id: str):
         "created_at": session["created_at"],
         "has_season": session["season"] is not None,
         "has_dynasty": session["dynasty"] is not None,
+        "has_dq": session.get("dq_manager") is not None,
     }
     if session["season"] is not None:
         result["season_status"] = _serialize_season_status(session)
@@ -729,6 +737,10 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    session["dq_manager"] = DraftyQueenzManager(
+        manager_name=req.human_teams[0] if req.human_teams else "Coach",
+        season_year=2026,
+    )
     session["history"] = history_results
 
     if has_human:
@@ -1406,6 +1418,17 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     }
     session["injury_tracker"] = InjuryTracker()
 
+    existing_dq = session.get("dq_manager")
+    if existing_dq:
+        existing_dq.season_year = dynasty.current_year
+        existing_dq.weekly_contests = {}
+        existing_dq.donations = []
+    else:
+        session["dq_manager"] = DraftyQueenzManager(
+            manager_name=dynasty.coach.team_name,
+            season_year=dynasty.current_year,
+        )
+
     return _serialize_season_status(session)
 
 
@@ -1442,6 +1465,17 @@ def dynasty_advance(session_id: str):
             recent_wins=recent_wins,
         )
 
+    dq_manager = session.get("dq_manager")
+    dq_boosts = {}
+    if dq_manager:
+        dq_boosts = dq_manager.get_active_boosts()
+        facilities_boost = dq_boosts.get("facilities", 0)
+        if facilities_boost > 0 and human_team in dynasty.team_prestige:
+            dynasty.team_prestige[human_team] = min(
+                100,
+                dynasty.team_prestige[human_team] + int(facilities_boost)
+            )
+
     dynasty._nil_programs = {}
     for team_name in dynasty.team_histories:
         prestige = dynasty.team_prestige.get(team_name, 50)
@@ -1464,6 +1498,9 @@ def dynasty_advance(session_id: str):
                 prestige=prestige, market=market,
                 previous_season_wins=prev_wins, championship=champ, rng=rng,
             )
+            nil_topup = dq_boosts.get("nil_topup", 0)
+            if nil_topup > 0:
+                budget += int(nil_topup)
             program = NILProgram(team_name=team_name, annual_budget=budget)
         else:
             program = auto_nil_program(
@@ -1524,6 +1561,7 @@ def dynasty_advance(session_id: str):
         "prestige": dict(dynasty.team_prestige),
         "phase": "nil",
         "player_cards": offseason_player_cards,
+        "dq_boosts": dq_boosts,
     }
     session["phase"] = "offseason"
     session["season"] = None
@@ -1986,10 +2024,18 @@ def offseason_recruiting_resolve(session_id: str):
         boards[team_name] = board
         all_nil[team_name] = nil
 
+    recruiting_prestige = dict(dynasty.team_prestige)
+    dq_boosts_off = offseason.get("dq_boosts", {})
+    recruit_boost = dq_boosts_off.get("recruiting", 0)
+    if recruit_boost > 0 and human_team in recruiting_prestige:
+        recruiting_prestige[human_team] = min(
+            100, recruiting_prestige[human_team] + int(recruit_boost)
+        )
+
     signed = simulate_recruit_decisions(
         pool=recruit_pool,
         team_boards=boards,
-        team_prestige=dynasty.team_prestige,
+        team_prestige=recruiting_prestige,
         team_regions=team_regions,
         nil_offers=all_nil,
         rng=rng,
@@ -2245,3 +2291,390 @@ def get_team_rivalry_history(session_id: str, team: str):
         if team in key.split("|"):
             team_rivalries[key] = entry
     return {"team": team, "rivalry_history": team_rivalries}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# DRAFTYQUEENZ ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════
+
+class DQPickRequest(BaseModel):
+    pick_type: str
+    game_idx: int
+    selection: str
+    amount: int
+
+class DQParlayLeg(BaseModel):
+    pick_type: str
+    game_idx: int
+    selection: str
+
+class DQParlayRequest(BaseModel):
+    legs: List[DQParlayLeg]
+    amount: int
+
+class DQRosterSlotRequest(BaseModel):
+    slot: str
+    player_tag: str
+    team_name: str
+
+class DQDonateRequest(BaseModel):
+    donation_type: str
+    amount: int
+
+
+def _require_dq(session: dict) -> DraftyQueenzManager:
+    mgr = session.get("dq_manager")
+    if mgr is None:
+        raise HTTPException(status_code=400, detail="DraftyQueenz not active for this session")
+    return mgr
+
+
+def _get_prestige_map(session: dict) -> Dict[str, int]:
+    dynasty = session.get("dynasty")
+    if dynasty and dynasty.team_prestige:
+        return dict(dynasty.team_prestige)
+    season = session.get("season")
+    if season:
+        from engine.season import estimate_team_prestige_from_roster
+        return {
+            name: estimate_team_prestige_from_roster(t)
+            for name, t in season.teams.items()
+        }
+    return {}
+
+
+@app.get("/sessions/{session_id}/dq/status")
+def dq_status(session_id: str):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    return {
+        "bankroll": mgr.bankroll.balance,
+        "peak_bankroll": mgr.peak_bankroll,
+        "season_year": mgr.season_year,
+        "total_earned": mgr.total_earned,
+        "total_wagered": mgr.total_wagered,
+        "total_donated": mgr.total_donated,
+        "career_donated": mgr.career_donated,
+        "pick_accuracy": mgr.pick_accuracy,
+        "fantasy_top3_rate": mgr.fantasy_top3_rate,
+        "roi": mgr.roi,
+        "booster_tier": mgr.booster_tier[0],
+        "booster_tier_desc": mgr.booster_tier[1],
+        "next_tier": {"amount_needed": mgr.next_tier[0], "name": mgr.next_tier[1]} if mgr.next_tier else None,
+        "active_boosts": mgr.get_active_boosts(),
+        "recent_transactions": mgr.bankroll.history[-10:],
+    }
+
+
+@app.post("/sessions/{session_id}/dq/start-week/{week}")
+def dq_start_week(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    season = _require_season(session)
+
+    if week in mgr.weekly_contests:
+        contest = mgr.weekly_contests[week]
+        return {
+            "week": week,
+            "odds": [o.to_dict() for o in contest.odds],
+            "pool_size": len(contest.player_pool),
+            "already_started": True,
+        }
+
+    week_games = [g for g in season.schedule if g.week == week and not g.completed]
+    if not week_games:
+        raise HTTPException(status_code=400, detail=f"No unplayed games for week {week}")
+
+    prestige_map = _get_prestige_map(session)
+    standings_map = {r.team_name: r for r in season.get_standings_sorted()} if season.standings else None
+
+    contest = mgr.start_week(week, week_games, season.teams, prestige_map, standings_map)
+
+    return {
+        "week": week,
+        "odds": [o.to_dict() for o in contest.odds],
+        "pool_size": len(contest.player_pool),
+        "bankroll": mgr.bankroll.balance,
+        "already_started": False,
+    }
+
+
+@app.get("/sessions/{session_id}/dq/contest/{week}")
+def dq_get_contest(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=404, detail=f"No contest for week {week}")
+    return contest.to_dict()
+
+
+@app.get("/sessions/{session_id}/dq/odds/{week}")
+def dq_get_odds(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=404, detail=f"No contest for week {week}")
+    odds_list = []
+    for i, o in enumerate(contest.odds):
+        d = o.to_dict()
+        d["game_idx"] = i
+        d["home_ml_display"] = format_moneyline(o.home_moneyline)
+        d["away_ml_display"] = format_moneyline(o.away_moneyline)
+        odds_list.append(d)
+    return {"week": week, "odds": odds_list}
+
+
+@app.post("/sessions/{session_id}/dq/pick/{week}")
+def dq_place_pick(session_id: str, week: int, req: DQPickRequest):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}. Start the week first.")
+    if contest.resolved:
+        raise HTTPException(status_code=400, detail="This week's contest is already resolved.")
+
+    pick, err = contest.make_pick(mgr.bankroll, req.pick_type, req.game_idx, req.selection, req.amount)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {
+        "pick": pick.to_dict(),
+        "bankroll": mgr.bankroll.balance,
+        "total_picks": len(contest.picks),
+    }
+
+
+@app.post("/sessions/{session_id}/dq/parlay/{week}")
+def dq_place_parlay(session_id: str, week: int, req: DQParlayRequest):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}.")
+    if contest.resolved:
+        raise HTTPException(status_code=400, detail="This week's contest is already resolved.")
+
+    legs = [(l.pick_type, l.game_idx, l.selection) for l in req.legs]
+    parlay, err = contest.make_parlay(mgr.bankroll, legs, req.amount)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {
+        "parlay": parlay.to_dict(),
+        "bankroll": mgr.bankroll.balance,
+        "total_parlays": len(contest.parlays),
+    }
+
+
+@app.post("/sessions/{session_id}/dq/fantasy/enter/{week}")
+def dq_enter_fantasy(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}.")
+
+    ok, err = mgr.enter_fantasy(week)
+    if not ok:
+        raise HTTPException(status_code=400, detail=err)
+    return {
+        "entered": True,
+        "bankroll": mgr.bankroll.balance,
+        "entry_fee": FANTASY_ENTRY_FEE,
+    }
+
+
+@app.get("/sessions/{session_id}/dq/fantasy/pool/{week}")
+def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=404, detail=f"No contest for week {week}")
+
+    pool = contest.player_pool
+    if position:
+        pool = [fp for fp in pool if fp.position_tag == position.upper()]
+
+    return {
+        "week": week,
+        "pool": [
+            {
+                "tag": fp.tag,
+                "name": fp.name,
+                "team": fp.team_name,
+                "position": fp.position_tag,
+                "overall": fp.overall,
+                "salary": fp.salary,
+                "projected": round(fp.projected_pts, 1),
+            }
+            for fp in pool
+        ],
+        "salary_cap": SALARY_CAP,
+    }
+
+
+@app.post("/sessions/{session_id}/dq/fantasy/set-slot/{week}")
+def dq_set_roster_slot(session_id: str, week: int, req: DQRosterSlotRequest):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}")
+    if contest.user_roster is None:
+        raise HTTPException(status_code=400, detail="Enter fantasy first before setting roster slots.")
+
+    player = None
+    for fp in contest.player_pool:
+        if fp.tag == req.player_tag and fp.team_name == req.team_name:
+            player = fp
+            break
+    if player is None:
+        raise HTTPException(status_code=404, detail=f"Player {req.player_tag} ({req.team_name}) not found in pool.")
+
+    err = contest.user_roster.set_slot(req.slot, player)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+
+    return {
+        "roster": contest.user_roster.to_dict(),
+        "salary_remaining": SALARY_CAP - contest.user_roster.total_salary,
+    }
+
+
+@app.delete("/sessions/{session_id}/dq/fantasy/clear-slot/{week}/{slot}")
+def dq_clear_roster_slot(session_id: str, week: int, slot: str):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}")
+    if contest.user_roster is None:
+        raise HTTPException(status_code=400, detail="No fantasy roster to clear.")
+    contest.user_roster.clear_slot(slot)
+    return {"roster": contest.user_roster.to_dict(), "salary_remaining": SALARY_CAP - contest.user_roster.total_salary}
+
+
+@app.get("/sessions/{session_id}/dq/fantasy/roster/{week}")
+def dq_get_roster(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=404, detail=f"No contest for week {week}")
+    if contest.user_roster is None:
+        return {"entered": False, "roster": None}
+    return {
+        "entered": True,
+        "roster": contest.user_roster.to_dict(),
+        "salary_remaining": SALARY_CAP - contest.user_roster.total_salary,
+    }
+
+
+@app.post("/sessions/{session_id}/dq/resolve/{week}")
+def dq_resolve_week(session_id: str, week: int):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    season = _require_season(session)
+    contest = mgr.weekly_contests.get(week)
+    if contest is None:
+        raise HTTPException(status_code=400, detail=f"No contest for week {week}")
+    if contest.resolved:
+        return {
+            "already_resolved": True,
+            "prediction_earnings": contest.prediction_earnings,
+            "fantasy_earnings": contest.fantasy_earnings,
+            "jackpot_bonus": contest.jackpot_bonus,
+            "bankroll": mgr.bankroll.balance,
+        }
+
+    week_games = [g for g in season.schedule if g.week == week and g.completed]
+    if not week_games:
+        raise HTTPException(status_code=400, detail=f"Week {week} games haven't been simulated yet.")
+
+    game_results = {}
+    for g in week_games:
+        if g.full_result:
+            key = f"{g.home_team} vs {g.away_team}"
+            game_results[key] = g.full_result
+
+    mgr.resolve_week(week, game_results)
+
+    result = {
+        "resolved": True,
+        "prediction_earnings": contest.prediction_earnings,
+        "fantasy_earnings": contest.fantasy_earnings,
+        "jackpot_bonus": contest.jackpot_bonus,
+        "bankroll": mgr.bankroll.balance,
+        "picks": [p.to_dict() for p in contest.picks],
+        "parlays": [p.to_dict() for p in contest.parlays],
+    }
+
+    if contest.user_roster:
+        ai_scores = sorted([r.total_points for r in contest.ai_rosters], reverse=True)
+        user_pts = contest.user_roster.total_points
+        rank = sum(1 for s in ai_scores if s > user_pts) + 1
+        result["fantasy_rank"] = rank
+        result["fantasy_points"] = user_pts
+        result["user_roster"] = contest.user_roster.to_dict()
+
+    return result
+
+
+@app.post("/sessions/{session_id}/dq/donate")
+def dq_donate(session_id: str, req: DQDonateRequest):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    donation, err = mgr.donate(req.donation_type, req.amount)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {
+        "donation": donation.to_dict(),
+        "bankroll": mgr.bankroll.balance,
+        "career_donated": mgr.career_donated,
+        "booster_tier": mgr.booster_tier[0],
+        "active_boosts": mgr.get_active_boosts(),
+    }
+
+
+@app.get("/sessions/{session_id}/dq/portfolio")
+def dq_portfolio(session_id: str):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    tier_name, tier_desc = mgr.booster_tier
+    next_info = mgr.next_tier
+    boosts = mgr.get_active_boosts()
+
+    boost_details = []
+    for dtype, info in DONATION_TYPES.items():
+        val = boosts.get(dtype, 0)
+        pct = min(100, val / info["cap"] * 100) if info["cap"] > 0 else 0
+        boost_details.append({
+            "type": dtype,
+            "label": info["label"],
+            "description": info["description"],
+            "current_value": round(val, 2),
+            "cap": info["cap"],
+            "progress_pct": round(pct, 1),
+        })
+
+    return {
+        "booster_tier": tier_name,
+        "booster_tier_desc": tier_desc,
+        "career_donated": mgr.career_donated,
+        "next_tier": {"amount_needed": next_info[0], "name": next_info[1]} if next_info else None,
+        "boosts": boost_details,
+        "donations": [d.to_dict() for d in mgr.donations],
+        "donation_types": {
+            k: {"label": v["label"], "description": v["description"], "per_10k": v["per_10k"], "cap": v["cap"]}
+            for k, v in DONATION_TYPES.items()
+        },
+    }
+
+
+@app.get("/sessions/{session_id}/dq/summary")
+def dq_summary(session_id: str):
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    return mgr.season_summary()
