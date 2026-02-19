@@ -163,6 +163,30 @@ Multi-player lateral sequences are encouraged:
 - Probability increases with each additional lateral in the chain
 - Risk-reward balance is critical to offensive strategy
 
+### Kick Pass (KP)
+A controlled kick delivered to a teammate, caught cleanly before touching the ground. Treated as a lateral for turnover and chaos purposes.
+
+**Key Properties:**
+- A kick pass is **not a forward pass** (because it is a kick)
+- A kick pass **may travel forward** (because kicks are not directionally restricted under §5 of the main rulebook)
+- The ball must be caught cleanly — a reception is only credited when the receiver secures possession before the ball contacts the ground
+
+**Outcomes:**
+- **Clean catch:** Receiver has possession at the spot of the catch. Play continues — the receiver may run, lateral, or kick again. Down does not advance on a completion.
+- **Dropped kick pass (incomplete):** The ball is dead at the line of scrimmage. The offense loses one down. No change in field position.
+- **Tipped kick pass:** If the ball is deflected by any player (offense or defense) before being caught or hitting the ground, the ball becomes a **chaos event** — it is live and may be recovered by either team.
+- **Defensive interception:** If a defender catches the kick pass cleanly before it touches the ground, the defense gains possession at the spot of the catch.
+
+**Restrictions:**
+- Only one kick pass may be attempted per play (a second kick pass on the same play is treated as a punt and follows punt rules)
+- A kick pass may not be attempted inside the kicking team's own 10-yard line (to prevent reckless play in the shadow of the team's own end zone)
+
+**Official Signal:**
+- The referee signals a completed kick pass by extending one arm forward and pumping the fist twice
+- An incomplete kick pass uses the standard incomplete signal (arms crossed overhead)
+
+**CVL Note:** The kick pass is a collegiate-specific interpretation of the live-ball kicking rules in §5 of the main rulebook. It is not currently recognized as a distinct play type in the official Viperball rulebook. The CVL adopts it to encourage creative use of the kicking game and to open up the field beyond lateral chains and backward passing.
+
 ---
 
 ## 8. Competitive Balance
@@ -218,7 +242,8 @@ For all rules not explicitly covered in this document, refer to the official Vip
 
 Key sections of particular relevance:
 - §3: Downs & Possession (5-for-20 system)
-- §5: Kicking (live-ball mechanics)
+- §4: Movement of the Ball (advancing methods)
+- §5: Kicking (live-ball mechanics — the basis for the CVL kick pass rule)
 - §9: Tackling & Blocking
 - §14: Clock Management
 - §15-17: Player Positions
@@ -228,6 +253,10 @@ Key sections of particular relevance:
 
 ---
 
-**Version:** 1.0  
-**Effective Date:** 2026 Season  
+**Version:** 1.1
+**Effective Date:** 2026 Season
 **Governing Body:** Collegiate Viperball League (CVL)
+
+**Changelog:**
+- v1.1: Added Kick Pass (KP) rule under §7 Game Regulations. Collegiate-specific interpretation of live-ball kicking rules.
+- v1.0: Initial release.
