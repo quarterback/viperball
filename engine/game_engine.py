@@ -3460,7 +3460,7 @@ class ViperballEngine:
             base_completion = 0.14
 
         completion_prob = base_completion * kicker_factor * receiver_factor * (1.0 + kick_pass_bonus + weather_mod)
-        completion_prob = min(0.70, max(0.08, completion_prob))
+        completion_prob = max(0.08, completion_prob)
 
         # Defensive coverage impact
         defense = self._current_defense()
