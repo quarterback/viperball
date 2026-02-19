@@ -125,12 +125,11 @@ SCORING_RULES = {
     "lateral_assists":    1.0,
     "fumbles":           -4.0,         # costly — just like in-game
 
-    # ── Kicking ──
-    # Player stats combine drop kicks (5 pts in-game) and place kicks (3 pts).
-    # Fantasy rewards the made kick itself, not the point value — drop kicks are
-    # already rarer so kickers who attempt them produce fewer but each is worth more.
-    "kick_made":          6.0,          # big reward — kicks are hard and game-deciding
-    "kick_att_miss":     -2.0,          # derived: att - made; misses hurt
+    # ── Kicking (split stats: pk = place kick/FG 3pts, dk = drop kick/snap kick 5pts) ──
+    "pk_made":            4.0,          # field goal made — reliable 3-pointer
+    "dk_made":            8.0,          # drop kick made — the big 5-pointer, hard to hit
+    "pk_miss":           -1.5,          # derived: pk_att - pk_made
+    "dk_miss":           -3.0,          # derived: dk_att - dk_made; high risk, high penalty
 
     # ── Keeper / Special Teams ──
     "keeper_bells":       5.0,          # signature defensive play
@@ -154,9 +153,13 @@ def score_player(player_stats: Dict) -> float:
     pts = 0.0
 
     for stat_key, rule in SCORING_RULES.items():
-        if stat_key == "kick_att_miss":
-            # Derived: misses = attempts − makes
-            misses = player_stats.get("kick_att", 0) - player_stats.get("kick_made", 0)
+        # Derived miss stats (att − made)
+        if stat_key == "pk_miss":
+            misses = player_stats.get("pk_att", 0) - player_stats.get("pk_made", 0)
+            pts += max(0, misses) * rule
+            continue
+        if stat_key == "dk_miss":
+            misses = player_stats.get("dk_att", 0) - player_stats.get("dk_made", 0)
             pts += max(0, misses) * rule
             continue
 
