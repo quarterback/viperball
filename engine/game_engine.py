@@ -1206,11 +1206,20 @@ DEFENSE_MUFF_MODIFIERS = {
 
 class ViperballEngine:
 
+    RIVALRY_UNDERDOG_BOOST = {
+        10: 2,
+        20: 5,
+        30: 7,
+        999: 9,
+    }
+
     def __init__(self, home_team: Team, away_team: Team, seed: Optional[int] = None,
                  style_overrides: Optional[Dict[str, str]] = None,
-                 weather: str = "clear"):
+                 weather: str = "clear",
+                 is_rivalry: bool = False):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
+        self.is_rivalry = is_rivalry
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
@@ -1278,6 +1287,36 @@ class ViperballEngine:
         self.away_def_intensity = random.gauss(1.0, 0.12)
         self.home_def_intensity = max(0.70, min(1.30, self.home_def_intensity))
         self.away_def_intensity = max(0.70, min(1.30, self.away_def_intensity))
+
+        if self.is_rivalry:
+            self._apply_rivalry_boost()
+
+    def _apply_rivalry_boost(self):
+        home_avg = sum(p.overall for p in self.home_team.players) / max(1, len(self.home_team.players))
+        away_avg = sum(p.overall for p in self.away_team.players) / max(1, len(self.away_team.players))
+        gap = abs(home_avg - away_avg)
+
+        underdog_boost = 2
+        for threshold, boost in sorted(self.RIVALRY_UNDERDOG_BOOST.items()):
+            if gap <= threshold:
+                underdog_boost = boost
+                break
+
+        intensity_boost = 2
+        underdog_team = self.away_team if home_avg > away_avg else self.home_team
+        favorite_team = self.home_team if home_avg > away_avg else self.away_team
+
+        for p in favorite_team.players:
+            p.speed = min(99, p.speed + intensity_boost)
+            p.stamina = min(99, p.stamina + intensity_boost)
+            p.awareness = min(99, p.awareness + intensity_boost)
+
+        total_boost = intensity_boost + underdog_boost
+        for p in underdog_team.players:
+            p.speed = min(99, p.speed + total_boost)
+            p.stamina = min(99, p.stamina + total_boost)
+            p.awareness = min(99, p.awareness + total_boost)
+            p.tackling = min(99, p.tackling + intensity_boost)
 
     def simulate_game(self) -> Dict:
         self.kickoff("away")

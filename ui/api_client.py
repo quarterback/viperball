@@ -97,7 +97,8 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
                   style_configs: Optional[Dict[str, Dict[str, str]]] = None,
                   history_years: int = 0,
                   pinned_matchups: Optional[List[List[str]]] = None,
-                  team_archetypes: Optional[Dict[str, str]] = None) -> dict:
+                  team_archetypes: Optional[Dict[str, str]] = None,
+                  rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None) -> dict:
     body = {
         "name": name,
         "games_per_team": games_per_team,
@@ -117,6 +118,8 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
         body["pinned_matchups"] = pinned_matchups
     if team_archetypes:
         body["team_archetypes"] = team_archetypes
+    if rivalries is not None:
+        body["rivalries"] = rivalries
     return _post(f"/sessions/{session_id}/season", json=body)
 
 
@@ -237,7 +240,8 @@ def get_bowl_results(session_id: str) -> list:
 def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
                    coach_team: str, starting_year: int = 2026,
                    num_conferences: int = 10, history_years: int = 0,
-                   program_archetype: Optional[str] = None) -> dict:
+                   program_archetype: Optional[str] = None,
+                   rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None) -> dict:
     body = {
         "dynasty_name": dynasty_name,
         "coach_name": coach_name,
@@ -248,6 +252,8 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
     }
     if program_archetype:
         body["program_archetype"] = program_archetype
+    if rivalries is not None:
+        body["rivalries"] = rivalries
     return _post(f"/sessions/{session_id}/dynasty", json=body)
 
 
@@ -257,7 +263,8 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
                          defense_style: str = "base_defense",
                          ai_seed: Optional[int] = None,
                          pinned_matchups: Optional[List[List[str]]] = None,
-                         program_archetype: Optional[str] = None) -> dict:
+                         program_archetype: Optional[str] = None,
+                         rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None) -> dict:
     body = {
         "games_per_team": games_per_team,
         "playoff_size": playoff_size,
@@ -271,6 +278,8 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
         body["pinned_matchups"] = pinned_matchups
     if program_archetype:
         body["program_archetype"] = program_archetype
+    if rivalries is not None:
+        body["rivalries"] = rivalries
     return _post(f"/sessions/{session_id}/dynasty/start-season", json=body)
 
 
@@ -445,3 +454,18 @@ def get_dynasty_non_conference_opponents(session_id: str,
     if team:
         params["team"] = team
     return _get(f"/sessions/{session_id}/dynasty/non-conference-opponents", params=params)
+
+
+def get_rivalries(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/rivalries")
+
+
+def set_rivalry(session_id: str, team: str,
+                conference_rival: Optional[str] = None,
+                non_conference_rival: Optional[str] = None) -> dict:
+    body: Dict[str, Any] = {"team": team}
+    if conference_rival is not None:
+        body["conference_rival"] = conference_rival
+    if non_conference_rival is not None:
+        body["non_conference_rival"] = non_conference_rival
+    return _post(f"/sessions/{session_id}/rivalries", json=body)

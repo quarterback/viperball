@@ -488,11 +488,15 @@ def render_game_detail(result, key_prefix="gd"):
     l_score = min(home["score"], away["score"])
     loser = away_name if winner == home_name else home_name
 
-    st.markdown(f"### {winner} {fmt_vb_score(w_score)} - {loser} {fmt_vb_score(l_score)}")
+    rivalry_tag = ""
+    if result.get("is_rivalry_game"):
+        rivalry_tag = " :crossed_swords: **RIVALRY**"
+    st.markdown(f"### {winner} {fmt_vb_score(w_score)} - {loser} {fmt_vb_score(l_score)}{rivalry_tag}")
 
     weather = result.get("weather", "clear")
     seed = result.get("seed", "N/A")
-    st.caption(f"Weather: {weather.title()} | Seed: {seed}")
+    caption_parts = [f"Weather: {weather.title()}", f"Seed: {seed}"]
+    st.caption(" | ".join(caption_parts))
 
     home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
     away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}

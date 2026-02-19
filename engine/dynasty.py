@@ -274,6 +274,9 @@ class Dynasty:
     # Team prestige ratings (updated each offseason)
     team_prestige: Dict[str, int] = field(default_factory=dict)
 
+    rivalries: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
+    rivalry_ledger: Dict[str, Dict] = field(default_factory=dict)
+
     # Team NIL programs for current year (not serialised, rebuilt each offseason)
     _nil_programs: Dict[str, NILProgram] = field(default_factory=dict, repr=False)
 
@@ -638,6 +641,8 @@ class Dynasty:
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))
 
+        self._update_rivalry_ledger(season)
+
         # Update record book
         self._update_record_book(year, season)
 
@@ -941,6 +946,64 @@ class Dynasty:
     def get_development_events(self, year: int) -> List[dict]:
         """Return notable development events for a given offseason year."""
         return self.development_history.get(year, [])
+
+    def _update_rivalry_ledger(self, season: Season):
+        """Update head-to-head rivalry records from completed season games."""
+        rivalry_pairs = set()
+        for team, rivals in self.rivalries.items():
+            conf_rival = rivals.get("conference")
+            nc_rival = rivals.get("non_conference")
+            if conf_rival:
+                rivalry_pairs.add(tuple(sorted([team, conf_rival])))
+            if nc_rival:
+                rivalry_pairs.add(tuple(sorted([team, nc_rival])))
+
+        for game in season.schedule:
+            if not game.completed:
+                continue
+            pair = tuple(sorted([game.home_team, game.away_team]))
+            if pair not in rivalry_pairs:
+                continue
+
+            ledger_key = f"{pair[0]}|{pair[1]}"
+            if ledger_key not in self.rivalry_ledger:
+                self.rivalry_ledger[ledger_key] = {
+                    "team_a": pair[0],
+                    "team_b": pair[1],
+                    "wins": {pair[0]: 0, pair[1]: 0},
+                    "seasons_played": [],
+                    "current_streak": {"team": None, "count": 0},
+                    "last_result": None,
+                }
+
+            entry = self.rivalry_ledger[ledger_key]
+            year = self.current_year
+            if year not in entry["seasons_played"]:
+                entry["seasons_played"].append(year)
+
+            if game.home_score is not None and game.away_score is not None:
+                if game.home_score > game.away_score:
+                    winner = game.home_team
+                elif game.away_score > game.home_score:
+                    winner = game.away_team
+                else:
+                    winner = None
+
+                if winner:
+                    entry["wins"][winner] = entry["wins"].get(winner, 0) + 1
+                    if entry["current_streak"]["team"] == winner:
+                        entry["current_streak"]["count"] += 1
+                    else:
+                        entry["current_streak"] = {"team": winner, "count": 1}
+
+                entry["last_result"] = {
+                    "winner": winner,
+                    "home": game.home_team,
+                    "away": game.away_team,
+                    "home_score": game.home_score,
+                    "away_score": game.away_score,
+                    "year": year,
+                }
 
     def _update_record_book(self, year: int, season: Season):
         """Update record book with new season results"""

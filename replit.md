@@ -54,7 +54,7 @@ The project follows a clear separation of concerns:
 - **`api/main.py`**: FastAPI backend with 45+ REST endpoints managing session-based state. All simulation operations route through here. Serializers convert engine objects to JSON for the UI.
 - **`ui/api_client.py`**: Typed Python wrapper for all API HTTP calls. Uses `requests` with configurable timeouts (120s GET, 300s POST). Custom `APIError` exception for error handling.
 - **`ui/`**: Streamlit web application (modular structure with `ui/app.py` as thin shell routing to `ui/page_modules/`). All page modules fetch data via `api_client` instead of importing engine directly.
-- **`data/teams/`**: Stores team configuration in JSON files (125 teams total, including D3, metro, legacy, women's, and international programs). 12 geographic conferences: Capital Athletic, Moonshine League, Gateway League, Great Lakes Union, Metro Atlantic, New England Athletic, Pacific Rim, Skyline Conference, Southern Athletic, Sun Country, West Coast Conference, Yankee Conference.
+- **`data/teams/`**: Stores team configuration in JSON files (187 teams total across 16 conferences, covering all 51 US states plus Canadian teams).
 - **`scripts/generate_new_teams.py`**: Team generation script for adding new schools with proper rosters, stats, and metadata.
 - **`main.py`**: The application's entry point, launching dual processes (FastAPI + Streamlit).
 
@@ -89,6 +89,7 @@ The project follows a clear separation of concerns:
 - **Power Index System**: Comprehensive 100-point ranking system replacing simple poll scores. Components: Win % (30pts), Strength of Schedule with 2-level depth (20pts), Quality Wins weighted by opponent rank (20pts), Non-conference record (10pts), Conference Strength based on non-conf performance (10pts), Point Differential (10pts), minus Loss Quality penalties (bad losses penalized more). Used for weekly Power Rankings, playoff selection, and conference standings.
 - **Playoff Selection**: Conference champion auto-bids (best conference record wins the auto-bid for each conference) plus at-large bids filled by highest Power Index. Teams seeded by Power Index regardless of bid type. Bid types (AUTO/AT-LARGE) displayed in playoff field table.
 - **CFL Rouge/Pindown Overhaul**: Comprehensive implementation following CFL rules, affecting punts, missed kicks, and kickoffs, with detailed return chance formulas and ball placement.
+- **Rivalry System**: Dual rivalry slots per team (conference + non-conference). Rivalry games guaranteed annually in schedule generation. Gameplay boosts: both teams +2 to speed/stamina/awareness, underdog gets additional scaled boost (prestige gap 0-10: +2, 11-20: +5, 21-30: +7, 31+: +9). AI teams auto-assigned via proximity-based state adjacency graph. Dynasty mode tracks rivalry ledger with series records, win streaks, and head-to-head history. UI: rivalry picker in dynasty/season creation forms, rivalry badges in schedule views and game detail headers. API endpoints: GET/POST `/sessions/{id}/rivalries`, GET `/sessions/{id}/rivalry-history`.
 
 ## External Dependencies
 - **Python 3.11**: Core programming language.

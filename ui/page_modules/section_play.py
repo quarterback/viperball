@@ -264,6 +264,72 @@ def _render_non_conference_picker(
     return all_pinned
 
 
+def _render_rivalry_picker(
+    user_teams: list,
+    all_teams: dict,
+    conferences: dict,
+    key_prefix: str = "rivalry",
+):
+    if not user_teams:
+        return {}
+
+    team_conf_map = {}
+    for conf_name, conf_teams in conferences.items():
+        for t in conf_teams:
+            team_conf_map[t] = conf_name
+
+    st.divider()
+    st.subheader("Rivalries")
+    st.caption(
+        "Set a conference rival and a non-conference rival for each of your teams. "
+        "Rivalry games are guaranteed every season, and both teams get intensity boosts during the matchup."
+    )
+
+    rivalries = {}
+    for user_team in user_teams:
+        my_conf = team_conf_map.get(user_team, "")
+        conf_mates = sorted([
+            t for t in (conferences.get(my_conf, []) if my_conf else [])
+            if t != user_team
+        ])
+        non_conf_teams = sorted([
+            t for t in all_teams.keys()
+            if t != user_team and team_conf_map.get(t, "") != my_conf
+        ])
+
+        if len(user_teams) > 1:
+            st.markdown(f"**{user_team}**")
+
+        r_col1, r_col2 = st.columns(2)
+        with r_col1:
+            conf_rival_options = ["None (auto-assign)"] + conf_mates
+            conf_rival_idx = st.selectbox(
+                f"Conference Rival" if len(user_teams) == 1 else "Conference Rival",
+                range(len(conf_rival_options)),
+                format_func=lambda i, opts=conf_rival_options: opts[i],
+                key=f"{key_prefix}_conf_{user_team}",
+                help="Plays this team every year within your conference",
+            )
+            conf_rival = conf_rival_options[conf_rival_idx] if conf_rival_idx > 0 else None
+        with r_col2:
+            nc_rival_options = ["None (auto-assign)"] + non_conf_teams
+            nc_rival_idx = st.selectbox(
+                f"Non-Conference Rival" if len(user_teams) == 1 else "Non-Conf Rival",
+                range(len(nc_rival_options)),
+                format_func=lambda i, opts=nc_rival_options: opts[i],
+                key=f"{key_prefix}_nc_{user_team}",
+                help="Plays this team every year as a guaranteed non-conference game",
+            )
+            nc_rival = nc_rival_options[nc_rival_idx] if nc_rival_idx > 0 else None
+
+        rivalries[user_team] = {
+            "conference": conf_rival,
+            "non_conference": nc_rival,
+        }
+
+    return rivalries
+
+
 def render_play_section(shared):
     teams = shared["teams"]
     styles = shared["styles"]
@@ -430,6 +496,18 @@ def _render_new_dynasty(shared):
     with history_col2:
         history_games = st.slider("Games Per Team (History Seasons)", min_value=8, max_value=12, value=10, key="history_games")
 
+    dyn_rivalries = {}
+    if conf_assignments:
+        dyn_conf_map = {}
+        for tname, cname in conf_assignments.items():
+            dyn_conf_map.setdefault(cname, []).append(tname)
+        dyn_rivalries = _render_rivalry_picker(
+            user_teams=[coach_team],
+            all_teams=setup_teams,
+            conferences=dyn_conf_map,
+            key_prefix="dyn_rivalry",
+        )
+
     st.divider()
     load_col1, load_col2 = st.columns(2)
     with load_col1:
@@ -450,6 +528,7 @@ def _render_new_dynasty(shared):
                     num_conferences=num_conferences,
                     history_years=history_years,
                     program_archetype=dyn_archetype,
+                    rivalries=dyn_rivalries if dyn_rivalries else {},
                 )
                 st.session_state["api_mode"] = "dynasty"
                 st.session_state["dyn_program_archetype_selected"] = dyn_archetype
@@ -649,6 +728,15 @@ def _render_new_season(shared):
             is_dynasty=False,
         )
 
+    season_rivalries = {}
+    if human_teams and auto_conferences:
+        season_rivalries = _render_rivalry_picker(
+            user_teams=human_teams,
+            all_teams=all_teams,
+            conferences=auto_conferences,
+            key_prefix="season_rivalry",
+        )
+
     st.divider()
     start_season = st.button("Start Season", type="primary", use_container_width=True, key="run_season")
 
@@ -668,6 +756,7 @@ def _render_new_season(shared):
                     ai_seed=actual_seed,
                     pinned_matchups=season_pinned if season_pinned else None,
                     team_archetypes=season_team_archetypes if season_team_archetypes else None,
+                    rivalries=season_rivalries if season_rivalries else {},
                 )
                 st.session_state["api_mode"] = "season"
                 st.session_state["season_human_teams_list"] = human_teams

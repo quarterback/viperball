@@ -491,9 +491,14 @@ def _render_schedule(session_id, completed_games, user_team):
             away_score_str = "—"
             winner_str = "—"
 
+        is_rivalry = g.get("is_rivalry_game", False)
+        game_type_str = entry.get("game_type", "")
+        if is_rivalry:
+            game_type_str = f"{game_type_str} (Rivalry)" if game_type_str else "Rivalry"
+
         row = {
             "Week": entry["label_prefix"],
-            "Type": entry.get("game_type", ""),
+            "Type": game_type_str,
             "Status": entry["status"],
             "Home": _team_label(home, user_team),
             "Away": _team_label(away, user_team),
@@ -503,10 +508,11 @@ def _render_schedule(session_id, completed_games, user_team):
         }
         schedule_data.append(row)
 
+        rivalry_tag = " [Rivalry]" if is_rivalry else ""
         if is_completed:
-            game_labels.append(f"{entry['label_prefix']}: {home} {fmt_vb_score(hs)} vs {away} {fmt_vb_score(aws)}")
+            game_labels.append(f"{entry['label_prefix']}: {home} {fmt_vb_score(hs)} vs {away} {fmt_vb_score(aws)}{rivalry_tag}")
         else:
-            game_labels.append(f"{entry['label_prefix']}: {home} vs {away} (Upcoming)")
+            game_labels.append(f"{entry['label_prefix']}: {home} vs {away} (Upcoming){rivalry_tag}")
         filtered_games.append(g)
 
     if schedule_data:

@@ -21,6 +21,7 @@ from engine.season import (
     get_non_conference_slots, get_available_non_conference_opponents,
     estimate_team_prestige_from_roster, is_buy_game, BUY_GAME_NIL_BONUS,
     MAX_CONFERENCE_GAMES,
+    auto_assign_rivalries,
 )
 from engine.dynasty import create_dynasty, Dynasty
 from engine.conference_names import generate_conference_names
@@ -93,6 +94,7 @@ class CreateSeasonRequest(BaseModel):
     history_years: int = 0
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     team_archetypes: Optional[Dict[str, str]] = None  # team_name -> archetype key
+    rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
 
 
 class CreateDynastyRequest(BaseModel):
@@ -103,6 +105,7 @@ class CreateDynastyRequest(BaseModel):
     num_conferences: int = 10
     history_years: int = 0
     program_archetype: Optional[str] = None  # archetype for coach's team
+    rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
 
 
 class SimulateWeekRequest(BaseModel):
@@ -122,6 +125,7 @@ class DynastyStartSeasonRequest(BaseModel):
     ai_seed: Optional[int] = None
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     program_archetype: Optional[str] = None  # archetype for human team
+    rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
 
 
 class QuickGameRequest(BaseModel):
@@ -152,6 +156,11 @@ class PortalOfferRequest(BaseModel):
 
 class PortalCommitRequest(BaseModel):
     entry_index: int
+
+class SetRivalriesRequest(BaseModel):
+    team: str
+    conference_rival: Optional[str] = None
+    non_conference_rival: Optional[str] = None
 
 class SeasonPortalGenerateRequest(BaseModel):
     size: int = 40
@@ -233,6 +242,7 @@ def _serialize_game(game: Game, include_full_result: bool = False) -> dict:
         "away_score": game.away_score,
         "completed": game.completed,
         "is_conference_game": game.is_conference_game,
+        "is_rivalry_game": getattr(game, 'is_rivalry_game', False),
         "home_metrics": game.home_metrics if hasattr(game, 'home_metrics') else None,
         "away_metrics": game.away_metrics if hasattr(game, 'away_metrics') else None,
         "has_full_result": bool(getattr(game, 'full_result', None)),
@@ -653,6 +663,13 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     if req.pinned_matchups:
         pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
 
+    rivalries_dict = auto_assign_rivalries(
+        conferences=conferences,
+        team_states=team_states,
+        human_team=req.human_teams[0] if req.human_teams else None,
+        existing_rivalries=req.rivalries,
+    )
+
     season = create_season(
         req.name,
         teams,
@@ -661,6 +678,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         games_per_team=req.games_per_team,
         team_states=team_states,
         pinned_matchups=pinned,
+        rivalries=rivalries_dict,
     )
 
     history_results = []
@@ -1352,6 +1370,15 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
 
     conf_dict = dynasty.get_conferences_dict()
+
+    rivalries_dict = auto_assign_rivalries(
+        conferences=conf_dict,
+        team_states=team_states,
+        human_team=dynasty.coach.team_name,
+        existing_rivalries=req.rivalries,
+    )
+    dynasty.rivalries = rivalries_dict
+
     season = create_season(
         f"{dynasty.current_year} CVL Season",
         teams,
@@ -1360,6 +1387,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         games_per_team=req.games_per_team,
         team_states=team_states,
         pinned_matchups=pinned,
+        rivalries=rivalries_dict,
     )
 
     session["season"] = season
@@ -2145,3 +2173,68 @@ def season_portal_skip(session_id: str):
     _require_season(session)
     session["phase"] = "regular"
     return {"phase": "regular", "skipped": True}
+
+
+@app.get("/sessions/{session_id}/rivalries")
+def get_rivalries(session_id: str):
+    session = _get_session(session_id)
+    season = session.get("season")
+    dynasty = session.get("dynasty")
+    if dynasty:
+        return {"rivalries": dynasty.rivalries}
+    elif season:
+        return {"rivalries": season.rivalries}
+    return {"rivalries": {}}
+
+
+@app.post("/sessions/{session_id}/rivalries")
+def set_rivalries(session_id: str, req: SetRivalriesRequest):
+    session = _get_session(session_id)
+    dynasty = session.get("dynasty")
+    season = session.get("season")
+
+    rivalry_update = {}
+    if req.conference_rival is not None:
+        rivalry_update["conference"] = req.conference_rival
+    if req.non_conference_rival is not None:
+        rivalry_update["non_conference"] = req.non_conference_rival
+
+    if dynasty:
+        if req.team not in dynasty.rivalries:
+            dynasty.rivalries[req.team] = {"conference": None, "non_conference": None}
+        dynasty.rivalries[req.team].update(rivalry_update)
+
+    if season:
+        if req.team not in season.rivalries:
+            season.rivalries[req.team] = {"conference": None, "non_conference": None}
+        season.rivalries[req.team].update(rivalry_update)
+
+    updated = {}
+    if dynasty:
+        updated = dynasty.rivalries.get(req.team, {})
+    elif season:
+        updated = season.rivalries.get(req.team, {})
+
+    return {"team": req.team, "rivalries": updated}
+
+
+@app.get("/sessions/{session_id}/rivalry-history")
+def get_rivalry_history(session_id: str):
+    session = _get_session(session_id)
+    dynasty = session.get("dynasty")
+    if not dynasty:
+        raise HTTPException(status_code=400, detail="Rivalry history only available in dynasty mode")
+    return {"rivalry_ledger": dynasty.rivalry_ledger}
+
+
+@app.get("/sessions/{session_id}/rivalry-history/{team}")
+def get_team_rivalry_history(session_id: str, team: str):
+    session = _get_session(session_id)
+    dynasty = session.get("dynasty")
+    if not dynasty:
+        raise HTTPException(status_code=400, detail="Rivalry history only available in dynasty mode")
+    team_rivalries = {}
+    for key, entry in dynasty.rivalry_ledger.items():
+        if team in key.split("|"):
+            team_rivalries[key] = entry
+    return {"team": team, "rivalry_history": team_rivalries}

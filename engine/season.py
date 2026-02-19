@@ -152,6 +152,7 @@ class Game:
     away_score: Optional[float] = None
     completed: bool = False
     is_conference_game: bool = False
+    is_rivalry_game: bool = False
 
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
@@ -404,6 +405,8 @@ class Season:
     champion: Optional[str] = None
     bowl_games: List[BowlGame] = field(default_factory=list)
 
+    rivalries: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
+
     def __post_init__(self):
         for team_name, team in self.teams.items():
             style_config = self.style_configs.get(team_name, {})
@@ -448,6 +451,22 @@ class Season:
             )
 
         self._assign_weeks_by_type(non_conf_weeks)
+        self._mark_rivalry_games()
+
+    def _mark_rivalry_games(self):
+        """Mark games involving rivalry pairs with is_rivalry_game flag."""
+        rivalry_pairs = set()
+        for team, rivals in self.rivalries.items():
+            conf_rival = rivals.get("conference")
+            nc_rival = rivals.get("non_conference")
+            if conf_rival:
+                rivalry_pairs.add(tuple(sorted([team, conf_rival])))
+            if nc_rival:
+                rivalry_pairs.add(tuple(sorted([team, nc_rival])))
+        for game in self.schedule:
+            pair = tuple(sorted([game.home_team, game.away_team]))
+            if pair in rivalry_pairs:
+                game.is_rivalry_game = True
 
     def _assign_weeks_by_type(self, non_conf_weeks: int = 3):
         """Assign week numbers ensuring no team plays more than once per week.
@@ -549,6 +568,23 @@ class Season:
             if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
                 continue
             _add_game(home, away, False, preserve_home_away=True)
+
+        # ── Step 1b: Add rivalry matchups ──
+        for team, rivals in self.rivalries.items():
+            if team not in self.teams:
+                continue
+            conf_rival = rivals.get("conference")
+            if conf_rival and conf_rival in self.teams:
+                pair = tuple(sorted([team, conf_rival]))
+                if pair not in scheduled_pairs:
+                    if game_counts[team] < games_per_team and game_counts[conf_rival] < games_per_team:
+                        _add_game(team, conf_rival, True)
+            nc_rival = rivals.get("non_conference")
+            if nc_rival and nc_rival in self.teams:
+                pair = tuple(sorted([team, nc_rival]))
+                if pair not in scheduled_pairs:
+                    if game_counts[team] < games_per_team and game_counts[nc_rival] < games_per_team:
+                        _add_game(team, nc_rival, False)
 
         # ── Step 2: Conference games (capped at MAX_CONFERENCE_GAMES per team) ──
         if has_conferences:
@@ -657,9 +693,11 @@ class Season:
             away_team,
             seed=random.randint(1, 1000000),
             style_overrides=style_overrides,
-            weather=season_weather
+            weather=season_weather,
+            is_rivalry=game.is_rivalry_game,
         )
         result = engine.simulate_game()
+        result["is_rivalry_game"] = game.is_rivalry_game
 
         for p in home_team.players:
             p.season_games_played = getattr(p, 'season_games_played', 0) + 1
@@ -1428,6 +1466,7 @@ def create_season(
     games_per_team: int = 0,
     team_states: Optional[Dict[str, str]] = None,
     pinned_matchups: Optional[List[Tuple[str, str]]] = None,
+    rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
 ) -> Season:
     """
     Create a season with teams and optional style configurations
@@ -1460,9 +1499,219 @@ def create_season(
         team_states=team_states or {},
     )
 
+    season.rivalries = rivalries or {}
+
     season.generate_schedule(
         games_per_team=games_per_team,
         pinned_matchups=pinned_matchups,
     )
 
     return season
+
+
+STATE_NEIGHBORS: Dict[str, List[str]] = {
+    "AL": ["FL","GA","MS","TN"],
+    "AK": [],
+    "AZ": ["CA","CO","NM","NV","UT"],
+    "AR": ["LA","MO","MS","OK","TN","TX"],
+    "CA": ["AZ","NV","OR"],
+    "CO": ["AZ","KS","NE","NM","OK","UT","WY"],
+    "CT": ["MA","NY","RI"],
+    "DE": ["MD","NJ","PA"],
+    "FL": ["AL","GA"],
+    "GA": ["AL","FL","NC","SC","TN"],
+    "HI": [],
+    "ID": ["MT","NV","OR","UT","WA","WY"],
+    "IL": ["IN","IA","KY","MO","WI"],
+    "IN": ["IL","KY","MI","OH"],
+    "IA": ["IL","MN","MO","NE","SD","WI"],
+    "KS": ["CO","MO","NE","OK"],
+    "KY": ["IL","IN","MO","OH","TN","VA","WV"],
+    "LA": ["AR","MS","TX"],
+    "ME": ["NH"],
+    "MD": ["DE","PA","VA","WV","DC"],
+    "MA": ["CT","NH","NY","RI","VT"],
+    "MI": ["IN","OH","WI"],
+    "MN": ["IA","ND","SD","WI"],
+    "MS": ["AL","AR","LA","TN"],
+    "MO": ["AR","IL","IA","KS","KY","NE","OK","TN"],
+    "MT": ["ID","ND","SD","WY"],
+    "NE": ["CO","IA","KS","MO","SD","WY"],
+    "NV": ["AZ","CA","ID","OR","UT"],
+    "NH": ["MA","ME","VT"],
+    "NJ": ["DE","NY","PA"],
+    "NM": ["AZ","CO","OK","TX","UT"],
+    "NY": ["CT","MA","NJ","PA","VT"],
+    "NC": ["GA","SC","TN","VA"],
+    "ND": ["MN","MT","SD"],
+    "OH": ["IN","KY","MI","PA","WV"],
+    "OK": ["AR","CO","KS","MO","NM","TX"],
+    "OR": ["CA","ID","NV","WA"],
+    "PA": ["DE","MD","NJ","NY","OH","WV"],
+    "RI": ["CT","MA"],
+    "SC": ["GA","NC"],
+    "SD": ["IA","MN","MT","ND","NE","WY"],
+    "TN": ["AL","AR","GA","KY","MO","MS","NC","VA"],
+    "TX": ["AR","LA","NM","OK"],
+    "UT": ["AZ","CO","ID","NM","NV","WY"],
+    "VT": ["MA","NH","NY"],
+    "VA": ["KY","MD","NC","TN","WV","DC"],
+    "WA": ["ID","OR"],
+    "WV": ["KY","MD","OH","PA","VA"],
+    "WI": ["IA","IL","MI","MN"],
+    "WY": ["CO","ID","MT","NE","SD","UT"],
+    "DC": ["MD","VA"],
+    "BC": ["AB","WA"],
+    "AB": ["BC","SK"],
+    "SK": ["AB","MB"],
+    "MB": ["SK","ON"],
+    "ON": ["MB","QC","NY"],
+    "QC": ["ON","NB","VT","ME","NH","NY"],
+    "NB": ["QC","NS","ME"],
+    "NS": ["NB"],
+}
+
+
+def _state_distance(s1: str, s2: str) -> int:
+    if s1 == s2:
+        return 0
+    if s2 in STATE_NEIGHBORS.get(s1, []):
+        return 1
+    visited = {s1}
+    frontier = [s1]
+    depth = 0
+    while frontier and depth < 8:
+        depth += 1
+        next_frontier = []
+        for st in frontier:
+            for nb in STATE_NEIGHBORS.get(st, []):
+                if nb == s2:
+                    return depth
+                if nb not in visited:
+                    visited.add(nb)
+                    next_frontier.append(nb)
+        frontier = next_frontier
+    return 99
+
+
+def auto_assign_rivalries(
+    conferences: Dict[str, List[str]],
+    team_states: Dict[str, str],
+    human_team: Optional[str] = None,
+    existing_rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
+) -> Dict[str, Dict[str, Optional[str]]]:
+    """Auto-assign conference and non-conference rivals for AI teams.
+
+    Uses state-based geographic proximity. Human team rivalries are preserved
+    from existing_rivalries (not overwritten).
+
+    Returns dict of team_name -> {"conference": rival_or_None, "non_conference": rival_or_None}
+    """
+    rivalries: Dict[str, Dict[str, Optional[str]]] = {}
+    if existing_rivalries:
+        for t, r in existing_rivalries.items():
+            rivalries[t] = dict(r)
+
+    team_conf: Dict[str, str] = {}
+    for conf_name, members in conferences.items():
+        for t in members:
+            team_conf[t] = conf_name
+
+    all_teams = list(team_conf.keys())
+    claimed_conf: Dict[str, set] = {}
+    claimed_nc: Dict[str, set] = {}
+    for conf_name in conferences:
+        claimed_conf[conf_name] = set()
+    for t in all_teams:
+        claimed_nc.setdefault(t, set())
+
+    for t, r in rivalries.items():
+        conf = team_conf.get(t, "")
+        cr = r.get("conference")
+        nr = r.get("non_conference")
+        if cr and conf:
+            claimed_conf.setdefault(conf, set()).add(cr)
+            claimed_conf.setdefault(conf, set()).add(t)
+        if nr:
+            claimed_nc.setdefault(t, set()).add(nr)
+            claimed_nc.setdefault(nr, set()).add(t)
+
+    for team in all_teams:
+        if team == human_team:
+            continue
+        if team in rivalries and rivalries[team].get("conference"):
+            continue
+
+        conf = team_conf.get(team, "")
+        if not conf:
+            continue
+        conf_members = [t for t in conferences.get(conf, []) if t != team]
+        if not conf_members:
+            continue
+
+        team_state = team_states.get(team, "")
+        best_rival = None
+        best_dist = 999
+        for candidate in conf_members:
+            if candidate == human_team:
+                continue
+            if candidate in claimed_conf.get(conf, set()):
+                continue
+            cand_state = team_states.get(candidate, "")
+            if team_state and cand_state:
+                dist = _state_distance(team_state, cand_state)
+            else:
+                dist = 50
+            if dist < best_dist:
+                best_dist = dist
+                best_rival = candidate
+
+        if best_rival:
+            rivalries.setdefault(team, {"conference": None, "non_conference": None})
+            rivalries[team]["conference"] = best_rival
+            claimed_conf.setdefault(conf, set()).add(team)
+            claimed_conf[conf].add(best_rival)
+            rivalries.setdefault(best_rival, {"conference": None, "non_conference": None})
+            if not rivalries[best_rival].get("conference"):
+                rivalries[best_rival]["conference"] = team
+
+    for team in all_teams:
+        if team == human_team:
+            continue
+        if team in rivalries and rivalries[team].get("non_conference"):
+            continue
+
+        conf = team_conf.get(team, "")
+        team_state = team_states.get(team, "")
+        non_conf_teams = [t for t in all_teams if team_conf.get(t, "") != conf and t != team]
+        if not non_conf_teams:
+            continue
+
+        best_rival = None
+        best_dist = 999
+        for candidate in non_conf_teams:
+            if candidate == human_team:
+                continue
+            if candidate in claimed_nc.get(team, set()):
+                continue
+            if candidate in rivalries and rivalries[candidate].get("non_conference"):
+                continue
+            cand_state = team_states.get(candidate, "")
+            if team_state and cand_state:
+                dist = _state_distance(team_state, cand_state)
+            else:
+                dist = 50
+            if dist < best_dist:
+                best_dist = dist
+                best_rival = candidate
+
+        if best_rival:
+            rivalries.setdefault(team, {"conference": None, "non_conference": None})
+            rivalries[team]["non_conference"] = best_rival
+            claimed_nc.setdefault(team, set()).add(best_rival)
+            claimed_nc.setdefault(best_rival, set()).add(team)
+            rivalries.setdefault(best_rival, {"conference": None, "non_conference": None})
+            if not rivalries[best_rival].get("non_conference"):
+                rivalries[best_rival]["non_conference"] = team
+
+    return rivalries
