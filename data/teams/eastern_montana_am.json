@@ -1,0 +1,34 @@
+{
+  "team_info": {
+    "school_id": "eastern_montana_am",
+    "school": "Eastern Montana A&M University",
+    "abbreviation": "EMAMU",
+    "mascot": "Bison",
+    "conference": "Interstate Athletic Association",
+    "city": "Miles City",
+    "state": "MT",
+    "colors": [
+      "Forest Green",
+      "Gold"
+    ]
+  },
+  "identity": {
+    "style": "balanced",
+    "philosophy": "ground_and_pound",
+    "tempo": "medium",
+    "two_way_emphasis": "medium"
+  },
+  "recruiting_pipeline": {
+    "south": 0.05,
+    "midwest": 0.2,
+    "mid_atlantic": 0.05,
+    "west_coast": 0.35,
+    "texas_southwest": 0.1,
+    "caribbean": 0.05,
+    "canadian_french": 0.2
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "base_defense"
+  }
+}

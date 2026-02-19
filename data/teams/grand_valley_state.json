@@ -1,0 +1,35 @@
+{
+  "team_info": {
+    "school_id": "grand_valley_state",
+    "school": "Grand Valley State University",
+    "abbreviation": "GVSU",
+    "mascot": "Lakers",
+    "conference": "Prairie Athletic Union",
+    "city": "Allendale",
+    "state": "MI",
+    "colors": [
+      "Blue",
+      "Black",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "aggressive",
+    "philosophy": "spread",
+    "tempo": "fast",
+    "two_way_emphasis": "medium"
+  },
+  "recruiting_pipeline": {
+    "south": 0.15,
+    "midwest": 0.45,
+    "mid_atlantic": 0.15,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "caribbean": 0.1,
+    "canadian_french": 0.05
+  },
+  "style": {
+    "offense_style": "aggressive",
+    "defense_style": "base_defense"
+  }
+}

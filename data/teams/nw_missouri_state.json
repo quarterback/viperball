@@ -1,0 +1,34 @@
+{
+  "team_info": {
+    "school_id": "nw_missouri_state",
+    "school": "Northwest Missouri State University",
+    "abbreviation": "NWMSU",
+    "mascot": "Bearcats",
+    "conference": "Outlands Coast Conference",
+    "city": "Maryville",
+    "state": "MO",
+    "colors": [
+      "Green",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "aggressive",
+    "philosophy": "ground_and_pound",
+    "tempo": "medium",
+    "two_way_emphasis": "medium"
+  },
+  "recruiting_pipeline": {
+    "south": 0.2,
+    "midwest": 0.4,
+    "mid_atlantic": 0.05,
+    "west_coast": 0.1,
+    "texas_southwest": 0.15,
+    "caribbean": 0.05,
+    "canadian_french": 0.05
+  },
+  "style": {
+    "offense_style": "aggressive",
+    "defense_style": "base_defense"
+  }
+}

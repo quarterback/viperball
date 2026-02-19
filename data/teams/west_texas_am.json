@@ -1,21 +1,21 @@
 {
   "team_info": {
-    "school_id": "ut_dallas",
-    "school": "University of Texas at Dallas",
-    "abbreviation": "UTD",
-    "mascot": "Comets",
+    "school_id": "west_texas_am",
+    "school": "West Texas A&M University",
+    "abbreviation": "WTAMU",
+    "mascot": "Buffaloes",
     "conference": "Collegiate Commonwealth",
-    "city": "Richardson",
+    "city": "Canyon",
     "state": "TX",
     "colors": [
-      "Orange",
-      "Green"
+      "Maroon",
+      "White"
     ]
   },
   "identity": {
-    "style": "balanced",
-    "philosophy": "hybrid",
-    "tempo": "medium",
+    "style": "aggressive",
+    "philosophy": "ground_and_pound",
+    "tempo": "slow",
     "two_way_emphasis": "medium"
   },
   "recruiting_pipeline": {
@@ -28,7 +28,7 @@
     "canadian_french": 0.05
   },
   "style": {
-    "offense_style": "balanced",
+    "offense_style": "aggressive",
     "defense_style": "base_defense"
   }
 }

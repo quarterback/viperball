@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "ut_dallas",
-    "school": "University of Texas at Dallas",
-    "abbreviation": "UTD",
-    "mascot": "Comets",
-    "conference": "Collegiate Commonwealth",
-    "city": "Richardson",
+    "school_id": "east_texas_am",
+    "school": "East Texas A&M University",
+    "abbreviation": "ETAMU",
+    "mascot": "Lions",
+    "conference": "Outlands Coast Conference",
+    "city": "Commerce",
     "state": "TX",
     "colors": [
-      "Orange",
-      "Green"
+      "Blue",
+      "Gold"
     ]
   },
   "identity": {

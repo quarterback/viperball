@@ -1,0 +1,34 @@
+{
+  "team_info": {
+    "school_id": "nevada_state",
+    "school": "Nevada State University",
+    "abbreviation": "NSU",
+    "mascot": "Mustangs",
+    "conference": "Pioneer Athletic Association",
+    "city": "Winnemucca",
+    "state": "NV",
+    "colors": [
+      "Silver",
+      "Blue"
+    ]
+  },
+  "identity": {
+    "style": "balanced",
+    "philosophy": "hybrid",
+    "tempo": "medium",
+    "two_way_emphasis": "medium"
+  },
+  "recruiting_pipeline": {
+    "south": 0.1,
+    "midwest": 0.1,
+    "mid_atlantic": 0.05,
+    "west_coast": 0.45,
+    "texas_southwest": 0.15,
+    "caribbean": 0.1,
+    "canadian_french": 0.05
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "base_defense"
+  }
+}
