@@ -705,6 +705,11 @@ class Season:
             injury_kwargs["dtd_away"] = self.injury_tracker.get_dtd_names(
                 game.away_team, game.week)
 
+        dq_kwargs = {}
+        if dq_team_boosts:
+            dq_kwargs["home_dq_boosts"] = dq_team_boosts.get(game.home_team, {})
+            dq_kwargs["away_dq_boosts"] = dq_team_boosts.get(game.away_team, {})
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -713,6 +718,7 @@ class Season:
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
             **injury_kwargs,
+            **dq_kwargs,
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game

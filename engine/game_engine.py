@@ -1275,7 +1275,9 @@ class ViperballEngine:
                  unavailable_home: Optional[set] = None,
                  unavailable_away: Optional[set] = None,
                  dtd_home: Optional[set] = None,
-                 dtd_away: Optional[set] = None):
+                 dtd_away: Optional[set] = None,
+                 home_dq_boosts: Optional[Dict] = None,
+                 away_dq_boosts: Optional[Dict] = None):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
