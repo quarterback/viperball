@@ -4656,14 +4656,18 @@ def get_available_teams() -> List[Dict]:
             with open(filepath) as fh:
                 data = json.load(fh)
             style = data.get("style", {}).get("offense_style", "balanced")
-            team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
+            team_info = data["team_info"]
+            team_name = team_info.get("school") or team_info.get("school_name", "Unknown")
             teams.append({
                 "key": f.replace(".json", ""),
                 "name": team_name,
-                "abbreviation": data["team_info"]["abbreviation"],
-                "mascot": data["team_info"]["mascot"],
+                "abbreviation": team_info["abbreviation"],
+                "mascot": team_info["mascot"],
                 "default_style": style,
                 "file": filepath,
+                "conference": team_info.get("conference", "Independent"),
+                "state": team_info.get("state", ""),
+                "city": team_info.get("city", ""),
             })
     return teams
 

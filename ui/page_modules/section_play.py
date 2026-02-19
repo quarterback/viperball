@@ -264,6 +264,166 @@ def _render_non_conference_picker(
     return all_pinned
 
 
+def _build_conference_team_map(teams):
+    conf_map = {}
+    for t in teams:
+        conf = t.get("conference", "Independent")
+        conf_map.setdefault(conf, []).append(t)
+    for conf in conf_map:
+        conf_map[conf].sort(key=lambda x: x["name"])
+    return conf_map
+
+
+def _render_team_picker_single(
+    teams: list,
+    label: str = "Your Team",
+    key_prefix: str = "tp",
+    default_team: str = None,
+):
+    conf_map = _build_conference_team_map(teams)
+    conf_names = sorted(conf_map.keys())
+    conf_options = ["All Conferences"] + conf_names
+
+    filter_col, team_col = st.columns([1, 2])
+    with filter_col:
+        conf_filter = st.selectbox(
+            "Filter by Conference",
+            conf_options,
+            key=f"{key_prefix}_conf_filter",
+        )
+    if conf_filter == "All Conferences":
+        filtered_teams = sorted(teams, key=lambda t: t["name"])
+    else:
+        filtered_teams = conf_map.get(conf_filter, [])
+
+    team_options = [t["name"] for t in filtered_teams]
+    if not team_options:
+        st.warning("No teams in this conference.")
+        return teams[0]["name"] if teams else ""
+
+    default_idx = 0
+    if default_team and default_team in team_options:
+        default_idx = team_options.index(default_team)
+
+    with team_col:
+        conf_labels = {t["name"]: t.get("conference", "") for t in filtered_teams}
+        state_labels = {t["name"]: t.get("state", "") for t in filtered_teams}
+        selected = st.selectbox(
+            label,
+            team_options,
+            index=default_idx,
+            format_func=lambda x: f"{x} ({conf_labels.get(x, '')})" if conf_filter == "All Conferences" else f"{x} — {state_labels.get(x, '')}",
+            key=f"{key_prefix}_team_select",
+        )
+    return selected
+
+
+def _render_team_picker_multi(
+    teams: list,
+    label: str = "Your Teams",
+    key_prefix: str = "tp_multi",
+    max_selections: int = 4,
+    help_text: str = "",
+):
+    conf_map = _build_conference_team_map(teams)
+    conf_names = sorted(conf_map.keys())
+
+    st.caption(f"{len(teams)} teams across {len(conf_names)} conferences")
+
+    browse_mode = st.radio(
+        "Browse teams by",
+        ["Conference", "All Teams (A-Z)"],
+        horizontal=True,
+        key=f"{key_prefix}_browse_mode",
+    )
+
+    picks_key = f"{key_prefix}_picks"
+    if picks_key not in st.session_state:
+        st.session_state[picks_key] = []
+    current_picks = st.session_state[picks_key]
+
+    if current_picks:
+        conf_labels_map = {t["name"]: t.get("conference", "") for t in teams}
+        pick_display = ", ".join([f"**{p}** ({conf_labels_map.get(p, '')})" for p in current_picks])
+        st.markdown(f"Selected ({len(current_picks)}/{max_selections}): {pick_display}")
+        if st.button("Clear All", key=f"{key_prefix}_clear"):
+            st.session_state[picks_key] = []
+            st.rerun()
+
+    if len(current_picks) >= max_selections:
+        st.info(f"Maximum {max_selections} teams selected.")
+        return current_picks
+
+    if browse_mode == "Conference":
+        conf_filter = st.selectbox(
+            "Select Conference",
+            conf_names,
+            key=f"{key_prefix}_conf_filter",
+        )
+        available = [t["name"] for t in conf_map.get(conf_filter, []) if t["name"] not in current_picks]
+    else:
+        available = sorted([t["name"] for t in teams if t["name"] not in current_picks])
+
+    if available:
+        add_col1, add_col2 = st.columns([3, 1])
+        with add_col1:
+            conf_labels = {t["name"]: t.get("conference", "") for t in teams}
+            selected = st.selectbox(
+                f"Add team ({len(available)} available)",
+                available,
+                format_func=lambda x: f"{x} ({conf_labels.get(x, '')})" if browse_mode != "Conference" else x,
+                key=f"{key_prefix}_add_select",
+            )
+        with add_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Add", type="primary", key=f"{key_prefix}_add_btn", use_container_width=True):
+                st.session_state[picks_key].append(selected)
+                st.rerun()
+    else:
+        st.caption("No more teams available to add.")
+
+    return current_picks
+
+
+def _render_team_picker_quick(
+    teams: list,
+    label: str = "Select Team",
+    key_prefix: str = "tp_quick",
+    default_idx: int = 0,
+):
+    conf_map = _build_conference_team_map(teams)
+    conf_names = sorted(conf_map.keys())
+    conf_options = ["All Conferences"] + conf_names
+
+    conf_filter = st.selectbox(
+        "Conference",
+        conf_options,
+        key=f"{key_prefix}_conf_filter",
+    )
+    if conf_filter == "All Conferences":
+        filtered_teams = sorted(teams, key=lambda t: t["name"])
+    else:
+        filtered_teams = conf_map.get(conf_filter, [])
+
+    if not filtered_teams:
+        st.warning("No teams in this conference.")
+        return teams[default_idx]["key"] if teams else ""
+
+    keys = [t["key"] for t in filtered_teams]
+    names = {t["key"]: t["name"] for t in filtered_teams}
+    confs = {t["key"]: t.get("conference", "") for t in filtered_teams}
+
+    sel_idx = min(default_idx, len(keys) - 1)
+    selected_key = st.selectbox(
+        label,
+        keys,
+        index=sel_idx,
+        format_func=lambda k: f"{names[k]} ({confs[k]})" if conf_filter == "All Conferences" else names[k],
+        key=f"{key_prefix}_team_select",
+    )
+    return selected_key
+
+
 def _render_rivalry_picker(
     user_teams: list,
     all_teams: dict,
@@ -379,10 +539,13 @@ def _render_new_dynasty(shared):
     dynasty_col1, dynasty_col2 = st.columns(2)
     with dynasty_col1:
         dynasty_name = st.text_input("Dynasty Name", value="My Viperball Dynasty", key="dyn_name")
-        coach_name = st.text_input("Coach Name", value="Coach", key="coach_name")
     with dynasty_col2:
-        coach_team = st.selectbox("Your Team", [t["name"] for t in teams], key="coach_team")
-        start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
+        coach_name = st.text_input("Coach Name", value="Coach", key="coach_name")
+
+    st.markdown("**Choose Your Team**")
+    coach_team = _render_team_picker_single(teams, label="Your Team", key_prefix="dyn_team")
+
+    start_year = st.number_input("Starting Year", min_value=2020, max_value=2050, value=2026, key="start_year")
 
     st.divider()
     st.subheader("Program Archetype")
@@ -549,7 +712,7 @@ def _render_new_season(shared):
     defense_styles = shared["defense_styles"]
 
     st.subheader("New Season")
-    st.caption("Simulate a full season with all 125 teams, standings, and playoffs")
+    st.caption(f"Simulate a full season with all {len(teams)} teams, standings, and playoffs")
 
     teams_dir = _teams_dir()
     all_teams = load_teams_from_directory(teams_dir)
@@ -561,13 +724,13 @@ def _render_new_season(shared):
         st.warning("Not enough teams loaded to run a season.")
         return
 
-    human_teams = st.multiselect(
-        "Your Teams (human-coached)",
-        all_team_names,
-        default=[],
+    st.markdown("**Your Teams** (human-coached, up to 4)")
+    human_teams = _render_team_picker_multi(
+        teams,
+        label="Your Teams",
+        key_prefix="season_human",
         max_selections=4,
-        key="season_human_teams",
-        help="Pick up to 4 teams to coach yourself. Everyone else is AI-controlled."
+        help_text="Pick up to 4 teams to coach yourself. Everyone else is AI-controlled.",
     )
 
     if "season_ai_seed" not in st.session_state:
@@ -1118,8 +1281,7 @@ def _render_quick_game(shared):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("**Home Team**")
-            home_key = st.selectbox("Select Home Team", [t["key"] for t in teams],
-                                    format_func=lambda x: team_names[x], key="home")
+            home_key = _render_team_picker_quick(teams, label="Select Home Team", key_prefix="home", default_idx=0)
             hc1, hc2 = st.columns(2)
             with hc1:
                 home_style = st.selectbox("Offense", style_keys,
@@ -1134,9 +1296,7 @@ def _render_quick_game(shared):
 
         with col2:
             st.markdown("**Away Team**")
-            away_key = st.selectbox("Select Away Team", [t["key"] for t in teams],
-                                    format_func=lambda x: team_names[x],
-                                    index=min(1, len(teams) - 1), key="away")
+            away_key = _render_team_picker_quick(teams, label="Select Away Team", key_prefix="away", default_idx=min(1, len(teams) - 1))
             ac1, ac2 = st.columns(2)
             with ac1:
                 away_style = st.selectbox("Offense", style_keys,
