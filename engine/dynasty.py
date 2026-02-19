@@ -552,6 +552,7 @@ class Dynasty:
 
         if player_cards is not None:
             self._record_awards_to_cards(honors, player_cards, year)
+            self._populate_career_seasons(season, player_cards, year)
 
         self.awards_history[year] = SeasonAwards(
             year=year,
@@ -634,6 +635,14 @@ class Dynasty:
                             player.redshirt = card.redshirt
                             player.season_games_played = 0
                             card.season_games_played = 0
+                            player.career_awards = list(card.career_awards)
+                            existing_seasons = getattr(player, "career_seasons", [])
+                            new_seasons = [s.to_dict() for s in card.career_seasons]
+                            existing_years = {s.get("season_year") for s in existing_seasons}
+                            for ns in new_seasons:
+                                if ns.get("season_year") not in existing_years:
+                                    existing_seasons.append(ns)
+                            player.career_seasons = existing_seasons
                             if hasattr(card, '_was_redshirted'):
                                 del card._was_redshirted
 
@@ -934,6 +943,106 @@ class Dynasty:
                     "team": winner.team_name,
                     "position": winner.position,
                 })
+
+    def _populate_career_seasons(
+        self,
+        season,
+        player_cards: Dict[str, list],
+        year: int,
+    ) -> None:
+        """Build season stats from completed games and log to PlayerCards."""
+        from engine.player_card import SeasonStats
+
+        card_lookup: Dict[str, "PlayerCard"] = {}
+        for team_name, cards in player_cards.items():
+            for card in cards:
+                key = f"{card.full_name}|{team_name}"
+                card_lookup[key] = card
+
+        player_agg: Dict[str, Dict] = {}
+
+        for game in season.schedule:
+            if not game.completed or not getattr(game, "full_result", None):
+                continue
+            fr = game.full_result
+            ps = fr.get("player_stats", {})
+            for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+                for p in ps.get(side, []):
+                    agg_key = f"{p['name']}|{team_name}"
+                    if agg_key not in player_agg:
+                        player_agg[agg_key] = {
+                            "team": team_name,
+                            "games_played": 0,
+                            "touches": 0,
+                            "rushing_yards": 0,
+                            "lateral_yards": 0,
+                            "total_yards": 0,
+                            "touchdowns": 0,
+                            "fumbles": 0,
+                            "laterals_thrown": 0,
+                            "kick_attempts": 0,
+                            "kick_makes": 0,
+                            "pk_attempts": 0,
+                            "pk_makes": 0,
+                            "dk_attempts": 0,
+                            "dk_makes": 0,
+                            "tackles": 0,
+                            "tfl": 0,
+                            "sacks": 0,
+                            "hurries": 0,
+                            "return_yards": 0,
+                            "st_tackles": 0,
+                        }
+                    a = player_agg[agg_key]
+                    a["games_played"] += 1
+                    a["touches"] += p.get("touches", 0)
+                    a["rushing_yards"] += p.get("rushing_yards", 0)
+                    a["lateral_yards"] += p.get("lateral_yards", 0)
+                    a["total_yards"] += p.get("yards", 0)
+                    a["touchdowns"] += p.get("tds", 0)
+                    a["fumbles"] += p.get("fumbles", 0)
+                    a["laterals_thrown"] += p.get("laterals_thrown", 0)
+                    a["kick_attempts"] += p.get("kick_att", 0)
+                    a["kick_makes"] += p.get("kick_made", 0)
+                    a["pk_attempts"] += p.get("pk_att", 0)
+                    a["pk_makes"] += p.get("pk_made", 0)
+                    a["dk_attempts"] += p.get("dk_att", 0)
+                    a["dk_makes"] += p.get("dk_made", 0)
+                    a["tackles"] += p.get("tackles", 0)
+                    a["tfl"] += p.get("tfl", 0)
+                    a["sacks"] += p.get("sacks", 0)
+                    a["hurries"] += p.get("hurries", 0)
+                    a["return_yards"] += p.get("kick_return_yards", 0) + p.get("punt_return_yards", 0)
+                    a["st_tackles"] += p.get("st_tackles", 0)
+
+        for agg_key, stats in player_agg.items():
+            card = card_lookup.get(agg_key)
+            if card is not None and stats["games_played"] > 0:
+                ss = SeasonStats(
+                    season_year=year,
+                    team=stats["team"],
+                    games_played=stats["games_played"],
+                    touches=stats["touches"],
+                    rushing_yards=stats["rushing_yards"],
+                    lateral_yards=stats["lateral_yards"],
+                    total_yards=stats["total_yards"],
+                    touchdowns=stats["touchdowns"],
+                    fumbles=stats["fumbles"],
+                    laterals_thrown=stats["laterals_thrown"],
+                    kick_attempts=stats["kick_attempts"],
+                    kick_makes=stats["kick_makes"],
+                    pk_attempts=stats["pk_attempts"],
+                    pk_makes=stats["pk_makes"],
+                    dk_attempts=stats["dk_attempts"],
+                    dk_makes=stats["dk_makes"],
+                    tackles=stats["tackles"],
+                    tfl=stats["tfl"],
+                    sacks=stats["sacks"],
+                    hurries=stats["hurries"],
+                    return_yards=stats["return_yards"],
+                    st_tackles=stats["st_tackles"],
+                )
+                card.career_seasons.append(ss)
 
     def get_honors(self, year: int) -> Optional[dict]:
         """Return the full SeasonHonors dict for a given year."""

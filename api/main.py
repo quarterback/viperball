@@ -258,10 +258,10 @@ def _serialize_game(game: Game, include_full_result: bool = False) -> dict:
     return d
 
 
-def _serialize_poll(poll: WeeklyPoll) -> dict:
+def _serialize_poll(poll: WeeklyPoll, prestige_map: Optional[dict] = None) -> dict:
     rankings = []
     for r in poll.rankings:
-        rankings.append({
+        entry = {
             "rank": r.rank,
             "team_name": r.team_name,
             "record": r.record,
@@ -273,7 +273,10 @@ def _serialize_poll(poll: WeeklyPoll) -> dict:
             "quality_wins": r.quality_wins,
             "sos_rank": r.sos_rank,
             "bid_type": r.bid_type,
-        })
+        }
+        if prestige_map:
+            entry["prestige"] = prestige_map.get(r.team_name)
+        rankings.append(entry)
     return {"week": poll.week, "rankings": rankings}
 
 
@@ -389,6 +392,7 @@ def _serialize_player(player) -> dict:
         "potential": getattr(player, "potential", 3),
         "development": getattr(player, "development", "normal"),
         "career_awards": getattr(player, "career_awards", []),
+        "career_seasons": getattr(player, "career_seasons", []),
     }
 
 
@@ -962,10 +966,17 @@ def get_team_roster(session_id: str, team_name: str):
     team = season.teams.get(team_name)
     if not team:
         raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
+    dynasty = session.get("dynasty")
+    prestige = None
+    if dynasty and hasattr(dynasty, "team_prestige"):
+        prestige = dynasty.team_prestige.get(team_name)
+
     return {
         "team_name": team_name,
         "roster": [_serialize_player(p) for p in team.players],
         "roster_size": len(team.players),
+        "prestige": prestige,
     }
 
 
@@ -1153,11 +1164,16 @@ def season_polls(session_id: str, week: Optional[int] = Query(None)):
     session = _get_session(session_id)
     season = _require_season(session)
 
+    dynasty = session.get("dynasty")
+    prestige_map = None
+    if dynasty and hasattr(dynasty, "team_prestige") and dynasty.team_prestige:
+        prestige_map = dynasty.team_prestige
+
     polls = season.weekly_polls
     if week is not None:
         polls = [p for p in polls if p.week == week]
 
-    return {"polls": [_serialize_poll(p) for p in polls]}
+    return {"polls": [_serialize_poll(p, prestige_map=prestige_map) for p in polls]}
 
 
 @app.get("/sessions/{session_id}/season/conferences")
@@ -1665,12 +1681,18 @@ def team_roster(session_id: str, team_name: str):
     record = season.standings.get(team_name)
     team_record = _serialize_team_record(record) if record else None
 
+    dynasty = session.get("dynasty")
+    prestige = None
+    if dynasty and hasattr(dynasty, "team_prestige"):
+        prestige = dynasty.team_prestige.get(team_name)
+
     return {
         "team_name": team.name,
         "abbreviation": team.abbreviation,
         "mascot": team.mascot,
         "players": players,
         "record": team_record,
+        "prestige": prestige,
     }
 
 

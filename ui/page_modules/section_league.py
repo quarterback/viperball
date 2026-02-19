@@ -190,7 +190,7 @@ def _render_power_rankings(session_id, standings, user_team):
                     movement = "--"
             else:
                 movement = "NEW"
-            poll_data.append({
+            entry = {
                 "#": rank,
                 "Team": _team_label(r.get("team_name", ""), user_team),
                 "Record": r.get("record", ""),
@@ -199,7 +199,10 @@ def _render_power_rankings(session_id, standings, user_team):
                 "Quality Wins": r.get("quality_wins", 0),
                 "SOS Rank": r.get("sos_rank", 0),
                 "Move": movement,
-            })
+            }
+            if r.get("prestige") is not None:
+                entry["Prestige"] = r["prestige"]
+            poll_data.append(entry)
         st.dataframe(pd.DataFrame(poll_data), hide_index=True, use_container_width=True, height=600)
     else:
         st.caption("No rankings available yet.")
@@ -762,6 +765,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
     try:
         roster_resp = api_client.get_roster(session_id, browse_team)
         roster = roster_resp.get("roster", [])
+        team_prestige = roster_resp.get("prestige")
     except api_client.APIError:
         st.warning("Could not load roster for this team.")
         return
@@ -770,7 +774,11 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
         st.info("No roster data available.")
         return
 
-    st.markdown(f"**{browse_team} Roster** ({len(roster)} players)")
+    header_parts = [f"**{browse_team} Roster** ({len(roster)} players)"]
+    if team_prestige is not None:
+        prestige_label = "Elite" if team_prestige >= 85 else "Strong" if team_prestige >= 70 else "Average" if team_prestige >= 50 else "Developing" if team_prestige >= 30 else "Rebuilding"
+        header_parts.append(f"Program Prestige: **{team_prestige}** ({prestige_label})")
+    st.markdown(" | ".join(header_parts))
 
     roster_data = []
     for p in roster:
@@ -893,6 +901,56 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
                         rt4.metric("ST Tackles", player_season["st_tackles"])
             except api_client.APIError:
                 pass
+
+            career_seasons = p.get("career_seasons", [])
+            if career_seasons:
+                st.markdown("**Career Stats (Year-by-Year)**")
+                career_rows = []
+                for cs in career_seasons:
+                    row = {
+                        "Year": cs.get("season_year", ""),
+                        "Team": cs.get("team", ""),
+                        "GP": cs.get("games_played", 0),
+                        "Touches": cs.get("touches", 0),
+                        "Rush Yds": cs.get("rushing_yards", 0),
+                        "Lat Yds": cs.get("lateral_yards", 0),
+                        "Total Yds": cs.get("total_yards", 0),
+                        "TDs": cs.get("touchdowns", 0),
+                        "Fumbles": cs.get("fumbles", 0),
+                    }
+                    if cs.get("kick_attempts", 0) > 0:
+                        ka = cs["kick_attempts"]
+                        km = cs.get("kick_makes", 0)
+                        row["Kicks"] = f"{km}/{ka}"
+                    if cs.get("tackles", 0) > 0 or cs.get("sacks", 0) > 0:
+                        row["TKL"] = cs.get("tackles", 0)
+                        row["Sacks"] = cs.get("sacks", 0)
+                    career_rows.append(row)
+
+                if len(career_rows) > 1:
+                    totals = {
+                        "Year": "CAREER",
+                        "Team": "",
+                        "GP": sum(cs.get("games_played", 0) for cs in career_seasons),
+                        "Touches": sum(cs.get("touches", 0) for cs in career_seasons),
+                        "Rush Yds": sum(cs.get("rushing_yards", 0) for cs in career_seasons),
+                        "Lat Yds": sum(cs.get("lateral_yards", 0) for cs in career_seasons),
+                        "Total Yds": sum(cs.get("total_yards", 0) for cs in career_seasons),
+                        "TDs": sum(cs.get("touchdowns", 0) for cs in career_seasons),
+                        "Fumbles": sum(cs.get("fumbles", 0) for cs in career_seasons),
+                    }
+                    total_ka = sum(cs.get("kick_attempts", 0) for cs in career_seasons)
+                    if total_ka > 0:
+                        total_km = sum(cs.get("kick_makes", 0) for cs in career_seasons)
+                        totals["Kicks"] = f"{total_km}/{total_ka}"
+                    total_tkl = sum(cs.get("tackles", 0) for cs in career_seasons)
+                    total_sacks = sum(cs.get("sacks", 0) for cs in career_seasons)
+                    if total_tkl > 0 or total_sacks > 0:
+                        totals["TKL"] = total_tkl
+                        totals["Sacks"] = total_sacks
+                    career_rows.append(totals)
+
+                st.dataframe(pd.DataFrame(career_rows), hide_index=True, use_container_width=True)
 
 
 def _render_awards_stats(session_id, standings, user_team):
