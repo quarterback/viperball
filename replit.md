@@ -43,7 +43,7 @@ The project maintains a clear separation of concerns:
 - **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and game stat tracking.
 - **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays with unique mechanics, Viper and Defensive Alignment systems, and a detailed Run Fumble System with recovery contests.
-- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats and special teams.
+- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, special teams, and defensive stats (tackles, TFL, sacks, hurries). Player Stats UI has 5 tabs: Rushing & Scoring, Lateral Game, Kicking, Defense, Returns & Special Teams.
 - **Drive Tracking**: Logs all possessions and outcomes.
 - **Dynamic Roster System**: Generates 36-player rosters for each season/dynasty, with balanced class years and geographic name pipelines. Dynasty mode includes automatic roster maintenance (graduation, recruitment).
 - **Pre-Season History**: Supports simulating prior seasons (0-100 years) for historical context in standalone Season mode.
