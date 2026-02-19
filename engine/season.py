@@ -328,16 +328,38 @@ def estimate_team_prestige_from_roster(team: "Team") -> int:
     return max(10, min(99, prestige))
 
 
+STATE_TO_REGION = {
+    "CT": "Northeast", "DE": "Northeast", "MA": "Northeast", "MD": "Northeast",
+    "ME": "Northeast", "NH": "Northeast", "NJ": "Northeast", "NY": "Northeast",
+    "PA": "Northeast", "RI": "Northeast", "VT": "Northeast", "DC": "Northeast",
+    "AL": "Southeast", "AR": "Southeast", "FL": "Southeast", "GA": "Southeast",
+    "KY": "Southeast", "LA": "Southeast", "MS": "Southeast", "NC": "Southeast",
+    "SC": "Southeast", "TN": "Southeast", "VA": "Southeast", "WV": "Southeast",
+    "IA": "Midwest", "IL": "Midwest", "IN": "Midwest", "KS": "Midwest",
+    "MI": "Midwest", "MN": "Midwest", "MO": "Midwest", "NE": "Midwest",
+    "ND": "Midwest", "OH": "Midwest", "OK": "Midwest", "SD": "Midwest", "WI": "Midwest",
+    "AZ": "West", "CA": "West", "CO": "West", "HI": "West", "ID": "West",
+    "MT": "West", "NM": "West", "NV": "West", "OR": "West", "UT": "West",
+    "WA": "West", "WY": "West",
+    "TX": "Texas",
+    "AK": "West",
+    "AB": "Canada", "BC": "Canada", "MB": "Canada", "ON": "Canada",
+    "QC": "Canada", "SK": "Canada", "NS": "Canada", "NB": "Canada",
+    "PE": "Canada", "NL": "Canada",
+}
+
+
 def get_available_non_conference_opponents(
     team_name: str,
     all_teams: Dict[str, "Team"],
     conferences: Dict[str, List[str]],
     team_conferences: Dict[str, str],
     team_prestige: Optional[Dict[str, int]] = None,
+    team_states: Optional[Dict[str, str]] = None,
 ) -> List[Dict]:
     """Get a list of available non-conference opponents for a team.
 
-    Returns a list of dicts with keys: name, conference, prestige, tier, overall.
+    Returns a list of dicts with keys: name, conference, prestige, tier, overall, state, region.
     Sorted by prestige descending (best opponents first).
     """
     my_conf = team_conferences.get(team_name, "")
@@ -352,12 +374,16 @@ def get_available_non_conference_opponents(
             prestige = team_prestige[opp_name]
         else:
             prestige = estimate_team_prestige_from_roster(opp_team)
+        opp_state = (team_states or {}).get(opp_name, "")
+        opp_region = STATE_TO_REGION.get(opp_state, "Other")
         opponents.append({
             "name": opp_name,
             "conference": opp_conf,
             "prestige": prestige,
             "tier": classify_prestige_tier(prestige),
             "overall": round(sum(p.overall for p in opp_team.players) / max(1, len(opp_team.players))),
+            "state": opp_state,
+            "region": opp_region,
         })
     opponents.sort(key=lambda x: x["prestige"], reverse=True)
     return opponents

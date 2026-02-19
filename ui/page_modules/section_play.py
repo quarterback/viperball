@@ -153,6 +153,44 @@ TIER_HELP = {
     "cupcake": "Weakest programs — buy-game candidates that give NIL pool bonuses in dynasty",
 }
 
+PRESTIGE_BAND_LABELS = {
+    (90, 100): "90-100 (Blue Blood)",
+    (80, 89): "80-89 (Elite)",
+    (70, 79): "70-79 (Strong)",
+    (60, 69): "60-69 (Above Average)",
+    (50, 59): "50-59 (Mid-Tier)",
+    (40, 49): "40-49 (Below Average)",
+    (30, 39): "30-39 (Lower)",
+    (20, 29): "20-29 (Weak)",
+    (10, 19): "10-19 (Cupcake)",
+    (0, 9): "0-9 (Bottom Tier)",
+}
+
+REGION_LIST = ["All Regions", "Northeast", "Southeast", "Midwest", "West", "Texas", "Canada"]
+
+
+def _build_team_states() -> dict:
+    """Build a mapping of team_name -> state from team JSON files."""
+    import json as _json
+    from pathlib import Path as _Path
+    cache_key = "_team_states_cache"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+    team_dir = _Path(__file__).parent.parent.parent / "data" / "teams"
+    result = {}
+    if team_dir.exists():
+        for fp in team_dir.glob("*.json"):
+            try:
+                d = _json.loads(fp.read_text())
+                name = d.get("team_info", {}).get("school") or d.get("team_info", {}).get("school_name", "")
+                state = d.get("team_info", {}).get("state", "")
+                if name and state:
+                    result[name] = state
+            except Exception:
+                continue
+    st.session_state[cache_key] = result
+    return result
+
 
 def _render_non_conference_picker(
     user_teams: list,
@@ -177,14 +215,17 @@ def _render_non_conference_picker(
     Returns:
         List of [home, away] pairs selected by the user.
     """
+    from engine.season import STATE_TO_REGION
+
     if not user_teams:
         return []
 
-    # Build team -> conference map
     team_conf_map = {}
     for conf_name, conf_teams in conferences.items():
         for t in conf_teams:
             team_conf_map[t] = conf_name
+
+    team_states = _build_team_states()
 
     st.divider()
     st.subheader("Non-Conference Schedule")
@@ -194,6 +235,13 @@ def _render_non_conference_picker(
     )
 
     all_pinned = []
+
+    globally_picked = set()
+    for ut in user_teams:
+        globally_picked.add(ut)
+        pk = f"{key_prefix}_picks_{ut}"
+        if pk in st.session_state:
+            globally_picked.update(st.session_state[pk])
 
     for user_team in user_teams:
         my_conf = team_conf_map.get(user_team, "")
@@ -207,7 +255,7 @@ def _render_non_conference_picker(
         conf_games = min(my_conf_size - 1 if my_conf_size > 0 else 0, MAX_CONFERENCE_GAMES)
 
         if len(user_teams) > 1:
-            st.markdown(f"**{user_team}**")
+            st.markdown(f"---\n#### {user_team}")
 
         info_col1, info_col2, info_col3 = st.columns(3)
         info_col1.metric("Conference Games", conf_games)
@@ -218,46 +266,32 @@ def _render_non_conference_picker(
             st.info("No non-conference slots available with current settings.")
             continue
 
-        # Get available opponents
         opponents = get_available_non_conference_opponents(
             team_name=user_team,
             all_teams=all_teams,
             conferences=conferences,
             team_conferences=team_conf_map,
             team_prestige=team_prestige,
+            team_states=team_states,
         )
 
         if not opponents:
             st.info("No non-conference opponents available.")
             continue
 
-        # Group by tier for display
-        tier_groups = {}
-        for opp in opponents:
-            tier = opp["tier"]
-            tier_groups.setdefault(tier, []).append(opp)
-
-        # Show tier summary
-        tier_summary = []
-        for tier in ["elite", "strong", "mid", "low", "cupcake"]:
-            if tier in tier_groups:
-                tier_summary.append(f"{TIER_LABELS[tier]}: {len(tier_groups[tier])}")
-        st.caption("Available opponents — " + " | ".join(tier_summary))
-
-        # Initialize session state for this team's picks
         state_key = f"{key_prefix}_picks_{user_team}"
         if state_key not in st.session_state:
             st.session_state[state_key] = []
 
         current_picks = st.session_state[state_key]
 
-        # Show current selections
         if current_picks:
             st.markdown("**Your Non-Conference Schedule:**")
             for i, pick in enumerate(current_picks):
                 opp_data = next((o for o in opponents if o["name"] == pick), None)
                 if opp_data:
                     tier_label = TIER_LABELS.get(opp_data["tier"], "")
+                    region_tag = f" [{opp_data.get('region', '')}]" if opp_data.get("region") else ""
                     buy_note = ""
                     if is_dynasty and team_prestige:
                         my_p = team_prestige.get(user_team, 50)
@@ -265,38 +299,60 @@ def _render_non_conference_picker(
                             buy_note = f" — Buy Game (+${BUY_GAME_NIL_BONUS:,} NIL bonus)"
                     st.markdown(
                         f"  {i+1}. **{pick}** ({opp_data['conference']}) "
-                        f"— {tier_label} (Prestige: {opp_data['prestige']}){buy_note}"
+                        f"— P:{opp_data['prestige']}{region_tag}{buy_note}"
                     )
 
             if st.button("Clear All Selections", key=f"{key_prefix}_clear_{user_team}"):
+                for removed in st.session_state[state_key]:
+                    globally_picked.discard(removed)
                 st.session_state[state_key] = []
+                pairs_key = f"{key_prefix}_pairs_{user_team}"
+                if pairs_key in st.session_state:
+                    st.session_state[pairs_key] = []
                 st.rerun()
 
         slots_remaining = nc_slots - len(current_picks)
         if slots_remaining > 0:
             st.markdown(f"**Select opponents** ({slots_remaining} slot{'s' if slots_remaining != 1 else ''} remaining)")
 
-            # Tier filter
-            tier_filter = st.selectbox(
-                "Filter by tier",
-                ["All Tiers"] + [TIER_LABELS[t] for t in ["elite", "strong", "mid", "low", "cupcake"] if t in tier_groups],
-                key=f"{key_prefix}_tier_filter_{user_team}",
-                help="Filter available opponents by program strength",
-            )
+            filter_col1, filter_col2 = st.columns(2)
 
-            # Map filter back to tier key
-            reverse_tier = {v: k for k, v in TIER_LABELS.items()}
-            active_tier = reverse_tier.get(tier_filter, None) if tier_filter != "All Tiers" else None
+            with filter_col1:
+                available_bands = []
+                for (lo, hi), label in sorted(PRESTIGE_BAND_LABELS.items(), key=lambda x: -x[0][0]):
+                    if any(lo <= o["prestige"] <= hi for o in opponents if o["name"] not in globally_picked):
+                        available_bands.append(label)
+                prestige_filter = st.selectbox(
+                    "Filter by prestige",
+                    ["All Prestige Levels"] + available_bands,
+                    key=f"{key_prefix}_pf_{user_team}",
+                    help="Narrow opponents by 10-point prestige bands",
+                )
 
-            # Filter opponents
+            with filter_col2:
+                region_filter = st.selectbox(
+                    "Filter by region",
+                    REGION_LIST,
+                    key=f"{key_prefix}_rf_{user_team}",
+                    help="Filter by geographic region",
+                )
+
+            band_map = {v: k for k, v in PRESTIGE_BAND_LABELS.items()}
+            active_band = band_map.get(prestige_filter, None)
+
             filtered_opps = opponents
-            if active_tier:
-                filtered_opps = [o for o in opponents if o["tier"] == active_tier]
-            # Exclude already picked
-            filtered_opps = [o for o in filtered_opps if o["name"] not in current_picks]
+            if active_band:
+                lo, hi = active_band
+                filtered_opps = [o for o in filtered_opps if lo <= o["prestige"] <= hi]
+            if region_filter != "All Regions":
+                filtered_opps = [o for o in filtered_opps if o.get("region") == region_filter]
+            filtered_opps = [o for o in filtered_opps if o["name"] not in globally_picked]
 
             if filtered_opps:
-                opp_options = [f"{o['name']} ({o['conference']}) — {TIER_LABELS[o['tier']]} (P:{o['prestige']})" for o in filtered_opps]
+                opp_options = [
+                    f"{o['name']} ({o['conference']}) — P:{o['prestige']} [{o.get('region', '')}]"
+                    for o in filtered_opps
+                ]
                 selected_idx = st.selectbox(
                     "Choose opponent",
                     range(len(opp_options)),
@@ -305,7 +361,6 @@ def _render_non_conference_picker(
                 )
                 selected_opp = filtered_opps[selected_idx]
 
-                # Show info about selected opponent
                 if is_dynasty and team_prestige:
                     my_p = team_prestige.get(user_team, 50)
                     if is_buy_game(my_p, selected_opp["prestige"]):
@@ -330,19 +385,18 @@ def _render_non_conference_picker(
                         key=f"{key_prefix}_add_{user_team}",
                     ):
                         st.session_state[state_key].append(selected_opp["name"])
+                        globally_picked.add(selected_opp["name"])
                         pair = [user_team, selected_opp["name"]] if home_away == "Home" else [selected_opp["name"], user_team]
-                        # Store the home/away pairing in a separate state key
                         pairs_key = f"{key_prefix}_pairs_{user_team}"
                         if pairs_key not in st.session_state:
                             st.session_state[pairs_key] = []
                         st.session_state[pairs_key].append(pair)
                         st.rerun()
             else:
-                st.caption("No more opponents available in this tier.")
+                st.caption("No opponents match your current filters. Try broadening your search.")
         elif slots_remaining == 0:
             st.success(f"All {nc_slots} non-conference slots filled!")
 
-        # Build final matchup list from stored pairs
         pairs_key = f"{key_prefix}_pairs_{user_team}"
         if pairs_key in st.session_state:
             all_pinned.extend(st.session_state[pairs_key])
