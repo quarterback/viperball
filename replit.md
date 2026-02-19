@@ -44,7 +44,7 @@ The project maintains a clear separation of concerns:
 - **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and game stat tracking.
 - **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays with unique mechanics, Viper and Defensive Alignment systems, and a detailed Run Fumble System with recovery contests.
-- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, special teams, and defensive stats (tackles, TFL, sacks, hurries). Player Stats UI has 5 tabs: Rushing & Scoring, Lateral Game, Kicking, Defense, Returns & Special Teams.
+- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats (tackles, TFL, sacks, hurries). Player Stats UI has 6 tabs: Rushing & Scoring, Lateral Game, Kick Pass, Kicking, Defense, Returns & Special Teams.
 - **Drive Tracking**: Logs all possessions and outcomes.
 - **Dynamic Roster System**: Generates 36-player rosters for each season/dynasty, with balanced class years and geographic name pipelines. Dynasty mode includes automatic roster maintenance (graduation, recruitment).
 - **Pre-Season History**: Supports simulating prior seasons (0-100 years) for historical context in standalone Season mode.
@@ -52,7 +52,7 @@ The project maintains a clear separation of concerns:
 - **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings, considering win %, Strength of Schedule, Quality Wins, Non-conference record, Conference Strength, and Point Differential.
 - **Playoff Selection**: Combines conference champion auto-bids with at-large bids based on Power Index.
 - **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games, in-game boosts, AI assignment, and historical tracking in Dynasty mode.
-- **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games, play fantasy football, and donate to unlock dynasty boosts.
+- **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games (winner, spread, O/U, chaos factor, kick pass O/U props), play fantasy football (with kick pass scoring), and donate to unlock dynasty boosts.
 
 ## External Dependencies
 - **Python 3.11**: Core programming language.

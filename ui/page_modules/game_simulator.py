@@ -256,26 +256,41 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                  hide_index=True, use_container_width=True)
 
     st.markdown("**Offensive Stats**")
+    h_kp_att = hs.get("kick_passes_attempted", 0)
+    h_kp_comp = hs.get("kick_passes_completed", 0)
+    a_kp_att = as_.get("kick_passes_attempted", 0)
+    a_kp_comp = as_.get("kick_passes_completed", 0)
+    h_kp_pct = round(h_kp_comp / max(1, h_kp_att) * 100, 1) if h_kp_att else 0
+    a_kp_pct = round(a_kp_comp / max(1, a_kp_att) * 100, 1) if a_kp_att else 0
     off_labels = [
-        "Total Yards", "Rushing Yards", "Lateral Yards",
+        "Total Yards", "Rushing Yards", "Lateral Yards", "Kick Pass Yards",
         "Yards/Play", "Total Plays",
         "Lateral Chains", "Lateral Efficiency",
+        "Kick Passes (Comp/Att)", "Kick Pass %", "Kick Pass INTs",
         "Longest Play",
     ]
     off_home = [
         str(hs["total_yards"]),
         str(hs.get("rushing_yards", 0)),
         str(hs.get("lateral_yards", 0)),
+        str(hs.get("kick_pass_yards", 0)),
         str(hs["yards_per_play"]), str(hs["total_plays"]),
         str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
+        f"{h_kp_comp}/{h_kp_att}",
+        f"{h_kp_pct}%",
+        str(hs.get("kick_pass_interceptions", 0)),
         str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
     ]
     off_away = [
         str(as_["total_yards"]),
         str(as_.get("rushing_yards", 0)),
         str(as_.get("lateral_yards", 0)),
+        str(as_.get("kick_pass_yards", 0)),
         str(as_["yards_per_play"]), str(as_["total_plays"]),
         str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
+        f"{a_kp_comp}/{a_kp_att}",
+        f"{a_kp_pct}%",
+        str(as_.get("kick_pass_interceptions", 0)),
         str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
     ]
     st.dataframe(pd.DataFrame({"": off_labels, home_name: off_home, away_name: off_away}),
@@ -398,8 +413,8 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 pstats = player_stats.get(side, [])
                 if pstats:
                     pdf = pd.DataFrame(pstats)
-                    stab1, stab2, stab3, stab4, stab5 = st.tabs(
-                        ["Rushing & Scoring", "Lateral Game", "Kicking", "Defense", "Returns & Special Teams"]
+                    stab1, stab2, stab3, stab4, stab5, stab6 = st.tabs(
+                        ["Rushing & Scoring", "Lateral Game", "Kick Pass", "Kicking", "Defense", "Returns & Special Teams"]
                     )
                     with stab1:
                         rush_cols = ["tag", "name", "archetype", "touches", "yards",
@@ -434,6 +449,27 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                         else:
                             st.caption("No lateral data.")
                     with stab3:
+                        kp_cols = ["tag", "name", "archetype",
+                                   "kick_passes_thrown", "kick_passes_completed",
+                                   "kick_pass_yards", "kick_pass_tds",
+                                   "kick_pass_interceptions_thrown",
+                                   "kick_pass_receptions", "kick_pass_ints"]
+                        kp_avail = [c for c in kp_cols if c in pdf.columns]
+                        kp_df = pdf[kp_avail].copy()
+                        has_kp = kp_df.drop(columns=[c for c in ["tag", "name", "archetype"] if c in kp_df.columns], errors="ignore")
+                        kp_df = kp_df[has_kp.sum(axis=1) > 0] if not has_kp.empty else kp_df
+                        kp_df.rename(columns={
+                            "tag": "Tag", "name": "Name", "archetype": "Archetype",
+                            "kick_passes_thrown": "KP Att", "kick_passes_completed": "KP Comp",
+                            "kick_pass_yards": "KP Yds", "kick_pass_tds": "KP TD",
+                            "kick_pass_interceptions_thrown": "KP INT",
+                            "kick_pass_receptions": "KP Rec", "kick_pass_ints": "Def KP INT",
+                        }, inplace=True)
+                        if not kp_df.empty:
+                            st.dataframe(kp_df, hide_index=True, use_container_width=True)
+                        else:
+                            st.caption("No kick pass data.")
+                    with stab4:
                         kick_cols = ["tag", "name", "archetype",
                                      "pk_att", "pk_made", "dk_att", "dk_made",
                                      "kick_att", "kick_made"]
@@ -461,9 +497,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                             st.dataframe(kick_df, hide_index=True, use_container_width=True)
                         else:
                             st.caption("No kicking data.")
-                    with stab4:
+                    with stab5:
                         def_cols = ["tag", "name", "archetype", "tackles", "tfl",
-                                    "sacks", "hurries"]
+                                    "sacks", "hurries", "kick_pass_ints"]
                         def_avail = [c for c in def_cols if c in pdf.columns]
                         def_df = pdf[def_avail].copy()
                         has_def = def_df.drop(columns=[c for c in ["tag", "name", "archetype"] if c in def_df.columns], errors="ignore")
@@ -472,12 +508,13 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                             "tag": "Tag", "name": "Name", "archetype": "Archetype",
                             "tackles": "Tackles", "tfl": "TFL",
                             "sacks": "Sacks", "hurries": "Hurries",
+                            "kick_pass_ints": "KP INT",
                         }, inplace=True)
                         if not def_df.empty:
                             st.dataframe(def_df, hide_index=True, use_container_width=True)
                         else:
                             st.caption("No defensive data.")
-                    with stab5:
+                    with stab6:
                         ret_cols = ["tag", "name", "archetype",
                                     "kick_returns", "kick_return_yards", "kick_return_tds",
                                     "punt_returns", "punt_return_yards", "punt_return_tds",
@@ -743,14 +780,16 @@ def _render_debug(result, plays, home_name, away_name, hs, as_):
         st.text("  No explosive plays")
 
     st.markdown("**Kick Decision Summary**")
-    kick_plays = [p for p in plays if p["play_type"] in ["drop_kick", "place_kick", "punt"]]
-    kc1, kc2, kc3 = st.columns(3)
+    kick_plays = [p for p in plays if p["play_type"] in ["drop_kick", "place_kick", "punt", "kick_pass"]]
+    kc1, kc2, kc3, kc4 = st.columns(4)
     punts = [p for p in kick_plays if p["play_type"] == "punt"]
     drops = [p for p in kick_plays if p["play_type"] == "drop_kick"]
     places = [p for p in kick_plays if p["play_type"] == "place_kick"]
+    kpasses = [p for p in kick_plays if p["play_type"] == "kick_pass"]
     kc1.metric("Punts", len(punts))
     kc2.metric("Snap Kick Attempts", len(drops))
     kc3.metric("Field Goal Attempts", len(places))
+    kc4.metric("Kick Passes", len(kpasses))
 
     st.markdown("**Style Parameters**")
     sc1, sc2 = st.columns(2)

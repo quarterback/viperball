@@ -125,6 +125,14 @@ SCORING_RULES = {
     "lateral_assists":    1.0,
     "fumbles":           -4.0,         # costly — just like in-game
 
+    # ── Kick Passing (forward kicks to teammates — Viperball's wildcard weapon) ──
+    "kick_passes_completed": 3.0,     # hard to complete — reward execution
+    "kick_pass_yards":    (1.0, 8),   # premium rate like laterals
+    "kick_pass_tds":      9.0,        # matches TD value
+    "kick_pass_int":     -5.0,        # derived: kick_pass_interceptions_thrown; costlier than fumble
+    "kick_pass_receptions": 2.0,      # catching a kicked ball is impressive
+    "kick_pass_def_int":  6.0,        # derived: kick_pass_ints; big defensive play
+
     # ── Kicking (split stats: pk = place kick/FG 3pts, dk = drop kick/snap kick 5pts) ──
     "pk_made":            4.0,          # field goal made — reliable 3-pointer
     "dk_made":            8.0,          # drop kick made — the big 5-pointer, hard to hit
@@ -161,6 +169,16 @@ def score_player(player_stats: Dict) -> float:
         if stat_key == "dk_miss":
             misses = player_stats.get("dk_att", 0) - player_stats.get("dk_made", 0)
             pts += max(0, misses) * rule
+            continue
+        if stat_key == "kick_pass_int":
+            val = player_stats.get("kick_pass_interceptions_thrown", 0)
+            if val > 0:
+                pts += val * rule
+            continue
+        if stat_key == "kick_pass_def_int":
+            val = player_stats.get("kick_pass_ints", 0)
+            if val > 0:
+                pts += val * rule
             continue
 
         val = player_stats.get(stat_key, 0)
@@ -399,6 +417,7 @@ class GameOdds:
     home_moneyline: int        # American odds
     away_moneyline: int
     chaos_ou: float            # Chaos Factor over/under
+    kick_pass_ou: float = 14.5 # Kick Pass attempts over/under
 
     def to_dict(self) -> Dict:
         return {
@@ -410,6 +429,7 @@ class GameOdds:
             "home_moneyline": self.home_moneyline,
             "away_moneyline": self.away_moneyline,
             "chaos_ou": self.chaos_ou,
+            "kick_pass_ou": self.kick_pass_ou,
         }
 
 
@@ -468,6 +488,11 @@ def generate_game_odds(
     chaos_base = 40 + abs(gap) * 0.3 + rng.gauss(0, 3)
     chaos_ou = round(max(20, min(80, chaos_base)), 1)
 
+    # Kick pass over/under (total KP attempts both teams combined)
+    # Base ~15 attempts, adjusted by combined prestige (better teams kick pass more)
+    kp_base = 12 + (avg_prestige / 100) * 8 + rng.gauss(0, 2)
+    kick_pass_ou = round(max(6.5, min(30.5, kp_base)) * 2) / 2  # round to nearest 0.5
+
     return GameOdds(
         home_team=home_team_name,
         away_team=away_team_name,
@@ -477,6 +502,7 @@ def generate_game_odds(
         home_moneyline=_prob_to_american(home_prob),
         away_moneyline=_prob_to_american(1 - home_prob),
         chaos_ou=chaos_ou,
+        kick_pass_ou=kick_pass_ou,
     )
 
 
@@ -602,6 +628,32 @@ def resolve_pick(pick: Pick, game_result: Dict) -> Pick:
         else:
             pick.payout = 0
             pick.result = "loss"
+
+    elif pick.pick_type == "kick_pass":
+        home_kp = game_result.get("stats", {}).get("home", {}).get("kick_passes_attempted", 0)
+        away_kp = game_result.get("stats", {}).get("away", {}).get("kick_passes_attempted", 0)
+        total_kp = home_kp + away_kp
+        line = pick.odds_snapshot.get("kick_pass_ou", 14.5)
+        if pick.selection == "over":
+            if total_kp > line:
+                pick.result = "win"
+            elif total_kp == line:
+                pick.result = "push"
+            else:
+                pick.result = "loss"
+        else:
+            if total_kp < line:
+                pick.result = "win"
+            elif total_kp == line:
+                pick.result = "push"
+            else:
+                pick.result = "loss"
+        if pick.result == "win":
+            pick.payout = round(pick.amount + pick.amount * 2.0)  # kick pass prop pays 2:1
+        elif pick.result == "push":
+            pick.payout = pick.amount
+        else:
+            pick.payout = 0
 
     return pick
 
@@ -857,7 +909,7 @@ class WeeklyContest:
             return None, f"Maximum bet is {MAX_BET} DQ$."
         if game_idx < 0 or game_idx >= len(self.odds):
             return None, "Invalid game index."
-        if pick_type not in ("winner", "spread", "over_under", "chaos"):
+        if pick_type not in ("winner", "spread", "over_under", "chaos", "kick_pass"):
             return None, f"Invalid pick type '{pick_type}'."
 
         if not bankroll.withdraw(amount, reason=f"Bet: {pick_type}"):
@@ -1265,7 +1317,7 @@ def format_odds_line(odds: GameOdds) -> str:
         f"{odds.away_team} ({format_moneyline(odds.away_moneyline)}) "
         f"@ {odds.home_team} ({format_moneyline(odds.home_moneyline)}) | "
         f"Spread: {odds.spread:+.1f} | O/U: {odds.over_under:.1f} | "
-        f"Chaos O/U: {odds.chaos_ou:.1f}"
+        f"Chaos O/U: {odds.chaos_ou:.1f} | KP O/U: {odds.kick_pass_ou:.1f}"
     )
 
 

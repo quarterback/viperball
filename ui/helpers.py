@@ -149,6 +149,9 @@ def generate_box_score_markdown(result):
     lines.append(f"| Punt Return TDs | {hs.get('punt_return_tds',0)} | {as_.get('punt_return_tds',0)} |")
     lines.append(f"| Chaos Recoveries | {hs.get('chaos_recoveries',0)} | {as_.get('chaos_recoveries',0)} |")
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
+    lines.append(f"| Kick Passes (Comp/Att) | {hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)} | {as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)} |")
+    lines.append(f"| Kick Pass Yards | {hs.get('kick_pass_yards',0)} | {as_.get('kick_pass_yards',0)} |")
+    lines.append(f"| Kick Pass INTs | {hs.get('kick_pass_interceptions',0)} | {as_.get('kick_pass_interceptions',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
     lines.append(f"| Rushing Yards | {hs.get('rushing_yards',0)} | {as_.get('rushing_yards',0)} |")
@@ -280,6 +283,9 @@ def generate_forum_box_score(result):
     lines.append(_stat_line("Total Yards", hs['total_yards'], as_['total_yards']))
     lines.append(_stat_line("Rushing Yards", hs.get('rushing_yards', 0), as_.get('rushing_yards', 0)))
     lines.append(_stat_line("Lateral Yards", hs.get('lateral_yards', 0), as_.get('lateral_yards', 0)))
+    lines.append(_stat_line("Kick Passes", f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"))
+    lines.append(_stat_line("Kick Pass Yards", hs.get('kick_pass_yards', 0), as_.get('kick_pass_yards', 0)))
+    lines.append(_stat_line("Kick Pass INTs", hs.get('kick_pass_interceptions', 0), as_.get('kick_pass_interceptions', 0)))
     lines.append(_stat_line("Yards/Play", hs['yards_per_play'], as_['yards_per_play']))
     lines.append(_stat_line("Total Plays", hs['total_plays'], as_['total_plays']))
     lines.append(_stat_line("Lateral Chains", f"{hs['lateral_chains']} ({hs['lateral_efficiency']}%)", f"{as_['lateral_chains']} ({as_['lateral_efficiency']}%)"))
@@ -323,6 +329,18 @@ def generate_forum_box_score(result):
                 pct = f"{(p['kick_made']/p['kick_att']*100):.0f}%" if p['kick_att'] > 0 else "—"
                 lines.append(f"  {name:<28} {p['kick_att']:>3}  {p['kick_made']:>4}  {pct:>3}")
 
+        kp_players = [p for p in side_ps if (p.get("kick_passes_thrown", 0) + p.get("kick_pass_receptions", 0) + p.get("kick_pass_ints", 0)) > 0]
+        if kp_players:
+            lines.append("")
+            lines.append("  Kick Passing")
+            lines.append(f"  {'Player':<28} ATT  COMP  YDS  TD  INT  REC  DINT")
+            lines.append(f"  {'-'*28} ---  ----  ---  --  ---  ---  ----")
+            for p in kp_players:
+                name = f"{p['tag']} {p['name']}"
+                if len(name) > 28:
+                    name = name[:27] + "."
+                lines.append(f"  {name:<28} {p.get('kick_passes_thrown',0):>3}  {p.get('kick_passes_completed',0):>4}  {p.get('kick_pass_yards',0):>3}  {p.get('kick_pass_tds',0):>2}  {p.get('kick_pass_interceptions_thrown',0):>3}  {p.get('kick_pass_receptions',0):>3}  {p.get('kick_pass_ints',0):>4}")
+
         st_players = [p for p in side_ps if (p.get("kick_returns", 0) + p.get("punt_returns", 0) + p.get("st_tackles", 0)) > 0]
         if st_players:
             lines.append("")
@@ -343,6 +361,8 @@ def generate_forum_box_score(result):
         elif p.get("yards", 0) >= 20:
             key_plays.append(p)
         elif p.get("play_type") in ("drop_kick", "place_kick") and p["result"] == "successful_kick":
+            key_plays.append(p)
+        elif p.get("play_type") == "kick_pass" and p["result"] in ("touchdown", "gain", "first_down"):
             key_plays.append(p)
 
     if key_plays:
@@ -550,6 +570,9 @@ def render_game_detail(result, key_prefix="gd"):
         {"Stat": "Total Yards", home_name: str(hs['total_yards']), away_name: str(as_['total_yards'])},
         {"Stat": "Rushing Yards", home_name: str(hs.get('rushing_yards',0)), away_name: str(as_.get('rushing_yards',0))},
         {"Stat": "Lateral Yards", home_name: str(hs.get('lateral_yards',0)), away_name: str(as_.get('lateral_yards',0))},
+        {"Stat": "Kick Passes (Comp/Att)", home_name: f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", away_name: f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"},
+        {"Stat": "Kick Pass Yards", home_name: str(hs.get('kick_pass_yards',0)), away_name: str(as_.get('kick_pass_yards',0))},
+        {"Stat": "Kick Pass INTs", home_name: str(hs.get('kick_pass_interceptions',0)), away_name: str(as_.get('kick_pass_interceptions',0))},
         {"Stat": "Yards/Play", home_name: str(hs['yards_per_play']), away_name: str(as_['yards_per_play'])},
         {"Stat": "Total Plays", home_name: str(hs['total_plays']), away_name: str(as_['total_plays'])},
         {"Stat": "Fumbles Lost", home_name: str(hs['fumbles_lost']), away_name: str(as_['fumbles_lost'])},
@@ -602,6 +625,23 @@ def render_game_detail(result, key_prefix="gd"):
                             "BLK": p.get("kick_deflections", 0),
                         })
                     st.dataframe(pd.DataFrame(kick_df), hide_index=True, use_container_width=True)
+
+                kp_rows = [p for p in side_ps if (p.get("kick_passes_thrown", 0) + p.get("kick_pass_receptions", 0) + p.get("kick_pass_ints", 0)) > 0]
+                if kp_rows:
+                    st.caption("Kick Passing")
+                    kp_df = []
+                    for p in kp_rows:
+                        kp_df.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "KP Att": p.get("kick_passes_thrown", 0),
+                            "KP Comp": p.get("kick_passes_completed", 0),
+                            "KP Yds": p.get("kick_pass_yards", 0),
+                            "KP TD": p.get("kick_pass_tds", 0),
+                            "KP INT": p.get("kick_pass_interceptions_thrown", 0),
+                            "KP Rec": p.get("kick_pass_receptions", 0),
+                            "Def KP INT": p.get("kick_pass_ints", 0),
+                        })
+                    st.dataframe(pd.DataFrame(kp_df), hide_index=True, use_container_width=True)
 
                 st_rows = [p for p in side_ps if (p.get("kick_returns", 0) + p.get("punt_returns", 0) + p.get("st_tackles", 0) + p.get("keeper_bells", 0) + p.get("coverage_snaps", 0)) > 0]
                 if st_rows:
