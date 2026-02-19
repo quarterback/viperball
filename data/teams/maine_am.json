@@ -1,0 +1,34 @@
+{
+  "team_info": {
+    "school_id": "maine_am",
+    "school": "Maine A&M University",
+    "abbreviation": "MAM",
+    "mascot": "Lumberjacks",
+    "conference": "Galactic League",
+    "city": "Portland",
+    "state": "ME",
+    "colors": [
+      "Pine Green",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "balanced",
+    "philosophy": "ground_and_pound",
+    "tempo": "slow",
+    "two_way_emphasis": "high"
+  },
+  "recruiting_pipeline": {
+    "south": 0.05,
+    "midwest": 0.1,
+    "mid_atlantic": 0.3,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "caribbean": 0.15,
+    "canadian_french": 0.3
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "base_defense"
+  }
+}
