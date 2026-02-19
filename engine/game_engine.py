@@ -1834,8 +1834,6 @@ class ViperballEngine:
             elif down == 4 and ('place_kick' in options or 'drop_kick' in options) and fg_distance <= 45 and ytg >= 8:
                 best = _best_kick()
 
-            # Take points: decide between drop kick and place kick
-            if ('place_kick' in options or 'drop_kick' in options) and fg_distance <= 65:
             if fp >= 50 and best == 'punt':
                 if 'drop_kick' in options and fg_distance <= 50:
                     best = 'drop_kick'
