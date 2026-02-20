@@ -1,51 +1,25 @@
 """
 Viperball Sandbox - Main Entry Point
-Runs FastAPI backend + Streamlit UI
+NiceGUI frontend + FastAPI backend in a single process.
 """
 
-import subprocess
-import sys
 import os
-import time
-import signal
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from api.main import app as fastapi_app  # noqa: E402
+from nicegui import ui  # noqa: E402
+import nicegui_app.app  # noqa: E402, F401 — registers @ui.page routes
 
 
 def main():
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-    api_proc = subprocess.Popen([
-        sys.executable, "-m", "uvicorn", "api.main:app",
-        "--host=0.0.0.0", "--port=8000",
-        "--log-level=warning",
-    ])
-
-    time.sleep(1)
-
-    streamlit_proc = subprocess.Popen([
-        sys.executable, "-m", "streamlit", "run", "ui/app.py",
-        "--server.port=5000",
-        "--server.address=0.0.0.0",
-        "--server.headless=true",
-        "--browser.gatherUsageStats=false",
-        "--server.enableCORS=false",
-        "--server.enableXsrfProtection=false",
-    ])
-
-    def shutdown(signum, frame):
-        api_proc.terminate()
-        streamlit_proc.terminate()
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, shutdown)
-    signal.signal(signal.SIGINT, shutdown)
-
-    try:
-        streamlit_proc.wait()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        api_proc.terminate()
-        streamlit_proc.terminate()
+    ui.run_with(
+        fastapi_app,
+        title="Viperball Sandbox",
+        storage_secret="viperball-sandbox-secret",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
+    )
 
 
 if __name__ == "__main__":
