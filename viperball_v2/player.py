@@ -261,7 +261,7 @@ VIPER_ARCHETYPES = {
     'deep_threat': {
         'name': 'Deep Threat',
         'explosive_rate': 1.6,
-        'kick_return_bonus': 1.3,
+        'punt_return_bonus': 1.3,
         'stamina_drain': 1.5         # Low stamina
     },
     'chaos': {
