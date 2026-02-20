@@ -151,6 +151,7 @@ def generate_box_score_markdown(result):
     lines.append(f"| Punts | {hs.get('punts',0)} | {as_.get('punts',0)} |")
     lines.append(f"| Kick Passes (Comp/Att) | {hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)} | {as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)} |")
     lines.append(f"| Kick Pass Yards | {hs.get('kick_pass_yards',0)} | {as_.get('kick_pass_yards',0)} |")
+    lines.append(f"| Kick Pass TDs | {hs.get('kick_pass_tds',0)} | {as_.get('kick_pass_tds',0)} |")
     lines.append(f"| Kick Pass INTs | {hs.get('kick_pass_interceptions',0)} | {as_.get('kick_pass_interceptions',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
@@ -285,6 +286,7 @@ def generate_forum_box_score(result):
     lines.append(_stat_line("Lateral Yards", hs.get('lateral_yards', 0), as_.get('lateral_yards', 0)))
     lines.append(_stat_line("Kick Passes", f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"))
     lines.append(_stat_line("Kick Pass Yards", hs.get('kick_pass_yards', 0), as_.get('kick_pass_yards', 0)))
+    lines.append(_stat_line("KP TDs", hs.get('kick_pass_tds', 0), as_.get('kick_pass_tds', 0)))
     lines.append(_stat_line("Kick Pass INTs", hs.get('kick_pass_interceptions', 0), as_.get('kick_pass_interceptions', 0)))
     lines.append(_stat_line("Yards/Play", hs['yards_per_play'], as_['yards_per_play']))
     lines.append(_stat_line("Total Plays", hs['total_plays'], as_['total_plays']))
@@ -570,9 +572,10 @@ def render_game_detail(result, key_prefix="gd"):
         {"Stat": "Total Yards", home_name: str(hs['total_yards']), away_name: str(as_['total_yards'])},
         {"Stat": "Rushing Yards", home_name: str(hs.get('rushing_yards',0)), away_name: str(as_.get('rushing_yards',0))},
         {"Stat": "Lateral Yards", home_name: str(hs.get('lateral_yards',0)), away_name: str(as_.get('lateral_yards',0))},
-        {"Stat": "Kick Passes (Comp/Att)", home_name: f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", away_name: f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"},
-        {"Stat": "Kick Pass Yards", home_name: str(hs.get('kick_pass_yards',0)), away_name: str(as_.get('kick_pass_yards',0))},
-        {"Stat": "Kick Pass INTs", home_name: str(hs.get('kick_pass_interceptions',0)), away_name: str(as_.get('kick_pass_interceptions',0))},
+        {"Stat": "KP (Comp/Att)", home_name: f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", away_name: f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"},
+        {"Stat": "KP Yards", home_name: str(hs.get('kick_pass_yards',0)), away_name: str(as_.get('kick_pass_yards',0))},
+        {"Stat": "KP TDs", home_name: str(hs.get('kick_pass_tds',0)), away_name: str(as_.get('kick_pass_tds',0))},
+        {"Stat": "KP INTs", home_name: str(hs.get('kick_pass_interceptions',0)), away_name: str(as_.get('kick_pass_interceptions',0))},
         {"Stat": "Yards/Play", home_name: str(hs['yards_per_play']), away_name: str(as_['yards_per_play'])},
         {"Stat": "Total Plays", home_name: str(hs['total_plays']), away_name: str(as_['total_plays'])},
         {"Stat": "Fumbles Lost", home_name: str(hs['fumbles_lost']), away_name: str(as_['fumbles_lost'])},

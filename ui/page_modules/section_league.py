@@ -597,7 +597,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
 
     st.caption(f"Showing {len(players)} players")
 
-    stat_views = st.tabs(["Rushing & Scoring", "Lateral Game", "Kicking", "Defense", "Returns & Special Teams"])
+    stat_views = st.tabs(["Rushing & Scoring", "Lateral Game", "Kick Pass", "Kicking", "Defense", "Returns & Special Teams"])
 
     with stat_views[0]:
         rush_data = []
@@ -640,6 +640,34 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
             st.caption("No lateral stats available yet.")
 
     with stat_views[2]:
+        kp_data = []
+        kp_sorted = sorted(players, key=lambda x: x.get("kick_pass_yards", 0) + x.get("kick_pass_receptions", 0) * 5, reverse=True)
+        for p in kp_sorted[:100]:
+            kpt = p.get("kick_passes_thrown", 0)
+            kpr = p.get("kick_pass_receptions", 0)
+            kpi = p.get("kick_pass_ints", 0)
+            if kpt > 0 or kpr > 0 or kpi > 0:
+                kpc = p.get("kick_passes_completed", 0)
+                kp_data.append({
+                    "Player": p["name"],
+                    "Team": p["team"],
+                    "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                    "GP": p["games_played"],
+                    "KP Att": kpt,
+                    "KP Comp": kpc,
+                    "KP %": f"{round(kpc / max(1, kpt) * 100, 1):.1f}%" if kpt > 0 else "—",
+                    "KP Yds": p.get("kick_pass_yards", 0),
+                    "KP TD": p.get("kick_pass_tds", 0),
+                    "KP INT": p.get("kick_pass_interceptions_thrown", 0),
+                    "KP Rec": kpr,
+                    "Def KP INT": kpi,
+                })
+        if kp_data:
+            st.dataframe(pd.DataFrame(kp_data), hide_index=True, use_container_width=True, height=500)
+        else:
+            st.caption("No kick pass stats available yet.")
+
+    with stat_views[3]:
         kick_data = []
         kick_sorted = sorted(players, key=lambda x: x["kick_att"], reverse=True)
         for p in kick_sorted[:100]:
@@ -664,7 +692,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
         else:
             st.caption("No kicking stats available yet.")
 
-    with stat_views[3]:
+    with stat_views[4]:
         def_data = []
         def_sorted = sorted(players, key=lambda x: x.get("tackles", 0), reverse=True)
         for p in def_sorted[:100]:
@@ -689,7 +717,7 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
         else:
             st.caption("No defensive stats available yet.")
 
-    with stat_views[4]:
+    with stat_views[5]:
         ret_data = []
         ret_sorted = sorted(players, key=lambda x: x["total_return_yards"], reverse=True)
         for p in ret_sorted[:100]:

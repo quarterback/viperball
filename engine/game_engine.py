@@ -5019,6 +5019,7 @@ class ViperballEngine:
         chaos_recoveries = [p for p in plays if p.result == "chaos_recovery"]
         kick_passes = [p for p in plays if p.play_type == "kick_pass"]
         kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
+        kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
         kick_pass_ints = [p for p in kick_passes if p.result == "kick_pass_intercepted"]
         kick_pass_yards = sum(max(0, p.yards_gained) for p in kick_pass_completions)
 
@@ -5075,6 +5076,7 @@ class ViperballEngine:
             "kick_passes_attempted": len(kick_passes),
             "kick_passes_completed": len(kick_pass_completions),
             "kick_pass_yards": kick_pass_yards,
+            "kick_pass_tds": len(kick_pass_tds),
             "kick_pass_interceptions": len(kick_pass_ints),
             "punts": len(punts),
             "pindowns": len(pindowns),

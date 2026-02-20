@@ -228,9 +228,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
 
     st.markdown("**Scoring**")
     scoring_labels = [
-        "Touchdowns (9pts)", "Snap Kicks (5pts)", "Field Goals (3pts)",
+        "TDs (9pts)", "Snap Kicks (5pts)", "FGs (3pts)",
         "Safeties (2pts)", "Pindowns (1pt)", "Strikes (½pt)",
-        "Punt Return TDs", "Chaos Recoveries",
+        "PR TDs", "Chaos Rec",
     ]
     scoring_home = [
         f"{hs['touchdowns']} ({hs['touchdowns'] * 9}pts)",
@@ -252,8 +252,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(as_.get("punt_return_tds", 0)),
         str(as_.get("chaos_recoveries", 0)),
     ]
-    st.dataframe(pd.DataFrame({"": scoring_labels, home_name: scoring_home, away_name: scoring_away}),
-                 hide_index=True, use_container_width=True)
+    scoring_df = pd.DataFrame({"Stat": scoring_labels, home_name: scoring_home, away_name: scoring_away})
+    st.dataframe(scoring_df, hide_index=True, use_container_width=True,
+                 column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Offensive Stats**")
     h_kp_att = hs.get("kick_passes_attempted", 0)
@@ -263,11 +264,11 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     h_kp_pct = round(h_kp_comp / max(1, h_kp_att) * 100, 1) if h_kp_att else 0
     a_kp_pct = round(a_kp_comp / max(1, a_kp_att) * 100, 1) if a_kp_att else 0
     off_labels = [
-        "Total Yards", "Rushing Yards", "Lateral Yards", "Kick Pass Yards",
-        "Yards/Play", "Total Plays",
-        "Lateral Chains", "Lateral Efficiency",
-        "Kick Passes (Comp/Att)", "Kick Pass %", "Kick Pass INTs",
-        "Longest Play",
+        "Total Yards", "Rush Yds", "Lateral Yds", "KP Yds",
+        "Yds/Play", "Plays",
+        "Lat Chains", "Lat Eff",
+        "KP (Comp/Att)", "KP %", "KP TDs", "KP INTs",
+        "Long Play",
     ]
     off_home = [
         str(hs["total_yards"]),
@@ -278,6 +279,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(hs["lateral_chains"]), f'{hs["lateral_efficiency"]}%',
         f"{h_kp_comp}/{h_kp_att}",
         f"{h_kp_pct}%",
+        str(hs.get("kick_pass_tds", 0)),
         str(hs.get("kick_pass_interceptions", 0)),
         str(max((p["yards"] for p in plays if p["possession"] == "home"), default=0)),
     ]
@@ -290,16 +292,18 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(as_["lateral_chains"]), f'{as_["lateral_efficiency"]}%',
         f"{a_kp_comp}/{a_kp_att}",
         f"{a_kp_pct}%",
+        str(as_.get("kick_pass_tds", 0)),
         str(as_.get("kick_pass_interceptions", 0)),
         str(max((p["yards"] for p in plays if p["possession"] == "away"), default=0)),
     ]
-    st.dataframe(pd.DataFrame({"": off_labels, home_name: off_home, away_name: off_away}),
-                 hide_index=True, use_container_width=True)
+    off_df = pd.DataFrame({"Stat": off_labels, home_name: off_home, away_name: off_away})
+    st.dataframe(off_df, hide_index=True, use_container_width=True,
+                 column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Kicking & Special Teams**")
     kick_labels = [
-        "Snap Kicks (Made/Att)", "Snap Kick %",
-        "Field Goals (Made/Att)", "Field Goal %",
+        "DK (Made/Att)", "DK %",
+        "FG (Made/Att)", "FG %",
         "Punts", "Pindowns",
         "Kick %",
     ]
@@ -325,13 +329,14 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(as_.get("pindowns", 0)),
         f"{as_.get('kick_percentage', 0)}%",
     ]
-    st.dataframe(pd.DataFrame({"": kick_labels, home_name: kick_home, away_name: kick_away}),
-                 hide_index=True, use_container_width=True)
+    kick_df = pd.DataFrame({"Stat": kick_labels, home_name: kick_home, away_name: kick_away})
+    st.dataframe(kick_df, hide_index=True, use_container_width=True,
+                 column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Turnovers & Discipline**")
     turn_labels = [
-        "Fumbles Lost", "Turnovers on Downs",
-        "Penalties", "Penalty Yards",
+        "Fumbles Lost", "TOD",
+        "Penalties", "Pen Yds",
     ]
     turn_home = [
         str(hs["fumbles_lost"]), str(hs["turnovers_on_downs"]),
@@ -341,13 +346,14 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(as_["fumbles_lost"]), str(as_["turnovers_on_downs"]),
         str(as_.get("penalties", 0)), str(as_.get("penalty_yards", 0)),
     ]
-    st.dataframe(pd.DataFrame({"": turn_labels, home_name: turn_home, away_name: turn_away}),
-                 hide_index=True, use_container_width=True)
+    turn_df = pd.DataFrame({"Stat": turn_labels, home_name: turn_home, away_name: turn_away})
+    st.dataframe(turn_df, hide_index=True, use_container_width=True,
+                 column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Keeper & Fatigue**")
     keep_labels = [
-        "Keeper Deflections", "Keeper Tackles",
-        "Keeper Bells", "Fake TDs Allowed",
+        "K Deflections", "K Tackles",
+        "K Bells", "Fake TDs",
         "Avg Fatigue",
     ]
     keep_home = [
@@ -364,8 +370,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         str(as_.get("keeper_fake_tds_allowed", 0)),
         f'{as_["avg_fatigue"]}%',
     ]
-    st.dataframe(pd.DataFrame({"": keep_labels, home_name: keep_home, away_name: keep_away}),
-                 hide_index=True, use_container_width=True)
+    keep_df = pd.DataFrame({"Stat": keep_labels, home_name: keep_home, away_name: keep_away})
+    st.dataframe(keep_df, hide_index=True, use_container_width=True,
+                 column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Down Conversions**")
     h_dc = hs.get("down_conversions", {})
