@@ -260,7 +260,7 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
 def dynasty_start_season(session_id: str, games_per_team: int = 10,
                          playoff_size: int = 8, bowl_count: int = 4,
                          offense_style: str = "balanced",
-                         defense_style: str = "base_defense",
+                         defense_style: str = "swarm",
                          ai_seed: Optional[int] = None,
                          pinned_matchups: Optional[List[List[str]]] = None,
                          program_archetype: Optional[str] = None,
@@ -410,9 +410,9 @@ def season_portal_skip(session_id: str) -> dict:
 
 def simulate_quick_game(home: str, away: str,
                         home_offense: str = "balanced",
-                        home_defense: str = "base_defense",
+                        home_defense: str = "swarm",
                         away_offense: str = "balanced",
-                        away_defense: str = "base_defense",
+                        away_defense: str = "swarm",
                         weather: str = "clear",
                         seed: Optional[int] = None) -> dict:
     body = {

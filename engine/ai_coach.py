@@ -29,9 +29,9 @@ PHILOSOPHY_TO_OFFENSE = {
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
-    "aggressive": ["pressure_defense", "run_stop_defense"],
-    "balanced": ["base_defense", "contain_defense", "coverage_defense"],
-    "conservative": ["contain_defense", "coverage_defense", "base_defense"],
+    "aggressive": ["blitz_pack", "predator", "chaos"],
+    "balanced": ["swarm", "fortress", "drift", "lockdown"],
+    "conservative": ["drift", "fortress", "lockdown", "swarm"],
 }
 
 
@@ -88,25 +88,33 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
     offense_style = rng.choices(offense_candidates, weights=weights)[0]
 
-    defense_candidates = list(IDENTITY_STYLE_TO_DEFENSE.get(style, ["base_defense"]))
+    defense_candidates = list(IDENTITY_STYLE_TO_DEFENSE.get(style, ["swarm"]))
 
-    if defense >= 80 and "run_stop_defense" not in defense_candidates:
-        defense_candidates.append("run_stop_defense")
-    if kicking >= 77 and "coverage_defense" not in defense_candidates:
-        defense_candidates.append("coverage_defense")
+    if defense >= 80 and "fortress" not in defense_candidates:
+        defense_candidates.append("fortress")
+    if speed >= 87 and "blitz_pack" not in defense_candidates:
+        defense_candidates.append("blitz_pack")
+    if kicking >= 77 and "lockdown" not in defense_candidates:
+        defense_candidates.append("lockdown")
 
     def_weights = []
     for c in defense_candidates:
         w = 1.0
-        if c == "pressure_defense":
+        if c == "blitz_pack":
             w += max(0, speed - 85) * 0.15
-        elif c == "run_stop_defense":
+        elif c == "fortress":
             w += max(0, defense - 76) * 0.2
-        elif c == "coverage_defense":
+        elif c == "lockdown":
             w += max(0, kicking - 72) * 0.1
-        elif c == "contain_defense":
+        elif c == "predator":
+            w += max(0, speed - 86) * 0.12
+        elif c == "chaos":
+            w += 0.15
+        elif c == "drift":
             w += 0.2
-        elif c == "base_defense":
+        elif c == "shadow":
+            w += 0.15
+        elif c == "swarm":
             w += 0.3
         def_weights.append(max(0.1, w))
 
@@ -128,11 +136,14 @@ def get_scheme_label(offense: str, defense: str) -> str:
         "balanced": "Balanced",
     }
     defense_labels = {
-        "base_defense": "Base",
-        "pressure_defense": "Pressure",
-        "contain_defense": "Contain",
-        "run_stop_defense": "Run-Stop",
-        "coverage_defense": "Coverage",
+        "swarm": "Swarm",
+        "blitz_pack": "Blitz Pack",
+        "shadow": "Shadow",
+        "fortress": "Fortress",
+        "predator": "Predator",
+        "drift": "Drift",
+        "chaos": "Chaos",
+        "lockdown": "Lockdown",
     }
     off_label = offense_labels.get(offense, offense)
     def_label = defense_labels.get(defense, defense)
@@ -163,7 +174,7 @@ def auto_assign_all_teams(
         team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
 
         if team_name in human_teams:
-            configs[team_name] = human_configs.get(team_name, {"offense_style": "balanced", "defense_style": "base_defense"})
+            configs[team_name] = human_configs.get(team_name, {"offense_style": "balanced", "defense_style": "swarm"})
             continue
 
         team_stats = data.get("team_stats", {})

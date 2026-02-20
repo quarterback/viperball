@@ -256,6 +256,37 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     st.dataframe(scoring_df, hide_index=True, use_container_width=True,
                  column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
+    h_sac_yds = hs.get("sacrifice_yards", 0)
+    a_sac_yds = as_.get("sacrifice_yards", 0)
+    h_sac_dr = hs.get("sacrifice_drives", 0)
+    a_sac_dr = as_.get("sacrifice_drives", 0)
+    h_sac_sc = hs.get("sacrifice_scores", 0)
+    a_sac_sc = as_.get("sacrifice_scores", 0)
+    h_ce = hs.get("compelled_efficiency")
+    a_ce = as_.get("compelled_efficiency")
+    if h_sac_dr > 0 or a_sac_dr > 0:
+        st.markdown("**Sacrifice & Compelled Efficiency**")
+        sac_labels = [
+            "Sacrifice Yards", "Adjusted Yards",
+            "Sacrifice Drives", "Sacrifice Scores",
+            "Compelled Eff %",
+        ]
+        sac_home = [
+            str(h_sac_yds),
+            str(hs.get("adjusted_yards", hs["total_yards"])),
+            str(h_sac_dr), str(h_sac_sc),
+            f"{h_ce}%" if h_ce is not None else "—",
+        ]
+        sac_away = [
+            str(a_sac_yds),
+            str(as_.get("adjusted_yards", as_["total_yards"])),
+            str(a_sac_dr), str(a_sac_sc),
+            f"{a_ce}%" if a_ce is not None else "—",
+        ]
+        sac_df = pd.DataFrame({"Stat": sac_labels, home_name: sac_home, away_name: sac_away})
+        st.dataframe(sac_df, hide_index=True, use_container_width=True,
+                     column_config={"Stat": st.column_config.TextColumn(width="medium")})
+
     st.markdown("**Offensive Stats**")
     h_kp_att = hs.get("kick_passes_attempted", 0)
     h_kp_comp = hs.get("kick_passes_completed", 0)
@@ -568,6 +599,9 @@ def _render_drives(result, home_name, away_name):
         drive_rows = []
         for i, d in enumerate(drives):
             team_label = home_name if d["team"] == "home" else away_name
+            result_lbl = drive_result_label(d["result"])
+            if d.get("sacrifice_drive"):
+                result_lbl += " *"
             drive_rows.append({
                 "#": i + 1,
                 "Team": team_label,
@@ -575,7 +609,7 @@ def _render_drives(result, home_name, away_name):
                 "Start": f"{d['start_yard_line']}yd",
                 "Plays": d["plays"],
                 "Yards": d["yards"],
-                "Result": drive_result_label(d["result"]),
+                "Result": result_lbl,
             })
         st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True, height=400)
 

@@ -26,6 +26,8 @@ def render_season_simulator(shared):
     defense_styles = shared["defense_styles"]
     OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
     DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
+    st_schemes = shared["st_schemes"]
+    st_scheme_keys = shared["st_scheme_keys"]
 
     st.title("Season Simulator")
     st.caption("Simulate a full round-robin season with standings, metrics, and playoffs")
@@ -95,7 +97,11 @@ def render_season_simulator(shared):
                         def_style = st.selectbox("Defense", defense_style_keys,
                                                   format_func=lambda x: defense_styles[x]["label"],
                                                   key=f"season_def_{tname}")
-                        style_configs[tname] = {"offense_style": off_style, "defense_style": def_style}
+                        st_sel = st.selectbox("Special Teams", st_scheme_keys,
+                                              format_func=lambda x: st_schemes[x]["label"],
+                                              index=st_scheme_keys.index("aces") if "aces" in st_scheme_keys else 0,
+                                              key=f"season_st_{tname}")
+                        style_configs[tname] = {"offense_style": off_style, "defense_style": def_style, "st_scheme": st_sel}
         
         ai_teams = [t for t in selected_teams if t not in human_teams]
         if ai_teams:
@@ -104,7 +110,7 @@ def render_season_simulator(shared):
             with st.expander(f"AI Coach Assignments ({len(ai_teams)} teams)", expanded=False):
                 ai_data = []
                 for tname in sorted(ai_teams):
-                    cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
+                    cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm"})
                     style_configs[tname] = cfg
                     identity = team_identities.get(tname, {})
                     mascot = identity.get("mascot", "")
@@ -119,7 +125,7 @@ def render_season_simulator(shared):
         
         for tname in selected_teams:
             if tname not in style_configs:
-                style_configs[tname] = {"offense_style": "balanced", "defense_style": "base_defense"}
+                style_configs[tname] = {"offense_style": "balanced", "defense_style": "swarm"}
 
         auto_conferences = {}
         for tname in selected_teams:

@@ -33,6 +33,8 @@ def render_dynasty_mode(shared):
     defense_styles = shared["defense_styles"]
     OFFENSE_TOOLTIPS = shared["OFFENSE_TOOLTIPS"]
     DEFENSE_TOOLTIPS = shared["DEFENSE_TOOLTIPS"]
+    st_schemes = shared["st_schemes"]
+    st_scheme_keys = shared["st_scheme_keys"]
 
     st.title("Dynasty Mode")
     st.caption("Multi-season career mode with historical tracking, awards, and record books")
@@ -259,6 +261,10 @@ def render_dynasty_mode(shared):
                 user_def = st.selectbox("Defense Style", defense_style_keys,
                                          format_func=lambda x: defense_styles[x]["label"],
                                          key=f"dyn_user_def_{dynasty.current_year}")
+            user_st = st.selectbox("Special Teams", st_scheme_keys,
+                                   format_func=lambda x: st_schemes[x]["label"],
+                                   index=st_scheme_keys.index("aces") if "aces" in st_scheme_keys else 0,
+                                   key=f"dyn_user_st_{dynasty.current_year}")
             
             ai_seed = hash(f"{dynasty.dynasty_name}_{dynasty.current_year}") % 999999
             ai_configs = auto_assign_all_teams(
@@ -269,10 +275,10 @@ def render_dynasty_mode(shared):
             )
             
             dyn_style_configs = {}
-            dyn_style_configs[user_team] = {"offense_style": user_off, "defense_style": user_def}
+            dyn_style_configs[user_team] = {"offense_style": user_off, "defense_style": user_def, "st_scheme": user_st}
             for tname in all_dynasty_teams:
                 if tname != user_team:
-                    dyn_style_configs[tname] = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "base_defense"})
+                    dyn_style_configs[tname] = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm"})
             
             ai_opponent_teams = sorted([t for t in all_dynasty_teams if t != user_team])
             with st.expander(f"AI Coach Assignments ({len(ai_opponent_teams)} teams)", expanded=False):

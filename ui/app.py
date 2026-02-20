@@ -221,13 +221,16 @@ try:
     styles_resp = api_client.get_styles()
     styles = styles_resp.get("offense_styles", {})
     defense_styles = styles_resp.get("defense_styles", {})
+    st_schemes = styles_resp.get("st_schemes", {})
 except api_client.APIError:
     styles = {}
     defense_styles = {}
+    st_schemes = {}
 
 team_names = {t["key"]: t["name"] for t in teams}
 style_keys = list(styles.keys())
 defense_style_keys = list(defense_styles.keys())
+st_scheme_keys = list(st_schemes.keys())
 
 shared = {
     "teams": teams,
@@ -236,6 +239,8 @@ shared = {
     "style_keys": style_keys,
     "defense_style_keys": defense_style_keys,
     "defense_styles": defense_styles,
+    "st_schemes": st_schemes,
+    "st_scheme_keys": st_scheme_keys,
     "OFFENSE_TOOLTIPS": OFFENSE_TOOLTIPS,
     "DEFENSE_TOOLTIPS": DEFENSE_TOOLTIPS,
 }

@@ -31,10 +31,14 @@ OFFENSE_STYLE_NAMES = {
 
 DEFENSE_STYLE_NAMES = {
     "pressure_defense": "Pressure",
-    "coverage_defense": "Coverage",
-    "contain_defense": "Contain",
-    "run_stop_defense": "Run-Stop",
-    "base_defense": "Base",
+    "swarm": "Swarm",
+    "blitz_pack": "Blitz Pack",
+    "shadow": "Shadow",
+    "fortress": "Fortress",
+    "predator": "Predator",
+    "drift": "Drift",
+    "chaos": "Chaos",
+    "lockdown": "Lockdown",
 }
 
 

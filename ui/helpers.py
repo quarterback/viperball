@@ -13,7 +13,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES, DEFENSE_STYLES
+from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES, DEFENSE_STYLES, ST_SCHEMES
 from engine.game_engine import WEATHER_CONDITIONS, POSITION_ARCHETYPES, get_archetype_info
 from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
@@ -164,6 +164,22 @@ def generate_box_score_markdown(result):
     lines.append(f"| Kick Pass INTs | {hs.get('kick_pass_interceptions',0)} | {as_.get('kick_pass_interceptions',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
+    h_sac = hs.get('sacrifice_yards', 0)
+    a_sac = as_.get('sacrifice_yards', 0)
+    if h_sac or a_sac:
+        lines.append(f"| Sacrifice Yards | {h_sac} | {a_sac} |")
+        lines.append(f"| Adjusted Yards | {hs.get('adjusted_yards', hs['total_yards'])} | {as_.get('adjusted_yards', as_['total_yards'])} |")
+    h_sac_dr = hs.get('sacrifice_drives', 0)
+    a_sac_dr = as_.get('sacrifice_drives', 0)
+    if h_sac_dr or a_sac_dr:
+        h_ce = hs.get('compelled_efficiency')
+        a_ce = as_.get('compelled_efficiency')
+        lines.append(f"| Sacrifice Drives | {h_sac_dr} | {a_sac_dr} |")
+        lines.append(f"| Sacrifice Scores | {hs.get('sacrifice_scores',0)} | {as_.get('sacrifice_scores',0)} |")
+        if h_ce is not None or a_ce is not None:
+            h_ce_str = f"{h_ce}%" if h_ce is not None else "—"
+            a_ce_str = f"{a_ce}%" if a_ce is not None else "—"
+            lines.append(f"| Compelled Eff % | {h_ce_str} | {a_ce_str} |")
     lines.append(f"| Rushing Yards | {hs.get('rushing_yards',0)} | {as_.get('rushing_yards',0)} |")
     lines.append(f"| Lateral Yards | {hs.get('lateral_yards',0)} | {as_.get('lateral_yards',0)} |")
     lines.append(f"| Yards/Play | {hs['yards_per_play']} | {as_['yards_per_play']} |")
@@ -590,6 +606,19 @@ def render_game_detail(result, key_prefix="gd"):
         {"Stat": "Fumbles Lost", home_name: str(hs['fumbles_lost']), away_name: str(as_['fumbles_lost'])},
         {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
     ]
+    h_sac_dr = hs.get('sacrifice_drives', 0)
+    a_sac_dr = as_.get('sacrifice_drives', 0)
+    if h_sac_dr or a_sac_dr:
+        stat_rows.extend([
+            {"Stat": "Sacrifice Yards", home_name: str(hs.get('sacrifice_yards', 0)), away_name: str(as_.get('sacrifice_yards', 0))},
+            {"Stat": "Adjusted Yards", home_name: str(hs.get('adjusted_yards', hs['total_yards'])), away_name: str(as_.get('adjusted_yards', as_['total_yards']))},
+            {"Stat": "Sacrifice Drives", home_name: str(h_sac_dr), away_name: str(a_sac_dr)},
+            {"Stat": "Sacrifice Scores", home_name: str(hs.get('sacrifice_scores', 0)), away_name: str(as_.get('sacrifice_scores', 0))},
+        ])
+        h_ce = hs.get('compelled_efficiency')
+        a_ce = as_.get('compelled_efficiency')
+        if h_ce is not None or a_ce is not None:
+            stat_rows.append({"Stat": "Compelled Eff %", home_name: f"{h_ce}%" if h_ce is not None else "—", away_name: f"{a_ce}%" if a_ce is not None else "—"})
     st.dataframe(pd.DataFrame(stat_rows), hide_index=True, use_container_width=True)
 
     ps = result.get("player_stats", {})
@@ -695,6 +724,9 @@ def render_game_detail(result, key_prefix="gd"):
             drive_rows = []
             for i, d in enumerate(drives):
                 team_label = home_name if d['team'] == 'home' else away_name
+                result_lbl = drive_result_label(d['result'])
+                if d.get('sacrifice_drive'):
+                    result_lbl += " *"
                 drive_rows.append({
                     "#": i + 1,
                     "Team": team_label,
@@ -702,7 +734,7 @@ def render_game_detail(result, key_prefix="gd"):
                     "Start": f"{d['start_yard_line']}yd",
                     "Plays": d['plays'],
                     "Yards": d['yards'],
-                    "Result": drive_result_label(d['result']),
+                    "Result": result_lbl,
                 })
             st.dataframe(pd.DataFrame(drive_rows), hide_index=True, use_container_width=True)
 
@@ -761,4 +793,6 @@ def get_shared_data():
         "defense_styles": DEFENSE_STYLES,
         "OFFENSE_TOOLTIPS": OFFENSE_TOOLTIPS,
         "DEFENSE_TOOLTIPS": DEFENSE_TOOLTIPS,
+        "st_schemes": ST_SCHEMES,
+        "st_scheme_keys": list(ST_SCHEMES.keys()),
     }

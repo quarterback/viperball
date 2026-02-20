@@ -1,0 +1,240 @@
+My bad — I was writing from what I remembered, not what's actually in the code. The defensive system has **8 schemes** (not 5), and the ST/defensive modifier fields are completely different from what I listed. Here's the corrected spec:
+
+---
+
+## Viperball Defensive System Spec — 8 Schemes
+
+### Scheme Overview
+
+| Key | Label | Identity | Weak To |
+|-----|-------|----------|---------|
+| `swarm` | Swarm Defense | Zone rally, elite vs laterals | Kick pass seams |
+| `blitz_pack` | Blitz Pack | Relentless pressure, TFLs | Counters, draws |
+| `shadow` | Shadow Defense | Mirrors the Viper | Power runs (undermanned box) |
+| `fortress` | Fortress | Stack the box, own LOS | Kick pass, laterals, tricks |
+| `predator` | Predator Defense | Gamble for turnovers | Big plays when you guess wrong |
+| `drift` | Drift Defense | Bend don't break, soft zone | Consistent 4-5 yard gains |
+| `chaos` | Chaos Defense | Stunts/disguises every snap | Draws exploit empty gaps |
+| `lockdown` | Lockdown | Shutdown kick pass coverage | Ground game runs freely |
+
+### Modifier Fields Per Scheme (13 categories)
+
+Every scheme defines all of these:
+
+**1. `play_family_modifiers`** — 11 keys, one per offensive play family:
+```
+dive_option, speed_option, sweep_option, power, counter, draw,
+viper_jet, lateral_spread, kick_pass, trick_play, territory_kick
+```
+Values below 1.0 = defense reduces yards. Above 1.0 = vulnerable.
+
+**2. `read_success_rate`** (float 0.38–0.48) — Base probability defense correctly reads the play pre-snap.
+
+**3. `pressure_factor`** (float 0.20–1.10) — Multiplied by 0.05 and subtracted from offense's fumble recovery odds.
+
+**4. `turnover_bonus`** (float 0.08–0.35) — Multiplied by 0.10 and subtracted from fumble recovery odds. Also boosts kick pass interception chance.
+
+**5. `explosive_suppression`** (float 0.55–1.20) — Multiplier on yardage for explosive/big plays. Below 1.0 = suppresses big plays. Above 1.0 = vulnerable to them.
+
+**6. `kick_suppression`** (float 0.80–1.05) — Modifier for kick block scenarios.
+
+**7. `kick_pass_coverage`** (float 0.03–0.22) — Directly boosts interception probability on kick passes. Lockdown has 0.22 (elite). Fortress has 0.03 (worst).
+
+**8. `pindown_defense`** (float 0.80–1.00) — Pin defense effectiveness modifier.
+
+**9. `fatigue_resistance`** (float -0.06 to 0.08) — Positive = defense tires slower. Negative (blitz_pack, chaos) = defense tires faster.
+
+**10. `gap_breakdown_bonus`** (float 0.02–0.10) — Bonus to gap stuffing. Fortress has 0.10 (elite).
+
+**11. `gameplan_bias`** — 11 keys matching play families. Added to read_success_rate when defense faces that specific play. Higher = better at diagnosing that play.
+
+**12. `personnel_weights`** — 4-6 stat keys with weights that determine how much each defender attribute improves read quality:
+```json
+{"tackling": 0.30, "speed": 0.30, "awareness": 0.25, "agility": 0.15}
+```
+
+**13. `situational`** — 5 keys:
+| Key | Description |
+|-----|-------------|
+| `red_zone_read_boost` | Read rate bonus inside the 20 (0.05–0.12) |
+| `short_yardage_modifier` | Yard modifier on 3rd/4th and short. Below 1.0 = defense excels |
+| `long_yardage_modifier` | Yard modifier on long-yardage downs. Below 1.0 = defense excels |
+| `trailing_aggression` | Read boost when defense is losing (Q3+, down 7+) |
+| `leading_conserve` | Read boost when defense is winning (Q3+, up 7+) |
+
+### Full Scheme Values
+
+| Scheme | read_success | pressure | turnover_bonus | explosive_supp | kick_pass_cov | fatigue_resist | gap_breakdown |
+|--------|-------------|----------|---------------|---------------|--------------|---------------|--------------|
+| swarm | 0.40 | 0.35 | 0.15 | 0.70 | 0.06 | 0.06 | 0.02 |
+| blitz_pack | 0.45 | 1.10 | 0.30 | 1.15 | 0.04 | -0.06 | 0.08 |
+| shadow | 0.42 | 0.40 | 0.18 | 0.72 | 0.12 | 0.02 | 0.03 |
+| fortress | 0.45 | 0.35 | 0.12 | 0.75 | 0.03 | 0.03 | 0.10 |
+| predator | 0.48 | 0.60 | 0.35 | 1.20 | 0.20 | 0.00 | 0.04 |
+| drift | 0.38 | 0.20 | 0.08 | 0.55 | 0.14 | 0.08 | 0.02 |
+| chaos | 0.42 | 0.70 | 0.22 | 1.10 | 0.08 | -0.03 | 0.06 |
+| lockdown | 0.38 | 0.30 | 0.22 | 0.78 | 0.22 | 0.04 | 0.02 |
+
+### Play Family Modifiers (full matrix)
+
+| Scheme | dive | speed | sweep | power | counter | draw | viper_jet | lateral | kick_pass | trick | territory |
+|--------|------|-------|-------|-------|---------|------|-----------|---------|-----------|-------|-----------|
+| swarm | 0.88 | 0.85 | 0.82 | 0.90 | 0.80 | 0.90 | 0.78 | 0.55 | 1.15 | 0.75 | 0.95 |
+| blitz_pack | 0.80 | 0.70 | 0.78 | 0.75 | 1.20 | 1.25 | 0.72 | 1.15 | 0.82 | 1.20 | 0.90 |
+| shadow | 1.10 | 0.85 | 0.95 | 1.12 | 0.80 | 1.00 | 0.55 | 0.85 | 0.90 | 0.65 | 1.00 |
+| fortress | 0.58 | 0.72 | 0.68 | 0.62 | 0.75 | 0.78 | 0.80 | 1.18 | 1.20 | 1.25 | 1.00 |
+| predator | 0.92 | 0.88 | 0.90 | 0.95 | 1.08 | 1.05 | 0.85 | 0.92 | 0.78 | 0.80 | 0.92 |
+| drift | 1.05 | 1.00 | 1.02 | 1.05 | 1.00 | 1.00 | 0.95 | 0.88 | 0.82 | 0.90 | 0.90 |
+| chaos | 0.82 | 0.80 | 0.78 | 0.85 | 0.88 | 1.10 | 0.80 | 0.90 | 0.90 | 0.85 | 1.00 |
+| lockdown | 1.10 | 1.05 | 1.05 | 1.15 | 1.08 | 1.05 | 0.88 | 0.85 | 0.60 | 0.85 | 0.82 |
+
+### How Defense Applies During Play Simulation
+
+**Pipeline (every play):**
+1. **Defensive read check** → `read_success_rate + gameplan_bias[play_family] + situational_boost + personnel_boost`, clamped to [0.10, 0.65]. If read succeeds: yards *= random(0.70, 0.88) and defender gets a hurry.
+2. **Play family modifier** → `yards *= play_family_modifiers[play_family]`
+3. **Offense-vs-defense matchup** → `yards *= OFFENSE_VS_DEFENSE_MATCHUP[(off_style, def_style)]` (rock/paper/scissors table)
+4. **Explosive suppression** → if big play: `yards *= explosive_suppression`
+
+**Fumble recovery:** `off_chance -= pressure_factor * 0.05 - turnover_bonus * 0.10`
+
+**Kick pass interception:** `int_chance = 0.03 * (1 + turnover_bonus + kick_pass_coverage * 0.5)`
+
+**Defensive fatigue:** After 5+ plays per drive, defense tires. `fatigue_resistance` slows this. Negative values (blitz_pack: -0.06) make it worse.
+
+### Defensive Stats Tracked
+
+**Per Player:**
+| Key | Type | Description |
+|-----|------|-------------|
+| `tackles` | int | Total tackles |
+| `tfl` | int | Tackles for loss |
+| `sacks` | int | Sacks (gap stuff + negative yards) |
+| `hurries` | int | Successful defensive reads |
+| `kick_pass_ints` | int | Kick pass interceptions |
+
+**Per Team:**
+| Key | Type | Description |
+|-----|------|-------------|
+| `keeper_deflections` | int | Keeper kick deflections |
+| `keeper_bells_generated` | int | Keeper bell hits |
+| `keeper_tackles` | int | Keeper tackles |
+| `keeper_fake_tds_allowed` | int | TDs allowed on fakes |
+
+---
+
+## Viperball Special Teams Spec — 5 Schemes
+
+### Scheme Overview
+
+| Key | Label | Identity | Risk |
+|-----|-------|----------|------|
+| `iron_curtain` | Iron Curtain | Elite coverage/gunners | Conservative returns |
+| `lightning_returns` | Lightning Returns | Explosive return game | Thin coverage |
+| `block_party` | Block Party | Rush the kicker every time | No coverage behind |
+| `chaos_unit` | Chaos Unit | Fakes, trick returns, surprises | High variance |
+| `aces` | Aces | Well-rounded, slight bonus everywhere | No identity |
+
+### Modifier Fields (7 per scheme)
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `coverage_modifier` | float | Reduces opponent return yards. Above 1.0 = better coverage |
+| `muff_bonus` | float | Forces more opponent muffs. Above 1.0 = more muffs forced |
+| `return_yards_modifier` | float | Multiplier on own return yardage |
+| `return_td_modifier` | float | Multiplier on own return TD probability |
+| `block_rush_modifier` | float | Multiplier on kick block probability |
+| `fake_play_rate` | float | Base probability of fake punt (0.01–0.12) |
+| `returner_muff_rate` | float | Own returner muff risk. Above 1.0 = riskier |
+
+### Full Scheme Values
+
+| Scheme | coverage | muff_bonus | return_yds | return_td | block_rush | fake_rate | own_muff |
+|--------|---------|------------|-----------|----------|-----------|-----------|---------|
+| iron_curtain | 1.35 | 1.30 | 0.70 | 0.50 | 0.90 | 0.01 | 0.80 |
+| lightning_returns | 0.80 | 0.85 | 1.40 | 1.60 | 0.90 | 0.02 | 1.10 |
+| block_party | 0.70 | 0.75 | 1.00 | 1.00 | 1.50 | 0.01 | 1.00 |
+| chaos_unit | 1.00 | 1.05 | 1.15 | 1.25 | 1.15 | 0.12 | 1.15 |
+| aces | 1.10 | 1.10 | 1.10 | 1.10 | 1.10 | 0.03 | 0.95 |
+
+### Formulas
+
+**Punt Return Yards:**
+```
+base = Normal(mean=12, stdev=8), clamped >= 0
+modifier = (speed/80 * 0.60 + agility/80 * 0.40)
+         * keeper_archetype.return_yards_modifier
+         * own_st.return_yards_modifier
+         / opponent_st.coverage_modifier
+return_yards = base * modifier
+```
+
+**Return TD Rate:**
+```
+base = 0.03
+speed_bonus = 1.40 (speed >= 92), 1.20 (speed >= 85), else 1.0
+td_rate = 0.03 * speed_bonus
+        * keeper_archetype.return_yards_modifier
+        * own_st.return_td_modifier
+        / opponent_st.coverage_modifier
+```
+
+**Kick Block Probability:**
+```
+punt: 0.03 * offense_block_mod * defense_block_mod * opponent_st.block_rush_modifier
+kick: 0.04 * offense_block_mod * defense_block_mod * opponent_st.block_rush_modifier
+```
+
+**Muff Probability:**
+```
+0.05 * defense_muff_mod * opponent_st.muff_bonus * own_st.returner_muff_rate * keeper_archetype_muff_mod
++ weather.muff_modifier
+```
+
+**Fake Punt:**
+```
+Trigger: field_position > 15 AND random() < st.fake_play_rate
+Success: 45% base (37% if ghost/chain_gang/lateral_spread offense)
+  → Gain 8–22 yards. If reaches 100 → TD (9 pts)
+Failure: 55% base
+  → Lose -3 to +2 yards. Turnover on downs.
+```
+
+### Keeper Archetypes (ST interaction)
+
+| Archetype | return_yards_mod | muff_rate | deflection_bonus | tackle_bonus |
+|-----------|-----------------|-----------|-----------------|-------------|
+| `return_keeper` | 1.30 | 0.15 | 0.0 | 0.0 |
+| `sure_hands_keeper` | 0.85 | 0.03 | 0.05 | 0.0 |
+| `tackle_keeper` | 1.0 | 0.12 | 0.08 | 0.15 |
+
+Muff rate is normalized against 0.10 baseline: `keeper_muff_mod = archetype.muff_rate / 0.10`
+
+Return Keeper also gets 1.4x weight in returner selection. Tackle Keeper gets 1.3x weight for coverage tackle selection.
+
+### ST Player Stats
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `punt_returns` | int | Number of punt returns |
+| `punt_return_yards` | int | Total punt return yardage |
+| `punt_return_tds` | int | Punt return touchdowns |
+| `kick_returns` | int | Kick returns |
+| `kick_return_yards` | int | Kick return yardage |
+| `kick_return_tds` | int | Kick return TDs |
+| `muffs` | int | Muffed punt catches |
+| `st_tackles` | int | Special teams tackles |
+| `coverage_snaps` | int | Coverage unit snaps |
+
+### Base Probabilities (for reference)
+
+```
+BASE_BLOCK_PUNT = 0.03
+BASE_BLOCK_KICK = 0.04
+BASE_MUFF_PUNT  = 0.05
+BASE_RETURN_TD  = 0.03
+```
+
+---
+
+That should be copy-paste ready. The big corrections from the first version: 8 defensive schemes (not 5), completely different modifier architecture (play_family_modifiers with 11 play types, read system, personnel weights, situational modifiers), and accurate ST modifier keys.

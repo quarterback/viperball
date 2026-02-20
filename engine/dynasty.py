@@ -1274,7 +1274,7 @@ class Dynasty:
             style_configs = {}
             for tname in all_teams:
                 style_configs[tname] = ai_configs.get(
-                    tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+                    tname, {"offense_style": "balanced", "defense_style": "swarm"}
                 )
 
             season = create_season(

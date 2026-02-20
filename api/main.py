@@ -30,9 +30,9 @@ from engine.injuries import InjuryTracker
 from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
-from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
+from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, ST_SCHEMES
 from scripts.generate_rosters import PROGRAM_ARCHETYPES
-from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, Player, assign_archetype
+from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, Player, assign_archetype, ST_SCHEMES
 from engine.nil_system import (
     NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
     assess_retention_risks, estimate_market_tier, compute_team_prestige,
@@ -127,7 +127,8 @@ class DynastyStartSeasonRequest(BaseModel):
     playoff_size: int = 8
     bowl_count: int = 4
     offense_style: str = "balanced"
-    defense_style: str = "base_defense"
+    defense_style: str = "swarm"
+    st_scheme: str = "aces"
     ai_seed: Optional[int] = None
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     program_archetype: Optional[str] = None  # archetype for human team
@@ -138,9 +139,9 @@ class QuickGameRequest(BaseModel):
     home: str
     away: str
     home_offense: str = "balanced"
-    home_defense: str = "base_defense"
+    home_defense: str = "swarm"
     away_offense: str = "balanced"
-    away_defense: str = "base_defense"
+    away_defense: str = "swarm"
     weather: str = "clear"
     seed: Optional[int] = None
 
@@ -416,7 +417,10 @@ def list_styles():
     defense_styles = {}
     for key, val in DEFENSE_STYLES.items():
         defense_styles[key] = {"label": val.get("label", key), "description": val.get("description", "")}
-    return {"offense_styles": offense_styles, "defense_styles": defense_styles}
+    st_schemes = {}
+    for key, val in ST_SCHEMES.items():
+        st_schemes[key] = {"label": val.get("label", key), "description": val.get("description", "")}
+    return {"offense_styles": offense_styles, "defense_styles": defense_styles, "st_schemes": st_schemes}
 
 
 @app.get("/weather-conditions")
@@ -669,7 +673,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         style_configs = {}
         for tname in teams:
             style_configs[tname] = ai_configs.get(
-                tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+                tname, {"offense_style": "balanced", "defense_style": "swarm"}
             )
 
     pinned = None
@@ -710,7 +714,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
             hist_styles = {}
             for tname in hist_teams_copy:
                 hist_styles[tname] = hist_ai.get(
-                    tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+                    tname, {"offense_style": "balanced", "defense_style": "swarm"}
                 )
             hist_season = create_season(
                 f"Year {hist_year}",
@@ -1433,7 +1437,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     style_configs = {}
     for tname in teams:
         style_configs[tname] = ai_configs.get(
-            tname, {"offense_style": "balanced", "defense_style": "base_defense"}
+            tname, {"offense_style": "balanced", "defense_style": "swarm"}
         )
 
     pinned = None

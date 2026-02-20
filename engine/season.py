@@ -45,7 +45,7 @@ class TeamRecord:
     conf_losses: int = 0
 
     offense_style: str = "balanced"
-    defense_style: str = "base_defense"
+    defense_style: str = "swarm"
 
     def add_game_result(self, won: bool, points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False):
@@ -440,7 +440,7 @@ class Season:
         for team_name, team in self.teams.items():
             style_config = self.style_configs.get(team_name, {})
             offense_style = style_config.get('offense_style', 'balanced')
-            defense_style = style_config.get('defense_style', 'base_defense')
+            defense_style = style_config.get('defense_style', 'swarm')
             conf = self.team_conferences.get(team_name, "")
 
             self.standings[team_name] = TeamRecord(
@@ -703,9 +703,9 @@ class Season:
 
         style_overrides = {
             home_team.name: home_style_config.get('offense_style', 'balanced'),
-            f"{home_team.name}_defense": home_style_config.get('defense_style', 'base_defense'),
+            f"{home_team.name}_defense": home_style_config.get('defense_style', 'swarm'),
             away_team.name: away_style_config.get('offense_style', 'balanced'),
-            f"{away_team.name}_defense": away_style_config.get('defense_style', 'base_defense'),
+            f"{away_team.name}_defense": away_style_config.get('defense_style', 'swarm'),
         }
 
         # Geo-aware weather: use home team's state if available

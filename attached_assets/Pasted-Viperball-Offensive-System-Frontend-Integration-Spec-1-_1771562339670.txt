@@ -1,0 +1,135 @@
+Viperball Offensive System — Frontend Integration Spec
+1. Offensive Styles (5 total)
+Each team selects one offensive style that governs play calling, tempo, and stat modifiers.
+
+Style Key	Display Name	Tempo	Run Weight	Pass Weight	Trick Weight
+ground_and_pound	Ground & Pound	0.3	1.5	0.7	0.3
+air_raid	Air Raid	0.7	0.5	1.5	0.4
+spread	Spread	0.5	0.9	1.1	0.6
+option	Option	0.4	1.2	0.6	1.0
+smashmouth	Smashmouth	0.2	1.8	0.4	0.2
+Tempo (0.0–1.0): Controls max plays per drive (20 + tempo * 15) and time per play. Higher tempo = faster, more plays, less clock consumed per play.
+
+Weights: Multipliers on the base probability of each play type. Higher = more likely to call that type.
+
+2. Defensive Schemes (5 total)
+Each team selects one defensive scheme. These counter specific offensive tendencies.
+
+Scheme Key	Display Name	Run Mod	Pass Mod	Trick Mod	Blitz Rate	Turnover Mod
+base_46	Base 4-6	0.85	1.05	1.0	0.15	1.0
+nickel	Nickel	1.05	0.85	0.95	0.20	1.05
+dime	Dime	1.10	0.80	0.90	0.25	1.10
+blitz_heavy	Blitz Heavy	0.95	0.90	1.10	0.40	1.20
+contain	Contain	0.90	0.95	0.80	0.10	0.90
+Run/Pass/Trick Mod: Multiplier on yards gained by that play type. Below 1.0 = reduces yards (good defense). Above 1.0 = vulnerable.
+
+Blitz Rate: Probability of blitz per play. Blitz = high risk/reward (big sack or big gain).
+
+Turnover Mod: Multiplier on base turnover probability. Above 1.0 = forces more turnovers.
+
+3. Special Teams Schemes (5 total)
+Scheme Key	Display Name	Return Mod	Coverage Mod	Block Chance Mod	Fake Punt Rate
+iron_curtain	Iron Curtain	0.7	1.4	0.9	0.02
+lightning_returns	Lightning Returns	1.5	0.8	0.95	0.05
+block_party	Block Party	0.9	0.9	1.6	0.04
+chaos_unit	Chaos Unit	1.1	0.85	1.1	0.12
+aces	Aces	1.0	1.0	1.0	0.03
+Return Mod: Multiplier on punt return yardage.
+Coverage Mod: Multiplier that reduces opponent return yards (higher = better coverage).
+Block Chance Mod: Multiplier on probability of blocking a kick attempt.
+Fake Punt Rate: Base probability of calling a fake punt on 4th down punt situations.
+
+4. Player Archetypes (Keeper Position)
+The Keeper is unique to Viperball — a hybrid specialist. Each Keeper has one archetype that modifies specific play outcomes.
+
+Archetype Key	Display Name	Description	Key Modifier
+return_keeper	Return Keeper	Elite returner	1.3x punt return yards
+sure_hands	Sure Hands	Reliable, no mistakes	0.85x return yards (conservative)
+ghost	Ghost	Trick play specialist	1.15x fake punt success
+chain_gang	Chain Gang	Physical, chain-mover	1.1x fake punt success
+Other Keeper archetypes may exist in the player data but these are the ones with special teams modifiers.
+
+5. Viper Mechanics
+The Viper is a shared neutral asset on the field. It has 3 positional states:
+
+Position	Effect
+free	No bonus to either team
+home	Home team gets offensive bonuses
+away	Away team gets offensive bonuses
+Viper Capture: ~8% base chance per play. Modified by:
+
+Player agility (top 3 players on possessing team averaged)
+Trick plays have higher capture rate
+Can change hands on any play
+Viper Bonus When Held: +15% yards on all plays for the holding team.
+
+6. Dynamic Field Position (No Kickoffs)
+Traditional kickoffs do not exist. After every score, possession alternates and field position is calculated:
+
+start_yard_line = max(1, 20 - point_differential)
+
+Where point_differential = receiving team's score minus opponent's score.
+
+Scenario	Point Diff	Start Yard Line
+Tied	0	20
+Trailing by 14	-14	34
+Trailing by 30	-30	50
+Leading by 10	+10	10
+Leading by 21	+21	1 (clamped)
+This is the sacrifice system — leading teams are penalized with worse field position.
+
+7. Stats to Display
+Per-Team Game Stats
+Stat Key	Display Name	Type	Description
+total_yards	Total Yards	int	Raw offensive yards
+sacrifice_yards	Sacrifice Yards	int	Total field position yards lost due to leading
+adjusted_yards	Adjusted Yards	int	total_yards + sacrifice_yards — true output metric
+sacrifice_drives	Sacrifice Drives	int	Drives that started behind the 20 due to leading
+sacrifice_scores	Sacrifice Scores	int	Scores on sacrifice drives
+compelled_efficiency	Compelled Efficiency	float or null	(sacrifice_scores / sacrifice_drives) * 100. Null if 0 sacrifice drives.
+rushing_yards	Rushing Yards	int	
+passing_yards	Passing Yards	int	
+turnovers	Turnovers	int	
+sacks	Sacks	int	
+fake_punts_attempted	Fake Punts Attempted	int	
+fake_punts_converted	Fake Punts Converted	int	
+Drive Log Entry Shape
+{
+  "team": "home" | "away",
+  "quarter": 1-4,
+  "start_yard_line": 1-50,
+  "plays": int,
+  "yards": int,
+  "result": "touchdown" | "successful_kick" | "missed_kick" | "punt" | "pindown" | "punt_return_td" | "fumble" | "turnover_on_downs" | "stall" | "snap_kick_recovery" | "chaos_recovery" | "safety",
+  "sacrifice_drive": true | false
+}
+
+Suggested UI Groupings
+Box Score Row: Total Yards / Adjusted Yards / Sacrifice Yards
+Efficiency Card: Compelled Efficiency % (with sacrifice_drives / sacrifice_scores breakdown)
+Drive Chart: Color-code sacrifice drives differently (e.g., red starting line marker). Show result icon.
+Scheme Display: Show offensive style + defensive scheme + ST scheme as 3 badges per team.
+
+8. API Response Shape (from simulate_game())
+{
+  "final_score": {
+    "home": { "name": "Team Name", "score": 28.0 },
+    "away": { "name": "Team Name", "score": 14.0 }
+  },
+  "stats": {
+    "home": { /* all stats from table above */ },
+    "away": { /* all stats from table above */ }
+  },
+  "drive_summary": [ /* array of drive log entries */ ],
+  "play_by_play": [ /* detailed play objects */ ]
+}
+
+9. Scheme Selection UI Requirements
+Each team needs to select exactly one from each category before a game:
+
+Offensive Style — 1 of 5 (default: spread)
+Defensive Scheme — 1 of 5 (default: base_46)
+Special Teams Scheme — 1 of 5 (default: aces)
+These are passed to ViperballEngine(home_team, away_team) — the team objects have .offensive_style, .defensive_scheme, and .st_scheme attributes set before simulation.
+
+That should be everything they need to build the UI layer against the engine. The stat keys, scheme keys, and response shapes all match the engine code exactly.

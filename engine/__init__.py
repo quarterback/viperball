@@ -12,6 +12,7 @@ from .game_engine import (
     Player,
     OFFENSE_STYLES,
     DEFENSE_STYLES,
+    ST_SCHEMES,
 )
 from .box_score import BoxScoreGenerator
 from .poll_system import PollSystem, TeamRecord, calculate_strength_of_schedule
@@ -33,6 +34,7 @@ __all__ = [
     "Player",
     "OFFENSE_STYLES",
     "DEFENSE_STYLES",
+    "ST_SCHEMES",
     "BoxScoreGenerator",
     "PollSystem",
     "TeamRecord",

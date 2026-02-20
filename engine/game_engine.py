@@ -665,7 +665,7 @@ class Team:
     lateral_proficiency: int
     defensive_strength: int
     offense_style: str = "balanced"
-    defense_style: str = "base_defense"
+    defense_style: str = "swarm"
     st_scheme: str = "aces"
 
 
