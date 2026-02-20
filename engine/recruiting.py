@@ -732,6 +732,7 @@ def _compute_team_score(
     nil_offer: float,
     max_nil_in_class: float,
     rng: random.Random,
+    coaching_score: float = 0.0,
 ) -> float:
     """
     Compute how attractive a team is to a recruit.
@@ -755,13 +756,20 @@ def _compute_team_score(
     else:
         nil_score = 50.0
 
+    # Coaching component (0-100): HC recruiting attribute normalized
+    coach_score = coaching_score * 100.0  # coaching_score is 0-1
+
     # Random factor (personality noise)
     noise = rng.uniform(-8, 8)
+
+    # Weight for coaching defaults to 0.15 (re-normalizes other weights)
+    prefers_coaching = getattr(recruit, "prefers_coaching", 0.15)
 
     score = (
         recruit.prefers_prestige * prestige_score
         + recruit.prefers_geography * geo_score
         + recruit.prefers_nil * nil_score
+        + prefers_coaching * coach_score
         + noise
     )
     return max(0.0, min(100.0, score))
@@ -774,6 +782,7 @@ def simulate_recruit_decisions(
     team_regions: Dict[str, str],
     nil_offers: Dict[str, Dict[str, float]],
     rng: Optional[random.Random] = None,
+    team_coaching_scores: Optional[Dict[str, float]] = None,
 ) -> Dict[str, List[Recruit]]:
     """
     Simulate all recruits making their decisions.
@@ -822,6 +831,7 @@ def simulate_recruit_decisions(
                 continue
 
             nil_amt = nil_offers.get(team_name, {}).get(recruit.recruit_id, 0.0)
+            cs = (team_coaching_scores or {}).get(team_name, 0.0)
             score = _compute_team_score(
                 recruit=recruit,
                 team_name=team_name,
@@ -830,6 +840,7 @@ def simulate_recruit_decisions(
                 nil_offer=nil_amt,
                 max_nil_in_class=max_nil,
                 rng=rng,
+                coaching_score=cs,
             )
             if score > best_score:
                 best_score = score
@@ -929,6 +940,7 @@ def run_full_recruiting_cycle(
     nil_budgets: Dict[str, float],
     pool_size: int = 300,
     rng: Optional[random.Random] = None,
+    team_coaching_scores: Optional[Dict[str, float]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle (for use by Dynasty.advance_season).
@@ -973,6 +985,7 @@ def run_full_recruiting_cycle(
         team_regions=team_regions,
         nil_offers=all_nil,
         rng=rng,
+        team_coaching_scores=team_coaching_scores,
     )
 
     # Class rankings

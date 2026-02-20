@@ -35,7 +35,8 @@ IDENTITY_STYLE_TO_DEFENSE = {
 }
 
 
-def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = None) -> Dict[str, str]:
+def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = None,
+                     coaching_staff: Optional[Dict] = None) -> Dict[str, str]:
     if seed is not None:
         rng = random.Random(seed)
     else:
@@ -47,6 +48,18 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
     lateral = team_stats.get("lateral_proficiency", 80)
     speed = team_stats.get("avg_speed", 85)
     defense = team_stats.get("defensive_strength", 76)
+
+    # Coaching influence: Scheme Master coaches bias scheme selection
+    _coach_scheme_bias = None
+    if coaching_staff:
+        hc = coaching_staff.get("head_coach")
+        if hc and hasattr(hc, "classification"):
+            if hc.classification == "scheme_master" and hasattr(hc, "instincts"):
+                # Higher instincts → stronger bias toward a specific scheme
+                if hc.instincts >= 80:
+                    _coach_scheme_bias = 0.3
+                elif hc.instincts >= 60:
+                    _coach_scheme_bias = 0.15
 
     offense_candidates = list(PHILOSOPHY_TO_OFFENSE.get(philosophy, ["balanced"]))
 
@@ -85,6 +98,11 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
         elif c == "balanced":
             w += 0.3
         weights.append(max(0.1, w))
+
+    # Coaching: Scheme Master bias — boost the top-weighted scheme
+    if _coach_scheme_bias and weights:
+        max_idx = weights.index(max(weights))
+        weights[max_idx] *= (1.0 + _coach_scheme_bias)
 
     offense_style = rng.choices(offense_candidates, weights=weights)[0]
 
@@ -144,6 +162,7 @@ def auto_assign_all_teams(
     human_teams: list = None,
     human_configs: Dict[str, Dict[str, str]] = None,
     seed: Optional[int] = None,
+    coaching_staffs: Optional[Dict[str, Dict]] = None,
 ) -> Dict[str, Dict[str, str]]:
     if human_teams is None:
         human_teams = []
@@ -169,7 +188,9 @@ def auto_assign_all_teams(
         team_stats = data.get("team_stats", {})
         identity = data.get("identity", {})
         team_seed = hash(team_name) + rng_base
-        configs[team_name] = assign_ai_scheme(team_stats, identity, seed=team_seed)
+        staff = (coaching_staffs or {}).get(team_name)
+        configs[team_name] = assign_ai_scheme(team_stats, identity, seed=team_seed,
+                                              coaching_staff=staff)
 
     return configs
 
@@ -284,6 +305,7 @@ def choose_defensive_call(
     score_diff: int,      # defensive team's score minus offensive team's score
     time_remaining: int,  # seconds remaining in game
     rng: Optional[random.Random] = None,
+    instincts: int = 50,  # coaching instincts attribute (25-95)
 ) -> DefensivePackage:
     """
     Choose a situational defensive package.
@@ -324,6 +346,13 @@ def choose_defensive_call(
     # Red zone (opponent inside our 25) – everyone gets more aggressive
     if field_pos >= 75:
         aggression = min(1.0, aggression + 0.10)
+
+    # Coaching: high instincts fine-tunes aggression toward optimal range
+    # At 95 instincts, aggression drifts ~5% toward 0.55 (the optimal midpoint)
+    if instincts > 50:
+        optimal_aggression = 0.55
+        instincts_pull = (instincts - 50) / 900.0  # max ~0.05
+        aggression = aggression + (optimal_aggression - aggression) * instincts_pull
 
     # Viper spy: more likely on passing/lateral-heavy situations
     base_spy = t["viper_spy_chance"]

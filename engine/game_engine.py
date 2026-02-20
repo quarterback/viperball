@@ -1763,7 +1763,9 @@ class ViperballEngine:
                  dtd_home: Optional[set] = None,
                  dtd_away: Optional[set] = None,
                  home_dq_boosts: Optional[Dict] = None,
-                 away_dq_boosts: Optional[Dict] = None):
+                 away_dq_boosts: Optional[Dict] = None,
+                 home_coaching: Optional[Dict] = None,
+                 away_coaching: Optional[Dict] = None):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -1881,6 +1883,16 @@ class ViperballEngine:
         self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
         self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
 
+        # ── Coaching staff modifiers (must init before rhythm) ──
+        self.home_coaching_mods: Dict = {}
+        self.away_coaching_mods: Dict = {}
+        if home_coaching or away_coaching:
+            from engine.coaching import compute_gameday_modifiers
+            if home_coaching:
+                self.home_coaching_mods = compute_gameday_modifiers(home_coaching)
+            if away_coaching:
+                self.away_coaching_mods = compute_gameday_modifiers(away_coaching)
+
         self.home_game_rhythm = random.gauss(1.0, 0.15)
         self.away_game_rhythm = random.gauss(1.0, 0.15)
         self.home_game_rhythm = max(0.65, min(1.35, self.home_game_rhythm))
@@ -1890,10 +1902,30 @@ class ViperballEngine:
         self.home_def_intensity = max(0.70, min(1.30, self.home_def_intensity))
         self.away_def_intensity = max(0.70, min(1.30, self.away_def_intensity))
 
+        # Coaching: leadership narrows rhythm variance toward 1.0 (prevents bad games)
+        home_lead = self.home_coaching_mods.get("leadership_factor", 0.0)
+        away_lead = self.away_coaching_mods.get("leadership_factor", 0.0)
+        if home_lead > 0:
+            self.home_game_rhythm = 1.0 + (self.home_game_rhythm - 1.0) * (1.0 - home_lead * 0.3)
+        if away_lead > 0:
+            self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) * (1.0 - away_lead * 0.3)
+
         if self.is_rivalry:
             self._apply_rivalry_boost()
 
         self._apply_dq_boosts()
+
+    def _coaching_mods(self) -> Dict:
+        """Return coaching modifiers for the team currently on offense."""
+        if self.state.possession == "home":
+            return self.home_coaching_mods
+        return self.away_coaching_mods
+
+    def _def_coaching_mods(self) -> Dict:
+        """Return coaching modifiers for the team currently on defense."""
+        if self.state.possession == "home":
+            return self.away_coaching_mods
+        return self.home_coaching_mods
 
     def _apply_dq_boosts(self):
         for boosts, team in [(self.home_dq_boosts, self.home_team),
@@ -3070,7 +3102,12 @@ class ViperballEngine:
         # Personnel quality boost — good defenders improve read rate
         personnel_boost = self._get_defense_personnel_boost(defense)
 
-        total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost
+        # Coaching: instincts improve defensive reads
+        def_mods = self._def_coaching_mods()
+        instincts_factor = def_mods.get("instincts_factor", 0.0)
+        coaching_read_boost = instincts_factor * 0.06  # max +0.06 at 95 instincts
+
+        total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost + coaching_read_boost
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         return random.random() < total_read_rate
@@ -3173,6 +3210,21 @@ class ViperballEngine:
 
         # 2. Play family modifier — scheme's base effectiveness vs this play type
         pfm = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+
+        # Coaching: Scheme Master amplifies play-family modifiers (strengths stronger)
+        def_mods = self._def_coaching_mods()
+        cls_effects = def_mods.get("classification_effects", {})
+        if def_mods.get("hc_classification") == "scheme_master":
+            amp = cls_effects.get("scheme_amplification", 0.0)
+            pfm = 1.0 + (pfm - 1.0) * (1.0 + amp)
+
+        # Coaching: Disciplinarian compresses offensive variance (fewer explosive plays)
+        off_mods = self._coaching_mods()
+        off_cls = off_mods.get("classification_effects", {})
+        if off_mods.get("hc_classification") == "disciplinarian":
+            compression = off_cls.get("variance_compression", 1.0)
+            pfm = 1.0 + (pfm - 1.0) * compression
+
         # Invert: lower pfm = defense is better, so multiply yards by pfm
         # (pfm of 0.60 means defense holds to 60% of normal yardage)
         yards_gained = int(yards_gained * pfm)
@@ -3226,6 +3278,10 @@ class ViperballEngine:
         # DEFENSIVE SYSTEM: Apply defensive fatigue resistance
         defense = self._current_defense()
         fatigue_resistance = defense.get("fatigue_resistance", 0.0)
+
+        # Coaching: rotations attribute adds extra fatigue resistance
+        def_mods = self._def_coaching_mods()
+        fatigue_resistance += def_mods.get("fatigue_resistance_mod", 0.0)
 
         # Fatigue resistance reduces the fatigue penalty
         # fatigue_resistance of 0.05 reduces fatigue bonus by 5%
@@ -3295,6 +3351,12 @@ class ViperballEngine:
             fumble_mod = arch_info.get("fumble_modifier", 1.0)
             if isinstance(fumble_mod, float) and fumble_mod != 1.0:
                 base_fumble *= fumble_mod
+
+        # Coaching: Disciplinarian reduces fumble rate
+        off_mods = self._coaching_mods()
+        if off_mods.get("hc_classification") == "disciplinarian":
+            cls_fx = off_mods.get("classification_effects", {})
+            base_fumble *= cls_fx.get("fumble_reduction", 1.0)
 
         return random.random() < base_fumble
 
