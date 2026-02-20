@@ -138,6 +138,15 @@ RUN_PLAY_CONFIG = {
 }
 
 DEFENSE_ALIGNMENT_MAP = {
+    "Swarm Defense": "spread",
+    "Blitz Pack": "aggressive",
+    "Shadow Defense": "balanced",
+    "Fortress": "stacked",
+    "Predator Defense": "aggressive",
+    "Drift Defense": "spread",
+    "Chaos Defense": "aggressive",
+    "Lockdown": "spread",
+    # Legacy mappings (backward compatibility)
     "Base Defense": "balanced",
     "Pressure Defense": "aggressive",
     "Contain Defense": "spread",
@@ -1036,6 +1045,108 @@ STYLE_MIGRATION = {
     "option_spread": "ghost",
 }
 
+# Migration map: old 5 defense styles → new 8 schemes
+DEFENSE_STYLE_MIGRATION = {
+    "base_defense": "swarm",
+    "pressure_defense": "blitz_pack",
+    "contain_defense": "shadow",
+    "run_stop_defense": "fortress",
+    "coverage_defense": "lockdown",
+}
+
+# ========================================
+# OFFENSE vs DEFENSE MATCHUP MATRIX
+# ========================================
+# Each entry is a multiplier applied to overall defensive effectiveness.
+# < 1.0 = defense has advantage (reduces offensive output)
+# > 1.0 = offense has advantage (boosts offensive output)
+# 1.0 = neutral matchup
+#
+# This creates rock/paper/scissors dynamics — no single defense is best,
+# and a smart DC can exploit an opponent's offensive tendencies.
+OFFENSE_VS_DEFENSE_MATCHUP = {
+    # Swarm crushes lateral-heavy offenses but kick pass carves its zones
+    ("ground_pound", "swarm"): 0.95,
+    ("lateral_spread", "swarm"): 0.82,
+    ("boot_raid", "swarm"): 1.12,
+    ("ball_control", "swarm"): 0.98,
+    ("ghost", "swarm"): 0.90,
+    ("rouge_hunt", "swarm"): 1.00,
+    ("chain_gang", "swarm"): 0.78,
+    ("triple_threat", "swarm"): 0.92,
+    ("balanced", "swarm"): 0.95,
+    # Blitz Pack pressures everything but counters/draws exploit vacated gaps
+    ("ground_pound", "blitz_pack"): 0.88,
+    ("lateral_spread", "blitz_pack"): 1.08,
+    ("boot_raid", "blitz_pack"): 0.90,
+    ("ball_control", "blitz_pack"): 0.85,
+    ("ghost", "blitz_pack"): 1.15,
+    ("rouge_hunt", "blitz_pack"): 0.92,
+    ("chain_gang", "blitz_pack"): 1.10,
+    ("triple_threat", "blitz_pack"): 1.12,
+    ("balanced", "blitz_pack"): 1.00,
+    # Shadow shuts down viper-based schemes but power run eats it alive
+    ("ground_pound", "shadow"): 1.12,
+    ("lateral_spread", "shadow"): 0.90,
+    ("boot_raid", "shadow"): 0.95,
+    ("ball_control", "shadow"): 1.08,
+    ("ghost", "shadow"): 0.80,
+    ("rouge_hunt", "shadow"): 1.00,
+    ("chain_gang", "shadow"): 0.88,
+    ("triple_threat", "shadow"): 0.85,
+    ("balanced", "shadow"): 0.98,
+    # Fortress walls off the run game but lateral/kick pass go around
+    ("ground_pound", "fortress"): 0.78,
+    ("lateral_spread", "fortress"): 1.15,
+    ("boot_raid", "fortress"): 1.18,
+    ("ball_control", "fortress"): 0.82,
+    ("ghost", "fortress"): 1.05,
+    ("rouge_hunt", "fortress"): 0.95,
+    ("chain_gang", "fortress"): 1.20,
+    ("triple_threat", "fortress"): 0.95,
+    ("balanced", "fortress"): 1.02,
+    # Predator gambles — great vs predictable offenses, burned by chaos
+    ("ground_pound", "predator"): 0.90,
+    ("lateral_spread", "predator"): 0.95,
+    ("boot_raid", "predator"): 0.88,
+    ("ball_control", "predator"): 0.85,
+    ("ghost", "predator"): 1.10,
+    ("rouge_hunt", "predator"): 0.92,
+    ("chain_gang", "predator"): 1.05,
+    ("triple_threat", "predator"): 1.08,
+    ("balanced", "predator"): 0.95,
+    # Drift bends but doesn't break — dies to patient ball control
+    ("ground_pound", "drift"): 1.05,
+    ("lateral_spread", "drift"): 0.92,
+    ("boot_raid", "drift"): 0.88,
+    ("ball_control", "drift"): 1.15,
+    ("ghost", "drift"): 0.95,
+    ("rouge_hunt", "drift"): 0.85,
+    ("chain_gang", "drift"): 0.90,
+    ("triple_threat", "drift"): 1.00,
+    ("balanced", "drift"): 0.98,
+    # Chaos wrecks predictable teams, but experienced/balanced offenses adapt
+    ("ground_pound", "chaos"): 0.88,
+    ("lateral_spread", "chaos"): 0.95,
+    ("boot_raid", "chaos"): 0.90,
+    ("ball_control", "chaos"): 0.92,
+    ("ghost", "chaos"): 1.05,
+    ("rouge_hunt", "chaos"): 0.90,
+    ("chain_gang", "chaos"): 0.98,
+    ("triple_threat", "chaos"): 1.00,
+    ("balanced", "chaos"): 1.08,
+    # Lockdown denies kick pass but ground game bulldozes the light box
+    ("ground_pound", "lockdown"): 1.15,
+    ("lateral_spread", "lockdown"): 0.92,
+    ("boot_raid", "lockdown"): 0.80,
+    ("ball_control", "lockdown"): 1.10,
+    ("ghost", "lockdown"): 0.95,
+    ("rouge_hunt", "lockdown"): 0.88,
+    ("chain_gang", "lockdown"): 0.90,
+    ("triple_threat", "lockdown"): 1.05,
+    ("balanced", "lockdown"): 0.95,
+}
+
 # ========================================
 # DEFENSIVE ARCHETYPES
 # ========================================
@@ -1048,152 +1159,209 @@ STYLE_MIGRATION = {
 # - Turnover generation
 
 DEFENSE_STYLES = {
-    "base_defense": {
-        "label": "Base Defense",
-        "description": "Balanced defensive approach, solid fundamentals",
+    # ================================================================
+    # SWARM DEFENSE — Tampa 2 analog
+    # Everyone flows to the ball. Zone responsibility, rally to contact.
+    # Elite vs laterals (multiple defenders converge on each handoff).
+    # Vulnerable to kick pass down the seam (gaps between zone drops).
+    # ================================================================
+    "swarm": {
+        "label": "Swarm Defense",
+        "description": "Zone-based rally defense. Everyone flows to the ball — elite vs laterals, vulnerable to kick pass seams.",
         "play_family_modifiers": {
-            "dive_option": 0.95,
-            "speed_option": 0.95,
-            "sweep_option": 0.95,
-            "power": 0.95,
-            "counter": 0.95,
-            "draw": 0.95,
-            "viper_jet": 0.95,
-            "lateral_spread": 0.95,
-            "kick_pass": 0.95,
-            "trick_play": 0.95,
+            "dive_option": 0.88,
+            "speed_option": 0.85,
+            "sweep_option": 0.82,
+            "power": 0.90,
+            "counter": 0.80,
+            "draw": 0.90,
+            "viper_jet": 0.78,
+            "lateral_spread": 0.55,
+            "kick_pass": 1.15,
+            "trick_play": 0.75,
             "territory_kick": 0.95,
         },
-        "read_success_rate": 0.35,
-        "pressure_factor": 0.50,
-        "turnover_bonus": 0.10,
-        "explosive_suppression": 0.90,
-        "kick_suppression": 0.97,
-        "kick_pass_coverage": 0.08,
-        "pindown_defense": 1.00,
-        "fatigue_resistance": 0.025,
+        "read_success_rate": 0.40,
+        "pressure_factor": 0.35,
+        "turnover_bonus": 0.15,
+        "explosive_suppression": 0.70,
+        "kick_suppression": 0.95,
+        "kick_pass_coverage": 0.06,
+        "pindown_defense": 0.95,
+        "fatigue_resistance": 0.06,
+        "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
-            "dive_option": 0.05,
+            "dive_option": 0.03,
             "speed_option": 0.05,
             "sweep_option": 0.05,
-            "power": 0.05,
-            "counter": 0.05,
-            "draw": 0.05,
-            "viper_jet": 0.05,
-            "lateral_spread": 0.05,
-            "kick_pass": 0.05,
-            "trick_play": 0.05,
-            "territory_kick": 0.05,
-        }
+            "power": 0.03,
+            "counter": 0.06,
+            "draw": 0.03,
+            "viper_jet": 0.08,
+            "lateral_spread": 0.12,
+            "kick_pass": 0.02,
+            "trick_play": 0.08,
+            "territory_kick": 0.03,
+        },
+        "personnel_weights": {
+            "tackling": 0.30, "speed": 0.30, "awareness": 0.25, "agility": 0.15,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.10,
+            "short_yardage_modifier": 0.90,
+            "long_yardage_modifier": 1.10,
+            "trailing_aggression": 0.05,
+            "leading_conserve": 0.08,
+        },
     },
-    "pressure_defense": {
-        "label": "Pressure Defense",
-        "description": "Aggressive blitzing, high risk/high reward",
+
+    # ================================================================
+    # BLITZ PACK — 46 Defense analog
+    # Relentless pressure. Send extra rushers on every play.
+    # Great at TFLs and forcing fumbles in the backfield.
+    # Burned by counters, draws, and trick plays that exploit vacated gaps.
+    # ================================================================
+    "blitz_pack": {
+        "label": "Blitz Pack",
+        "description": "Relentless pressure — extra rushers every play. Elite TFLs, but counters and draws carve empty gaps.",
         "play_family_modifiers": {
-            "dive_option": 0.85,
+            "dive_option": 0.80,
             "speed_option": 0.70,
-            "sweep_option": 0.80,
-            "power": 0.80,
-            "counter": 1.15,
-            "draw": 1.20,
-            "viper_jet": 0.75,
-            "lateral_spread": 1.25,
-            "kick_pass": 0.80,
-            "trick_play": 0.70,
+            "sweep_option": 0.78,
+            "power": 0.75,
+            "counter": 1.20,
+            "draw": 1.25,
+            "viper_jet": 0.72,
+            "lateral_spread": 1.15,
+            "kick_pass": 0.82,
+            "trick_play": 1.20,
             "territory_kick": 0.90,
         },
         "read_success_rate": 0.45,
-        "pressure_factor": 1.00,
+        "pressure_factor": 1.10,
         "turnover_bonus": 0.30,
-        "explosive_suppression": 1.10,
+        "explosive_suppression": 1.15,
         "kick_suppression": 1.05,
-        "kick_pass_coverage": 0.05,
-        "pindown_defense": 0.95,
-        "fatigue_resistance": -0.05,
-        "gap_breakdown_bonus": 0.06,
+        "kick_pass_coverage": 0.04,
+        "pindown_defense": 0.90,
+        "fatigue_resistance": -0.06,
+        "gap_breakdown_bonus": 0.08,
         "gameplan_bias": {
-            "dive_option": 0.05,
+            "dive_option": 0.06,
             "speed_option": 0.10,
-            "sweep_option": 0.05,
-            "power": 0.05,
-            "counter": 0.03,
-            "draw": 0.02,
+            "sweep_option": 0.06,
+            "power": 0.06,
+            "counter": 0.02,
+            "draw": 0.01,
             "viper_jet": 0.08,
-            "lateral_spread": 0.10,
+            "lateral_spread": 0.08,
             "kick_pass": 0.05,
-            "trick_play": 0.08,
+            "trick_play": 0.02,
             "territory_kick": 0.00,
-        }
+        },
+        "personnel_weights": {
+            "speed": 0.35, "tackling": 0.30, "power": 0.25, "agility": 0.10,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.08,
+            "short_yardage_modifier": 0.80,
+            "long_yardage_modifier": 1.20,
+            "trailing_aggression": 0.12,
+            "leading_conserve": 0.00,
+        },
     },
-    "contain_defense": {
-        "label": "Contain Defense",
-        "description": "Anti-chaos, prevents lateral chains and explosive plays",
+
+    # ================================================================
+    # SHADOW DEFENSE — Spy / Mirror analog
+    # Assigns a defender to shadow the Viper at all times.
+    # Shuts down viper_jet and ghost-style misdirection.
+    # Vulnerable to straight-ahead power run game (one less box defender).
+    # ================================================================
+    "shadow": {
+        "label": "Shadow Defense",
+        "description": "Assigns a defender to mirror the Viper. Shuts down jet sweeps and ghost schemes, but power runs exploit the undermanned box.",
         "play_family_modifiers": {
-            "dive_option": 0.95,
-            "speed_option": 0.80,
-            "sweep_option": 0.85,
-            "power": 1.00,
+            "dive_option": 1.10,
+            "speed_option": 0.85,
+            "sweep_option": 0.95,
+            "power": 1.12,
             "counter": 0.80,
-            "draw": 0.95,
-            "viper_jet": 0.75,
-            "lateral_spread": 0.65,
-            "kick_pass": 0.70,
-            "trick_play": 0.60,
+            "draw": 1.00,
+            "viper_jet": 0.55,
+            "lateral_spread": 0.85,
+            "kick_pass": 0.90,
+            "trick_play": 0.65,
             "territory_kick": 1.00,
         },
-        "read_success_rate": 0.40,
-        "pressure_factor": 0.20,
-        "turnover_bonus": 0.10,
-        "explosive_suppression": 0.60,
-        "kick_suppression": 1.00,
-        "kick_pass_coverage": 0.15,
+        "read_success_rate": 0.42,
+        "pressure_factor": 0.40,
+        "turnover_bonus": 0.18,
+        "explosive_suppression": 0.72,
+        "kick_suppression": 0.95,
+        "kick_pass_coverage": 0.12,
         "pindown_defense": 1.00,
-        "fatigue_resistance": 0.05,
+        "fatigue_resistance": 0.02,
         "gap_breakdown_bonus": 0.03,
         "gameplan_bias": {
-            "dive_option": 0.00,
+            "dive_option": 0.02,
             "speed_option": 0.05,
-            "sweep_option": 0.05,
-            "power": 0.00,
-            "counter": 0.05,
-            "draw": 0.00,
-            "viper_jet": 0.08,
-            "lateral_spread": 0.10,
-            "kick_pass": 0.08,
+            "sweep_option": 0.03,
+            "power": 0.02,
+            "counter": 0.06,
+            "draw": 0.03,
+            "viper_jet": 0.15,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.05,
             "trick_play": 0.10,
-            "territory_kick": 0.00,
-        }
+            "territory_kick": 0.02,
+        },
+        "personnel_weights": {
+            "awareness": 0.35, "speed": 0.30, "agility": 0.20, "tackling": 0.15,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.06,
+            "short_yardage_modifier": 1.08,
+            "long_yardage_modifier": 0.92,
+            "trailing_aggression": 0.04,
+            "leading_conserve": 0.06,
+        },
     },
-    "run_stop_defense": {
-        "label": "Run-Stop Defense",
-        "description": "Stacks the box, elite vs run game",
+
+    # ================================================================
+    # FORTRESS — Goal Line / Box-Stacking analog
+    # Loads the box with bodies. Dominates inside runs and short yardage.
+    # Gets carved by kick pass and laterals that stretch outside.
+    # ================================================================
+    "fortress": {
+        "label": "Fortress",
+        "description": "Stack the box, own the line of scrimmage. Dominates inside runs — but kick pass and laterals stretch the vacated edges.",
         "play_family_modifiers": {
-            "dive_option": 0.60,
-            "speed_option": 0.75,
-            "sweep_option": 0.70,
-            "power": 0.65,
+            "dive_option": 0.58,
+            "speed_option": 0.72,
+            "sweep_option": 0.68,
+            "power": 0.62,
             "counter": 0.75,
-            "draw": 0.80,
+            "draw": 0.78,
             "viper_jet": 0.80,
-            "lateral_spread": 1.15,
-            "kick_pass": 1.15,
-            "trick_play": 1.30,
+            "lateral_spread": 1.18,
+            "kick_pass": 1.20,
+            "trick_play": 1.25,
             "territory_kick": 1.00,
         },
         "read_success_rate": 0.45,
-        "pressure_factor": 0.30,
-        "turnover_bonus": 0.10,
+        "pressure_factor": 0.35,
+        "turnover_bonus": 0.12,
         "explosive_suppression": 0.75,
         "kick_suppression": 1.00,
         "kick_pass_coverage": 0.03,
         "pindown_defense": 1.00,
-        "fatigue_resistance": 0.00,
-        "gap_breakdown_bonus": 0.08,
+        "fatigue_resistance": 0.03,
+        "gap_breakdown_bonus": 0.10,
         "gameplan_bias": {
-            "dive_option": 0.10,
+            "dive_option": 0.12,
             "speed_option": 0.10,
             "sweep_option": 0.10,
-            "power": 0.08,
+            "power": 0.10,
             "counter": 0.06,
             "draw": 0.05,
             "viper_jet": 0.05,
@@ -1201,32 +1369,215 @@ DEFENSE_STYLES = {
             "kick_pass": 0.00,
             "trick_play": 0.00,
             "territory_kick": 0.00,
-        }
+        },
+        "personnel_weights": {
+            "tackling": 0.35, "power": 0.30, "awareness": 0.20, "speed": 0.15,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.12,
+            "short_yardage_modifier": 0.70,
+            "long_yardage_modifier": 1.25,
+            "trailing_aggression": 0.02,
+            "leading_conserve": 0.10,
+        },
     },
-    "coverage_defense": {
-        "label": "Coverage Defense",
-        "description": "Anti-kick, prevents pindowns and punt returns",
+
+    # ================================================================
+    # PREDATOR — Aggressive man coverage / Turnover-hunting analog
+    # Gambles for interceptions on kick pass. Creates turnovers constantly.
+    # High risk: when the gamble fails, gives up explosives.
+    # ================================================================
+    "predator": {
+        "label": "Predator Defense",
+        "description": "Gamble for turnovers — jump kick pass routes, force fumbles. When you guess right, it's a takeaway. When wrong, it's a touchdown.",
+        "play_family_modifiers": {
+            "dive_option": 0.92,
+            "speed_option": 0.88,
+            "sweep_option": 0.90,
+            "power": 0.95,
+            "counter": 1.08,
+            "draw": 1.05,
+            "viper_jet": 0.85,
+            "lateral_spread": 0.92,
+            "kick_pass": 0.78,
+            "trick_play": 0.80,
+            "territory_kick": 0.92,
+        },
+        "read_success_rate": 0.48,
+        "pressure_factor": 0.60,
+        "turnover_bonus": 0.35,
+        "explosive_suppression": 1.20,
+        "kick_suppression": 0.88,
+        "kick_pass_coverage": 0.20,
+        "pindown_defense": 0.90,
+        "fatigue_resistance": 0.00,
+        "gap_breakdown_bonus": 0.04,
+        "gameplan_bias": {
+            "dive_option": 0.04,
+            "speed_option": 0.06,
+            "sweep_option": 0.04,
+            "power": 0.03,
+            "counter": 0.03,
+            "draw": 0.03,
+            "viper_jet": 0.06,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.10,
+            "trick_play": 0.08,
+            "territory_kick": 0.05,
+        },
+        "personnel_weights": {
+            "awareness": 0.35, "speed": 0.25, "hands": 0.25, "agility": 0.15,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.05,
+            "short_yardage_modifier": 0.95,
+            "long_yardage_modifier": 0.90,
+            "trailing_aggression": 0.10,
+            "leading_conserve": 0.05,
+        },
+    },
+
+    # ================================================================
+    # DRIFT — Cover 3 / Soft Zone analog
+    # Prevent explosives at all costs. Bend but don't break.
+    # Gives up short yardage consistently — death by a thousand cuts.
+    # ================================================================
+    "drift": {
+        "label": "Drift Defense",
+        "description": "Soft zone — bend don't break. Prevents explosives and big plays, but gives up 4-5 yards on every carry. Death by paper cuts.",
         "play_family_modifiers": {
             "dive_option": 1.05,
             "speed_option": 1.00,
-            "sweep_option": 1.00,
-            "power": 1.10,
-            "counter": 1.05,
-            "draw": 1.05,
-            "viper_jet": 0.90,
-            "lateral_spread": 0.90,
-            "kick_pass": 0.75,
-            "trick_play": 1.10,
-            "territory_kick": 0.80,
+            "sweep_option": 1.02,
+            "power": 1.05,
+            "counter": 1.00,
+            "draw": 1.00,
+            "viper_jet": 0.95,
+            "lateral_spread": 0.88,
+            "kick_pass": 0.82,
+            "trick_play": 0.90,
+            "territory_kick": 0.90,
         },
-        "read_success_rate": 0.35,
-        "pressure_factor": 0.40,
-        "turnover_bonus": 0.20,
-        "explosive_suppression": 0.85,
+        "read_success_rate": 0.38,
+        "pressure_factor": 0.20,
+        "turnover_bonus": 0.08,
+        "explosive_suppression": 0.55,
+        "kick_suppression": 0.90,
+        "kick_pass_coverage": 0.14,
+        "pindown_defense": 0.85,
+        "fatigue_resistance": 0.08,
+        "gap_breakdown_bonus": 0.02,
+        "gameplan_bias": {
+            "dive_option": 0.02,
+            "speed_option": 0.02,
+            "sweep_option": 0.02,
+            "power": 0.02,
+            "counter": 0.03,
+            "draw": 0.03,
+            "viper_jet": 0.04,
+            "lateral_spread": 0.05,
+            "kick_pass": 0.06,
+            "trick_play": 0.04,
+            "territory_kick": 0.05,
+        },
+        "personnel_weights": {
+            "awareness": 0.30, "tackling": 0.25, "speed": 0.25, "agility": 0.20,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.08,
+            "short_yardage_modifier": 1.10,
+            "long_yardage_modifier": 0.80,
+            "trailing_aggression": 0.00,
+            "leading_conserve": 0.12,
+        },
+    },
+
+    # ================================================================
+    # CHAOS DEFENSE — Go-Go / Disguise analog
+    # Stunts, line shifts, pre-snap disguises every play.
+    # Messes up the offense's blocking assignments and pre-snap reads.
+    # High variance: sometimes dominates, sometimes gives up huge plays.
+    # ================================================================
+    "chaos": {
+        "label": "Chaos Defense",
+        "description": "Stunts, disguises, and line shifts every snap. Wrecks blocking assignments — but when the offense adjusts, it's wide open.",
+        "play_family_modifiers": {
+            "dive_option": 0.82,
+            "speed_option": 0.80,
+            "sweep_option": 0.78,
+            "power": 0.85,
+            "counter": 0.88,
+            "draw": 1.10,
+            "viper_jet": 0.80,
+            "lateral_spread": 0.90,
+            "kick_pass": 0.90,
+            "trick_play": 0.85,
+            "territory_kick": 1.00,
+        },
+        "read_success_rate": 0.42,
+        "pressure_factor": 0.70,
+        "turnover_bonus": 0.22,
+        "explosive_suppression": 1.10,
+        "kick_suppression": 1.00,
+        "kick_pass_coverage": 0.08,
+        "pindown_defense": 0.95,
+        "fatigue_resistance": -0.03,
+        "gap_breakdown_bonus": 0.06,
+        "gameplan_bias": {
+            "dive_option": 0.05,
+            "speed_option": 0.06,
+            "sweep_option": 0.06,
+            "power": 0.05,
+            "counter": 0.04,
+            "draw": 0.02,
+            "viper_jet": 0.06,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.05,
+            "trick_play": 0.06,
+            "territory_kick": 0.03,
+        },
+        "personnel_weights": {
+            "agility": 0.30, "speed": 0.30, "awareness": 0.25, "tackling": 0.15,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.06,
+            "short_yardage_modifier": 0.85,
+            "long_yardage_modifier": 1.05,
+            "trailing_aggression": 0.15,
+            "leading_conserve": 0.00,
+        },
+    },
+
+    # ================================================================
+    # LOCKDOWN — Shutdown Coverage analog
+    # Best kick pass defense in the game. Blankets receivers, denies completions.
+    # Worst vs power run game — light boxes get bulldozed.
+    # Forces the offense to grind on the ground.
+    # ================================================================
+    "lockdown": {
+        "label": "Lockdown",
+        "description": "Shutdown kick pass coverage — blankets receivers and denies completions. Forces you to grind on the ground through heavy boxes.",
+        "play_family_modifiers": {
+            "dive_option": 1.10,
+            "speed_option": 1.05,
+            "sweep_option": 1.05,
+            "power": 1.15,
+            "counter": 1.08,
+            "draw": 1.05,
+            "viper_jet": 0.88,
+            "lateral_spread": 0.85,
+            "kick_pass": 0.60,
+            "trick_play": 0.85,
+            "territory_kick": 0.82,
+        },
+        "read_success_rate": 0.38,
+        "pressure_factor": 0.30,
+        "turnover_bonus": 0.22,
+        "explosive_suppression": 0.78,
         "kick_suppression": 0.80,
-        "kick_pass_coverage": 0.18,
-        "pindown_defense": 0.75,
-        "fatigue_resistance": 0.025,
+        "kick_pass_coverage": 0.22,
+        "pindown_defense": 0.80,
+        "fatigue_resistance": 0.04,
         "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
             "dive_option": 0.00,
@@ -1235,12 +1586,22 @@ DEFENSE_STYLES = {
             "power": 0.00,
             "counter": 0.02,
             "draw": 0.02,
-            "viper_jet": 0.03,
-            "lateral_spread": 0.00,
-            "kick_pass": 0.08,
-            "trick_play": 0.02,
-            "territory_kick": 0.10,
-        }
+            "viper_jet": 0.04,
+            "lateral_spread": 0.04,
+            "kick_pass": 0.12,
+            "trick_play": 0.04,
+            "territory_kick": 0.08,
+        },
+        "personnel_weights": {
+            "awareness": 0.30, "speed": 0.30, "hands": 0.20, "tackling": 0.20,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.10,
+            "short_yardage_modifier": 1.12,
+            "long_yardage_modifier": 0.85,
+            "trailing_aggression": 0.02,
+            "leading_conserve": 0.10,
+        },
     },
 }
 
@@ -1269,19 +1630,37 @@ OFFENSE_BLOCK_MODIFIERS = {
 
 # Defensive style modifiers for blocks/muffs (higher = better special teams pressure)
 DEFENSE_BLOCK_MODIFIERS = {
-    "pressure_defense": 1.5,   # Elite at blocking kicks
-    "coverage_defense": 1.0,   # Average at blocking
-    "contain_defense": 1.0,    # Average at blocking
-    "run_stop_defense": 1.0,   # Average at blocking
-    "base_defense": 1.0,       # Average at blocking
+    "blitz_pack": 1.5,         # Elite at blocking kicks — extra rushers
+    "chaos": 1.3,              # Stunts create confusion on kick protection
+    "predator": 1.2,           # Aggressive — gets after kicks
+    "fortress": 1.1,           # Big bodies push the pocket
+    "swarm": 1.0,              # Average
+    "shadow": 1.0,             # Average
+    "drift": 0.9,              # Soft zone = less rush
+    "lockdown": 0.8,           # Drops back, doesn't rush kicks
+    # Legacy (backward compatibility)
+    "pressure_defense": 1.5,
+    "coverage_defense": 1.0,
+    "contain_defense": 1.0,
+    "run_stop_defense": 1.0,
+    "base_defense": 1.0,
 }
 
 DEFENSE_MUFF_MODIFIERS = {
-    "coverage_defense": 1.3,   # Better gunners/coverage = more muffs
-    "pressure_defense": 1.1,   # Aggressive coverage
-    "contain_defense": 1.0,    # Average
-    "run_stop_defense": 1.0,   # Average
-    "base_defense": 1.0,       # Average
+    "lockdown": 1.35,          # Best coverage = best gunners on punt team
+    "predator": 1.25,          # Aggressive coverage, forces mistakes
+    "swarm": 1.15,             # Flows to ball — good special teams
+    "chaos": 1.10,             # Unpredictable coverage
+    "blitz_pack": 1.05,        # Aggressive
+    "shadow": 1.00,            # Average
+    "drift": 0.95,             # Soft coverage, less pressure on returner
+    "fortress": 0.90,          # Slow to get downfield
+    # Legacy (backward compatibility)
+    "coverage_defense": 1.3,
+    "pressure_defense": 1.1,
+    "contain_defense": 1.0,
+    "run_stop_defense": 1.0,
+    "base_defense": 1.0,
 }
 
 
@@ -1393,8 +1772,13 @@ class ViperballEngine:
         self.away_team.offense_style = away_off
         self.home_style = OFFENSE_STYLES.get(home_off, OFFENSE_STYLES["balanced"])
         self.away_style = OFFENSE_STYLES.get(away_off, OFFENSE_STYLES["balanced"])
-        self.home_defense = DEFENSE_STYLES.get(self.home_team.defense_style, DEFENSE_STYLES["base_defense"])
-        self.away_defense = DEFENSE_STYLES.get(self.away_team.defense_style, DEFENSE_STYLES["base_defense"])
+        # Migrate old defense style names to new scheme names
+        home_def = DEFENSE_STYLE_MIGRATION.get(self.home_team.defense_style, self.home_team.defense_style)
+        away_def = DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style)
+        self.home_team.defense_style = home_def
+        self.away_team.defense_style = away_def
+        self.home_defense = DEFENSE_STYLES.get(home_def, DEFENSE_STYLES["swarm"])
+        self.away_defense = DEFENSE_STYLES.get(away_def, DEFENSE_STYLES["swarm"])
 
         self.home_game_rhythm = random.gauss(1.0, 0.15)
         self.away_game_rhythm = random.gauss(1.0, 0.15)
@@ -2547,30 +2931,150 @@ class ViperballEngine:
         """
         Determines if the defense successfully 'reads' the play.
         A successful read reduces play effectiveness.
-        Returns True if defense reads the play correctly.
+
+        The read rate is built from:
+        1. Base scheme read_success_rate
+        2. Gameplan bias for specific play families
+        3. Situational modifiers (red zone, short yardage, score, etc.)
+        4. Personnel quality (weighted by scheme's personnel_weights)
         """
         defense = self._current_defense()
         base_read_rate = defense.get("read_success_rate", 0.35)
 
-        # Add gameplan bias for specific play families
+        # Gameplan bias for specific play families
         gameplan_bias = defense.get("gameplan_bias", {}).get(play_family.value, 0.0)
-        total_read_rate = base_read_rate + gameplan_bias
+
+        # Situational modifiers from scheme
+        situational_boost = self._get_defense_situational_boost(defense)
+
+        # Personnel quality boost — good defenders improve read rate
+        personnel_boost = self._get_defense_personnel_boost(defense)
+
+        total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost
+        total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         return random.random() < total_read_rate
 
+    def _get_defense_situational_boost(self, defense: Dict) -> float:
+        """
+        Returns a read rate adjustment based on game situation and scheme tendencies.
+        Each scheme reacts differently to down/distance/score/field position.
+        """
+        sit = defense.get("situational", {})
+        boost = 0.0
+
+        fp = self.state.field_position
+        down = self.state.down
+        ytg = self.state.yards_to_go
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+
+        # Red zone — defenses tighten
+        if fp >= 80:
+            boost += sit.get("red_zone_read_boost", 0.05)
+
+        # Short yardage — some schemes excel, others struggle
+        # modifier < 1.0 means the scheme is BETTER (reduces yards)
+        # We convert to a read boost: lower modifier = higher read rate
+        if ytg <= 3:
+            short_mod = sit.get("short_yardage_modifier", 1.0)
+            boost += (1.0 - short_mod) * 0.15  # e.g. 0.70 → +0.045 read rate
+
+        # Long yardage — opposite dynamics
+        elif ytg > 10:
+            long_mod = sit.get("long_yardage_modifier", 1.0)
+            boost += (1.0 - long_mod) * 0.10
+
+        # Score-based aggression
+        if quarter >= 3:
+            if score_diff < -7:
+                # Defense is winning — trailing offense gets desperate, easier to read
+                boost += sit.get("leading_conserve", 0.05)
+            elif score_diff > 7:
+                # Defense is losing — scheme gets more aggressive
+                boost += sit.get("trailing_aggression", 0.05)
+
+        return boost
+
+    def _get_defense_personnel_boost(self, defense: Dict) -> float:
+        """
+        Returns a read rate boost based on how well the defensive personnel
+        matches the scheme's needs. Each scheme weights different stats.
+
+        A Blitz Pack needs speed and power. A Shadow needs awareness and agility.
+        A Predator needs awareness and hands. Better personnel = better reads.
+        """
+        def_team = self.get_defensive_team()
+        pw = defense.get("personnel_weights", {})
+        if not pw:
+            return 0.0
+
+        # Average the weighted stats across starting defenders
+        defenders = [p for p in def_team.players if p.position in ("Keeper", "Defensive Line")]
+        if not defenders:
+            defenders = def_team.players[:5]
+
+        total_score = 0.0
+        for p in defenders:
+            player_score = 0.0
+            player_score += pw.get("tackling", 0.0) * p.tackling
+            player_score += pw.get("speed", 0.0) * p.speed
+            player_score += pw.get("awareness", 0.0) * getattr(p, 'awareness', 75)
+            player_score += pw.get("agility", 0.0) * getattr(p, 'agility', 75)
+            player_score += pw.get("power", 0.0) * getattr(p, 'power', 75)
+            player_score += pw.get("hands", 0.0) * getattr(p, 'hands', 75)
+            total_score += player_score
+
+        avg_score = total_score / max(1, len(defenders))
+        # Normalize: 75 is average (0 boost), 90+ is elite (+0.05), 60- is bad (-0.05)
+        return (avg_score - 75) / 300  # 15 point swing = ±0.05
+
     def apply_defensive_modifiers(self, yards_gained: int, play_family: PlayFamily,
                                    is_explosive: bool = False) -> int:
-        defense = self._current_defense()
-        defense_read = self.get_defensive_read(play_family)
+        """
+        Apply full defensive scheme impact to yardage.
 
+        Pipeline:
+        1. Defensive read check (scheme + situation + personnel)
+        2. Play family modifier from scheme
+        3. Offense-vs-defense matchup matrix
+        4. Explosive play suppression
+        """
+        defense = self._current_defense()
+
+        # 1. Defensive read — if defense reads it, yardage is cut
+        defense_read = self.get_defensive_read(play_family)
         if defense_read:
-            read_reduction = random.uniform(0.75, 0.90)
+            read_reduction = random.uniform(0.70, 0.88)
             yards_gained = int(yards_gained * read_reduction)
             def_team = self.get_defensive_team()
             hurry_player = self._pick_def_tackler(def_team, yards_gained)
             hurry_player.game_hurries += 1
 
+        # 2. Play family modifier — scheme's base effectiveness vs this play type
+        pfm = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+        # Invert: lower pfm = defense is better, so multiply yards by pfm
+        # (pfm of 0.60 means defense holds to 60% of normal yardage)
+        yards_gained = int(yards_gained * pfm)
+
+        # 3. Offense-vs-defense matchup — rock/paper/scissors
+        off_style = self._current_style_name()
+        def_style = self._current_defense_name()
+        matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((off_style, def_style), 1.0)
+        yards_gained = int(yards_gained * matchup)
+
+        # 4. Explosive suppression — schemes with low suppression prevent big plays
+        if is_explosive:
+            exp_supp = defense.get("explosive_suppression", 0.90)
+            yards_gained = int(yards_gained * exp_supp)
+
         return yards_gained
+
+    def _current_defense_name(self) -> str:
+        """Returns the defense style name string for the team currently on defense."""
+        if self.state.possession == "home":
+            return self.away_team.defense_style
+        return self.home_team.defense_style
 
     def _defensive_fatigue_factor(self) -> float:
         """
