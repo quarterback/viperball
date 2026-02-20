@@ -16,6 +16,7 @@ class PlayType(Enum):
     RUN = "run"
     LATERAL_CHAIN = "lateral_chain"
     KICK_PASS = "kick_pass"
+    TRICK_PLAY = "trick_play"
     PUNT = "punt"
     DROP_KICK = "drop_kick"
     PLACE_KICK = "place_kick"
@@ -27,6 +28,7 @@ class PlayFamily(Enum):
     SWEEP_OPTION = "sweep_option"
     LATERAL_SPREAD = "lateral_spread"
     KICK_PASS = "kick_pass"
+    TRICK_PLAY = "trick_play"
     TERRITORY_KICK = "territory_kick"
     POWER = "power"
     COUNTER = "counter"
@@ -65,6 +67,7 @@ PLAY_FAMILY_TO_TYPE = {
     PlayFamily.VIPER_JET: PlayType.RUN,
     PlayFamily.LATERAL_SPREAD: PlayType.LATERAL_CHAIN,
     PlayFamily.KICK_PASS: PlayType.KICK_PASS,
+    PlayFamily.TRICK_PLAY: PlayType.TRICK_PLAY,
     PlayFamily.TERRITORY_KICK: PlayType.PUNT,
 }
 
@@ -150,6 +153,7 @@ PLAY_DIRECTION = {
     "counter": "weak",
     "draw": "center",
     "viper_jet": "edge",
+    "trick_play": "weak",
 }
 
 ALIGNMENT_VS_PLAY = {
@@ -185,6 +189,10 @@ ALIGNMENT_VS_PLAY = {
     ('balanced', 'draw'): 0.0,
     ('balanced', 'viper_jet'): 0.0,
     ('balanced', 'lateral_spread'): 0.0,
+    ('spread', 'trick_play'): 0.10,
+    ('stacked', 'trick_play'): 0.20,
+    ('aggressive', 'trick_play'): 0.15,
+    ('balanced', 'trick_play'): 0.08,
 }
 
 EXPLOSIVE_CHANCE = {
@@ -196,6 +204,7 @@ EXPLOSIVE_CHANCE = {
     'draw': 0.06,
     'viper_jet': 0.15,
     'lateral_spread': 0.12,
+    'trick_play': 0.18,
 }
 
 VIPER_ALIGNMENT_BONUS = {
@@ -736,15 +745,16 @@ OFFENSE_STYLES = {
         "label": "Ground & Pound",
         "description": "Grind 20 yards, punch it in. Old-school power football using all 6 downs.",
         "weights": {
-            "dive_option": 0.14,
-            "power": 0.12,
-            "sweep_option": 0.08,
-            "speed_option": 0.04,
+            "dive_option": 0.12,
+            "power": 0.11,
+            "sweep_option": 0.07,
+            "speed_option": 0.03,
             "counter": 0.03,
             "draw": 0.02,
             "viper_jet": 0.02,
             "lateral_spread": 0.20,
             "kick_pass": 0.30,
+            "trick_play": 0.05,
             "territory_kick": 0.05,
         },
         "tempo": 0.4,
@@ -766,15 +776,16 @@ OFFENSE_STYLES = {
         "label": "Lateral Spread",
         "description": "Stretch the defense horizontally with 2-4 lateral chains. High-variance, big-play offense.",
         "weights": {
-            "dive_option": 0.02,
+            "dive_option": 0.01,
             "power": 0.01,
-            "sweep_option": 0.03,
-            "speed_option": 0.03,
+            "sweep_option": 0.02,
+            "speed_option": 0.02,
             "counter": 0.02,
             "draw": 0.02,
             "viper_jet": 0.02,
             "lateral_spread": 0.42,
             "kick_pass": 0.38,
+            "trick_play": 0.03,
             "territory_kick": 0.05,
         },
         "tempo": 0.7,
@@ -799,15 +810,16 @@ OFFENSE_STYLES = {
         "label": "Boot Raid",
         "description": "Air Raid with the foot. Get to the Launch Pad (opp 40-45), then fire snap kicks.",
         "weights": {
-            "dive_option": 0.06,
-            "power": 0.04,
+            "dive_option": 0.04,
+            "power": 0.03,
             "sweep_option": 0.03,
             "speed_option": 0.02,
             "counter": 0.01,
-            "draw": 0.02,
+            "draw": 0.01,
             "viper_jet": 0.02,
             "lateral_spread": 0.15,
             "kick_pass": 0.55,
+            "trick_play": 0.04,
             "territory_kick": 0.10,
         },
         "weights_attack": {
@@ -836,15 +848,16 @@ OFFENSE_STYLES = {
         "label": "Ball Control",
         "description": "Conservative, mistake-free football. Take the points when available. Win 24-21.",
         "weights": {
-            "dive_option": 0.13,
-            "power": 0.10,
-            "sweep_option": 0.08,
+            "dive_option": 0.12,
+            "power": 0.09,
+            "sweep_option": 0.07,
             "speed_option": 0.04,
             "counter": 0.02,
             "draw": 0.02,
             "viper_jet": 0.01,
             "lateral_spread": 0.18,
             "kick_pass": 0.35,
+            "trick_play": 0.03,
             "territory_kick": 0.07,
         },
         "tempo": 0.3,
@@ -866,15 +879,16 @@ OFFENSE_STYLES = {
         "label": "Ghost Formation",
         "description": "Viper chaos and pre-snap confusion. The defense never knows where the playmaker is.",
         "weights": {
-            "dive_option": 0.03,
-            "power": 0.02,
-            "sweep_option": 0.04,
-            "speed_option": 0.03,
-            "counter": 0.05,
-            "draw": 0.03,
-            "viper_jet": 0.05,
+            "dive_option": 0.02,
+            "power": 0.01,
+            "sweep_option": 0.03,
+            "speed_option": 0.02,
+            "counter": 0.04,
+            "draw": 0.02,
+            "viper_jet": 0.04,
             "lateral_spread": 0.30,
             "kick_pass": 0.40,
+            "trick_play": 0.07,
             "territory_kick": 0.05,
         },
         "tempo": 0.65,
@@ -897,15 +911,16 @@ OFFENSE_STYLES = {
         "label": "Rouge Hunt",
         "description": "Defense-first offense. Punt early, pin deep, force mistakes. Score Pindowns, Bells, Safeties.",
         "weights": {
-            "dive_option": 0.10,
-            "power": 0.08,
-            "sweep_option": 0.05,
+            "dive_option": 0.09,
+            "power": 0.07,
+            "sweep_option": 0.04,
             "speed_option": 0.03,
             "counter": 0.02,
             "draw": 0.01,
             "viper_jet": 0.01,
             "lateral_spread": 0.20,
             "kick_pass": 0.25,
+            "trick_play": 0.03,
             "territory_kick": 0.25,
         },
         "tempo": 0.35,
@@ -928,13 +943,14 @@ OFFENSE_STYLES = {
         "weights": {
             "dive_option": 0.01,
             "power": 0.01,
-            "sweep_option": 0.02,
-            "speed_option": 0.02,
+            "sweep_option": 0.01,
+            "speed_option": 0.01,
             "counter": 0.01,
             "draw": 0.01,
-            "viper_jet": 0.02,
+            "viper_jet": 0.01,
             "lateral_spread": 0.50,
             "kick_pass": 0.35,
+            "trick_play": 0.03,
             "territory_kick": 0.05,
         },
         "tempo": 0.8,
@@ -958,15 +974,16 @@ OFFENSE_STYLES = {
         "label": "Triple Threat",
         "description": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
         "weights": {
-            "dive_option": 0.06,
-            "power": 0.06,
-            "sweep_option": 0.05,
-            "speed_option": 0.05,
-            "counter": 0.05,
+            "dive_option": 0.04,
+            "power": 0.05,
+            "sweep_option": 0.04,
+            "speed_option": 0.04,
+            "counter": 0.04,
             "draw": 0.04,
-            "viper_jet": 0.04,
+            "viper_jet": 0.03,
             "lateral_spread": 0.25,
             "kick_pass": 0.35,
+            "trick_play": 0.07,
             "territory_kick": 0.05,
         },
         "tempo": 0.45,
@@ -987,15 +1004,16 @@ OFFENSE_STYLES = {
         "label": "Balanced",
         "description": "No strong tendency, adapts to situation. Multiple threats, adaptable gameplan.",
         "weights": {
-            "dive_option": 0.05,
-            "speed_option": 0.04,
-            "sweep_option": 0.04,
-            "power": 0.05,
+            "dive_option": 0.04,
+            "speed_option": 0.03,
+            "sweep_option": 0.03,
+            "power": 0.04,
             "counter": 0.04,
             "draw": 0.04,
-            "viper_jet": 0.04,
+            "viper_jet": 0.03,
             "lateral_spread": 0.25,
             "kick_pass": 0.40,
+            "trick_play": 0.05,
             "territory_kick": 0.05,
         },
         "tempo": 0.5,
@@ -1043,6 +1061,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.95,
             "lateral_spread": 0.95,
             "kick_pass": 0.95,
+            "trick_play": 0.95,
             "territory_kick": 0.95,
         },
         "read_success_rate": 0.35,
@@ -1063,6 +1082,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.05,
             "lateral_spread": 0.05,
             "kick_pass": 0.05,
+            "trick_play": 0.05,
             "territory_kick": 0.05,
         }
     },
@@ -1079,6 +1099,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.75,
             "lateral_spread": 1.25,
             "kick_pass": 0.80,
+            "trick_play": 0.70,
             "territory_kick": 0.90,
         },
         "read_success_rate": 0.45,
@@ -1100,6 +1121,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.08,
             "lateral_spread": 0.10,
             "kick_pass": 0.05,
+            "trick_play": 0.08,
             "territory_kick": 0.00,
         }
     },
@@ -1116,6 +1138,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.75,
             "lateral_spread": 0.65,
             "kick_pass": 0.70,
+            "trick_play": 0.60,
             "territory_kick": 1.00,
         },
         "read_success_rate": 0.40,
@@ -1137,6 +1160,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.08,
             "lateral_spread": 0.10,
             "kick_pass": 0.08,
+            "trick_play": 0.10,
             "territory_kick": 0.00,
         }
     },
@@ -1153,6 +1177,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.80,
             "lateral_spread": 1.15,
             "kick_pass": 1.15,
+            "trick_play": 1.30,
             "territory_kick": 1.00,
         },
         "read_success_rate": 0.45,
@@ -1174,6 +1199,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.05,
             "lateral_spread": 0.00,
             "kick_pass": 0.00,
+            "trick_play": 0.00,
             "territory_kick": 0.00,
         }
     },
@@ -1190,6 +1216,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.90,
             "lateral_spread": 0.90,
             "kick_pass": 0.75,
+            "trick_play": 1.10,
             "territory_kick": 0.80,
         },
         "read_success_rate": 0.35,
@@ -1211,6 +1238,7 @@ DEFENSE_STYLES = {
             "viper_jet": 0.03,
             "lateral_spread": 0.00,
             "kick_pass": 0.08,
+            "trick_play": 0.02,
             "territory_kick": 0.10,
         }
     },
@@ -2286,6 +2314,8 @@ class ViperballEngine:
             play = self.simulate_lateral_chain(play_family)
         elif play_type == PlayType.KICK_PASS:
             play = self.simulate_kick_pass(play_family)
+        elif play_type == PlayType.TRICK_PLAY:
+            play = self.simulate_trick_play(play_family)
         elif play_type == PlayType.PUNT:
             play = self.simulate_punt(play_family)
         elif play_type == PlayType.DROP_KICK:
@@ -2326,18 +2356,21 @@ class ViperballEngine:
             weights["counter"] = weights.get("counter", 0.05) * 0.8
             weights["draw"] = weights.get("draw", 0.05) * 0.6
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.8
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
         elif ytg <= 10:
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.2
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.3
             weights["counter"] = weights.get("counter", 0.05) * 1.2
             weights["draw"] = weights.get("draw", 0.05) * 1.1
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 1.2
         else:
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.8
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.8
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.4
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 1.6
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
@@ -2348,11 +2381,13 @@ class ViperballEngine:
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.2
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.1
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
         elif fp >= 80:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 1.5
             weights["power"] = weights.get("power", 0.1) * 1.5
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.6
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.5
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.6
 
         if down >= 5 and ytg >= 10:
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.5
@@ -2369,11 +2404,13 @@ class ViperballEngine:
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.5
             weights["draw"] = weights.get("draw", 0.05) * 0.6
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
         elif quarter == 4 and time_left <= 300 and score_diff < -7:
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.5
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.6
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.5
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.4
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 1.8
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
@@ -3177,6 +3214,287 @@ class ViperballEngine:
             description=description + injury_note,
             fatigue=round(stamina, 1),
             play_signature=sig_detail,
+        )
+
+    def simulate_trick_play(self, family: PlayFamily = PlayFamily.TRICK_PLAY) -> Play:
+        """Simulate a trick play — high-risk/high-reward misdirection.
+
+        Trick plays disguise the true ball carrier or play direction. They include:
+        - Halfback kick (HB takes handoff then kicks downfield)
+        - Viper reverse (ball handed off, reversed to Viper going opposite way)
+        - Flea flicker (handoff → pitch back to ZB who kicks)
+        - Double reverse (two direction changes before the runner goes)
+        - Statue of Liberty (fake kick setup, trailing back takes it)
+
+        Integration: Called from simulate_play() when PlayFamily.TRICK_PLAY is selected.
+        The play family weight is set in OFFENSE_STYLES (3-7% depending on style).
+        Defense counters via play_family_modifiers["trick_play"] in DEFENSE_STYLES.
+        """
+        team = self.get_offensive_team()
+        style = self._current_style()
+
+        # Pick the trick play variant
+        trick_variants = [
+            {"name": "halfback_kick", "action": "HB kick", "positions": ["HB", "SB"], "fumble_rate": 0.04, "base_yards": (5.0, 12.0), "variance": 8.0},
+            {"name": "viper_reverse", "action": "viper reverse", "positions": ["VP", "WB"], "fumble_rate": 0.05, "base_yards": (3.0, 14.0), "variance": 9.0},
+            {"name": "flea_flicker", "action": "flea flicker", "positions": ["ZB", "HB"], "fumble_rate": 0.05, "base_yards": (4.0, 15.0), "variance": 10.0},
+            {"name": "double_reverse", "action": "double reverse", "positions": ["WB", "HB", "VP"], "fumble_rate": 0.06, "base_yards": (2.0, 16.0), "variance": 11.0},
+            {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.04, "base_yards": (6.0, 13.0), "variance": 8.0},
+        ]
+        variant = random.choice(trick_variants)
+
+        # Select primary ball carrier from eligible positions
+        eligible = []
+        for p in team.players[:8]:
+            ptag_check = player_tag(p)
+            if any(pos in ptag_check for pos in variant["positions"]):
+                eligible.append(p)
+        if not eligible:
+            eligible = team.players[:5]
+        carrier = random.choice(eligible)
+        plabel = player_label(carrier)
+        ptag = player_tag(carrier)
+        carrier.game_touches += 1
+
+        # Pick a secondary player involved in the trick
+        secondary_pool = [p for p in team.players[:8] if p != carrier]
+        secondary = random.choice(secondary_pool) if secondary_pool else carrier
+        sec_tag = player_tag(secondary)
+
+        # Base yardage calculation
+        base_min, base_max = variant["base_yards"]
+        base_center = random.uniform(base_min, base_max)
+        base_yards = random.gauss(base_center, variant["variance"])
+
+        # Misdirection bonus from style (ghost, triple_threat benefit here)
+        misdirection = style.get("misdirection_bonus", 1.0)
+        base_yards *= misdirection
+
+        # Viper alignment advantage
+        viper_align = self._determine_viper_alignment()
+        play_dir = PLAY_DIRECTION.get("trick_play", "weak")
+        viper_bonus = self._calculate_viper_advantage(viper_align, play_dir)
+
+        # Defensive alignment — trick plays exploit aggressive/stacked defenses
+        def_align = self._determine_defense_alignment()
+        def_align_mod = ALIGNMENT_VS_PLAY.get((def_align, "trick_play"), 0.08)
+
+        base_yards *= (1.0 + viper_bonus + def_align_mod)
+
+        # Defensive read check — if defense reads the trick, it's a disaster
+        defense = self._current_defense()
+        read_rate = defense.get("read_success_rate", 0.35)
+        trick_read_bonus = defense.get("gameplan_bias", {}).get("trick_play", 0.05)
+        defense_read = random.random() < (read_rate + trick_read_bonus)
+
+        if defense_read:
+            # Defense blew it up — big loss
+            base_yards = random.uniform(-8.0, -2.0)
+
+        # Apply defensive play family modifier
+        def_modifier = defense.get("play_family_modifiers", {}).get("trick_play", 0.95)
+        base_yards *= def_modifier
+
+        # Fatigue
+        fatigue_factor = self.get_fatigue_factor()
+        fatigue_resistance = style.get("fatigue_resistance", 0.0)
+        fatigue_factor = min(1.0, fatigue_factor + fatigue_resistance)
+        def_fatigue = self._defensive_fatigue_factor()
+
+        yards_gained = int(base_yards * fatigue_factor)
+        yards_gained = max(-10, yards_gained)
+
+        # Explosive play check — trick plays have highest explosive chance (18%)
+        was_explosive = False
+        explosive_chance = EXPLOSIVE_CHANCE.get("trick_play", 0.18)
+        explosive_supp = defense.get("explosive_suppression", 0.90)
+        if not defense_read and random.random() < (explosive_chance * explosive_supp):
+            was_explosive = True
+            extra = random.randint(10, 35)
+            yards_gained += extra
+
+        # Fumble check — trick plays involve extra ball handling
+        fumble_rate = variant["fumble_rate"]
+        fumble_rate += self.weather_info.get("fumble_modifier", 0.0)
+        if defense_read:
+            fumble_rate *= 1.5  # more likely to fumble when defense reads it
+
+        fp = self.state.field_position
+
+        if random.random() < fumble_rate:
+            fumble_yards = random.randint(-3, max(1, yards_gained))
+            fumble_spot = max(1, fp + fumble_yards)
+            carrier.game_fumbles += 1
+            recovered_by, is_bell = self._resolve_fumble_recovery(fumble_spot, carrier)
+
+            if recovered_by == 'defense':
+                self.change_possession()
+                self.state.field_position = max(1, 100 - fumble_spot)
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.add_score(0.5)
+                self.apply_stamina_drain(3)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=1, yards_to_go=20,
+                    play_type="trick_play", play_family=family.value,
+                    players_involved=[plabel, player_label(secondary)],
+                    yards_gained=fumble_yards,
+                    result=PlayResult.FUMBLE.value,
+                    description=f"{ptag} {variant['action']} via {sec_tag} → {fumble_yards} — FUMBLE! Defense recovers — BELL (+½)",
+                    fatigue=round(stamina, 1),
+                    fumble=True,
+                )
+            else:
+                self.state.field_position = max(1, fumble_spot)
+                self.state.down += 1
+                self.state.yards_to_go = max(1, self.state.yards_to_go - max(0, fumble_yards))
+                self.apply_stamina_drain(3)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                if self.state.down > 6:
+                    self.change_possession()
+                    self.state.field_position = 100 - self.state.field_position
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=1, yards_to_go=20,
+                        play_type="trick_play", play_family=family.value,
+                        players_involved=[plabel, player_label(secondary)],
+                        yards_gained=fumble_yards,
+                        result=PlayResult.TURNOVER_ON_DOWNS.value,
+                        description=f"{ptag} {variant['action']} via {sec_tag} → FUMBLE recovered by offense but TURNOVER ON DOWNS",
+                        fatigue=round(stamina, 1),
+                        fumble=True,
+                    )
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=self.state.down, yards_to_go=self.state.yards_to_go,
+                    play_type="trick_play", play_family=family.value,
+                    players_involved=[plabel, player_label(secondary)],
+                    yards_gained=max(0, fumble_yards),
+                    result=PlayResult.GAIN.value,
+                    description=f"{ptag} {variant['action']} via {sec_tag} → FUMBLE recovered by offense at {self.state.field_position}",
+                    fatigue=round(stamina, 1),
+                    fumble=True,
+                )
+
+        # Normal outcome resolution
+        new_position = min(100, fp + yards_gained)
+
+        desc_parts = []
+        if defense_read:
+            desc_parts.append("DEFENSE READ")
+        if viper_bonus >= 0.08:
+            desc_parts.append(f"VP {viper_align} pulls D")
+        if def_align != "balanced":
+            desc_parts.append(f"vs {def_align} D")
+        if was_explosive:
+            desc_parts.append("EXPLOSIVE")
+        mech_tag = f" [{', '.join(desc_parts)}]" if desc_parts else ""
+
+        # Safety check
+        if new_position <= 0:
+            self.change_possession()
+            self.add_score(2)
+            self.change_possession()
+            self.apply_stamina_drain(3)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            self.state.field_position = 20
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=self.state.down, yards_to_go=self.state.yards_to_go,
+                play_type="trick_play", play_family=family.value,
+                players_involved=[plabel, player_label(secondary)],
+                yards_gained=yards_gained,
+                result=PlayResult.SAFETY.value,
+                description=f"{ptag} {variant['action']} via {sec_tag} → tackled in end zone — SAFETY! (+2 defensive){mech_tag}",
+                fatigue=round(stamina, 1),
+            )
+
+        # Touchdown / first down / gain resolution
+        if new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team):
+            result = PlayResult.TOUCHDOWN
+            yards_gained = 100 - fp
+            self.add_score(9)
+            carrier.game_tds += 1
+            carrier.game_yards += yards_gained
+            carrier.game_rushing_yards += yards_gained
+            description = f"{ptag} {variant['action']} via {sec_tag} → {yards_gained} — TOUCHDOWN!{mech_tag}"
+        elif yards_gained >= self.state.yards_to_go:
+            result = PlayResult.FIRST_DOWN
+            self.state.field_position = new_position
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            carrier.game_yards += yards_gained
+            carrier.game_rushing_yards += yards_gained
+            description = f"{ptag} {variant['action']} via {sec_tag} → {yards_gained} — FIRST DOWN{mech_tag}"
+        else:
+            result = PlayResult.GAIN
+            self.state.field_position = new_position
+            self.state.down += 1
+            self.state.yards_to_go -= yards_gained
+            carrier.game_yards += yards_gained
+            carrier.game_rushing_yards += yards_gained
+            description = f"{ptag} {variant['action']} via {sec_tag} → {yards_gained}{mech_tag}"
+            if self.state.down > 6:
+                result = PlayResult.TURNOVER_ON_DOWNS
+                self.change_possession()
+                self.state.field_position = 100 - self.state.field_position
+                description += " — TURNOVER ON DOWNS"
+
+        # Tackling and injury
+        def_team = self.get_defensive_team()
+        tackler = self._pick_def_tackler(def_team, yards_gained)
+        tackler.game_tackles += 1
+        if yards_gained <= 0:
+            tackler.game_tfl += 1
+
+        injury_note = ""
+        carrier_inj = self.check_in_game_injury(carrier, play_type="run")
+        if carrier_inj:
+            injury_note += f" | {carrier_inj.narrative}"
+        tackler_inj = self.check_defender_injury(tackler, play_type="tackle")
+        if tackler_inj:
+            injury_note += f" | {tackler_inj.narrative}"
+
+        self.apply_stamina_drain(3)
+        stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+        return Play(
+            play_number=self.state.play_number,
+            quarter=self.state.quarter,
+            time=self.state.time_remaining,
+            possession=self.state.possession,
+            field_position=self.state.field_position,
+            down=self.state.down,
+            yards_to_go=self.state.yards_to_go,
+            play_type="trick_play",
+            play_family=family.value,
+            players_involved=[plabel, player_label(secondary)],
+            yards_gained=yards_gained,
+            result=result.value,
+            description=description + injury_note,
+            fatigue=round(stamina, 1),
         )
 
     def simulate_lateral_chain(self, family: PlayFamily = PlayFamily.LATERAL_SPREAD) -> Play:
