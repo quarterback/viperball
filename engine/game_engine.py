@@ -72,7 +72,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
         'base_yards': (3.5, 5.5),
         'variance': 3.0,
-        'fumble_rate': 0.010,
+        'fumble_rate': 0.005,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
         'archetype_bonus': {'power_flanker': 1.3, 'reliable_flanker': 1.2},
@@ -81,7 +81,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.POWER: {
         'base_yards': (3.5, 6.0),
         'variance': 3.5,
-        'fumble_rate': 0.012,
+        'fumble_rate': 0.006,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
         'archetype_bonus': {'power_flanker': 1.4},
@@ -90,7 +90,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SWEEP_OPTION: {
         'base_yards': (3.0, 6.0),
         'variance': 4.5,
-        'fumble_rate': 0.016,
+        'fumble_rate': 0.008,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
         'archetype_bonus': {'speed_flanker': 1.4, 'elusive_flanker': 1.3},
@@ -99,7 +99,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SPEED_OPTION: {
         'base_yards': (3.5, 6.5),
         'variance': 5.0,
-        'fumble_rate': 0.018,
+        'fumble_rate': 0.009,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'running_zb': 1.3, 'dual_threat_zb': 1.2},
@@ -108,7 +108,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.COUNTER: {
         'base_yards': (3.5, 7.0),
         'variance': 5.0,
-        'fumble_rate': 0.015,
+        'fumble_rate': 0.007,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'elusive_flanker': 1.3, 'hybrid_viper': 1.2},
@@ -117,7 +117,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DRAW: {
         'base_yards': (3.0, 6.0),
         'variance': 5.0,
-        'fumble_rate': 0.014,
+        'fumble_rate': 0.007,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
         'archetype_bonus': {'running_zb': 1.2},
@@ -126,7 +126,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.VIPER_JET: {
         'base_yards': (3.5, 7.0),
         'variance': 5.5,
-        'fumble_rate': 0.028,
+        'fumble_rate': 0.012,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
         'archetype_bonus': {'receiving_viper': 1.3, 'hybrid_viper': 1.4},
@@ -2637,45 +2637,17 @@ class ViperballEngine:
         base_fumble = config['fumble_rate']
 
         if yards_gained <= 0:
-            base_fumble += 0.035
-        elif yards_gained <= 2:
-            base_fumble += 0.015
+            base_fumble += 0.008
 
         if carrier:
             ball_security = getattr(carrier, 'hands', getattr(carrier, 'power', 75))
             if ball_security >= 85:
                 base_fumble *= 0.70
-            elif ball_security >= 70:
-                base_fumble *= 0.85
             elif ball_security < 60:
-                base_fumble *= 1.25
-        else:
-            team = self.get_offensive_team()
-            best_hands = max(getattr(p, 'hands', 75) for p in team.players[:5])
-            if best_hands >= 85:
-                base_fumble *= 0.80
-            elif best_hands < 60:
                 base_fumble *= 1.15
 
-        fatigue_factor = self.get_fatigue_factor()
-        if fatigue_factor < 0.85:
-            base_fumble += 0.008
-
-        defense = self._current_defense()
-        pressure = defense.get("pressure_factor", 0.50)
-        if pressure >= 0.80:
-            base_fumble += 0.012
-        elif pressure >= 0.50:
-            base_fumble += 0.005
-        turnover_bonus = defense.get("turnover_bonus", 0.0)
-        base_fumble *= (1 + turnover_bonus)
-
-        def_intensity = self.away_def_intensity if self.state.possession == "home" else self.home_def_intensity
-        def_fumble_boost = max(0, (def_intensity - 1.0)) * 0.5
-        base_fumble *= (1.0 + def_fumble_boost)
-
         if self.weather in ['rain', 'snow', 'sleet']:
-            base_fumble *= 1.40
+            base_fumble *= 1.20
         else:
             base_fumble += self.weather_info.get("fumble_modifier", 0.0)
 
@@ -2995,28 +2967,6 @@ class ViperballEngine:
             run_bonus_factor *= (1.0 + option_read_bonus)
 
         fp = self.state.field_position
-        if fp <= 25:
-            territory_mod = 0.88
-        elif fp <= 40:
-            territory_mod = 0.94
-        elif fp <= 55:
-            territory_mod = 1.00
-        elif fp <= 70:
-            territory_mod = 1.02
-        elif fp <= 85:
-            territory_mod = 0.96
-        else:
-            territory_mod = 0.90
-
-        defensive_stiffening = 1.0
-        if self.state.field_position >= 85:
-            defensive_stiffening = 0.96
-        elif self.state.field_position >= 70:
-            defensive_stiffening = 0.86
-        elif self.state.field_position >= 55:
-            defensive_stiffening = 0.84
-        elif self.state.field_position >= 45:
-            defensive_stiffening = 0.93
 
         safety_chance = 0.0
         if self.state.field_position <= 2:
@@ -3055,22 +3005,11 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        defense = self._current_defense()
-        def_family_mod = defense.get("play_family_modifiers", {}).get(family.value, 1.0)
+        style_mod = run_bonus_factor * fatigue_factor
+        style_mod = max(0.85, min(1.15, style_mod))
 
-        off_rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
-        def_intensity = self.away_def_intensity if self.state.possession == "home" else self.home_def_intensity
-
-        def_gap_bonus = defense.get("gap_breakdown_bonus", 0.0)
-        gap_breakdown_chance = (0.08 + def_gap_bonus) * def_intensity
+        yards_gained = int(base_yards * style_mod)
         gap_stuffed = False
-        if random.random() < gap_breakdown_chance:
-            yards_gained = random.randint(-3, 1)
-            gap_stuffed = True
-        elif random.random() < 0.15:
-            yards_gained = random.randint(1, 4)
-        else:
-            yards_gained = int(base_yards * fatigue_factor * def_fatigue * run_bonus_factor * territory_mod * def_family_mod * defensive_stiffening * off_rhythm / def_intensity)
 
         yards_gained = max(-5, yards_gained)
 
@@ -3285,41 +3224,17 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        per_exchange_fumble = 0.035
+        per_exchange_fumble = 0.020
         fumble_prob = 1.0 - (1.0 - per_exchange_fumble) ** chain_length
         fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
-        if self.drive_play_count >= 6:
-            fumble_prob += random.uniform(0.010, 0.025)
-        if chain_length >= 3:
-            fumble_prob += 0.025
         if chain_length >= 4:
-            fumble_prob += 0.035
+            fumble_prob += 0.015
         if chain_length >= 5:
-            fumble_prob += 0.030
-        fatigue_factor_lat = self.get_fatigue_factor()
-        if fatigue_factor_lat < 0.9:
             fumble_prob += 0.020
-        elif fatigue_factor_lat < 0.95:
-            fumble_prob += 0.010
-
-        tempo = style.get("tempo", 0.5)
-        fumble_prob *= (1 + (tempo - 0.5) * 0.10)
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
         fumble_prob *= (1 - lateral_success_bonus)
-
         fumble_prob *= style.get("lateral_risk", 1.0)
-        prof_reduction = max(0.85, team.lateral_proficiency / 100)
-        fumble_prob /= prof_reduction
-
-        # DEFENSIVE SYSTEM: Apply defensive pressure to lateral chains
-        defense = self._current_defense()
-        defensive_pressure = defense.get("pressure_factor", 0.50)
-        fumble_prob *= (1 + defensive_pressure * 0.15)  # Pressure increases fumble chance
-
-        # DEFENSIVE SYSTEM: Apply turnover bonus
-        turnover_bonus = defense.get("turnover_bonus", 0.0)
-        fumble_prob *= (1 + turnover_bonus)
 
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
@@ -3409,31 +3324,8 @@ class ViperballEngine:
 
         base_yards = random.gauss(5, 5)
         lateral_bonus = chain_length * 1.5
-        fatigue_factor = self.get_fatigue_factor()
-        viper_factor = self.calculate_viper_impact()
-        def_fatigue = self._defensive_fatigue_factor()
-        off_rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
-        def_intensity = self.away_def_intensity if self.state.possession == "home" else self.home_def_intensity
 
-        tired_def_yardage = style.get("tired_def_yardage_bonus", 0.0)
-        if def_fatigue > 1.0 and tired_def_yardage > 0:
-            def_fatigue += tired_def_yardage
-
-        fp = self.state.field_position
-        if fp <= 25:
-            lat_territory_mod = 0.75
-        elif fp <= 40:
-            lat_territory_mod = 0.85
-        elif fp <= 55:
-            lat_territory_mod = 0.95
-        elif fp <= 70:
-            lat_territory_mod = 1.15
-        elif fp <= 85:
-            lat_territory_mod = 1.30
-        else:
-            lat_territory_mod = 1.45
-
-        yards_gained = int((base_yards + lateral_bonus) * fatigue_factor * viper_factor * def_fatigue * lat_territory_mod * off_rhythm / def_intensity)
+        yards_gained = int(base_yards + lateral_bonus)
         yards_gained = max(-5, yards_gained)
 
         # Check for explosive lateral play
@@ -3533,9 +3425,15 @@ class ViperballEngine:
         team = self.get_offensive_team()
         style = self._current_style()
 
-        # Pick kicker (best kick_accuracy among top 8) and receiver (best hands among rest)
         top8 = team.players[:8]
-        kicker = max(top8, key=lambda p: p.kick_accuracy)
+        zbs = [p for p in top8 if p.position == "Zeroback"]
+        vps = [p for p in top8 if p.position == "Viper"]
+        if zbs:
+            kicker = max(zbs, key=lambda p: p.kick_accuracy)
+        elif vps:
+            kicker = max(vps, key=lambda p: p.kick_accuracy)
+        else:
+            kicker = max(top8, key=lambda p: p.kick_accuracy)
         eligible_receivers = [p for p in top8 if p != kicker]
         if not eligible_receivers:
             eligible_receivers = top8[1:]
@@ -3590,10 +3488,9 @@ class ViperballEngine:
             yac_bonus = receiver.speed / 100 * random.randint(0, 8)
             yac = int(yac + yac_bonus)
 
-            # Fumble on catch (ball security risk)
-            fumble_on_catch = 0.04
-            fumble_on_catch -= (receiver.hands / 100) * 0.02
-            fumble_on_catch = max(0.01, fumble_on_catch)
+            fumble_on_catch = 0.02
+            fumble_on_catch -= (receiver.hands / 100) * 0.01
+            fumble_on_catch = max(0.005, fumble_on_catch)
 
             total_yards = kick_distance + yac
 
