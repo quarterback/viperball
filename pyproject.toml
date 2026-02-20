@@ -5,8 +5,10 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.129.0",
+    "nicegui>=2.0.0",
     "pandas>=2.3.3",
     "plotly>=6.5.2",
-    "streamlit>=1.54.0",
     "uvicorn>=0.40.0",
+    "requests",
+    "httpx",
 ]
