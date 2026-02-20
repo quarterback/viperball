@@ -329,6 +329,8 @@ class Injury:
     week_injured: int
     weeks_out: int              # 0 for DTD who play through, 99 for season-ending
     week_return: int            # week player is available again; 9999 = season-ending
+    original_weeks_out: int = -1  # original timeline (-1 = not yet set)
+    recovery_note: str = ""     # "ahead of schedule", "suffered setback", etc.
     in_game: bool = False       # True if this happened during a game
 
     @property
@@ -383,10 +385,12 @@ class Injury:
             "body_part": self.body_part,
             "week_injured": self.week_injured,
             "weeks_out": self.weeks_out,
+            "original_weeks_out": self.original_weeks_out if self.original_weeks_out >= 0 else self.weeks_out,
             "week_return": self.week_return,
             "is_season_ending": self.is_season_ending,
             "in_game": self.in_game,
             "game_status": self.game_status,
+            "recovery_note": self.recovery_note,
         }
 
 
@@ -503,6 +507,8 @@ class InjuryTracker:
             week_injured=week,
             weeks_out=weeks_out,
             week_return=week_return,
+            original_weeks_out=weeks_out,
+            recovery_note="",
             in_game=in_game,
         )
 
@@ -554,12 +560,55 @@ class InjuryTracker:
         return new_injuries
 
     def resolve_week(self, week: int):
-        """Remove players who have returned from injury."""
+        """Remove recovered players and apply recovery variance.
+
+        Each week, injured players may:
+        - Return early (~25% chance when within 1 week of return date)
+        - Return early (~15% chance when within 2 weeks)
+        - Suffer a setback (~8% chance, adds 1-3 weeks)
+        Season-ending and DTD injuries are excluded from variance.
+        """
         for team_name in list(self.active_injuries.keys()):
-            self.active_injuries[team_name] = [
-                inj for inj in self.active_injuries[team_name]
-                if inj.week_return > week
-            ]
+            still_active = []
+            for inj in self.active_injuries[team_name]:
+                if inj.week_return <= week:
+                    continue
+
+                if inj.is_season_ending or inj.is_day_to_day:
+                    still_active.append(inj)
+                    continue
+
+                weeks_remaining = inj.week_return - week
+                original = inj.original_weeks_out if inj.original_weeks_out >= 0 else inj.weeks_out
+
+                if weeks_remaining <= 1 and original >= 2:
+                    if self.rng.random() < 0.25:
+                        inj.week_return = week
+                        inj.weeks_out = week - inj.week_injured
+                        inj.recovery_note = "Cleared early — ahead of schedule"
+                        continue
+                elif weeks_remaining <= 2 and original >= 3:
+                    if self.rng.random() < 0.15:
+                        inj.week_return = week
+                        inj.weeks_out = week - inj.week_injured
+                        inj.recovery_note = "Returned ahead of schedule"
+                        continue
+
+                if weeks_remaining >= 2 and original >= 3:
+                    if self.rng.random() < 0.08:
+                        extra = self.rng.randint(1, 3)
+                        inj.week_return += extra
+                        inj.weeks_out += extra
+                        inj.recovery_note = f"Suffered setback — out {extra} extra week(s)"
+
+                if not inj.recovery_note and original >= 2:
+                    elapsed = week - inj.week_injured
+                    if elapsed >= original * 0.5:
+                        inj.recovery_note = "Progressing on schedule"
+
+                still_active.append(inj)
+
+            self.active_injuries[team_name] = still_active
 
     # ── In-game injury roll ──────────────────────────────
 

@@ -221,15 +221,23 @@ def _render_dashboard(session_id, mode, team_name, standings):
             inj_rows = []
             for inj in active_inj:
                 status = "OUT FOR SEASON" if inj.get("is_season_ending") or inj.get("tier") == "severe" else (inj.get("game_status") or "OUT").upper()
+                orig_wks = inj.get("original_weeks_out", inj.get("weeks_out", 0))
+                cur_wks = inj.get("weeks_out", 0)
+                if status == "OUT FOR SEASON":
+                    timeline = "Season-ending"
+                elif orig_wks != cur_wks and orig_wks > 0:
+                    timeline = f"{cur_wks} wk (was {orig_wks})"
+                else:
+                    timeline = f"{cur_wks} wk" if cur_wks else "DTD"
+                recovery = inj.get("recovery_note", "")
                 inj_rows.append({
                     "Player": inj.get("player_name", ""),
                     "Position": inj.get("position", ""),
                     "Injury": inj.get("description", ""),
-                    "Body Part": (inj.get("body_part") or "").title(),
-                    "Category": {"on_field_contact": "Contact", "on_field_noncontact": "Non-Contact", "practice": "Practice", "off_field": "Off-Field"}.get(inj.get("category", ""), inj.get("category", "")),
                     "Status": status,
-                    "Week Out": inj.get("week_injured", ""),
+                    "Timeline": timeline,
                     "Return": "Season-ending" if status == "OUT FOR SEASON" else f"Wk {inj.get('week_return', '?')}",
+                    "Recovery": recovery if recovery else "—",
                 })
             st.dataframe(pd.DataFrame(inj_rows), hide_index=True, use_container_width=True)
         else:

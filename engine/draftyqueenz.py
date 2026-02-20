@@ -252,12 +252,21 @@ def _salary_for_player(overall: int, position_tag: str,
     return salary
 
 
-def compute_depth_chart(players: list) -> Dict[str, list]:
+def compute_depth_chart(players: list, unavailable_names: set = None,
+                        dtd_names: set = None) -> Dict[str, list]:
     """Compute depth chart for a team's players, grouped by position.
 
-    Returns dict of position -> list of (player, depth_rank) sorted by overall desc.
+    Injury-aware: unavailable players are pushed to the bottom with a
+    special rank suffix, DTD players are kept in normal ranking but flagged.
+
+    Returns dict of position -> list of (player, depth_rank, status) tuples
+    sorted by: healthy first (by overall desc), then injured (by overall desc).
+    status is "healthy", "dtd", or "out".
     """
     from engine.game_engine import player_tag
+    unavail = unavailable_names or set()
+    dtd = dtd_names or set()
+
     pos_groups: Dict[str, list] = {}
     for p in players:
         pos = getattr(p, "position", "Unknown")
@@ -265,8 +274,30 @@ def compute_depth_chart(players: list) -> Dict[str, list]:
 
     depth_chart: Dict[str, list] = {}
     for pos, group in pos_groups.items():
-        sorted_group = sorted(group, key=lambda x: getattr(x, "overall", 0), reverse=True)
-        depth_chart[pos] = [(p, rank + 1) for rank, p in enumerate(sorted_group)]
+        healthy = []
+        injured_out = []
+        for p in group:
+            name = getattr(p, "name", "")
+            if name in unavail:
+                injured_out.append(p)
+            else:
+                healthy.append(p)
+
+        healthy.sort(key=lambda x: getattr(x, "overall", 0), reverse=True)
+        injured_out.sort(key=lambda x: getattr(x, "overall", 0), reverse=True)
+
+        entries = []
+        rank = 1
+        for p in healthy:
+            name = getattr(p, "name", "")
+            status = "dtd" if name in dtd else "healthy"
+            entries.append((p, rank, status))
+            rank += 1
+        for p in injured_out:
+            entries.append((p, rank, "out"))
+            rank += 1
+
+        depth_chart[pos] = entries
 
     return depth_chart
 

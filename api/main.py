@@ -1004,17 +1004,29 @@ def get_team_roster(session_id: str, team_name: str):
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    tracker = session.get("injury_tracker")
+    unavail = set()
+    dtd = set()
+    if tracker:
+        current_week = _require_season(session).current_week
+        unavail = tracker.get_unavailable_names(team_name, current_week)
+        dtd = tracker.get_dtd_names(team_name, current_week)
+
     from engine.draftyqueenz import compute_depth_chart
-    depth = compute_depth_chart(team.players)
+    depth = compute_depth_chart(team.players, unavailable_names=unavail, dtd_names=dtd)
     depth_rank_map = {}
+    depth_status_map = {}
     for pos, entries in depth.items():
-        for p, rank in entries:
-            depth_rank_map[getattr(p, 'name', '')] = rank
+        for p, rank, status in entries:
+            pname = getattr(p, 'name', '')
+            depth_rank_map[pname] = rank
+            depth_status_map[pname] = status
 
     serialized = []
     for p in team.players:
         d = _serialize_player(p)
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
+        d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
         d["redshirt_eligible"] = (
             not getattr(p, "redshirt_used", False)
@@ -1783,17 +1795,29 @@ def team_roster(session_id: str, team_name: str):
 
     team = season.teams[team_name]
 
+    tracker = session.get("injury_tracker")
+    unavail = set()
+    dtd = set()
+    if tracker:
+        current_week = season.current_week
+        unavail = tracker.get_unavailable_names(team_name, current_week)
+        dtd = tracker.get_dtd_names(team_name, current_week)
+
     from engine.draftyqueenz import compute_depth_chart
-    depth = compute_depth_chart(team.players)
+    depth = compute_depth_chart(team.players, unavailable_names=unavail, dtd_names=dtd)
     depth_rank_map = {}
+    depth_status_map = {}
     for pos, entries in depth.items():
-        for p, rank in entries:
-            depth_rank_map[getattr(p, 'name', '')] = rank
+        for p, rank, status in entries:
+            pname = getattr(p, 'name', '')
+            depth_rank_map[pname] = rank
+            depth_status_map[pname] = status
 
     players = []
     for p in team.players:
         d = _serialize_player(p)
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
+        d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
         d["redshirt_eligible"] = (
             not getattr(p, "redshirt_used", False)

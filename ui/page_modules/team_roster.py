@@ -46,27 +46,25 @@ def render_team_roster(shared):
 
     view_mode = st.radio("View", ["Full Roster", "Depth Chart"], horizontal=True, key="static_roster_view")
 
-    pos_groups = {}
-    for p in players:
-        pos_groups.setdefault(p["position"], []).append(p)
-    depth_rank_map = {}
-    for pos, group in pos_groups.items():
-        sorted_group = sorted(group, key=lambda x: x["stats"].get("speed", 0) + x["stats"].get("agility", 0) + x["stats"].get("awareness", 0), reverse=True)
-        for i, pl in enumerate(sorted_group, 1):
-            depth_rank_map[pl["name"]] = i
-
     rows = []
     for p in players:
         if p["position"] not in selected_positions:
             continue
         s = p["stats"]
-        depth = depth_rank_map.get(p["name"], 99)
-        role = "Starter" if depth == 1 else f"Backup #{depth}" if depth <= 3 else "Reserve"
+        depth = p.get("depth_rank", 99)
+        ds = p.get("depth_status", "healthy")
+        if ds == "out":
+            role = "INJURED"
+        elif ds == "dtd":
+            role = "Starter (DTD)" if depth == 1 else f"Backup #{depth} (DTD)"
+        else:
+            role = "Starter" if depth == 1 else f"Backup #{depth}" if depth <= 3 else "Reserve"
         rows.append({
             "#": p["number"],
             "Name": p["name"],
             "Position": p["position"],
             "Role": role,
+            "Status": {"healthy": "Active", "dtd": "Questionable", "out": "OUT"}.get(ds, "Active"),
             "Archetype": p.get("archetype", ""),
             "Year": p["year"],
             "Height": p["height"],
@@ -86,9 +84,11 @@ def render_team_roster(shared):
     if view_mode == "Depth Chart" and rows:
         dc_positions = sorted(set(r["Position"] for r in rows))
         for pos in dc_positions:
-            group = sorted([r for r in rows if r["Position"] == pos], key=lambda x: -(x["Speed"] + x["Agility"] + x["Awareness"]))
+            group = sorted([r for r in rows if r["Position"] == pos],
+                           key=lambda x: (0 if x["Status"] == "Active" else 1 if x["Status"] == "Questionable" else 2,
+                                          -(x["Speed"] + x["Agility"] + x["Awareness"])))
             st.markdown(f"**{pos}**")
-            dc_df = pd.DataFrame(group)[["#", "Name", "Role", "Year", "Archetype", "Speed", "Agility", "Power", "Awareness"]]
+            dc_df = pd.DataFrame(group)[["#", "Name", "Role", "Status", "Year", "Archetype", "Speed", "Agility", "Power", "Awareness"]]
             st.dataframe(dc_df, hide_index=True, use_container_width=True)
     else:
         df = pd.DataFrame(rows)
