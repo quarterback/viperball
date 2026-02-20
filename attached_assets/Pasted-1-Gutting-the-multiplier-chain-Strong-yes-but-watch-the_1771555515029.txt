@@ -1,0 +1,15 @@
+1. Gutting the multiplier chain — Strong yes, but watch the floor
+
+Replacing 8 stacked factors with one base_yards * simple_modifier (0.85–1.15) is the right call. But 0.85–1.15 might be too narrow. That's only a ±15% swing between a fresh offense against a gassed defense vs. a tired offense against a stacked front. You might want 0.75–1.25 to preserve some feel of matchup advantage without the death spiral the current system creates. Test both ranges.
+
+2. Killing artificial yard-capping — Mostly yes, one concern
+
+Removing gap_breakdown, low-yardage floor, defensive_stiffening, and territory_mod is correct — they're all doing the same job (suppressing yards) and stacking to do it 4x. But "let the gaussian variance produce natural play outcomes" only works if the gaussian parameters are right. What's the current mean and stddev for the base yard generation? If it's something like mean=4, stddev=3, you'll get natural short plays without needing artificial floors. If it's mean=8, stddev=5, you'll get too many explosive plays without any dampening. Your engineer should verify the gaussian params produce a realistic yard distribution on their own before ripping out all the guardrails simultaneously.
+
+3. Halving fumble rates — Right direction, maybe not far enough
+
+Current: ~2.34 fumbles/team/game = ~4.7 total. Target: ~1.5/team = ~3 total. Real football is about 1-1.5 fumbles total per game — but viperball is a different sport with laterals and more ball-handling, so 3 total is reasonable. The specific cuts look right. One thing to watch: the negative-yard fumble bonus going from +0.035 to +0.008 — make sure this doesn't create a weird feedback loop where stuffed plays never fumble. Maybe +0.012 as a compromise. Getting stuffed behind the line should still carry some risk.
+
+4. Lateral fumble treatment — Yes, but this is the big one
+
+Laterals are supposed to be a core mechanic of viperball. If lateral fumbles are too punishing, teams will never lateral, and the sport loses its identity. The chain-length scaling is the key variable — each additional lateral should add risk, but the current scaling is probably exponential when it should be linear or logarithmic. A 3-man lateral chain should feel risky but viable, not suicidal.

@@ -1,0 +1,21 @@
+Fumbles overshot — you went past the target and nobody stopped
+
+Target was ~1.5/team. You're at 0.57-0.65. That's NFL-level fumble rates in a sport built around laterals. Laterals should generate fumbles — that's the risk/reward tradeoff that makes the mechanic interesting. If a 4-man lateral chain is basically free, there's no decision-making involved. Your engineer should walk the rates back up — you cut too aggressively. Aim for the 1.5 target, not 0.6.
+
+The aggression fix is correct but the reasoning is slightly off
+
+The engineer is right that the aggression values are backwards. But the fix shouldn't just flip the numbers — it should account for the expected value of each decision. On 6th down, "go for it" is always correct because the alternative is a turnover on downs anyway (unless you're punting/kicking). So 6th down aggression should be very high (~1.5+), while 4th and 5th down should depend on field position and yards remaining. A flat multiplier per down number is too blunt — but it's probably fine as a v1 fix as long as 6th down is heavily weighted toward going for it.
+
+The base yard bump concerns me
+
+Increasing base yards from 3-7 center to 5-6 center to accommodate 20-yard first downs is treating the symptom, not the cause. The real question is: is 20 yards for a first down the right number for this sport? If you have to keep inflating yard gains to make 20-yard first downs work, you'll end up with an arena football feel where every play goes for 6+ yards and there are no grinding drives. The alternative is dropping first down distance to 15 yards, which preserves the 3-5 yard play feel while making conversion rates more natural. But that's a design decision, not a tuning decision — flag it for whoever owns the rules.
+
+Safety check rates are high but maybe shouldn't be zero
+
+14% at the 2-yard line and 9% at the 5 are aggressive, sure. But before cutting them, look at what they actually produce in game totals. If it's <1 safety per game across both teams, the rates might be fine — they only fire when you're pinned deep, which is rare. If you gut safety rates and boost aggression and increase base yards all at once, you might overshoot TDs the way you overshot fumbles.
+
+The bigger pattern I'm seeing:
+
+Your engineer is fixing one stat, seeing another stat is wrong, then fixing that, in a chain. Fumbles → yards → TDs → aggression → safeties. Each fix shifts the equilibrium and reveals the next problem. This is exactly why I suggested phasing the changes. At this point you've changed so many variables simultaneously that if the next sim shows TDs at 6.5, you won't know which of the 8 knobs to turn back.
+
+My recommendation: After the aggression fix, run the sim and stop tuning for a moment. Look at the full stat line holistically. If TDs are at 2.8 and the target is 3-5, that might be close enough for now. Get the shape right before chasing exact numbers.

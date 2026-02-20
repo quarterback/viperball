@@ -70,63 +70,63 @@ PLAY_FAMILY_TO_TYPE = {
 
 RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
-        'base_yards': (3.5, 5.5),
+        'base_yards': (4.0, 6.5),
         'variance': 3.0,
-        'fumble_rate': 0.005,
+        'fumble_rate': 0.010,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
         'archetype_bonus': {'power_flanker': 1.3, 'reliable_flanker': 1.2},
         'action': 'dive',
     },
     PlayFamily.POWER: {
-        'base_yards': (3.5, 6.0),
+        'base_yards': (4.0, 6.5),
         'variance': 3.5,
-        'fumble_rate': 0.006,
+        'fumble_rate': 0.012,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
         'archetype_bonus': {'power_flanker': 1.4},
         'action': 'power',
     },
     PlayFamily.SWEEP_OPTION: {
-        'base_yards': (3.0, 6.0),
+        'base_yards': (3.5, 7.0),
         'variance': 4.5,
-        'fumble_rate': 0.008,
+        'fumble_rate': 0.014,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
         'archetype_bonus': {'speed_flanker': 1.4, 'elusive_flanker': 1.3},
         'action': 'sweep',
     },
     PlayFamily.SPEED_OPTION: {
-        'base_yards': (3.5, 6.5),
+        'base_yards': (4.0, 7.0),
         'variance': 5.0,
-        'fumble_rate': 0.009,
+        'fumble_rate': 0.015,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'running_zb': 1.3, 'dual_threat_zb': 1.2},
         'action': 'pitch',
     },
     PlayFamily.COUNTER: {
-        'base_yards': (3.5, 7.0),
+        'base_yards': (4.0, 7.5),
         'variance': 5.0,
-        'fumble_rate': 0.007,
+        'fumble_rate': 0.012,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'elusive_flanker': 1.3, 'hybrid_viper': 1.2},
         'action': 'counter',
     },
     PlayFamily.DRAW: {
-        'base_yards': (3.0, 6.0),
+        'base_yards': (3.5, 6.5),
         'variance': 5.0,
-        'fumble_rate': 0.007,
+        'fumble_rate': 0.012,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
         'archetype_bonus': {'running_zb': 1.2},
         'action': 'draw',
     },
     PlayFamily.VIPER_JET: {
-        'base_yards': (3.5, 7.0),
+        'base_yards': (4.0, 7.5),
         'variance': 5.5,
-        'fumble_rate': 0.012,
+        'fumble_rate': 0.020,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
         'archetype_bonus': {'receiving_viper': 1.3, 'hybrid_viper': 1.4},
@@ -1733,12 +1733,8 @@ class ViperballEngine:
         failure_cost = (1 - conversion_rate) * tod_value * 0.5
         ev_go_for_it = conversion_rate * (continuation_value + drive_ep * 0.6 + td_prob_boost) - failure_cost
 
-        aggression = {4: 1.25, 5: 1.00, 6: 0.85}.get(down, 1.0)
+        aggression = {4: 1.30, 5: 1.20, 6: 1.40}.get(down, 1.0)
         ev_go_for_it *= aggression
-        if fg_distance <= 55 and down >= 4:
-            ev_go_for_it *= 0.80
-        elif fg_distance <= 71 and down >= 5:
-            ev_go_for_it *= 0.75
         if fp >= 35 and fp < 52 and down <= 5 and ytg <= 5:
             ev_go_for_it *= 1.20
 
@@ -2527,32 +2523,15 @@ class ViperballEngine:
 
     def apply_defensive_modifiers(self, yards_gained: int, play_family: PlayFamily,
                                    is_explosive: bool = False) -> int:
-        """
-        Applies all defensive modifiers to yards gained.
-        This is the core of the defensive system.
-        """
         defense = self._current_defense()
-
-        # 1. Check if defense read the play
         defense_read = self.get_defensive_read(play_family)
 
-        # 2. Apply play family modifier
-        family_modifier = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
-        yards_gained = int(yards_gained * family_modifier)
-
-        # 3. If defense read the play, reduce yards significantly
         if defense_read:
-            read_reduction = random.uniform(0.55, 0.80)
+            read_reduction = random.uniform(0.75, 0.90)
             yards_gained = int(yards_gained * read_reduction)
             def_team = self.get_defensive_team()
             hurry_player = self._pick_def_tackler(def_team, yards_gained)
             hurry_player.game_hurries += 1
-
-        # 4. Apply explosive play suppression (if play is explosive)
-        if is_explosive:
-            explosive_suppression = defense.get("explosive_suppression", 1.0)
-            if random.random() > explosive_suppression:
-                yards_gained = int(yards_gained * 0.70)
 
         return yards_gained
 
@@ -2586,39 +2565,26 @@ class ViperballEngine:
         if yards_gained < 2:
             return False
         if new_position >= 97:
-            td_chance = 0.92
-            return random.random() < td_chance
+            td_chance = 0.95
         elif new_position >= 95:
-            td_chance = 0.82 + (team.avg_speed - 85) * 0.01
-            if self.drive_play_count >= 5:
-                td_chance += 0.08
-            return random.random() < td_chance
+            td_chance = 0.85
         elif new_position >= 90:
-            td_chance = 0.65 + (team.avg_speed - 85) * 0.008
-            if self.drive_play_count >= 5:
-                td_chance += 0.10
-            return random.random() < td_chance
+            td_chance = 0.70
         elif new_position >= 85:
-            td_chance = 0.45 + (team.avg_speed - 85) * 0.005
-            if self.drive_play_count >= 5:
-                td_chance += 0.10
-            return random.random() < td_chance
+            td_chance = 0.55
         elif new_position >= 80:
-            td_chance = 0.28 + (team.avg_speed - 85) * 0.004
-            if self.drive_play_count >= 5:
-                td_chance += 0.08
-            return random.random() < td_chance
+            td_chance = 0.35
         elif new_position >= 75:
-            td_chance = 0.12 + (team.avg_speed - 85) * 0.003
+            td_chance = 0.18
             if yards_gained >= 8:
                 td_chance += 0.10
-            return random.random() < td_chance
         elif new_position >= 70:
-            td_chance = 0.05 + (team.avg_speed - 85) * 0.002
+            td_chance = 0.08
             if yards_gained >= 12:
-                td_chance += 0.08
-            return random.random() < td_chance
-        return False
+                td_chance += 0.10
+        else:
+            return False
+        return random.random() < td_chance
 
     def _breakaway_check(self, yards_gained: int, team: Team) -> int:
         if yards_gained >= 7:
@@ -2637,7 +2603,7 @@ class ViperballEngine:
         base_fumble = config['fumble_rate']
 
         if yards_gained <= 0:
-            base_fumble += 0.008
+            base_fumble += 0.012
 
         if carrier:
             ball_security = getattr(carrier, 'hands', getattr(carrier, 'power', 75))
@@ -2970,15 +2936,13 @@ class ViperballEngine:
 
         safety_chance = 0.0
         if self.state.field_position <= 2:
-            safety_chance = 0.14
+            safety_chance = 0.10
         elif self.state.field_position <= 5:
-            safety_chance = 0.09
+            safety_chance = 0.06
         elif self.state.field_position <= 10:
-            safety_chance = 0.05
+            safety_chance = 0.03
         elif self.state.field_position <= 15:
-            safety_chance = 0.025
-        elif self.state.field_position <= 20:
-            safety_chance = 0.0120
+            safety_chance = 0.015
         if safety_chance > 0 and random.random() < safety_chance:
             self.change_possession()
             self.add_score(2)
@@ -3006,7 +2970,7 @@ class ViperballEngine:
             )
 
         style_mod = run_bonus_factor * fatigue_factor
-        style_mod = max(0.85, min(1.15, style_mod))
+        style_mod = max(0.75, min(1.25, style_mod))
 
         yards_gained = int(base_yards * style_mod)
         gap_stuffed = False
@@ -3224,17 +3188,14 @@ class ViperballEngine:
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
-        per_exchange_fumble = 0.020
-        fumble_prob = 1.0 - (1.0 - per_exchange_fumble) ** chain_length
+        base_lateral_fumble = 0.06
+        fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.05
         fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
-        if chain_length >= 4:
-            fumble_prob += 0.015
-        if chain_length >= 5:
-            fumble_prob += 0.020
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
         fumble_prob *= (1 - lateral_success_bonus)
         fumble_prob *= style.get("lateral_risk", 1.0)
+        fumble_prob = max(0.02, min(0.20, fumble_prob))
 
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
