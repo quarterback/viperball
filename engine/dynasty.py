@@ -280,6 +280,10 @@ class Dynasty:
     # Team NIL programs for current year (not serialised, rebuilt each offseason)
     _nil_programs: Dict[str, NILProgram] = field(default_factory=dict, repr=False)
 
+    # Coaching staff per team: team_name -> { role -> CoachCard }
+    _coaching_staffs: Dict[str, dict] = field(default_factory=dict, repr=False)
+    coaching_history: Dict[int, dict] = field(default_factory=dict)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
 
@@ -614,6 +618,10 @@ class Dynasty:
                 team_dev_boost = 0.0
                 if dq_team_boosts and team_name in dq_team_boosts:
                     team_dev_boost = dq_team_boosts[team_name].get("development", 0.0)
+                # Coaching: HC development attribute adds to dev_boost
+                if hasattr(self, '_coaching_staffs') and team_name in self._coaching_staffs:
+                    from engine.coaching import compute_dev_boost
+                    team_dev_boost += compute_dev_boost(self._coaching_staffs[team_name])
                 report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost)
                 for ev in report.notable_events:
                     dev_events.append({
@@ -716,6 +724,92 @@ class Dynasty:
                 recent_wins=recent_wins,
             )
         result["prestige"] = dict(self.team_prestige)
+
+        # ── 1b. Coaching staff management ──
+        from engine.coaching import (
+            CoachCard, CoachMarketplace, CoachingSalaryPool,
+            auto_coaching_pool, generate_coaching_staff,
+            evaluate_coaching_staff, ai_fill_vacancies,
+            calculate_coach_salary,
+        )
+
+        # Initialise coaching staffs if not present
+        if not self._coaching_staffs:
+            for team_name in self.team_histories:
+                prestige = self.team_prestige.get(team_name, 50)
+                self._coaching_staffs[team_name] = generate_coaching_staff(
+                    team_name=team_name, prestige=prestige, year=year, rng=rng,
+                )
+
+        # Build coaching salary pools
+        coaching_pools: Dict[str, CoachingSalaryPool] = {}
+        for team_name in self.team_histories:
+            prestige = self.team_prestige.get(team_name, 50)
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            prev_wins = sr.get("wins", 5)
+            champ = False
+            if prev_year in self.awards_history:
+                if team_name == self.awards_history[prev_year].champion:
+                    champ = True
+            coaching_pools[team_name] = auto_coaching_pool(
+                team_name=team_name, prestige=prestige,
+                previous_wins=prev_wins, championship=champ, rng=rng,
+            )
+
+        # CPU teams evaluate and potentially fire coaches
+        human_team = self.coach.team_name
+        marketplace = CoachMarketplace(year=year)
+        marketplace.generate_free_agents(num_coaches=40, rng=rng)
+
+        coaching_changes: Dict[str, list] = {}
+        for team_name, staff in self._coaching_staffs.items():
+            if team_name == human_team:
+                continue  # Human decides their own coaching
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            tw = sr.get("wins", 5)
+            tl = sr.get("losses", 5)
+            fire_list = evaluate_coaching_staff(staff, tw, tl, rng=rng)
+            if fire_list:
+                coaching_changes[team_name] = fire_list
+                # Tick contract years for remaining staff
+                for role, card in staff.items():
+                    if role not in fire_list:
+                        card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
+                        card.seasons_coached += 1
+                        card.career_wins += tw
+                        card.career_losses += tl
+                        card.age += 1
+                staff = ai_fill_vacancies(
+                    staff, fire_list, marketplace,
+                    coaching_pools[team_name], team_name, year, rng=rng,
+                )
+                self._coaching_staffs[team_name] = staff
+            else:
+                # Normal end-of-season updates for all coaches
+                for role, card in staff.items():
+                    card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
+                    card.seasons_coached += 1
+                    card.career_wins += tw
+                    card.career_losses += tl
+                    card.age += 1
+
+        # Update human team coaches too (career stats, age)
+        if human_team in self._coaching_staffs:
+            sr = self.team_histories.get(human_team, TeamHistory(team_name=human_team))
+            hw = sr.season_records.get(prev_year, {}).get("wins", 5)
+            hl = sr.season_records.get(prev_year, {}).get("losses", 5)
+            for role, card in self._coaching_staffs[human_team].items():
+                card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
+                card.seasons_coached += 1
+                card.career_wins += hw
+                card.career_losses += hl
+                card.age += 1
+
+        self.coaching_history[year] = {
+            "changes": coaching_changes,
+            "marketplace_summary": marketplace.get_summary(),
+        }
+        result["coaching"] = self.coaching_history[year]
 
         # ── 2. Build NIL programs ──
         self._nil_programs = {}
@@ -866,6 +960,13 @@ class Dynasty:
             nil_prog = self._nil_programs.get(team_name)
             nil_budgets[team_name] = nil_prog.recruiting_pool if nil_prog else 300_000
 
+        # Build coaching recruiting scores from staff
+        team_coaching_scores: Dict[str, float] = {}
+        if self._coaching_staffs:
+            from engine.coaching import compute_recruiting_bonus
+            for tn, staff in self._coaching_staffs.items():
+                team_coaching_scores[tn] = compute_recruiting_bonus(staff)
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -878,6 +979,7 @@ class Dynasty:
             nil_budgets=nil_budgets,
             pool_size=pool_size,
             rng=rng,
+            team_coaching_scores=team_coaching_scores,
         )
 
         self.recruiting_history[year] = {
