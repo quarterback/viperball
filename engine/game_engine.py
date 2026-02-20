@@ -749,7 +749,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.4,
         "lateral_risk": 0.6,
-        "kick_rate": 0.08,
+        "kick_rate": 0.18,
         "option_rate": 0.55,
         "run_bonus": 0.06,
         "fatigue_resistance": 0.08,
@@ -779,7 +779,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.7,
         "lateral_risk": 1.4,
-        "kick_rate": 0.12,
+        "kick_rate": 0.22,
         "option_rate": 0.25,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
@@ -819,7 +819,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.6,
         "lateral_risk": 0.9,
-        "kick_rate": 0.35,
+        "kick_rate": 0.55,
         "option_rate": 0.30,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
@@ -849,7 +849,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.3,
         "lateral_risk": 0.5,
-        "kick_rate": 0.10,
+        "kick_rate": 0.20,
         "option_rate": 0.30,
         "run_bonus": 0.04,
         "fatigue_resistance": 0.05,
@@ -879,7 +879,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.65,
         "lateral_risk": 1.1,
-        "kick_rate": 0.10,
+        "kick_rate": 0.20,
         "option_rate": 0.40,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
@@ -910,7 +910,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.35,
         "lateral_risk": 0.6,
-        "kick_rate": 0.35,
+        "kick_rate": 0.50,
         "option_rate": 0.25,
         "run_bonus": 0.03,
         "fatigue_resistance": 0.05,
@@ -939,7 +939,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.8,
         "lateral_risk": 1.6,
-        "kick_rate": 0.08,
+        "kick_rate": 0.16,
         "option_rate": 0.25,
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
@@ -971,7 +971,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.45,
         "lateral_risk": 0.7,
-        "kick_rate": 0.10,
+        "kick_rate": 0.20,
         "option_rate": 0.45,
         "run_bonus": 0.03,
         "fatigue_resistance": 0.04,
@@ -1000,7 +1000,7 @@ OFFENSE_STYLES = {
         },
         "tempo": 0.5,
         "lateral_risk": 1.0,
-        "kick_rate": 0.22,
+        "kick_rate": 0.35,
         "option_rate": 0.40,
         "run_bonus": 0.03,
         "fatigue_resistance": 0.025,
@@ -1685,23 +1685,23 @@ class ViperballEngine:
         ev_drop_kick = dk_success * 5 + (1 - dk_success) * dk_miss_value
 
         if fg_distance <= 20:
-            ev_drop_kick *= 4.50
+            ev_drop_kick *= 6.00
         elif fg_distance <= 25:
-            ev_drop_kick *= 3.60
+            ev_drop_kick *= 5.00
         elif fg_distance <= 30:
-            ev_drop_kick *= 2.80
+            ev_drop_kick *= 3.80
         elif fg_distance <= 35:
-            ev_drop_kick *= 2.20
+            ev_drop_kick *= 3.00
         elif fg_distance <= 40:
-            ev_drop_kick *= 1.75
+            ev_drop_kick *= 2.40
         elif fg_distance <= 48:
-            ev_drop_kick *= 1.40
+            ev_drop_kick *= 1.90
         else:
-            ev_drop_kick *= 1.10
+            ev_drop_kick *= 1.45
 
         arch_info = get_archetype_info(kicker.archetype)
         if is_specialist:
-            ev_drop_kick *= 1.45
+            ev_drop_kick *= 1.80
             snapkick_boost = arch_info.get("snapkick_trigger_boost", 0.0)
             ev_drop_kick *= (1.0 + snapkick_boost * 0.5)
 
@@ -2158,32 +2158,37 @@ class ViperballEngine:
             return None
         fp = self.state.field_position
         fg_distance = (100 - fp) + 10
-        if fg_distance > 55:
+        if fg_distance > 58:
             return None
 
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
 
         if fg_distance <= 20:
-            shot_chance = 0.40
+            shot_chance = 0.65
         elif fg_distance <= 25:
-            shot_chance = 0.32
+            shot_chance = 0.55
         elif fg_distance <= 30:
-            shot_chance = 0.26
+            shot_chance = 0.45
         elif fg_distance <= 35:
-            shot_chance = 0.20
+            shot_chance = 0.36
         elif fg_distance <= 40:
-            shot_chance = 0.16
+            shot_chance = 0.28
+        elif fg_distance <= 48:
+            shot_chance = 0.20
         else:
-            shot_chance = 0.10
+            shot_chance = 0.12
 
-        if kicker.archetype == "kicking_zb":
-            shot_chance *= 1.5
+        is_specialist = kicker.archetype == "kicking_zb" or kicker.kicking >= 85
+        if is_specialist:
+            shot_chance *= 2.2
+        elif kicker.kicking >= 78:
+            shot_chance *= 1.4
 
         if self.state.down == 5:
-            shot_chance *= 0.70
+            shot_chance *= 0.75
         elif self.state.down == 4:
-            shot_chance *= 0.85
+            shot_chance *= 0.90
 
         score_diff = self._get_score_diff()
         if score_diff < -6:
@@ -2378,6 +2383,15 @@ class ViperballEngine:
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
+
+        kp_weight = weights.get("kick_pass", 0.05)
+        kp_bonus = style.get("kick_pass_bonus", 0.0)
+        if kp_weight >= 0.10 or kp_bonus >= 0.06:
+            spacing_factor = 1.0 + min(0.15, kp_weight * 0.5 + kp_bonus)
+            weights["dive_option"] = weights.get("dive_option", 0.1) * spacing_factor
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * spacing_factor
+            weights["speed_option"] = weights.get("speed_option", 0.1) * spacing_factor
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * (1.0 + min(0.10, kp_bonus * 0.8))
 
         families = list(PlayFamily)
         w = [max(0.01, weights.get(f.value, 0.05)) for f in families]
@@ -3537,95 +3551,43 @@ class ViperballEngine:
         kick_distance = min(random.randint(8, 32), random.randint(8, 28))
         kick_pass_bonus = style.get("kick_pass_bonus", 0.0)
 
-        # Completion probability — kick passes are inherently harder than thrown passes.
-        # A ball off the foot is less accurate and harder to catch cleanly.
-        kicker_factor = (kicker.kick_accuracy / 80) * 0.6 + (kicker.kicking / 80) * 0.4
-        receiver_factor = (receiver.hands / 80) * 0.5 + (receiver.agility / 80) * 0.3 + (receiver.speed / 80) * 0.2
+        kicker_skill = (kicker.kick_accuracy * 0.6 + kicker.kicking * 0.4)
+        kicker_factor = 1.0 + (kicker_skill - 70) * 0.006
+        receiver_skill = (receiver.hands * 0.5 + receiver.agility * 0.3 + receiver.speed * 0.2)
+        receiver_factor = 1.0 + (receiver_skill - 70) * 0.005
         weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
 
         if kick_distance <= 12:
-            base_completion = 0.68
+            base_completion = 0.75
         elif kick_distance <= 18:
-            base_completion = 0.55
+            base_completion = 0.63
         elif kick_distance <= 25:
-            base_completion = 0.40
+            base_completion = 0.50
         elif kick_distance <= 30:
-            base_completion = 0.25
+            base_completion = 0.35
         else:
-            base_completion = 0.14
+            base_completion = 0.22
 
         completion_prob = base_completion * kicker_factor * receiver_factor * (1.0 + kick_pass_bonus + weather_mod)
 
-        # Defensive coverage impact
         defense = self._current_defense()
         coverage_mod = defense.get("kick_pass_coverage", 0.0)
         completion_prob *= (1.0 - coverage_mod)
+        completion_prob = min(0.92, max(0.08, completion_prob))
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
 
-        # Interception check — kicked balls hang in the air longer than thrown passes,
-        # but defenses are still adapting to this unconventional play.
-        base_int_chance = 0.025
-        int_mod = defense.get("turnover_bonus", 0.0)
-        coverage_int = defense.get("kick_pass_coverage", 0.0)
-        int_chance = base_int_chance * (1 + int_mod + coverage_int)
-        # Good kicker accuracy reduces INT chance (no artificial floor)
-        int_chance *= (1.0 - (kicker_factor - 1.0) * 0.4)
-        # Longer kicks are slightly easier to read
-        if kick_distance >= 25:
-            int_chance += 0.015
-        elif kick_distance >= 18:
-            int_chance += 0.005
-
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
-        if random.random() < int_chance:
-            # Interception — defense catches the kick pass
-            kicker.game_kick_pass_interceptions += 1
-            int_spot = min(99, self.state.field_position + kick_distance)
-            self.change_possession()
-            self.state.field_position = max(1, 100 - int_spot)
-            self.state.down = 1
-            self.state.yards_to_go = 20
-
-            # Pick interceptor weighted by awareness + hands (defensive prowess)
-            def_team = self.get_defensive_team()
-            def_candidates = def_team.players[:6]
-            int_weights = [p.awareness + p.hands for p in def_candidates]
-            interceptor = random.choices(def_candidates, weights=int_weights)[0]
-            interceptor.game_kick_pass_ints += 1
-            int_tag = player_tag(interceptor)
-
-            self.apply_stamina_drain(4)
-            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-
-            return Play(
-                play_number=self.state.play_number,
-                quarter=self.state.quarter,
-                time=self.state.time_remaining,
-                possession=self.state.possession,
-                field_position=self.state.field_position,
-                down=1,
-                yards_to_go=20,
-                play_type="kick_pass",
-                play_family=family.value,
-                players_involved=[kicker_lbl, receiver_lbl],
-                yards_gained=0,
-                result=PlayResult.KICK_PASS_INTERCEPTED.value,
-                description=f"{kicker_tag} kick pass intended for {receiver_tag} — INTERCEPTED by {int_tag}!",
-                fatigue=round(stamina, 1),
-            )
-
-        if random.random() < completion_prob:
-            # Completion — receiver catches the kick
+        roll = random.random()
+        if roll < completion_prob:
             kicker.game_kick_passes_completed += 1
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
 
-            # Yards after catch (limited — ball off a kick is harder to secure)
-            yac = random.randint(0, 8)
-            yac_bonus = receiver.speed / 100 * random.randint(0, 5)
+            yac = random.randint(2, 14)
+            yac_bonus = receiver.speed / 100 * random.randint(0, 8)
             yac = int(yac + yac_bonus)
 
             # Fumble on catch (ball security risk)
@@ -3786,7 +3748,52 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        # Incomplete kick pass — ball dead at line of scrimmage, lose a down
+        base_int_chance = 0.03
+        int_mod = defense.get("turnover_bonus", 0.0)
+        coverage_int = defense.get("kick_pass_coverage", 0.0)
+        int_chance = base_int_chance * (1 + int_mod + coverage_int * 0.5)
+        int_chance *= (2.0 - kicker_factor)
+        if kick_distance >= 25:
+            int_chance += 0.015
+        elif kick_distance >= 18:
+            int_chance += 0.005
+        int_chance = max(0.01, min(0.12, int_chance))
+
+        if random.random() < int_chance:
+            kicker.game_kick_pass_interceptions += 1
+            int_spot = min(99, self.state.field_position + kick_distance)
+            self.change_possession()
+            self.state.field_position = max(1, 100 - int_spot)
+            self.state.down = 1
+            self.state.yards_to_go = 20
+
+            def_team = self.get_defensive_team()
+            def_candidates = def_team.players[:6]
+            int_weights = [p.awareness + p.hands for p in def_candidates]
+            interceptor = random.choices(def_candidates, weights=int_weights)[0]
+            interceptor.game_kick_pass_ints += 1
+            int_tag = player_tag(interceptor)
+
+            self.apply_stamina_drain(4)
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=1,
+                yards_to_go=20,
+                play_type="kick_pass",
+                play_family=family.value,
+                players_involved=[kicker_lbl, receiver_lbl],
+                yards_gained=0,
+                result=PlayResult.KICK_PASS_INTERCEPTED.value,
+                description=f"{kicker_tag} kick pass intended for {receiver_tag} — INTERCEPTED by {int_tag}!",
+                fatigue=round(stamina, 1),
+            )
+
         self.state.down += 1
 
         description = f"{kicker_tag} kick pass intended for {receiver_tag} — INCOMPLETE"

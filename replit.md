@@ -5,9 +5,10 @@ The Viperball Simulation Sandbox is a browser-accessible platform for the Colleg
 
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
-- **Snap kick (DK) rate**: User confirmed 1.78-2.23/game is PERFECT. Do NOT lower snap kicks — the old 0.5-1.5 target was too low. Updated target range: 1.5-2.5 DK per team per game.
+- **Snap kick (DK) rate**: NBA 3-pointer philosophy — DK is the premium scoring play. Target: 3.5-4.0 DK per team per game. Specialist teams (kicking_zb archetype or kicking ≥85) should hit 4.5-6+. Non-specialists ~3.0-3.5. Teams should DK almost every time they're in range with a specialist.
 - **Place kick philosophy**: User wants more PK attempts — teams should try field goals instead of punting when drives stall, even from 40+ yards. PK attempts target: 3-5 per team per game. Max FG range: 71 yards. Success rate is secondary to attempt frequency.
-- **Snap kick philosophy**: Drop kicks (snap kicks) should be preferred over place kicks from close range (≤25 yards: why take 3 when you can get 5?). Common at 25-40 yards, plausible at 40-55 yards. Kicking specialists (kicking_zb archetype or skill ≥82) get significant DK preference boosts. Target DK rate: 1.78-2.23 per team per game.
+- **Snap kick philosophy**: Drop kicks (snap kicks) should be strongly preferred over place kicks from close range (≤25 yards: why take 3 when you can get 5?). Common at 25-40 yards, plausible at 40-58 yards. Kicking specialists get massive DK preference boosts (2.2x shot play trigger, 1.8x EV multiplier).
+- **Kick passing**: Real offensive weapon, not a prayer. Target completion rate: 55-70% (comparable to rugby kick-pass / NFL pass). Short kicks (≤12 yds) ~75%, medium ~63%, long ~50%, deep ~35%, bomb ~22%. Interceptions only happen on failed completions. YAC potential is high (2-14 base + speed bonus). Kick pass threat creates floor-spacing effect that improves run/lateral efficiency.
 - **Stat variance**: User wants all stat categories to produce a natural low-to-high range across seasons, NOT predictive clustering. Per-game rhythm/intensity factors (0.65-1.35 range) create this variance.
 - **Lateral chain risk**: User wants laterals to be genuinely risky. Target fumble rate ~25% (was 7%). Per-exchange fumble 0.035 with chain-length scaling.
 
