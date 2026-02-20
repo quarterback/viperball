@@ -1910,6 +1910,33 @@ class ViperballEngine:
         if away_lead > 0:
             self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) * (1.0 - away_lead * 0.3)
 
+        self._home_halftime_score = 0
+        self._away_halftime_score = 0
+
+        for side_label, mods in [("home", self.home_coaching_mods), ("away", self.away_coaching_mods)]:
+            if mods.get("hc_classification") == "motivator":
+                cls_fx = mods.get("classification_effects", {})
+                comp_amp = cls_fx.get("composure_amplification", 1.0)
+                if comp_amp > 1.0:
+                    if side_label == "home":
+                        self.home_game_rhythm = 1.0 + (self.home_game_rhythm - 1.0) / comp_amp
+                    else:
+                        self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) / comp_amp
+
+        for side_label, mods in [("home", self.home_coaching_mods), ("away", self.away_coaching_mods)]:
+            if mods.get("hc_classification") == "players_coach":
+                cls_fx = mods.get("classification_effects", {})
+                chem = cls_fx.get("chemistry_bonus_per_game", 0.0)
+                if chem > 0:
+                    cumulative = chem * self.game_week
+                    if side_label == "home":
+                        self.home_game_rhythm = min(1.35, self.home_game_rhythm + cumulative)
+                    else:
+                        self.away_game_rhythm = min(1.35, self.away_game_rhythm + cumulative)
+
+        self._home_momentum_plays = 0
+        self._away_momentum_plays = 0
+
         if self.is_rivalry:
             self._apply_rivalry_boost()
 
@@ -1974,12 +2001,44 @@ class ViperballEngine:
             self.state.quarter = quarter
             self.state.time_remaining = 900
 
+            if quarter == 3:
+                self._apply_halftime_coaching_adjustments()
+
             while self.state.time_remaining > 0:
                 self.simulate_drive()
                 if self.state.time_remaining <= 0:
                     break
 
+            if quarter == 2:
+                self._home_halftime_score = self.state.home_score
+                self._away_halftime_score = self.state.away_score
+
         return self.generate_game_summary()
+
+    def _apply_halftime_coaching_adjustments(self):
+        for side in ("home", "away"):
+            mods = self.home_coaching_mods if side == "home" else self.away_coaching_mods
+            cls = mods.get("hc_classification", "")
+            cls_fx = mods.get("classification_effects", {})
+
+            if cls == "gameday_manager":
+                adj = cls_fx.get("halftime_adjustment_bonus", 0.0)
+                if adj > 0:
+                    if side == "home":
+                        self.home_game_rhythm = 1.0 + (self.home_game_rhythm - 1.0) * (1.0 - adj)
+                    else:
+                        self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) * (1.0 - adj)
+
+            if cls == "motivator":
+                boost = cls_fx.get("trailing_halftime_boost", 0.0)
+                if boost > 0:
+                    my_half = self._home_halftime_score if side == "home" else self._away_halftime_score
+                    opp_half = self._away_halftime_score if side == "home" else self._home_halftime_score
+                    if my_half < opp_half:
+                        if side == "home":
+                            self.home_game_rhythm = min(1.35, self.home_game_rhythm + boost)
+                        else:
+                            self.away_game_rhythm = min(1.35, self.away_game_rhythm + boost)
 
     def _check_rouge_pindown(self, receiving_team_obj, kicking_possession: str) -> bool:
         return_speed = receiving_team_obj.avg_speed
@@ -2046,6 +2105,13 @@ class ViperballEngine:
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
 
+        if self.state.possession == "home" and self._home_momentum_plays > 0:
+            self.home_game_rhythm = min(1.35, self.home_game_rhythm + 0.04 * self._home_momentum_plays)
+            self._home_momentum_plays = 0
+        elif self.state.possession == "away" and self._away_momentum_plays > 0:
+            self.away_game_rhythm = min(1.35, self.away_game_rhythm + 0.04 * self._away_momentum_plays)
+            self._away_momentum_plays = 0
+
         drive_team = self.state.possession
         drive_start = self.state.field_position
         drive_quarter = self.state.quarter
@@ -2073,6 +2139,15 @@ class ViperballEngine:
 
             if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "chaos_recovery", "safety"]:
                 drive_result = play.result
+                if play.result in ("fumble", "turnover_on_downs"):
+                    new_pos = self.state.possession
+                    new_mods = self.home_coaching_mods if new_pos == "home" else self.away_coaching_mods
+                    if new_mods.get("hc_classification") == "motivator":
+                        mom_plays = int(new_mods.get("classification_effects", {}).get("momentum_recovery_plays", 0))
+                        if new_pos == "home":
+                            self._home_momentum_plays = mom_plays
+                        else:
+                            self._away_momentum_plays = mom_plays
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
@@ -2131,14 +2206,23 @@ class ViperballEngine:
     def _conversion_rate(self, down: int, ytg: int) -> float:
         rates = self.CONVERSION_RATES.get(down, self.CONVERSION_RATES[6])
         if ytg <= 3:
-            return rates[3]
+            rate = rates[3]
         elif ytg <= 6:
-            return rates[6]
+            rate = rates[6]
         elif ytg <= 10:
-            return rates[10]
+            rate = rates[10]
         elif ytg <= 15:
-            return rates[15]
-        return rates[20]
+            rate = rates[15]
+        else:
+            rate = rates[20]
+
+        off_mods = self._coaching_mods()
+        if off_mods.get("hc_classification") == "gameday_manager":
+            cls_fx = off_mods.get("classification_effects", {})
+            rate += cls_fx.get("fourth_down_accuracy", 0.0)
+            rate = min(0.95, rate)
+
+        return rate
 
     def _place_kick_success(self, distance: int) -> float:
         if distance <= 25:
@@ -3077,6 +3161,12 @@ class ViperballEngine:
         muff_prob = BASE_MUFF_PUNT * coverage_modifier * st_muff_bonus * returner_muff_rate * keeper_muff_mod
         muff_prob += self.weather_info.get("muff_modifier", 0.0)
 
+        receiving_side = "away" if self.state.possession == "home" else "home"
+        recv_mods = self.home_coaching_mods if receiving_side == "home" else self.away_coaching_mods
+        if recv_mods.get("hc_classification") == "disciplinarian":
+            cls_fx = recv_mods.get("classification_effects", {})
+            muff_prob *= cls_fx.get("muff_reduction", 1.0)
+
         return max(0.0, muff_prob)
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
@@ -3096,6 +3186,13 @@ class ViperballEngine:
         # Gameplan bias for specific play families
         gameplan_bias = defense.get("gameplan_bias", {}).get(play_family.value, 0.0)
 
+        # Coaching: Scheme Master gameplan adaptation — gameplan reads improve in 2nd half
+        def_mods = self._def_coaching_mods()
+        cls_effects = def_mods.get("classification_effects", {})
+        if def_mods.get("hc_classification") == "scheme_master" and self.state.quarter >= 3:
+            adapt = cls_effects.get("gameplan_adaptation_bonus", 0.0)
+            gameplan_bias += adapt
+
         # Situational modifiers from scheme
         situational_boost = self._get_defense_situational_boost(defense)
 
@@ -3103,7 +3200,6 @@ class ViperballEngine:
         personnel_boost = self._get_defense_personnel_boost(defense)
 
         # Coaching: instincts improve defensive reads
-        def_mods = self._def_coaching_mods()
         instincts_factor = def_mods.get("instincts_factor", 0.0)
         coaching_read_boost = instincts_factor * 0.06  # max +0.06 at 95 instincts
 
@@ -3145,11 +3241,14 @@ class ViperballEngine:
         # Score-based aggression
         if quarter >= 3:
             if score_diff < -7:
-                # Defense is winning — trailing offense gets desperate, easier to read
                 boost += sit.get("leading_conserve", 0.05)
             elif score_diff > 7:
-                # Defense is losing — scheme gets more aggressive
                 boost += sit.get("trailing_aggression", 0.05)
+
+        def_mods = self._def_coaching_mods()
+        if def_mods.get("hc_classification") == "gameday_manager":
+            cls_fx = def_mods.get("classification_effects", {})
+            boost *= (1.0 + cls_fx.get("situational_amplification", 0.0))
 
         return boost
 
@@ -3224,6 +3323,12 @@ class ViperballEngine:
         if off_mods.get("hc_classification") == "disciplinarian":
             compression = off_cls.get("variance_compression", 1.0)
             pfm = 1.0 + (pfm - 1.0) * compression
+
+        # Coaching: Disciplinarian gap discipline reduces run yards
+        if def_mods.get("hc_classification") == "disciplinarian":
+            gap_disc = cls_effects.get("gap_discipline_bonus", 0.0)
+            if gap_disc > 0:
+                pfm *= (1.0 - gap_disc)
 
         # Invert: lower pfm = defense is better, so multiply yards by pfm
         # (pfm of 0.60 means defense holds to 60% of normal yardage)

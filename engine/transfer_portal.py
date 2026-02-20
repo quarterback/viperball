@@ -363,6 +363,7 @@ def _should_enter_portal(
     team_record_wins: int,
     team_record_losses: int,
     rng: random.Random,
+    retention_bonus: float = 0.0,
 ) -> Optional[str]:
     """
     Determine if a player enters the transfer portal.
@@ -398,6 +399,9 @@ def _should_enter_portal(
     if card.potential >= 4 and card.overall < 70:
         base_chance += 0.06
 
+    if retention_bonus > 0:
+        base_chance *= max(0.3, 1.0 - retention_bonus)
+
     if rng.random() < base_chance:
         reasons = [
             ("seeking_playing_time", 0.30),
@@ -417,6 +421,7 @@ def populate_portal(
     team_rosters: Dict[str, List[PlayerCard]],
     team_records: Dict[str, Tuple[int, int]],
     rng: Optional[random.Random] = None,
+    coaching_retention: Optional[Dict[str, float]] = None,
 ) -> List[PortalEntry]:
     """
     Populate the transfer portal from existing team rosters.
@@ -435,10 +440,14 @@ def populate_portal(
 
     new_entries: List[PortalEntry] = []
 
+    if coaching_retention is None:
+        coaching_retention = {}
+
     for team_name, roster in team_rosters.items():
         wins, losses = team_records.get(team_name, (5, 5))
+        ret_bonus = coaching_retention.get(team_name, 0.0)
         for card in roster:
-            reason = _should_enter_portal(card, wins, losses, rng)
+            reason = _should_enter_portal(card, wins, losses, rng, retention_bonus=ret_bonus)
             if reason is not None:
                 pres = rng.uniform(0.25, 0.55)
                 nil_pref = rng.uniform(0.15, 0.45)

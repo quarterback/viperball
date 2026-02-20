@@ -22,6 +22,7 @@ from engine.season import (
     estimate_team_prestige_from_roster, is_buy_game, BUY_GAME_NIL_BONUS,
     MAX_CONFERENCE_GAMES,
     auto_assign_rivalries,
+    load_coaching_staffs_from_directory,
 )
 from engine.dynasty import create_dynasty, Dynasty
 from engine.conference_names import generate_conference_names
@@ -329,6 +330,17 @@ def _serialize_dynasty_status(session: dict) -> dict:
 
     conf_dict = dynasty.get_conferences_dict() if dynasty.conferences else {}
 
+    sr = {}
+    for yr, rec in coach.season_records.items():
+        sr[str(yr)] = {
+            "wins": rec.get("wins", 0),
+            "losses": rec.get("losses", 0),
+            "points_for": rec.get("points_for", 0),
+            "points_against": rec.get("points_against", 0),
+            "playoff": rec.get("playoff", False),
+            "champion": rec.get("champion", False),
+        }
+
     return {
         "dynasty_name": dynasty.dynasty_name,
         "current_year": dynasty.current_year,
@@ -341,6 +353,8 @@ def _serialize_dynasty_status(session: dict) -> dict:
             "championships": coach.championships,
             "playoff_appearances": coach.playoff_appearances,
             "years_coached": len(coach.years_coached),
+            "years_experience": coach.years_experience,
+            "season_records": sr,
         },
         "team_count": team_count,
         "seasons_played": seasons_played,
@@ -689,6 +703,8 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         existing_rivalries=req.rivalries,
     )
 
+    coaching_staffs = load_coaching_staffs_from_directory(TEAMS_DIR)
+
     season = create_season(
         req.name,
         teams,
@@ -698,6 +714,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         team_states=team_states,
         pinned_matchups=pinned,
         rivalries=rivalries_dict,
+        coaching_staffs=coaching_staffs,
     )
 
     history_results = []
@@ -1466,6 +1483,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         team_states=team_states,
         pinned_matchups=pinned,
         rivalries=rivalries_dict,
+        coaching_staffs=dynasty._coaching_staffs if dynasty._coaching_staffs else None,
     )
 
     session["season"] = season
@@ -1720,6 +1738,39 @@ def dynasty_record_book(session_id: str):
             "most_coaching_championships": rb.most_coaching_championships,
         }
     }
+
+
+@app.get("/sessions/{session_id}/dynasty/coaching-history")
+def dynasty_coaching_history(session_id: str):
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+
+    history = {}
+    for year, data in dynasty.coaching_history.items():
+        changes = data.get("changes", {})
+        summary = data.get("marketplace_summary", {})
+        history[str(year)] = {
+            "changes": {
+                team: roles for team, roles in changes.items()
+            },
+            "teams_with_changes": len(changes),
+            "marketplace_summary": summary,
+        }
+
+    staffs = {}
+    coaching_staffs = dynasty._coaching_staffs or {}
+    for t_name, staff in coaching_staffs.items():
+        hc = staff.get("head_coach") if isinstance(staff, dict) else None
+        if hc:
+            staffs[t_name] = {
+                "hc_name": hc.name,
+                "hc_classification": hc.classification or "unclassified",
+                "hc_overall": hc.overall,
+                "hc_seasons": hc.seasons_coached,
+                "hc_record": f"{hc.career_wins}-{hc.career_losses}",
+            }
+
+    return {"coaching_history": history, "current_staffs": staffs}
 
 
 @app.get("/sessions/{session_id}/team/{team_name}")

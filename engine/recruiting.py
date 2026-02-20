@@ -137,6 +137,7 @@ class Recruit:
     prefers_prestige: float = 0.5    # 0-1: how much prestige matters
     prefers_geography: float = 0.3   # 0-1: how much being close to home matters
     prefers_nil: float = 0.2         # 0-1: how much NIL money matters
+    prefers_coaching: float = 0.15   # 0-1: how much coaching quality matters
 
     @property
     def full_name(self) -> str:
@@ -579,6 +580,7 @@ def scout_recruit(
     recruit: Recruit,
     level: str = "basic",
     rng: Optional[random.Random] = None,
+    scouting_error: int = 3,
 ) -> Dict[str, object]:
     """
     Scout a recruit and reveal attributes.
@@ -629,7 +631,7 @@ def scout_recruit(
         }
         top3 = sorted(all_attrs.items(), key=lambda x: x[1], reverse=True)[:3]
         for attr_name, true_val in top3:
-            noise = rng.randint(-3, 3)
+            noise = rng.randint(-scouting_error, scouting_error)
             recruit.scouted_attrs[attr_name] = max(40, min(99, true_val + noise))
 
     return recruit.get_visible_attrs()
@@ -666,6 +668,7 @@ class RecruitingBoard:
         recruit: Recruit,
         level: str = "basic",
         rng: Optional[random.Random] = None,
+        scouting_error: int = 3,
     ) -> Optional[Dict[str, object]]:
         """Scout a recruit, spending scouting points."""
         cost = 1 if level == "basic" else 3
@@ -674,7 +677,7 @@ class RecruitingBoard:
         self.scouting_points -= cost
         if recruit.recruit_id not in self.watchlist:
             self.watchlist.append(recruit.recruit_id)
-        return scout_recruit(recruit, level=level, rng=rng)
+        return scout_recruit(recruit, level=level, rng=rng, scouting_error=scouting_error)
 
     def offer(self, recruit: Recruit) -> bool:
         """
@@ -762,14 +765,11 @@ def _compute_team_score(
     # Random factor (personality noise)
     noise = rng.uniform(-8, 8)
 
-    # Weight for coaching defaults to 0.15 (re-normalizes other weights)
-    prefers_coaching = getattr(recruit, "prefers_coaching", 0.15)
-
     score = (
         recruit.prefers_prestige * prestige_score
         + recruit.prefers_geography * geo_score
         + recruit.prefers_nil * nil_score
-        + prefers_coaching * coach_score
+        + recruit.prefers_coaching * coach_score
         + noise
     )
     return max(0.0, min(100.0, score))
@@ -783,6 +783,7 @@ def simulate_recruit_decisions(
     nil_offers: Dict[str, Dict[str, float]],
     rng: Optional[random.Random] = None,
     team_coaching_scores: Optional[Dict[str, float]] = None,
+    coaching_prestige_bonus: Optional[Dict[str, int]] = None,
 ) -> Dict[str, List[Recruit]]:
     """
     Simulate all recruits making their decisions.
@@ -832,10 +833,11 @@ def simulate_recruit_decisions(
 
             nil_amt = nil_offers.get(team_name, {}).get(recruit.recruit_id, 0.0)
             cs = (team_coaching_scores or {}).get(team_name, 0.0)
+            p_bonus = (coaching_prestige_bonus or {}).get(team_name, 0)
             score = _compute_team_score(
                 recruit=recruit,
                 team_name=team_name,
-                team_prestige=team_prestige.get(team_name, 50),
+                team_prestige=min(100, team_prestige.get(team_name, 50) + p_bonus),
                 team_region=team_regions.get(team_name, "midwest"),
                 nil_offer=nil_amt,
                 max_nil_in_class=max_nil,
@@ -941,6 +943,7 @@ def run_full_recruiting_cycle(
     pool_size: int = 300,
     rng: Optional[random.Random] = None,
     team_coaching_scores: Optional[Dict[str, float]] = None,
+    coaching_prestige_bonus: Optional[Dict[str, int]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle (for use by Dynasty.advance_season).
@@ -986,6 +989,7 @@ def run_full_recruiting_cycle(
         nil_offers=all_nil,
         rng=rng,
         team_coaching_scores=team_coaching_scores,
+        coaching_prestige_bonus=coaching_prestige_bonus,
     )
 
     # Class rankings

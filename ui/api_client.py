@@ -309,6 +309,10 @@ def get_season_awards(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/season/awards")
 
 
+def get_dynasty_coaching_history(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/dynasty/coaching-history")
+
+
 def get_team_roster(session_id: str, team_name: str) -> dict:
     return _get(f"/sessions/{session_id}/team/{team_name}")
 

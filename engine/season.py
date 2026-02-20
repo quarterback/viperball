@@ -433,6 +433,9 @@ class Season:
 
     rivalries: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
 
+    # Coaching staffs: team_name -> { role -> CoachCard }
+    coaching_staffs: Dict[str, dict] = field(default_factory=dict)
+
     # Injury tracker — when set, injuries affect game simulation
     injury_tracker: Optional[object] = None
 
@@ -738,6 +741,16 @@ class Season:
             dq_kwargs["home_dq_boosts"] = dq_team_boosts.get(game.home_team, {})
             dq_kwargs["away_dq_boosts"] = dq_team_boosts.get(game.away_team, {})
 
+        coaching_kwargs = {}
+        if self.coaching_staffs:
+            home_staff = self.coaching_staffs.get(game.home_team)
+            away_staff = self.coaching_staffs.get(game.away_team)
+            if home_staff:
+                coaching_kwargs["home_coaching"] = home_staff
+            if away_staff:
+                coaching_kwargs["away_coaching"] = away_staff
+            coaching_kwargs["game_week"] = game.week
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -747,6 +760,7 @@ class Season:
             is_rivalry=game.is_rivalry_game,
             **injury_kwargs,
             **dq_kwargs,
+            **coaching_kwargs,
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
@@ -1517,6 +1531,30 @@ def load_teams_with_states(
     return teams, team_states
 
 
+def load_coaching_staffs_from_directory(directory: str) -> Dict[str, dict]:
+    """Load coaching staffs from team JSON files.
+
+    Returns dict of team_name -> { role -> CoachCard }.
+    """
+    import json as _json
+    from engine.coaching import CoachCard
+    staffs = {}
+    team_dir = Path(directory)
+    for team_file in team_dir.glob("*.json"):
+        with open(team_file) as f:
+            raw = _json.load(f)
+        team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        cs = raw.get("coaching_staff")
+        if cs and team_name:
+            staff = {}
+            for role, card_data in cs.items():
+                if isinstance(card_data, dict) and "coach_id" in card_data:
+                    staff[role] = CoachCard.from_dict(card_data)
+            if staff:
+                staffs[team_name] = staff
+    return staffs
+
+
 def create_season(
     name: str,
     teams: Dict[str, Team],
@@ -1526,6 +1564,7 @@ def create_season(
     team_states: Optional[Dict[str, str]] = None,
     pinned_matchups: Optional[List[Tuple[str, str]]] = None,
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
+    coaching_staffs: Optional[Dict[str, dict]] = None,
 ) -> Season:
     """
     Create a season with teams and optional style configurations
@@ -1556,6 +1595,7 @@ def create_season(
         conferences=conf_map,
         team_conferences=team_conf_map,
         team_states=team_states or {},
+        coaching_staffs=coaching_staffs or {},
     )
 
     season.rivalries = rivalries or {}

@@ -664,6 +664,46 @@ def _render_history(session_id):
             st.plotly_chart(fig, use_container_width=True, key="myteam_wins_chart")
 
     st.divider()
+    st.subheader("Coaching History")
+    try:
+        ch_resp = api_client.get_dynasty_coaching_history(session_id)
+        coaching_hist = ch_resp.get("coaching_history", {})
+        current_staffs = ch_resp.get("current_staffs", {})
+    except api_client.APIError:
+        coaching_hist = {}
+        current_staffs = {}
+
+    my_staff = current_staffs.get(team_name, {})
+    if my_staff:
+        cs1, cs2, cs3 = st.columns(3)
+        cs1.metric("Head Coach", my_staff.get("hc_name", "Unknown"))
+        cs2.metric("Classification", my_staff.get("hc_classification", "unclassified").replace("_", " ").title())
+        cs3.metric("HC Record", my_staff.get("hc_record", "0-0"))
+
+    if coaching_hist:
+        with st.expander("Coaching Changes by Year"):
+            def _safe_year_sort(y):
+                try:
+                    return int(y)
+                except (ValueError, TypeError):
+                    return 0
+            for year in sorted(coaching_hist.keys(), key=_safe_year_sort):
+                yr_data = coaching_hist[year]
+                n_changes = yr_data.get("teams_with_changes", 0)
+                if n_changes > 0:
+                    changes = yr_data.get("changes", {})
+                    my_changes = changes.get(team_name, {})
+                    if my_changes:
+                        st.markdown(f"**Year {year}** — Your team had coaching changes:")
+                        for role, info in my_changes.items():
+                            if isinstance(info, dict):
+                                st.caption(f"  {role}: {info.get('new', 'N/A')} (replaced {info.get('old', 'N/A')})")
+                            else:
+                                st.caption(f"  {role}: {info}")
+                    else:
+                        st.caption(f"Year {year}: {n_changes} team(s) had coaching changes (none on your team)")
+
+    st.divider()
     st.subheader("Team History")
     try:
         histories_resp = api_client.get_dynasty_team_histories(session_id)

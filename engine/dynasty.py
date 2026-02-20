@@ -760,6 +760,7 @@ class Dynasty:
         human_team = self.coach.team_name
         marketplace = CoachMarketplace(year=year)
         marketplace.generate_free_agents(num_coaches=40, rng=rng)
+        marketplace.add_poaching_targets(self._coaching_staffs, rng=rng)
 
         coaching_changes: Dict[str, list] = {}
         for team_name, staff in self._coaching_staffs.items():
@@ -901,8 +902,17 @@ class Dynasty:
             rec = sr.season_records.get(prev_year, {"wins": 5, "losses": 5})
             team_records[team_name] = (rec.get("wins", 5), rec.get("losses", 5))
 
+        coaching_retention = {}
+        for tn, staff in self._coaching_staffs.items():
+            hc = staff.get("head_coach")
+            if hc and hasattr(hc, 'classification') and hc.classification == "players_coach":
+                from engine.coaching import get_classification_effects
+                fx = get_classification_effects(hc)
+                coaching_retention[tn] = fx.get("retention_bonus", 0.0)
+
         portal = TransferPortal(year=year)
-        populate_portal(portal, player_cards, team_records, rng=rng)
+        populate_portal(portal, player_cards, team_records, rng=rng,
+                       coaching_retention=coaching_retention)
 
         # CPU teams make portal offers
         team_regions = self._estimate_team_regions()
@@ -967,6 +977,16 @@ class Dynasty:
             for tn, staff in self._coaching_staffs.items():
                 team_coaching_scores[tn] = compute_recruiting_bonus(staff)
 
+        coaching_prestige_bonus = {}
+        for tn, staff in self._coaching_staffs.items():
+            hc = staff.get("head_coach")
+            if hc and hasattr(hc, 'classification') and hc.classification == "players_coach":
+                from engine.coaching import get_classification_effects
+                fx = get_classification_effects(hc)
+                bonus = int(fx.get("recruiting_appeal_prestige", 0))
+                if bonus > 0:
+                    coaching_prestige_bonus[tn] = bonus
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -980,6 +1000,7 @@ class Dynasty:
             pool_size=pool_size,
             rng=rng,
             team_coaching_scores=team_coaching_scores,
+            coaching_prestige_bonus=coaching_prestige_bonus,
         )
 
         self.recruiting_history[year] = {
@@ -1453,7 +1474,7 @@ class Dynasty:
 
     def save(self, filepath: str):
         """Save dynasty to JSON file"""
-        # Convert to dict (simplified - would need custom serialization for full support)
+        from engine.coaching import CoachCard
         data = {
             "dynasty_name": self.dynasty_name,
             "coach": asdict(self.coach),
@@ -1462,6 +1483,14 @@ class Dynasty:
             "team_histories": {name: asdict(history) for name, history in self.team_histories.items()},
             "awards_history": {year: asdict(awards) for year, awards in self.awards_history.items()},
             "record_book": asdict(self.record_book),
+            "coaching_staffs": {
+                team_name: {
+                    role: (card.to_dict() if isinstance(card, CoachCard) else card)
+                    for role, card in staff.items()
+                }
+                for team_name, staff in self._coaching_staffs.items()
+            } if self._coaching_staffs else {},
+            "coaching_history": {str(k): v for k, v in self.coaching_history.items()},
         }
 
         with open(filepath, 'w') as f:
@@ -1494,6 +1523,19 @@ class Dynasty:
 
         # Reconstruct record book
         dynasty.record_book = RecordBook(**data["record_book"])
+
+        # Reconstruct coaching staffs
+        if "coaching_staffs" in data and data["coaching_staffs"]:
+            from engine.coaching import CoachCard
+            for team_name, staff_data in data["coaching_staffs"].items():
+                dynasty._coaching_staffs[team_name] = {
+                    role: CoachCard.from_dict(card_data)
+                    for role, card_data in staff_data.items()
+                }
+
+        # Reconstruct coaching history
+        if "coaching_history" in data:
+            dynasty.coaching_history = {int(k): v for k, v in data["coaching_history"].items()}
 
         return dynasty
 
