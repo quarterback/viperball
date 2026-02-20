@@ -535,6 +535,8 @@ class GameState:
     play_number: int = 0
     home_stamina: float = 100.0
     away_stamina: float = 100.0
+    home_sacrifice_yards: int = 0
+    away_sacrifice_yards: int = 0
 
 
 @dataclass
@@ -659,7 +661,8 @@ class Team:
     lateral_proficiency: int
     defensive_strength: int
     offense_style: str = "balanced"
-    defense_style: str = "base_defense"  # New: defensive archetype
+    defense_style: str = "base_defense"
+    st_scheme: str = "aces"
 
 
 @dataclass
@@ -1663,6 +1666,78 @@ DEFENSE_MUFF_MODIFIERS = {
     "base_defense": 1.0,
 }
 
+# ── Special Teams Schemes ────────────────────────────────────────────────
+# The third strategic dimension. Offense → Defense → Special Teams.
+# Each team selects an ST philosophy that governs coverage, returns,
+# kick blocking, and trick-play tendencies on punts and kicks.
+
+ST_SCHEMES = {
+    "iron_curtain": {
+        "label": "Iron Curtain",
+        "description": "Elite coverage unit. Best gunners force muffs and pin returners. "
+                       "Your own return game is conservative — secure the ball, take the field position.",
+        "coverage_modifier": 1.35,       # Opponents get far fewer return yards
+        "muff_bonus": 1.30,              # Gunners force muffs
+        "return_yards_modifier": 0.70,   # Your returns are short, safe
+        "return_td_modifier": 0.50,      # Rarely break one
+        "block_rush_modifier": 0.90,     # Don't rush kicks much
+        "fake_play_rate": 0.01,          # Almost never fake
+        "returner_muff_rate": 0.80,      # Your returner rarely muffs (safe hands focus)
+    },
+    "lightning_returns": {
+        "label": "Lightning Returns",
+        "description": "Built around explosive returners. Keeper and Viper get maximum return touches. "
+                       "Accept thin coverage for game-breaking return yardage.",
+        "coverage_modifier": 0.80,       # Opponents get more return yards
+        "muff_bonus": 0.85,              # Less pressure on returners
+        "return_yards_modifier": 1.40,   # Your returns go further
+        "return_td_modifier": 1.60,      # Much higher return TD chance
+        "block_rush_modifier": 0.90,     # Normal
+        "fake_play_rate": 0.02,          # Occasional fake
+        "returner_muff_rate": 1.10,      # Slightly higher muff risk (aggressive catches)
+    },
+    "block_party": {
+        "label": "Block Party",
+        "description": "Rush the kicker every time. Highest block rate in the game. "
+                       "But the coverage behind is thin — if the kick gets off, you're exposed.",
+        "coverage_modifier": 0.70,       # Worst coverage — everyone rushed
+        "muff_bonus": 0.75,              # No gunners downfield
+        "return_yards_modifier": 1.00,   # Normal returns
+        "return_td_modifier": 1.00,      # Normal
+        "block_rush_modifier": 1.50,     # Elite block rate
+        "fake_play_rate": 0.01,          # Disciplined
+        "returner_muff_rate": 1.00,      # Normal
+    },
+    "chaos_unit": {
+        "label": "Chaos Unit",
+        "description": "Fake punts, trick returns, surprise plays. The opponent never knows what's coming. "
+                       "High variance — sometimes genius, sometimes disaster.",
+        "coverage_modifier": 1.00,       # Normal coverage
+        "muff_bonus": 1.05,              # Slight confusion factor
+        "return_yards_modifier": 1.15,   # Slightly better (creative returns)
+        "return_td_modifier": 1.25,      # Better (trick return schemes)
+        "block_rush_modifier": 1.15,     # Some rush disguises
+        "fake_play_rate": 0.12,          # 12% of punts are fakes!
+        "returner_muff_rate": 1.15,      # More aggressive = more risk
+    },
+    "aces": {
+        "label": "Aces",
+        "description": "Well-rounded special teams. Slight bonus across the board, no weakness. "
+                       "The safe pick for teams without a special teams identity.",
+        "coverage_modifier": 1.10,       # Slightly better coverage
+        "muff_bonus": 1.10,              # Slightly better gunners
+        "return_yards_modifier": 1.10,   # Slightly better returns
+        "return_td_modifier": 1.10,      # Slightly better
+        "block_rush_modifier": 1.10,     # Slightly better
+        "fake_play_rate": 0.03,          # Occasional fake
+        "returner_muff_rate": 0.95,      # Slightly safer
+    },
+}
+
+ST_SCHEME_MIGRATION = {
+    "base": "aces",
+}
+
 
 class ViperballEngine:
 
@@ -1752,6 +1827,20 @@ class ViperballEngine:
                             if clean_key in clean_name or clean_name in clean_key:
                                 t.defense_style = style
                                 break
+                elif "_st" in team_key.lower() and style in ST_SCHEMES:
+                    # Apply special teams scheme (e.g., "gonzaga_st")
+                    st_base = base_key.replace("_st", "")
+                    if st_base in [self.home_team.name.lower(), self.home_team.abbreviation.lower()]:
+                        self.home_team.st_scheme = style
+                    elif st_base in [self.away_team.name.lower(), self.away_team.abbreviation.lower()]:
+                        self.away_team.st_scheme = style
+                    else:
+                        for t in [self.home_team, self.away_team]:
+                            clean_key = st_base.replace(" ", "_").replace("-", "_")
+                            clean_name = t.name.lower().replace(" ", "_").replace("-", "_")
+                            if clean_key in clean_name or clean_name in clean_key:
+                                t.st_scheme = style
+                                break
                 elif style in OFFENSE_STYLES:
                     # Apply offensive style (existing logic)
                     if team_key.lower() in [self.home_team.name.lower(), self.home_team.abbreviation.lower()]:
@@ -1779,6 +1868,13 @@ class ViperballEngine:
         self.away_team.defense_style = away_def
         self.home_defense = DEFENSE_STYLES.get(home_def, DEFENSE_STYLES["swarm"])
         self.away_defense = DEFENSE_STYLES.get(away_def, DEFENSE_STYLES["swarm"])
+        # Migrate and load special teams schemes
+        home_st = ST_SCHEME_MIGRATION.get(self.home_team.st_scheme, self.home_team.st_scheme)
+        away_st = ST_SCHEME_MIGRATION.get(self.away_team.st_scheme, self.away_team.st_scheme)
+        self.home_team.st_scheme = home_st
+        self.away_team.st_scheme = away_st
+        self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
+        self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
 
         self.home_game_rhythm = random.gauss(1.0, 0.15)
         self.away_game_rhythm = random.gauss(1.0, 0.15)
@@ -1867,43 +1963,34 @@ class ViperballEngine:
         self.state.yards_to_go = 20
 
     def kickoff(self, receiving_team: str):
+        """Dynamic field position system — no traditional kickoff.
+
+        Possession alternates, but starting field position is based on
+        score differential: start at the 20 +/- however many points you
+        lead or trail. Clamped to the 1 yard line minimum.
+
+        Down 14 → start at 34. Up 21 → start at 1. Tied → start at 20.
+        """
         self.state.possession = receiving_team
-        kick_distance = int(random.gauss(62, 10))
-        kick_distance = max(20, kick_distance)
 
-        receiving_team_obj = self.home_team if receiving_team == "home" else self.away_team
-        kicking_team_str = "away" if receiving_team == "home" else "home"
-        kicking_team_obj = self.home_team if kicking_team_str == "home" else self.away_team
+        # Calculate score differential from receiving team's perspective
+        if receiving_team == "home":
+            their_score = self.state.home_score
+            opp_score = self.state.away_score
+        else:
+            their_score = self.state.away_score
+            opp_score = self.state.home_score
 
-        if kick_distance >= 60:
-            if self._check_rouge_pindown(receiving_team_obj, kicking_team_str):
-                self._apply_rouge_pindown(kicking_team_str, receiving_team)
-                return
-            else:
-                self.state.field_position = random.randint(15, 30)
-                self.state.down = 1
-                self.state.yards_to_go = 20
-                return
+        point_differential = their_score - opp_score  # positive = leading
+        start_position = max(1, int(20 - point_differential))
 
-        return_yards = random.randint(10, 30)
-        start_position = max(1, return_yards)
-
-        returner = self._pick_returner(receiving_team_obj)
-        if returner:
-            returner.game_kick_returns += 1
-            returner.game_kick_return_yards += start_position
-            if start_position >= 100:
-                returner.game_kick_return_tds += 1
-
-        tackler = self._pick_tackler(kicking_team_obj)
-        if tackler:
-            tackler.game_st_tackles += 1
-            tackler.game_coverage_snaps += 1
-
-        coverage_unit = [p for p in kicking_team_obj.players if p.position in ("Keeper", "Defensive Line")]
-        if coverage_unit:
-            cov_player = random.choice(coverage_unit)
-            cov_player.game_coverage_snaps += 1
+        # Track sacrifice yards — the penalty for leading
+        # Sacrifice = how many yards behind the 20 you start (positive when leading)
+        sacrifice = 20 - start_position  # positive = gave up yards, negative = got bonus yards
+        if receiving_team == "home":
+            self.state.home_sacrifice_yards += sacrifice
+        else:
+            self.state.away_sacrifice_yards += sacrifice
 
         self.state.field_position = start_position
         self.state.down = 1
@@ -2884,45 +2971,55 @@ class ViperballEngine:
 
     def calculate_block_probability(self, kick_type: str = "punt") -> float:
         """
-        Calculate probability of blocked kick based on offensive/defensive styles.
-
-        Args:
-            kick_type: "punt" or "kick" (FG/snapkick)
-
-        Returns:
-            Probability of block (0.0 to 1.0)
+        Calculate probability of blocked kick based on offensive style,
+        defensive style, and both teams' ST schemes.
         """
         base_prob = BASE_BLOCK_PUNT if kick_type == "punt" else BASE_BLOCK_KICK
 
-        # Get offensive style modifier (kicking team)
+        # Offensive style modifier (kicking team protection)
         offense_style_name = self.home_team.offense_style if self.state.possession == "home" else self.away_team.offense_style
         offense_modifier = OFFENSE_BLOCK_MODIFIERS.get(offense_style_name, 1.0)
 
-        # Get defensive style modifier (rush team)
+        # Defensive style modifier (rush team aggression)
         defense_style_name = self.away_team.defense_style if self.state.possession == "home" else self.home_team.defense_style
         defense_modifier = DEFENSE_BLOCK_MODIFIERS.get(defense_style_name, 1.0)
 
-        # Apply modifiers
-        block_prob = base_prob * offense_modifier * defense_modifier
+        # ST scheme modifier (rushing team's block specialization)
+        rushing_st = self.away_st if self.state.possession == "home" else self.home_st
+        st_modifier = rushing_st.get("block_rush_modifier", 1.0)
+
+        block_prob = base_prob * offense_modifier * defense_modifier * st_modifier
 
         return max(0.0, block_prob)
 
     def calculate_muff_probability(self) -> float:
         """
-        Calculate probability of muffed punt return based on defensive style.
-
-        Returns:
-            Probability of muff (0.0 to 1.0)
+        Calculate probability of muffed punt return based on defensive style,
+        ST schemes, and returner's Keeper archetype.
         """
-        # Get receiving team's defensive style (their special teams quality)
-        receiving_defense_name = self.away_team.defense_style if self.state.possession == "home" else self.home_team.defense_style
-
         # Kicking team's defensive style (their coverage quality)
         kicking_defense_name = self.home_team.defense_style if self.state.possession == "home" else self.away_team.defense_style
         coverage_modifier = DEFENSE_MUFF_MODIFIERS.get(kicking_defense_name, 1.0)
 
-        # Base probability modified by kicking team's coverage
-        muff_prob = BASE_MUFF_PUNT * coverage_modifier
+        # Kicking team's ST scheme (gunner quality)
+        kicking_st = self.home_st if self.state.possession == "home" else self.away_st
+        st_muff_bonus = kicking_st.get("muff_bonus", 1.0)
+
+        # Receiving team's ST scheme (returner ball security)
+        receiving_st = self.away_st if self.state.possession == "home" else self.home_st
+        returner_muff_rate = receiving_st.get("returner_muff_rate", 1.0)
+
+        # Returner's keeper archetype muff rate (sure_hands = 0.03, return = 0.15)
+        receiving_team = self.get_defensive_team()
+        returner = self._pick_returner(receiving_team)
+        keeper_muff_mod = 1.0
+        if returner and returner.position == "Keeper" and returner.archetype != "none":
+            arch_info = get_archetype_info(returner.archetype)
+            # Lower muff_rate = safer hands. Normalize around 0.10 baseline
+            arch_muff = arch_info.get("muff_rate", 0.10)
+            keeper_muff_mod = arch_muff / 0.10  # sure_hands: 0.3, return: 1.5, tackle: 1.2
+
+        muff_prob = BASE_MUFF_PUNT * coverage_modifier * st_muff_bonus * returner_muff_rate * keeper_muff_mod
         muff_prob += self.weather_info.get("muff_modifier", 0.0)
 
         return max(0.0, muff_prob)
@@ -3076,6 +3173,18 @@ class ViperballEngine:
             return self.away_team.defense_style
         return self.home_team.defense_style
 
+    def _kicking_team_st(self) -> Dict:
+        """Returns the ST scheme dict for the team currently punting/kicking."""
+        if self.state.possession == "home":
+            return self.home_st
+        return self.away_st
+
+    def _returning_team_st(self) -> Dict:
+        """Returns the ST scheme dict for the team receiving the punt/kick."""
+        if self.state.possession == "home":
+            return self.away_st
+        return self.home_st
+
     def _defensive_fatigue_factor(self) -> float:
         """
         Returns defensive fatigue multiplier (>1.0 = tired defense, helps offense)
@@ -3167,11 +3276,39 @@ class ViperballEngine:
         return random.random() < base_fumble
 
     def _pick_returner(self, team):
+        """Skill-weighted returner selection — speed and hands matter."""
         eligible = [p for p in team.players if p.position in
                     ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
         if not eligible:
             eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
-        return random.choice(eligible) if eligible else None
+        if not eligible:
+            return None
+        # Weight by return ability: speed dominant, hands for ball security
+        weights = []
+        for p in eligible:
+            w = p.speed * 0.55 + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * 0.20
+            # Keeper return_keeper archetype gets a big boost
+            if p.position == "Keeper" and p.archetype == "return_keeper":
+                w *= 1.40
+            weights.append(max(1.0, w))
+        return random.choices(eligible, weights=weights, k=1)[0]
+
+    def _pick_coverage_tackler(self, team):
+        """Skill-weighted coverage tackler — tackling and speed matter."""
+        eligible = [p for p in team.players if p.position in
+                    ("Keeper", "Defensive Line")]
+        if not eligible:
+            eligible = team.players
+        if not eligible:
+            return None
+        weights = []
+        for p in eligible:
+            w = p.tackling * 0.40 + p.speed * 0.35 + getattr(p, 'awareness', 75) * 0.25
+            # Tackle keeper archetype excels on coverage
+            if p.position == "Keeper" and p.archetype == "tackle_keeper":
+                w *= 1.30
+            weights.append(max(1.0, w))
+        return random.choices(eligible, weights=weights, k=1)[0]
 
     def _pick_tackler(self, team):
         eligible = [p for p in team.players if p.position in
@@ -3179,6 +3316,31 @@ class ViperballEngine:
         if not eligible:
             eligible = team.players
         return random.choice(eligible) if eligible else None
+
+    def _calculate_punt_return_yards(self, returner, returning_team, punting_team) -> int:
+        """Skill-based punt return yardage. Returner attributes, keeper archetype,
+        and both teams' ST schemes all factor in."""
+        base_return = max(0, int(random.gauss(12, 8)))
+
+        # Returner skill factor (speed + agility)
+        speed_factor = returner.speed / 80.0
+        agility_factor = getattr(returner, 'agility', 75) / 80.0
+        returner_modifier = speed_factor * 0.60 + agility_factor * 0.40
+
+        # Keeper archetype: return_keeper gets the archetype's return_yards_modifier
+        archetype_info = get_archetype_info(returner.archetype) if returner.archetype != "none" else {}
+        return_yards_mod = archetype_info.get("return_yards_modifier", 1.0)
+        returner_modifier *= return_yards_mod
+
+        # Returning team's ST scheme bonus
+        ret_st = ST_SCHEMES.get(returning_team.st_scheme, ST_SCHEMES["aces"])
+        returner_modifier *= ret_st["return_yards_modifier"]
+
+        # Punting team's ST scheme coverage quality reduces return yards
+        punt_st = ST_SCHEMES.get(punting_team.st_scheme, ST_SCHEMES["aces"])
+        returner_modifier /= punt_st["coverage_modifier"]
+
+        return max(0, int(base_return * returner_modifier))
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
         dl = [p for p in def_team.players if p.position == "Defensive Line"]
@@ -4513,6 +4675,81 @@ class ViperballEngine:
         punter = max(team.players[:8], key=lambda p: p.kicking)
         ptag = player_tag(punter)
 
+        # ── Fake Punt Check ──────────────────────────────────────────
+        # ST scheme determines fake tendency. Chaos Unit fakes 12% of punts.
+        kicking_st = self.home_st if self.state.possession == "home" else self.away_st
+        fake_rate = kicking_st.get("fake_play_rate", 0.03)
+        # Don't fake from your own end zone — too risky
+        if self.state.field_position > 15 and random.random() < fake_rate:
+            # Fake punt — runner or passer from punt formation
+            playmaker = max(team.players[:6],
+                            key=lambda p: p.speed * 0.5 + getattr(p, 'agility', 75) * 0.3 + getattr(p, 'hands', 75) * 0.2)
+            ftag = player_tag(playmaker)
+            # 45% chance of success (first down), 55% turnover on downs
+            success_roll = random.random()
+            # Offensive style bonus: ghost/chain_gang get small boost
+            style_name = self._current_style_name()
+            if style_name in ("ghost", "chain_gang", "lateral_spread"):
+                success_roll -= 0.08  # Lower = better
+            self.apply_stamina_drain(3)
+            if success_roll < 0.45:
+                # Fake works! Gain 8-22 yards
+                fake_gain = random.randint(8, 22)
+                self.state.field_position = min(99, self.state.field_position + fake_gain)
+                playmaker.game_touches += 1
+                playmaker.game_yards += fake_gain
+                # Check for TD
+                if self.state.field_position >= 100:
+                    self.state.field_position = 100
+                    playmaker.game_tds += 1
+                    self.add_score(9)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=self.state.possession,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="fake_punt", play_family=family.value,
+                        players_involved=[player_label(punter), player_label(playmaker)],
+                        yards_gained=fake_gain,
+                        result="touchdown",
+                        description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — TOUCHDOWN! +9",
+                        fatigue=round(stamina, 1),
+                    )
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="fake_punt", play_family=family.value,
+                    players_involved=[player_label(punter), player_label(playmaker)],
+                    yards_gained=fake_gain,
+                    result="first_down",
+                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — FIRST DOWN!",
+                    fatigue=round(stamina, 1),
+                )
+            else:
+                # Fake fails — turnover on downs
+                fake_loss = random.randint(-3, 2)
+                self.state.field_position = max(1, self.state.field_position + fake_loss)
+                self.change_possession()
+                self.state.field_position = 100 - self.state.field_position
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="fake_punt", play_family=family.value,
+                    players_involved=[player_label(punter), player_label(playmaker)],
+                    yards_gained=fake_loss,
+                    result="turnover_on_downs",
+                    description=f"FAKE PUNT! {ftag} stuffed — TURNOVER ON DOWNS!",
+                    fatigue=round(stamina, 1),
+                )
+
         # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
         block_prob = self.calculate_block_probability(kick_type="punt")
         if random.random() < block_prob:
@@ -4761,14 +4998,36 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
 
-        if random.random() < 0.03:
-            def_team = self.get_defensive_team()
-            returner = max(def_team.players[:5], key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
-            rtag = player_tag(returner)
-            returner.game_punt_returns += 1
-            returner.game_punt_return_tds += 1
+        # ── Punt Return TD check — skill-based ─────────────────────
+        def_team = self.get_defensive_team()
+        punt_team = self.get_offensive_team()
+        td_returner = self._pick_returner(def_team)
+        base_td_rate = 0.03
+        if td_returner:
+            # Returner speed bonus: elite speedsters break more
+            speed_bonus = 1.0
+            if td_returner.speed >= 92:
+                speed_bonus = 1.40
+            elif td_returner.speed >= 85:
+                speed_bonus = 1.20
+            # Keeper return_keeper archetype bonus
+            archetype_info = get_archetype_info(td_returner.archetype) if td_returner.archetype != "none" else {}
+            arch_mod = archetype_info.get("return_yards_modifier", 1.0)
+            # ST scheme modifiers
+            ret_st = ST_SCHEMES.get(def_team.st_scheme, ST_SCHEMES["aces"])
+            punt_st = ST_SCHEMES.get(punt_team.st_scheme, ST_SCHEMES["aces"])
+            td_rate = base_td_rate * speed_bonus * arch_mod
+            td_rate *= ret_st["return_td_modifier"]
+            td_rate /= punt_st["coverage_modifier"]
+        else:
+            td_rate = base_td_rate
+
+        if random.random() < td_rate and td_returner:
+            rtag = player_tag(td_returner)
+            td_returner.game_punt_returns += 1
+            td_returner.game_punt_return_tds += 1
             new_pos = 100 - min(99, self.state.field_position + distance)
-            returner.game_punt_return_yards += new_pos
+            td_returner.game_punt_return_yards += new_pos
             self.change_possession()
             self.add_score(9)
             self.apply_stamina_drain(2)
@@ -4778,7 +5037,7 @@ class ViperballEngine:
                 time=self.state.time_remaining, possession=self.state.possession,
                 field_position=self.state.field_position, down=1, yards_to_go=20,
                 play_type="punt", play_family=family.value,
-                players_involved=[player_label(punter), player_label(returner)],
+                players_involved=[player_label(punter), player_label(td_returner)],
                 yards_gained=new_pos,
                 result=PlayResult.PUNT_RETURN_TD.value,
                 description=f"{ptag} punt → {rtag} RETURNS IT ALL THE WAY — TOUCHDOWN! +9",
@@ -4827,22 +5086,54 @@ class ViperballEngine:
                     self._apply_rouge_pindown(kicking_team, receiving)
                     return play
 
-        new_position = 100 - min(99, self.state.field_position + distance)
+        landing_spot = 100 - min(99, self.state.field_position + distance)
 
+        # ── Punt Return Phase ────────────────────────────────────────
         punt_coverage_team = self.get_offensive_team()
-        punt_cov_eligible = [p for p in punt_coverage_team.players if p.position in ("Keeper", "Defensive Line")]
+        returning_team = self.get_defensive_team()
+
+        returner = self._pick_returner(returning_team)
+        return_yards = 0
+        returner_desc = ""
+
+        if returner and landing_spot > 5:
+            return_yards = self._calculate_punt_return_yards(
+                returner, returning_team, punt_coverage_team
+            )
+            # Can't return past midfield+ without it being a TD (handled above)
+            # Ensure we don't go past our own territory unrealistically
+            final_position = max(1, landing_spot - return_yards)
+            returner.game_punt_returns += 1
+            returner.game_punt_return_yards += return_yards
+            rtag = player_tag(returner)
+            if return_yards > 0:
+                returner_desc = f", {rtag} returns {return_yards} yards"
+        else:
+            final_position = max(1, landing_spot)
+
+        # Coverage unit tackles the returner
+        tackler = self._pick_coverage_tackler(punt_coverage_team)
+        if tackler and return_yards > 0:
+            tackler.game_st_tackles += 1
+            tackler.game_coverage_snaps += 1
+        # Additional coverage snap for another unit member
+        punt_cov_eligible = [p for p in punt_coverage_team.players
+                             if p.position in ("Keeper", "Defensive Line") and p != tackler]
         if punt_cov_eligible:
             cov1 = random.choice(punt_cov_eligible)
             cov1.game_coverage_snaps += 1
-            cov1.game_st_tackles += 1
 
         self.change_possession()
-        self.state.field_position = max(1, new_position)
+        self.state.field_position = max(1, final_position)
         self.state.down = 1
         self.state.yards_to_go = 20
 
         self.apply_stamina_drain(2)
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+        involved = [player_label(punter)]
+        if returner and return_yards > 0:
+            involved.append(player_label(returner))
 
         return Play(
             play_number=self.state.play_number,
@@ -4854,10 +5145,10 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go,
             play_type="punt",
             play_family=family.value,
-            players_involved=[player_label(punter)],
+            players_involved=involved,
             yards_gained=-distance,
             result="punt",
-            description=f"{ptag} punt → {distance} yards",
+            description=f"{ptag} punt → {distance} yards{returner_desc}",
             fatigue=round(stamina, 1),
         )
 
@@ -5500,6 +5791,20 @@ class ViperballEngine:
         home_stats["bells"] = away_turnovers
         away_stats["bells"] = home_turnovers
 
+        # Sacrifice yards and adjusted yardage (AdjY)
+        home_stats["sacrifice_yards"] = self.state.home_sacrifice_yards
+        away_stats["sacrifice_yards"] = self.state.away_sacrifice_yards
+        home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_sacrifice_yards
+        away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_sacrifice_yards
+
+        # Fake punt stats
+        home_fake_punts = [p for p in home_plays if p.play_type == "fake_punt"]
+        away_fake_punts = [p for p in away_plays if p.play_type == "fake_punt"]
+        home_stats["fake_punts_attempted"] = len(home_fake_punts)
+        home_stats["fake_punts_converted"] = len([p for p in home_fake_punts if p.result in ("first_down", "touchdown")])
+        away_stats["fake_punts_attempted"] = len(away_fake_punts)
+        away_stats["fake_punts_converted"] = len([p for p in away_fake_punts if p.result in ("first_down", "touchdown")])
+
         for stats, team_obj in [(home_stats, self.home_team), (away_stats, self.away_team)]:
             keeper_deflections = sum(p.game_kick_deflections for p in team_obj.players)
             keeper_bells = sum(p.game_keeper_bells for p in team_obj.players)
@@ -5646,6 +5951,14 @@ class ViperballEngine:
             },
             "home_style": self.home_team.offense_style,
             "away_style": self.away_team.offense_style,
+            "home_defense_style": self.home_team.defense_style,
+            "away_defense_style": self.away_team.defense_style,
+            "home_st_scheme": self.home_team.st_scheme,
+            "away_st_scheme": self.away_team.st_scheme,
+            "sacrifice_yards": {
+                "home": self.state.home_sacrifice_yards,
+                "away": self.state.away_sacrifice_yards,
+            },
             "weather": self.weather,
             "weather_label": self.weather_info["label"],
             "weather_description": self.weather_info["description"],
@@ -5826,6 +6139,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
     mascot = data["team_info"]["mascot"]
     style = data.get("style", {}).get("offense_style", "balanced")
     defense_style = data.get("style", {}).get("defense_style", "base_defense")
+    st_scheme = data.get("style", {}).get("st_scheme", "aces")
     identity = data.get("identity", {})
     philosophy = identity.get("philosophy", "hybrid")
     state = data["team_info"].get("state", "")
@@ -5853,6 +6167,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
             mascot=mascot,
             offense_style=style,
             defense_style=defense_style,
+            st_scheme=st_scheme,
             philosophy=philosophy,
             recruiting_pipeline=recruiting_pipeline,
             program_archetype=program_archetype,
@@ -5922,6 +6237,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
         defensive_strength=data["team_stats"]["defensive_strength"],
         offense_style=style,
         defense_style=defense_style,
+        st_scheme=st_scheme,
     )
 
 
@@ -5931,6 +6247,7 @@ def generate_team_on_the_fly(
     mascot: str,
     offense_style: str = "balanced",
     defense_style: str = "base_defense",
+    st_scheme: str = "aces",
     philosophy: str = "hybrid",
     recruiting_pipeline: Optional[Dict] = None,
     program_archetype: Optional[str] = None,
@@ -6101,6 +6418,7 @@ def generate_team_on_the_fly(
         defensive_strength=defensive_strength,
         offense_style=offense_style,
         defense_style=defense_style,
+        st_scheme=st_scheme,
     )
 
 
