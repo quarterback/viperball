@@ -537,6 +537,10 @@ class GameState:
     away_stamina: float = 100.0
     home_sacrifice_yards: int = 0
     away_sacrifice_yards: int = 0
+    home_sacrifice_drives: int = 0
+    away_sacrifice_drives: int = 0
+    home_sacrifice_scores: int = 0
+    away_sacrifice_scores: int = 0
 
 
 @dataclass
@@ -1771,6 +1775,7 @@ class ViperballEngine:
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
+        self._current_drive_sacrifice = False
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
 
@@ -1989,8 +1994,15 @@ class ViperballEngine:
         sacrifice = 20 - start_position  # positive = gave up yards, negative = got bonus yards
         if receiving_team == "home":
             self.state.home_sacrifice_yards += sacrifice
+            if sacrifice > 0:
+                self.state.home_sacrifice_drives += 1
         else:
             self.state.away_sacrifice_yards += sacrifice
+            if sacrifice > 0:
+                self.state.away_sacrifice_drives += 1
+
+        # Flag for the upcoming drive — did it start under sacrifice?
+        self._current_drive_sacrifice = sacrifice > 0
 
         self.state.field_position = start_position
         self.state.down = 1
@@ -2005,6 +2017,8 @@ class ViperballEngine:
         drive_team = self.state.possession
         drive_start = self.state.field_position
         drive_quarter = self.state.quarter
+        drive_sacrifice = self._current_drive_sacrifice
+        self._current_drive_sacrifice = False  # Reset for next drive
         drive_plays = 0
         drive_yards = 0
         drive_result = "stall"
@@ -2047,6 +2061,14 @@ class ViperballEngine:
                     self.state.yards_to_go = 20
                 break
 
+        # Track compelled efficiency: did a sacrifice drive end in a score?
+        is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td")
+        if drive_sacrifice and is_score:
+            if drive_team == "home":
+                self.state.home_sacrifice_scores += 1
+            else:
+                self.state.away_sacrifice_scores += 1
+
         self.drive_log.append({
             "team": drive_team,
             "quarter": drive_quarter,
@@ -2054,6 +2076,7 @@ class ViperballEngine:
             "plays": drive_plays,
             "yards": drive_yards,
             "result": drive_result,
+            "sacrifice_drive": drive_sacrifice,
         })
 
     FIELD_POSITION_VALUE = [
@@ -5804,6 +5827,18 @@ class ViperballEngine:
         home_stats["fake_punts_converted"] = len([p for p in home_fake_punts if p.result in ("first_down", "touchdown")])
         away_stats["fake_punts_attempted"] = len(away_fake_punts)
         away_stats["fake_punts_converted"] = len([p for p in away_fake_punts if p.result in ("first_down", "touchdown")])
+
+        # Compelled Efficiency — scoring rate when starting under sacrifice
+        home_stats["sacrifice_drives"] = self.state.home_sacrifice_drives
+        home_stats["sacrifice_scores"] = self.state.home_sacrifice_scores
+        home_stats["compelled_efficiency"] = round(
+            self.state.home_sacrifice_scores / max(1, self.state.home_sacrifice_drives) * 100, 1
+        ) if self.state.home_sacrifice_drives > 0 else None
+        away_stats["sacrifice_drives"] = self.state.away_sacrifice_drives
+        away_stats["sacrifice_scores"] = self.state.away_sacrifice_scores
+        away_stats["compelled_efficiency"] = round(
+            self.state.away_sacrifice_scores / max(1, self.state.away_sacrifice_drives) * 100, 1
+        ) if self.state.away_sacrifice_drives > 0 else None
 
         for stats, team_obj in [(home_stats, self.home_team), (away_stats, self.away_team)]:
             keeper_deflections = sum(p.game_kick_deflections for p in team_obj.players)
