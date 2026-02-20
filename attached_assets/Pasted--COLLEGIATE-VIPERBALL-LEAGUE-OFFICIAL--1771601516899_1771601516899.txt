@@ -1,0 +1,126 @@
+============================================================
+COLLEGIATE VIPERBALL LEAGUE — OFFICIAL BOX SCORE
+============================================================
+
+  Alabama State University 68½, Agnes Scott College 51½
+  Weather: Clear | Seed: 154564
+
+------------------------------------------------------------
+SCORING BY QUARTER
+------------------------------------------------------------
+  Team                        Q1    Q2    Q3    Q4    Final
+  --------------------------  ----  ----  ----  ----  -----
+  Agnes Scott College           8½     0   33½     8    51½
+  Alabama State University      13     5    22    25    68½
+
+------------------------------------------------------------
+TEAM STATISTICS
+------------------------------------------------------------
+                                Agnes Scott College    Alabama State University
+                         --------------------------  --------------------------
+  Touchdowns (9pts)                       2 (18pts)                    0 (0pts)
+  Snap Kicks (5pts)                            5/13                       11/20
+  Field Goals (3pts)                            2/2                         3/6
+  Pindowns (1pt)                                  0                           1
+  Strikes (1/2pt)                                 2                           0
+  Total Yards                                   543                         790
+  Rushing Yards                                  25                         139
+  Lateral Yards                                  12                          33
+  Kick Passes                                 23/44                       27/46
+  Kick Pass Yards                               455                         541
+  KP TDs                                          2                           0
+  Kick Pass INTs                                  2                           1
+  Yards/Play                                   6.96                        8.32
+  Total Plays                                    78                          95
+  Lateral Chains                         10 (90.0%)                   9 (66.7%)
+  Fumbles Lost                                    0                           2
+  Turnovers on Downs                              0                           0
+  Penalties                              10 / 85yds                 14 / 140yds
+
+------------------------------------------------------------
+INDIVIDUAL STATS — AGNES SCOTT COLLEGE
+------------------------------------------------------------
+
+  Rushing & Laterals
+  Player                       TCH  YDS  RUSH  LAT   TD  FUM  L.Thr L.Rec
+  ---------------------------- ---  ---  ----  ---   --  ---  ----- -----
+  DL22 Jade Hernandez           46    0     0    0    0    0      1     1
+  DL6 Catherine Fox             25  438     3    0    2    1      1     0
+  SB18 Nicole Shah               9   21    21    0    0    1      6     4
+  DL19 Ivy Morris                6    2     0    2    0    1      5     5
+  OL4 Zuri Clark                 5    9     0    9    0    0      2     4
+  HB20 Iris Howard               5    4     4    0    0    0      3     2
+  OL2 Bridget Baker              4    2     0    2    0    0      2     3
+  OL14 Jasmine Wood              4    2     0    2    0    0      2     3
+
+  Kicking
+  Player                       ATT  MADE  PCT
+  ---------------------------- ---  ----  ---
+  SB18 Nicole Shah              14     7  50%
+
+  Kick Passing
+  Player                       ATT  COMP  YDS  TD  INT  REC  DINT
+  ---------------------------- ---  ----  ---  --  ---  ---  ----
+  DL22 Jade Hernandez           44    23  435   2    2    0     0
+  DL6 Catherine Fox              0     0    0   2    0   23     1
+  OL14 Jasmine Wood              0     0    0   0    0    0     1
+
+  Special Teams
+  Player                       KR  KRYds KRTD  PR  PRYds PRTD  Tkl
+  ---------------------------- --  ----- ----  --  ----- ----  ---
+  DL22 Jade Hernandez           0      0    0   0      0    0    1
+
+------------------------------------------------------------
+INDIVIDUAL STATS — ALABAMA STATE UNIVERSITY
+------------------------------------------------------------
+
+  Rushing & Laterals
+  Player                       TCH  YDS  RUSH  LAT   TD  FUM  L.Thr L.Rec
+  ---------------------------- ---  ---  ----  ---   --  ---  ----- -----
+  ZB6 Lydia Hansen              49   23    23    0    0    0      0     0
+  DL4 Vivian Adams              30  578     0    7    0    0      1     2
+  SB9 Iris Yang                  4   62    62    0    0    1      1     0
+  DL11 Penelope Shaw             3    9     0    9    0    0      0     3
+  WB13 Hayden Hernandez          5    7     0    7    0    0      4     2
+  WB1 Monica Mason               4    0     0    0    0    0      3     3
+  HB3 Maddison Ford              4   60    60    0    0    0      1     1
+  OL8 Grace Sullivan             1    0     0    0    0    0      1     0
+
+  Kicking
+  Player                       ATT  MADE  PCT
+  ---------------------------- ---  ----  ---
+  SB9 Iris Yang                 20    14  70%
+
+  Kick Passing
+  Player                       ATT  COMP  YDS  TD  INT  REC  DINT
+  ---------------------------- ---  ----  ---  --  ---  ---  ----
+  ZB6 Lydia Hansen              46    28  571   0    2    0     0
+  DL4 Vivian Adams               0     0    0   0    0   28     0
+  WB1 Monica Mason               0     0    0   0    0    0     1
+  OL8 Grace Sullivan             0     0    0   0    0    0     1
+
+  Special Teams
+  Player                       KR  KRYds KRTD  PR  PRYds PRTD  Tkl
+  ---------------------------- --  ----- ----  --  ----- ----  ---
+  WB1 Monica Mason              0      0    0   1     22    0    0
+
+------------------------------------------------------------
+KEY PLAYS
+------------------------------------------------------------
+  Q1 14:03 [HOME] SB18 snap kick 51yd — GOOD! +5
+  Q1 13:05 [AWAY] SB9 pitch → 28 — FIRST DOWN [vs spread D, correct read, beats OL14 in open field]
+  Q1 12:17 [AWAY] ZB6 kick pass to DL4 → 17
+  Q1 11:44 [AWAY] HB3 counter → 21 — FIRST DOWN [VP left pulls D, vs spread D, counter action, slips past OL14, EXPLOSIVE]
+  Q1 11:30 [AWAY] SB9 snap kick 49yd — GOOD! +5
+  Q1 10:39 [AWAY] SB9 snap kick 33yd — GOOD! +5
+  Q1 09:41 [HOME] DL22 kick pass to DL6 → 15
+  Q1 09:19 [HOME] DL22 kick pass to DL6 → 23 — FIRST DOWN
+  Q1 08:06 [AWAY] ZB6 kick pass to DL4 → 26 — FIRST DOWN
+  Q1 06:42 [HOME] DL22 kick pass to DL6 → 13
+  Q1 06:15 [HOME] DL22 kick pass to DL6 → 13 — FIRST DOWN
+  Q1 03:06 [AWAY] ZB6 kick pass to DL4 → 12
+
+============================================================
+CVL Official Box Score | 6-down, 20-yard system
+Scoring: TD 9 | SK 5 | FG 3 | Safety 2 | Pindown 1 | Strike 1/2
+============================================================
