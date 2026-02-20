@@ -1,14 +1,13 @@
 """
 Geographic Conference Assignment for Viperball
 
-Groups teams into geographically coherent conferences using state-based
-regional clustering. Supports flexible conference counts by merging/splitting
-regions as needed.
+Reads canonical conference assignments from team JSON files (team_info.conference).
+Falls back to geographic clustering only if teams lack conference assignments.
 """
 
 import json
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 REGION_MAP = {
@@ -62,7 +61,7 @@ def get_team_state(team_data: dict) -> str:
     return team_data.get("team_info", {}).get("state", "")
 
 
-def load_team_states(teams_dir: str) -> Dict[str, str]:
+def load_team_data(teams_dir: str) -> Dict[str, dict]:
     result = {}
     for fname in os.listdir(teams_dir):
         if not fname.endswith(".json"):
@@ -71,13 +70,54 @@ def load_team_states(teams_dir: str) -> Dict[str, str]:
         try:
             with open(fpath) as f:
                 data = json.load(f)
-                name = data.get("team_info", {}).get("school_name", fname.replace(".json", ""))
-                state = data.get("team_info", {}).get("state", "")
-                if name and state:
-                    result[name] = state
+                ti = data.get("team_info", {})
+                name = ti.get("school_name", fname.replace(".json", ""))
+                result[name] = {
+                    "state": ti.get("state", ""),
+                    "conference": ti.get("conference", ""),
+                    "school_id": fname.replace(".json", ""),
+                }
         except (json.JSONDecodeError, KeyError):
             continue
     return result
+
+
+def load_team_states(teams_dir: str) -> Dict[str, str]:
+    data = load_team_data(teams_dir)
+    return {name: info["state"] for name, info in data.items()}
+
+
+def read_conferences_from_team_files(
+    teams_dir: str, team_names: List[str]
+) -> Optional[Dict[str, List[str]]]:
+    team_data = load_team_data(teams_dir)
+
+    name_to_conf = {}
+    for name, info in team_data.items():
+        if info["conference"]:
+            name_to_conf[name] = info["conference"]
+
+    if not name_to_conf:
+        return None
+
+    assigned = {t for t in team_names if t in name_to_conf}
+    if len(assigned) < len(team_names) * 0.5:
+        return None
+
+    confs: Dict[str, List[str]] = {}
+    unassigned = []
+    for t in team_names:
+        conf = name_to_conf.get(t, "")
+        if conf:
+            confs.setdefault(conf, []).append(t)
+        else:
+            unassigned.append(t)
+
+    if unassigned and confs:
+        smallest = min(confs, key=lambda k: len(confs[k]))
+        confs[smallest].extend(unassigned)
+
+    return confs
 
 
 def cluster_teams_by_geography(
@@ -150,5 +190,9 @@ def get_geographic_conference_defaults(
     team_names: List[str],
     num_conferences: int,
 ) -> Dict[str, List[str]]:
+    file_confs = read_conferences_from_team_files(teams_dir, team_names)
+    if file_confs:
+        return file_confs
+
     team_states = load_team_states(teams_dir)
     return cluster_teams_by_geography(team_names, team_states, num_conferences)

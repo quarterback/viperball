@@ -10,7 +10,8 @@
     "colors": [
       "Orange",
       "Blue"
-    ]
+    ],
+    "school_name": "South Carolina A&M University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "relationship builder",
       "background": "Offensive innovator"
     }
-  }
+  },
+  "name": "South Carolina A&M University"
 }

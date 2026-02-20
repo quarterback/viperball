@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "school_name": "East Texas A&M University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "detail-oriented strategist",
       "background": "Former college player returning to alma mater"
     }
-  }
+  },
+  "name": "East Texas A&M University"
 }

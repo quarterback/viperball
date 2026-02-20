@@ -10,7 +10,8 @@
     "colors": [
       "Pine Green",
       "White"
-    ]
+    ],
+    "school_name": "Maine A&M University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "old-school fundamentalist",
       "background": "Veteran high school coach transitioning to college"
     }
-  }
+  },
+  "name": "Maine A&M University"
 }

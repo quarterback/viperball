@@ -10,7 +10,8 @@
     "colors": [
       "Navy",
       "Gold"
-    ]
+    ],
+    "school_name": "Western Mississippi University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "disciplinarian",
       "background": "Turnaround specialist known for rebuilding programs"
     }
-  }
+  },
+  "name": "Western Mississippi University"
 }

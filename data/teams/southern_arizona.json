@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "Sand"
-    ]
+    ],
+    "school_name": "Southern Arizona University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "relationship builder",
       "background": "Rising star assistant with innovative schemes"
     }
-  }
+  },
+  "name": "Southern Arizona University"
 }

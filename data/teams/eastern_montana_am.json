@@ -10,7 +10,8 @@
     "colors": [
       "Forest Green",
       "Gold"
-    ]
+    ],
+    "school_name": "Eastern Montana A&M University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "old-school fundamentalist",
       "background": "Experienced coach hired from rival program"
     }
-  }
+  },
+  "name": "Eastern Montana A&M University"
 }

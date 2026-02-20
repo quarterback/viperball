@@ -10,7 +10,8 @@
     "colors": [
       "Orange",
       "Green"
-    ]
+    ],
+    "school_name": "University of Texas at Dallas"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "calm under pressure",
       "background": "Rising star assistant with innovative schemes"
     }
-  }
+  },
+  "name": "University of Texas at Dallas"
 }

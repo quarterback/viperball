@@ -11,7 +11,8 @@
       "Blue",
       "Black",
       "White"
-    ]
+    ],
+    "school_name": "Grand Valley State University"
   },
   "identity": {
     "style": "aggressive",
@@ -157,5 +158,6 @@
       "personality": "players-first mentor",
       "background": "Former college assistant promoted to head coach"
     }
-  }
+  },
+  "name": "Grand Valley State University"
 }

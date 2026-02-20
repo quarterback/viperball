@@ -1,64 +1,1818 @@
 {
   "league": "Collegiate Viperball League (CVL)",
-  "season": "2027",
-  "total_schools": 102,
-  "total_conferences": 8,
+  "total_schools": 187,
+  "total_conferences": 16,
   "conferences": [
     {
-      "conference_id": "yankee",
-      "name": "Yankee Conference",
-      "region": "Northeast / New England",
-      "teams": 13,
-      "schools": ["vermont", "maine", "new_hampshire", "umass_lowell", "albany", "stony_brook", "binghamton", "hartford", "umbc", "njit", "boston_university", "northeastern", "quinnipiac"]
-    },
-    {
-      "conference_id": "metro_atlantic",
-      "name": "Metro Atlantic",
-      "region": "Mid-Atlantic / Northeast Corridor",
-      "teams": 13,
-      "schools": ["st_johns", "seton_hall", "providence", "georgetown", "villanova", "fordham", "hofstra", "fairfield", "loyola_md", "american", "manhattan", "iona", "nyu"]
-    },
-    {
-      "conference_id": "great_lakes",
-      "name": "Great Lakes Union",
-      "region": "Midwest / Great Lakes",
-      "teams": 13,
-      "schools": ["marquette", "depaul", "loyola_chicago", "xavier", "butler", "creighton", "detroit_mercy", "cleveland_state", "uic", "milwaukee", "wright_state", "green_bay", "northern_kentucky"]
-    },
-    {
-      "conference_id": "colonial",
-      "name": "Colonial Athletic",
-      "region": "South Atlantic",
-      "teams": 13,
-      "schools": ["vcu", "george_mason", "dayton", "richmond", "la_salle", "duquesne", "charleston", "davidson", "unc_asheville", "high_point", "winthrop", "uncg", "saint_louis"]
-    },
-    {
-      "conference_id": "gateway",
-      "name": "Gateway League",
-      "region": "Missouri Valley / Interior",
-      "teams": 13,
-      "schools": ["wichita_state", "drake", "bradley", "valparaiso", "belmont", "lipscomb", "northern_iowa", "indiana_state", "missouri_state", "southern_illinois", "evansville", "murray_state", "oral_roberts"]
-    },
-    {
-      "conference_id": "sun_country",
-      "name": "Sun Country",
-      "region": "Southwest / Texas",
-      "teams": 11,
-      "schools": ["ut_arlington", "little_rock", "nmsu", "grand_canyon", "seattle", "utep", "texas_state", "ut_san_antonio", "north_texas", "air_force", "denver"]
-    },
-    {
-      "conference_id": "skyline",
-      "name": "Skyline Conference",
-      "region": "Mountain West / Northern Plains",
+      "name": "Big Pacific",
       "teams": 12,
-      "schools": ["northern_colorado", "utah_valley", "idaho_state", "weber_state", "montana_state", "montana", "wyoming", "northern_arizona", "south_dakota", "north_dakota"]
+      "schools": [
+        "chaminade",
+        "gonzaga",
+        "linfield",
+        "oregon_state",
+        "portland_state",
+        "santa_clara",
+        "ucsb",
+        "hawaii",
+        "portland",
+        "san_francisco",
+        "pacific",
+        "washington_state"
+      ],
+      "details": [
+        {
+          "school_id": "chaminade",
+          "school_name": "Chaminade University",
+          "abbreviation": "CHAM",
+          "mascot": "Silverswords",
+          "city": "Honolulu",
+          "state": "HI"
+        },
+        {
+          "school_id": "gonzaga",
+          "school_name": "Gonzaga University",
+          "abbreviation": "GU",
+          "mascot": "Bulldogs",
+          "city": "Spokane",
+          "state": "WA"
+        },
+        {
+          "school_id": "linfield",
+          "school_name": "Linfield University",
+          "abbreviation": "LINF",
+          "mascot": "Wildcats",
+          "city": "McMinnville",
+          "state": "OR"
+        },
+        {
+          "school_id": "oregon_state",
+          "school_name": "Oregon State University",
+          "abbreviation": "ORST",
+          "mascot": "Beavers",
+          "city": "Corvallis",
+          "state": "OR"
+        },
+        {
+          "school_id": "portland_state",
+          "school_name": "Portland State University",
+          "abbreviation": "PSU",
+          "mascot": "Vikings",
+          "city": "Portland",
+          "state": "OR"
+        },
+        {
+          "school_id": "santa_clara",
+          "school_name": "Santa Clara University",
+          "abbreviation": "SCU",
+          "mascot": "Broncos",
+          "city": "Santa Clara",
+          "state": "CA"
+        },
+        {
+          "school_id": "ucsb",
+          "school_name": "University of California, Santa Barbara",
+          "abbreviation": "UCSB",
+          "mascot": "Gauchos",
+          "city": "Santa Barbara",
+          "state": "CA"
+        },
+        {
+          "school_id": "hawaii",
+          "school_name": "University of Hawaii",
+          "abbreviation": "HAW",
+          "mascot": "Rainbow Warriors",
+          "city": "Honolulu",
+          "state": "HI"
+        },
+        {
+          "school_id": "portland",
+          "school_name": "University of Portland",
+          "abbreviation": "UP",
+          "mascot": "Pilots",
+          "city": "Portland",
+          "state": "OR"
+        },
+        {
+          "school_id": "san_francisco",
+          "school_name": "University of San Francisco",
+          "abbreviation": "USF",
+          "mascot": "Dons",
+          "city": "San Francisco",
+          "state": "CA"
+        },
+        {
+          "school_id": "pacific",
+          "school_name": "University of the Pacific",
+          "abbreviation": "UOP",
+          "mascot": "Tigers",
+          "city": "Stockton",
+          "state": "CA"
+        },
+        {
+          "school_id": "washington_state",
+          "school_name": "Washington State University",
+          "abbreviation": "WSU",
+          "mascot": "Cougars",
+          "city": "Pullman",
+          "state": "WA"
+        }
+      ]
     },
     {
-      "conference_id": "pacific_rim",
-      "name": "Pacific Rim",
-      "region": "West Coast",
+      "name": "Border Conference",
+      "teams": 14,
+      "schools": [
+        "nmsu",
+        "oral_roberts",
+        "seattle",
+        "southern_arizona",
+        "sw_new_mexico",
+        "texas_am_cc",
+        "texas_state",
+        "little_rock",
+        "unlv",
+        "north_texas",
+        "ut_arlington",
+        "ut_dallas",
+        "utep",
+        "ut_san_antonio"
+      ],
+      "details": [
+        {
+          "school_id": "nmsu",
+          "school_name": "New Mexico State University",
+          "abbreviation": "NMSU",
+          "mascot": "Aggies",
+          "city": "Las Cruces",
+          "state": "NM"
+        },
+        {
+          "school_id": "oral_roberts",
+          "school_name": "Oral Roberts University",
+          "abbreviation": "ORU",
+          "mascot": "Golden Eagles",
+          "city": "Tulsa",
+          "state": "OK"
+        },
+        {
+          "school_id": "seattle",
+          "school_name": "Seattle University",
+          "abbreviation": "SU",
+          "mascot": "Redhawks",
+          "city": "Seattle",
+          "state": "WA"
+        },
+        {
+          "school_id": "southern_arizona",
+          "school_name": "Southern Arizona University",
+          "abbreviation": "SAU",
+          "mascot": "Sidewinders",
+          "city": "Tucson",
+          "state": "AZ"
+        },
+        {
+          "school_id": "sw_new_mexico",
+          "school_name": "Southwest New Mexico University",
+          "abbreviation": "SWNMU",
+          "mascot": "Thunderhawks",
+          "city": "Silver City",
+          "state": "NM"
+        },
+        {
+          "school_id": "texas_am_cc",
+          "school_name": "Texas A&M University-Corpus Christi",
+          "abbreviation": "AMCC",
+          "mascot": "Islanders",
+          "city": "Corpus Christi",
+          "state": "TX"
+        },
+        {
+          "school_id": "texas_state",
+          "school_name": "Texas State University",
+          "abbreviation": "TXST",
+          "mascot": "Bobcats",
+          "city": "San Marcos",
+          "state": "TX"
+        },
+        {
+          "school_id": "little_rock",
+          "school_name": "University of Arkansas at Little Rock",
+          "abbreviation": "UALR",
+          "mascot": "Trojans",
+          "city": "Little Rock",
+          "state": "AR"
+        },
+        {
+          "school_id": "unlv",
+          "school_name": "University of Nevada Las Vegas",
+          "abbreviation": "UNLV",
+          "mascot": "Rebels",
+          "city": "Las Vegas",
+          "state": "NV"
+        },
+        {
+          "school_id": "north_texas",
+          "school_name": "University of North Texas",
+          "abbreviation": "UNT",
+          "mascot": "Mean Green",
+          "city": "Denton",
+          "state": "TX"
+        },
+        {
+          "school_id": "ut_arlington",
+          "school_name": "University of Texas at Arlington",
+          "abbreviation": "UTA",
+          "mascot": "Mavericks",
+          "city": "Arlington",
+          "state": "TX"
+        },
+        {
+          "school_id": "ut_dallas",
+          "school_name": "University of Texas at Dallas",
+          "abbreviation": "UTD",
+          "mascot": "Comets",
+          "city": "Richardson",
+          "state": "TX"
+        },
+        {
+          "school_id": "utep",
+          "school_name": "University of Texas at El Paso",
+          "abbreviation": "UTEP",
+          "mascot": "Miners",
+          "city": "El Paso",
+          "state": "TX"
+        },
+        {
+          "school_id": "ut_san_antonio",
+          "school_name": "University of Texas at San Antonio",
+          "abbreviation": "UTSA",
+          "mascot": "Roadrunners",
+          "city": "San Antonio",
+          "state": "TX"
+        }
+      ]
+    },
+    {
+      "name": "Collegiate Commonwealth",
+      "teams": 9,
+      "schools": [
+        "boston_university",
+        "brandeis",
+        "holy_cross",
+        "mount_holyoke",
+        "quinnipiac",
+        "smith",
+        "coast_guard",
+        "wellesley",
+        "west_texas_am"
+      ],
+      "details": [
+        {
+          "school_id": "boston_university",
+          "school_name": "Boston University",
+          "abbreviation": "BU",
+          "mascot": "Terriers",
+          "city": "Boston",
+          "state": "MA"
+        },
+        {
+          "school_id": "brandeis",
+          "school_name": "Brandeis University",
+          "abbreviation": "BRND",
+          "mascot": "Judges",
+          "city": "Waltham",
+          "state": "MA"
+        },
+        {
+          "school_id": "holy_cross",
+          "school_name": "College of the Holy Cross",
+          "abbreviation": "HC",
+          "mascot": "Crusaders",
+          "city": "Worcester",
+          "state": "MA"
+        },
+        {
+          "school_id": "mount_holyoke",
+          "school_name": "Mount Holyoke College",
+          "abbreviation": "MHC",
+          "mascot": "Lyons",
+          "city": "South Hadley",
+          "state": "MA"
+        },
+        {
+          "school_id": "quinnipiac",
+          "school_name": "Quinnipiac University",
+          "abbreviation": "QU",
+          "mascot": "Bobcats",
+          "city": "Hamden",
+          "state": "CT"
+        },
+        {
+          "school_id": "smith",
+          "school_name": "Smith College",
+          "abbreviation": "SMTH",
+          "mascot": "Pioneers",
+          "city": "Northampton",
+          "state": "MA"
+        },
+        {
+          "school_id": "coast_guard",
+          "school_name": "United States Coast Guard Academy",
+          "abbreviation": "USCG",
+          "mascot": "Bears",
+          "city": "New London",
+          "state": "CT"
+        },
+        {
+          "school_id": "wellesley",
+          "school_name": "Wellesley College",
+          "abbreviation": "WELL",
+          "mascot": "Blue",
+          "city": "Wellesley",
+          "state": "MA"
+        },
+        {
+          "school_id": "west_texas_am",
+          "school_name": "West Texas A&M University",
+          "abbreviation": "WTAMU",
+          "mascot": "Buffaloes",
+          "city": "Canyon",
+          "state": "TX"
+        }
+      ]
+    },
+    {
+      "name": "Galactic League",
+      "teams": 10,
+      "schools": [
+        "langston",
+        "maine_am",
+        "nyu",
+        "ne_louisiana",
+        "seton_hall",
+        "st_johns",
+        "tennessee_am",
+        "space_force",
+        "south_dakota",
+        "western_mississippi"
+      ],
+      "details": [
+        {
+          "school_id": "langston",
+          "school_name": "Langston University",
+          "abbreviation": "LU",
+          "mascot": "Lions",
+          "city": "Langston",
+          "state": "OK"
+        },
+        {
+          "school_id": "maine_am",
+          "school_name": "Maine A&M University",
+          "abbreviation": "MAM",
+          "mascot": "Lumberjacks",
+          "city": "Portland",
+          "state": "ME"
+        },
+        {
+          "school_id": "nyu",
+          "school_name": "New York University",
+          "abbreviation": "NYU",
+          "mascot": "Violets",
+          "city": "New York",
+          "state": "NY"
+        },
+        {
+          "school_id": "ne_louisiana",
+          "school_name": "Northeast Louisiana University",
+          "abbreviation": "NLU",
+          "mascot": "War Hawks",
+          "city": "Mansfield",
+          "state": "LA"
+        },
+        {
+          "school_id": "seton_hall",
+          "school_name": "Seton Hall University",
+          "abbreviation": "SHU",
+          "mascot": "Pirates",
+          "city": "South Orange",
+          "state": "NJ"
+        },
+        {
+          "school_id": "st_johns",
+          "school_name": "St. John's University",
+          "abbreviation": "SJU",
+          "mascot": "Red Storm",
+          "city": "Queens",
+          "state": "NY"
+        },
+        {
+          "school_id": "tennessee_am",
+          "school_name": "Tennessee A&M University",
+          "abbreviation": "TAMU",
+          "mascot": "Golden Eagles",
+          "city": "Dyersburg",
+          "state": "TN"
+        },
+        {
+          "school_id": "space_force",
+          "school_name": "United States Space Force Academy",
+          "abbreviation": "USSF",
+          "mascot": "Guardians",
+          "city": "Fallon",
+          "state": "NV"
+        },
+        {
+          "school_id": "south_dakota",
+          "school_name": "University of South Dakota",
+          "abbreviation": "USD",
+          "mascot": "Coyotes",
+          "city": "Vermillion",
+          "state": "SD"
+        },
+        {
+          "school_id": "western_mississippi",
+          "school_name": "Western Mississippi University",
+          "abbreviation": "WMU",
+          "mascot": "River Kings",
+          "city": "Vicksburg",
+          "state": "MS"
+        }
+      ]
+    },
+    {
+      "name": "Giant 14",
       "teams": 13,
-      "schools": ["gonzaga", "pepperdine", "santa_clara", "san_francisco", "loyola_marymount", "san_diego", "pacific", "portland", "uci", "ucsb", "csuf", "long_beach_state", "uc_riverside"]
+      "schools": [
+        "creighton",
+        "depaul",
+        "loyola_chicago",
+        "marquette",
+        "oakland",
+        "uchicago",
+        "dayton",
+        "uic",
+        "minnesota",
+        "st_thomas",
+        "green_bay",
+        "milwaukee",
+        "xavier"
+      ],
+      "details": [
+        {
+          "school_id": "creighton",
+          "school_name": "Creighton University",
+          "abbreviation": "CU",
+          "mascot": "Bluejays",
+          "city": "Omaha",
+          "state": "NE"
+        },
+        {
+          "school_id": "depaul",
+          "school_name": "DePaul University",
+          "abbreviation": "DPU",
+          "mascot": "Blue Demons",
+          "city": "Chicago",
+          "state": "IL"
+        },
+        {
+          "school_id": "loyola_chicago",
+          "school_name": "Loyola University Chicago",
+          "abbreviation": "LUC",
+          "mascot": "Ramblers",
+          "city": "Chicago",
+          "state": "IL"
+        },
+        {
+          "school_id": "marquette",
+          "school_name": "Marquette University",
+          "abbreviation": "MU",
+          "mascot": "Golden Eagles",
+          "city": "Milwaukee",
+          "state": "WI"
+        },
+        {
+          "school_id": "oakland",
+          "school_name": "Oakland University",
+          "abbreviation": "OAK",
+          "mascot": "Golden Grizzlies",
+          "city": "Rochester",
+          "state": "MI"
+        },
+        {
+          "school_id": "uchicago",
+          "school_name": "University of Chicago",
+          "abbreviation": "UCHI",
+          "mascot": "Maroons",
+          "city": "Chicago",
+          "state": "IL"
+        },
+        {
+          "school_id": "dayton",
+          "school_name": "University of Dayton",
+          "abbreviation": "UD",
+          "mascot": "Flyers",
+          "city": "Dayton",
+          "state": "OH"
+        },
+        {
+          "school_id": "uic",
+          "school_name": "University of Illinois Chicago",
+          "abbreviation": "UIC",
+          "mascot": "Flames",
+          "city": "Chicago",
+          "state": "IL"
+        },
+        {
+          "school_id": "minnesota",
+          "school_name": "University of Minnesota",
+          "abbreviation": "MINN",
+          "mascot": "Golden Gophers",
+          "city": "Minneapolis",
+          "state": "MN"
+        },
+        {
+          "school_id": "st_thomas",
+          "school_name": "University of St. Thomas",
+          "abbreviation": "STMN",
+          "mascot": "Tommies",
+          "city": "St. Paul",
+          "state": "MN"
+        },
+        {
+          "school_id": "green_bay",
+          "school_name": "University of Wisconsin-Green Bay",
+          "abbreviation": "UWGB",
+          "mascot": "Phoenix",
+          "city": "Green Bay",
+          "state": "WI"
+        },
+        {
+          "school_id": "milwaukee",
+          "school_name": "University of Wisconsin-Milwaukee",
+          "abbreviation": "UWM",
+          "mascot": "Panthers",
+          "city": "Milwaukee",
+          "state": "WI"
+        },
+        {
+          "school_id": "xavier",
+          "school_name": "Xavier University",
+          "abbreviation": "XU",
+          "mascot": "Musketeers",
+          "city": "Cincinnati",
+          "state": "OH"
+        }
+      ]
+    },
+    {
+      "name": "Interstate Athletic Association",
+      "teams": 12,
+      "schools": [
+        "alabama_state",
+        "bethune_cookman",
+        "delaware_state",
+        "eastern_montana_am",
+        "florida_am",
+        "kentucky_state",
+        "mississippi_valley_state",
+        "south_carolina_am",
+        "spelman",
+        "texas_southern",
+        "valdosta_state",
+        "west_virginia_state"
+      ],
+      "details": [
+        {
+          "school_id": "alabama_state",
+          "school_name": "Alabama State University",
+          "abbreviation": "ALST",
+          "mascot": "Hornets",
+          "city": "Montgomery",
+          "state": "AL"
+        },
+        {
+          "school_id": "bethune_cookman",
+          "school_name": "Bethune-Cookman University",
+          "abbreviation": "BCU",
+          "mascot": "Wildcats",
+          "city": "Daytona Beach",
+          "state": "FL"
+        },
+        {
+          "school_id": "delaware_state",
+          "school_name": "Delaware State University",
+          "abbreviation": "DSU",
+          "mascot": "Hornets",
+          "city": "Dover",
+          "state": "DE"
+        },
+        {
+          "school_id": "eastern_montana_am",
+          "school_name": "Eastern Montana A&M University",
+          "abbreviation": "EMAMU",
+          "mascot": "Bison",
+          "city": "Miles City",
+          "state": "MT"
+        },
+        {
+          "school_id": "florida_am",
+          "school_name": "Florida A&M University",
+          "abbreviation": "FAMU",
+          "mascot": "Rattlers",
+          "city": "Tallahassee",
+          "state": "FL"
+        },
+        {
+          "school_id": "kentucky_state",
+          "school_name": "Kentucky State University",
+          "abbreviation": "KYSU",
+          "mascot": "Thorobreds",
+          "city": "Frankfort",
+          "state": "KY"
+        },
+        {
+          "school_id": "mississippi_valley_state",
+          "school_name": "Mississippi Valley State University",
+          "abbreviation": "MVSU",
+          "mascot": "Delta Devils",
+          "city": "Itta Bena",
+          "state": "MS"
+        },
+        {
+          "school_id": "south_carolina_am",
+          "school_name": "South Carolina A&M University",
+          "abbreviation": "SCAMU",
+          "mascot": "Bulldogs",
+          "city": "Orangeburg",
+          "state": "SC"
+        },
+        {
+          "school_id": "spelman",
+          "school_name": "Spelman College",
+          "abbreviation": "SPEL",
+          "mascot": "Jaguars",
+          "city": "Atlanta",
+          "state": "GA"
+        },
+        {
+          "school_id": "texas_southern",
+          "school_name": "Texas Southern University",
+          "abbreviation": "TXSO",
+          "mascot": "Tigers",
+          "city": "Houston",
+          "state": "TX"
+        },
+        {
+          "school_id": "valdosta_state",
+          "school_name": "Valdosta State University",
+          "abbreviation": "VSU",
+          "mascot": "Blazers",
+          "city": "Valdosta",
+          "state": "GA"
+        },
+        {
+          "school_id": "west_virginia_state",
+          "school_name": "West Virginia State University",
+          "abbreviation": "WVSU",
+          "mascot": "Yellow Jackets",
+          "city": "Institute",
+          "state": "WV"
+        }
+      ]
+    },
+    {
+      "name": "Midwest States Interscholastic Association",
+      "teams": 13,
+      "schools": [
+        "belmont",
+        "bradley",
+        "drake",
+        "indiana_state",
+        "lipscomb",
+        "missouri_state",
+        "saint_louis",
+        "southern_illinois",
+        "nebraska_omaha",
+        "northern_iowa",
+        "valparaiso",
+        "wash_u",
+        "wichita_state"
+      ],
+      "details": [
+        {
+          "school_id": "belmont",
+          "school_name": "Belmont University",
+          "abbreviation": "BEL",
+          "mascot": "Bruins",
+          "city": "Nashville",
+          "state": "TN"
+        },
+        {
+          "school_id": "bradley",
+          "school_name": "Bradley University",
+          "abbreviation": "BU",
+          "mascot": "Braves",
+          "city": "Peoria",
+          "state": "IL"
+        },
+        {
+          "school_id": "drake",
+          "school_name": "Drake University",
+          "abbreviation": "DU",
+          "mascot": "Bulldogs",
+          "city": "Des Moines",
+          "state": "IA"
+        },
+        {
+          "school_id": "indiana_state",
+          "school_name": "Indiana State University",
+          "abbreviation": "ISU",
+          "mascot": "Sycamores",
+          "city": "Terre Haute",
+          "state": "IN"
+        },
+        {
+          "school_id": "lipscomb",
+          "school_name": "Lipscomb University",
+          "abbreviation": "LIP",
+          "mascot": "Bisons",
+          "city": "Nashville",
+          "state": "TN"
+        },
+        {
+          "school_id": "missouri_state",
+          "school_name": "Missouri State University",
+          "abbreviation": "MSU",
+          "mascot": "Bears",
+          "city": "Springfield",
+          "state": "MO"
+        },
+        {
+          "school_id": "saint_louis",
+          "school_name": "Saint Louis University",
+          "abbreviation": "SLU",
+          "mascot": "Billikens",
+          "city": "St. Louis",
+          "state": "MO"
+        },
+        {
+          "school_id": "southern_illinois",
+          "school_name": "Southern Illinois University",
+          "abbreviation": "SIU",
+          "mascot": "Salukis",
+          "city": "Carbondale",
+          "state": "IL"
+        },
+        {
+          "school_id": "nebraska_omaha",
+          "school_name": "University of Nebraska Omaha",
+          "abbreviation": "UNO",
+          "mascot": "Mavericks",
+          "city": "Omaha",
+          "state": "NE"
+        },
+        {
+          "school_id": "northern_iowa",
+          "school_name": "University of Northern Iowa",
+          "abbreviation": "UNI",
+          "mascot": "Panthers",
+          "city": "Cedar Falls",
+          "state": "IA"
+        },
+        {
+          "school_id": "valparaiso",
+          "school_name": "Valparaiso University",
+          "abbreviation": "VALPO",
+          "mascot": "Beacons",
+          "city": "Valparaiso",
+          "state": "IN"
+        },
+        {
+          "school_id": "wash_u",
+          "school_name": "Washington University in St. Louis",
+          "abbreviation": "WUSTL",
+          "mascot": "Bears",
+          "city": "St. Louis",
+          "state": "MO"
+        },
+        {
+          "school_id": "wichita_state",
+          "school_name": "Wichita State University",
+          "abbreviation": "WSU",
+          "mascot": "Shockers",
+          "city": "Wichita",
+          "state": "KS"
+        }
+      ]
+    },
+    {
+      "name": "Moonshine League",
+      "teams": 13,
+      "schools": [
+        "butler",
+        "cleveland_state",
+        "george_mason",
+        "marshall",
+        "murray_state",
+        "northern_kentucky",
+        "se_oklahoma_state",
+        "sweet_briar",
+        "evansville",
+        "richmond",
+        "vcu",
+        "winthrop",
+        "wright_state"
+      ],
+      "details": [
+        {
+          "school_id": "butler",
+          "school_name": "Butler University",
+          "abbreviation": "BUT",
+          "mascot": "Bulldogs",
+          "city": "Indianapolis",
+          "state": "IN"
+        },
+        {
+          "school_id": "cleveland_state",
+          "school_name": "Cleveland State University",
+          "abbreviation": "CSU",
+          "mascot": "Vikings",
+          "city": "Cleveland",
+          "state": "OH"
+        },
+        {
+          "school_id": "george_mason",
+          "school_name": "George Mason University",
+          "abbreviation": "GMU",
+          "mascot": "Patriots",
+          "city": "Fairfax",
+          "state": "VA"
+        },
+        {
+          "school_id": "marshall",
+          "school_name": "Marshall University",
+          "abbreviation": "MRSH",
+          "mascot": "Thundering Herd",
+          "city": "Huntington",
+          "state": "WV"
+        },
+        {
+          "school_id": "murray_state",
+          "school_name": "Murray State University",
+          "abbreviation": "MUR",
+          "mascot": "Racers",
+          "city": "Murray",
+          "state": "KY"
+        },
+        {
+          "school_id": "northern_kentucky",
+          "school_name": "Northern Kentucky University",
+          "abbreviation": "NKU",
+          "mascot": "Norse",
+          "city": "Highland Heights",
+          "state": "KY"
+        },
+        {
+          "school_id": "se_oklahoma_state",
+          "school_name": "Southeastern Oklahoma State University",
+          "abbreviation": "SEOSU",
+          "mascot": "Savage Storm",
+          "city": "Durant",
+          "state": "OK"
+        },
+        {
+          "school_id": "sweet_briar",
+          "school_name": "Sweet Briar College",
+          "abbreviation": "SBC",
+          "mascot": "Vixens",
+          "city": "Sweet Briar",
+          "state": "VA"
+        },
+        {
+          "school_id": "evansville",
+          "school_name": "University of Evansville",
+          "abbreviation": "UE",
+          "mascot": "Purple Aces",
+          "city": "Evansville",
+          "state": "IN"
+        },
+        {
+          "school_id": "richmond",
+          "school_name": "University of Richmond",
+          "abbreviation": "UR",
+          "mascot": "Spiders",
+          "city": "Richmond",
+          "state": "VA"
+        },
+        {
+          "school_id": "vcu",
+          "school_name": "Virginia Commonwealth University",
+          "abbreviation": "VCU",
+          "mascot": "Rams",
+          "city": "Richmond",
+          "state": "VA"
+        },
+        {
+          "school_id": "winthrop",
+          "school_name": "Winthrop University",
+          "abbreviation": "WIN",
+          "mascot": "Eagles",
+          "city": "Rock Hill",
+          "state": "SC"
+        },
+        {
+          "school_id": "wright_state",
+          "school_name": "Wright State University",
+          "abbreviation": "WSU",
+          "mascot": "Raiders",
+          "city": "Dayton",
+          "state": "OH"
+        }
+      ]
+    },
+    {
+      "name": "National Collegiate League",
+      "teams": 8,
+      "schools": [
+        "agnes_scott",
+        "davidson",
+        "emory",
+        "high_point",
+        "meredith",
+        "mississippi_women",
+        "unc_asheville",
+        "uncg"
+      ],
+      "details": [
+        {
+          "school_id": "agnes_scott",
+          "school_name": "Agnes Scott College",
+          "abbreviation": "ASC",
+          "mascot": "Scotties",
+          "city": "Decatur",
+          "state": "GA"
+        },
+        {
+          "school_id": "davidson",
+          "school_name": "Davidson College",
+          "abbreviation": "DAV",
+          "mascot": "Wildcats",
+          "city": "Davidson",
+          "state": "NC"
+        },
+        {
+          "school_id": "emory",
+          "school_name": "Emory University",
+          "abbreviation": "EMRY",
+          "mascot": "Eagles",
+          "city": "Atlanta",
+          "state": "GA"
+        },
+        {
+          "school_id": "high_point",
+          "school_name": "High Point University",
+          "abbreviation": "HPU",
+          "mascot": "Panthers",
+          "city": "High Point",
+          "state": "NC"
+        },
+        {
+          "school_id": "meredith",
+          "school_name": "Meredith College",
+          "abbreviation": "MERD",
+          "mascot": "Avenging Angels",
+          "city": "Raleigh",
+          "state": "NC"
+        },
+        {
+          "school_id": "mississippi_women",
+          "school_name": "Mississippi University for Women",
+          "abbreviation": "MUW",
+          "mascot": "Owls",
+          "city": "Columbus",
+          "state": "MS"
+        },
+        {
+          "school_id": "unc_asheville",
+          "school_name": "University of North Carolina at Asheville",
+          "abbreviation": "UNCA",
+          "mascot": "Bulldogs",
+          "city": "Asheville",
+          "state": "NC"
+        },
+        {
+          "school_id": "uncg",
+          "school_name": "University of North Carolina at Greensboro",
+          "abbreviation": "UNCG",
+          "mascot": "Spartans",
+          "city": "Greensboro",
+          "state": "NC"
+        }
+      ]
+    },
+    {
+      "name": "Northern Shield",
+      "teams": 12,
+      "schools": [
+        "clarkson",
+        "oswego",
+        "plattsburgh",
+        "sfu",
+        "st_lawrence",
+        "alaska_anchorage",
+        "alberta",
+        "ubc",
+        "calgary",
+        "saskatchewan",
+        "uvic",
+        "ufv"
+      ],
+      "details": [
+        {
+          "school_id": "clarkson",
+          "school_name": "Clarkson University",
+          "abbreviation": "CLRK",
+          "mascot": "Golden Knights",
+          "city": "Potsdam",
+          "state": "NY"
+        },
+        {
+          "school_id": "oswego",
+          "school_name": "Oswego State",
+          "abbreviation": "OSWE",
+          "mascot": "Lakers",
+          "city": "Oswego",
+          "state": "NY"
+        },
+        {
+          "school_id": "plattsburgh",
+          "school_name": "SUNY Plattsburgh",
+          "abbreviation": "PLAT",
+          "mascot": "Cardinals",
+          "city": "Plattsburgh",
+          "state": "NY"
+        },
+        {
+          "school_id": "sfu",
+          "school_name": "Simon Fraser University",
+          "abbreviation": "SFU",
+          "mascot": "Clan",
+          "city": "Burnaby",
+          "state": "BC"
+        },
+        {
+          "school_id": "st_lawrence",
+          "school_name": "St. Lawrence University",
+          "abbreviation": "SLU",
+          "mascot": "Saints",
+          "city": "Canton",
+          "state": "NY"
+        },
+        {
+          "school_id": "alaska_anchorage",
+          "school_name": "University of Alaska Anchorage",
+          "abbreviation": "UAA",
+          "mascot": "Seawolves",
+          "city": "Anchorage",
+          "state": "AK"
+        },
+        {
+          "school_id": "alberta",
+          "school_name": "University of Alberta",
+          "abbreviation": "ALTA",
+          "mascot": "Golden Bears",
+          "city": "Edmonton",
+          "state": "AB"
+        },
+        {
+          "school_id": "ubc",
+          "school_name": "University of British Columbia",
+          "abbreviation": "UBC",
+          "mascot": "Thunderbirds",
+          "city": "Vancouver",
+          "state": "BC"
+        },
+        {
+          "school_id": "calgary",
+          "school_name": "University of Calgary",
+          "abbreviation": "CALG",
+          "mascot": "Dinos",
+          "city": "Calgary",
+          "state": "AB"
+        },
+        {
+          "school_id": "saskatchewan",
+          "school_name": "University of Saskatchewan",
+          "abbreviation": "SASK",
+          "mascot": "Huskies",
+          "city": "Saskatoon",
+          "state": "SK"
+        },
+        {
+          "school_id": "uvic",
+          "school_name": "University of Victoria",
+          "abbreviation": "UVIC",
+          "mascot": "Vikes",
+          "city": "Victoria",
+          "state": "BC"
+        },
+        {
+          "school_id": "ufv",
+          "school_name": "University of the Fraser Valley",
+          "abbreviation": "UFV",
+          "mascot": "Cascades",
+          "city": "Abbotsford",
+          "state": "BC"
+        }
+      ]
+    },
+    {
+      "name": "Outlands Coast Conference",
+      "teams": 12,
+      "schools": [
+        "caltech",
+        "csuf",
+        "long_beach_state",
+        "claremont_mckenna",
+        "east_texas_am",
+        "loyola_marymount",
+        "nw_missouri_state",
+        "pepperdine",
+        "uc_santa_cruz",
+        "uci",
+        "uc_riverside",
+        "san_diego"
+      ],
+      "details": [
+        {
+          "school_id": "caltech",
+          "school_name": "California Institute of Technology",
+          "abbreviation": "CALT",
+          "mascot": "Beavers",
+          "city": "Pasadena",
+          "state": "CA"
+        },
+        {
+          "school_id": "csuf",
+          "school_name": "California State University, Fullerton",
+          "abbreviation": "CSUF",
+          "mascot": "Titans",
+          "city": "Fullerton",
+          "state": "CA"
+        },
+        {
+          "school_id": "long_beach_state",
+          "school_name": "California State University, Long Beach",
+          "abbreviation": "LBSU",
+          "mascot": "Beach",
+          "city": "Long Beach",
+          "state": "CA"
+        },
+        {
+          "school_id": "claremont_mckenna",
+          "school_name": "Claremont McKenna College",
+          "abbreviation": "CMC",
+          "mascot": "Stags",
+          "city": "Claremont",
+          "state": "CA"
+        },
+        {
+          "school_id": "east_texas_am",
+          "school_name": "East Texas A&M University",
+          "abbreviation": "ETAMU",
+          "mascot": "Lions",
+          "city": "Commerce",
+          "state": "TX"
+        },
+        {
+          "school_id": "loyola_marymount",
+          "school_name": "Loyola Marymount University",
+          "abbreviation": "LMU",
+          "mascot": "Lions",
+          "city": "Los Angeles",
+          "state": "CA"
+        },
+        {
+          "school_id": "nw_missouri_state",
+          "school_name": "Northwest Missouri State University",
+          "abbreviation": "NWMSU",
+          "mascot": "Bearcats",
+          "city": "Maryville",
+          "state": "MO"
+        },
+        {
+          "school_id": "pepperdine",
+          "school_name": "Pepperdine University",
+          "abbreviation": "PU",
+          "mascot": "Waves",
+          "city": "Malibu",
+          "state": "CA"
+        },
+        {
+          "school_id": "uc_santa_cruz",
+          "school_name": "UC Santa Cruz",
+          "abbreviation": "UCSC",
+          "mascot": "Banana Slugs",
+          "city": "Santa Cruz",
+          "state": "CA"
+        },
+        {
+          "school_id": "uci",
+          "school_name": "University of California, Irvine",
+          "abbreviation": "UCI",
+          "mascot": "Anteaters",
+          "city": "Irvine",
+          "state": "CA"
+        },
+        {
+          "school_id": "uc_riverside",
+          "school_name": "University of California, Riverside",
+          "abbreviation": "UCR",
+          "mascot": "Highlanders",
+          "city": "Riverside",
+          "state": "CA"
+        },
+        {
+          "school_id": "san_diego",
+          "school_name": "University of San Diego",
+          "abbreviation": "USD",
+          "mascot": "Toreros",
+          "city": "San Diego",
+          "state": "CA"
+        }
+      ]
+    },
+    {
+      "name": "Pioneer Athletic Association",
+      "teams": 14,
+      "schools": [
+        "black_hills_state",
+        "carroll_college",
+        "college_of_idaho",
+        "fort_hays_state",
+        "idaho_state",
+        "montana_state",
+        "nevada_state",
+        "air_force",
+        "denver",
+        "montana",
+        "northern_colorado",
+        "sioux",
+        "utah_valley",
+        "weber_state"
+      ],
+      "details": [
+        {
+          "school_id": "black_hills_state",
+          "school_name": "Black Hills State University",
+          "abbreviation": "BHSU",
+          "mascot": "Yellow Jackets",
+          "city": "Spearfish",
+          "state": "SD"
+        },
+        {
+          "school_id": "carroll_college",
+          "school_name": "Carroll College",
+          "abbreviation": "CROL",
+          "mascot": "Fighting Saints",
+          "city": "Helena",
+          "state": "MT"
+        },
+        {
+          "school_id": "college_of_idaho",
+          "school_name": "College of Idaho",
+          "abbreviation": "COI",
+          "mascot": "Coyotes",
+          "city": "Caldwell",
+          "state": "ID"
+        },
+        {
+          "school_id": "fort_hays_state",
+          "school_name": "Fort Hays State University",
+          "abbreviation": "FHSU",
+          "mascot": "Tigers",
+          "city": "Hays",
+          "state": "KS"
+        },
+        {
+          "school_id": "idaho_state",
+          "school_name": "Idaho State University",
+          "abbreviation": "ISU",
+          "mascot": "Bengals",
+          "city": "Pocatello",
+          "state": "ID"
+        },
+        {
+          "school_id": "montana_state",
+          "school_name": "Montana State University",
+          "abbreviation": "MSU",
+          "mascot": "Bobcats",
+          "city": "Bozeman",
+          "state": "MT"
+        },
+        {
+          "school_id": "nevada_state",
+          "school_name": "Nevada State University",
+          "abbreviation": "NSU",
+          "mascot": "Mustangs",
+          "city": "Winnemucca",
+          "state": "NV"
+        },
+        {
+          "school_id": "air_force",
+          "school_name": "United States Air Force Academy",
+          "abbreviation": "AFA",
+          "mascot": "Falcons",
+          "city": "Colorado Springs",
+          "state": "CO"
+        },
+        {
+          "school_id": "denver",
+          "school_name": "University of Denver",
+          "abbreviation": "DU",
+          "mascot": "Pioneers",
+          "city": "Denver",
+          "state": "CO"
+        },
+        {
+          "school_id": "montana",
+          "school_name": "University of Montana",
+          "abbreviation": "UM",
+          "mascot": "Grizzlies",
+          "city": "Missoula",
+          "state": "MT"
+        },
+        {
+          "school_id": "northern_colorado",
+          "school_name": "University of Northern Colorado",
+          "abbreviation": "UNC",
+          "mascot": "Bears",
+          "city": "Greeley",
+          "state": "CO"
+        },
+        {
+          "school_id": "sioux",
+          "school_name": "University of the Sioux",
+          "abbreviation": "SIOU",
+          "mascot": "Thunderbirds",
+          "city": "Devils Lake",
+          "state": "ND"
+        },
+        {
+          "school_id": "utah_valley",
+          "school_name": "Utah Valley University",
+          "abbreviation": "UVU",
+          "mascot": "Wolverines",
+          "city": "Orem",
+          "state": "UT"
+        },
+        {
+          "school_id": "weber_state",
+          "school_name": "Weber State University",
+          "abbreviation": "WSU",
+          "mascot": "Wildcats",
+          "city": "Ogden",
+          "state": "UT"
+        }
+      ]
+    },
+    {
+      "name": "Potomac Athletic Conference",
+      "teams": 13,
+      "schools": [
+        "american",
+        "bryn_mawr",
+        "carnegie_mellon",
+        "duquesne",
+        "georgetown",
+        "haverford",
+        "johns_hopkins",
+        "la_salle",
+        "providence",
+        "swarthmore",
+        "delaware",
+        "villanova",
+        "west_chester"
+      ],
+      "details": [
+        {
+          "school_id": "american",
+          "school_name": "American University",
+          "abbreviation": "AU",
+          "mascot": "Eagles",
+          "city": "Washington",
+          "state": "DC"
+        },
+        {
+          "school_id": "bryn_mawr",
+          "school_name": "Bryn Mawr College",
+          "abbreviation": "BRYN",
+          "mascot": "Owls",
+          "city": "Bryn Mawr",
+          "state": "PA"
+        },
+        {
+          "school_id": "carnegie_mellon",
+          "school_name": "Carnegie Mellon University",
+          "abbreviation": "CMU",
+          "mascot": "Tartans",
+          "city": "Pittsburgh",
+          "state": "PA"
+        },
+        {
+          "school_id": "duquesne",
+          "school_name": "Duquesne University",
+          "abbreviation": "DUQ",
+          "mascot": "Dukes",
+          "city": "Pittsburgh",
+          "state": "PA"
+        },
+        {
+          "school_id": "georgetown",
+          "school_name": "Georgetown University",
+          "abbreviation": "GTWN",
+          "mascot": "Hoyas",
+          "city": "Washington",
+          "state": "DC"
+        },
+        {
+          "school_id": "haverford",
+          "school_name": "Haverford College",
+          "abbreviation": "HAVR",
+          "mascot": "Fords",
+          "city": "Haverford",
+          "state": "PA"
+        },
+        {
+          "school_id": "johns_hopkins",
+          "school_name": "Johns Hopkins University",
+          "abbreviation": "JHU",
+          "mascot": "Blue Jays",
+          "city": "Baltimore",
+          "state": "MD"
+        },
+        {
+          "school_id": "la_salle",
+          "school_name": "La Salle University",
+          "abbreviation": "LS",
+          "mascot": "Explorers",
+          "city": "Philadelphia",
+          "state": "PA"
+        },
+        {
+          "school_id": "providence",
+          "school_name": "Providence College",
+          "abbreviation": "PC",
+          "mascot": "Friars",
+          "city": "Providence",
+          "state": "RI"
+        },
+        {
+          "school_id": "swarthmore",
+          "school_name": "Swarthmore College",
+          "abbreviation": "SWAT",
+          "mascot": "Garnet",
+          "city": "Swarthmore",
+          "state": "PA"
+        },
+        {
+          "school_id": "delaware",
+          "school_name": "University of Delaware",
+          "abbreviation": "DEL",
+          "mascot": "Fightin' Blue Hens",
+          "city": "Newark",
+          "state": "DE"
+        },
+        {
+          "school_id": "villanova",
+          "school_name": "Villanova University",
+          "abbreviation": "NOVA",
+          "mascot": "Wildcats",
+          "city": "Villanova",
+          "state": "PA"
+        },
+        {
+          "school_id": "west_chester",
+          "school_name": "West Chester University",
+          "abbreviation": "WCU",
+          "mascot": "Golden Rams",
+          "city": "West Chester",
+          "state": "PA"
+        }
+      ]
+    },
+    {
+      "name": "Prairie Athletic Union",
+      "teams": 12,
+      "schools": [
+        "cornell_college",
+        "eastern_wyoming",
+        "ferris_state",
+        "grand_valley_state",
+        "grinnell",
+        "illinois_college",
+        "knox",
+        "lake_forest",
+        "lawrence",
+        "luther",
+        "monmouth_il",
+        "nebraska_kearney"
+      ],
+      "details": [
+        {
+          "school_id": "cornell_college",
+          "school_name": "Cornell College",
+          "abbreviation": "CORN",
+          "mascot": "Rams",
+          "city": "Mount Vernon",
+          "state": "IA"
+        },
+        {
+          "school_id": "eastern_wyoming",
+          "school_name": "Eastern Wyoming College",
+          "abbreviation": "EWC",
+          "mascot": "Lancers",
+          "city": "Torrington",
+          "state": "WY"
+        },
+        {
+          "school_id": "ferris_state",
+          "school_name": "Ferris State University",
+          "abbreviation": "FSU",
+          "mascot": "Bulldogs",
+          "city": "Big Rapids",
+          "state": "MI"
+        },
+        {
+          "school_id": "grand_valley_state",
+          "school_name": "Grand Valley State University",
+          "abbreviation": "GVSU",
+          "mascot": "Lakers",
+          "city": "Allendale",
+          "state": "MI"
+        },
+        {
+          "school_id": "grinnell",
+          "school_name": "Grinnell College",
+          "abbreviation": "GRIN",
+          "mascot": "Pioneers",
+          "city": "Grinnell",
+          "state": "IA"
+        },
+        {
+          "school_id": "illinois_college",
+          "school_name": "Illinois College",
+          "abbreviation": "ILCO",
+          "mascot": "Blueboys",
+          "city": "Jacksonville",
+          "state": "IL"
+        },
+        {
+          "school_id": "knox",
+          "school_name": "Knox College",
+          "abbreviation": "KNOX",
+          "mascot": "Prairie Fire",
+          "city": "Galesburg",
+          "state": "IL"
+        },
+        {
+          "school_id": "lake_forest",
+          "school_name": "Lake Forest College",
+          "abbreviation": "LFC",
+          "mascot": "Foresters",
+          "city": "Lake Forest",
+          "state": "IL"
+        },
+        {
+          "school_id": "lawrence",
+          "school_name": "Lawrence University",
+          "abbreviation": "LAWR",
+          "mascot": "Vikings",
+          "city": "Appleton",
+          "state": "WI"
+        },
+        {
+          "school_id": "luther",
+          "school_name": "Luther College",
+          "abbreviation": "LTHR",
+          "mascot": "Norse",
+          "city": "Decorah",
+          "state": "IA"
+        },
+        {
+          "school_id": "monmouth_il",
+          "school_name": "Monmouth College",
+          "abbreviation": "MNTH",
+          "mascot": "Fighting Scots",
+          "city": "Monmouth",
+          "state": "IL"
+        },
+        {
+          "school_id": "nebraska_kearney",
+          "school_name": "University of Nebraska at Kearney",
+          "abbreviation": "UNK",
+          "mascot": "Lopers",
+          "city": "Kearney",
+          "state": "NE"
+        }
+      ]
+    },
+    {
+      "name": "Southern Sun Conference",
+      "teams": 9,
+      "schools": [
+        "colorado_college",
+        "fgcu",
+        "jacksonville",
+        "loyola_new_orleans",
+        "samford",
+        "stetson",
+        "marine_corps",
+        "new_orleans",
+        "north_florida"
+      ],
+      "details": [
+        {
+          "school_id": "colorado_college",
+          "school_name": "Colorado College",
+          "abbreviation": "CC",
+          "mascot": "Tigers",
+          "city": "Colorado Springs",
+          "state": "CO"
+        },
+        {
+          "school_id": "fgcu",
+          "school_name": "Florida Gulf Coast University",
+          "abbreviation": "FGCU",
+          "mascot": "Eagles",
+          "city": "Fort Myers",
+          "state": "FL"
+        },
+        {
+          "school_id": "jacksonville",
+          "school_name": "Jacksonville University",
+          "abbreviation": "JU",
+          "mascot": "Dolphins",
+          "city": "Jacksonville",
+          "state": "FL"
+        },
+        {
+          "school_id": "loyola_new_orleans",
+          "school_name": "Loyola University New Orleans",
+          "abbreviation": "LYNO",
+          "mascot": "Wolf Pack",
+          "city": "New Orleans",
+          "state": "LA"
+        },
+        {
+          "school_id": "samford",
+          "school_name": "Samford University",
+          "abbreviation": "SAM",
+          "mascot": "Bulldogs",
+          "city": "Birmingham",
+          "state": "AL"
+        },
+        {
+          "school_id": "stetson",
+          "school_name": "Stetson University",
+          "abbreviation": "STET",
+          "mascot": "Hatters",
+          "city": "DeLand",
+          "state": "FL"
+        },
+        {
+          "school_id": "marine_corps",
+          "school_name": "United States Marine Corps Academy",
+          "abbreviation": "USMC",
+          "mascot": "Bulldogs",
+          "city": "Milton",
+          "state": "FL"
+        },
+        {
+          "school_id": "new_orleans",
+          "school_name": "University of New Orleans",
+          "abbreviation": "UNO",
+          "mascot": "Privateers",
+          "city": "New Orleans",
+          "state": "LA"
+        },
+        {
+          "school_id": "north_florida",
+          "school_name": "University of North Florida",
+          "abbreviation": "UNF",
+          "mascot": "Ospreys",
+          "city": "Jacksonville",
+          "state": "FL"
+        }
+      ]
+    },
+    {
+      "name": "Yankee Fourteen",
+      "teams": 11,
+      "schools": [
+        "bowdoin",
+        "colgate",
+        "cornell",
+        "ithaca",
+        "njit",
+        "rpi",
+        "union_ny",
+        "umbc",
+        "new_hampshire",
+        "rochester",
+        "vermont"
+      ],
+      "details": [
+        {
+          "school_id": "bowdoin",
+          "school_name": "Bowdoin College",
+          "abbreviation": "BOWD",
+          "mascot": "Polar Bears",
+          "city": "Brunswick",
+          "state": "ME"
+        },
+        {
+          "school_id": "colgate",
+          "school_name": "Colgate University",
+          "abbreviation": "COLG",
+          "mascot": "Raiders",
+          "city": "Hamilton",
+          "state": "NY"
+        },
+        {
+          "school_id": "cornell",
+          "school_name": "Cornell University",
+          "abbreviation": "COR",
+          "mascot": "Big Red",
+          "city": "Ithaca",
+          "state": "NY"
+        },
+        {
+          "school_id": "ithaca",
+          "school_name": "Ithaca College",
+          "abbreviation": "ITHA",
+          "mascot": "Bombers",
+          "city": "Ithaca",
+          "state": "NY"
+        },
+        {
+          "school_id": "njit",
+          "school_name": "New Jersey Institute of Technology",
+          "abbreviation": "NJIT",
+          "mascot": "Highlanders",
+          "city": "Newark",
+          "state": "NJ"
+        },
+        {
+          "school_id": "rpi",
+          "school_name": "Rensselaer Polytechnic Institute",
+          "abbreviation": "RPI",
+          "mascot": "Engineers",
+          "city": "Troy",
+          "state": "NY"
+        },
+        {
+          "school_id": "union_ny",
+          "school_name": "Union College",
+          "abbreviation": "UNON",
+          "mascot": "Dutchmen",
+          "city": "Schenectady",
+          "state": "NY"
+        },
+        {
+          "school_id": "umbc",
+          "school_name": "University of Maryland, Baltimore County",
+          "abbreviation": "UMBC",
+          "mascot": "Retrievers",
+          "city": "Baltimore",
+          "state": "MD"
+        },
+        {
+          "school_id": "new_hampshire",
+          "school_name": "University of New Hampshire",
+          "abbreviation": "UNH",
+          "mascot": "Wildcats",
+          "city": "Durham",
+          "state": "NH"
+        },
+        {
+          "school_id": "rochester",
+          "school_name": "University of Rochester",
+          "abbreviation": "ROCH",
+          "mascot": "Yellowjackets",
+          "city": "Rochester",
+          "state": "NY"
+        },
+        {
+          "school_id": "vermont",
+          "school_name": "University of Vermont",
+          "abbreviation": "UVM",
+          "mascot": "Catamounts",
+          "city": "Burlington",
+          "state": "VT"
+        }
+      ]
     }
   ]
 }

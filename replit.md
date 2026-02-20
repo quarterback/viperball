@@ -22,7 +22,7 @@ The user interface is built with Streamlit using a 4-tab navigation system plus 
 - **Export**: Offers tools for exporting various season and dynasty data in CSV and JSON formats.
 - **Settings (sidebar)**: Contains Debug Tools and Play Inspector.
 - Session management is handled via the sidebar, indicating the current mode and an option to end the session.
-- All 125 teams are included in seasons, with up to 4 human-coached teams and the rest AI-controlled.
+- All 187 teams across 16 conferences are included in seasons, with up to 4 human-coached teams and the rest AI-controlled.
 - Dynasty mode supports pre-dynasty history simulation (1-100 years).
 
 ### API-First Architecture
@@ -67,6 +67,30 @@ The project maintains a clear separation of concerns:
 - **Go-for-it aggression**: 1.6/1.5/1.7 multipliers on 4th/5th/6th down
 - **Current batch results** (20-game avg per team): Score 57.6, TDs/game 5.20, DK att 11.15/made 4.53, PK att 4.10, KP att 43.75 (58% comp), KP TDs 2.17, Rush 87.6 yds, Punts 0.78
 - **Remaining gaps**: KP TDs below ~4 target, rush yards below 100-120 target, KP INTs slightly over 1.0 target
+
+## Conference Structure (16 Conferences, 187 Teams)
+Conference assignments are the **source of truth** in each team's JSON file at `data/teams/<id>.json` under `team_info.conference`. The canonical directory is also maintained at `data/conferences.json` and exported as `data/cvl_conference_directory.txt`.
+
+| Conference | Teams |
+|---|---|
+| Big Pacific | 12 |
+| Border Conference | 14 |
+| Collegiate Commonwealth | 9 |
+| Galactic League | 10 |
+| Giant 14 | 13 |
+| Interstate Athletic Association | 12 |
+| Midwest States Interscholastic Association | 13 |
+| Moonshine League | 13 |
+| National Collegiate League | 8 |
+| Northern Shield | 12 |
+| Outlands Coast Conference | 12 |
+| Pioneer Athletic Association | 14 |
+| Potomac Athletic Conference | 13 |
+| Prairie Athletic Union | 12 |
+| Southern Sun Conference | 9 |
+| Yankee Fourteen | 11 |
+
+The engine reads conferences from team files via `engine/geography.py:get_geographic_conference_defaults()`. Geographic clustering is only used as a fallback if team files lack conference assignments.
 
 ## External Dependencies
 - **Python 3.11**: Core programming language.

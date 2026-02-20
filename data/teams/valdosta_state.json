@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "Black"
-    ]
+    ],
+    "school_name": "Valdosta State University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "disciplinarian",
       "background": "Long-time coordinator stepping into head role"
     }
-  }
+  },
+  "name": "Valdosta State University"
 }

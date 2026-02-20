@@ -10,7 +10,8 @@
     "colors": [
       "Green",
       "White"
-    ]
+    ],
+    "school_name": "Northwest Missouri State University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "players-first mentor",
       "background": "First-time head coach with strong pedigree"
     }
-  }
+  },
+  "name": "Northwest Missouri State University"
 }

@@ -10,7 +10,8 @@
     "colors": [
       "Black",
       "Gold"
-    ]
+    ],
+    "school_name": "Colorado College"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "innovative thinker",
       "background": "Rising star assistant with innovative schemes"
     }
-  }
+  },
+  "name": "Colorado College"
 }

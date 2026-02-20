@@ -10,7 +10,8 @@
     "colors": [
       "Maroon",
       "White"
-    ]
+    ],
+    "school_name": "West Texas A&M University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "disciplinarian",
       "background": "Offensive innovator"
     }
-  }
+  },
+  "name": "West Texas A&M University"
 }

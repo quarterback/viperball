@@ -10,7 +10,8 @@
     "colors": [
       "Silver",
       "Blue"
-    ]
+    ],
+    "school_name": "Nevada State University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "analytics-driven",
       "background": "Veteran high school coach transitioning to college"
     }
-  }
+  },
+  "name": "Nevada State University"
 }

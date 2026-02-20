@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "Gold"
-    ]
+    ],
+    "school_name": "College of Idaho"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "intense competitor",
       "background": "Turnaround specialist known for rebuilding programs"
     }
-  }
+  },
+  "name": "College of Idaho"
 }

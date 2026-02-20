@@ -10,7 +10,8 @@
     "colors": [
       "Green",
       "Gold"
-    ]
+    ],
+    "school_name": "Black Hills State University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "innovative thinker",
       "background": "Turnaround specialist known for rebuilding programs"
     }
-  }
+  },
+  "name": "Black Hills State University"
 }

@@ -10,7 +10,8 @@
     "colors": [
       "Black",
       "Gold"
-    ]
+    ],
+    "school_name": "Fort Hays State University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "tactical genius",
       "background": "Former college assistant promoted to head coach"
     }
-  }
+  },
+  "name": "Fort Hays State University"
 }

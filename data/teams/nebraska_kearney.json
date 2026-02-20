@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "school_name": "University of Nebraska at Kearney"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "detail-oriented strategist",
       "background": "Turnaround specialist known for rebuilding programs"
     }
-  }
+  },
+  "name": "University of Nebraska at Kearney"
 }

@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "school_name": "Southeastern Oklahoma State University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "calm under pressure",
       "background": "First-time head coach with strong pedigree"
     }
-  }
+  },
+  "name": "Southeastern Oklahoma State University"
 }

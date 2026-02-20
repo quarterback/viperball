@@ -10,7 +10,8 @@
     "colors": [
       "Orange",
       "Blue"
-    ]
+    ],
+    "school_name": "Langston University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "players-first mentor",
       "background": "Veteran high school coach transitioning to college"
     }
-  }
+  },
+  "name": "Langston University"
 }

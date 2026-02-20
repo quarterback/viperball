@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "Blue"
-    ]
+    ],
+    "school_name": "Northeast Louisiana University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "detail-oriented strategist",
       "background": "Offensive innovator"
     }
-  }
+  },
+  "name": "Northeast Louisiana University"
 }

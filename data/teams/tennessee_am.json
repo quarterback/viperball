@@ -10,7 +10,8 @@
     "colors": [
       "Royal Blue",
       "Gold"
-    ]
+    ],
+    "school_name": "Tennessee A&M University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "relationship builder",
       "background": "Turnaround specialist known for rebuilding programs"
     }
-  }
+  },
+  "name": "Tennessee A&M University"
 }

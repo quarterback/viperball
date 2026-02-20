@@ -10,7 +10,8 @@
     "colors": [
       "Crimson",
       "Gold"
-    ]
+    ],
+    "school_name": "Ferris State University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "calm under pressure",
       "background": "Experienced coach hired from rival program"
     }
-  }
+  },
+  "name": "Ferris State University"
 }

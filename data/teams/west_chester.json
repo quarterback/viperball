@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "Gold"
-    ]
+    ],
+    "school_name": "West Chester University"
   },
   "identity": {
     "style": "balanced",
@@ -156,5 +157,6 @@
       "personality": "players-first mentor",
       "background": "Defense-minded tactician"
     }
-  }
+  },
+  "name": "West Chester University"
 }

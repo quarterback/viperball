@@ -10,7 +10,8 @@
     "colors": [
       "Turquoise",
       "Copper"
-    ]
+    ],
+    "school_name": "Southwest New Mexico University"
   },
   "identity": {
     "style": "aggressive",
@@ -156,5 +157,6 @@
       "personality": "relationship builder",
       "background": "Veteran high school coach transitioning to college"
     }
-  }
+  },
+  "name": "Southwest New Mexico University"
 }
