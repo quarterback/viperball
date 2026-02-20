@@ -1995,6 +1995,35 @@ class ViperballEngine:
             p.awareness = min(99, p.awareness + total_boost)
             p.tackling = min(99, p.tackling + intensity_boost)
 
+    def _offense_skill(self, team):
+        """Return offensive skill-position players (ball carriers, receivers)."""
+        skill = [p for p in team.players if p.position in
+                 ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")]
+        return skill if skill else team.players[:8]
+
+    def _offense_all(self, team):
+        """Return all offensive players including OL."""
+        off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")]
+        return off if off else team.players[:8]
+
+    def _defense_players(self, team):
+        """Return defensive players (Keepers and DL)."""
+        defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")]
+        return defs if defs else team.players[:5]
+
+    def _kicker_candidates(self, team):
+        """Return best kicker candidates: ZBs first, then VPs, then SBs."""
+        zbs = [p for p in team.players if p.position == "Zeroback"]
+        if zbs:
+            return zbs
+        vps = [p for p in team.players if p.position == "Viper"]
+        if vps:
+            return vps
+        sbs = [p for p in team.players if p.position == "Slotback"]
+        if sbs:
+            return sbs
+        return self._offense_skill(team)
+
     def simulate_game(self) -> Dict:
         self.kickoff("away")
 
@@ -2309,7 +2338,7 @@ class ViperballEngine:
         tod_value = self._fp_value(tod_opponent_fp)
 
         team = self.get_offensive_team()
-        kicker = max(team.players[:8], key=lambda p: p.kicking)
+        kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         kicker_skill = kicker.kicking
         is_specialist = kicker.archetype == "kicking_zb" or kicker_skill >= 82
 
@@ -2653,7 +2682,13 @@ class ViperballEngine:
                     team_name = random.choice(["home", "away"])
 
                 team_obj = self.home_team if team_name == "home" else self.away_team
-                player = random.choice(team_obj.players[:8])
+                if on_side == "offense":
+                    pen_pool = self._offense_all(team_obj)
+                elif on_side == "defense":
+                    pen_pool = self._defense_players(team_obj)
+                else:
+                    pen_pool = team_obj.players[:10]
+                player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
                 return Penalty(
@@ -2777,7 +2812,7 @@ class ViperballEngine:
             return None
 
         team = self.get_offensive_team()
-        kicker = max(team.players[:8], key=lambda p: p.kicking)
+        kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
 
         if fg_distance <= 20:
             shot_chance = 0.95
@@ -3257,9 +3292,7 @@ class ViperballEngine:
             return 0.0
 
         # Average the weighted stats across starting defenders
-        defenders = [p for p in def_team.players if p.position in ("Keeper", "Defensive Line")]
-        if not defenders:
-            defenders = def_team.players[:5]
+        defenders = self._defense_players(def_team)
 
         total_score = 0.0
         for p in defenders:
@@ -3678,7 +3711,7 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         keepers = [p for p in def_team.players if p.position == "Keeper"]
         if not keepers:
-            keepers = [max(def_team.players[:5], key=lambda p: p.tackling)]
+            keepers = [max(self._defense_players(def_team), key=lambda p: p.tackling)]
         keeper = keepers[0]
         ktag = player_tag(keeper)
         carrier_score = carrier.speed * 0.45 + getattr(carrier, 'agility', 75) * 0.30 + getattr(carrier, 'power', 75) * 0.25
@@ -3723,7 +3756,7 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         keepers = [p for p in def_team.players if p.position == "Keeper"]
         if not keepers:
-            keepers = [max(def_team.players[:5], key=lambda p: p.tackling)]
+            keepers = [max(self._defense_players(def_team), key=lambda p: p.tackling)]
         keeper = keepers[0]
         carrier_score = carrier.speed * 0.5 + getattr(carrier, 'agility', 75) * 0.3 + getattr(carrier, 'power', 75) * 0.2
         keeper_score = keeper.speed * 0.4 + keeper.tackling * 0.4 + getattr(keeper, 'awareness', 75) * 0.2
@@ -3755,11 +3788,12 @@ class ViperballEngine:
         primary_positions = config['primary_positions']
         carrier_weights = config.get('carrier_weights', [])
         archetype_bonus = config.get('archetype_bonus', {})
+        skill_pool = self._offense_skill(team)
         eligible = []
         weights = []
         for i, pos in enumerate(primary_positions):
             pos_weight = carrier_weights[i] if i < len(carrier_weights) else 0.3
-            for p in team.players[:8]:
+            for p in skill_pool:
                 ptag_check = player_tag(p)
                 if pos in ptag_check:
                     w = pos_weight
@@ -3778,7 +3812,7 @@ class ViperballEngine:
                         eligible.append(p)
                         weights.append(max(0.05, w))
         if not eligible:
-            eligible = team.players[:5]
+            eligible = skill_pool[:5]
             weights = [1.0] * len(eligible)
         player = random.choices(eligible, weights=weights, k=1)[0]
         plabel = player_label(player)
@@ -4072,20 +4106,21 @@ class ViperballEngine:
         variant = random.choice(trick_variants)
 
         # Select primary ball carrier from eligible positions
+        skill_pool = self._offense_skill(team)
         eligible = []
-        for p in team.players[:8]:
+        for p in skill_pool:
             ptag_check = player_tag(p)
             if any(pos in ptag_check for pos in variant["positions"]):
                 eligible.append(p)
         if not eligible:
-            eligible = team.players[:5]
+            eligible = skill_pool[:5]
         carrier = random.choice(eligible)
         plabel = player_label(carrier)
         ptag = player_tag(carrier)
         carrier.game_touches += 1
 
         # Pick a secondary player involved in the trick
-        secondary_pool = [p for p in team.players[:8] if p != carrier]
+        secondary_pool = [p for p in skill_pool if p != carrier]
         secondary = random.choice(secondary_pool) if secondary_pool else carrier
         sec_tag = player_tag(secondary)
 
@@ -4331,7 +4366,8 @@ class ViperballEngine:
         style = self._current_style()
 
         chain_length = random.randint(2, 5)
-        players_involved = random.sample(team.players[:8], min(chain_length, len(team.players[:8])))
+        skill_pool = self._offense_skill(team)
+        players_involved = random.sample(skill_pool, min(chain_length, len(skill_pool)))
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
@@ -4533,18 +4569,12 @@ class ViperballEngine:
         team = self.get_offensive_team()
         style = self._current_style()
 
-        top8 = team.players[:8]
-        zbs = [p for p in top8 if p.position == "Zeroback"]
-        vps = [p for p in top8 if p.position == "Viper"]
-        if zbs:
-            kicker = max(zbs, key=lambda p: p.kick_accuracy)
-        elif vps:
-            kicker = max(vps, key=lambda p: p.kick_accuracy)
-        else:
-            kicker = max(top8, key=lambda p: p.kick_accuracy)
-        eligible_receivers = [p for p in top8 if p != kicker]
+        kicker_pool = self._kicker_candidates(team)
+        kicker = max(kicker_pool, key=lambda p: p.kick_accuracy)
+        skill = self._offense_skill(team)
+        eligible_receivers = [p for p in skill if p != kicker]
         if not eligible_receivers:
-            eligible_receivers = top8[1:]
+            eligible_receivers = [p for p in skill]
         receiver = max(eligible_receivers, key=lambda p: p.hands + p.speed)
 
         kicker_tag = player_tag(kicker)
@@ -4839,7 +4869,7 @@ class ViperballEngine:
 
     def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
-        punter = max(team.players[:8], key=lambda p: p.kicking)
+        punter = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(punter)
 
         # ── Fake Punt Check ──────────────────────────────────────────
@@ -4935,7 +4965,7 @@ class ViperballEngine:
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                 def_team = self.get_defensive_team()
-                blocker = max(def_team.players[:5], key=lambda p: p.speed)
+                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
                 btag = player_tag(blocker)
 
                 return Play(
@@ -4962,7 +4992,7 @@ class ViperballEngine:
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                     def_team = self.get_defensive_team()
-                    blocker = max(def_team.players[:5], key=lambda p: p.speed)
+                    blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
                     btag = player_tag(blocker)
 
                     return Play(
@@ -5109,7 +5139,7 @@ class ViperballEngine:
             # MUFFED PUNT!
             kicking_team = self.state.possession
             def_team = self.get_defensive_team()
-            returner = max(def_team.players[:5], key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
+            returner = max(self._offense_skill(def_team), key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
             rtag = player_tag(returner)
             returner.game_muffs += 1
             returner.game_punt_returns += 1
@@ -5150,7 +5180,7 @@ class ViperballEngine:
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                 # Get kicking team player
-                kicker_recoverer = max(team.players[:8], key=lambda p: p.speed)
+                kicker_recoverer = max(self._offense_skill(team), key=lambda p: p.speed)
                 ktag = player_tag(kicker_recoverer)
 
                 return Play(
@@ -5324,7 +5354,7 @@ class ViperballEngine:
 
     def simulate_drop_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
-        kicker = max(team.players[:8], key=lambda p: p.kicking)
+        kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
 
         # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
@@ -5332,7 +5362,7 @@ class ViperballEngine:
         if random.random() < block_prob:
             # BLOCKED KICK!
             def_team = self.get_defensive_team()
-            blocker = max(def_team.players[:5], key=lambda p: p.speed)
+            blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
             btag = player_tag(blocker)
 
             # 70% defense recovers, 30% offense recovers
@@ -5608,7 +5638,7 @@ class ViperballEngine:
 
     def simulate_place_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
         team = self.get_offensive_team()
-        kicker = max(team.players[:8], key=lambda p: p.kicking)
+        kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
 
         # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
@@ -5616,7 +5646,7 @@ class ViperballEngine:
         if random.random() < block_prob:
             # BLOCKED KICK!
             def_team = self.get_defensive_team()
-            blocker = max(def_team.players[:5], key=lambda p: p.speed)
+            blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
             btag = player_tag(blocker)
 
             # 70% defense recovers, 30% offense recovers
@@ -6374,9 +6404,14 @@ def load_team_from_json(filepath: str, fresh: bool = False,
         "Lineman": "Offensive Line",
     }
 
+    POSITION_ORDER = {
+        "Viper": 0, "Zeroback": 1, "Halfback": 2, "Wingback": 3,
+        "Slotback": 4, "Keeper": 5, "Offensive Line": 6, "Defensive Line": 7,
+    }
+
     # Load the stored roster (static path — used when loading a saved game)
     players = []
-    for p_data in data["roster"]["players"][:10]:
+    for p_data in data["roster"]["players"]:
         stats = p_data.get("stats", {})
         hometown = p_data.get("hometown", {})
         raw_pos = p_data["position"]
@@ -6411,6 +6446,8 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                 development=p_data.get("development", "normal"),
             )
         )
+
+    players.sort(key=lambda p: (POSITION_ORDER.get(p.position, 99), p.number))
 
     return Team(
         name=team_name,
