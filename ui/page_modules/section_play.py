@@ -1000,7 +1000,7 @@ def _render_new_season(shared):
         with st.expander(f"AI Coach Assignments ({len(ai_teams)} teams)", expanded=False):
             ai_data = []
             for tname in sorted(ai_teams):
-                cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm"})
+                cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"})
                 style_configs[tname] = cfg
                 identity = team_identities.get(tname, {})
                 mascot = identity.get("mascot", "")
@@ -1009,13 +1009,14 @@ def _render_new_season(shared):
                     "Mascot": mascot,
                     "Offense": styles.get(cfg["offense_style"], {}).get("label", cfg["offense_style"]),
                     "Defense": defense_styles.get(cfg["defense_style"], {}).get("label", cfg["defense_style"]),
+                    "Special Teams": st_schemes.get(cfg.get("st_scheme", "aces"), {}).get("label", cfg.get("st_scheme", "aces")),
                     "Scheme": get_scheme_label(cfg["offense_style"], cfg["defense_style"]),
                 })
             st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
 
     for tname in all_team_names:
         if tname not in style_configs:
-            style_configs[tname] = {"offense_style": "balanced", "defense_style": "swarm"}
+            style_configs[tname] = {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
 
     auto_conferences = {}
     for tname in all_team_names:
@@ -1541,8 +1542,10 @@ def _render_quick_game(shared):
                     away=away_key,
                     home_offense=home_style,
                     home_defense=home_def_style,
+                    home_st=home_st,
                     away_offense=away_style,
                     away_defense=away_def_style,
+                    away_st=away_st,
                     weather=weather,
                     seed=actual_seed,
                 )
@@ -1562,6 +1565,8 @@ def _render_dynasty_play(shared):
     style_keys = shared["style_keys"]
     defense_style_keys = shared["defense_style_keys"]
     defense_styles = shared["defense_styles"]
+    st_schemes = shared["st_schemes"]
+    st_scheme_keys = shared["st_scheme_keys"]
 
     session_id = st.session_state["api_session_id"]
 
@@ -1622,7 +1627,7 @@ def _render_dynasty_play(shared):
         if user_mascot or user_conf:
             st.caption(f"{user_mascot} | {user_conf}" + (f" | {user_color_str}" if user_color_str else ""))
 
-        user_off_col, user_def_col = st.columns(2)
+        user_off_col, user_def_col, user_st_col = st.columns(3)
         with user_off_col:
             user_off = st.selectbox("Offense Style", style_keys, format_func=lambda x: styles[x]["label"],
                                      key=f"dyn_user_off_{current_year}")
@@ -1630,12 +1635,17 @@ def _render_dynasty_play(shared):
             user_def = st.selectbox("Defense Style", defense_style_keys,
                                      format_func=lambda x: defense_styles[x]["label"],
                                      key=f"dyn_user_def_{current_year}")
+        with user_st_col:
+            user_st = st.selectbox("Special Teams", st_scheme_keys,
+                                    format_func=lambda x: st_schemes[x]["label"],
+                                    index=st_scheme_keys.index("aces") if "aces" in st_scheme_keys else 0,
+                                    key=f"dyn_user_st_{current_year}")
 
         ai_seed = hash(f"{dynasty_name}_{current_year}") % 999999
         ai_configs = auto_assign_all_teams(
             teams_dir_path,
             human_teams=[user_team],
-            human_configs={user_team: {"offense_style": user_off, "defense_style": user_def}},
+            human_configs={user_team: {"offense_style": user_off, "defense_style": user_def, "st_scheme": user_st}},
             seed=ai_seed,
         )
 
@@ -1643,7 +1653,7 @@ def _render_dynasty_play(shared):
         with st.expander(f"AI Coach Assignments ({len(ai_opponent_teams)} teams)", expanded=False):
             ai_data = []
             for tname in ai_opponent_teams:
-                cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm"})
+                cfg = ai_configs.get(tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"})
                 identity = team_identities.get(tname, {})
                 mascot = identity.get("mascot", "")
                 ai_data.append({
@@ -1651,6 +1661,7 @@ def _render_dynasty_play(shared):
                     "Mascot": mascot,
                     "Offense": styles.get(cfg["offense_style"], {}).get("label", cfg["offense_style"]),
                     "Defense": defense_styles.get(cfg["defense_style"], {}).get("label", cfg["defense_style"]),
+                    "Special Teams": st_schemes.get(cfg.get("st_scheme", "aces"), {}).get("label", cfg.get("st_scheme", "aces")),
                 })
             st.dataframe(pd.DataFrame(ai_data), hide_index=True, use_container_width=True)
 
@@ -1725,6 +1736,7 @@ def _render_dynasty_play(shared):
                             bowl_count=dyn_bowl_count,
                             offense_style=user_off,
                             defense_style=user_def,
+                            st_scheme=user_st,
                             ai_seed=ai_seed,
                             pinned_matchups=dyn_pinned if dyn_pinned else None,
                             program_archetype=st.session_state.get("dyn_program_archetype_selected"),

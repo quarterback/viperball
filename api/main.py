@@ -140,8 +140,10 @@ class QuickGameRequest(BaseModel):
     away: str
     home_offense: str = "balanced"
     home_defense: str = "swarm"
+    home_st: str = "aces"
     away_offense: str = "balanced"
     away_defense: str = "swarm"
+    away_st: str = "aces"
     weather: str = "clear"
     seed: Optional[int] = None
 
@@ -673,7 +675,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         style_configs = {}
         for tname in teams:
             style_configs[tname] = ai_configs.get(
-                tname, {"offense_style": "balanced", "defense_style": "swarm"}
+                tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
             )
 
     pinned = None
@@ -1429,6 +1431,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             dynasty.coach.team_name: {
                 "offense_style": req.offense_style,
                 "defense_style": req.defense_style,
+                "st_scheme": req.st_scheme,
             }
         },
         seed=seed,
@@ -1437,7 +1440,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     style_configs = {}
     for tname in teams:
         style_configs[tname] = ai_configs.get(
-            tname, {"offense_style": "balanced", "defense_style": "swarm"}
+            tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
         )
 
     pinned = None

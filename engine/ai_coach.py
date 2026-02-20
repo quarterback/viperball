@@ -34,6 +34,12 @@ IDENTITY_STYLE_TO_DEFENSE = {
     "conservative": ["drift", "fortress", "lockdown", "swarm"],
 }
 
+IDENTITY_STYLE_TO_ST = {
+    "aggressive": ["block_party", "chaos_unit", "lightning_returns"],
+    "balanced": ["aces", "iron_curtain", "lightning_returns"],
+    "conservative": ["iron_curtain", "aces"],
+}
+
 
 def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = None) -> Dict[str, str]:
     if seed is not None:
@@ -120,7 +126,32 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
     defense_style = rng.choices(defense_candidates, weights=def_weights)[0]
 
-    return {"offense_style": offense_style, "defense_style": defense_style}
+    st_candidates = list(IDENTITY_STYLE_TO_ST.get(style, ["aces"]))
+    if speed >= 88 and "lightning_returns" not in st_candidates:
+        st_candidates.append("lightning_returns")
+    if defense >= 80 and "iron_curtain" not in st_candidates:
+        st_candidates.append("iron_curtain")
+    if speed >= 86 and "block_party" not in st_candidates:
+        st_candidates.append("block_party")
+
+    st_weights = []
+    for c in st_candidates:
+        w = 1.0
+        if c == "lightning_returns":
+            w += max(0, speed - 85) * 0.15
+        elif c == "iron_curtain":
+            w += max(0, defense - 76) * 0.12
+        elif c == "block_party":
+            w += max(0, speed - 84) * 0.10
+        elif c == "chaos_unit":
+            w += 0.15
+        elif c == "aces":
+            w += 0.3
+        st_weights.append(max(0.1, w))
+
+    st_scheme = rng.choices(st_candidates, weights=st_weights)[0]
+
+    return {"offense_style": offense_style, "defense_style": defense_style, "st_scheme": st_scheme}
 
 
 def get_scheme_label(offense: str, defense: str) -> str:

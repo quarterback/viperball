@@ -261,6 +261,7 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
                          playoff_size: int = 8, bowl_count: int = 4,
                          offense_style: str = "balanced",
                          defense_style: str = "swarm",
+                         st_scheme: str = "aces",
                          ai_seed: Optional[int] = None,
                          pinned_matchups: Optional[List[List[str]]] = None,
                          program_archetype: Optional[str] = None,
@@ -271,6 +272,7 @@ def dynasty_start_season(session_id: str, games_per_team: int = 10,
         "bowl_count": bowl_count,
         "offense_style": offense_style,
         "defense_style": defense_style,
+        "st_scheme": st_scheme,
     }
     if ai_seed is not None:
         body["ai_seed"] = ai_seed
@@ -411,8 +413,10 @@ def season_portal_skip(session_id: str) -> dict:
 def simulate_quick_game(home: str, away: str,
                         home_offense: str = "balanced",
                         home_defense: str = "swarm",
+                        home_st: str = "aces",
                         away_offense: str = "balanced",
                         away_defense: str = "swarm",
+                        away_st: str = "aces",
                         weather: str = "clear",
                         seed: Optional[int] = None) -> dict:
     body = {
@@ -420,8 +424,10 @@ def simulate_quick_game(home: str, away: str,
         "styles": {
             home: home_offense,
             f"{home}_defense": home_defense,
+            f"{home}_st": home_st,
             away: away_offense,
             f"{away}_defense": away_defense,
+            f"{away}_st": away_st,
         },
         "weather": weather,
     }

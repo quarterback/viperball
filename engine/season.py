@@ -704,8 +704,10 @@ class Season:
         style_overrides = {
             home_team.name: home_style_config.get('offense_style', 'balanced'),
             f"{home_team.name}_defense": home_style_config.get('defense_style', 'swarm'),
+            f"{home_team.name}_st": home_style_config.get('st_scheme', 'aces'),
             away_team.name: away_style_config.get('offense_style', 'balanced'),
             f"{away_team.name}_defense": away_style_config.get('defense_style', 'swarm'),
+            f"{away_team.name}_st": away_style_config.get('st_scheme', 'aces'),
         }
 
         # Geo-aware weather: use home team's state if available
