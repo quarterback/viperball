@@ -54,6 +54,9 @@ The project maintains a clear separation of concerns:
 - **Playoff Selection**: Combines conference champion auto-bids with at-large bids based on Power Index.
 - **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games, in-game boosts, AI assignment, and historical tracking in Dynasty mode.
 - **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games (winner, spread, O/U, chaos factor, kick pass O/U props), play fantasy football (with kick pass scoring), and donate to unlock dynasty boosts.
+- **Injury-Aware Auto Depth Chart**: Depth chart automatically adjusts when players are injured — OUT players drop to bottom, healthy players slide up. DTD players stay in their spot but flagged as Questionable. Both roster endpoints (season + dynasty) pass injury data to compute_depth_chart(). UI depth chart view shows Status column (Active/Questionable/OUT) with healthy-first sorting.
+- **Injury Recovery Variance**: Weekly resolve_week() applies probabilistic recovery — 25% early return chance when within 1 week of return, 15% when within 2 weeks, 8% setback chance adding 1-3 extra weeks. Injury dataclass tracks original_weeks_out and recovery_note for UI display. Distribution: ~35% early, ~53% on-time, ~12% setback.
+- **Enhanced My Team Injury Report**: Dashboard injury table shows Timeline (current vs original weeks), expected Return week, and Recovery notes (ahead of schedule / suffered setback / progressing on schedule). Season injury history available in expandable section.
 
 ## Recent Engine Tuning (Feb 2026)
 - **Play selection weights**: KP 3.5x boost, run families 1.8x boost, punt suppressed to 5% of original
