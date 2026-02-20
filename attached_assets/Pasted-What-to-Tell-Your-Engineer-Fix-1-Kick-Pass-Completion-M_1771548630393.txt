@@ -1,0 +1,63 @@
+What to Tell Your Engineer
+Fix 1: Kick Pass Completion Math (game_engine.py:3515-3537)
+The multiplicative factor chain is the killer. Two options:
+
+Option A (simple): Change the formula so kicker_factor and receiver_factor are additive modifiers around 1.0 rather than sub-1.0 multipliers. e.g., completion_prob = base_completion × (1.0 + (kicker_factor - 0.5) × 0.3) × ... — this keeps skill differentiation but stops the probability from collapsing.
+Option B (direct): Just raise the base rates significantly to compensate. If the factors typically reduce by ~50%, double the bases. Short = 90%+, Medium = 75%, Long = 55%, etc.
+Target actual rate: 25-40% completion. Think rugby kick-pass, not prayer.
+
+Fix 2: Double Drop Kick Attempt Rates (game_engine.py OFFENSE_STYLES)
+Bump kick_rate across all styles:
+
+Standard styles (ground_pound, balanced): 0.08-0.10 → 0.16-0.22
+Kicking-heavy styles (territory_kick, snap_kick_heavy): 0.35 → 0.50-0.60
+Add a check: if team has a kicking specialist (kicking ≥ 82), apply a further +0.10-0.15 multiplier to kick_rate. These teams should DK almost every time they're in range, like a team built around a Steph Curry.
+Target: ~3.5-4.0 DK/team/game average, with specialist teams hitting 5-6+.
+
+Fix 3: Kick Passing Should Open Things Up
+Once completion rate is fixed, kick passes become a real threat. Your engineer should:
+
+Increase yards-after-catch potential on successful kick passes (it's a big play, reward it)
+Consider a defensive adjustment factor — if a team has high kick pass volume, the defense should have to respect it, slightly improving run/lateral efficiency (like how the 3-point shot spaces the floor)
+Fix 4: Fantasy Salary Range (if you need it adjusted)
+You mentioned $750-$7,500 in increments of 1. Currently the floor is $487 and there's no hard ceiling. In engine/draftyqueenz.py:219-249, the _salary_for_player function would need:
+
+Change the hard floor from max(487, ...) to max(750, ...)
+Add a ceiling clamp: min(7500, salary)
+Salaries are already non-rounded integers (increments of 1), so that part is fine
+That's the playbook. The two biggest bang-for-buck fixes are the kick pass completion math and doubling the kick rates — both are concentrated in engine/game_engine.py and will propagate to all game modes automatically since they share the same engine.
+
+kick pass completion rates in rugby are oun the 70% range, completion rates in the NFL are in the 65% range, so like...this sport should manage that threshold too.
+
+
+
+Good point. You're right — there's no reason a kick pass in Viperball should complete at a lower rate than a forward pass in the NFL or a kick pass in rugby. The base rates in the code (14-68%) actually aren't far off from where they need to be — the problem is entirely in the multiplicative factor math that destroys them.
+
+Here's the refined advice for your engineer:
+
+The Fix (one location: game_engine.py:3515-3537)
+Target actual completion rates:
+
+Short (≤12 yds): 70-75% (routine play, like a short NFL pass)
+Medium (≤18 yds): 60-65%
+Long (≤25 yds): 45-55%
+Deep (≤30 yds): 30-40%
+Bomb (>30 yds): 18-25%
+The current base rates aren't the main problem. The problem is:
+
+completion_prob = base_completion × kicker_factor × receiver_factor × (1 + bonuses)
+
+When kicker_factor is ~0.7 and receiver_factor is ~0.7, you're multiplying by 0.49. That turns a 68% base into 33% before weather, defense, and the interception check that eats completions. That's how you end up at 2.3% actual.
+
+Tell your engineer: The kicker_factor and receiver_factor should modify the base rate, not halve it. They should be centered around 1.0 — a league-average kicker/receiver should multiply by ~1.0, a bad one by ~0.85, a great one by ~1.15. The current formula treats 80-rated players as a penalty. Skill should create variance around the base rate, not crater it.
+
+If the factors are recentered around 1.0, the existing base rates just need a modest bump:
+
+Short: 68% → 75%
+Medium: 55% → 63%
+Long: 40% → 50%
+Deep: 25% → 35%
+Bomb: 14% → 22%
+And the interception check at lines before the completion check should only trigger on failed completions, not consume successful ones.
+
+That's one function, one formula change, and it cascades everywhere automatically.
