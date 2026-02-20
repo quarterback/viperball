@@ -55,6 +55,16 @@ The project maintains a clear separation of concerns:
 - **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games, in-game boosts, AI assignment, and historical tracking in Dynasty mode.
 - **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games (winner, spread, O/U, chaos factor, kick pass O/U props), play fantasy football (with kick pass scoring), and donate to unlock dynasty boosts.
 
+## Recent Engine Tuning (Feb 2026)
+- **Play selection weights**: KP 3.5x boost, run families 1.8x boost, punt suppressed to 5% of original
+- **Clock timing**: 11-36 second base range per play (~82 plays/team/game)
+- **DK accuracy**: Boosted table (96% at ≤20yd, 68% at ≤40yd, skill_factor floor 0.88)
+- **KP mechanics**: INT base 0.055, YAC 3-18 + speed bonus, big-play TD mechanic for 20+ yard completions
+- **Run base yards**: Boosted to 6-11+ range across play families
+- **Go-for-it aggression**: 1.6/1.5/1.7 multipliers on 4th/5th/6th down
+- **Current batch results** (20-game avg per team): Score 57.6, TDs/game 5.20, DK att 11.15/made 4.53, PK att 4.10, KP att 43.75 (58% comp), KP TDs 2.17, Rush 87.6 yds, Punts 0.78
+- **Remaining gaps**: KP TDs below ~4 target, rush yards below 100-120 target, KP INTs slightly over 1.0 target
+
 ## External Dependencies
 - **Python 3.11**: Core programming language.
 - **Streamlit**: For the interactive web user interface.

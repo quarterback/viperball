@@ -73,8 +73,8 @@ PLAY_FAMILY_TO_TYPE = {
 
 RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
-        'base_yards': (4.0, 6.5),
-        'variance': 3.0,
+        'base_yards': (6.0, 10.0),
+        'variance': 3.5,
         'fumble_rate': 0.010,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
@@ -82,8 +82,8 @@ RUN_PLAY_CONFIG = {
         'action': 'dive',
     },
     PlayFamily.POWER: {
-        'base_yards': (4.0, 6.5),
-        'variance': 3.5,
+        'base_yards': (6.5, 10.5),
+        'variance': 4.0,
         'fumble_rate': 0.012,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
@@ -91,8 +91,8 @@ RUN_PLAY_CONFIG = {
         'action': 'power',
     },
     PlayFamily.SWEEP_OPTION: {
-        'base_yards': (3.5, 7.0),
-        'variance': 4.5,
+        'base_yards': (5.5, 11.0),
+        'variance': 5.0,
         'fumble_rate': 0.014,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
@@ -100,8 +100,8 @@ RUN_PLAY_CONFIG = {
         'action': 'sweep',
     },
     PlayFamily.SPEED_OPTION: {
-        'base_yards': (4.0, 7.0),
-        'variance': 5.0,
+        'base_yards': (6.0, 11.0),
+        'variance': 5.5,
         'fumble_rate': 0.015,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
@@ -109,8 +109,8 @@ RUN_PLAY_CONFIG = {
         'action': 'pitch',
     },
     PlayFamily.COUNTER: {
-        'base_yards': (4.0, 7.5),
-        'variance': 5.0,
+        'base_yards': (6.0, 11.5),
+        'variance': 5.5,
         'fumble_rate': 0.012,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
@@ -118,8 +118,8 @@ RUN_PLAY_CONFIG = {
         'action': 'counter',
     },
     PlayFamily.DRAW: {
-        'base_yards': (3.5, 6.5),
-        'variance': 5.0,
+        'base_yards': (5.5, 10.0),
+        'variance': 5.5,
         'fumble_rate': 0.012,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
@@ -127,8 +127,8 @@ RUN_PLAY_CONFIG = {
         'action': 'draw',
     },
     PlayFamily.VIPER_JET: {
-        'base_yards': (4.0, 7.5),
-        'variance': 5.5,
+        'base_yards': (5.5, 10.0),
+        'variance': 6.0,
         'fumble_rate': 0.020,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
@@ -2129,8 +2129,8 @@ class ViperballEngine:
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
 
-            base_time = random.randint(15, 45)
-            time_elapsed = int(base_time * (1.2 - tempo * 0.4))
+            base_time = random.randint(11, 36)
+            time_elapsed = int(base_time * (1.12 - tempo * 0.32))
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
             if play.result == "snap_kick_recovery":
@@ -2250,10 +2250,10 @@ class ViperballEngine:
 
         # Columns: ≤20, ≤25, ≤30, ≤35, ≤40, ≤45, ≤54, 55+
         table = [
-            [0.96, 0.92, 0.86, 0.78, 0.68, 0.55, 0.42, 0.30],
-            [0.92, 0.86, 0.78, 0.68, 0.58, 0.45, 0.33, 0.22],
-            [0.86, 0.78, 0.70, 0.58, 0.48, 0.36, 0.24, 0.15],
-            [0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.17, 0.10],
+            [0.97, 0.94, 0.90, 0.84, 0.76, 0.65, 0.52, 0.38],
+            [0.94, 0.90, 0.84, 0.76, 0.66, 0.55, 0.42, 0.30],
+            [0.90, 0.84, 0.76, 0.66, 0.56, 0.44, 0.32, 0.22],
+            [0.84, 0.76, 0.66, 0.56, 0.46, 0.35, 0.24, 0.16],
         ]
 
         if distance <= 20:
@@ -2323,19 +2323,21 @@ class ViperballEngine:
         ev_drop_kick = dk_success * 5 + (1 - dk_success) * dk_miss_value
 
         if fg_distance <= 20:
-            ev_drop_kick *= 6.00
+            ev_drop_kick *= 8.00
         elif fg_distance <= 25:
-            ev_drop_kick *= 5.00
+            ev_drop_kick *= 7.00
         elif fg_distance <= 30:
-            ev_drop_kick *= 3.80
+            ev_drop_kick *= 5.50
         elif fg_distance <= 35:
-            ev_drop_kick *= 3.00
+            ev_drop_kick *= 4.50
         elif fg_distance <= 40:
-            ev_drop_kick *= 2.40
+            ev_drop_kick *= 3.50
         elif fg_distance <= 48:
-            ev_drop_kick *= 1.90
+            ev_drop_kick *= 2.80
+        elif fg_distance <= 55:
+            ev_drop_kick *= 2.20
         else:
-            ev_drop_kick *= 1.45
+            ev_drop_kick *= 1.70
 
         arch_info = get_archetype_info(kicker.archetype)
         if is_specialist:
@@ -2353,7 +2355,7 @@ class ViperballEngine:
         opp_fp = max(1, 100 - new_fp_after_punt)
         opp_value_after_punt = self._fp_value(opp_fp)
         pindown_prob = 0.40 if new_fp_after_punt >= 100 else (0.25 if opp_fp <= 10 else (0.15 if opp_fp <= 20 else 0.05))
-        ev_punt = max(0.2, tod_value - opp_value_after_punt + pindown_prob * 1.0 - self.POSSESSION_VALUE * 1.5)
+        ev_punt = max(0.1, tod_value - opp_value_after_punt + pindown_prob * 0.8 - self.POSSESSION_VALUE * 2.0)
 
         conversion_rate = self._conversion_rate(down, ytg)
         new_fp_if_convert = min(99, fp + ytg)
@@ -2371,10 +2373,10 @@ class ViperballEngine:
         failure_cost = (1 - conversion_rate) * tod_value * 0.5
         ev_go_for_it = conversion_rate * (continuation_value + drive_ep * 0.6 + td_prob_boost) - failure_cost
 
-        aggression = {4: 1.30, 5: 1.20, 6: 1.40}.get(down, 1.0)
+        aggression = {4: 1.60, 5: 1.50, 6: 1.70}.get(down, 1.0)
         ev_go_for_it *= aggression
         if fp >= 35 and fp < 52 and down <= 5 and ytg <= 5:
-            ev_go_for_it *= 1.20
+            ev_go_for_it *= 1.30
 
         score_diff = self._get_score_diff()
         quarter = self.state.quarter
@@ -2417,12 +2419,14 @@ class ViperballEngine:
         elif kick_rate >= 0.20:
             ev_drop_kick *= 1.08
 
+        ev_punt *= 0.15
+
         options = {}
         if fg_distance <= 71:
             options['place_kick'] = ev_place_kick
         if fg_distance <= 60:
             options['drop_kick'] = ev_drop_kick
-        if fp < 60:
+        if fp < 25:
             options['punt'] = ev_punt
         options['go_for_it'] = ev_go_for_it
 
@@ -2792,43 +2796,48 @@ class ViperballEngine:
             return None
         fp = self.state.field_position
         fg_distance = (100 - fp) + 10
-        if fg_distance > 58:
+        if fg_distance > 60:
             return None
 
         team = self.get_offensive_team()
         kicker = max(team.players[:8], key=lambda p: p.kicking)
 
         if fg_distance <= 20:
-            shot_chance = 0.65
+            shot_chance = 0.96
         elif fg_distance <= 25:
-            shot_chance = 0.55
+            shot_chance = 0.90
         elif fg_distance <= 30:
-            shot_chance = 0.45
+            shot_chance = 0.82
         elif fg_distance <= 35:
-            shot_chance = 0.36
+            shot_chance = 0.72
         elif fg_distance <= 40:
-            shot_chance = 0.28
+            shot_chance = 0.60
         elif fg_distance <= 48:
-            shot_chance = 0.20
+            shot_chance = 0.48
+        elif fg_distance <= 55:
+            shot_chance = 0.36
         else:
-            shot_chance = 0.12
+            shot_chance = 0.22
 
         is_specialist = kicker.archetype == "kicking_zb" or kicker.kicking >= 85
         if is_specialist:
             shot_chance *= 2.2
+            shot_chance = min(0.98, shot_chance)
         elif kicker.kicking >= 78:
-            shot_chance *= 1.4
+            shot_chance *= 1.5
 
         if self.state.down == 5:
-            shot_chance *= 0.75
+            shot_chance *= 0.85
         elif self.state.down == 4:
-            shot_chance *= 0.90
+            shot_chance *= 0.95
 
         score_diff = self._get_score_diff()
         if score_diff < -6:
             shot_chance *= 1.4
         elif score_diff < -3:
             shot_chance *= 1.2
+        elif score_diff > 10:
+            shot_chance *= 0.85
 
         if random.random() < shot_chance:
             return PlayType.DROP_KICK
@@ -2954,13 +2963,19 @@ class ViperballEngine:
         ytg = self.state.yards_to_go
         fp = self.state.field_position
 
-        weights["territory_kick"] = max(0.02, weights.get("territory_kick", 0.2) * 0.15)
+        weights["territory_kick"] = max(0.01, weights.get("territory_kick", 0.2) * 0.05)
+
+        kick_pass_base = weights.get("kick_pass", 0.05)
+        weights["kick_pass"] = kick_pass_base * 3.5
+
+        for rk in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw"):
+            weights[rk] = weights.get(rk, 0.1) * 1.8
 
         if ytg <= 3:
-            weights["dive_option"] = weights.get("dive_option", 0.1) * 2.0
-            weights["power"] = weights.get("power", 0.1) * 2.0
-            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.4
-            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.2
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 2.2
+            weights["power"] = weights.get("power", 0.1) * 2.2
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.5
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.4
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.5
             weights["counter"] = weights.get("counter", 0.05) * 0.8
@@ -2968,9 +2983,9 @@ class ViperballEngine:
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.8
             weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
         elif ytg <= 10:
-            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
-            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.2
-            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.3
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.4
             weights["counter"] = weights.get("counter", 0.05) * 1.2
             weights["draw"] = weights.get("draw", 0.05) * 1.1
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.2
@@ -2981,8 +2996,8 @@ class ViperballEngine:
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.6
-            weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
-            weights["power"] = weights.get("power", 0.1) * 0.5
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 0.7
+            weights["power"] = weights.get("power", 0.1) * 0.7
 
         if fp >= 90:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 2.0
@@ -3401,21 +3416,25 @@ class ViperballEngine:
         if new_position >= 97:
             td_chance = 0.95
         elif new_position >= 95:
-            td_chance = 0.85
+            td_chance = 0.88
         elif new_position >= 90:
-            td_chance = 0.70
+            td_chance = 0.75
         elif new_position >= 85:
-            td_chance = 0.55
+            td_chance = 0.60
         elif new_position >= 80:
-            td_chance = 0.35
+            td_chance = 0.42
         elif new_position >= 75:
-            td_chance = 0.18
+            td_chance = 0.25
             if yards_gained >= 8:
                 td_chance += 0.10
         elif new_position >= 70:
-            td_chance = 0.08
+            td_chance = 0.12
             if yards_gained >= 12:
-                td_chance += 0.10
+                td_chance += 0.08
+        elif new_position >= 65:
+            td_chance = 0.05
+            if yards_gained >= 15:
+                td_chance += 0.06
         else:
             return False
         return random.random() < td_chance
@@ -4619,8 +4638,8 @@ class ViperballEngine:
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
 
-            yac = random.randint(2, 14)
-            yac_bonus = receiver.speed / 100 * random.randint(0, 8)
+            yac = random.randint(3, 18)
+            yac_bonus = receiver.speed / 100 * random.randint(0, 10)
             yac = int(yac + yac_bonus)
 
             fumble_on_catch = 0.02
@@ -4724,7 +4743,21 @@ class ViperballEngine:
             kicker.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
 
-            is_td = new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team)
+            big_play_td = False
+            if not (new_position >= 100) and yards_gained >= 20 and new_position >= 55:
+                big_play_chance = 0.0
+                if yards_gained >= 50:
+                    big_play_chance = 0.25
+                elif yards_gained >= 40:
+                    big_play_chance = 0.16
+                elif yards_gained >= 30:
+                    big_play_chance = 0.09
+                elif yards_gained >= 20:
+                    big_play_chance = 0.04
+                big_play_chance += (receiver.speed - 80) / 100 * 0.05
+                big_play_td = random.random() < big_play_chance
+
+            is_td = new_position >= 100 or big_play_td or self._red_zone_td_check(new_position, yards_gained, team)
             if is_td:
                 result = PlayResult.TOUCHDOWN
                 yards_gained = 100 - self.state.field_position
@@ -4780,7 +4813,7 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        base_int_chance = 0.03
+        base_int_chance = 0.055
         int_mod = defense.get("turnover_bonus", 0.0)
         coverage_int = defense.get("kick_pass_coverage", 0.0)
         int_chance = base_int_chance * (1 + int_mod + coverage_int * 0.5)
@@ -4788,8 +4821,8 @@ class ViperballEngine:
         if kick_distance >= 25:
             int_chance += 0.015
         elif kick_distance >= 18:
-            int_chance += 0.005
-        int_chance = max(0.01, min(0.12, int_chance))
+            int_chance += 0.008
+        int_chance = max(0.015, min(0.12, int_chance))
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -5429,7 +5462,7 @@ class ViperballEngine:
         keeper.game_coverage_snaps += 1
 
         keeper_arch = get_archetype_info(keeper.archetype)
-        deflection_base = 0.08
+        deflection_base = 0.05
         deflection_base += keeper_arch.get("deflection_bonus", 0.0)
         if keeper.speed >= 90:
             deflection_base += 0.03
@@ -5475,28 +5508,32 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        skill_factor = kicker.kicking / 85
+        skill_factor = max(0.88, kicker.kicking / 80)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
 
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
 
         if distance <= 20:
-            base_prob = 0.92
+            base_prob = 0.96
         elif distance <= 25:
-            base_prob = 0.85
+            base_prob = 0.92
         elif distance <= 30:
-            base_prob = 0.78
+            base_prob = 0.86
         elif distance <= 35:
-            base_prob = 0.68
+            base_prob = 0.78
         elif distance <= 40:
-            base_prob = 0.55
+            base_prob = 0.68
         elif distance <= 45:
-            base_prob = 0.42
+            base_prob = 0.56
+        elif distance <= 50:
+            base_prob = 0.44
         elif distance <= 55:
-            base_prob = 0.28
+            base_prob = 0.34
+        elif distance <= 60:
+            base_prob = 0.22
         else:
-            base_prob = max(0.08, 0.28 - (distance - 55) * 0.015)
+            base_prob = max(0.08, 0.22 - (distance - 60) * 0.02)
 
         weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
         success_prob = base_prob * skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
