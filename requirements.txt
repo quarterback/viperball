@@ -1,5 +1,5 @@
 fastapi>=0.129.0
-nicegui>=2.0.0
+nicegui>=2.0.0,<3.0.0
 pandas>=2.3.3
 plotly>=6.5.2
 uvicorn>=0.40.0

@@ -76,29 +76,40 @@ def _handle(resp: requests.Response) -> Any:
     return resp.json()
 
 
+def _request(method: str, path: str, params: Optional[dict] = None,
+             json: Optional[Any] = None, timeout: int = 120) -> Any:
+    try:
+        resp = requests.request(method, _url(path), params=params, json=json, timeout=timeout)
+    except requests.exceptions.ConnectionError:
+        raise APIError(503, f"Cannot reach API at {API_BASE}")
+    except requests.exceptions.Timeout:
+        raise APIError(504, f"API request timed out: {path}")
+    return _handle(resp)
+
+
 def _get(path: str, params: Optional[dict] = None, timeout: int = 120) -> Any:
     key = _cache_key(path, params)
     cached = _cache_get(key)
     if cached is not None:
         return cached
-    result = _handle(requests.get(_url(path), params=params, timeout=timeout))
+    result = _request("GET", path, params=params, timeout=timeout)
     _cache_set(key, result)
     return result
 
 
 def _post(path: str, json: Optional[dict] = None, timeout: int = 300) -> Any:
     invalidate_cache()  # mutations invalidate the read cache
-    return _handle(requests.post(_url(path), json=json, timeout=timeout))
+    return _request("POST", path, json=json, timeout=timeout)
 
 
 def _put(path: str, json: Optional[Any] = None, timeout: int = 120) -> Any:
     invalidate_cache()
-    return _handle(requests.put(_url(path), json=json, timeout=timeout))
+    return _request("PUT", path, json=json, timeout=timeout)
 
 
 def _delete(path: str, timeout: int = 30) -> Any:
     invalidate_cache()
-    return _handle(requests.delete(_url(path), timeout=timeout))
+    return _request("DELETE", path, timeout=timeout)
 
 
 # ---------------------------------------------------------------------------

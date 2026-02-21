@@ -112,8 +112,8 @@ def render_dynasty_mode(state: UserState, shared: dict):
     total_teams = len(all_team_names_sorted)
     max_conf = max(1, total_teams // 9)
 
+    ui.label(f"Number of Conferences ({total_teams} teams)").classes("text-sm text-slate-600")
     num_conferences = ui.slider(
-        f"Number of Conferences ({total_teams} teams)",
         min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
     ).classes("w-96")
 
@@ -137,7 +137,8 @@ def render_dynasty_mode(state: UserState, shared: dict):
     ui.label("Generate past seasons for established history with champions, records, and rivalries.").classes("text-sm text-gray-500")
 
     with ui.row().classes("gap-4"):
-        history_years = ui.slider("Years of History", min=0, max=100, value=0).classes("w-64")
+        ui.label("Years of History").classes("text-sm text-slate-600")
+        history_years = ui.slider(min=0, max=100, value=0).classes("w-64")
         ui.label("0 = start fresh. Higher values take longer.").classes("text-sm text-gray-400 self-center")
 
     # ── Create Dynasty Button ──

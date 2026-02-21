@@ -78,8 +78,8 @@ def render_season_simulator(state: UserState, shared: dict):
     total_teams = len(all_team_names)
     max_conf = max(1, total_teams // 9)
 
+    ui.label(f"Number of Conferences ({total_teams} teams)").classes("text-sm text-slate-600")
     num_conferences = ui.slider(
-        f"Number of Conferences ({total_teams} teams)",
         min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
     ).classes("w-96")
 
@@ -123,8 +123,10 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.label("Generate pre-existing seasons so the league has history.").classes("text-sm text-gray-500")
 
     with ui.row().classes("gap-4"):
-        history_years = ui.slider("Years of History", min=0, max=100, value=0).classes("w-64")
-        games_per_team = ui.slider("Games per Team", min=8, max=12, value=10).classes("w-64")
+        ui.label("Years of History").classes("text-sm text-slate-600")
+        history_years = ui.slider(min=0, max=100, value=0).classes("w-64")
+        ui.label("Games per Team").classes("text-sm text-slate-600")
+        games_per_team = ui.slider(min=8, max=12, value=10).classes("w-64")
 
     ui.separator().classes("my-4")
 
