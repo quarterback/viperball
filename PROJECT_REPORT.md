@@ -22,6 +22,7 @@ This sprint replaced the Viperball game engine's core resolution mechanics with 
 | Turnovers/team | ~4.5 | ~2.0 | 1.5-3 |
 | 4th Down Conversion | 57% | ~85% | 80-90% |
 | 5th Down Conversion | 38% | ~71% | 65-75% |
+| 6th Down Conversion | 22% | ~63% | 55-65% |
 
 ---
 
@@ -228,6 +229,7 @@ Opportunistic drop kicks on early downs now scale with kicker talent and coachin
 | 2-3 | "Pull-up three" — base 3-22% by distance | × snap_kick_agg × kicker_mult |
 | 4 | Nearly never — only elite specialists in very close range with long ytg | |
 | 5 | Secondary chance after select_kick_decision | × snap_kick_agg × kicker_mult |
+| 6 | Handled by `select_kick_decision()` — kick > punt > go for it | N/A (not snap kick) |
 
 The `kicker_mult = max(0.4, (kicker.kicking - 60) / 20.0)` means an 90-rated kicker fires snap kicks 50% more often than baseline, while a 68-rated kicker fires 60% less.
 
