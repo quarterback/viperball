@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for viperball on 2026-02-21T00:01:32Z
+# fly.toml app configuration file generated for viperball on 2026-02-21T00:14:12Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'viperball'
-primary_region = 'arn'
+primary_region = 'ams'
 
 [build]
 
@@ -17,5 +17,7 @@ primary_region = 'arn'
   processes = ['app']
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
