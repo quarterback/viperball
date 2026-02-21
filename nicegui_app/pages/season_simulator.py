@@ -122,11 +122,22 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.label("League History").classes("text-lg font-semibold text-slate-700")
     ui.label("Generate pre-existing seasons so the league has history.").classes("text-sm text-gray-500")
 
-    with ui.row().classes("gap-4"):
+    with ui.row().classes("gap-4 items-center"):
         ui.label("Years of History").classes("text-sm text-slate-600")
         history_years = ui.slider(min=0, max=100, value=0).classes("w-64")
+        history_years_label = ui.label("0 years").classes("text-sm font-semibold text-slate-700 min-w-[60px]")
         ui.label("Games per Team").classes("text-sm text-slate-600")
         games_per_team = ui.slider(min=8, max=12, value=10).classes("w-64")
+        games_label = ui.label("10 games").classes("text-sm font-semibold text-slate-700 min-w-[60px]")
+
+    def _update_history_label():
+        v = int(history_years.value)
+        history_years_label.set_text(f"{v} year{'s' if v != 1 else ''}")
+    history_years.on_value_change(lambda _: _update_history_label())
+
+    def _update_games_label():
+        games_label.set_text(f"{int(games_per_team.value)} games")
+    games_per_team.on_value_change(lambda _: _update_games_label())
 
     ui.separator().classes("my-4")
 
