@@ -56,6 +56,7 @@ class PlayResult(Enum):
     KICK_PASS_COMPLETE = "kick_pass_complete"
     KICK_PASS_INCOMPLETE = "kick_pass_incomplete"
     KICK_PASS_INTERCEPTED = "kick_pass_intercepted"
+    INT_RETURN_TD = "int_return_td"
     LATERAL_INTERCEPTED = "lateral_intercepted"
 
 
@@ -77,7 +78,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.012,
+        'fumble_rate': 0.006,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
         'archetype_bonus': {'power_flanker': 1.3, 'reliable_flanker': 1.2},
@@ -86,7 +87,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.POWER: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.014,
+        'fumble_rate': 0.007,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
         'archetype_bonus': {'power_flanker': 1.4},
@@ -95,7 +96,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SWEEP_OPTION: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.015,
+        'fumble_rate': 0.008,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
         'archetype_bonus': {'speed_flanker': 1.4, 'elusive_flanker': 1.3},
@@ -104,7 +105,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SPEED_OPTION: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.015,
+        'fumble_rate': 0.008,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'running_zb': 1.3, 'dual_threat_zb': 1.2},
@@ -113,7 +114,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.COUNTER: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.014,
+        'fumble_rate': 0.007,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'elusive_flanker': 1.3, 'hybrid_viper': 1.2},
@@ -122,7 +123,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DRAW: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.014,
+        'fumble_rate': 0.007,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
         'archetype_bonus': {'running_zb': 1.2},
@@ -131,7 +132,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.VIPER_JET: {
         'base_yards': (2.5, 4.5),
         'variance': 1.5,
-        'fumble_rate': 0.021,
+        'fumble_rate': 0.011,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
         'archetype_bonus': {'receiving_viper': 1.3, 'hybrid_viper': 1.4},
@@ -2241,7 +2242,7 @@ class ViperballEngine:
                 drive_result = "snap_kick_recovery"
                 continue
 
-            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted"]:
+            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted"]:
                 drive_result = play.result
                 if play.result in ("fumble", "turnover_on_downs"):
                     new_pos = self.state.possession
@@ -2264,6 +2265,11 @@ class ViperballEngine:
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
+                elif play.result == "int_return_td":
+                    # Pick-six: intercepting team scored, kickoff to other team
+                    scoring_team = self.state.possession
+                    receiving = "away" if scoring_team == "home" else "home"
+                    self.kickoff(receiving)
                 elif play.result == "safety":
                     scored_team = "away" if drive_team == "home" else "home"
                     self.state.possession = drive_team
@@ -2273,7 +2279,7 @@ class ViperballEngine:
                 break
 
         # Track compelled efficiency: did a sacrifice drive end in a score?
-        is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td")
+        is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td")
         if drive_sacrifice and is_score:
             if drive_team == "home":
                 self.state.home_sacrifice_scores += 1
@@ -3523,11 +3529,45 @@ class ViperballEngine:
         # ── Delta: positive = offense advantage ──
         delta = off_skill - def_skill  # typically −30 to +30
 
-        # ── Sigmoid → yards center ──
-        # delta  0 → center ~5.0  (even matchup — calibrated for 20yd/6 downs)
-        # delta +25 → center ~7.5  (offense dominates)
-        # delta −25 → center ~2.5  (defense dominates)
-        center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
+        # ── Yards center: depends on game situation ──
+        #
+        # Early downs (1-3): Standard sigmoid contest.  The center is a
+        # fixed base modified by the skill delta between carrier and
+        # tackler.  This keeps drives progressing naturally.
+        #
+        # Late downs (4-6): **Needs-based conversion contest**.  The
+        # center is anchored on what the offense NEEDS (yards_to_go)
+        # and the talent delta determines whether they overshoot or
+        # fall short.  Better players → higher conversion probability.
+        # This produces the target 85 / 71 / 63 % conversion rates
+        # organically from player talent, not from flat bonuses.
+
+        if self.state.down >= 4:
+            # ── Late-down conversion contest ──
+            ytg = self.state.yards_to_go
+
+            # Normalise talent to 0-1 scale (rating 50-99 range)
+            off_norm = max(0.0, (off_skill - 50) / 49.0)   # 0.0–1.0
+            def_norm = max(0.0, (def_skill - 50) / 49.0)
+
+            # Talent edge: positive = offense outclasses defense
+            talent_edge = off_norm - def_norm  # roughly −1.0 to +1.0
+
+            # Buffer: how far past the ytg the play is likely to go.
+            # Elite offense vs weak D → +6 buffer (overshoot by 6 yds)
+            # Even matchup          → +3 buffer
+            # Weak offense vs elite D → 0 (coin flip)
+            buffer = 3.0 + talent_edge * 3.0
+
+            # Urgency scalar: 4th down = full urgency, 5th/6th decay
+            urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
+            center = ytg + buffer * urgency
+        else:
+            # ── Standard early-down sigmoid ──
+            # delta  0 → center ~5.0  (even matchup)
+            # delta +25 → center ~7.5  (offense dominates)
+            # delta −25 → center ~2.5  (defense dominates)
+            center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
 
         # ── Play-type shift ──
         base_low, base_high = play_config['base_yards']
@@ -3607,6 +3647,15 @@ class ViperballEngine:
         delta = off_skill - def_coverage
         # Sigmoid: even skill → ~55% base (slight offense bias)
         base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
+
+        # ── Late-down conversion urgency ──
+        # On 4th-6th down, kickers focus harder and receivers run
+        # sharper routes.  Talent still drives the outcome — elite
+        # kicker/receiver pairs get a bigger boost than average ones.
+        if self.state.down >= 4:
+            off_talent = max(0.0, (off_skill - 50) / 49.0)  # 0–1
+            urgency = {4: 0.18, 5: 0.12, 6: 0.08}.get(self.state.down, 0.08)
+            base_prob = min(0.92, base_prob + urgency * (0.5 + off_talent * 0.5))
 
         # Hot streak: kicker on a roll → tighter noise, biased upward
         streak_bonus, streak_var = self._hot_streak_modifier(kicker)
@@ -3995,11 +4044,11 @@ class ViperballEngine:
 
         # Pick the trick play variant
         trick_variants = [
-            {"name": "halfback_kick", "action": "HB kick", "positions": ["HB", "SB"], "fumble_rate": 0.03, "base_yards": (2.0, 4.0), "variance": 1.4},
-            {"name": "viper_reverse", "action": "viper reverse", "positions": ["VP", "WB"], "fumble_rate": 0.035, "base_yards": (2.0, 4.5), "variance": 1.5},
-            {"name": "flea_flicker", "action": "flea flicker", "positions": ["ZB", "HB"], "fumble_rate": 0.035, "base_yards": (2.0, 4.0), "variance": 1.4},
-            {"name": "double_reverse", "action": "double reverse", "positions": ["WB", "HB", "VP"], "fumble_rate": 0.04, "base_yards": (2.5, 5.0), "variance": 1.6},
-            {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.03, "base_yards": (2.0, 4.0), "variance": 1.4},
+            {"name": "halfback_kick", "action": "HB kick", "positions": ["HB", "SB"], "fumble_rate": 0.015, "base_yards": (2.0, 4.0), "variance": 1.4},
+            {"name": "viper_reverse", "action": "viper reverse", "positions": ["VP", "WB"], "fumble_rate": 0.018, "base_yards": (2.0, 4.5), "variance": 1.5},
+            {"name": "flea_flicker", "action": "flea flicker", "positions": ["ZB", "HB"], "fumble_rate": 0.018, "base_yards": (2.0, 4.0), "variance": 1.4},
+            {"name": "double_reverse", "action": "double reverse", "positions": ["WB", "HB", "VP"], "fumble_rate": 0.020, "base_yards": (2.5, 5.0), "variance": 1.6},
+            {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.015, "base_yards": (2.0, 4.0), "variance": 1.4},
         ]
         variant = random.choice(trick_variants)
 
@@ -4255,15 +4304,13 @@ class ViperballEngine:
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
-            int_chance = 0.03 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
-            int_chance = max(0.005, min(0.08, int_chance))
+            int_chance = 0.005 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance = max(0.001, min(0.015, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
                 int_spot = self.state.field_position + random.randint(0, 3)
                 self.change_possession()
-                self.state.field_position = max(1, 100 - int_spot)
-                self.state.down = 1
-                self.state.yards_to_go = 20
+                raw_fp = max(1, 100 - int_spot)
 
                 # Pick the interceptor
                 int_candidates = def_team.players[:6]
@@ -4272,29 +4319,66 @@ class ViperballEngine:
                 interceptor.game_lateral_interceptions += 1
                 int_tag = player_tag(interceptor)
 
+                # Explosive INT return — laterals intercepted in the open
+                # field often lead to big returns or pick-sixes.
+                int_speed = interceptor.speed
+                int_agility = getattr(interceptor, 'agility', 75)
+                return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
+                return_yards = max(0, int(random.gauss(30 + return_talent * 20, 12)))
+                new_fp = min(100, raw_fp + return_yards)
+
                 self.apply_stamina_drain(4)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-                return Play(
-                    play_number=self.state.play_number,
-                    quarter=self.state.quarter,
-                    time=self.state.time_remaining,
-                    possession=self.state.possession,
-                    field_position=self.state.field_position,
-                    down=1,
-                    yards_to_go=20,
-                    play_type="lateral_chain",
-                    play_family=family.value,
-                    players_involved=chain_labels,
-                    yards_gained=0,
-                    result=PlayResult.LATERAL_INTERCEPTED.value,
-                    description=f"{chain_tags} lateral — INTERCEPTED by {int_tag}!",
-                    fatigue=round(stamina, 1),
-                    laterals=chain_length,
-                )
+
+                if new_fp >= 100:
+                    # Pick-six from lateral interception
+                    self.state.field_position = 25
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.add_score(9)
+                    interceptor.game_tds += 1
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=1,
+                        yards_to_go=20,
+                        play_type="lateral_chain",
+                        play_family=family.value,
+                        players_involved=chain_labels,
+                        yards_gained=0,
+                        result=PlayResult.INT_RETURN_TD.value,
+                        description=f"{chain_tags} lateral — INTERCEPTED by {int_tag}! Returned {return_yards} for TOUCHDOWN!",
+                        fatigue=round(stamina, 1),
+                        laterals=chain_length,
+                    )
+                else:
+                    self.state.field_position = new_fp
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=1,
+                        yards_to_go=20,
+                        play_type="lateral_chain",
+                        play_family=family.value,
+                        players_involved=chain_labels,
+                        yards_gained=0,
+                        result=PlayResult.LATERAL_INTERCEPTED.value,
+                        description=f"{chain_tags} lateral — INTERCEPTED by {int_tag}! Returned {return_yards} yds to the {new_fp}",
+                        fatigue=round(stamina, 1),
+                        laterals=chain_length,
+                    )
 
         # ── Lateral fumble check ──
-        base_lateral_fumble = 0.20
-        fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.10
+        base_lateral_fumble = 0.08
+        fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.04
         fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
@@ -4513,7 +4597,16 @@ class ViperballEngine:
         # Kick distance: base 5-14 + kicker skill roll
         # Kick passes are the engine of drive progression — short, medium,
         # and long-range completions all create opportunities.
-        kick_distance = random.randint(5, 14)
+        #
+        # On late downs (4-6), kickers target what the team needs.
+        # The distance biases toward yards_to_go so completions convert.
+        if self.state.down >= 4:
+            ytg = self.state.yards_to_go
+            # Target distance is ~ytg (receiver will add YAC on top)
+            target = max(5, min(14, ytg - 2))  # aim short of ytg, YAC covers rest
+            kick_distance = random.randint(max(5, target - 2), min(14, target + 3))
+        else:
+            kick_distance = random.randint(5, 14)
         kick_skill_bonus = self._player_skill_roll(kicker, play_type="kick_pass")
         kick_distance = max(1, int(kick_distance + kick_skill_bonus))
 
@@ -4551,9 +4644,9 @@ class ViperballEngine:
             else:
                 yac = random.randint(0, 3) + int(receiver_skill * random.randint(0, 2))
 
-            fumble_on_catch = 0.02
-            fumble_on_catch -= (receiver.hands / 100) * 0.01
-            fumble_on_catch = max(0.005, fumble_on_catch)
+            fumble_on_catch = 0.008
+            fumble_on_catch -= (receiver.hands / 100) * 0.004
+            fumble_on_catch = max(0.002, fumble_on_catch)
 
             total_yards = kick_distance + yac
 
@@ -4720,18 +4813,18 @@ class ViperballEngine:
         self._update_player_streak(kicker, False)
 
         # Interception: checked on incomplete kicks only.
-        # Global INT rate per attempt ≈ P(incomplete) × int_chance.
-        # With ~63% completion: 0.37 × 0.10 ≈ 3.7% global rate.
-        # Distance already penalizes completion prob — no need to double-dip.
-        int_chance = 0.10
+        # Rare but explosive — when it happens, the defender has open
+        # field and a high chance of housing it (pick-six) or getting
+        # major return yards.  INTs are high-burst, high-velocity plays.
+        # Global rate ≈ P(incomplete) × int_chance ≈ 0.37 × 0.02 ≈ 0.7%.
+        int_chance = 0.02
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
             int_spot = min(99, self.state.field_position + kick_distance)
             self.change_possession()
-            self.state.field_position = max(1, 100 - int_spot)
-            self.state.down = 1
-            self.state.yards_to_go = 20
+            # Field position from the intercepting team's perspective
+            raw_fp = max(1, 100 - int_spot)
 
             def_team = self.get_defensive_team()
             def_candidates = def_team.players[:6]
@@ -4740,25 +4833,67 @@ class ViperballEngine:
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
 
-            self.apply_stamina_drain(4)
-            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            # ── Explosive INT return ──
+            # Interceptors have open field.  Speed + agility determine
+            # return distance.  >60% of INTs should produce a score.
+            int_speed = interceptor.speed
+            int_agility = getattr(interceptor, 'agility', 75)
+            return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40  # 0–1
+            return_yards = max(0, int(random.gauss(30 + return_talent * 20, 12)))
+            new_fp = min(100, raw_fp + return_yards)
 
-            return Play(
-                play_number=self.state.play_number,
-                quarter=self.state.quarter,
-                time=self.state.time_remaining,
-                possession=self.state.possession,
-                field_position=self.state.field_position,
-                down=1,
-                yards_to_go=20,
-                play_type="kick_pass",
-                play_family=family.value,
-                players_involved=[kicker_lbl, receiver_lbl],
-                yards_gained=0,
-                result=PlayResult.KICK_PASS_INTERCEPTED.value,
-                description=f"{kicker_tag} kick pass intended for {receiver_tag} — INTERCEPTED by {int_tag}!",
-                fatigue=round(stamina, 1),
-            )
+            if new_fp >= 100:
+                # Pick-six!  Interceptor returns it all the way.
+                self.state.field_position = 25  # kickoff position after TD
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.add_score(9)  # TD for intercepting team
+                interceptor.game_tds += 1
+
+                self.apply_stamina_drain(4)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=1,
+                    yards_to_go=20,
+                    play_type="kick_pass",
+                    play_family=family.value,
+                    players_involved=[kicker_lbl, receiver_lbl],
+                    yards_gained=0,
+                    result=PlayResult.INT_RETURN_TD.value,
+                    description=f"{kicker_tag} kick pass — INTERCEPTED by {int_tag}! Returned {return_yards} yards for a TOUCHDOWN!",
+                    fatigue=round(stamina, 1),
+                )
+            else:
+                # INT with return yards — great field position
+                self.state.field_position = new_fp
+                self.state.down = 1
+                self.state.yards_to_go = 20
+
+                self.apply_stamina_drain(4)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=1,
+                    yards_to_go=20,
+                    play_type="kick_pass",
+                    play_family=family.value,
+                    players_involved=[kicker_lbl, receiver_lbl],
+                    yards_gained=0,
+                    result=PlayResult.KICK_PASS_INTERCEPTED.value,
+                    description=f"{kicker_tag} kick pass — INTERCEPTED by {int_tag}! Returned {return_yards} yards to the {new_fp}",
+                    fatigue=round(stamina, 1),
+                )
 
         self.state.down += 1
 
@@ -6365,7 +6500,7 @@ class ViperballEngine:
         kick_passes = [p for p in plays if p.play_type == "kick_pass"]
         kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
         kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
-        kick_pass_ints = [p for p in kick_passes if p.result == "kick_pass_intercepted"]
+        kick_pass_ints = [p for p in kick_passes if p.result in ("kick_pass_intercepted", "int_return_td")]
         kick_pass_yards = sum(max(0, p.yards_gained) for p in kick_pass_completions)
         lateral_ints = [p for p in laterals if p.result == "lateral_intercepted"]
 
