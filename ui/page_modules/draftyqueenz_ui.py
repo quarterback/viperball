@@ -386,14 +386,15 @@ def _render_fantasy_tab(session_id: str, week: int, kp: str):
     roster_data = roster_resp.get("roster", {})
     entries = roster_data.get("entries", {})
     total_salary = roster_data.get("total_salary", 0)
-    cap_remaining = 50000 - total_salary
+    from engine.draftyqueenz import SALARY_CAP as _CAP
+    cap_remaining = _CAP - total_salary
     slots_filled = len(entries)
 
     # -- Salary cap progress bar ----------------------------------------------
-    cap_pct = min(total_salary / 50000, 1.0)
+    cap_pct = min(total_salary / _CAP, 1.0)
     st.markdown(
         f"**Your Roster** ({slots_filled}/5) — "
-        f"${total_salary:,} / $50,000 used — ${cap_remaining:,} remaining"
+        f"${total_salary:,} / ${_CAP:,} used — ${cap_remaining:,} remaining"
     )
     st.progress(cap_pct, text=f"Salary cap: {cap_pct:.0%}")
 

@@ -42,10 +42,29 @@ ROSTER_SLOTS = {
     "FLEX": 1,   # Any skill position
 }
 ROSTER_SIZE = sum(ROSTER_SLOTS.values())  # 5 starters
-SALARY_CAP = 50_000
+SALARY_CAP = 15_000
 
 BALL_CARRIER_TAGS = {"HB", "ZB", "WB", "SB"}
 FLEX_ELIGIBLE = {"VP", "HB", "ZB", "WB", "SB", "KP"}
+
+# Full position names for display (tag → human-readable)
+POSITION_NAMES = {
+    "VP": "Viper",
+    "HB": "Halfback",
+    "ZB": "Zeroback",
+    "WB": "Wingback",
+    "SB": "Slotback",
+    "KP": "Keeper",
+}
+
+# Roster slot display labels (slot → description)
+SLOT_LABELS = {
+    "VP": "Viper",
+    "BALL1": "Ball Carrier 1",
+    "BALL2": "Ball Carrier 2",
+    "KP": "Keeper",
+    "FLEX": "Flex",
+}
 
 # AI fantasy manager archetypes
 AI_MANAGER_STYLES = ["stars_and_scrubs", "balanced", "contrarian", "chalk"]
@@ -221,7 +240,7 @@ def _salary_for_player(overall: int, position_tag: str,
                        seed: int = 0) -> int:
     """Compute weekly salary from overall rating, position, usage, and depth.
 
-    Range: $750 – $7,500 in $1 increments.
+    Range: $750 – $5,000 in $50 increments.
     Bench warmers and low-usage players sit near the floor.
     Elite starters approach the ceiling.
     """
@@ -246,8 +265,11 @@ def _salary_for_player(overall: int, position_tag: str,
     micro_var = 0.94 + (h % 1200) / 10000.0
 
     pct = min(1.0, raw * micro_var * 1.15)
-    salary = 750 + int((pct ** 1.4) * (7500 - 750))
-    salary = max(750, min(7500, salary))
+    salary = 750 + int((pct ** 1.4) * (5000 - 750))
+    salary = max(750, min(5000, salary))
+    # Round to nearest $50 for clean display
+    salary = round(salary / 50) * 50
+    salary = max(750, min(5000, salary))
 
     return salary
 
@@ -439,6 +461,8 @@ class FantasyRoster:
                     "name": fp.name,
                     "team": fp.team_name,
                     "position": fp.position_tag,
+                    "position_name": POSITION_NAMES.get(fp.position_tag, fp.position_tag),
+                    "slot_label": SLOT_LABELS.get(slot, slot),
                     "salary": fp.salary,
                     "points": fp.actual_pts,
                 }
