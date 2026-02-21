@@ -3881,9 +3881,13 @@ class ViperballEngine:
         va = player.variance_archetype
 
         if va == "reliable":
-            # Clamp: center ± 2 yards (simulates ±10 rating on yardage scale)
-            expected = 4.5  # approximate average expected yards
-            return max(expected - 2.0, min(expected + 2.0, raw_yards))
+            # Reliable: compress toward the expected center.
+            # Pull extreme results back toward a reasonable band.
+            # The "center" is approximated as the midpoint between
+            # raw and a moderate baseline.  This removes boom/bust
+            # without the hard clamp that killed late-down conversions.
+            moderate = max(3.0, raw_yards * 0.85 + 0.7)
+            return (raw_yards + moderate) / 2.0  # Blend toward moderate
 
         elif va == "explosive":
             # Full range: add extra variance (can boom or bust)
@@ -3996,7 +4000,7 @@ class ViperballEngine:
                 talent_edge = (power - 1.0) * 2.0  # map power to edge
                 buffer = 3.0 + min(3.0, max(-3.0, talent_edge * 3.0))
                 urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
-                center = ytg + buffer * urgency
+                center = ytg + buffer * urgency + play_shift
 
         else:
             # ═══ V1: LEGACY SIGMOID ═══
@@ -7324,6 +7328,35 @@ class ViperballEngine:
         return d
 
 
+def _derive_prestige_from_roster(players: List[Player]) -> int:
+    """Derive prestige from the worst 3 players on the roster.
+
+    The idea: a program's depth defines its prestige.  Blue bloods
+    have 65+ rated backups; doormat programs have 45-rated ones.
+    We take the average overall of the 3 lowest-rated players and
+    map that to a 10-99 prestige scale.
+
+    Bottom-3 avg 45 → prestige ~25
+    Bottom-3 avg 55 → prestige ~45
+    Bottom-3 avg 65 → prestige ~65
+    Bottom-3 avg 75 → prestige ~85
+    """
+    if not players or len(players) < 3:
+        return 50
+
+    overalls = sorted(p.overall for p in players)
+    worst_3_avg = sum(overalls[:3]) / 3.0
+
+    # Map: overall 40 → prestige 15, overall 80 → prestige 95
+    # Linear: prestige = (worst_3_avg - 40) * 2.0 + 15
+    prestige = (worst_3_avg - 40) * 2.0 + 15
+
+    # Add some noise so identical rosters don't all land on the same prestige
+    prestige += random.gauss(0, 3)
+
+    return max(10, min(99, int(round(prestige))))
+
+
 def load_team_from_json(filepath: str, fresh: bool = False,
                         program_archetype: Optional[str] = None) -> Team:
     """Load a team from its JSON metadata file.
@@ -7438,8 +7471,15 @@ def load_team_from_json(filepath: str, fresh: bool = False,
 
     players.sort(key=lambda p: (POSITION_ORDER.get(p.position, 99), p.number))
 
-    # V2: Load prestige from team data (if present)
-    prestige = data.get("prestige", data.get("team_stats", {}).get("prestige", 50))
+    # V2: Load prestige from team data, or derive from roster floor.
+    # Prestige is keyed off the WORST 3 players — the depth of the roster
+    # defines the program's floor.  A blue blood has 65-rated backups;
+    # a doormat has 45-rated ones.  This creates natural prestige spread.
+    stored_prestige = data.get("prestige", data.get("team_stats", {}).get("prestige", None))
+    if stored_prestige is not None:
+        prestige = stored_prestige
+    else:
+        prestige = _derive_prestige_from_roster(players)
 
     team = Team(
         name=team_name,
@@ -7630,7 +7670,10 @@ def generate_team_on_the_fly(
     lateral_proficiency = sum(p.lateral_skill for p in players) // len(players)
     defensive_strength = sum(p.tackling for p in players) // len(players)
 
-    return Team(
+    # V2: Derive prestige from roster floor
+    prestige = _derive_prestige_from_roster(players)
+
+    team = Team(
         name=team_name,
         abbreviation=abbreviation,
         mascot=mascot,
@@ -7643,7 +7686,14 @@ def generate_team_on_the_fly(
         offense_style=offense_style,
         defense_style=defense_style,
         st_scheme=st_scheme,
+        prestige=prestige,
     )
+
+    h_off, h_def = derive_halo(prestige)
+    team.halo_offense = h_off
+    team.halo_defense = h_def
+
+    return team
 
 
 def get_available_teams() -> List[Dict]:
