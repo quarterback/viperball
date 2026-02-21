@@ -3606,6 +3606,9 @@ class ViperballEngine:
         if yards_gained <= 0:
             tackler.game_tfl += 1
 
+        # Breakaway check — good plays can become great plays
+        yards_gained = self._breakaway_check(yards_gained, team)
+
         fumble_family = family
         if family == PlayFamily.VIPER_JET:
             vj_config = dict(config)
@@ -3860,6 +3863,10 @@ class ViperballEngine:
 
         yards_gained = int(base_yards)
         yards_gained = max(-10, yards_gained)
+
+        # Breakaway check on trick plays (only if defense didn't read it)
+        if not defense_read:
+            yards_gained = self._breakaway_check(yards_gained, team)
 
         was_explosive = False
 
@@ -4176,6 +4183,9 @@ class ViperballEngine:
 
         if yards_gained <= 0:
             lat_tackler.game_tfl += 1
+
+        # Breakaway check on lateral chains
+        yards_gained = self._breakaway_check(yards_gained, team)
 
         new_position = min(100, self.state.field_position + yards_gained)
 
