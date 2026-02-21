@@ -506,24 +506,27 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
             ui.label(f"Salary cap: {cap_pct:.0%}").classes("text-xs text-gray-500")
 
             # -- Roster card grid (5 slots in a row) ------------------------------
+            from engine.draftyqueenz import SLOT_LABELS as _SLOTS
             slot_names = ["VP", "BALL1", "BALL2", "KP", "FLEX"]
             with ui.row().classes("w-full gap-4"):
                 for slot in slot_names:
                     entry = entries.get(slot)
+                    slot_display = _SLOTS.get(slot, slot)
                     with ui.column().classes("flex-1"):
                         if entry:
+                            pos_display = entry.get("position_name", entry["position"])
                             ui.html(
                                 f'<div class="dq-roster-slot">'
-                                f'<div class="slot-label">{slot}</div>'
+                                f'<div class="slot-label">{slot_display}</div>'
                                 f'<div class="slot-player">{entry["name"]}</div>'
                                 f'<div class="slot-meta">{entry["team"]} &middot; '
-                                f'{entry["position"]}<br>${entry["salary"]:,}</div>'
+                                f'{pos_display}<br>${entry["salary"]:,}</div>'
                                 f'</div>'
                             )
                         else:
                             ui.html(
                                 f'<div class="dq-roster-slot empty">'
-                                f'<div class="slot-label">{slot}</div>'
+                                f'<div class="slot-label">{slot_display}</div>'
                                 f'<div class="slot-player">Empty</div>'
                                 f'<div class="slot-meta">&mdash;</div>'
                                 f'</div>'
@@ -580,7 +583,7 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                             "idx": i,
                             "name": p["name"],
                             "team": p["team"],
-                            "pos": p["position"],
+                            "pos": p.get("position_name", p["position"]),
                             "ovr": p["overall"],
                             "salary": f"${p['salary']:,}",
                             "salary_raw": p["salary"],
@@ -592,7 +595,7 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                     columns = [
                         {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
                         {"name": "team", "label": "Team", "field": "team", "align": "left", "sortable": True},
-                        {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                        {"name": "pos", "label": "Position", "field": "pos", "align": "center"},
                         {"name": "depth", "label": "Role", "field": "depth", "align": "center"},
                         {"name": "ovr", "label": "OVR", "field": "ovr", "align": "center", "sortable": True},
                         {"name": "salary", "label": "Salary", "field": "salary", "align": "right", "sortable": True},
@@ -617,11 +620,11 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                     table.on("selection", _on_select)
 
                     # Slot selector and draft button
-                    slot_options = {s: s for s in slot_names}
+                    slot_options = {s: _SLOTS.get(s, s) for s in slot_names}
                     with ui.row().classes("w-full gap-4 items-end mt-2"):
                         with ui.column().classes("flex-1"):
                             ui.select(
-                                slot_options, label="Slot", value=slot_names[0],
+                                slot_options, label="Roster Slot", value=slot_names[0],
                                 on_change=lambda e: draft_state.update(slot=e.value),
                             ).classes("w-full")
 
@@ -660,8 +663,9 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                     ).classes("w-full").props('clearable outlined dense')
                 with ui.column().classes("flex-1"):
                     ui.select(
-                        {"All": "All", "VP": "VP", "HB": "HB", "ZB": "ZB",
-                         "WB": "WB", "SB": "SB", "KP": "KP"},
+                        {"All": "All Positions", "VP": "Viper", "HB": "Halfback",
+                         "ZB": "Zeroback", "WB": "Wingback", "SB": "Slotback",
+                         "KP": "Keeper"},
                         label="Position", value="All",
                         on_change=lambda e: (
                             draft_state.update(pos_filter=e.value),

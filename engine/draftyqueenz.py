@@ -47,6 +47,25 @@ SALARY_CAP = 15_000
 BALL_CARRIER_TAGS = {"HB", "ZB", "WB", "SB"}
 FLEX_ELIGIBLE = {"VP", "HB", "ZB", "WB", "SB", "KP"}
 
+# Full position names for display (tag → human-readable)
+POSITION_NAMES = {
+    "VP": "Viper",
+    "HB": "Halfback",
+    "ZB": "Zeroback",
+    "WB": "Wingback",
+    "SB": "Slotback",
+    "KP": "Keeper",
+}
+
+# Roster slot display labels (slot → description)
+SLOT_LABELS = {
+    "VP": "Viper",
+    "BALL1": "Ball Carrier 1",
+    "BALL2": "Ball Carrier 2",
+    "KP": "Keeper",
+    "FLEX": "Flex",
+}
+
 # AI fantasy manager archetypes
 AI_MANAGER_STYLES = ["stars_and_scrubs", "balanced", "contrarian", "chalk"]
 AI_MANAGER_COUNT = 9  # compete against 9 AI managers each week
@@ -442,6 +461,8 @@ class FantasyRoster:
                     "name": fp.name,
                     "team": fp.team_name,
                     "position": fp.position_tag,
+                    "position_name": POSITION_NAMES.get(fp.position_tag, fp.position_tag),
+                    "slot_label": SLOT_LABELS.get(slot, slot),
                     "salary": fp.salary,
                     "points": fp.actual_pts,
                 }

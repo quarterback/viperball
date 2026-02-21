@@ -52,6 +52,7 @@ from engine.draftyqueenz import (
     DraftyQueenzManager, DONATION_TYPES, BOOSTER_TIERS,
     STARTING_BANKROLL, SALARY_CAP, FANTASY_ENTRY_FEE,
     MIN_BET, MAX_BET, MIN_DONATION, PARLAY_MULTIPLIERS,
+    POSITION_NAMES, SLOT_LABELS,
     format_moneyline,
 )
 
@@ -2706,6 +2707,7 @@ def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None):
             "name": fp.name,
             "team": fp.team_name,
             "position": fp.position_tag,
+            "position_name": POSITION_NAMES.get(fp.position_tag, fp.position_tag),
             "overall": fp.overall,
             "salary": fp.salary,
             "projected": round(fp.projected_pts, 1),
