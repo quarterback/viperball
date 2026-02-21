@@ -348,6 +348,10 @@ def choose_defensive_call(
     time_remaining: int,  # seconds remaining in game
     rng: Optional[random.Random] = None,
     instincts: int = 50,  # coaching instincts attribute (25-95)
+    # V2: Prestige-driven decision inputs
+    team_prestige: int = 50,
+    opponent_prestige: int = 50,
+    composure: float = 100.0,
 ) -> DefensivePackage:
     """
     Choose a situational defensive package.
@@ -395,6 +399,30 @@ def choose_defensive_call(
         optimal_aggression = 0.55
         instincts_pull = (instincts - 50) / 900.0  # max ~0.05
         aggression = aggression + (optimal_aggression - aggression) * instincts_pull
+
+    # ── V2: Prestige bravado tiers ──
+    # High-prestige teams are more aggressive (confidence/bravado)
+    # Low-prestige teams play more conservatively
+    if team_prestige >= 90:
+        aggression = min(1.0, aggression + 0.10)  # Elite: swagger
+    elif team_prestige >= 70:
+        aggression = min(1.0, aggression + 0.05)  # Strong: confident
+    elif team_prestige < 40:
+        aggression = max(0.15, aggression - 0.05)  # Weak: cautious
+
+    # ── V2: Composure modifier ──
+    # Tilted teams make worse defensive calls (panic)
+    if composure < 70:
+        # Tilted: random aggression swings (panic decisions)
+        aggression = min(1.0, aggression + (rng or random).uniform(-0.15, 0.20))
+    elif composure > 120:
+        # Surging: more disciplined
+        aggression = aggression * 0.95 + 0.55 * 0.05  # Drift toward optimal
+
+    # ── V2: Desperation override ──
+    # < 2:00 remaining, down by > 9: all-out aggression
+    if time_remaining < 120 and score_diff < -9:
+        aggression = min(1.0, 0.85 + (rng or random).uniform(0, 0.15))
 
     # Viper spy: more likely on passing/lateral-heavy situations
     base_spy = t["viper_spy_chance"]
