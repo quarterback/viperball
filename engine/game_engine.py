@@ -4129,9 +4129,16 @@ class ViperballEngine:
             base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
 
         # ── Late-down conversion urgency ──
+        # Target ceteris paribus: 4th ~80%, 5th ~73%, 6th ~66%
+        # In viperball's 6-down system, offenses focus harder on
+        # critical downs.  The urgency boost represents sharper
+        # route-running, more decisive kicking, and receiver
+        # commitment.  This is the primary lever for hit-rate targets.
         if self.state.down >= 4:
             off_talent = max(0.0, (off_skill - 50) / 49.0)
-            urgency = {4: 0.18, 5: 0.12, 6: 0.08}.get(self.state.down, 0.08)
+            # Aggressive urgency: boost completion from ~55% to target
+            # 4th: +25% → ~80%, 5th: +18% → ~73%, 6th: +11% → ~66%
+            urgency = {4: 0.35, 5: 0.26, 6: 0.18}.get(self.state.down, 0.18)
             base_prob = min(0.92, base_prob + urgency * (0.5 + off_talent * 0.5))
 
         # ── V2: Composure modifier ──
@@ -4983,6 +4990,12 @@ class ViperballEngine:
         if ball_carrier_for_roll:
             skill_bonus = self._player_skill_roll(ball_carrier_for_roll, play_type="lateral")
             base_yards += skill_bonus
+
+        # Late-down urgency: lateral chains target what the team needs
+        if self.state.down >= 4:
+            ytg = self.state.yards_to_go
+            urgency_boost = {4: 2.5, 5: 1.8, 6: 1.2}.get(self.state.down, 1.2)
+            base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
         yards_gained = max(-5, yards_gained)
