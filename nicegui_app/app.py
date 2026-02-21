@@ -12,6 +12,9 @@ from ui import api_client
 from nicegui_app.state import UserState
 from nicegui_app.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS
 
+from engine import get_available_teams, OFFENSE_STYLES
+from engine.game_engine import DEFENSE_STYLES, ST_SCHEMES
+
 
 # ── Custom CSS (ported from Streamlit custom styles) ──
 
@@ -32,22 +35,18 @@ APP_CSS = """
 
 
 def _load_shared_data() -> dict:
-    """Load teams and styles from the API (cached at module level)."""
+    """Load teams and styles directly from the engine (no HTTP loopback)."""
     try:
-        teams_resp = api_client.get_teams()
-        teams = teams_resp.get("teams", [])
-    except api_client.APIError:
+        teams = get_available_teams()
+    except Exception:
         teams = []
 
-    try:
-        styles_resp = api_client.get_styles()
-        styles = styles_resp.get("offense_styles", {})
-        defense_styles = styles_resp.get("defense_styles", {})
-        st_schemes = styles_resp.get("st_schemes", {})
-    except api_client.APIError:
-        styles = {}
-        defense_styles = {}
-        st_schemes = {}
+    styles = {k: {"label": v.get("label", k), "description": v.get("description", "")}
+              for k, v in OFFENSE_STYLES.items()}
+    defense_styles = {k: {"label": v.get("label", k), "description": v.get("description", "")}
+                      for k, v in DEFENSE_STYLES.items()}
+    st_schemes = {k: {"label": v.get("label", k), "description": v.get("description", "")}
+                  for k, v in ST_SCHEMES.items()}
 
     return {
         "teams": teams,
