@@ -60,33 +60,41 @@ def render_league_section(state, shared):
             ui.label("No active season found. Start a new season or dynasty from the Play section to view league data.")
         return
 
-    try:
-        standings_resp = api_client.get_standings(session_id)
-        standings = standings_resp.get("standings", [])
-    except api_client.APIError:
-        ui.label("League").classes("text-2xl font-bold text-slate-800")
-        with ui.card().classes("bg-blue-50 p-3 rounded"):
-            ui.label("No active season found. Start a new season or dynasty from the Play section to view league data.")
-        return
+    # -- Parallel initial fetch (5 calls → 1 round-trip) -----------------------
+    def _safe(fn, default=None):
+        try:
+            return fn()
+        except api_client.APIError:
+            return default
 
+    _fetchers = [
+        lambda: _safe(lambda: api_client.get_standings(session_id), {}),
+        lambda: _safe(lambda: api_client.get_season_status(session_id), {}),
+        lambda: _safe(lambda: api_client.get_schedule(session_id, completed_only=True), {}),
+        lambda: _safe(lambda: api_client.get_conferences(session_id), {}),
+    ]
+    if mode == "dynasty":
+        _fetchers.append(
+            lambda: _safe(lambda: api_client.get_dynasty_status(session_id), {})
+        )
+
+    _results = api_client.fetch_parallel(*_fetchers)
+    standings_resp = _results[0] or {}
+    status = _results[1] or {}
+    schedule_resp = _results[2] or {}
+    conf_resp = _results[3] or {}
+    dyn_status = _results[4] if len(_results) > 4 else {}
+
+    standings = standings_resp.get("standings", [])
     if not standings:
         ui.label("League").classes("text-2xl font-bold text-slate-800")
         with ui.card().classes("bg-blue-50 p-3 rounded"):
             ui.label("No standings data available yet. Simulate some games first.")
         return
 
-    try:
-        status = api_client.get_season_status(session_id)
-    except api_client.APIError:
-        status = {}
-
     user_team = None
-    if mode == "dynasty":
-        try:
-            dyn_status = api_client.get_dynasty_status(session_id)
-            user_team = dyn_status.get("coach", {}).get("team")
-        except api_client.APIError:
-            pass
+    if mode == "dynasty" and dyn_status:
+        user_team = dyn_status.get("coach", {}).get("team")
 
     champion = status.get("champion")
     if champion:
@@ -94,11 +102,7 @@ def render_league_section(state, shared):
             ui.label(f"National Champions: {champion}").classes("font-bold text-green-800")
 
     # -- Completed games and league-wide stats --
-    try:
-        schedule_resp = api_client.get_schedule(session_id, completed_only=True)
-        completed_games = schedule_resp.get("games", [])
-    except api_client.APIError:
-        completed_games = []
+    completed_games = schedule_resp.get("games", [])
 
     total_games = len(completed_games)
     all_scores: list[float] = []
@@ -106,11 +110,7 @@ def render_league_section(state, shared):
         all_scores.extend([g.get("home_score") or 0, g.get("away_score") or 0])
     avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
 
-    try:
-        conf_resp = api_client.get_conferences(session_id)
-        conferences = conf_resp.get("conferences", {})
-    except api_client.APIError:
-        conferences = {}
+    conferences = conf_resp.get("conferences", {})
 
     has_conferences = bool(conferences) and len(conferences) >= 1
 
