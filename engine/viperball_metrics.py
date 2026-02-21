@@ -336,3 +336,155 @@ def calculate_overall_performance_index(metrics: Dict) -> float:
     )
 
     return round(opi, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
+# V2: YARDS ABOVE REPLACEMENT (YAR)
+# ═══════════════════════════════════════════════════════════════
+
+# Replacement-level yards per touch by position
+_REPLACEMENT_LEVEL = {
+    "Zeroback": 3.8,
+    "Viper": 4.2,
+    "Halfback": 3.5,
+    "Wingback": 3.6,
+    "Slotback": 3.4,
+    "Keeper": 2.0,
+    "Offensive Line": 0.0,
+    "Defensive Line": 0.0,
+}
+
+
+def calculate_yar(player_stats: Dict, position: str = "") -> float:
+    """Yards Above Replacement (V2).
+
+    Measures how many more yards a player generates per touch
+    compared to a hypothetical replacement-level player at their
+    position.
+
+    YAR = (player_yards / player_touches) - replacement_yards_per_touch
+    Scaled by touches to reward volume + efficiency.
+
+    Returns:
+        Float YAR value. Positive = above replacement, negative = below.
+    """
+    touches = player_stats.get("touches", 0)
+    yards = player_stats.get("yards", 0)
+    if touches == 0:
+        return 0.0
+
+    yards_per_touch = yards / touches
+    replacement = _REPLACEMENT_LEVEL.get(position, 3.5)
+    yar_per_touch = yards_per_touch - replacement
+
+    # Scale by touches (volume matters)
+    # Log scale so high-volume players don't completely dominate
+    import math
+    volume_factor = math.log(touches + 1) / math.log(20)  # ~1.0 at 19 touches
+    return round(yar_per_touch * volume_factor, 2)
+
+
+def calculate_team_yar(player_stats_list: list) -> float:
+    """Sum of individual YAR values for all players on a team."""
+    return round(sum(
+        calculate_yar(ps, ps.get("position", ""))
+        for ps in player_stats_list
+    ), 2)
+
+
+# ═══════════════════════════════════════════════════════════════
+# V2: HEADLINE GENERATOR
+# Composure-driven narrative templates.
+# ═══════════════════════════════════════════════════════════════
+
+_HEADLINE_TEMPLATES = {
+    "blowout_win": [
+        "{winner} DEMOLISHES {loser} {score}",
+        "{winner} cruises past {loser} in blowout",
+        "Dominant {winner} rolls over {loser} {score}",
+    ],
+    "close_win": [
+        "{winner} holds on to edge {loser} {score}",
+        "Thriller: {winner} survives {loser} scare {score}",
+        "{winner} escapes with narrow win over {loser}",
+    ],
+    "upset": [
+        "UPSET! {winner} stuns {loser} {score}",
+        "Cinderella: {winner} topples {loser} {score}",
+        "{winner} pulls off massive upset over {loser}",
+    ],
+    "tilt_collapse": [
+        "{loser} COLLAPSES after tilt — {winner} wins {score}",
+        "Composure meltdown: {loser} falls apart, {winner} capitalizes {score}",
+        "{winner} pounces on tilted {loser} {score}",
+    ],
+    "comeback": [
+        "COMEBACK! {winner} rallies from behind to beat {loser} {score}",
+        "{winner} mounts furious comeback to stun {loser}",
+        "Down but not out: {winner} storms back for {score} win",
+    ],
+    "defensive_battle": [
+        "Defensive war: {winner} grinds out {score} win over {loser}",
+        "Low-scoring affair as {winner} edges {loser} {score}",
+    ],
+}
+
+
+def generate_headline(game_summary: Dict) -> str:
+    """Generate a narrative headline from a game summary (V2).
+
+    Uses composure data, score differential, and prestige gap
+    to select the most dramatic/appropriate headline template.
+    """
+    import random as _rng
+
+    fs = game_summary.get("final_score", {})
+    home_score = fs.get("home", {}).get("score", 0)
+    away_score = fs.get("away", {}).get("score", 0)
+    home_name = fs.get("home", {}).get("team", "Home")
+    away_name = fs.get("away", {}).get("team", "Away")
+
+    if home_score > away_score:
+        winner, loser = home_name, away_name
+        w_score, l_score = home_score, away_score
+    else:
+        winner, loser = away_name, home_name
+        w_score, l_score = away_score, home_score
+
+    margin = abs(w_score - l_score)
+    score_str = f"{w_score}-{l_score}"
+
+    # Check V2 composure data
+    v2 = game_summary.get("v2_engine", {})
+    home_tilted = v2.get("home_tilted_at_end", False)
+    away_tilted = v2.get("away_tilted_at_end", False)
+    loser_tilted = (home_tilted and home_score < away_score) or \
+                   (away_tilted and away_score < home_score)
+
+    # Check prestige for upset detection
+    home_prestige = v2.get("home_prestige", 50)
+    away_prestige = v2.get("away_prestige", 50)
+    if home_score > away_score:
+        winner_prestige, loser_prestige = home_prestige, away_prestige
+    else:
+        winner_prestige, loser_prestige = away_prestige, home_prestige
+
+    is_upset = loser_prestige - winner_prestige > 15
+
+    # Select headline category
+    if loser_tilted and margin > 10:
+        category = "tilt_collapse"
+    elif is_upset:
+        category = "upset"
+    elif margin >= 20:
+        category = "blowout_win"
+    elif margin <= 5:
+        category = "close_win"
+    elif w_score + l_score < 40:
+        category = "defensive_battle"
+    else:
+        category = "close_win"
+
+    templates = _HEADLINE_TEMPLATES.get(category, _HEADLINE_TEMPLATES["close_win"])
+    template = _rng.choice(templates)
+    return template.format(winner=winner, loser=loser, score=score_str)

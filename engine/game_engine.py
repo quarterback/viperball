@@ -1,6 +1,9 @@
 """
 Collegiate Viperball Simulation Engine
 Core game simulation logic for CVL games
+
+V2 Architecture: Halo Model, Power Ratios, Composure, Star Designation,
+Hero Ball, Fatigue Tiers, R/E/C Archetypes, Prestige-Driven Decision Matrix.
 """
 
 import math
@@ -10,6 +13,146 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from copy import deepcopy
+
+
+# ═══════════════════════════════════════════════════════════════
+# V2 ENGINE CONFIGURATION
+# Feature flags for A/B testing during migration.
+# Set V2_ENGINE_CONFIG before constructing ViperballEngine to
+# control which systems are active.
+# ═══════════════════════════════════════════════════════════════
+
+V2_ENGINE_CONFIG = {
+    # Contest resolution: "v1_sigmoid" (legacy) or "v2_power_ratio" (spec)
+    "contest_model": "v2_power_ratio",
+    # Halo model: use team-level prestige halo for non-star plays
+    "halo_enabled": True,
+    # Fatigue tiers: Elite/Standard/Low based on talent rating
+    "fatigue_tiers_enabled": True,
+    # R/E/C variance archetypes: Reliable, Explosive, Clutch
+    "rec_archetypes_enabled": True,
+    # Star override: designated stars get performance floor
+    "star_override_enabled": True,
+    # Hero Ball: force-feed star players, defensive keying counter
+    "hero_ball_enabled": True,
+    # Composure: dynamic per-game composure with tilt/surge
+    "composure_enabled": True,
+    # Prestige decision matrix: prestige-driven play-calling
+    "prestige_decisions_enabled": True,
+    # Prestige decay: per-game asymmetric adjustments
+    "prestige_decay_enabled": True,
+    # Narrative generation: YAR, headlines, composure graph
+    "narrative_enabled": True,
+    # Power ratio exponent: tune between 1.5 (mild) and 2.0 (spec)
+    "power_ratio_exponent": 1.8,
+}
+
+
+class VarianceArchetype(Enum):
+    """R/E/C variance model — orthogonal to position archetypes.
+
+    Every player has BOTH a position archetype (what they do: kicking_zb,
+    speed_flanker, etc.) AND a variance archetype (how consistently they
+    do it: Reliable, Explosive, or Clutch).
+    """
+    RELIABLE = "reliable"      # Clamp roll to rating ± 10
+    EXPLOSIVE = "explosive"    # Full 0-100 roll range, no floor
+    CLUTCH = "clutch"          # Standard variance + 15% boost in pressure
+
+
+class FatigueTier(Enum):
+    """Talent-based fatigue classification."""
+    ELITE = "elite"        # 0.8x drain, 0.5 stat loss per fatigue point
+    STANDARD = "standard"  # 1.0x drain, 1.0 stat loss per fatigue point
+    LOW = "low"            # 1.5x drain, 1.5 stat loss per fatigue point
+
+
+# ═══════════════════════════════════════════════════════════════
+# HALO MODEL — Prestige-to-Engine Derivation Table
+# Maps prestige (0-99) to team halo offense/defense ratings.
+# The halo is the baseline for 90% of plays; individual player
+# ratings only matter for Star-designated players at CCPs.
+# ═══════════════════════════════════════════════════════════════
+
+PRESTIGE_TO_HALO = {
+    # prestige_floor: (halo_offense, halo_defense)
+    # Higher prestige = higher baseline halo
+    90: (88, 86),   # Elite programs
+    80: (83, 81),   # Strong programs
+    70: (78, 76),   # Above average
+    60: (73, 72),   # Mid-tier
+    50: (68, 67),   # Below average
+    40: (63, 62),   # Weak
+    30: (58, 57),   # Rebuilding
+    20: (53, 52),   # Bottom tier
+    10: (48, 47),   # Doormat
+    0:  (43, 42),   # Absolute bottom
+}
+
+
+def derive_halo(prestige: int) -> Tuple[float, float]:
+    """Derive team halo (offense, defense) from prestige rating.
+
+    Uses linear interpolation between prestige tier breakpoints.
+    Returns (halo_offense, halo_defense) as floats in 0-100 range.
+    """
+    prestige = max(0, min(99, prestige))
+
+    # Find the two closest breakpoints
+    tiers = sorted(PRESTIGE_TO_HALO.keys())
+    lower_tier = 0
+    upper_tier = tiers[-1]
+    for t in tiers:
+        if t <= prestige:
+            lower_tier = t
+        if t > prestige:
+            upper_tier = t
+            break
+    else:
+        upper_tier = lower_tier
+
+    if lower_tier == upper_tier:
+        return PRESTIGE_TO_HALO[lower_tier]
+
+    lo_off, lo_def = PRESTIGE_TO_HALO[lower_tier]
+    hi_off, hi_def = PRESTIGE_TO_HALO[upper_tier]
+    frac = (prestige - lower_tier) / max(1, upper_tier - lower_tier)
+    return (
+        lo_off + (hi_off - lo_off) * frac,
+        lo_def + (hi_def - lo_def) * frac,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMPOSURE SYSTEM — Dynamic per-game composure
+# ═══════════════════════════════════════════════════════════════
+
+COMPOSURE_EVENTS = {
+    "turnover_committed": -8,
+    "turnover_forced": +5,
+    "touchdown_scored": +6,
+    "touchdown_allowed": -4,
+    "failed_conversion": -10,
+    "successful_conversion_late": +8,
+    "sack": -3,
+    "big_play_allowed": -5,     # 20+ yard play allowed
+    "big_play_scored": +4,      # 20+ yard play scored
+    "penalty_committed": -2,
+    "blocked_kick": -6,
+}
+
+COMPOSURE_PREGAME = {
+    "rivalry": 0.15,        # +15% variance (both teams)
+    "playoff": 0.25,        # +25% variance
+    "trap_game_favorite": -0.15,   # Favorite starts lower composure
+    "trap_game_underdog": +0.15,   # Underdog gets composure boost
+}
+
+COMPOSURE_TILT_THRESHOLD = 70      # Below this: team is tilted
+COMPOSURE_TILT_EXIT = 75           # Must recover above this to exit tilt (hysteresis)
+COMPOSURE_BASE = 100               # Starting composure (range 60-140)
+COMPOSURE_MIN = 60
+COMPOSURE_MAX = 140
 
 
 
@@ -507,6 +650,56 @@ def assign_archetype(player) -> str:
     return "none"
 
 
+def assign_variance_archetype(player) -> str:
+    """Assign R/E/C variance archetype based on player attributes.
+
+    This is ORTHOGONAL to position archetypes.  A speed_flanker can be
+    Reliable (consistent gains), Explosive (boom/bust), or Clutch
+    (elevates in pressure).
+
+    Heuristic:
+    - High awareness + high stamina → Reliable (consistency)
+    - High speed + low awareness → Explosive (raw athleticism, volatile)
+    - High power + high awareness → Clutch (rises under pressure)
+    """
+    awareness = getattr(player, 'awareness', 75)
+    stamina = player.stamina
+    speed = player.speed
+    power = getattr(player, 'power', 75)
+
+    # Score each archetype
+    reliable_score = awareness * 0.5 + stamina * 0.3 + power * 0.2
+    explosive_score = speed * 0.5 + getattr(player, 'agility', 75) * 0.3 + (100 - awareness) * 0.2
+    clutch_score = power * 0.3 + awareness * 0.4 + stamina * 0.3
+
+    # Highest score wins
+    scores = {
+        "reliable": reliable_score,
+        "explosive": explosive_score,
+        "clutch": clutch_score,
+    }
+    return max(scores, key=scores.get)
+
+
+def designate_stars(players: List, max_stars: int = 3) -> List[str]:
+    """Pregame star designation — pick up to max_stars best players.
+
+    Stars get performance floor (max(roll, rating - 10)) and are
+    eligible for Hero Ball force-feeding.  Explosive players keep
+    full variance even when starred.
+
+    Returns list of player names designated as stars.
+    """
+    # Sort by overall descending, take top max_stars
+    eligible = sorted(players, key=lambda p: p.overall, reverse=True)
+    stars = []
+    for p in eligible[:max_stars]:
+        if p.overall >= 75:  # Minimum threshold to be a star
+            p.star_designated = True
+            stars.append(p.name)
+    return stars
+
+
 def get_archetype_info(archetype: str) -> dict:
     for category, archetypes in POSITION_ARCHETYPES.items():
         if archetype in archetypes:
@@ -548,6 +741,26 @@ class GameState:
     home_timeouts: int = 3
     away_timeouts: int = 3
 
+    # --- V2: Composure System ---
+    home_composure: float = 100.0    # Dynamic: 60-140 range
+    away_composure: float = 100.0
+    home_is_tilted: bool = False     # Tilt state with hysteresis
+    away_is_tilted: bool = False
+
+    # --- V2: Hero Ball tracking ---
+    home_hero_ball_target: str = ""       # Player name of hero ball target
+    away_hero_ball_target: str = ""
+    home_consecutive_star_touches: int = 0
+    away_consecutive_star_touches: int = 0
+
+    # --- V2: Star designations (set pregame, max 3 per team) ---
+    home_stars: List[str] = field(default_factory=list)
+    away_stars: List[str] = field(default_factory=list)
+
+    # --- V2: Composure timeline for post-game narrative ---
+    home_composure_timeline: List[float] = field(default_factory=list)
+    away_composure_timeline: List[float] = field(default_factory=list)
+
 
 @dataclass
 class Player:
@@ -588,6 +801,12 @@ class Player:
     redshirt: bool = False       # if True, player doesn't advance class year this season
     redshirt_used: bool = False  # if True, player has already used their one-time redshirt
     season_games_played: int = 0 # games played this season (for redshirt eligibility)
+
+    # --- V2: Variance archetype (R/E/C) — orthogonal to position archetype ---
+    variance_archetype: str = "reliable"  # "reliable" | "explosive" | "clutch"
+
+    # --- V2: Star designation (pregame, max 3 per team) ---
+    star_designated: bool = False
 
     # --- Fatigue / game state ---
     current_stamina: float = 100.0
@@ -656,6 +875,45 @@ class Player:
             self.hands * 0.9 + self.kick_power * 0.6 + self.kick_accuracy * 0.6
         ) / 10.0)
 
+    # ── V2: Canonical 4-stat derivation ──
+    # The 6 extended stats feed into the 4 canonical ratings used by
+    # power-ratio contest resolution.  Granularity preserved for
+    # recruiting/development; contest resolution stays clean.
+
+    @property
+    def canon_speed(self) -> float:
+        """Canonical Speed: speed (60%) + agility (40%)."""
+        return self.speed * 0.6 + self.agility * 0.4
+
+    @property
+    def canon_kicking(self) -> float:
+        """Canonical Kicking: kick_power (45%) + kick_accuracy (45%) + kicking (10%)."""
+        return self.kick_power * 0.45 + self.kick_accuracy * 0.45 + self.kicking * 0.10
+
+    @property
+    def canon_lateral(self) -> float:
+        """Canonical Lateral: lateral_skill (50%) + hands (30%) + awareness (20%)."""
+        return self.lateral_skill * 0.50 + self.hands * 0.30 + self.awareness * 0.20
+
+    @property
+    def canon_tackling(self) -> float:
+        """Canonical Tackling: tackling (50%) + power (25%) + awareness (25%)."""
+        return self.tackling * 0.50 + self.power * 0.25 + self.awareness * 0.25
+
+    @property
+    def fatigue_tier(self) -> str:
+        """Derive fatigue tier from overall talent.
+        Elite (overall >= 82): 0.8x drain, 0.5 stat loss/point
+        Standard (62-81): 1.0x drain, 1.0 stat loss/point
+        Low (< 62): 1.5x drain, 1.5 stat loss/point
+        """
+        ovr = self.overall
+        if ovr >= 82:
+            return FatigueTier.ELITE.value
+        elif ovr >= 62:
+            return FatigueTier.STANDARD.value
+        return FatigueTier.LOW.value
+
     @property
     def first_name(self) -> str:
         parts = self.name.split()
@@ -681,6 +939,10 @@ class Team:
     offense_style: str = "balanced"
     defense_style: str = "swarm"
     st_scheme: str = "aces"
+    # --- V2: Prestige and Halo ---
+    prestige: int = 50               # 0-99, drives halo derivation
+    halo_offense: float = 68.0       # Derived from prestige via derive_halo()
+    halo_defense: float = 67.0       # Derived from prestige via derive_halo()
 
 
 @dataclass
@@ -1783,7 +2045,12 @@ class ViperballEngine:
                  home_dq_boosts: Optional[Dict] = None,
                  away_dq_boosts: Optional[Dict] = None,
                  home_coaching: Optional[Dict] = None,
-                 away_coaching: Optional[Dict] = None):
+                 away_coaching: Optional[Dict] = None,
+                 # V2: Prestige and game context
+                 home_prestige: int = 50,
+                 away_prestige: int = 50,
+                 is_playoff: bool = False,
+                 is_trap_game: bool = False):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -1831,6 +2098,33 @@ class ViperballEngine:
             p.archetype = assign_archetype(p)
         for p in self.away_team.players:
             p.archetype = assign_archetype(p)
+
+        # ── V2: Assign variance archetypes (R/E/C) ──
+        if V2_ENGINE_CONFIG.get("rec_archetypes_enabled", False):
+            for p in self.home_team.players:
+                p.variance_archetype = assign_variance_archetype(p)
+            for p in self.away_team.players:
+                p.variance_archetype = assign_variance_archetype(p)
+
+        # ── V2: Wire prestige into engine ──
+        self.home_team.prestige = home_prestige
+        self.away_team.prestige = away_prestige
+        self._is_playoff = is_playoff
+        self._is_trap_game = is_trap_game
+
+        # ── V2: Derive halo from prestige ──
+        if V2_ENGINE_CONFIG.get("halo_enabled", False):
+            h_off, h_def = derive_halo(home_prestige)
+            self.home_team.halo_offense = h_off
+            self.home_team.halo_defense = h_def
+            a_off, a_def = derive_halo(away_prestige)
+            self.away_team.halo_offense = a_off
+            self.away_team.halo_defense = a_def
+
+        # ── V2: Pregame star designation (max 3 per team) ──
+        if V2_ENGINE_CONFIG.get("star_override_enabled", False):
+            self.state.home_stars = designate_stars(self.home_team.players, max_stars=3)
+            self.state.away_stars = designate_stars(self.away_team.players, max_stars=3)
 
         if seed is not None:
             random.seed(seed)
@@ -2062,6 +2356,9 @@ class ViperballEngine:
         return self._offense_skill(team)
 
     def simulate_game(self) -> Dict:
+        # V2: Apply pregame composure modifiers
+        self._apply_pregame_composure()
+
         self.kickoff("away")
 
         for quarter in range(1, 5):
@@ -2079,6 +2376,8 @@ class ViperballEngine:
                 self.simulate_drive()
                 if self.state.time_remaining <= 0:
                     break
+                # V2: Underdog surge check each drive
+                self._check_underdog_surge()
 
             if quarter == 2:
                 self._home_halftime_score = self.state.home_score
@@ -2247,6 +2546,38 @@ class ViperballEngine:
 
             if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted"]:
                 drive_result = play.result
+
+                # ── V2: Composure events ──
+                off_team = drive_team
+                def_team_side = "away" if drive_team == "home" else "home"
+                if play.result == "touchdown":
+                    self._adjust_composure(off_team, "touchdown_scored")
+                    self._adjust_composure(def_team_side, "touchdown_allowed")
+                elif play.result in ("fumble", "lateral_intercepted", "kick_pass_intercepted"):
+                    self._adjust_composure(off_team, "turnover_committed")
+                    self._adjust_composure(def_team_side, "turnover_forced")
+                elif play.result == "turnover_on_downs":
+                    self._adjust_composure(off_team, "failed_conversion")
+                elif play.result in ("punt_return_td", "int_return_td"):
+                    self._adjust_composure(def_team_side, "touchdown_scored")
+                    self._adjust_composure(off_team, "touchdown_allowed")
+                elif play.result == "successful_kick":
+                    self._adjust_composure(off_team, "successful_conversion_late")
+
+                # Big play tracking (20+ yards)
+                if play.yards_gained >= 20:
+                    self._adjust_composure(off_team, "big_play_scored")
+                    self._adjust_composure(def_team_side, "big_play_allowed")
+
+                # ── V2: Hero ball tracking ──
+                if play.players_involved:
+                    primary_player = play.players_involved[0] if play.players_involved else ""
+                    is_success = play.result in ("touchdown", "first_down", "gain", "successful_kick") and play.yards_gained > 0
+                    # Extract player name from label (e.g. "ZB6 Jane Smith" -> "Jane Smith")
+                    parts = primary_player.split(" ", 1)
+                    pname = parts[1] if len(parts) > 1 else primary_player
+                    self._update_hero_ball(off_team, pname, is_success)
+
                 if play.result in ("fumble", "turnover_on_downs"):
                     new_pos = self.state.possession
                     new_mods = self.home_coaching_mods if new_pos == "home" else self.away_coaching_mods
@@ -3499,95 +3830,195 @@ class ViperballEngine:
 
     # ── Dynamic Stochastic Resolution ──────────────────────────
     #
-    # Every interaction is a CONTEST between attributes, not a
-    # blanket modifier.  The code asks the attributes to compete,
-    # then rolls the dice to decide the result.
+    # V2: Dual-mode contest resolution.
     #
-    # 1. COMPETE: SuccessProb = sigmoid(attacker – defender)
-    # 2. DICE:    outcome = gauss(center, variance)
-    # 3. GRAVITY: ratings pull the bell curve — high‐rated players
-    #            pull it toward success, fatigue pulls it back.
+    # v1_sigmoid (legacy): additive delta + sigmoid center
+    # v2_power_ratio (spec): multiplicative (carrier/tackler)**exp
     #
-    # When two elite players meet, the delta is small and variance
-    # is HIGH → "dice battles" and natural upset potential.
+    # The feature flag V2_ENGINE_CONFIG["contest_model"] controls
+    # which path is taken.  When halo_enabled=True, non-star plays
+    # use team halo instead of individual ratings.
     # ─────────────────────────────────────────────────────────────
+
+    def _get_offensive_rating(self, carrier, use_halo: bool = False) -> float:
+        """Get the offensive rating for contest resolution.
+
+        V2 Halo: if use_halo is True (non-star play), use team halo_offense.
+        Otherwise use individual canonical stats.
+        """
+        if use_halo:
+            team = self.get_offensive_team()
+            return team.halo_offense * self.player_fatigue_modifier(carrier)
+
+        # Individual: canonical speed (weighted blend of speed + agility)
+        off_skill = carrier.canon_speed * 0.4 + getattr(carrier, 'power', 75) * 0.3 + getattr(carrier, 'agility', 75) * 0.3
+        return off_skill * self.player_fatigue_modifier(carrier)
+
+    def _get_defensive_rating(self, tackler, use_halo: bool = False) -> float:
+        """Get the defensive rating for contest resolution.
+
+        V2 Halo: if use_halo is True, use team halo_defense.
+        Otherwise use individual canonical stats.
+        """
+        if use_halo:
+            team = self.get_defensive_team()
+            return team.halo_defense * self.player_fatigue_modifier(tackler)
+
+        # Individual: canonical tackling (weighted blend of tackling + power + awareness)
+        def_skill = tackler.canon_tackling * 0.5 + getattr(tackler, 'awareness', 70) * 0.25 + tackler.speed * 0.25
+        return def_skill * self.player_fatigue_modifier(tackler)
+
+    def _apply_variance_archetype(self, raw_yards: float, player) -> float:
+        """Apply R/E/C variance modification to contest result.
+
+        Reliable: clamp to rating ± 10 (tight band, consistent)
+        Explosive: full range, no floor (boom/bust)
+        Clutch: standard + 15% boost in pressure situations
+        """
+        if not V2_ENGINE_CONFIG.get("rec_archetypes_enabled", False):
+            return raw_yards
+
+        va = player.variance_archetype
+
+        if va == "reliable":
+            # Clamp: center ± 2 yards (simulates ±10 rating on yardage scale)
+            expected = 4.5  # approximate average expected yards
+            return max(expected - 2.0, min(expected + 2.0, raw_yards))
+
+        elif va == "explosive":
+            # Full range: add extra variance (can boom or bust)
+            explosive_noise = random.gauss(0, 1.5)
+            return raw_yards + explosive_noise
+
+        elif va == "clutch":
+            # Boost in pressure: Q4 within 1 possession, or composure < 80
+            is_pressure = False
+            if self.state.quarter == 4:
+                score_diff = abs(self._get_score_diff())
+                if score_diff <= 9:  # Within 1 possession (TD = 9 pts)
+                    is_pressure = True
+            # Check composure state
+            if self.state.possession == "home":
+                if self.state.home_composure < 80:
+                    is_pressure = True
+            else:
+                if self.state.away_composure < 80:
+                    is_pressure = True
+
+            if is_pressure:
+                return raw_yards * 1.15  # +15% in clutch situations
+            return raw_yards
+
+        return raw_yards
+
+    def _apply_star_override(self, raw_yards: float, player) -> float:
+        """Star Override: designated stars get a performance floor.
+
+        floor = max(roll, player_rating_scaled - 1.0)
+        Explosive stars keep full variance (no floor).
+        """
+        if not V2_ENGINE_CONFIG.get("star_override_enabled", False):
+            return raw_yards
+        if not player.star_designated:
+            return raw_yards
+        if player.variance_archetype == "explosive":
+            return raw_yards  # Explosive keeps full variance even when starred
+
+        # Performance floor: scale overall to yardage (overall 90 → floor ~4.0)
+        floor = max(0.0, (player.overall - 50) / 10.0)
+        return max(raw_yards, floor)
+
+    def _should_use_halo(self, carrier) -> bool:
+        """Determine if this play uses team halo or individual ratings.
+
+        V2 Rule: 90% of plays use halo.  Star-designated players at
+        Critical Contest Points always use individual ratings.
+        """
+        if not V2_ENGINE_CONFIG.get("halo_enabled", False):
+            return False
+        if carrier.star_designated:
+            return False  # Stars always use individual ratings
+        # 90% halo, 10% individual (for non-star plays)
+        return random.random() < 0.90
 
     def _contest_run_yards(self, carrier, tackler, play_config) -> float:
         """Contest-based stochastic resolution for run plays.
 
-        The outcome is determined by the relative attribute delta
-        between carrier and tackler.  Fatigue reduces each player's
-        effective 'gravity' (the center of their bell curve).
+        V2 supports dual-mode:
+        - v1_sigmoid: legacy additive delta + sigmoid center
+        - v2_power_ratio: multiplicative (carrier/tackler)**exp
 
-        Proximity in skill → HIGH variance (dice battle, upsets).
-        Big gap → LOWER variance (elite dominates predictably).
+        With halo enabled, non-star plays use team-level ratings.
+        R/E/C variance and star override are applied post-roll.
         """
-        # ── Offensive gravity ──
-        off_speed = carrier.speed
-        off_power = getattr(carrier, 'power', 75)
-        off_agility = getattr(carrier, 'agility', 75)
-        off_skill = off_speed * 0.4 + off_power * 0.3 + off_agility * 0.3
-        off_skill *= self.player_fatigue_modifier(carrier)
+        contest_model = V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid")
+        use_halo = self._should_use_halo(carrier)
 
-        # ── Defensive gravity ──
-        def_tackling = tackler.tackling
-        def_awareness = getattr(tackler, 'awareness', 70)
-        def_speed = tackler.speed
-        def_skill = def_tackling * 0.5 + def_awareness * 0.25 + def_speed * 0.25
-        def_skill *= self.player_fatigue_modifier(tackler)
+        # ── Get ratings (halo or individual) ──
+        off_skill = self._get_offensive_rating(carrier, use_halo)
+        def_skill = self._get_defensive_rating(tackler, use_halo)
 
-        # ── Delta: positive = offense advantage ──
-        delta = off_skill - def_skill  # typically −30 to +30
+        if contest_model == "v2_power_ratio":
+            # ═══ V2: POWER RATIO ═══
+            # success_chance = (carrier_rating / tackler_rating) ** exponent
+            # This produces a MULTIPLICATIVE relationship where ratios matter,
+            # not absolute differences.  A 90 vs 60 (1.5 ratio) produces very
+            # different results from a 60 vs 30 (2.0 ratio).
+            exponent = V2_ENGINE_CONFIG.get("power_ratio_exponent", 1.8)
 
-        # ── Yards center: depends on game situation ──
-        #
-        # Early downs (1-3): Standard sigmoid contest.  The center is a
-        # fixed base modified by the skill delta between carrier and
-        # tackler.  This keeps drives progressing naturally.
-        #
-        # Late downs (4-6): **Needs-based conversion contest**.  The
-        # center is anchored on what the offense NEEDS (yards_to_go)
-        # and the talent delta determines whether they overshoot or
-        # fall short.  Better players → higher conversion probability.
-        # This produces the target 85 / 71 / 63 % conversion rates
-        # organically from player talent, not from flat bonuses.
+            # Prevent division by zero; floor at 30
+            off_eff = max(30.0, off_skill)
+            def_eff = max(30.0, def_skill)
 
-        if self.state.down >= 4:
-            # ── Late-down conversion contest ──
-            ytg = self.state.yards_to_go
+            # Power ratio: > 1.0 = offense advantage, < 1.0 = defense wins
+            ratio = off_eff / def_eff
+            power = ratio ** exponent
 
-            # Normalise talent to 0-1 scale (rating 50-99 range)
-            off_norm = max(0.0, (off_skill - 50) / 49.0)   # 0.0–1.0
-            def_norm = max(0.0, (def_skill - 50) / 49.0)
+            # Convert power ratio to expected yards
+            # power 1.0 → ~4.5 yards (even matchup)
+            # power 1.5 → ~6.75 yards (offense dominates)
+            # power 0.67 → ~2.0 yards (defense dominates)
+            base_yards = 4.5 * power
 
-            # Talent edge: positive = offense outclasses defense
-            talent_edge = off_norm - def_norm  # roughly −1.0 to +1.0
+            # Play-type shift
+            base_low, base_high = play_config['base_yards']
+            play_shift = ((base_low + base_high) / 2.0) - 3.0
+            center = base_yards + play_shift
 
-            # Buffer: how far past the ytg the play is likely to go.
-            # Elite offense vs weak D → +6 buffer (overshoot by 6 yds)
-            # Even matchup          → +3 buffer
-            # Weak offense vs elite D → 0 (coin flip)
-            buffer = 3.0 + talent_edge * 3.0
+            # Variance: closer matchups = more volatile
+            ratio_distance = abs(ratio - 1.0)
+            proximity = 1.0 - min(1.0, ratio_distance / 0.5)
+            variance = 0.8 + proximity * 1.4
 
-            # Urgency scalar: 4th down = full urgency, 5th/6th decay
-            urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
-            center = ytg + buffer * urgency
+            if self.state.down >= 4:
+                # Late-down urgency: anchor toward yards-to-go
+                ytg = self.state.yards_to_go
+                talent_edge = (power - 1.0) * 2.0  # map power to edge
+                buffer = 3.0 + min(3.0, max(-3.0, talent_edge * 3.0))
+                urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
+                center = ytg + buffer * urgency
+
         else:
-            # ── Standard early-down sigmoid ──
-            # delta  0 → center ~5.0  (even matchup)
-            # delta +25 → center ~7.5  (offense dominates)
-            # delta −25 → center ~2.5  (defense dominates)
-            center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
+            # ═══ V1: LEGACY SIGMOID ═══
+            delta = off_skill - def_skill
 
-        # ── Play-type shift ──
-        base_low, base_high = play_config['base_yards']
-        play_shift = ((base_low + base_high) / 2.0) - 3.0
-        center += play_shift
+            if self.state.down >= 4:
+                ytg = self.state.yards_to_go
+                off_norm = max(0.0, (off_skill - 50) / 49.0)
+                def_norm = max(0.0, (def_skill - 50) / 49.0)
+                talent_edge = off_norm - def_norm
+                buffer = 3.0 + talent_edge * 3.0
+                urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
+                center = ytg + buffer * urgency
+            else:
+                center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
 
-        # ── Proximity → variance ──
-        # Even matchups are volatile; blowout gaps are consistent.
-        proximity = 1.0 - min(1.0, abs(delta) / 35.0)
-        variance = 0.8 + proximity * 1.4  # 0.8 (big gap) → 2.2 (even)
+            base_low, base_high = play_config['base_yards']
+            play_shift = ((base_low + base_high) / 2.0) - 3.0
+            center += play_shift
+
+            proximity = 1.0 - min(1.0, abs(delta) / 35.0)
+            variance = 0.8 + proximity * 1.4
 
         # ── Coaching gravity adjustments ──
         off_mods = self._coaching_mods()
@@ -3607,19 +4038,27 @@ class ViperballEngine:
         elif def_cls == "scheme_master":
             center *= 1.0 - def_fx.get("scheme_amplification", 0.0) * 0.5
 
+        # ── V2: Composure modifier ──
+        if V2_ENGINE_CONFIG.get("composure_enabled", False):
+            composure = self._get_current_composure()
+            if composure < COMPOSURE_TILT_THRESHOLD:
+                # Tilted: awareness drops, variance expands
+                center *= 0.85
+                variance *= 1.3
+            elif composure > 120:
+                # Surging: tighter variance, slight boost
+                center *= 1.05
+                variance *= 0.85
+
         # ── Drive chain momentum ──
-        # Consecutive positive-yard plays push the defense back.
-        # Each successive gain widens the lanes slightly.
         chain = getattr(self, '_drive_chain_positive', 0)
         if chain >= 3:
-            center += min(1.5, chain * 0.3)  # +0.9 at 3, +1.2 at 4, capped at 1.5
+            center += min(1.5, chain * 0.3)
 
         # ── Spread thin (kick-pass floor-spacing) ──
-        # After a kick pass, defense is spread → widened lanes for runners.
-        # This is the "force multiplier" that rewards mixed play-calling.
         if getattr(self, '_spread_thin_active', False):
             center += 1.0
-            variance *= 0.85  # Tighter variance — more reliable gains
+            variance *= 0.85
 
         # ── Hot streak: variance narrows toward high end ──
         streak_bonus, streak_var = self._hot_streak_modifier(carrier)
@@ -3631,49 +4070,79 @@ class ViperballEngine:
 
         # ── Roll the dice ──
         yards = random.gauss(center, variance)
+
+        # ── V2: Apply R/E/C variance archetype ──
+        yards = self._apply_variance_archetype(yards, carrier)
+
+        # ── V2: Apply star override (performance floor) ──
+        yards = self._apply_star_override(yards, carrier)
+
         return max(-2.0, round(yards, 1))
 
     def _contest_kick_pass_prob(self, kicker, receiver, def_team) -> float:
         """Contest-based completion probability for kick passes.
 
-        Kicker accuracy + receiver hands vs average defensive coverage.
-        The sigmoid produces a base probability; a gauss noise roll
-        allows for spectacular catches and terrible drops alike.
+        V2: Supports halo mode (team-level resolution for non-stars)
+        and power ratio contest model.
         """
-        off_skill = kicker.kick_accuracy * 0.6 + receiver.hands * 0.4
-        off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+        use_halo = self._should_use_halo(kicker)
 
-        # Average defensive coverage quality from keepers + DL
-        def_players = [p for p in def_team.players
-                       if p.position in ("Keeper", "Defensive Line")]
-        if not def_players:
-            def_players = def_team.players[:5]
-        def_coverage = sum(getattr(p, 'awareness', 70) for p in def_players[:5]) / max(1, min(5, len(def_players)))
+        if use_halo:
+            off_skill = self.get_offensive_team().halo_offense
+            off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+        else:
+            off_skill = kicker.kick_accuracy * 0.6 + receiver.hands * 0.4
+            off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+
+        # Average defensive coverage quality
+        if use_halo:
+            def_coverage = def_team.halo_defense
+        else:
+            def_players = [p for p in def_team.players
+                           if p.position in ("Keeper", "Defensive Line")]
+            if not def_players:
+                def_players = def_team.players[:5]
+            def_coverage = sum(getattr(p, 'awareness', 70) for p in def_players[:5]) / max(1, min(5, len(def_players)))
         # Pick a representative defender for fatigue check
-        rep_def = def_players[0] if def_players else None
+        def_players_list = [p for p in def_team.players if p.position in ("Keeper", "Defensive Line")]
+        if not def_players_list:
+            def_players_list = def_team.players[:5]
+        rep_def = def_players_list[0] if def_players_list else None
         if rep_def:
             def_coverage *= self.player_fatigue_modifier(rep_def) * 0.5 + 0.5
 
-        delta = off_skill - def_coverage
-        # Sigmoid: even skill → ~55% base (slight offense bias)
-        base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
+        contest_model = V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid")
+
+        if contest_model == "v2_power_ratio":
+            # Power ratio for completion probability
+            off_eff = max(30.0, off_skill)
+            def_eff = max(30.0, def_coverage)
+            ratio = off_eff / def_eff
+            # Map ratio to probability: ratio 1.0 → ~55%, ratio 1.3 → ~72%
+            base_prob = min(0.92, max(0.08, 0.55 * ratio))
+        else:
+            delta = off_skill - def_coverage
+            base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
 
         # ── Late-down conversion urgency ──
-        # On 4th-6th down, kickers focus harder and receivers run
-        # sharper routes.  Talent still drives the outcome — elite
-        # kicker/receiver pairs get a bigger boost than average ones.
         if self.state.down >= 4:
-            off_talent = max(0.0, (off_skill - 50) / 49.0)  # 0–1
+            off_talent = max(0.0, (off_skill - 50) / 49.0)
             urgency = {4: 0.18, 5: 0.12, 6: 0.08}.get(self.state.down, 0.08)
             base_prob = min(0.92, base_prob + urgency * (0.5 + off_talent * 0.5))
 
-        # Hot streak: kicker on a roll → tighter noise, biased upward
+        # ── V2: Composure modifier ──
+        if V2_ENGINE_CONFIG.get("composure_enabled", False):
+            composure = self._get_current_composure()
+            if composure < COMPOSURE_TILT_THRESHOLD:
+                base_prob *= 0.85  # Tilted: less accurate
+            elif composure > 120:
+                base_prob = min(0.92, base_prob * 1.05)
+
+        # Hot streak
         streak_bonus, streak_var = self._hot_streak_modifier(kicker)
         base_prob = min(0.92, base_prob + streak_bonus * 0.05)
         noise_spread = 0.10 * streak_var
 
-        # Stochastic noise: sometimes the coverage plays perfectly,
-        # sometimes the kicker threads the needle
         prob = random.gauss(base_prob, noise_spread)
         return max(0.08, min(0.92, prob))
 
@@ -3770,6 +4239,17 @@ class ViperballEngine:
         if not eligible:
             eligible = skill_pool[:5]
             weights = [1.0] * len(eligible)
+
+        # ── V2: Hero Ball force-feed ──
+        # If hero ball is active, massively boost the star's selection weight
+        team_side = self.state.possession
+        hero_target = self._check_hero_ball(team_side)
+        if hero_target:
+            for i, p in enumerate(eligible):
+                if p.name == hero_target:
+                    weights[i] *= 5.0  # 5x weight for hero ball target
+                    break
+
         player = random.choices(eligible, weights=weights, k=1)[0]
         plabel = player_label(player)
         ptag = player_tag(player)
@@ -3829,6 +4309,11 @@ class ViperballEngine:
 
         yards_gained = int(self._contest_run_yards(player, tackler, config))
         yards_gained = max(-5, yards_gained)
+
+        # ── V2: Defensive keying penalty ──
+        key_mod = self._apply_defensive_keying(player, team_side)
+        if key_mod < 1.0:
+            yards_gained = int(yards_gained * key_mod)
 
         if yards_gained <= 0:
             tackler.game_tfl += 1
@@ -6042,9 +6527,12 @@ class ViperballEngine:
     def drain_player_energy(self, player, play_type: str = "run"):
         """Drain a player's game_energy based on involvement type.
 
-        Drain is **progressive** — small in Q1/Q2, ramps up in Q3/Q4.
-        This models cumulative fatigue: players are fresh early, heavy-
-        legged late.  Weather and role still modify the base drain.
+        V2 Fatigue Tiers: drain rate depends on player's talent tier.
+        Elite (overall >= 82): 0.8x drain rate
+        Standard (62-81): 1.0x drain rate
+        Low (< 62): 1.5x drain rate
+
+        Drain is also **progressive** — small in Q1/Q2, ramps up in Q3/Q4.
         """
         drain_map = {
             "carrier": 1.8,
@@ -6059,7 +6547,17 @@ class ViperballEngine:
         quarter_mult = {1: 0.6, 2: 0.8, 3: 1.1, 4: 1.4}.get(quarter, 1.0)
         base_drain = drain_map.get(play_type, 1.2)
         weather_mult = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
-        player.game_energy = max(0.0, player.game_energy - base_drain * quarter_mult * weather_mult)
+
+        # V2: Fatigue tier multiplier
+        tier_mult = 1.0
+        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+            tier = player.fatigue_tier
+            if tier == FatigueTier.ELITE.value:
+                tier_mult = 0.8   # Elite players drain slower
+            elif tier == FatigueTier.LOW.value:
+                tier_mult = 1.5   # Low-tier players drain faster
+
+        player.game_energy = max(0.0, player.game_energy - base_drain * quarter_mult * weather_mult * tier_mult)
 
         # Track touch for rhythm
         if play_type in ("carrier", "run", "lateral", "kick_pass"):
@@ -6068,30 +6566,42 @@ class ViperballEngine:
     def player_fatigue_modifier(self, player) -> float:
         """Returns a multiplier (0.40 to 1.0) based on player's current energy.
 
-        The "fatigue cliff" — below 40% energy, performance degrades
-        sharply enough that a 95-rated star becomes less effective than
-        a fresh 75-rated backup.  This is what forces depth chart usage.
+        V2 Fatigue Tiers modify the severity of stat loss:
+        Elite: 0.5x stat loss per energy point (more resilient)
+        Standard: 1.0x stat loss (baseline)
+        Low: 1.5x stat loss (degrades faster)
 
-        80-100%: no effect (1.0)
-        60-80%:  minor fatigue (0.95)
-        40-60%:  noticeable (0.85)
-        20-40%:  THE CLIFF — severe degradation (0.55)
-        <20%:    should be subbed out — near-useless (0.40)
+        The "fatigue cliff" remains — below 40% energy, performance
+        degrades sharply.  But elite players handle it better.
         """
         energy = player.game_energy
+
+        # V2: Tier-based stat loss multiplier
+        stat_loss_mult = 1.0
+        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+            tier = player.fatigue_tier
+            if tier == FatigueTier.ELITE.value:
+                stat_loss_mult = 0.5   # Elite feels fatigue half as much
+            elif tier == FatigueTier.LOW.value:
+                stat_loss_mult = 1.5   # Low-tier feels it 50% more
+
         if energy >= 80:
             return 1.0
         elif energy >= 60:
-            return 0.95
+            penalty = 0.05 * stat_loss_mult
+            return max(0.85, 1.0 - penalty)
         elif energy >= 40:
-            return 0.85
+            penalty = 0.15 * stat_loss_mult
+            return max(0.70, 1.0 - penalty)
         elif energy >= 20:
-            # The cliff: linear ramp from 0.55 (at 20%) to 0.85 (at 40%)
-            # At 30% → 0.70, at 25% → 0.625
-            return 0.55 + (energy - 20) / 20 * 0.30
+            # The cliff: linear ramp
+            base_penalty = 0.15 + (40 - energy) / 20 * 0.30
+            penalty = base_penalty * stat_loss_mult
+            return max(0.40, 1.0 - penalty)
         else:
-            # Emergency zone: player is cooked
-            return 0.40
+            # Emergency zone
+            penalty = 0.60 * stat_loss_mult
+            return max(0.25, 1.0 - penalty)
 
     def fatigue_injury_multiplier(self, player) -> float:
         """Fatigued players are more injury-prone.
@@ -6190,6 +6700,197 @@ class ViperballEngine:
             return 0.85
         elif touches_gap >= 15:
             return 0.92
+        return 1.0
+
+    # ═══════════════════════════════════════════════════════════
+    # V2: COMPOSURE SYSTEM
+    # Dynamic per-game composure with tilt/surge and hysteresis.
+    # ═══════════════════════════════════════════════════════════
+
+    def _get_current_composure(self) -> float:
+        """Get composure for the team currently on offense."""
+        if self.state.possession == "home":
+            return self.state.home_composure
+        return self.state.away_composure
+
+    def _get_opponent_composure(self) -> float:
+        """Get composure for the team currently on defense."""
+        if self.state.possession == "home":
+            return self.state.away_composure
+        return self.state.home_composure
+
+    def _adjust_composure(self, team: str, event: str):
+        """Adjust a team's composure based on a game event.
+
+        Applies the composure delta from COMPOSURE_EVENTS, clamps
+        to [COMPOSURE_MIN, COMPOSURE_MAX], and checks tilt/exit.
+        """
+        if not V2_ENGINE_CONFIG.get("composure_enabled", False):
+            return
+
+        delta = COMPOSURE_EVENTS.get(event, 0)
+        if delta == 0:
+            return
+
+        if team == "home":
+            self.state.home_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX,
+                self.state.home_composure + delta))
+            # Tilt check with hysteresis
+            if not self.state.home_is_tilted and self.state.home_composure < COMPOSURE_TILT_THRESHOLD:
+                self.state.home_is_tilted = True
+            elif self.state.home_is_tilted and self.state.home_composure >= COMPOSURE_TILT_EXIT:
+                self.state.home_is_tilted = False
+            # Record timeline
+            self.state.home_composure_timeline.append(round(self.state.home_composure, 1))
+        else:
+            self.state.away_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX,
+                self.state.away_composure + delta))
+            if not self.state.away_is_tilted and self.state.away_composure < COMPOSURE_TILT_THRESHOLD:
+                self.state.away_is_tilted = True
+            elif self.state.away_is_tilted and self.state.away_composure >= COMPOSURE_TILT_EXIT:
+                self.state.away_is_tilted = False
+            self.state.away_composure_timeline.append(round(self.state.away_composure, 1))
+
+    def _apply_pregame_composure(self):
+        """Apply pregame composure modifiers based on game context.
+
+        Rivalry: +15% variance (both teams start with slightly volatile composure)
+        Playoff: +25% variance
+        Trap game: favorite starts lower, underdog starts higher
+        """
+        if not V2_ENGINE_CONFIG.get("composure_enabled", False):
+            return
+
+        base = COMPOSURE_BASE
+
+        if self.is_rivalry:
+            # Rivalry: both teams get composure variance
+            variance = base * COMPOSURE_PREGAME["rivalry"]
+            self.state.home_composure = base + random.gauss(0, variance * 0.5)
+            self.state.away_composure = base + random.gauss(0, variance * 0.5)
+
+        if getattr(self, '_is_playoff', False):
+            variance = base * COMPOSURE_PREGAME["playoff"]
+            self.state.home_composure += random.gauss(0, variance * 0.5)
+            self.state.away_composure += random.gauss(0, variance * 0.5)
+
+        if getattr(self, '_is_trap_game', False):
+            # Determine favorite/underdog by prestige
+            if self.home_team.prestige > self.away_team.prestige:
+                self.state.home_composure += base * COMPOSURE_PREGAME["trap_game_favorite"]
+                self.state.away_composure += base * COMPOSURE_PREGAME["trap_game_underdog"]
+            else:
+                self.state.away_composure += base * COMPOSURE_PREGAME["trap_game_favorite"]
+                self.state.home_composure += base * COMPOSURE_PREGAME["trap_game_underdog"]
+
+        # Clamp
+        self.state.home_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX, self.state.home_composure))
+        self.state.away_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX, self.state.away_composure))
+
+    def _check_underdog_surge(self):
+        """Underdog Surge: if the underdog is leading in Q4, reduce their
+        fatigue drain by 15% (crowd energy, adrenaline).
+        """
+        if not V2_ENGINE_CONFIG.get("composure_enabled", False):
+            return
+        if self.state.quarter != 4:
+            return
+
+        home_prestige = self.home_team.prestige
+        away_prestige = self.away_team.prestige
+        score_diff = self.state.home_score - self.state.away_score
+
+        # Home is underdog and leading
+        if home_prestige < away_prestige - 10 and score_diff > 0:
+            self.state.home_composure = min(COMPOSURE_MAX,
+                self.state.home_composure + 2)  # Steady composure boost
+        # Away is underdog and leading
+        elif away_prestige < home_prestige - 10 and score_diff < 0:
+            self.state.away_composure = min(COMPOSURE_MAX,
+                self.state.away_composure + 2)
+
+    # ═══════════════════════════════════════════════════════════
+    # V2: HERO BALL + DEFENSIVE KEYING
+    # ═══════════════════════════════════════════════════════════
+
+    def _check_hero_ball(self, team_side: str) -> Optional[str]:
+        """Check if hero ball should activate for the offensive team.
+
+        Hero Ball: when a star player has 3+ consecutive touches with
+        positive results, the offense force-feeds them.  Returns the
+        star player's name if hero ball is active, None otherwise.
+        """
+        if not V2_ENGINE_CONFIG.get("hero_ball_enabled", False):
+            return None
+
+        if team_side == "home":
+            target = self.state.home_hero_ball_target
+            touches = self.state.home_consecutive_star_touches
+        else:
+            target = self.state.away_hero_ball_target
+            touches = self.state.away_consecutive_star_touches
+
+        if target and touches >= 3:
+            return target
+        return None
+
+    def _update_hero_ball(self, team_side: str, player_name: str, success: bool):
+        """Update hero ball tracking after a play.
+
+        If a star player had a successful touch, increment their
+        consecutive count.  If they failed or it was a non-star,
+        reset the hero ball target.
+        """
+        if not V2_ENGINE_CONFIG.get("hero_ball_enabled", False):
+            return
+
+        team = self.home_team if team_side == "home" else self.away_team
+        stars = self.state.home_stars if team_side == "home" else self.state.away_stars
+
+        if player_name in stars and success:
+            if team_side == "home":
+                if self.state.home_hero_ball_target == player_name:
+                    self.state.home_consecutive_star_touches += 1
+                else:
+                    self.state.home_hero_ball_target = player_name
+                    self.state.home_consecutive_star_touches = 1
+            else:
+                if self.state.away_hero_ball_target == player_name:
+                    self.state.away_consecutive_star_touches += 1
+                else:
+                    self.state.away_hero_ball_target = player_name
+                    self.state.away_consecutive_star_touches = 1
+        else:
+            # Reset on failure or non-star touch
+            if team_side == "home":
+                self.state.home_hero_ball_target = ""
+                self.state.home_consecutive_star_touches = 0
+            else:
+                self.state.away_hero_ball_target = ""
+                self.state.away_consecutive_star_touches = 0
+
+    def _apply_defensive_keying(self, carrier, team_side: str) -> float:
+        """Defensive Keying: if the defense identifies the hero ball target,
+        they key on that player, reducing their effectiveness.
+
+        Returns a yards modifier (< 1.0 = keying is working).
+        """
+        if not V2_ENGINE_CONFIG.get("hero_ball_enabled", False):
+            return 1.0
+
+        # Defense keys on hero ball after 4+ consecutive star touches
+        if team_side == "home":
+            target = self.state.home_hero_ball_target
+            touches = self.state.home_consecutive_star_touches
+        else:
+            target = self.state.away_hero_ball_target
+            touches = self.state.away_consecutive_star_touches
+
+        if carrier.name == target and touches >= 4:
+            # Defense is keying: effectiveness drops with each touch
+            key_penalty = min(0.30, (touches - 3) * 0.08)
+            return 1.0 - key_penalty
+
         return 1.0
 
     def _hot_streak_modifier(self, player) -> Tuple[float, float]:
@@ -6464,6 +7165,30 @@ class ViperballEngine:
                 }
                 for e in self.in_game_injuries
             ],
+            # ── V2: Engine metadata ──
+            "v2_engine": {
+                "contest_model": V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid"),
+                "halo_enabled": V2_ENGINE_CONFIG.get("halo_enabled", False),
+                "composure_enabled": V2_ENGINE_CONFIG.get("composure_enabled", False),
+                "home_prestige": self.home_team.prestige,
+                "away_prestige": self.away_team.prestige,
+                "home_halo": {"offense": round(self.home_team.halo_offense, 1),
+                              "defense": round(self.home_team.halo_defense, 1)},
+                "away_halo": {"offense": round(self.away_team.halo_offense, 1),
+                              "defense": round(self.away_team.halo_defense, 1)},
+                "home_stars": self.state.home_stars,
+                "away_stars": self.state.away_stars,
+                "composure_final": {
+                    "home": round(self.state.home_composure, 1),
+                    "away": round(self.state.away_composure, 1),
+                },
+                "composure_timeline": {
+                    "home": self.state.home_composure_timeline,
+                    "away": self.state.away_composure_timeline,
+                },
+                "home_tilted_at_end": self.state.home_is_tilted,
+                "away_tilted_at_end": self.state.away_is_tilted,
+            },
         }
 
         return summary
@@ -6713,7 +7438,10 @@ def load_team_from_json(filepath: str, fresh: bool = False,
 
     players.sort(key=lambda p: (POSITION_ORDER.get(p.position, 99), p.number))
 
-    return Team(
+    # V2: Load prestige from team data (if present)
+    prestige = data.get("prestige", data.get("team_stats", {}).get("prestige", 50))
+
+    team = Team(
         name=team_name,
         abbreviation=abbreviation,
         mascot=mascot,
@@ -6726,7 +7454,15 @@ def load_team_from_json(filepath: str, fresh: bool = False,
         offense_style=style,
         defense_style=defense_style,
         st_scheme=st_scheme,
+        prestige=prestige,
     )
+
+    # V2: Derive halo from prestige
+    h_off, h_def = derive_halo(prestige)
+    team.halo_offense = h_off
+    team.halo_defense = h_def
+
+    return team
 
 
 def generate_team_on_the_fly(

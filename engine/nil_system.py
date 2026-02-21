@@ -488,3 +488,88 @@ def compute_team_prestige(
 
     prestige = int(base + champ_pts + recent_pts)
     return max(10, min(99, prestige))
+
+
+# ═══════════════════════════════════════════════════════════════
+# V2: PER-GAME PRESTIGE DECAY
+# Asymmetric: losses decay fast, wins rebuild slowly.
+# Streak modifiers amplify both directions.
+# Season-end 20% regression toward mean.
+# ═══════════════════════════════════════════════════════════════
+
+def adjust_prestige_postgame(
+    current_prestige: int,
+    won: bool,
+    opponent_prestige: int,
+    win_streak: int = 0,
+    loss_streak: int = 0,
+) -> int:
+    """Per-game prestige adjustment (V2 asymmetric decay model).
+
+    Losses decay prestige fast (especially against weaker opponents).
+    Wins rebuild slowly (bigger gains against stronger opponents).
+    Streaks amplify both directions.
+
+    Args:
+        current_prestige: Team's current prestige (0-99)
+        won: True if team won this game
+        opponent_prestige: Opponent's prestige (0-99)
+        win_streak: Current consecutive win streak (0+)
+        loss_streak: Current consecutive loss streak (0+)
+
+    Returns:
+        New prestige value (0-99)
+    """
+    prestige_gap = opponent_prestige - current_prestige  # positive = opponent is stronger
+
+    if won:
+        # Base gain: small for expected wins, larger for upsets
+        if prestige_gap > 20:
+            base_gain = 3.0   # Major upset
+        elif prestige_gap > 10:
+            base_gain = 2.0   # Notable upset
+        elif prestige_gap > 0:
+            base_gain = 1.5   # Slight upset
+        elif prestige_gap > -10:
+            base_gain = 1.0   # Expected win
+        elif prestige_gap > -20:
+            base_gain = 0.5   # Easy win
+        else:
+            base_gain = 0.25  # Blowout mismatch
+
+        # Win streak amplifier: consecutive wins build momentum
+        streak_mult = 1.0 + min(0.5, win_streak * 0.1)
+        delta = base_gain * streak_mult
+
+    else:
+        # Base loss: harsh for losses to weaker opponents
+        if prestige_gap < -20:
+            base_loss = -4.0   # Embarrassing upset loss
+        elif prestige_gap < -10:
+            base_loss = -3.0   # Bad loss
+        elif prestige_gap < 0:
+            base_loss = -2.0   # Expected loss to worse team
+        elif prestige_gap < 10:
+            base_loss = -1.5   # Close loss to similar team
+        elif prestige_gap < 20:
+            base_loss = -1.0   # Expected loss
+        else:
+            base_loss = -0.5   # Loss to much better team
+
+        # Loss streak amplifier: consecutive losses crater prestige
+        streak_mult = 1.0 + min(0.8, loss_streak * 0.15)
+        delta = base_loss * streak_mult
+
+    new_prestige = current_prestige + delta
+    return max(10, min(99, int(round(new_prestige))))
+
+
+def apply_season_end_regression(current_prestige: int, mean: int = 50) -> int:
+    """Season-end 20% regression toward the mean.
+
+    Prevents prestige from becoming permanently extreme.
+    Elite programs drift slightly down; bottom-feeders drift up.
+    """
+    regression = (mean - current_prestige) * 0.20
+    new_prestige = current_prestige + regression
+    return max(10, min(99, int(round(new_prestige))))
