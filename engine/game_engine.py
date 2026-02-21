@@ -901,6 +901,7 @@ OFFENSE_STYLES = {
         "option_read_bonus": 0.0,
         "broken_play_bonus": 0.0,
         "pindown_bonus": 0.08,
+        "snap_kick_aggression": 1.3,
         "run_vs_lateral": 0.75,
         "early_down_aggression": 0.50,
         "clock_burn_multiplier": 1.3,
@@ -964,6 +965,7 @@ OFFENSE_STYLES = {
         "option_read_bonus": 0.0,
         "broken_play_bonus": 0.0,
         "pindown_bonus": 0.20,
+        "snap_kick_aggression": 1.4,
         "early_punt_threshold": 3,
         "pindown_priority": 1.5,
     },
@@ -1057,6 +1059,7 @@ OFFENSE_STYLES = {
         "option_read_bonus": 0.05,
         "broken_play_bonus": 0.05,
         "pindown_bonus": 0.05,
+        "snap_kick_aggression": 1.1,
     },
 }
 
@@ -2334,91 +2337,82 @@ class ViperballEngine:
 
         return rate
 
-    def _place_kick_success(self, distance: int) -> float:
-        """Field goal accuracy — expanded range for Viperball.
+    def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
+        """Field goal accuracy — kicker-range model.
 
-        Viperball kickers are elite athletes. 50-yard FGs are routine,
-        60-70 yard FGs are normalish, and even 75+ is attempted.
+        In a sport that evolved around kicking (no forward pass), kickers
+        are far more developed than NFL kickers.  50-yard FGs are routine.
+        60-70 yarders are competitive.  The kicker's skill determines
+        their COMFORTABLE RANGE — within it, makes are near-automatic.
+        Beyond it, success drops off steeply.
+
+        60-skill → comfortable to ~45 yards
+        75-skill → comfortable to ~58 yards
+        85-skill → comfortable to ~67 yards
+        95-skill → comfortable to ~76 yards
         """
-        if distance <= 25:
-            return 0.98
-        elif distance <= 34:
-            return 0.96
-        elif distance <= 44:
-            return 0.92
-        elif distance <= 50:
-            return 0.86
-        elif distance <= 55:
-            return 0.80
-        elif distance <= 60:
-            return 0.72
-        elif distance <= 65:
-            return 0.62
-        elif distance <= 70:
-            return 0.50
-        elif distance <= 75:
-            return 0.38
-        else:
-            return max(0.15, 0.30 - (distance - 75) * 0.03)
-
-    def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
-        """Drop kick accuracy — the preferred scoring method in close range.
-
-        Drop kicks are worth 5 points (vs 3 for FGs) and have recovery
-        potential on misses. From 30 yards and in, a drop kick is the
-        logical choice over a field goal. From 45+ it's still viable.
-        Under 20 yards, it's practically automatic for good kickers.
-        """
-        if kicker_skill >= 85:
-            tier = 0
-        elif kicker_skill >= 70:
-            tier = 1
-        elif kicker_skill >= 50:
-            tier = 2
-        else:
-            tier = 3
-
-        # Columns: ≤20, ≤25, ≤30, ≤35, ≤40, ≤45, ≤47, ≤50, 51+
-        # Deep range tops out at ~47 yards. Top 5% (tier 0) can stretch to 50.
-        # Beyond 50, drop kicks are desperation heaves.
-        table = [
-            [0.98, 0.96, 0.92, 0.86, 0.78, 0.66, 0.52, 0.35, 0.18],
-            [0.96, 0.92, 0.86, 0.78, 0.68, 0.54, 0.38, 0.22, 0.10],
-            [0.92, 0.86, 0.78, 0.68, 0.56, 0.42, 0.28, 0.14, 0.06],
-            [0.86, 0.78, 0.68, 0.56, 0.44, 0.30, 0.18, 0.08, 0.03],
-        ]
+        comfortable_range = 45 + (kicker_skill - 60) * 0.9
 
         if distance <= 20:
-            col = 0
-        elif distance <= 25:
-            col = 1
-        elif distance <= 30:
-            col = 2
-        elif distance <= 35:
-            col = 3
-        elif distance <= 40:
-            col = 4
-        elif distance <= 45:
-            col = 5
-        elif distance <= 47:
-            col = 6
-        elif distance <= 50:
-            col = 7
+            return 0.99  # Chip shot
+        elif distance <= comfortable_range:
+            frac = (distance - 20) / max(1, comfortable_range - 20)
+            return 0.98 - frac * 0.10  # 0.98 close → 0.88 at edge
+        elif distance <= comfortable_range + 10:
+            over = distance - comfortable_range
+            return max(0.10, 0.85 - over * 0.05)
+        elif distance <= comfortable_range + 20:
+            over = distance - comfortable_range - 10
+            return max(0.05, 0.30 - over * 0.02)
         else:
-            col = 8
+            return max(0.03, 0.08 - (distance - comfortable_range - 20) * 0.01)
 
-        return table[tier][col]
+    def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
+        """Drop kick accuracy — kicker-range model.
+
+        Drop kicks are worth 5 points (vs 3 for FGs) and have recovery
+        potential on misses.  Harder than a place kick — the ball must
+        bounce off the ground first — so the comfortable range is
+        shorter, but the payoff is bigger.
+
+        60-skill → comfortable to ~30 yards
+        75-skill → comfortable to ~41 yards
+        85-skill → comfortable to ~49 yards
+        95-skill → comfortable to ~56 yards
+        """
+        comfortable_range = 30 + (kicker_skill - 60) * 0.75
+
+        if distance <= 15:
+            return 0.98  # Point-blank
+        elif distance <= comfortable_range:
+            frac = (distance - 15) / max(1, comfortable_range - 15)
+            return 0.96 - frac * 0.10  # 0.96 close → 0.86 at edge
+        elif distance <= comfortable_range + 10:
+            over = distance - comfortable_range
+            return max(0.08, 0.80 - over * 0.06)
+        elif distance <= comfortable_range + 15:
+            over = distance - comfortable_range - 10
+            return max(0.05, 0.20 - over * 0.02)
+        else:
+            return max(0.03, 0.06 - (distance - comfortable_range - 15) * 0.01)
 
     POSSESSION_VALUE = 3.0
 
     GO_FOR_IT_MATRIX = {
-        15:  {4: 5, 5: 4, 6: 3},
-        30:  {4: 8, 5: 6, 6: 4},
-        45:  {4: 10, 5: 8, 6: 6},
-        50:  {4: 12, 5: 10, 6: 8},
-        60:  {4: 10, 5: 8, 6: 7},
-        75:  {4: 8, 5: 6, 6: 5},
-        100: {4: 6, 5: 4, 6: 3},
+        # Down 4 values don't matter (always go for it on 4th).
+        # Down 5 = the real decision point.  Down 6 = last chance.
+        # Values = max ytg to go for it; above this → kick if available.
+        # Kicker skill adjusts: elite kickers (90+) reduce by up to 3,
+        # meaning they kick even on shorter ytg.
+        # NOTE: select_kick_decision() also has a ytg <= 3 hard bypass,
+        # so down 5 always goes for it on 5th-and-3 or less regardless.
+        15:  {4: 20, 5: 3, 6: 2},
+        30:  {4: 20, 5: 4, 6: 2},
+        45:  {4: 20, 5: 5, 6: 3},
+        50:  {4: 20, 5: 6, 6: 3},
+        60:  {4: 20, 5: 5, 6: 3},
+        75:  {4: 20, 5: 4, 6: 2},
+        100: {4: 20, 5: 3, 6: 2},
     }
 
     def _go_for_it_threshold(self, fp: int, down: int) -> int:
@@ -2444,14 +2438,14 @@ class ViperballEngine:
         down = self.state.down
         ytg = self.state.yards_to_go
 
-        fg_distance = (100 - fp) + 17
+        fg_distance = (100 - fp) + 10  # Match simulate_drop_kick / simulate_place_kick
 
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         kicker_skill = kicker.kicking
 
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
-        pk_success = self._place_kick_success(fg_distance)
+        pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
         if fp >= 90:
@@ -2463,53 +2457,63 @@ class ViperballEngine:
                     return PlayType.PLACE_KICK
             return None
 
-        # ── Short yardage: go for it (conversion is likely) ──
-        if ytg <= 3 and down <= 5:
-            return None
-
-        # ── Downs 1-3: keep driving (no kicks yet) ──
-        if down <= 3:
+        # ── Downs 1-4: keep driving — with 6 downs you never kick here ──
+        # Down 4 in Viperball is like 2nd down in NFL.  You have 2+ downs
+        # remaining.  Snap kicks on downs 2-4 are handled separately by
+        # _check_snap_kick_shot_play() as opportunistic "pull-up threes".
+        if down <= 4:
             return None
 
         # ── Determine best available kick ──
-        # Snap kick (drop kick) = 5 pts, preferred.  FG = 3 pts, fallback.
+        # Drop kicks (5 pts) are preferred in close range but coaches
+        # have a "comfort zone" — beyond it they trust the set-piece FG.
+        # The kicker's skill and coaching style determine how far out
+        # a coach will call for a drop kick vs a field goal.
+        snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
+
+        # Drop kick comfort range matches _drop_kick_success model.
+        # Aggressive styles (boot_raid=1.5) extend the comfort zone.
+        dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
+        dk_comfort *= snap_kick_agg
+
         best_kick = None
         best_kick_ev = 0.0
-        if dk_success >= 0.15:  # Attempt drop kick if >= 15% success
+        # Drop kick: only within the coaching comfort zone
+        if fg_distance <= dk_comfort and dk_success >= 0.30:
             best_kick = PlayType.DROP_KICK
             best_kick_ev = dk_success * 5.0
-        if pk_success >= 0.20:  # Attempt FG if >= 20% success
+        # Place kick (FG): available at any viable distance
+        if pk_success >= 0.20:
             fg_ev = pk_success * 3.0
             if fg_ev > best_kick_ev:
                 best_kick = PlayType.PLACE_KICK
                 best_kick_ev = fg_ev
 
-        # ── Down 4: kick if ytg is long, else go for it ──
-        if down == 4:
-            go_threshold = self._go_for_it_threshold(fp, 4)
-            if ytg <= go_threshold:
-                return None  # Go for the conversion
-            # Long ytg — take points if available
-            if best_kick:
-                return best_kick
-            # No kick available — still go for it on 4th (2 downs left)
-            return None
-
-        # ── Down 5: kick if available, otherwise go for it ──
+        # ── Down 5: THE key decision point (like 4th down in NFL) ──
+        # The kicker determines how aggressive the team is about kicking.
+        # Elite kickers (90+) lower the "go for it" threshold so the team
+        # takes the points.  Weak kickers raise it so the team converts.
         if down == 5:
             go_threshold = self._go_for_it_threshold(fp, 5)
+            # Kicker skill adjusts: 90 kicker → -3, 75 → 0, 60 → +3
+            kicker_adj = (75 - kicker_skill) // 5
+            go_threshold = max(1, go_threshold + kicker_adj)
+
+            # Very short yardage: always go for it
+            if ytg <= 2:
+                return None
             if ytg <= go_threshold:
-                return None  # Go for it
-            # Prefer kick over risking TOD with only 1 down left
+                return None
             if best_kick:
                 return best_kick
-            # No kick — still try to convert (punt on 6th if needed)
+            # No kick available — try to convert (punt on 6th if needed)
             return None
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
         if down == 6:
-            # Very short ytg — go for it
-            if ytg <= 2:
+            # Go for it on very short ytg (elite kickers lower this)
+            go_ytg = max(1, 3 - (kicker_skill - 75) // 10)
+            if ytg <= go_ytg:
                 return None
             # Any kick available? Take it — always prefer points.
             if best_kick:
@@ -2518,7 +2522,6 @@ class ViperballEngine:
             if fp < 65:
                 return PlayType.PUNT
             # Deep in opponent territory but no kick — go for it
-            # (a punt from fp 65+ is wasteful, better to try)
             if ytg <= 5:
                 return None
             return PlayType.PUNT
@@ -2694,9 +2697,12 @@ class ViperballEngine:
         attempted opportunistically throughout a drive, not just as a
         last resort.
 
-        Downs 2-3: "Pull-up three" — moderate probability in range.
-        Down 4:    "Tactical option" — solid chance when ytg is long.
-        Down 5:    "The objective" — high probability in range.
+        Downs 2-3: "Pull-up three" — opportunistic snap kick, frequency
+                   driven by the KICKER'S skill and coaching style.
+        Down 4:    Nearly never — you have 2 downs left.  Only an elite
+                   specialist in close range with long ytg would try.
+        Down 5:    Secondary chance after select_kick_decision says go.
+                   The kicker's skill determines how often this fires.
         Down 6:    Handled by select_kick_decision, not this function.
         """
         if self.state.down > 5 or self.state.down < 2:
@@ -2715,62 +2721,66 @@ class ViperballEngine:
         down = self.state.down
         ytg = self.state.yards_to_go
 
+        # Coaching style snap kick aggression (boot_raid=1.5, ball_control=1.2, etc.)
+        snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
+
+        # Kicker skill multiplier: elite kickers (90+) fire 50% more often,
+        # weak kickers (60) fire 60% less often.
+        kicker_mult = max(0.4, (kicker.kicking - 60) / 20.0)  # 0.4 at 68, 1.0 at 80, 1.5 at 90
+
         # ── Down 2-3: Pull-up three — opportunistic shot ──
         if down <= 3:
             if fg_distance <= 20:
-                shot_chance = 0.15
+                shot_chance = 0.22
             elif fg_distance <= 25:
-                shot_chance = 0.10
+                shot_chance = 0.16
             elif fg_distance <= 30:
-                shot_chance = 0.07
+                shot_chance = 0.12
             elif fg_distance <= 40:
-                shot_chance = 0.05
+                shot_chance = 0.09
             elif fg_distance <= 50:
-                shot_chance = 0.03
+                shot_chance = 0.05
             else:
-                shot_chance = 0.02
+                shot_chance = 0.03
             if is_specialist:
                 shot_chance *= 1.6
+            shot_chance *= snap_kick_agg * kicker_mult
             if random.random() < shot_chance:
                 return PlayType.DROP_KICK
             return None
 
-        # ── Down 4: Tactical option ──
+        # ── Down 4: Nearly never — you have 2 downs left ──
+        # Only an elite specialist in very close range with long ytg.
         if down == 4:
-            if ytg < 6:
-                return None  # Short conversion — go for it
+            if not is_specialist or ytg < 12:
+                return None
             if fg_distance <= 20:
-                shot_chance = 0.30
-            elif fg_distance <= 25:
-                shot_chance = 0.22
-            elif fg_distance <= 30:
-                shot_chance = 0.15
-            elif fg_distance <= 40:
-                shot_chance = 0.10
-            elif fg_distance <= 50:
                 shot_chance = 0.06
-            else:
+            elif fg_distance <= 25:
                 shot_chance = 0.03
-            if is_specialist:
-                shot_chance *= 1.5
+            else:
+                return None
+            shot_chance *= snap_kick_agg * kicker_mult
             if random.random() < shot_chance:
                 return PlayType.DROP_KICK
             return None
 
-        # ── Down 5: The objective — kick if in range ──
+        # ── Down 5: Secondary chance (after select_kick_decision) ──
+        # The kicker's skill and style drive the frequency.
         if down == 5:
             if ytg < 4:
                 return None  # Very short — go for it
             if fg_distance <= 25:
-                shot_chance = 0.75
+                shot_chance = 0.50
             elif fg_distance <= 35:
-                shot_chance = 0.55
+                shot_chance = 0.35
             elif fg_distance <= 45:
-                shot_chance = 0.40
+                shot_chance = 0.25
             elif fg_distance <= 55:
-                shot_chance = 0.25 if is_specialist else 0.12
+                shot_chance = 0.12
             else:
                 return None
+            shot_chance *= snap_kick_agg * kicker_mult
             if random.random() < shot_chance:
                 return PlayType.DROP_KICK
 
@@ -5544,35 +5554,19 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        skill_factor = max(0.88, kicker.kicking / 80)
-        kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
+        # ── Kicker-range success model ──
+        # Uses the same model as _drop_kick_success: the kicker determines
+        # a comfortable range.  Within range, kicks are very reliable.
+        # Beyond range, success drops off.
+        success_prob = self._drop_kick_success(distance, kicker.kicking)
 
+        # Style, archetype, and weather modifiers (secondary adjustments)
+        kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
-
-        if distance <= 20:
-            base_prob = 0.96
-        elif distance <= 25:
-            base_prob = 0.92
-        elif distance <= 30:
-            base_prob = 0.86
-        elif distance <= 35:
-            base_prob = 0.78
-        elif distance <= 40:
-            base_prob = 0.68
-        elif distance <= 45:
-            base_prob = 0.56
-        elif distance <= 50:
-            base_prob = 0.44
-        elif distance <= 55:
-            base_prob = 0.34
-        elif distance <= 60:
-            base_prob = 0.22
-        else:
-            base_prob = max(0.08, 0.22 - (distance - 60) * 0.02)
-
         weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
-        success_prob = base_prob * skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        success_prob *= (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        success_prob = max(0.05, min(0.98, success_prob))
         kicker.game_kick_attempts += 1
         kicker.game_dk_attempts += 1
 
@@ -5772,23 +5766,19 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        if distance <= 25:
-            success_prob = 0.93
-        elif distance <= 35:
-            success_prob = 0.86
-        elif distance <= 45:
-            success_prob = 0.76
-        elif distance <= 55:
-            success_prob = 0.62
-        else:
-            success_prob = max(0.20, 0.62 - (distance - 55) * 0.025)
+        # ── Kicker-range success model ──
+        # Uses the same model as _place_kick_success: the kicker determines
+        # a comfortable range.  Within range, kicks are near-automatic.
+        # Beyond range, success drops off.
+        success_prob = self._place_kick_success(distance, kicker.kicking)
 
-        skill_factor = kicker.kicking / 85
+        # Style, archetype, and weather modifiers (secondary adjustments)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
         weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
-        success_prob *= skill_factor * (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        success_prob *= (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
+        success_prob = max(0.10, min(0.98, success_prob))
         kicker.game_kick_attempts += 1
         kicker.game_pk_attempts += 1
 
