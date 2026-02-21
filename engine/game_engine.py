@@ -639,6 +639,9 @@ class Player:
     game_sacks: int = 0
     game_hurries: int = 0
     game_kick_pass_ints: int = 0
+    # VPA (Viperball Points Added) attribution
+    game_vpa: float = 0.0             # total VPA attributed to this player
+    game_plays_involved: int = 0      # number of plays this player was involved in
     # Per-player in-game fatigue: starts at 100, drains with usage
     game_energy: float = 100.0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
@@ -6340,6 +6343,38 @@ class ViperballEngine:
         home_stats["epa"] = home_epa
         away_stats["epa"] = away_epa
 
+        # -- Per-player VPA attribution ----------------------------------------
+        # Build lookup from player label -> Player object for both teams.
+        _player_lookup: Dict[str, "Player"] = {}
+        for _p in self.home_team.players:
+            _player_lookup[player_label(_p)] = _p
+        for _p in self.away_team.players:
+            _player_lookup[player_label(_p)] = _p
+
+        for pd in play_dicts:
+            epa_val = pd.get("epa", 0)
+            involved = pd.get("players", [])
+            if not involved:
+                continue
+            # Last player in the list is the ball carrier / primary actor
+            # Split VPA: primary gets 60%, others split 40% evenly
+            primary_label = involved[-1]
+            assist_labels = involved[:-1]
+
+            primary_share = epa_val if len(involved) == 1 else epa_val * 0.6
+            assist_share = (epa_val * 0.4 / len(assist_labels)) if assist_labels else 0
+
+            primary_player = _player_lookup.get(primary_label)
+            if primary_player:
+                primary_player.game_vpa += primary_share
+                primary_player.game_plays_involved += 1
+
+            for al in assist_labels:
+                assist_player = _player_lookup.get(al)
+                if assist_player:
+                    assist_player.game_vpa += assist_share
+                    assist_player.game_plays_involved += 1
+
         # VIPERBALL SABERMETRICS (Positive metrics, no negative numbers)
         home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home")
         away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away")
@@ -6360,7 +6395,8 @@ class ViperballEngine:
                                p.game_st_tackles > 0 or p.game_tackles > 0 or
                                p.game_sacks > 0 or p.game_hurries > 0 or
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
-                               p.game_kick_pass_receptions > 0)
+                               p.game_kick_pass_receptions > 0 or
+                               p.game_plays_involved > 0)
                 if has_activity:
                     stat_entry = {
                         "tag": player_tag(p),
@@ -6408,6 +6444,9 @@ class ViperballEngine:
                         "sacks": p.game_sacks,
                         "hurries": p.game_hurries,
                         "kick_pass_ints": p.game_kick_pass_ints,
+                        "vpa": round(p.game_vpa, 2),
+                        "plays_involved": p.game_plays_involved,
+                        "vpa_per_play": round(p.game_vpa / max(1, p.game_plays_involved), 3),
                     }
                     stats.append(stat_entry)
             return sorted(stats, key=lambda x: x["touches"] + x["kick_att"] + x["tackles"], reverse=True)
