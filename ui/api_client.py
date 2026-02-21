@@ -8,7 +8,7 @@ import os
 import requests
 from typing import Dict, List, Optional, Any
 
-API_BASE = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8000")
+API_BASE = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8080")
 
 
 class APIError(Exception):
