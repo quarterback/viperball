@@ -2584,15 +2584,40 @@ def dq_get_contest(session_id: str, week: int):
 def dq_get_odds(session_id: str, week: int):
     session = _get_session(session_id)
     mgr = _require_dq(session)
+    season = _require_season(session)
     contest = mgr.weekly_contests.get(week)
     if contest is None:
         raise HTTPException(status_code=404, detail=f"No contest for week {week}")
+
+    prestige_map = _get_prestige_map(session)
+    standings_map = {r.team_name: r for r in season.get_standings_sorted()} if season.standings else {}
+
+    def _team_context(team_name: str) -> dict:
+        """Build context dict for a team: record, prestige, star player."""
+        ctx: dict = {"name": team_name}
+        rec = standings_map.get(team_name)
+        if rec:
+            ctx["record"] = f"{rec.wins}-{rec.losses}"
+        else:
+            ctx["record"] = "0-0"
+        ctx["prestige"] = prestige_map.get(team_name, 50)
+        # Find the top player (highest overall) on this team
+        team_obj = season.teams.get(team_name)
+        if team_obj and team_obj.players:
+            best = max(team_obj.players, key=lambda p: getattr(p, "overall", 0))
+            ctx["star"] = getattr(best, "name", "")
+            ctx["star_pos"] = getattr(best, "position", "")
+            ctx["star_ovr"] = getattr(best, "overall", 0)
+        return ctx
+
     odds_list = []
     for i, o in enumerate(contest.odds):
         d = o.to_dict()
         d["game_idx"] = i
         d["home_ml_display"] = format_moneyline(o.home_moneyline)
         d["away_ml_display"] = format_moneyline(o.away_moneyline)
+        d["home_ctx"] = _team_context(o.home_team)
+        d["away_ctx"] = _team_context(o.away_team)
         odds_list.append(d)
     return {"week": week, "odds": odds_list}
 
@@ -2668,20 +2693,28 @@ def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None):
     if position:
         pool = [fp for fp in pool if fp.position_tag == position.upper()]
 
+    # Add depth rank label for display context
+    pool_data = []
+    for fp in pool:
+        depth_label = ""
+        tag_num = "".join(c for c in fp.tag if c.isdigit())
+        if tag_num:
+            rank = int(tag_num)
+            depth_label = ["Starter", "Backup", "3rd string"][min(rank - 1, 2)] if rank <= 3 else "Reserve"
+        pool_data.append({
+            "tag": fp.tag,
+            "name": fp.name,
+            "team": fp.team_name,
+            "position": fp.position_tag,
+            "overall": fp.overall,
+            "salary": fp.salary,
+            "projected": round(fp.projected_pts, 1),
+            "depth": depth_label,
+        })
+
     return {
         "week": week,
-        "pool": [
-            {
-                "tag": fp.tag,
-                "name": fp.name,
-                "team": fp.team_name,
-                "position": fp.position_tag,
-                "overall": fp.overall,
-                "salary": fp.salary,
-                "projected": round(fp.projected_pts, 1),
-            }
-            for fp in pool
-        ],
+        "pool": pool_data,
         "salary_cap": SALARY_CAP,
     }
 

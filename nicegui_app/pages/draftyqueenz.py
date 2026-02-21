@@ -372,29 +372,72 @@ def _render_predictions_tab(state, session_id: str, week: int, kp: str):
 
 
 def _render_odds_board(odds_list: list):
-    """Compact 2-column odds board so users see all games before picking."""
-    cols_per_row = 2
-    for row_start in range(0, len(odds_list), cols_per_row):
-        with ui.row().classes("w-full gap-4"):
-            for ci in range(cols_per_row):
-                idx = row_start + ci
-                if idx >= len(odds_list):
-                    break
-                o = odds_list[idx]
-                spread_str = f"{o['spread']:+.1f}"
-                ou_str = f"{o['over_under']:.1f}"
-                kp_ou = f"{o.get('kick_pass_ou', 14.5):.1f}"
-                away_ml = o.get("away_ml_display", "")
-                home_ml = o.get("home_ml_display", "")
-                with ui.column().classes("flex-1"):
-                    ui.html(
-                        f'<div class="dq-odds-card">'
-                        f'<div class="matchup">{o["away_team"]} ({away_ml}) @ '
-                        f'{o["home_team"]} ({home_ml})</div>'
-                        f'<div class="lines">Spread {spread_str} &middot; '
-                        f'O/U {ou_str} &middot; KP O/U {kp_ou}</div>'
-                        f'</div>'
-                    )
+    """Odds board with team context: records, prestige, star players."""
+    for o in odds_list:
+        spread_str = f"{o['spread']:+.1f}"
+        ou_str = f"{o['over_under']:.1f}"
+        kp_ou = f"{o.get('kick_pass_ou', 14.5):.1f}"
+        away_ml = o.get("away_ml_display", "")
+        home_ml = o.get("home_ml_display", "")
+
+        # Team context (record, prestige, star)
+        away_ctx = o.get("away_ctx", {})
+        home_ctx = o.get("home_ctx", {})
+        away_rec = away_ctx.get("record", "")
+        home_rec = home_ctx.get("record", "")
+        away_prs = away_ctx.get("prestige", 50)
+        home_prs = home_ctx.get("prestige", 50)
+        away_star = away_ctx.get("star", "")
+        away_star_pos = away_ctx.get("star_pos", "")
+        home_star = home_ctx.get("star", "")
+        home_star_pos = home_ctx.get("star_pos", "")
+
+        # Prestige bar width (0-100 mapped to percentage)
+        away_prs_w = min(100, max(5, away_prs))
+        home_prs_w = min(100, max(5, home_prs))
+
+        ui.html(
+            f'<div class="dq-odds-card">'
+            # Matchup header
+            f'<div class="matchup" style="font-size:1rem; margin-bottom:6px;">'
+            f'{o["away_team"]} <span style="color:#64748b;font-weight:400;">({away_rec})</span>'
+            f' &nbsp;@&nbsp; '
+            f'{o["home_team"]} <span style="color:#64748b;font-weight:400;">({home_rec})</span>'
+            f'</div>'
+            # Team details row
+            f'<div style="display:flex;gap:16px;margin-bottom:6px;">'
+            # Away team
+            f'<div style="flex:1;">'
+            f'<div style="font-size:0.78rem;color:#94a3b8;text-transform:uppercase;">Away</div>'
+            f'<div style="font-size:0.85rem;font-weight:600;">{o["away_team"]}'
+            f' <span style="color:#64748b;font-weight:400;">{away_ml}</span></div>'
+            f'<div style="font-size:0.78rem;color:#64748b;">Prestige: {away_prs}</div>'
+            f'<div style="background:#e2e8f0;border-radius:3px;height:4px;margin:2px 0;">'
+            f'<div style="background:#3b82f6;height:4px;border-radius:3px;width:{away_prs_w}%;"></div></div>'
+            f'<div style="font-size:0.78rem;color:#475569;">'
+            f'Star: {away_star} ({away_star_pos})</div>'
+            f'</div>'
+            # Home team
+            f'<div style="flex:1;">'
+            f'<div style="font-size:0.78rem;color:#94a3b8;text-transform:uppercase;">Home</div>'
+            f'<div style="font-size:0.85rem;font-weight:600;">{o["home_team"]}'
+            f' <span style="color:#64748b;font-weight:400;">{home_ml}</span></div>'
+            f'<div style="font-size:0.78rem;color:#64748b;">Prestige: {home_prs}</div>'
+            f'<div style="background:#e2e8f0;border-radius:3px;height:4px;margin:2px 0;">'
+            f'<div style="background:#3b82f6;height:4px;border-radius:3px;width:{home_prs_w}%;"></div></div>'
+            f'<div style="font-size:0.78rem;color:#475569;">'
+            f'Star: {home_star} ({home_star_pos})</div>'
+            f'</div>'
+            f'</div>'
+            # Lines row
+            f'<div class="lines" style="display:flex;gap:16px;padding-top:4px;border-top:1px solid #e2e8f0;">'
+            f'<span>Spread <b>{spread_str}</b></span>'
+            f'<span>O/U <b>{ou_str}</b></span>'
+            f'<span>Chaos O/U <b>{o.get("chaos_ou", 40):.1f}</b></span>'
+            f'<span>KP O/U <b>{kp_ou}</b></span>'
+            f'</div>'
+            f'</div>'
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -449,14 +492,15 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
             roster_data = current_roster_resp.get("roster", {})
             entries = roster_data.get("entries", {})
             total_salary = roster_data.get("total_salary", 0)
-            cap_remaining = 50000 - total_salary
+            from engine.draftyqueenz import SALARY_CAP as _CAP
+            cap_remaining = _CAP - total_salary
             slots_filled = len(entries)
 
             # -- Salary cap progress bar ------------------------------------------
-            cap_pct = min(total_salary / 50000, 1.0)
+            cap_pct = min(total_salary / _CAP, 1.0)
             ui.label(
                 f"Your Roster ({slots_filled}/5) -- "
-                f"${total_salary:,} / $50,000 used -- ${cap_remaining:,} remaining"
+                f"${total_salary:,} / ${_CAP:,} used -- ${cap_remaining:,} remaining"
             ).classes("font-bold")
             ui.linear_progress(value=cap_pct).classes("w-full")
             ui.label(f"Salary cap: {cap_pct:.0%}").classes("text-xs text-gray-500")
@@ -489,42 +533,92 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
             ui.separator()
             ui.label("Draft a Player").classes("font-bold")
 
-            draft_state = {"pos_filter": "All", "player_idx": 0, "slot": slot_names[0]}
+            draft_state = {
+                "pos_filter": "All",
+                "search": "",
+                "selected_idx": None,
+                "slot": slot_names[0],
+                "pool": [],
+            }
 
-            # Pool container refreshes when position filter changes
+            # Fetch the full pool once
+            try:
+                full_pool_resp = api_client.dq_fantasy_pool(session_id, week)
+                draft_state["pool"] = full_pool_resp.get("pool", [])
+            except api_client.APIError:
+                draft_state["pool"] = []
+
+            # Pool table container
             pool_container = ui.column().classes("w-full")
 
             def _refresh_pool():
                 pool_container.clear()
-                with pool_container:
-                    try:
-                        pool_pos = draft_state["pos_filter"] if draft_state["pos_filter"] != "All" else None
-                        pool_resp = api_client.dq_fantasy_pool(
-                            session_id, week, position=pool_pos,
-                        )
-                        pool = pool_resp.get("pool", [])
-                    except api_client.APIError:
-                        pool = []
+                pool = draft_state["pool"]
 
+                # Apply position filter
+                pos_f = draft_state["pos_filter"]
+                if pos_f != "All":
+                    pool = [p for p in pool if p["position"] == pos_f]
+
+                # Apply search filter
+                search = draft_state["search"].strip().lower()
+                if search:
+                    pool = [
+                        p for p in pool
+                        if search in p["name"].lower() or search in p["team"].lower()
+                    ]
+
+                with pool_container:
                     if not pool:
-                        notify_info("No players available for this position filter.")
+                        notify_info("No players match your filters.")
                         return
 
-                    player_options = {
-                        i: (
-                            f"{p['name']} ({p['team']}) [{p['position']}] "
-                            f"OVR:{p['overall']}  ${p['salary']:,}  proj:{p['projected']}"
-                        )
-                        for i, p in enumerate(pool)
-                    }
-                    slot_options = {s: s for s in slot_names}
+                    # Build table rows
+                    rows = []
+                    for i, p in enumerate(pool):
+                        rows.append({
+                            "idx": i,
+                            "name": p["name"],
+                            "team": p["team"],
+                            "pos": p["position"],
+                            "ovr": p["overall"],
+                            "salary": f"${p['salary']:,}",
+                            "salary_raw": p["salary"],
+                            "proj": p["projected"],
+                            "depth": p.get("depth", ""),
+                            "tag": p["tag"],
+                        })
 
-                    with ui.row().classes("w-full gap-4 items-end"):
-                        with ui.column().classes("flex-[3]"):
-                            ui.select(
-                                player_options, label="Player", value=0,
-                                on_change=lambda e: draft_state.update(player_idx=e.value),
-                            ).classes("w-full")
+                    columns = [
+                        {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                        {"name": "team", "label": "Team", "field": "team", "align": "left", "sortable": True},
+                        {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                        {"name": "depth", "label": "Role", "field": "depth", "align": "center"},
+                        {"name": "ovr", "label": "OVR", "field": "ovr", "align": "center", "sortable": True},
+                        {"name": "salary", "label": "Salary", "field": "salary", "align": "right", "sortable": True},
+                        {"name": "proj", "label": "Proj Pts", "field": "proj", "align": "right", "sortable": True},
+                    ]
+
+                    draft_state["selected_idx"] = None
+                    draft_state["_filtered_pool"] = pool
+
+                    table = ui.table(
+                        columns=columns, rows=rows, selection="single",
+                        row_key="idx",
+                    ).classes("w-full").props("dense flat")
+
+                    def _on_select(e):
+                        selected = e.selection
+                        if selected:
+                            draft_state["selected_idx"] = selected[0]["idx"]
+                        else:
+                            draft_state["selected_idx"] = None
+
+                    table.on("selection", _on_select)
+
+                    # Slot selector and draft button
+                    slot_options = {s: s for s in slot_names}
+                    with ui.row().classes("w-full gap-4 items-end mt-2"):
                         with ui.column().classes("flex-1"):
                             ui.select(
                                 slot_options, label="Slot", value=slot_names[0],
@@ -532,7 +626,12 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                             ).classes("w-full")
 
                     async def _draft_player():
-                        selected = pool[draft_state["player_idx"]]
+                        sel_idx = draft_state["selected_idx"]
+                        filtered = draft_state.get("_filtered_pool", [])
+                        if sel_idx is None or sel_idx >= len(filtered):
+                            notify_warning("Select a player from the table first.")
+                            return
+                        selected = filtered[sel_idx]
                         try:
                             api_client.dq_set_roster_slot(
                                 session_id, week, draft_state["slot"],
@@ -545,18 +644,30 @@ def _render_fantasy_tab(state, session_id: str, week: int, kp: str):
                         except api_client.APIError as e:
                             notify_error(e.detail)
 
-                    ui.button("Draft Player", on_click=_draft_player, icon="person_add").props(
+                    ui.button("Draft Selected Player", on_click=_draft_player, icon="person_add").props(
                         "color=primary"
                     ).classes("w-full mt-2")
 
-            ui.select(
-                {"All": "All", "VP": "VP", "HB": "HB", "ZB": "ZB", "WB": "WB", "SB": "SB", "KP": "KP"},
-                label="Filter by position", value="All",
-                on_change=lambda e: (
-                    draft_state.update(pos_filter=e.value),
-                    _refresh_pool(),
-                ),
-            ).classes("w-full")
+            # Search + filter controls
+            with ui.row().classes("w-full gap-4 items-end"):
+                with ui.column().classes("flex-[2]"):
+                    ui.input(
+                        "Search players or teams...",
+                        on_change=lambda e: (
+                            draft_state.update(search=e.value or ""),
+                            _refresh_pool(),
+                        ),
+                    ).classes("w-full").props('clearable outlined dense')
+                with ui.column().classes("flex-1"):
+                    ui.select(
+                        {"All": "All", "VP": "VP", "HB": "HB", "ZB": "ZB",
+                         "WB": "WB", "SB": "SB", "KP": "KP"},
+                        label="Position", value="All",
+                        on_change=lambda e: (
+                            draft_state.update(pos_filter=e.value),
+                            _refresh_pool(),
+                        ),
+                    ).classes("w-full")
 
             _refresh_pool()
 
