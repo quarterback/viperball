@@ -37,6 +37,9 @@ class UserState:
         # Batch simulator
         self.batch_results: Optional[list] = None
 
+        # Play inspector
+        self.play_inspector_results: Optional[list] = None
+
         # DraftyQueenz
         self.dq_css_injected: bool = False
 
