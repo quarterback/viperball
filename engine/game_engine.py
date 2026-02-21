@@ -642,6 +642,8 @@ class Player:
     game_energy: float = 100.0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
     plays_since_last_touch: int = 0
+    # Hot streak: consecutive successful contests (positive yards or completions)
+    consecutive_successes: int = 0
 
     @property
     def overall(self) -> int:
@@ -1790,6 +1792,7 @@ class ViperballEngine:
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
+        self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
         self._current_drive_sacrifice = False
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
@@ -2168,6 +2171,7 @@ class ViperballEngine:
         tempo = style["tempo"]
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
+        self._drive_chain_positive = 0
 
         if self.state.possession == "home" and self._home_momentum_plays > 0:
             self.home_game_rhythm = min(1.35, self.home_game_rhythm + 0.04 * self._home_momentum_plays)
@@ -2195,6 +2199,9 @@ class ViperballEngine:
             drive_plays += 1
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
+                self._drive_chain_positive += 1
+            else:
+                self._drive_chain_positive = 0
 
             # Play clock: tempo-driven pace differentiation
             # Ball Control/Rouge Hunt grind ~140-160 plays/game
@@ -2893,6 +2900,20 @@ class ViperballEngine:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.7
             weights["power"] = weights.get("power", 0.1) * 0.7
 
+        # ── "2nd & Short" aggression ──
+        # With down 2 and < 5 to go, the offense has 4 downs of cushion.
+        # Go-like aggression: hunt the 9-point TD with big-play calls.
+        if down == 2 and ytg < 5:
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.8
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 2.2
+            weights["viper_jet"] = weights.get("viper_jet", 0.05) * 2.0
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 1.8
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.5
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.4
+            # Dial back conservative grinds — we can afford to miss
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
+            weights["power"] = weights.get("power", 0.1) * 0.5
+
         if fp >= 90:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 2.0
             weights["power"] = weights.get("power", 0.1) * 2.0
@@ -3503,10 +3524,10 @@ class ViperballEngine:
         delta = off_skill - def_skill  # typically −30 to +30
 
         # ── Sigmoid → yards center ──
-        # delta  0 → center ~3.5  (even matchup)
-        # delta +25 → center ~6.0  (offense dominates)
-        # delta −25 → center ~1.0  (defense dominates)
-        center = 3.5 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
+        # delta  0 → center ~5.0  (even matchup — calibrated for 20yd/6 downs)
+        # delta +25 → center ~7.5  (offense dominates)
+        # delta −25 → center ~2.5  (defense dominates)
+        center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
 
         # ── Play-type shift ──
         base_low, base_high = play_config['base_yards']
@@ -3516,7 +3537,7 @@ class ViperballEngine:
         # ── Proximity → variance ──
         # Even matchups are volatile; blowout gaps are consistent.
         proximity = 1.0 - min(1.0, abs(delta) / 35.0)
-        variance = 1.0 + proximity * 2.0  # 1.0 (big gap) → 3.0 (even)
+        variance = 0.8 + proximity * 1.4  # 0.8 (big gap) → 2.2 (even)
 
         # ── Coaching gravity adjustments ──
         off_mods = self._coaching_mods()
@@ -3536,9 +3557,24 @@ class ViperballEngine:
         elif def_cls == "scheme_master":
             center *= 1.0 - def_fx.get("scheme_amplification", 0.0) * 0.5
 
+        # ── Drive chain momentum ──
+        # Consecutive positive-yard plays push the defense back.
+        # Each successive gain widens the lanes slightly.
+        chain = getattr(self, '_drive_chain_positive', 0)
+        if chain >= 3:
+            center += min(1.5, chain * 0.3)  # +0.9 at 3, +1.2 at 4, capped at 1.5
+
         # ── Spread thin (kick-pass floor-spacing) ──
+        # After a kick pass, defense is spread → widened lanes for runners.
+        # This is the "force multiplier" that rewards mixed play-calling.
         if getattr(self, '_spread_thin_active', False):
-            center += 0.5
+            center += 1.0
+            variance *= 0.85  # Tighter variance — more reliable gains
+
+        # ── Hot streak: variance narrows toward high end ──
+        streak_bonus, streak_var = self._hot_streak_modifier(carrier)
+        center += streak_bonus
+        variance *= streak_var
 
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
@@ -3572,9 +3608,14 @@ class ViperballEngine:
         # Sigmoid: even skill → ~55% base (slight offense bias)
         base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
 
+        # Hot streak: kicker on a roll → tighter noise, biased upward
+        streak_bonus, streak_var = self._hot_streak_modifier(kicker)
+        base_prob = min(0.92, base_prob + streak_bonus * 0.05)
+        noise_spread = 0.10 * streak_var
+
         # Stochastic noise: sometimes the coverage plays perfectly,
         # sometimes the kicker threads the needle
-        prob = random.gauss(base_prob, 0.10)
+        prob = random.gauss(base_prob, noise_spread)
         return max(0.08, min(0.92, prob))
 
     def _player_skill_roll(self, player, play_type: str = "run") -> float:
@@ -3620,8 +3661,9 @@ class ViperballEngine:
         tackle_skill = max(0.0, min(1.0, (tackler.tackling - 30) / 69))
         reduction = random.uniform(0.56, 0.88) * tackle_skill
         # Kick pass floor-spacing: defense spread thin after a completion
+        # Widened lanes → tacklers arrive late, weaker angles
         if getattr(self, '_spread_thin_active', False):
-            reduction *= 0.70
+            reduction *= 0.55
         # Floor at 0 — tackling can't add yards
         return max(0.0, round(reduction, 1))
 
@@ -3651,13 +3693,18 @@ class ViperballEngine:
                     if p.archetype in archetype_bonus:
                         w *= archetype_bonus[p.archetype]
                     # Per-player fatigue: prefer fresh players
+                    # Below 40% is the fatigue cliff — AI avoids using them
                     energy_pct = p.game_energy / 100.0
-                    if energy_pct < 0.3:
-                        w *= 0.4  # Very tired — avoid using
+                    if energy_pct < 0.2:
+                        w *= 0.10  # Emergency zone — almost never used
+                    elif energy_pct < 0.3:
+                        w *= 0.25  # Deep cliff — strongly avoid
+                    elif energy_pct < 0.4:
+                        w *= 0.40  # Cliff zone — significant penalty
                     elif energy_pct < 0.5:
-                        w *= 0.6
+                        w *= 0.60
                     elif energy_pct < 0.7:
-                        w *= 0.8
+                        w *= 0.80
                     if p not in eligible:
                         eligible.append(p)
                         weights.append(max(0.05, w))
@@ -3733,6 +3780,10 @@ class ViperballEngine:
 
         # Breakaway check — good plays can become great plays
         yards_gained = self._breakaway_check(yards_gained, team)
+
+        # Update hot streak: positive yards = successful contest
+        self._update_player_streak(player, yards_gained > 0)
+        self._update_player_streak(tackler, yards_gained <= 0)
 
         # Drain energy from ball carrier and tackler
         self.drain_player_energy(player, "carrier")
@@ -4482,6 +4533,8 @@ class ViperballEngine:
 
         roll = random.random()
         if roll < completion_prob:
+            # Hot streak: kicker completed → streak continues
+            self._update_player_streak(kicker, True)
             kicker.game_kick_passes_completed += 1
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
@@ -4663,13 +4716,14 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        base_int_chance = 0.055
-        int_chance = base_int_chance
-        if kick_distance >= 25:
-            int_chance += 0.015
-        elif kick_distance >= 18:
-            int_chance += 0.008
-        int_chance = max(0.02, min(0.12, int_chance))
+        # Hot streak: kicker missed → streak broken
+        self._update_player_streak(kicker, False)
+
+        # Interception: checked on incomplete kicks only.
+        # Global INT rate per attempt ≈ P(incomplete) × int_chance.
+        # With ~63% completion: 0.37 × 0.10 ≈ 3.7% global rate.
+        # Distance already penalizes completion prob — no need to double-dip.
+        int_chance = 0.10
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -5887,13 +5941,17 @@ class ViperballEngine:
             player.plays_since_last_touch = 0
 
     def player_fatigue_modifier(self, player) -> float:
-        """Returns a multiplier (0.7 to 1.0) based on player's current energy.
+        """Returns a multiplier (0.40 to 1.0) based on player's current energy.
+
+        The "fatigue cliff" — below 40% energy, performance degrades
+        sharply enough that a 95-rated star becomes less effective than
+        a fresh 75-rated backup.  This is what forces depth chart usage.
 
         80-100%: no effect (1.0)
-        60-80%:  -5% to skill rolls (0.95)
-        40-60%:  -15% (0.85)
-        20-40%:  -30% (0.70)
-        <20%:    player should be subbed out
+        60-80%:  minor fatigue (0.95)
+        40-60%:  noticeable (0.85)
+        20-40%:  THE CLIFF — severe degradation (0.55)
+        <20%:    should be subbed out — near-useless (0.40)
         """
         energy = player.game_energy
         if energy >= 80:
@@ -5902,14 +5960,19 @@ class ViperballEngine:
             return 0.95
         elif energy >= 40:
             return 0.85
+        elif energy >= 20:
+            # The cliff: linear ramp from 0.55 (at 20%) to 0.85 (at 40%)
+            # At 30% → 0.70, at 25% → 0.625
+            return 0.55 + (energy - 20) / 20 * 0.30
         else:
-            return 0.70
+            # Emergency zone: player is cooked
+            return 0.40
 
     def fatigue_injury_multiplier(self, player) -> float:
         """Fatigued players are more injury-prone.
 
         Uses the "structural strain" model: injury chance scales with
-        fatigue. Plus a flat 0.2% "freak injury" chaos factor on any play.
+        fatigue. The cliff below 40% makes continued use dangerous.
         """
         energy = player.game_energy
         if energy >= 80:
@@ -5918,8 +5981,10 @@ class ViperballEngine:
             return 1.0
         elif energy >= 40:
             return 1.5  # +50% injury risk
+        elif energy >= 20:
+            return 2.5  # +150% injury risk — body breaking down
         else:
-            return 2.0  # +100% injury risk
+            return 4.0  # +300% injury risk — reckless to keep playing
 
     def recover_energy_between_drives(self):
         """Between drives, involved players recover a small amount of energy."""
@@ -6001,6 +6066,31 @@ class ViperballEngine:
         elif touches_gap >= 15:
             return 0.92
         return 1.0
+
+    def _hot_streak_modifier(self, player) -> Tuple[float, float]:
+        """Hot streak: after 3+ consecutive successful contests,
+        a player's variance narrows toward the high end.
+
+        Returns (center_bonus, variance_multiplier).
+        3 successes: +0.4 center, 0.80× variance (tighter, upward)
+        4 successes: +0.6 center, 0.70× variance
+        5+ successes: +0.8 center, 0.60× variance (locked in)
+        """
+        streak = player.consecutive_successes
+        if streak >= 5:
+            return (0.8, 0.60)
+        elif streak >= 4:
+            return (0.6, 0.70)
+        elif streak >= 3:
+            return (0.4, 0.80)
+        return (0.0, 1.0)
+
+    def _update_player_streak(self, player, success: bool):
+        """Update a player's consecutive success counter after a contest."""
+        if success:
+            player.consecutive_successes += 1
+        else:
+            player.consecutive_successes = 0
 
     def _garbage_time_check(self) -> bool:
         """In garbage time (lead > 27 or Q4 win prob > 95%),

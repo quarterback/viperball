@@ -48,6 +48,11 @@ def run_batch(num_games=200):
     home_timeouts_used = []
     away_timeouts_used = []
     punts_total = []
+    kick_pass_attempts = []
+    kick_pass_completions = []
+    kick_pass_ints = []
+    first_downs_total = []
+    drives_total = []
 
     for i in range(num_games):
         # Pick two random different teams
@@ -137,6 +142,36 @@ def run_batch(num_games=200):
         # Punts
         punts_total.append(hs.get('punts', 0) + aws.get('punts', 0))
 
+        # Kick pass stats
+        kp_att = hs.get('kick_passes_attempted', 0) + aws.get('kick_passes_attempted', 0)
+        kp_comp = hs.get('kick_passes_completed', 0) + aws.get('kick_passes_completed', 0)
+        kp_int = hs.get('kick_pass_interceptions', 0) + aws.get('kick_pass_interceptions', 0)
+        kick_pass_attempts.append(kp_att)
+        kick_pass_completions.append(kp_comp)
+        kick_pass_ints.append(kp_int)
+
+        # First downs from play-by-play
+        pbp = result.get('play_by_play', [])
+        fd_count = len([p for p in pbp if p.get('result') == 'first_down'])
+        first_downs_total.append(fd_count)
+
+        # Avg yards_to_go on down 4
+        d4_plays = [p for p in pbp if p.get('down') == 4 and p.get('play_type') not in ['punt', 'drop_kick', 'place_kick']]
+        if d4_plays:
+            avg_ytg_d4 = sum(p.get('yards_to_go', 0) for p in d4_plays) / len(d4_plays)
+        else:
+            avg_ytg_d4 = 0
+        if not hasattr(run_batch, '_d4_ytg_samples'):
+            run_batch._d4_ytg_samples = []
+        run_batch._d4_ytg_samples.append(avg_ytg_d4)
+
+        # Track drive outcomes
+        if not hasattr(run_batch, '_drive_outcomes'):
+            run_batch._drive_outcomes = defaultdict(int)
+        for ds in result.get('drive_summary', []):
+            outcome = ds.get('result', 'unknown')
+            run_batch._drive_outcomes[outcome] += 1
+
         if (i + 1) % 25 == 0:
             print(f"  Completed {i+1}/{num_games} games...")
 
@@ -222,6 +257,33 @@ def run_batch(num_games=200):
 
     avg_punts = avg(punts_total)
     print(f"{'Punts/game':<35} {avg_punts:>12.1f}")
+
+    total_kp_att = sum(kick_pass_attempts)
+    total_kp_comp = sum(kick_pass_completions)
+    total_kp_int = sum(kick_pass_ints)
+    kp_comp_pct = (total_kp_comp / total_kp_att * 100) if total_kp_att > 0 else 0
+    kp_int_pct = (total_kp_int / total_kp_att * 100) if total_kp_att > 0 else 0
+    print(f"{'Kick pass completion %':<35} {kp_comp_pct:>11.1f}%")
+    print(f"{'  KP att/comp/int':<35} {total_kp_att:>4}/{total_kp_comp:>4}/{total_kp_int:<4}")
+    print(f"{'Kick pass INT rate':<35} {kp_int_pct:>11.1f}% {'3-4%':>12}")
+
+    avg_fd = avg(first_downs_total)
+    print(f"{'First downs/game':<35} {avg_fd:>12.1f}")
+    if avg_plays > 0:
+        fd_rate = avg_fd / avg_plays * 100
+        print(f"{'First down rate (% of plays)':<35} {fd_rate:>11.1f}%")
+    if hasattr(run_batch, '_d4_ytg_samples') and run_batch._d4_ytg_samples:
+        avg_d4_ytg = avg(run_batch._d4_ytg_samples)
+        print(f"{'Avg yards_to_go on 4th down':<35} {avg_d4_ytg:>12.1f}")
+
+    # Drive outcome breakdown
+    if hasattr(run_batch, '_drive_outcomes'):
+        outcomes = run_batch._drive_outcomes
+        total_dr = sum(outcomes.values())
+        print(f"\n{'DRIVE OUTCOMES':<35} {'Count':>8} {'%':>8}")
+        for k in sorted(outcomes.keys(), key=lambda x: -outcomes[x]):
+            pct_val = outcomes[k] / total_dr * 100 if total_dr > 0 else 0
+            print(f"  {k:<33} {outcomes[k]:>8} {pct_val:>7.1f}%")
 
     # Avg fatigue (from the single-game sample)
     print(f"\n{'='*60}")
