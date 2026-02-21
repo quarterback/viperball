@@ -1201,26 +1201,34 @@ def render_my_team_section(state, shared):
         notify_info("No active session found. Go to Play to start a new season or dynasty.")
         return
 
+    # -- Parallel initial fetch ------------------------------------------------
     if mode == "dynasty":
         try:
-            dyn_status = api_client.get_dynasty_status(session_id)
-            human_teams = [dyn_status.get("coach", {}).get("team", "")]
+            dyn_resp, standings_resp = api_client.fetch_parallel(
+                lambda: api_client.get_dynasty_status(session_id),
+                lambda: api_client.get_standings(session_id),
+            )
+            human_teams = [dyn_resp.get("coach", {}).get("team", "")]
         except api_client.APIError:
             ui.label("My Team").classes("text-2xl font-bold")
             notify_error("Could not load dynasty data.")
             return
     else:
         human_teams = state.human_teams or []
+        try:
+            standings_resp = api_client.get_standings(session_id)
+        except api_client.APIError:
+            ui.label("My Team").classes("text-2xl font-bold")
+            notify_info("No season data available yet. Simulate a season from Play to see your team's data.")
+            return
 
     if not human_teams or not any(human_teams):
         ui.label("My Team").classes("text-2xl font-bold")
         notify_info("No human-coached teams in this session. Go to Play to start a new one with your team selected.")
         return
 
-    try:
-        standings_resp = api_client.get_standings(session_id)
-        standings = standings_resp.get("standings", [])
-    except api_client.APIError:
+    standings = standings_resp.get("standings", []) if standings_resp else []
+    if not standings:
         ui.label("My Team").classes("text-2xl font-bold")
         notify_info("No season data available yet. Simulate a season from Play to see your team's data.")
         return

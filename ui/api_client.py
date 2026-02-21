@@ -2,13 +2,57 @@
 API client for the Viperball FastAPI backend.
 Thin wrapper around requests that handles session management
 and provides typed helper methods for all endpoints.
+
+Performance features:
+- Short-TTL cache for GET requests (avoids duplicate loopback calls
+  within the same page render cycle)
+- fetch_parallel() helper for concurrent initial page loads
 """
 
 import os
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable, Tuple
 
 API_BASE = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8080")
+
+# ---------------------------------------------------------------------------
+# GET cache – avoids duplicate loopback HTTP calls within a render cycle.
+# 2-second TTL is enough to deduplicate calls within a single page render
+# without serving stale data across user actions.
+# ---------------------------------------------------------------------------
+_cache_lock = threading.Lock()
+_cache: Dict[str, Tuple[float, Any]] = {}
+_CACHE_TTL = 2.0  # seconds
+
+
+def _cache_key(path: str, params: Optional[dict]) -> str:
+    key = path
+    if params:
+        key += "?" + "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+    return key
+
+
+def _cache_get(key: str) -> Optional[Any]:
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and (time.monotonic() - entry[0]) < _CACHE_TTL:
+            return entry[1]
+        _cache.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, value: Any) -> None:
+    with _cache_lock:
+        _cache[key] = (time.monotonic(), value)
+
+
+def invalidate_cache() -> None:
+    """Clear the entire GET cache (call after mutations)."""
+    with _cache_lock:
+        _cache.clear()
 
 
 class APIError(Exception):
@@ -33,19 +77,48 @@ def _handle(resp: requests.Response) -> Any:
 
 
 def _get(path: str, params: Optional[dict] = None, timeout: int = 120) -> Any:
-    return _handle(requests.get(_url(path), params=params, timeout=timeout))
+    key = _cache_key(path, params)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    result = _handle(requests.get(_url(path), params=params, timeout=timeout))
+    _cache_set(key, result)
+    return result
 
 
 def _post(path: str, json: Optional[dict] = None, timeout: int = 300) -> Any:
+    invalidate_cache()  # mutations invalidate the read cache
     return _handle(requests.post(_url(path), json=json, timeout=timeout))
 
 
 def _put(path: str, json: Optional[Any] = None, timeout: int = 120) -> Any:
+    invalidate_cache()
     return _handle(requests.put(_url(path), json=json, timeout=timeout))
 
 
 def _delete(path: str, timeout: int = 30) -> Any:
+    invalidate_cache()
     return _handle(requests.delete(_url(path), timeout=timeout))
+
+
+# ---------------------------------------------------------------------------
+# Parallel fetch helper – runs multiple API calls concurrently.
+# Usage:
+#   standings, status, conferences = fetch_parallel(
+#       lambda: get_standings(sid),
+#       lambda: get_season_status(sid),
+#       lambda: get_conferences(sid),
+#   )
+# ---------------------------------------------------------------------------
+_pool = ThreadPoolExecutor(max_workers=6)
+
+
+def fetch_parallel(*calls: Callable[[], Any]) -> tuple:
+    """Execute multiple API calls concurrently and return results in order."""
+    if len(calls) == 1:
+        return (calls[0](),)
+    futures = [_pool.submit(fn) for fn in calls]
+    return tuple(f.result() for f in futures)
 
 
 def health() -> dict:
