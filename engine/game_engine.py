@@ -3561,6 +3561,53 @@ class ViperballEngine:
         style_label = defense.get("label", "Base Defense")
         return DEFENSE_ALIGNMENT_MAP.get(style_label, "balanced")
 
+    def _player_skill_roll(self, player, play_type: str = "run") -> float:
+        """Skill-weighted dice roll for yardage bonus.
+
+        Returns a random bonus (can be negative) shaped by the player's
+        attributes.  Better players roll higher *on average* but any given
+        play is still unpredictable.
+
+        Run plays:  speed sets the ceiling, power/agility shape the curve.
+        Kick pass:  kick_accuracy and kicking set the ceiling.
+        Lateral:    lateral_skill and speed shape the curve.
+        """
+        if play_type == "run":
+            # Primary stat: speed (how far you can break)
+            # Secondary: power (yards after contact), agility (elusiveness)
+            primary = player.speed
+            secondary = (getattr(player, 'power', 75) + getattr(player, 'agility', 75)) / 2
+        elif play_type == "kick_pass":
+            primary = player.kick_accuracy
+            secondary = player.kicking
+        elif play_type == "lateral":
+            primary = player.lateral_skill
+            secondary = player.speed
+        else:
+            primary = player.speed
+            secondary = 75
+
+        # Skill factor: 0.0 (worst) to 1.0 (elite)
+        # 60 rating → 0.0, 100 rating → 1.0
+        skill = max(0.0, min(1.0, (primary - 60) / 40))
+        support = max(0.0, min(1.0, (secondary - 60) / 40))
+
+        # Blend: primary matters more
+        combined = skill * 0.7 + support * 0.3
+
+        # Higher skill → higher center AND higher ceiling
+        # 0.0 skill: center 0, max ~2   (bad player, mostly stuffed)
+        # 0.5 skill: center 1.5, max ~4 (average player, some medium gains)
+        # 1.0 skill: center 3, max ~7+  (elite player, frequent big rolls)
+        center = combined * 3.0
+        spread = 0.8 + combined * 0.8  # better players have MORE variance (bigger plays)
+        roll = random.gauss(center, spread)
+
+        # Floor: even elites get stuffed sometimes
+        roll = max(-2.0, roll)
+
+        return round(roll, 1)
+
     def _calculate_viper_advantage(self, viper_alignment, play_direction):
         dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
         mapped_dir = dir_map.get(play_direction, 'center')
@@ -3612,6 +3659,10 @@ class ViperballEngine:
 
         base_min, base_max = config['base_yards']
         base_yards = random.uniform(base_min, base_max) + random.gauss(0, config['variance'] * 0.5)
+
+        # Player skill roll — carrier's attributes shape the bonus
+        skill_bonus = self._player_skill_roll(player, play_type="run")
+        base_yards += skill_bonus
 
         speed_weather_mod = self.weather_info.get("speed_modifier", 0.0)
         base_yards += speed_weather_mod * 2
@@ -3907,6 +3958,10 @@ class ViperballEngine:
         base_min, base_max = variant["base_yards"]
         base_center = random.uniform(base_min, base_max)
         base_yards = random.gauss(base_center, variant["variance"])
+
+        # Carrier skill roll
+        skill_bonus = self._player_skill_roll(carrier, play_type="run")
+        base_yards += skill_bonus
 
         # Defensive read check — if defense reads the trick, it's a disaster
         defense = self._current_defense()
@@ -4212,6 +4267,12 @@ class ViperballEngine:
         base_yards = random.gauss(1.3, 0.8)
         lateral_bonus = chain_length * 0.5
 
+        # Skill roll from the final ball carrier (lateral skill matters)
+        ball_carrier_for_roll = players_involved[-1] if players_involved else None
+        if ball_carrier_for_roll:
+            skill_bonus = self._player_skill_roll(ball_carrier_for_roll, play_type="lateral")
+            base_yards += skill_bonus
+
         yards_gained = int(base_yards + lateral_bonus)
         yards_gained = max(-5, yards_gained)
 
@@ -4313,11 +4374,10 @@ class ViperballEngine:
         kicker_lbl = player_label(kicker)
         receiver_lbl = player_label(receiver)
 
-        # Kick distance: how far the kick travels in the air
+        # Kick distance: base 2-5 + kicker skill roll
         kick_distance = random.randint(2, 5)
-
-        kicker_skill = (kicker.kick_accuracy * 0.6 + kicker.kicking * 0.4)
-        kicker_factor = kicker_skill
+        kick_skill_bonus = self._player_skill_roll(kicker, play_type="kick_pass")
+        kick_distance = max(1, int(kick_distance + kick_skill_bonus))
 
         if kick_distance <= 8:
             base_completion = 0.72
