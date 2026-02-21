@@ -418,3 +418,118 @@ def _render_results(container, results):
             {"name": away_name, "label": away_name, "field": away_name, "align": "right"},
         ]
         ui.table(columns=to_columns, rows=to_rows).classes("w-full").props("dense flat")
+
+        # -- Player Impact Report -----------------------------------------------
+        _render_batch_player_impact(results, n, home_name, away_name)
+
+
+def _render_batch_player_impact(results, n, home_name, away_name):
+    """Aggregate per-player VPA across all batch simulations."""
+    from collections import defaultdict
+
+    ui.label("Player Impact Report").classes("text-xl font-semibold mt-6")
+    ui.label(
+        f"Average per-player VPA across {n} simulations. "
+        "Shows which players consistently produce value."
+    ).classes("text-sm text-gray-500")
+
+    for side, team_name in [("home", home_name), ("away", away_name)]:
+        # Accumulate stats across games keyed by player name
+        accum: dict[str, dict] = defaultdict(lambda: {
+            "tag": "", "vpa_sum": 0.0, "plays_sum": 0, "touches_sum": 0,
+            "yards_sum": 0, "tds_sum": 0, "fumbles_sum": 0, "games": 0,
+        })
+
+        for r in results:
+            pstats = r.get("player_stats", {}).get(side, [])
+            for p in pstats:
+                if p.get("plays_involved", 0) == 0:
+                    continue
+                key = p["name"]
+                rec = accum[key]
+                rec["tag"] = p["tag"]
+                rec["vpa_sum"] += p.get("vpa", 0)
+                rec["plays_sum"] += p.get("plays_involved", 0)
+                rec["touches_sum"] += p.get("touches", 0)
+                rec["yards_sum"] += p.get("yards", 0)
+                rec["tds_sum"] += p.get("tds", 0)
+                rec["fumbles_sum"] += p.get("fumbles", 0)
+                rec["games"] += 1
+
+        if not accum:
+            continue
+
+        # Sort by avg VPA descending
+        sorted_players = sorted(
+            accum.items(),
+            key=lambda kv: kv[1]["vpa_sum"] / max(1, kv[1]["games"]),
+            reverse=True,
+        )
+
+        ui.label(team_name).classes("text-lg font-bold text-slate-700 mt-4")
+
+        # Top performer summary
+        if sorted_players:
+            top_name, top_rec = sorted_players[0]
+            top_avg_vpa = round(top_rec["vpa_sum"] / max(1, top_rec["games"]), 2)
+            from nicegui_app.components import metric_card
+            with ui.row().classes("w-full gap-3 flex-wrap"):
+                metric_card("Avg Team VPA",
+                            round(sum(v["vpa_sum"] for v in accum.values()) / n, 1))
+                metric_card("Most Impactful", f"{top_rec['tag']} {top_name}")
+                metric_card("Best Avg VPA", top_avg_vpa)
+                # Find highest VPA/play among regulars (>= 50% of games)
+                regulars = [(nm, rc) for nm, rc in sorted_players if rc["games"] >= n * 0.5]
+                if regulars:
+                    best_eff = max(regulars, key=lambda x: x[1]["vpa_sum"] / max(1, x[1]["plays_sum"]))
+                    metric_card("Most Efficient",
+                                f"{best_eff[1]['tag']} {best_eff[0]}")
+
+        # Impact table
+        impact_rows = []
+        for name, rec in sorted_players:
+            games = rec["games"]
+            avg_vpa = round(rec["vpa_sum"] / max(1, games), 2)
+            avg_plays = round(rec["plays_sum"] / max(1, games), 1)
+            avg_vpa_pp = round(rec["vpa_sum"] / max(1, rec["plays_sum"]), 3)
+            avg_touches = round(rec["touches_sum"] / max(1, games), 1)
+            avg_yards = round(rec["yards_sum"] / max(1, games), 1)
+            avg_tds = round(rec["tds_sum"] / max(1, games), 2)
+            avg_fumbles = round(rec["fumbles_sum"] / max(1, games), 2)
+
+            impact_rows.append({
+                "Player": f"{rec['tag']} {name}",
+                "GP": games,
+                "Avg VPA": avg_vpa,
+                "Avg VPA/Play": avg_vpa_pp,
+                "Avg Plays": avg_plays,
+                "Avg Touches": avg_touches,
+                "Avg Yards": avg_yards,
+                "Avg TDs": avg_tds,
+                "Avg Fumbles": avg_fumbles,
+            })
+        if impact_rows:
+            from nicegui_app.components import stat_table
+            stat_table(impact_rows)
+
+        # VPA distribution bar chart
+        chart_data = sorted_players[:10]
+        if chart_data:
+            names = [f"{rec['tag']} {nm}" for nm, rec in chart_data]
+            vpas = [round(rec["vpa_sum"] / max(1, rec["games"]), 2) for _, rec in chart_data]
+            colors = ["#16a34a" if v >= 0 else "#dc2626" for v in vpas]
+            fig = go.Figure(go.Bar(
+                x=vpas, y=names, orientation="h",
+                marker_color=colors,
+                text=[f"{v:+.1f}" for v in vpas],
+                textposition="outside",
+            ))
+            fig.update_layout(
+                title=f"{team_name} — Avg Player VPA ({n} games)",
+                xaxis_title="Avg VPA/Game",
+                yaxis=dict(autorange="reversed"),
+                height=max(250, len(chart_data) * 35 + 80),
+                template="plotly_white",
+                margin=dict(l=200),
+            )
+            ui.plotly(fig).classes("w-full")
