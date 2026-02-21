@@ -35,29 +35,29 @@ from scripts.generate_coach_names import generate_coach_name
 PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
-        "description": "Bottom-tier program (OVR ~10-30). Talent is scarce but a hidden gem or two keeps hope alive.",
-        "talent_offset": -57,          # target avg stat ~20
-        "floor_adjust": -70,           # floors effectively 1 (no artificial floor)
-        "hidden_gem_count": (1, 2),    # 1-2 players have hidden elite skills
-        "hidden_gem_boost": (40, 55),  # massive boost on targeted stats only
-        "hidden_gem_stats": (2, 3),    # boost 2-3 stats per gem (not all)
-        "potential_weights": {          # mostly low-potential players
-            "freshman": [5, 5, 10, 35, 45],     # [5,4,3,2,1]-star weights
+        "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
+        "stat_center": 42,             # gaussian center for all stats
+        "stat_spread": 7,              # gaussian std dev
+        "hidden_gem_count": (1, 3),    # 1-3 players get large stat boosts
+        "hidden_gem_boost": (25, 40),  # 42+40=82 → a doormat gem can be legitimately good
+        "hidden_gem_stats": (3, 5),    # boost several stats to make them well-rounded
+        "potential_weights": {
+            "freshman": [5, 5, 10, 35, 45],
             "sophomore": [3, 5, 8, 34, 50],
             "junior": [2, 3, 5, 35, 55],
             "senior": [0, 2, 10, 33, 55],
         },
-        "dev_weights": [40, 5, 45, 10],   # normal, quick, slow, late_bloomer
+        "dev_weights": [40, 5, 45, 10],
         "prestige_range": (5, 20),
     },
     "underdog": {
         "label": "Underdogs",
-        "description": "Below average but scrappy (OVR ~30-50). A few solid players make them competitive on any given day.",
-        "talent_offset": -37,
-        "floor_adjust": -55,
+        "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
+        "stat_center": 51,
+        "stat_spread": 8,
         "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (30, 45),
-        "hidden_gem_stats": (2, 3),
+        "hidden_gem_boost": (18, 30),  # 51+30=81 → underdog gems can be very good
+        "hidden_gem_stats": (2, 4),
         "potential_weights": {
             "freshman": [10, 12, 15, 30, 33],
             "sophomore": [8, 10, 12, 32, 38],
@@ -69,11 +69,11 @@ PROGRAM_ARCHETYPES = {
     },
     "punching_above": {
         "label": "Punching Above Their Weight",
-        "description": "Mid-tier program with surprising talent (OVR ~40-60). Well-coached and greater than the sum of their parts.",
-        "talent_offset": -27,
-        "floor_adjust": -45,
+        "description": "Mid-tier program with surprising talent. Well-coached and greater than the sum of their parts.",
+        "stat_center": 59,
+        "stat_spread": 9,
         "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (20, 35),
+        "hidden_gem_boost": (12, 22),
         "hidden_gem_stats": (2, 4),
         "potential_weights": {
             "freshman": [15, 20, 20, 25, 20],
@@ -86,11 +86,11 @@ PROGRAM_ARCHETYPES = {
     },
     "regional_power": {
         "label": "Regional Power",
-        "description": "Strong program that dominates their region (OVR ~50-75). Solid roster top to bottom.",
-        "talent_offset": -15,
-        "floor_adjust": -30,
+        "description": "Strong program that dominates their region. Solid roster top to bottom.",
+        "stat_center": 67,
+        "stat_spread": 9,
         "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (12, 22),
+        "hidden_gem_boost": (8, 16),
         "hidden_gem_stats": (2, 4),
         "potential_weights": {
             "freshman": [25, 25, 20, 18, 12],
@@ -103,9 +103,9 @@ PROGRAM_ARCHETYPES = {
     },
     "national_power": {
         "label": "National Power",
-        "description": "Top-tier program that competes for championships (OVR ~70-90). Deep roster with multiple stars.",
-        "talent_offset": 3,
-        "floor_adjust": 0,
+        "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
+        "stat_center": 77,
+        "stat_spread": 9,
         "hidden_gem_count": (3, 5),
         "hidden_gem_boost": (5, 12),
         "hidden_gem_stats": (2, 3),
@@ -120,9 +120,9 @@ PROGRAM_ARCHETYPES = {
     },
     "blue_blood": {
         "label": "Blue Blood",
-        "description": "Elite program (OVR ~85-99). Loaded with talent across every position. The standard everyone else chases.",
-        "talent_offset": 15,
-        "floor_adjust": 10,
+        "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
+        "stat_center": 84,
+        "stat_spread": 8,
         "hidden_gem_count": (4, 6),
         "hidden_gem_boost": (3, 8),
         "hidden_gem_stats": (2, 3),
@@ -208,111 +208,72 @@ POSITIONS = [
     "Defensive Line",
 ]
 
+def _stat_roll(center, std):
+    """Generate a single stat using gaussian distribution, clamped 30-99."""
+    return max(30, min(99, int(round(random.gauss(center, std)))))
+
+
+# Position-specific center offsets (added to archetype stat_center)
+_POSITION_OFFSETS = {
+    "Viper":          {'speed': 3, 'agility': 3, 'lateral_skill': 3, 'hands': 2},
+    "Halfback":       {'speed': 3, 'agility': 3, 'lateral_skill': 3, 'hands': 2},
+    "Wingback":       {'speed': 3, 'agility': 3, 'lateral_skill': 3, 'hands': 2},
+    "Slotback":       {'speed': 3, 'agility': 3, 'lateral_skill': 3, 'hands': 2},
+    "Offensive Line": {'power': 5, 'tackling': 4, 'stamina': 2,
+                       'speed': -4, 'agility': -3, 'lateral_skill': -4,
+                       'hands': -3, 'kicking': -4, 'kick_power': -3, 'kick_accuracy': -3},
+    "Defensive Line": {'power': 5, 'tackling': 4, 'stamina': 2,
+                       'speed': -4, 'agility': -3, 'lateral_skill': -4,
+                       'hands': -3, 'kicking': -4, 'kick_power': -3, 'kick_accuracy': -3},
+    "Zeroback":       {'awareness': 4, 'kicking': 5, 'kick_power': 4, 'kick_accuracy': 4},
+    "Keeper":         {'tackling': 4, 'awareness': 3, 'hands': 2, 'speed': 1, 'power': 2},
+}
+
+# Philosophy-specific center offsets
+_PHILOSOPHY_OFFSETS = {
+    "kick_heavy":       {'kicking': 3, 'kick_power': 2, 'kick_accuracy': 2},
+    "lateral_heavy":    {'lateral_skill': 3, 'agility': 2},
+    "ground_and_pound": {'tackling': 2, 'stamina': 2, 'power': 2},
+}
+
+# All stat keys that are numeric ratings
+_STAT_KEYS = [
+    'speed', 'stamina', 'kicking', 'lateral_skill', 'tackling',
+    'agility', 'power', 'awareness', 'hands', 'kick_power', 'kick_accuracy',
+]
+
+
 def generate_player_attributes(position, team_philosophy, year, is_viper=False,
                                program_archetype=None):
-    """Generate player stats based on position, team needs, and program archetype.
+    """Generate player stats using gaussian distribution shaped by program archetype.
 
-    Args:
-        position: Player position string.
-        team_philosophy: Team's playing philosophy (kick_heavy, lateral_heavy, etc.).
-        year: Class year (freshman, sophomore, junior, senior).
-        is_viper: Whether this is the team's Viper player.
-        program_archetype: Optional program archetype key from PROGRAM_ARCHETYPES.
-                          Affects base talent level and stat floors.
+    Each stat is rolled as gauss(center, spread) where center depends on the
+    program's archetype (doormat→42, blue_blood→84) plus position, philosophy,
+    viper, and class-year offsets.  All stats clamped to 30-99.
     """
     archetype_data = PROGRAM_ARCHETYPES.get(program_archetype or DEFAULT_ARCHETYPE,
                                              PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
-    talent_offset = archetype_data["talent_offset"]
-    floor_adj = archetype_data["floor_adjust"]
+    center = archetype_data["stat_center"]
+    std = archetype_data["stat_spread"]
 
-    # Base ranges (core stats) adjusted by archetype talent offset
-    base_speed = random.randint(75, 92) + talent_offset
-    base_stamina = random.randint(80, 90) + talent_offset
-    base_kicking = random.randint(60, 85) + talent_offset
-    base_lateral_skill = random.randint(65, 90) + talent_offset
-    base_tackling = random.randint(65, 88) + talent_offset
+    # Gather all offsets
+    pos_off = _POSITION_OFFSETS.get(position, {})
+    phil_off = _PHILOSOPHY_OFFSETS.get(team_philosophy, {})
+    viper_off = {'speed': 3, 'lateral_skill': 3, 'kicking': 2,
+                 'agility': 2, 'awareness': 3} if is_viper else {}
+    year_mod = {'freshman': -4, 'sophomore': -2, 'junior': 0, 'senior': 2}.get(year, 0)
 
-    # Extended attributes base ranges
-    base_agility = random.randint(68, 90) + talent_offset
-    base_power = random.randint(65, 88) + talent_offset
-    base_awareness = random.randint(65, 88) + talent_offset
-    base_hands = random.randint(65, 88) + talent_offset
-    base_kick_power = random.randint(60, 85) + talent_offset
-    base_kick_accuracy = random.randint(60, 85) + talent_offset
+    # Roll each stat
+    results = {}
+    for stat in _STAT_KEYS:
+        stat_center = (center
+                       + pos_off.get(stat, 0)
+                       + phil_off.get(stat, 0)
+                       + viper_off.get(stat, 0)
+                       + year_mod)
+        results[stat] = _stat_roll(stat_center, std)
 
-    # Adjust for position
-    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
-        base_speed += random.randint(3, 8)
-        base_lateral_skill += random.randint(3, 8)
-        base_agility += random.randint(3, 8)
-        base_hands += random.randint(3, 7)
-    elif position in ("Offensive Line", "Defensive Line"):
-        base_tackling += random.randint(3, 8)
-        base_stamina += random.randint(2, 5)
-        base_power += random.randint(5, 10)
-        base_speed -= random.randint(3, 7)
-        base_agility -= random.randint(2, 5)
-    elif "Zeroback" in position:
-        base_awareness += random.randint(4, 8)
-        base_kick_power += random.randint(3, 7)
-        base_kick_accuracy += random.randint(3, 7)
-    elif position == "Keeper":
-        base_speed += random.randint(2, 6)
-        base_tackling += random.randint(5, 10)
-        base_awareness += random.randint(3, 7)
-        base_power += random.randint(2, 5)
-        base_hands += random.randint(3, 7)
-
-    # Adjust for team philosophy
-    if team_philosophy == 'kick_heavy':
-        base_kicking += random.randint(5, 10)
-        base_kick_power += random.randint(3, 7)
-        base_kick_accuracy += random.randint(3, 7)
-    elif team_philosophy == 'lateral_heavy':
-        base_lateral_skill += random.randint(5, 10)
-        base_agility += random.randint(3, 6)
-    elif team_philosophy == 'ground_and_pound':
-        base_tackling += random.randint(3, 7)
-        base_stamina += random.randint(3, 7)
-        base_power += random.randint(3, 6)
-
-    # Viper gets boosted stats
-    if is_viper:
-        base_speed += random.randint(2, 5)
-        base_lateral_skill += random.randint(3, 6)
-        base_kicking += random.randint(2, 5)
-        base_agility += random.randint(2, 4)
-        base_awareness += random.randint(3, 6)
-
-    # Class year modifiers
-    if year == 'freshman':
-        modifier = -5
-    elif year == 'sophomore':
-        modifier = -2
-    elif year == 'junior':
-        modifier = 0
-    elif year == 'senior':
-        modifier = +3
-    else:
-        modifier = 0
-
-    # Apply modifier and cap — floors adjusted by archetype (hard minimum 1)
-    def _clamp(val, base_floor):
-        return max(1, min(100, max(base_floor + floor_adj, val)))
-
-    speed = _clamp(base_speed + modifier, 60)
-    stamina = _clamp(base_stamina + modifier, 70)
-    kicking = _clamp(base_kicking + modifier, 50)
-    lateral_skill = _clamp(base_lateral_skill + modifier, 55)
-    tackling = _clamp(base_tackling + modifier, 55)
-    agility = _clamp(base_agility + modifier, 55)
-    power = _clamp(base_power + modifier, 55)
-    awareness = _clamp(base_awareness + modifier, 55)
-    hands = _clamp(base_hands + modifier, 55)
-    kick_power = _clamp(base_kick_power + modifier, 50)
-    kick_accuracy = _clamp(base_kick_accuracy + modifier, 50)
-
-    # Generate height and weight (women's athletes)
+    # Height and weight
     if position in ("Offensive Line", "Defensive Line"):
         height_inches = random.randint(69, 75)  # 5'9" to 6'3"
         weight = random.randint(185, 215)
@@ -323,46 +284,43 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
         height_inches = random.randint(67, 73)  # 5'7" to 6'1"
         weight = random.randint(170, 200)
 
-    # Convert height to feet-inches
     feet = height_inches // 12
     inches = height_inches % 12
-    height = f"{feet}-{inches}"
+    results['height'] = f"{feet}-{inches}"
+    results['weight'] = weight
 
-    # Generate potential (1-5 stars) — distribution driven by program archetype
+    # Potential (1-5 stars) — distribution driven by program archetype
     pot_weights = archetype_data["potential_weights"]
     year_key = year if year in pot_weights else "senior"
-    year_weights = pot_weights[year_key]  # [5-star, 4-star, 3-star, 2-star, 1-star]
+    year_weights = pot_weights[year_key]
     if len(year_weights) == 5:
-        potential = random.choices([5, 4, 3, 2, 1], weights=year_weights)[0]
+        results['potential'] = random.choices([5, 4, 3, 2, 1], weights=year_weights)[0]
     elif len(year_weights) == 4:
-        potential = random.choices([4, 3, 2, 1], weights=year_weights)[0]
+        results['potential'] = random.choices([4, 3, 2, 1], weights=year_weights)[0]
     else:
-        potential = random.choices([3, 4, 5, 2, 1], weights=[35, 30, 15, 15, 5])[0]
+        results['potential'] = random.choices([3, 4, 5, 2, 1], weights=[35, 30, 15, 15, 5])[0]
 
-    # Generate development trait — archetype-driven distribution
+    # Development trait
     dev_weights = archetype_data.get("dev_weights", [60, 20, 12, 8])
-    development = random.choices(
+    results['development'] = random.choices(
         ['normal', 'quick', 'slow', 'late_bloomer'],
         weights=dev_weights,
     )[0]
 
-    return {
-        'speed': speed,
-        'stamina': stamina,
-        'kicking': kicking,
-        'lateral_skill': lateral_skill,
-        'tackling': tackling,
-        'agility': agility,
-        'power': power,
-        'awareness': awareness,
-        'hands': hands,
-        'kick_power': kick_power,
-        'kick_accuracy': kick_accuracy,
-        'height': height,
-        'weight': weight,
-        'potential': potential,
-        'development': development,
-    }
+    return results
+
+def assign_program_archetype(school_id):
+    """Deterministically assign a program archetype from AI_ARCHETYPE_WEIGHTS.
+
+    Uses a simple hash of school_id so the same school always gets the same
+    archetype across regenerations (unless weights change).
+    """
+    seed = sum(ord(c) * (i + 1) for i, c in enumerate(school_id))
+    rng = random.Random(seed)
+    archetypes = list(AI_ARCHETYPE_WEIGHTS.keys())
+    weights = list(AI_ARCHETYPE_WEIGHTS.values())
+    return rng.choices(archetypes, weights=weights, k=1)[0]
+
 
 def generate_roster(school_data):
     """Generate a 36-player roster for a team."""
@@ -390,7 +348,10 @@ def generate_roster(school_data):
         # Use geo pipeline as the effective domestic pipeline
     recruiting_pipeline = geo_pipeline
 
-    print(f"  Generating roster for {school_name}...")
+    # Assign program archetype (determines talent level)
+    program_arch = school_data.get('program_archetype') or assign_program_archetype(school_id)
+    archetype_data = PROGRAM_ARCHETYPES.get(program_arch, PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
+    print(f"  Generating roster for {school_name} [{archetype_data['label']}]...")
 
     roster = []
     used_numbers = set()
@@ -458,7 +419,8 @@ def generate_roster(school_data):
         )
 
         # Generate attributes
-        attributes = generate_player_attributes(position, philosophy, year, is_viper)
+        attributes = generate_player_attributes(position, philosophy, year, is_viper,
+                                                program_archetype=program_arch)
 
         # Compute archetype from position and stats
         archetype = assign_archetype(
@@ -501,6 +463,19 @@ def generate_roster(school_data):
 
         roster.append(player)
 
+    # ── Hidden Gems ──
+    # Every program has a few players who overperform their recruiting class.
+    # For doormats this is critical — it's the one star player who gives them a shot.
+    gem_count = random.randint(*archetype_data["hidden_gem_count"])
+    gem_indices = random.sample(range(len(roster)), min(gem_count, len(roster)))
+    for idx in gem_indices:
+        player = roster[idx]
+        boost = random.randint(*archetype_data["hidden_gem_boost"])
+        n_stats = random.randint(*archetype_data["hidden_gem_stats"])
+        boosted_stats = random.sample(_STAT_KEYS, min(n_stats, len(_STAT_KEYS)))
+        for stat_key in boosted_stats:
+            player['stats'][stat_key] = min(99, player['stats'][stat_key] + boost)
+
     # Sort by jersey number
     roster.sort(key=lambda p: p['number'])
 
@@ -532,6 +507,7 @@ def generate_roster(school_data):
             'state': school_data['state'],
             'colors': school_data['colors']
         },
+        'program_archetype': program_arch,
         'identity': identity,
         'recruiting_pipeline': recruiting_pipeline,
         'roster': {

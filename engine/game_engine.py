@@ -1940,6 +1940,9 @@ class ViperballEngine:
         self._home_momentum_plays = 0
         self._away_momentum_plays = 0
 
+        if not self.neutral_site:
+            self._apply_home_field_boost()
+
         if self.is_rivalry:
             self._apply_rivalry_boost()
 
@@ -1969,6 +1972,21 @@ class ViperballEngine:
                 for p in team.players:
                     p.awareness = min(99, p.awareness + min(combined, 3))
                     p.stamina = min(99, p.stamina + min(combined, 2))
+
+    def _apply_home_field_boost(self):
+        """Temporary ratings boost for the home team.
+
+        Represents crowd energy, field familiarity, comfort of home.
+        Inverse scaling: lower-rated players get a bigger boost.
+        A 45-rated player gets +6, a 75→+3, 85+→+1.
+        This helps bad/average teams playing at home compete.
+        """
+        for p in self.home_team.players:
+            for attr in ('speed', 'power', 'stamina', 'awareness', 'agility', 'tackling'):
+                val = getattr(p, attr, 60)
+                # Inverse scale: lower ratings get bigger boosts, 85+ gets +1
+                boost = max(1, min(6, 6 - (val - 40) // 10))
+                setattr(p, attr, min(99, val + boost))
 
     def _apply_rivalry_boost(self):
         home_avg = sum(p.overall for p in self.home_team.players) / max(1, len(self.home_team.players))
@@ -2161,7 +2179,9 @@ class ViperballEngine:
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
 
-            base_time = random.randint(11, 36)
+            # Up-tempo game: shorter play clock than traditional football
+            # Viperball plays run faster — more like rugby/aussie rules pace
+            base_time = random.randint(6, 18)
             time_elapsed = int(base_time * (1.12 - tempo * 0.32))
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
@@ -3594,9 +3614,10 @@ class ViperballEngine:
             secondary = 75
 
         # Skill factor: 0.0 (worst) to 1.0 (elite)
-        # 60 rating → 0.0, 100 rating → 1.0
-        skill = max(0.0, min(1.0, (primary - 60) / 40))
-        support = max(0.0, min(1.0, (secondary - 60) / 40))
+        # 30 rating → 0.0, 99 rating → 1.0
+        # Matches the 30-99 stat range from roster generation
+        skill = max(0.0, min(1.0, (primary - 30) / 69))
+        support = max(0.0, min(1.0, (secondary - 30) / 69))
 
         # Blend: primary matters more
         combined = skill * 0.7 + support * 0.3
@@ -3624,12 +3645,29 @@ class ViperballEngine:
             center *= 1.15
             spread *= 1.1
 
-        # Home field advantage: +0.4 yard center boost for home team
-        # Represents crowd energy, familiarity, comfort
-        if not self.neutral_site:
-            off_team = self.get_offensive_team()
-            if off_team is self.home_team:
-                center += 0.4
+        # Coaching amplifier — HC classification modifies the roll
+        off_mods = self._coaching_mods()
+        def_mods = self._def_coaching_mods()
+        hc_cls = off_mods.get("hc_classification", "")
+        def_cls = def_mods.get("hc_classification", "")
+        cls_fx = off_mods.get("classification_effects", {})
+        def_fx = def_mods.get("classification_effects", {})
+
+        # Offensive coaching: scheme_master boosts center, motivator widens spread
+        if hc_cls == "scheme_master":
+            center *= 1.0 + cls_fx.get("scheme_amplification", 0.0)
+        elif hc_cls == "motivator":
+            spread *= cls_fx.get("composure_amplification", 1.0)
+
+        # Defensive coaching: disciplinarian compresses offensive rolls,
+        # scheme_master suppresses opponent's ceiling
+        if def_cls == "disciplinarian":
+            compression = def_fx.get("variance_compression", 1.0)
+            spread *= compression
+            gap_disc = def_fx.get("gap_discipline_bonus", 0.0)
+            center *= (1.0 - gap_disc)
+        elif def_cls == "scheme_master":
+            center *= 1.0 - def_fx.get("scheme_amplification", 0.0) * 0.5
 
         roll = random.gauss(center, spread)
 
@@ -3637,6 +3675,20 @@ class ViperballEngine:
         roll = max(-2.0, roll)
 
         return round(roll, 1)
+
+    def _tackle_reduction(self, tackler, yards_gained: int) -> float:
+        """Tackling skill reduces yards gained on contact.
+
+        Better tacklers wrap up sooner and limit YAC.  A 99-tackling
+        defender shaves ~1.2 yards on average; a 30-rated one ~0.
+        Only applies when the ball carrier gained positive yards.
+        """
+        if yards_gained <= 0:
+            return 0.0
+        tackle_skill = max(0.0, min(1.0, (tackler.tackling - 30) / 69))
+        reduction = random.gauss(tackle_skill * 1.2, 0.4)
+        # Floor at 0 — tackling can't add yards
+        return max(0.0, round(reduction, 1))
 
     def _calculate_viper_advantage(self, viper_alignment, play_direction):
         dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
@@ -3735,7 +3787,6 @@ class ViperballEngine:
             )
 
         yards_gained = int(base_yards)
-        gap_stuffed = False
 
         yards_gained = max(-5, yards_gained)
 
@@ -3746,10 +3797,13 @@ class ViperballEngine:
         def_team_for_tackle = self.get_defensive_team()
         tackler = self._pick_def_tackler(def_team_for_tackle, yards_gained)
         tackler.game_tackles += 1
+
+        # Tackling reduces yards — better tacklers limit gains
+        tackle_red = self._tackle_reduction(tackler, yards_gained)
+        yards_gained = max(-5, int(yards_gained - tackle_red))
+
         if yards_gained <= 0:
             tackler.game_tfl += 1
-            if gap_stuffed and yards_gained < 0:
-                tackler.game_sacks += 1
 
         fumble_family = family
         if family == PlayFamily.VIPER_JET:
@@ -4158,6 +4212,11 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         tackler = self._pick_def_tackler(def_team, yards_gained)
         tackler.game_tackles += 1
+
+        # Tackling reduces trick play yards
+        trick_tackle_red = self._tackle_reduction(tackler, yards_gained)
+        yards_gained = max(-5, int(yards_gained - trick_tackle_red))
+
         if yards_gained <= 0:
             tackler.game_tfl += 1
 
@@ -4309,6 +4368,11 @@ class ViperballEngine:
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
         lat_tackler.game_tackles += 1
+
+        # Tackling reduces lateral chain yards
+        lat_tackle_red = self._tackle_reduction(lat_tackler, yards_gained)
+        yards_gained = max(-5, int(yards_gained - lat_tackle_red))
+
         if yards_gained <= 0:
             lat_tackler.game_tfl += 1
 
@@ -4531,8 +4595,15 @@ class ViperballEngine:
                         fumble=True,
                     )
 
-            # Clean completion
-            yards_gained = total_yards
+            # Clean completion — tackling limits YAC
+            kp_def_team = self.get_defensive_team()
+            kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
+            kp_tackler.game_tackles += 1
+            kp_tackle_red = self._tackle_reduction(kp_tackler, total_yards)
+            yards_gained = max(1, int(total_yards - kp_tackle_red))
+            if yards_gained <= 0:
+                kp_tackler.game_tfl += 1
+
             new_position = min(100, self.state.field_position + yards_gained)
             kicker.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
