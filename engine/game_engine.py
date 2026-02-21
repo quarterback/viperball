@@ -1757,6 +1757,7 @@ class ViperballEngine:
                  style_overrides: Optional[Dict[str, str]] = None,
                  weather: str = "clear",
                  is_rivalry: bool = False,
+                 neutral_site: bool = False,
                  injury_tracker=None,
                  game_week: int = 1,
                  unavailable_home: Optional[set] = None,
@@ -1770,6 +1771,7 @@ class ViperballEngine:
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
+        self.neutral_site = neutral_site
         self.home_dq_boosts = home_dq_boosts or {}
         self.away_dq_boosts = away_dq_boosts or {}
         self.state = GameState()
@@ -3571,10 +3573,14 @@ class ViperballEngine:
         Run plays:  speed sets the ceiling, power/agility shape the curve.
         Kick pass:  kick_accuracy and kicking set the ceiling.
         Lateral:    lateral_skill and speed shape the curve.
+
+        Scoring zone (field position 60+): rolls get amplified — less field
+        for defense to work with, angles compress, skill gaps widen.
+
+        Home field advantage: home team gets a small bump to every roll
+        (unless neutral site).
         """
         if play_type == "run":
-            # Primary stat: speed (how far you can break)
-            # Secondary: power (yards after contact), agility (elusiveness)
             primary = player.speed
             secondary = (getattr(player, 'power', 75) + getattr(player, 'agility', 75)) / 2
         elif play_type == "kick_pass":
@@ -3601,6 +3607,30 @@ class ViperballEngine:
         # 1.0 skill: center 3, max ~7+  (elite player, frequent big rolls)
         center = combined * 3.0
         spread = 0.8 + combined * 0.8  # better players have MORE variance (bigger plays)
+
+        # Scoring zone boost: inside opponent's 40 (field_position 60+)
+        # Amplifies the roll — skill differences matter more in tight spaces
+        fp = self.state.field_position
+        if fp >= 80:
+            # Deep red zone — big boost, defenders pinned
+            center *= 1.6
+            spread *= 1.4
+        elif fp >= 70:
+            # Red zone — solid boost
+            center *= 1.35
+            spread *= 1.25
+        elif fp >= 60:
+            # Scoring territory — modest boost
+            center *= 1.15
+            spread *= 1.1
+
+        # Home field advantage: +0.4 yard center boost for home team
+        # Represents crowd energy, familiarity, comfort
+        if not self.neutral_site:
+            off_team = self.get_offensive_team()
+            if off_team is self.home_team:
+                center += 0.4
+
         roll = random.gauss(center, spread)
 
         # Floor: even elites get stuffed sometimes

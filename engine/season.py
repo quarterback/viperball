@@ -751,6 +751,9 @@ class Season:
                 coaching_kwargs["away_coaching"] = away_staff
             coaching_kwargs["game_week"] = game.week
 
+        # Bowl games and playoff games are neutral site (no home field advantage)
+        is_neutral = game.week >= 900
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -758,6 +761,7 @@ class Season:
             style_overrides=style_overrides,
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
+            neutral_site=is_neutral,
             **injury_kwargs,
             **dq_kwargs,
             **coaching_kwargs,
