@@ -136,10 +136,16 @@ def render_dynasty_mode(state: UserState, shared: dict):
     ui.label("League History").classes("text-lg font-semibold text-slate-700")
     ui.label("Generate past seasons for established history with champions, records, and rivalries.").classes("text-sm text-gray-500")
 
-    with ui.row().classes("gap-4"):
+    with ui.row().classes("gap-4 items-center"):
         ui.label("Years of History").classes("text-sm text-slate-600")
         history_years = ui.slider(min=0, max=100, value=0).classes("w-64")
+        history_years_label = ui.label("0 years").classes("text-sm font-semibold text-slate-700 min-w-[60px]")
         ui.label("0 = start fresh. Higher values take longer.").classes("text-sm text-gray-400 self-center")
+
+    def _update_history_label():
+        v = int(history_years.value)
+        history_years_label.set_text(f"{v} year{'s' if v != 1 else ''}")
+    history_years.on_value_change(lambda _: _update_history_label())
 
     # ── Create Dynasty Button ──
     ui.separator().classes("my-4")
