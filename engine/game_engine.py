@@ -73,8 +73,8 @@ PLAY_FAMILY_TO_TYPE = {
 
 RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
-        'base_yards': (3.0, 6.5),
-        'variance': 2.5,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.010,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
@@ -82,8 +82,8 @@ RUN_PLAY_CONFIG = {
         'action': 'dive',
     },
     PlayFamily.POWER: {
-        'base_yards': (3.5, 7.0),
-        'variance': 2.8,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.012,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
@@ -91,8 +91,8 @@ RUN_PLAY_CONFIG = {
         'action': 'power',
     },
     PlayFamily.SWEEP_OPTION: {
-        'base_yards': (2.5, 7.0),
-        'variance': 3.5,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.014,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
@@ -100,8 +100,8 @@ RUN_PLAY_CONFIG = {
         'action': 'sweep',
     },
     PlayFamily.SPEED_OPTION: {
-        'base_yards': (3.0, 7.0),
-        'variance': 3.5,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.015,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
@@ -109,8 +109,8 @@ RUN_PLAY_CONFIG = {
         'action': 'pitch',
     },
     PlayFamily.COUNTER: {
-        'base_yards': (3.0, 7.5),
-        'variance': 3.5,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.012,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
@@ -118,8 +118,8 @@ RUN_PLAY_CONFIG = {
         'action': 'counter',
     },
     PlayFamily.DRAW: {
-        'base_yards': (2.5, 6.0),
-        'variance': 3.5,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.012,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
@@ -127,8 +127,8 @@ RUN_PLAY_CONFIG = {
         'action': 'draw',
     },
     PlayFamily.VIPER_JET: {
-        'base_yards': (2.5, 6.5),
-        'variance': 3.8,
+        'base_yards': (1.1, 1.6),
+        'variance': 0.8,
         'fumble_rate': 0.020,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
@@ -3309,68 +3309,6 @@ class ViperballEngine:
         # Normalize: 75 is average (0 boost), 90+ is elite (+0.05), 60- is bad (-0.05)
         return (avg_score - 75) / 300  # 15 point swing = ±0.05
 
-    def apply_defensive_modifiers(self, yards_gained: int, play_family: PlayFamily,
-                                   is_explosive: bool = False) -> int:
-        """
-        Apply full defensive scheme impact to yardage.
-
-        Pipeline:
-        1. Defensive read check (scheme + situation + personnel)
-        2. Play family modifier from scheme
-        3. Offense-vs-defense matchup matrix
-        4. Explosive play suppression
-        """
-        defense = self._current_defense()
-
-        # 1. Defensive read — if defense reads it, yardage is cut
-        defense_read = self.get_defensive_read(play_family)
-        if defense_read:
-            read_reduction = random.uniform(0.70, 0.88)
-            yards_gained = int(yards_gained * read_reduction)
-            def_team = self.get_defensive_team()
-            hurry_player = self._pick_def_tackler(def_team, yards_gained)
-            hurry_player.game_hurries += 1
-
-        # 2. Play family modifier — scheme's base effectiveness vs this play type
-        pfm = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
-
-        # Coaching: Scheme Master amplifies play-family modifiers (strengths stronger)
-        def_mods = self._def_coaching_mods()
-        cls_effects = def_mods.get("classification_effects", {})
-        if def_mods.get("hc_classification") == "scheme_master":
-            amp = cls_effects.get("scheme_amplification", 0.0)
-            pfm = 1.0 + (pfm - 1.0) * (1.0 + amp)
-
-        # Coaching: Disciplinarian compresses offensive variance (fewer explosive plays)
-        off_mods = self._coaching_mods()
-        off_cls = off_mods.get("classification_effects", {})
-        if off_mods.get("hc_classification") == "disciplinarian":
-            compression = off_cls.get("variance_compression", 1.0)
-            pfm = 1.0 + (pfm - 1.0) * compression
-
-        # Coaching: Disciplinarian gap discipline reduces run yards
-        if def_mods.get("hc_classification") == "disciplinarian":
-            gap_disc = cls_effects.get("gap_discipline_bonus", 0.0)
-            if gap_disc > 0:
-                pfm *= (1.0 - gap_disc)
-
-        # Invert: lower pfm = defense is better, so multiply yards by pfm
-        # (pfm of 0.60 means defense holds to 60% of normal yardage)
-        yards_gained = int(yards_gained * pfm)
-
-        # 3. Offense-vs-defense matchup — rock/paper/scissors
-        off_style = self._current_style_name()
-        def_style = self._current_defense_name()
-        matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((off_style, def_style), 1.0)
-        yards_gained = int(yards_gained * matchup)
-
-        # 4. Explosive suppression — schemes with low suppression prevent big plays
-        if is_explosive:
-            exp_supp = defense.get("explosive_suppression", 0.90)
-            yards_gained = int(yards_gained * exp_supp)
-
-        return yards_gained
-
     def _current_defense_name(self) -> str:
         """Returns the defense style name string for the team currently on defense."""
         if self.state.possession == "home":
@@ -3623,163 +3561,12 @@ class ViperballEngine:
         style_label = defense.get("label", "Base Defense")
         return DEFENSE_ALIGNMENT_MAP.get(style_label, "balanced")
 
-    def _determine_keeper_alignment(self, play_direction):
-        if play_direction == 'center':
-            weights = [0.50, 0.20, 0.30]
-        elif play_direction == 'edge':
-            weights = [0.20, 0.45, 0.35]
-        else:
-            weights = [0.35, 0.30, 0.35]
-        return random.choices(['inside', 'outside', 'balanced'], weights=weights, k=1)[0]
-
     def _calculate_viper_advantage(self, viper_alignment, play_direction):
         dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
         mapped_dir = dir_map.get(play_direction, 'center')
         bonus = VIPER_ALIGNMENT_BONUS.get((viper_alignment, mapped_dir), 0.0)
         bonus += random.uniform(-0.02, 0.02)
         return bonus
-
-    def _apply_play_signature(self, family, base_yards, carrier, keeper_alignment):
-        sig_detail = ""
-        if family == PlayFamily.DIVE_OPTION:
-            result = base_yards * random.uniform(0.88, 1.08)
-            sig_detail = "low variance"
-        elif family == PlayFamily.POWER:
-            if carrier.archetype == 'power_flanker':
-                result = base_yards * random.uniform(1.05, 1.15)
-                sig_detail = "PF lead block bonus"
-            else:
-                result = base_yards * random.uniform(0.90, 1.10)
-                sig_detail = "downhill"
-        elif family == PlayFamily.SWEEP_OPTION:
-            if keeper_alignment == 'inside':
-                result = base_yards * random.uniform(1.15, 1.30)
-                sig_detail = "KP cheats inside — edge open"
-            elif keeper_alignment == 'outside':
-                result = base_yards * random.uniform(0.75, 0.90)
-                sig_detail = "KP has the angle"
-            else:
-                result = base_yards * random.uniform(0.90, 1.10)
-                sig_detail = "contested edge"
-        elif family == PlayFamily.SPEED_OPTION:
-            read_skill = getattr(carrier, 'awareness', 75)
-            read_correct = random.random() < (read_skill / 130)
-            if read_correct:
-                result = base_yards + random.uniform(2, 5)
-                sig_detail = "correct read"
-            else:
-                result = base_yards - random.uniform(1, 3)
-                sig_detail = "bad read"
-        elif family == PlayFamily.COUNTER:
-            if random.random() < 0.18:
-                result = base_yards + random.uniform(4, 8)
-                sig_detail = "defense bit on misdirection"
-            else:
-                result = base_yards * random.uniform(0.90, 1.05)
-                sig_detail = "counter action"
-        elif family == PlayFamily.DRAW:
-            def_expecting_kick = (self.state.down >= 4 and self.state.field_position >= 55)
-            def_style = self._current_defense().get("label", "")
-            if def_expecting_kick:
-                result = base_yards * 1.30
-                sig_detail = "draw fools kick-block stance"
-            elif "Pressure" in def_style:
-                result = base_yards * 1.20
-                sig_detail = "draw exploits pressure D"
-            else:
-                result = base_yards * random.uniform(0.92, 1.08)
-                sig_detail = "delayed handoff"
-        elif family == PlayFamily.VIPER_JET:
-            result = base_yards * random.uniform(0.6, 1.4)
-            if random.random() < 0.08:
-                result = random.uniform(-3, 1)
-                sig_detail = "jet motion — botched exchange"
-            elif result > base_yards * 1.2:
-                sig_detail = "jet motion — explosive"
-            elif result < base_yards * 0.7:
-                sig_detail = "jet motion — stuffed"
-            else:
-                sig_detail = "jet motion"
-        else:
-            result = base_yards
-            sig_detail = ""
-        return result, sig_detail
-
-    def _resolve_keeper_matchup(self, carrier, yards_so_far):
-        if yards_so_far < 8:
-            return yards_so_far, ""
-        def_team = self.get_defensive_team()
-        keepers = [p for p in def_team.players if p.position == "Keeper"]
-        if not keepers:
-            keepers = [max(self._defense_players(def_team), key=lambda p: p.tackling)]
-        keeper = keepers[0]
-        ktag = player_tag(keeper)
-        carrier_score = carrier.speed * 0.45 + getattr(carrier, 'agility', 75) * 0.30 + getattr(carrier, 'power', 75) * 0.25
-        keeper_score = keeper.speed * 0.35 + keeper.tackling * 0.40 + getattr(keeper, 'awareness', 75) * 0.25
-        diff = carrier_score - keeper_score
-        if diff > 15:
-            extra = random.randint(10, 30)
-            return yards_so_far + extra, f"beats {ktag} in open field"
-        elif diff > 8:
-            extra = random.randint(4, 14)
-            return yards_so_far + extra, f"slips past {ktag}"
-        elif diff > -3:
-            if random.random() < 0.28:
-                extra = random.randint(3, 10)
-                return yards_so_far + extra, f"eludes {ktag}"
-            keeper.game_keeper_tackles += 1
-            return yards_so_far, f"{ktag} makes the stop"
-        else:
-            keeper.game_keeper_tackles += 1
-            return yards_so_far, f"{ktag} makes the stop"
-
-    def _check_explosive_run(self, family, carrier, yards_after):
-        if yards_after < 5:
-            return yards_after, False
-        base_chance = EXPLOSIVE_CHANCE.get(family.value, 0.12)
-        if carrier.speed >= 85:
-            base_chance += 0.08
-        if getattr(carrier, 'agility', 75) >= 80:
-            base_chance += 0.06
-        def_fatigue = self._defensive_fatigue_factor()
-        if def_fatigue > 1.15:
-            base_chance += 0.10
-        elif def_fatigue > 1.05:
-            base_chance += 0.05
-        if random.random() < base_chance:
-            explosive_yards = self._resolve_explosive_run(carrier, yards_after)
-            return explosive_yards, True
-        return yards_after, False
-
-    def _resolve_explosive_run(self, carrier, yards_at_break):
-        remaining = max(1, 100 - self.state.field_position - yards_at_break)
-        def_team = self.get_defensive_team()
-        keepers = [p for p in def_team.players if p.position == "Keeper"]
-        if not keepers:
-            keepers = [max(self._defense_players(def_team), key=lambda p: p.tackling)]
-        keeper = keepers[0]
-        carrier_score = carrier.speed * 0.5 + getattr(carrier, 'agility', 75) * 0.3 + getattr(carrier, 'power', 75) * 0.2
-        keeper_score = keeper.speed * 0.4 + keeper.tackling * 0.4 + getattr(keeper, 'awareness', 75) * 0.2
-        def_fatigue = self._defensive_fatigue_factor()
-        if def_fatigue > 1.15:
-            keeper_score *= 0.80
-        diff = carrier_score - keeper_score
-        if diff > 15:
-            td_chance = 0.85
-        elif diff > 5:
-            td_chance = 0.60
-        elif diff > -5:
-            td_chance = 0.40
-        else:
-            td_chance = 0.20
-        if remaining <= 20:
-            td_chance += 0.15
-        td_chance = min(0.98, td_chance)
-        if random.random() < td_chance:
-            return yards_at_break + remaining
-        else:
-            gain_pct = random.uniform(0.50, 0.85)
-            return yards_at_break + int(remaining * gain_pct)
 
     def simulate_run(self, family: PlayFamily = PlayFamily.DIVE_OPTION) -> Play:
         team = self.get_offensive_team()
@@ -3799,10 +3586,6 @@ class ViperballEngine:
                     w = pos_weight
                     if p.archetype in archetype_bonus:
                         w *= archetype_bonus[p.archetype]
-                    arch_info = get_archetype_info(p.archetype)
-                    run_mod = arch_info.get("run_yards_modifier", 1.0)
-                    if run_mod > 1.0:
-                        w *= 1.15
                     fatigue_pct = getattr(p, 'current_stamina', getattr(p, 'stamina', 75)) / 100
                     if fatigue_pct < 0.3:
                         w *= 0.6
@@ -3827,15 +3610,11 @@ class ViperballEngine:
         def_align = self._determine_defense_alignment()
         def_align_mod = ALIGNMENT_VS_PLAY.get((def_align, family.value), 0.0)
 
-        keeper_align = self._determine_keeper_alignment(play_dir)
-
         base_min, base_max = config['base_yards']
         base_yards = random.uniform(base_min, base_max) + random.gauss(0, config['variance'] * 0.5)
 
         speed_weather_mod = self.weather_info.get("speed_modifier", 0.0)
         base_yards += speed_weather_mod * 2
-
-        base_yards += def_align_mod * 2
 
         fp = self.state.field_position
 
@@ -4097,11 +3876,11 @@ class ViperballEngine:
 
         # Pick the trick play variant
         trick_variants = [
-            {"name": "halfback_kick", "action": "HB kick", "positions": ["HB", "SB"], "fumble_rate": 0.04, "base_yards": (2.0, 8.0), "variance": 4.0},
-            {"name": "viper_reverse", "action": "viper reverse", "positions": ["VP", "WB"], "fumble_rate": 0.05, "base_yards": (1.0, 10.0), "variance": 5.0},
-            {"name": "flea_flicker", "action": "flea flicker", "positions": ["ZB", "HB"], "fumble_rate": 0.05, "base_yards": (2.0, 11.0), "variance": 5.5},
-            {"name": "double_reverse", "action": "double reverse", "positions": ["WB", "HB", "VP"], "fumble_rate": 0.06, "base_yards": (0.0, 12.0), "variance": 6.0},
-            {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.04, "base_yards": (3.0, 9.0), "variance": 4.5},
+            {"name": "halfback_kick", "action": "HB kick", "positions": ["HB", "SB"], "fumble_rate": 0.04, "base_yards": (1.1, 1.6), "variance": 0.8},
+            {"name": "viper_reverse", "action": "viper reverse", "positions": ["VP", "WB"], "fumble_rate": 0.05, "base_yards": (1.1, 1.6), "variance": 0.8},
+            {"name": "flea_flicker", "action": "flea flicker", "positions": ["ZB", "HB"], "fumble_rate": 0.05, "base_yards": (1.1, 1.6), "variance": 0.8},
+            {"name": "double_reverse", "action": "double reverse", "positions": ["WB", "HB", "VP"], "fumble_rate": 0.06, "base_yards": (1.1, 1.6), "variance": 0.8},
+            {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.04, "base_yards": (1.1, 1.6), "variance": 0.8},
         ]
         variant = random.choice(trick_variants)
 
@@ -4129,21 +3908,6 @@ class ViperballEngine:
         base_center = random.uniform(base_min, base_max)
         base_yards = random.gauss(base_center, variant["variance"])
 
-        # Misdirection bonus from style (ghost, triple_threat benefit here)
-        misdirection = style.get("misdirection_bonus", 1.0)
-        base_yards *= misdirection
-
-        # Viper alignment advantage
-        viper_align = self._determine_viper_alignment()
-        play_dir = PLAY_DIRECTION.get("trick_play", "weak")
-        viper_bonus = self._calculate_viper_advantage(viper_align, play_dir)
-
-        # Defensive alignment — trick plays exploit aggressive/stacked defenses
-        def_align = self._determine_defense_alignment()
-        def_align_mod = ALIGNMENT_VS_PLAY.get((def_align, "trick_play"), 0.08)
-
-        base_yards *= (1.0 + viper_bonus + def_align_mod)
-
         # Defensive read check — if defense reads the trick, it's a disaster
         defense = self._current_defense()
         read_rate = defense.get("read_success_rate", 0.35)
@@ -4154,27 +3918,10 @@ class ViperballEngine:
             # Defense blew it up — big loss
             base_yards = random.uniform(-8.0, -2.0)
 
-        # Apply defensive play family modifier
-        def_modifier = defense.get("play_family_modifiers", {}).get("trick_play", 0.95)
-        base_yards *= def_modifier
-
-        # Fatigue
-        fatigue_factor = self.get_fatigue_factor()
-        fatigue_resistance = style.get("fatigue_resistance", 0.0)
-        fatigue_factor = min(1.0, fatigue_factor + fatigue_resistance)
-        def_fatigue = self._defensive_fatigue_factor()
-
-        yards_gained = int(base_yards * fatigue_factor)
+        yards_gained = int(base_yards)
         yards_gained = max(-10, yards_gained)
 
-        # Explosive play check — trick plays have highest explosive chance (18%)
         was_explosive = False
-        explosive_chance = EXPLOSIVE_CHANCE.get("trick_play", 0.18)
-        explosive_supp = defense.get("explosive_suppression", 0.90)
-        if not defense_read and random.random() < (explosive_chance * explosive_supp):
-            was_explosive = True
-            extra = random.randint(10, 35)
-            yards_gained += extra
 
         # Fumble check — trick plays involve extra ball handling
         fumble_rate = variant["fumble_rate"]
@@ -4261,10 +4008,6 @@ class ViperballEngine:
         desc_parts = []
         if defense_read:
             desc_parts.append("DEFENSE READ")
-        if viper_bonus >= 0.08:
-            desc_parts.append(f"VP {viper_align} pulls D")
-        if def_align != "balanced":
-            desc_parts.append(f"vs {def_align} D")
         if was_explosive:
             desc_parts.append("EXPLOSIVE")
         mech_tag = f" [{', '.join(desc_parts)}]" if desc_parts else ""
@@ -4466,23 +4209,11 @@ class ViperballEngine:
                     fumble=True,
                 )
 
-        base_yards = random.gauss(5, 5)
-        lateral_bonus = chain_length * 1.5
+        base_yards = random.gauss(1.3, 0.8)
+        lateral_bonus = chain_length * 0.5
 
         yards_gained = int(base_yards + lateral_bonus)
         yards_gained = max(-5, yards_gained)
-
-        # Check for explosive lateral play
-        is_explosive = False
-        explosive_lateral_bonus = style.get("explosive_lateral_bonus", 0.0)
-        explosive_chance = chain_length * 0.05 + explosive_lateral_bonus
-        if yards_gained >= 10 and random.random() < explosive_chance:
-            extra = random.randint(8, 30)
-            yards_gained += extra
-            is_explosive = True
-
-        # DEFENSIVE SYSTEM: Apply all defensive modifiers
-        yards_gained = self.apply_defensive_modifiers(yards_gained, family, is_explosive or yards_gained >= 15)
 
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
@@ -4583,9 +4314,7 @@ class ViperballEngine:
         receiver_lbl = player_label(receiver)
 
         # Kick distance: how far the kick travels in the air
-        # Biased toward shorter kicks — kickers aim for completable distances
-        kick_distance = min(random.randint(4, 18), random.randint(4, 16))
-        kick_pass_bonus = style.get("kick_pass_bonus", 0.0)
+        kick_distance = random.randint(2, 5)
 
         kicker_skill = (kicker.kick_accuracy * 0.6 + kicker.kicking * 0.4)
         kicker_factor = kicker_skill
@@ -4617,7 +4346,7 @@ class ViperballEngine:
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
 
-            yac = random.randint(0, 5)
+            yac = random.randint(0, 1)
 
             fumble_on_catch = 0.02
             fumble_on_catch -= (receiver.hands / 100) * 0.01
@@ -4713,28 +4442,12 @@ class ViperballEngine:
                     )
 
             # Clean completion
-            new_position = min(100, self.state.field_position + total_yards)
-            yards_gained = self.apply_defensive_modifiers(total_yards, family, total_yards >= 20)
-
+            yards_gained = total_yards
             new_position = min(100, self.state.field_position + yards_gained)
             kicker.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
 
-            big_play_td = False
-            if not (new_position >= 100) and yards_gained >= 20 and new_position >= 55:
-                big_play_chance = 0.0
-                if yards_gained >= 50:
-                    big_play_chance = 0.25
-                elif yards_gained >= 40:
-                    big_play_chance = 0.16
-                elif yards_gained >= 30:
-                    big_play_chance = 0.09
-                elif yards_gained >= 20:
-                    big_play_chance = 0.04
-                big_play_chance += (receiver.speed - 80) / 100 * 0.05
-                big_play_td = random.random() < big_play_chance
-
-            is_td = new_position >= 100 or big_play_td or self._red_zone_td_check(new_position, yards_gained, team)
+            is_td = new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team)
             if is_td:
                 result = PlayResult.TOUCHDOWN
                 yards_gained = 100 - self.state.field_position
