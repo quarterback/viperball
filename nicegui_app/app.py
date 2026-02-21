@@ -115,9 +115,27 @@ def index():
 
         # Settings navigation
         ui.label("Settings").classes("text-xs font-semibold uppercase tracking-wide text-slate-400 mt-2")
+
+        def _on_settings_change(e):
+            settings_container.clear()
+            if e.value is None:
+                main_container.set_visibility(True)
+                settings_container.set_visibility(False)
+            else:
+                main_container.set_visibility(False)
+                settings_container.set_visibility(True)
+                with settings_container:
+                    if e.value == "debug":
+                        from nicegui_app.pages.debug_tools import render_debug_tools
+                        render_debug_tools(state, shared)
+                    elif e.value == "inspector":
+                        from nicegui_app.pages.play_inspector import render_play_inspector
+                        render_play_inspector(state, shared)
+
         ui.radio(
             {None: "None", "debug": "Debug Tools", "inspector": "Play Inspector"},
             value=None,
+            on_change=_on_settings_change,
         ).classes("text-slate-300")
 
         ui.separator().classes("my-3").style("border-color: #334155;")
@@ -135,6 +153,7 @@ def index():
 
         # Settings pages (rendered when selected)
         settings_container = ui.column().classes("w-full")
+        settings_container.set_visibility(False)
 
         # Main tabs
         main_container = ui.column().classes("w-full")
