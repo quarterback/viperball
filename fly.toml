@@ -11,13 +11,19 @@ primary_region = 'ams'
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
 
+[checks]
+  [checks.alive]
+    type = "tcp"
+    port = 8080
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-  memory_mb = 256
+  size = "performance-1x"
+  memory = "2048mb"
