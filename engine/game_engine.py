@@ -45,6 +45,15 @@ V2_ENGINE_CONFIG = {
     "narrative_enabled": True,
     # Power ratio exponent: tune between 1.5 (mild) and 2.0 (spec)
     "power_ratio_exponent": 1.8,
+    # V2.4: Starting yard line for drives (20 = standard, 15 = tighter field)
+    "starting_yard_line": 20,
+    # V2.4: Minimum combined suppression multiplier — prevents degenerate 0-yard drives
+    # No matter how cold the DC + weather + coaching stack, offense retains at least 65% yardage
+    "min_yardage_multiplier": 0.65,
+    # V2.4: Play-family adaptation — DC "solves" repetitive play-calling mid-game
+    "play_family_adaptation_enabled": True,
+    # V2.4: Time-of-possession model — play clock varies by offensive style
+    "top_model_enabled": True,
 }
 
 
@@ -2121,13 +2130,19 @@ class ViperballEngine:
                  home_prestige: int = 50,
                  away_prestige: int = 50,
                  is_playoff: bool = False,
-                 is_trap_game: bool = False):
+                 is_trap_game: bool = False,
+                 # V2.4: Defensive prestige — No-Fly Zone
+                 home_no_fly_zone: bool = False,
+                 away_no_fly_zone: bool = False):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
         self.neutral_site = neutral_site
         self.home_dq_boosts = home_dq_boosts or {}
         self.away_dq_boosts = away_dq_boosts or {}
+        # V2.4: Defensive prestige — "No-Fly Zone" reduces opponent kick pass accuracy
+        self.home_no_fly_zone = home_no_fly_zone
+        self.away_no_fly_zone = away_no_fly_zone
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
@@ -2294,6 +2309,22 @@ class ViperballEngine:
         self.home_def_intensity = max(0.70, min(1.30, self.home_def_intensity))
         self.away_def_intensity = max(0.70, min(1.30, self.away_def_intensity))
 
+        # ── V2.4: Play-family adaptation tracking ──
+        # Tracks how often each team runs each play family, per drive and per half.
+        # When frequency exceeds the DC's threshold, additional suppression is applied.
+        # "solved_families" maps play_family_name → suppression multiplier (permanent until reset)
+        self._home_family_freq_drive: Dict[str, int] = {}  # offense running against away DC
+        self._away_family_freq_drive: Dict[str, int] = {}
+        self._home_family_freq_half: Dict[str, int] = {}
+        self._away_family_freq_half: Dict[str, int] = {}
+        self._home_solved_families: Dict[str, float] = {}  # away DC solved these vs home offense
+        self._away_solved_families: Dict[str, float] = {}  # home DC solved these vs away offense
+        # Narrative log for adaptation events
+        self._adaptation_log: List[str] = []
+        # Consecutive non-solved plays (for decay tracking)
+        self._home_consecutive_non_solved: int = 0
+        self._away_consecutive_non_solved: int = 0
+
         # Coaching: leadership narrows rhythm variance toward 1.0 (prevents bad games)
         home_lead = self.home_coaching_mods.get("leadership_factor", 0.0)
         away_lead = self.away_coaching_mods.get("leadership_factor", 0.0)
@@ -2354,6 +2385,143 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.away_dc_gameplan
         return self.home_dc_gameplan
+
+    def _get_play_family_adaptation(self, play_family) -> float:
+        """V2.4: Play-family adaptation — the "Solved Puzzle" mechanic.
+
+        When an offense repeats the same play family too often (same DC category),
+        the defensive coordinator's instincts kick in and suppress that family.
+
+        Thresholds:
+          - 3+ times in a single drive  → adaptation roll
+          - 8+ times in a half          → adaptation roll (if not already solved)
+
+        DC instincts determine how fast the puzzle is solved:
+          - instincts 90+ → "solves" in 2 plays (threshold reduced)
+          - instincts 50  → standard threshold (3 drive / 8 half)
+          - instincts 30  → needs 4+ per drive to trigger
+
+        Once solved, that family gets +15% yardage suppression for the game.
+        Counter: if the offense switches to a completely different family for
+        3+ consecutive plays, one solved family begins to decay (loses suppression).
+
+        Returns a multiplier (1.0 = no effect, 0.85 = 15% suppression).
+        """
+        if play_family is None:
+            return 1.0
+
+        # Map the play family to DC category
+        dc_type = PLAY_FAMILY_TO_DC_TYPE.get(play_family)
+        if not dc_type:
+            return 1.0
+
+        # Get the right tracking dicts based on who's on offense
+        if self.state.possession == "home":
+            freq_drive = self._home_family_freq_drive
+            freq_half = self._home_family_freq_half
+            solved = self._home_solved_families   # away DC solved these vs home offense
+        else:
+            freq_drive = self._away_family_freq_drive
+            freq_half = self._away_family_freq_half
+            solved = self._away_solved_families   # home DC solved these vs away offense
+
+        # If already solved, return the suppression
+        if dc_type in solved:
+            return solved[dc_type]
+
+        # Get DC instincts
+        def_mods = self._def_coaching_mods()
+        dc_instincts = def_mods.get("instincts_factor", 0.0)  # 0.0 - 1.0
+
+        # Instincts modify thresholds: elite DCs solve faster
+        # instincts 1.0 → drive threshold 2, half threshold 6
+        # instincts 0.5 → drive threshold 3, half threshold 8
+        # instincts 0.0 → drive threshold 4, half threshold 10
+        drive_threshold = max(2, int(4 - dc_instincts * 2))
+        half_threshold = max(6, int(10 - dc_instincts * 4))
+
+        drive_count = freq_drive.get(dc_type, 0)
+        half_count = freq_half.get(dc_type, 0)
+
+        triggered = False
+        if drive_count >= drive_threshold:
+            triggered = True
+        elif half_count >= half_threshold:
+            triggered = True
+
+        if not triggered:
+            return 1.0
+
+        # Adaptation roll: DC instincts + frequency bonus vs OC deception
+        # Higher instincts = more likely to solve
+        frequency_bonus = min(0.3, (drive_count - drive_threshold + 1) * 0.1)
+        solve_chance = 0.20 + dc_instincts * 0.40 + frequency_bonus
+        # Cap at 80% — even elite DCs can fail
+        solve_chance = min(0.80, solve_chance)
+
+        # OC deception factor (from offensive coaching mods)
+        off_mods = self._coaching_mods()
+        off_pf = off_mods.get("personality_factors", {})
+        deception = off_pf.get("deception", 0.0)  # 0.0 - 1.0 if present
+        solve_chance -= deception * 0.15
+
+        if random.random() < solve_chance:
+            # Solved! Apply 15% suppression
+            suppression = 0.85
+            solved[dc_type] = suppression
+
+            # Build narrative
+            dc_type_labels = {
+                "run": "the running game",
+                "lateral": "the lateral chains",
+                "kick_pass": "the kick pass attack",
+                "trick": "the trick plays",
+            }
+            family_label = dc_type_labels.get(dc_type, dc_type)
+            self._adaptation_log.append(
+                f"DEFENSIVE INSIGHT: DC has solved {family_label}! "
+                f"(+15% suppression applied)"
+            )
+            return suppression
+
+        return 1.0
+
+    def _decay_solved_families(self, off_team: str, current_dc_type: str):
+        """V2.4: If the offense switches away from solved families, decay suppression.
+
+        When the offense runs 3+ consecutive plays from a different family than
+        a solved one, the solved suppression starts to decay (0.85 → 0.90 → 0.95 → 1.0).
+        This rewards the OC for adapting their scheme mid-game.
+        """
+        if off_team == "home":
+            solved = self._home_solved_families
+        else:
+            solved = self._away_solved_families
+
+        if not solved:
+            return
+
+        # Get consecutive plays NOT in any solved family
+        consecutive_other = getattr(self, f'_{off_team}_consecutive_non_solved', 0)
+        if current_dc_type and current_dc_type not in solved:
+            consecutive_other += 1
+        else:
+            consecutive_other = 0
+        setattr(self, f'_{off_team}_consecutive_non_solved', consecutive_other)
+
+        # After 3 consecutive non-solved plays, decay the oldest solved family
+        if consecutive_other >= 3:
+            # Decay the most suppressive (lowest multiplier) solved family
+            if solved:
+                worst_family = min(solved, key=solved.get)
+                solved[worst_family] = min(1.0, solved[worst_family] + 0.05)
+                if solved[worst_family] >= 1.0:
+                    del solved[worst_family]
+                    self._adaptation_log.append(
+                        f"TENDENCY BROKEN: Offense has reset the DC's read on "
+                        f"{worst_family}."
+                    )
+            setattr(self, f'_{off_team}_consecutive_non_solved', 0)
 
     def _apply_dq_boosts(self):
         for boosts, team in [(self.home_dq_boosts, self.home_team),
@@ -2456,6 +2624,10 @@ class ViperballEngine:
                 self.state.home_timeouts = 3
                 self.state.away_timeouts = 3
                 self.state.three_min_warning_triggered = False
+                # V2.4: Reset half-level play-family frequency counters
+                # Solved families persist — but the frequency tracking resets
+                self._home_family_freq_half = {}
+                self._away_family_freq_half = {}
 
             while self.state.time_remaining > 0:
                 # ── Defensive Bonus Possession: pre-drive check ──
@@ -2466,9 +2638,10 @@ class ViperballEngine:
                     bonus_team_name = self.home_team.name if bonus_team == "home" else self.away_team.name
                     self._bonus_recipient = ""
                     self._bonus_drives_remaining = -1
-                    # Force the bonus possession from the 20
+                    # Force the bonus possession from the baseline yard line
+                    _bonus_baseline = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
                     self.state.possession = bonus_team
-                    self.state.field_position = 20
+                    self.state.field_position = _bonus_baseline
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.state.kick_mode = False
@@ -2482,7 +2655,7 @@ class ViperballEngine:
                         quarter=self.state.quarter,
                         time=self.state.time_remaining,
                         possession=bonus_team,
-                        field_position=20,
+                        field_position=_bonus_baseline,
                         down=1,
                         yards_to_go=20,
                         play_type="bonus_possession",
@@ -2585,12 +2758,17 @@ class ViperballEngine:
         """Dynamic field position system — no traditional kickoff.
 
         Possession alternates, but starting field position is based on
-        score differential: start at the 20 +/- however many points you
+        score differential: start at the baseline +/- however many points you
         lead or trail. Clamped to the 1 yard line minimum.
 
-        Down 14 → start at 34. Up 21 → start at 1. Tied → start at 20.
+        V2.4: Baseline is configurable (default 20, set to 15 for tighter scoring).
+        At 15: teams must go 85 yards instead of 80, adding ~1.5 extra plays per
+        drive — 24 extra turnover/penalty opportunities per game.
+
+        Down 14 → start at baseline+14. Up 21 → start at 1. Tied → start at baseline.
         """
         self.state.possession = receiving_team
+        baseline = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
 
         # Calculate score differential from receiving team's perspective
         if receiving_team == "home":
@@ -2601,11 +2779,11 @@ class ViperballEngine:
             opp_score = self.state.home_score
 
         point_differential = their_score - opp_score  # positive = leading
-        start_position = max(1, int(20 - point_differential))
+        start_position = max(1, int(baseline - point_differential))
 
         # Track sacrifice yards — the penalty for leading
-        # Sacrifice = how many yards behind the 20 you start (positive when leading)
-        sacrifice = 20 - start_position  # positive = gave up yards, negative = got bonus yards
+        # Sacrifice = how many yards behind the baseline you start (positive when leading)
+        sacrifice = baseline - start_position  # positive = gave up yards, negative = got bonus yards
         if receiving_team == "home":
             self.state.home_sacrifice_yards += sacrifice
             if sacrifice > 0:
@@ -2646,6 +2824,12 @@ class ViperballEngine:
         drive_yards = 0
         drive_result = "stall"
 
+        # ── V2.4: Reset per-drive play-family frequency counters ──
+        if drive_team == "home":
+            self._home_family_freq_drive = {}
+        else:
+            self._away_family_freq_drive = {}
+
         # Between-drive recovery: players get a brief rest
         self.recover_energy_between_drives()
 
@@ -2654,19 +2838,53 @@ class ViperballEngine:
             play = self.simulate_play()
             self.play_log.append(play)
             drive_plays += 1
+
+            # ── V2.4: Track play-family frequency for adaptation ──
+            _pf_dc_type = None
+            if play.play_family and play.play_family != "none":
+                pf_name = play.play_family if isinstance(play.play_family, str) else play.play_family.value
+                _pf_dc_type = PLAY_FAMILY_TO_DC_TYPE.get(
+                    PlayFamily(pf_name) if pf_name in [e.value for e in PlayFamily] else None
+                )
+                if _pf_dc_type:
+                    if drive_team == "home":
+                        self._home_family_freq_drive[_pf_dc_type] = self._home_family_freq_drive.get(_pf_dc_type, 0) + 1
+                        self._home_family_freq_half[_pf_dc_type] = self._home_family_freq_half.get(_pf_dc_type, 0) + 1
+                    else:
+                        self._away_family_freq_drive[_pf_dc_type] = self._away_family_freq_drive.get(_pf_dc_type, 0) + 1
+                        self._away_family_freq_half[_pf_dc_type] = self._away_family_freq_half.get(_pf_dc_type, 0) + 1
+            # V2.4: Decay solved families when offense breaks tendency
+            if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False):
+                self._decay_solved_families(drive_team, _pf_dc_type)
+
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
                 self._drive_chain_positive += 1
             else:
                 self._drive_chain_positive = 0
 
-            # ── Play clock: fixed 18 seconds per play ──
-            # Tempo multiplier differentiates styles:
-            #   Grind teams (Ball Control/Rouge Hunt): ~1.15x = ~21s/play
-            #   Balanced: ~1.0x = 18s/play
-            #   Tempo teams (Chain Gang/Lateral Spread): ~0.85x = ~15s/play
-            base_time = 18
-            tempo_mult = 1.30 - tempo * 0.55
+            # ── V2.4: Time-of-possession model ──
+            # Play clock varies significantly by offensive style, creating
+            # a real time-of-possession differential between grind and tempo teams.
+            #
+            # Style-based play clock (seconds per play):
+            #   Ground & Pound / Ball Control / Rouge Hunt: 32-38s (huddle, heavy sets)
+            #   Triple Threat / Balanced:                   25-30s (pro-style)
+            #   Boot Raid / Ghost:                          22-26s (moderate tempo)
+            #   Lateral Spread / Chain Gang:                18-22s (no-huddle, high tempo)
+            #
+            # Formula: base_time maps tempo (0.0-1.0) to seconds.
+            #   tempo 0.0 → 38s (pure grind), tempo 1.0 → 18s (pure tempo)
+            if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                base_time = int(38 - tempo * 20)  # 38s at 0.0 tempo, 18s at 1.0
+                # Add natural variance: ±3 seconds per play
+                base_time += random.randint(-3, 3)
+                base_time = max(15, min(42, base_time))
+                tempo_mult = 1.0  # variance built into base_time now
+            else:
+                # Legacy: flat 18s with small tempo multiplier
+                base_time = 18
+                tempo_mult = 1.30 - tempo * 0.55
 
             # ── 3-minute warning clock management ──
             is_three_min = (self.state.quarter in (2, 4) and
@@ -2674,13 +2892,25 @@ class ViperballEngine:
             if is_three_min:
                 score_diff = self._get_score_diff()
                 if score_diff < 0:
-                    # Trailing: hurry-up, cut clock to 1/3
-                    tempo_mult *= 0.33
+                    # Trailing: hurry-up, cut clock to minimum
+                    if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                        base_time = max(12, int(base_time * 0.50))  # compress to ~50% of normal
+                    else:
+                        tempo_mult *= 0.33
                 elif score_diff > 0:
                     # Leading: burn clock at full speed
                     # V2.3: clock_burn_multiplier from offense style amplifies clock burning
                     clock_burn = style.get("clock_burn_multiplier", 1.0)
-                    tempo_mult *= 1.2 * clock_burn
+                    if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                        # V2.4: clock_burn_multiplier only meaningful in 4th quarter
+                        # Old-school enforcer up by 10 → 42s play clocks, strangling the comeback
+                        if self.state.quarter == 4:
+                            base_time = int(base_time * 1.2 * clock_burn)
+                            base_time = min(45, base_time)  # cap at 45s (play clock violation)
+                        else:
+                            base_time = int(base_time * 1.1)
+                    else:
+                        tempo_mult *= 1.2 * clock_burn
 
             time_elapsed = max(8, int(base_time * tempo_mult))
             prev_time = self.state.time_remaining
@@ -2796,7 +3026,7 @@ class ViperballEngine:
                 elif play.result == "safety":
                     scored_team = "away" if drive_team == "home" else "home"
                     self.state.possession = drive_team
-                    self.state.field_position = 20
+                    self.state.field_position = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
                     self.state.down = 1
                     self.state.yards_to_go = 20
                 break
@@ -4566,6 +4796,11 @@ class ViperballEngine:
             proximity = 1.0 - min(1.0, abs(delta) / 35.0)
             variance = 0.8 + proximity * 1.4
 
+        # ── V2.4: Snapshot pre-modifier center for degeneracy floor ──
+        # This captures the raw talent-based yardage before coaching/weather/DC stacking.
+        # No matter how cold the DC + weather + coaching stack, offense retains a minimum %.
+        pre_modifier_center = center
+
         # ── Coaching gravity adjustments ──
         off_mods = self._coaching_mods()
         def_mods = self._def_coaching_mods()
@@ -4630,12 +4865,21 @@ class ViperballEngine:
         # ── V2.3: DC gameplan suppression (stacks multiplicatively with weather) ──
         # The opposing DC's film prep creates per-play-type suppression.
         # A cold defensive game in the rain compounds: 0.85 DC * 0.95 weather effect.
+        dc_suppression = 1.0
         if play_family is not None:
             dc_type = PLAY_FAMILY_TO_DC_TYPE.get(play_family)
             if dc_type:
                 dc_gp = self._def_dc_gameplan()
                 dc_suppression = dc_gp.get(dc_type, 1.0)
                 center *= dc_suppression
+
+        # ── V2.4: Play-family adaptation — "Solved Puzzle" mechanic ──
+        # If the DC has seen too many plays from the same family this drive/half,
+        # instincts kick in and the DC applies additional suppression.
+        adaptation_suppression = 1.0
+        if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False) and play_family is not None:
+            adaptation_suppression = self._get_play_family_adaptation(play_family)
+            center *= adaptation_suppression
 
         # ── V2.3: HC affinity offensive bonus ──
         # offensive_mind HC amplifies yard production when on offense.
@@ -4648,6 +4892,15 @@ class ViperballEngine:
         # ── Game rhythm — all coaching rhythm effects flow through here ──
         rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
         center *= rhythm
+
+        # ── V2.4: Degeneracy floor — MIN_YARDAGE_MULTIPLIER ──
+        # Prevents degenerate outcomes from extreme stacking (cold DC + sleet + disciplinarian).
+        # Even an elite defense can't suppress more than 35% of raw yardage.
+        min_mult = V2_ENGINE_CONFIG.get("min_yardage_multiplier", 0.65)
+        if pre_modifier_center > 0:
+            effective_mult = center / pre_modifier_center
+            if effective_mult < min_mult:
+                center = pre_modifier_center * min_mult
 
         # ── V2.1: Yardage polarization ──
         # Bimodal distribution: occasional busts and explosives,
@@ -4754,6 +5007,17 @@ class ViperballEngine:
         dc_gp = self._def_dc_gameplan()
         dc_kp_supp = dc_gp.get("kick_pass", 1.0)
         base_prob *= dc_kp_supp
+
+        # ── V2.4: No-Fly Zone — defensive prestige "Rattled" modifier ──
+        # If the defending team has earned No-Fly Zone status (2+ INTs in 3
+        # consecutive games), opposing ZBs get rattled on deep kick passes.
+        # -5% accuracy on all kick pass attempts against this defense.
+        def_has_nfz = (
+            (self.state.possession == "home" and self.away_no_fly_zone)
+            or (self.state.possession == "away" and self.home_no_fly_zone)
+        )
+        if def_has_nfz:
+            base_prob *= 0.95  # "Rattled" — 5% accuracy penalty
 
         # Hot streak
         streak_bonus, streak_var = self._hot_streak_modifier(kicker)
@@ -4903,7 +5167,7 @@ class ViperballEngine:
             self.change_possession()
             self.apply_stamina_drain(3)
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-            self.state.field_position = 20
+            self.state.field_position = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
             self.state.down = 1
             self.state.yards_to_go = 20
             return Play(
@@ -5061,7 +5325,7 @@ class ViperballEngine:
             self.change_possession()
             self.apply_stamina_drain(3)
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-            self.state.field_position = 20
+            self.state.field_position = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
             self.state.down = 1
             self.state.yards_to_go = 20
             return Play(
@@ -5318,7 +5582,7 @@ class ViperballEngine:
             self.change_possession()
             self.apply_stamina_drain(3)
             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-            self.state.field_position = 20
+            self.state.field_position = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
             self.state.down = 1
             self.state.yards_to_go = 20
             return Play(
@@ -7954,9 +8218,103 @@ class ViperballEngine:
                 "home_tilted_at_end": self.state.home_is_tilted,
                 "away_tilted_at_end": self.state.away_is_tilted,
             },
+            # ── V2.4: Modifier stack visibility ──
+            "modifier_stack": self._build_modifier_stack_summary(),
+            # ── V2.4: Play-family adaptation narrative ──
+            "adaptation_log": list(self._adaptation_log),
         }
 
         return summary
+
+    def _build_modifier_stack_summary(self) -> Dict:
+        """V2.4: Build a human-readable summary of the modifier stacking.
+
+        Shows each side's combined defensive suppression picture so the
+        summary tells the story of WHY a team was losing, not just that
+        they were.
+
+        Example output:
+        {
+            "home_defense": {
+                "dc_gameplan": {"run": 0.82, "kick_pass": 1.03, ...},
+                "game_temperature": "cold",
+                "weather": "rain",
+                "weather_speed_modifier": -0.03,
+                "no_fly_zone": False,
+                "solved_families": {"run": 0.85},
+                "stack_label": "STIFLING RUN DEFENSE (0.74 Multiplier applied)"
+            },
+            ...
+        }
+        """
+        result = {}
+        for side, gp, nfz, solved in [
+            ("home_defense", self.home_dc_gameplan, self.home_no_fly_zone,
+             self._away_solved_families),  # home DC solves away offense
+            ("away_defense", self.away_dc_gameplan, self.away_no_fly_zone,
+             self._home_solved_families),  # away DC solves home offense
+        ]:
+            temp = gp.get("game_temperature", "neutral")
+            # Find the most suppressed play type
+            play_types = ("run", "lateral", "kick_pass", "trick")
+            suppression_vals = {pt: gp.get(pt, 1.0) for pt in play_types}
+            worst_pt = min(suppression_vals, key=suppression_vals.get)
+            worst_val = suppression_vals[worst_pt]
+
+            # Determine the combined multiplier for the worst case
+            combined = worst_val
+            weather_mod = self.weather_info.get("speed_modifier", 0.0)
+            if weather_mod < 0:
+                # Approximate: weather speed_modifier shifts center additively,
+                # but for display we show the equivalent multiplicative effect
+                combined *= (1.0 + weather_mod * 2 / 5.5)  # relative to ~5.5 yd base
+
+            # Solved family stacking
+            if worst_pt in solved:
+                combined *= solved[worst_pt]
+
+            # Build label
+            play_type_labels = {
+                "run": "RUN DEFENSE",
+                "lateral": "LATERAL COVERAGE",
+                "kick_pass": "PASS DEFENSE",
+                "trick": "TRICK PLAY DEFENSE",
+            }
+            if combined <= 0.80:
+                intensity = "STIFLING"
+            elif combined <= 0.90:
+                intensity = "STRONG"
+            elif combined <= 0.95:
+                intensity = "SOLID"
+            else:
+                intensity = "NEUTRAL"
+
+            label_parts = []
+            if temp == "cold":
+                label_parts.append("Defensive Guru HC" if worst_val <= 0.85 else "Cold DC")
+            if self.weather != "clear":
+                label_parts.append(self.weather_info["label"])
+            if solved:
+                label_parts.append("Adapted")
+
+            stack_label = ""
+            if label_parts and intensity != "NEUTRAL":
+                stack_label = (
+                    f"{' + '.join(label_parts)} = {intensity} "
+                    f"{play_type_labels.get(worst_pt, 'DEFENSE')} "
+                    f"({combined:.2f} Multiplier applied)"
+                )
+
+            result[side] = {
+                "dc_gameplan": {pt: gp.get(pt, 1.0) for pt in play_types},
+                "game_temperature": temp,
+                "weather": self.weather,
+                "weather_speed_modifier": weather_mod,
+                "no_fly_zone": nfz,
+                "solved_families": dict(solved) if solved else {},
+                "stack_label": stack_label,
+            }
+        return result
 
     def calculate_team_stats(self, plays: List[Play]) -> Dict:
         total_yards = sum(p.yards_gained for p in plays if p.yards_gained > 0)
