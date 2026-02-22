@@ -79,6 +79,7 @@ CLASSIFICATION_EFFECTS = {
         "fourth_down_accuracy":         (0.05, 0.15),
         "halftime_adjustment_bonus":    (0.03, 0.08),
         "situational_amplification":    (0.04, 0.10),
+        "int_chance_reduction":         (0.95, 0.85),  # multiplier on INT chance (lower = better)
     },
     "motivator": {
         "trailing_halftime_boost":      (1.05, 1.12),
@@ -235,6 +236,20 @@ HIDDEN_TRAIT_EFFECTS = {
     "timeout_hoarder":        {},
     "timeout_sprinter":       {},
     "momentum_rider":         {"momentum_recovery_multiplier": 1.30},
+    "ball_security_obsessed": {
+        "lateral_weight_multiplier": 0.70,
+        "kick_pass_weight_multiplier": 0.80,
+        "trick_play_weight_multiplier": 0.60,
+    },
+    "turnover_gambler":       {
+        "lateral_weight_multiplier": 1.40,
+        "kick_pass_weight_multiplier": 1.30,
+        "trick_play_weight_multiplier": 1.50,
+    },
+    "bonus_possession_aware": {
+        "lateral_weight_multiplier": 1.15,
+        "int_acceptance_trailing": 0.90,
+    },
 }
 
 HIDDEN_TRAIT_LABELS = {
@@ -258,6 +273,9 @@ HIDDEN_TRAIT_LABELS = {
     "timeout_hoarder":       "Timeout Hoarder",
     "timeout_sprinter":      "Timeout Sprinter",
     "momentum_rider":        "Momentum Rider",
+    "ball_security_obsessed": "Ball Security Obsessed",
+    "turnover_gambler":      "Turnover Gambler",
+    "bonus_possession_aware": "Bonus Possession Aware",
 }
 
 

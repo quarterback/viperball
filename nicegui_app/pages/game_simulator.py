@@ -276,6 +276,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         {"Stat": "Lat Chains", home_name: str(hs["lateral_chains"]), away_name: str(as_["lateral_chains"])},
         {"Stat": "Lat Eff", home_name: f"{hs['lateral_efficiency']}%", away_name: f"{as_['lateral_efficiency']}%"},
         {"Stat": "Fumbles Lost", home_name: str(hs["fumbles_lost"]), away_name: str(as_["fumbles_lost"])},
+        {"Stat": "KP INTs", home_name: str(hs.get("kick_pass_interceptions", 0)), away_name: str(as_.get("kick_pass_interceptions", 0))},
+        {"Stat": "Lat INTs", home_name: str(hs.get("lateral_interceptions", 0)), away_name: str(as_.get("lateral_interceptions", 0))},
+        {"Stat": "Bonus Poss.", home_name: str(hs.get("bonus_possessions", 0)), away_name: str(as_.get("bonus_possessions", 0))},
         {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
     ]
     stat_table(off_rows)

@@ -2440,9 +2440,9 @@ class ViperballEngine:
                     bonus_team_name = self.home_team.name if bonus_team == "home" else self.away_team.name
                     self._bonus_recipient = ""
                     self._bonus_drives_remaining = -1
-                    # Force the bonus possession from the 25
+                    # Force the bonus possession from the 20
                     self.state.possession = bonus_team
-                    self.state.field_position = 25
+                    self.state.field_position = 20
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.state.kick_mode = False
@@ -2456,7 +2456,7 @@ class ViperballEngine:
                         quarter=self.state.quarter,
                         time=self.state.time_remaining,
                         possession=bonus_team,
-                        field_position=25,
+                        field_position=20,
                         down=1,
                         yards_to_go=20,
                         play_type="bonus_possession",
@@ -3096,6 +3096,13 @@ class ViperballEngine:
         # Style and urgency
         kick_prob += kick_mode_agg - 0.5  # Centered at 0
         kick_prob += urgency
+
+        # V2.3: INT awareness — when leading in 2H, going for it risks
+        # a turnover that gifts the opponent a bonus possession. Bias
+        # toward kicking (safe points) proportional to lead size.
+        if self.state.quarter >= 3 and score_diff > 0:
+            int_kick_bias = min(0.20, score_diff / 50.0)  # up to +0.20 at 10+ pts
+            kick_prob += int_kick_bias
 
         kick_prob = max(0.05, min(0.85, kick_prob))
 
@@ -3758,7 +3765,8 @@ class ViperballEngine:
         # Tempo preference → kick_pass boost (tempo coaches love the air game)
         tempo = pf.get("tempo_preference", 1.0)
         kp_sub = sub_fx.get("kick_pass_weight_multiplier", 1.0)
-        weights["kick_pass"] = weights.get("kick_pass", 0.05) * tempo * kp_sub
+        kp_trait = trait_fx.get("kick_pass_weight_multiplier", 1.0)
+        weights["kick_pass"] = weights.get("kick_pass", 0.05) * tempo * kp_sub * kp_trait
 
         # Variance tolerance → explosive play families
         var_tol = pf.get("variance_tolerance", 1.0)
@@ -3832,6 +3840,25 @@ class ViperballEngine:
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.4
             if quarter == 4 and abs(score_diff) <= 7:
                 weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.5
+            # V2.3: Style-specific INT protection — chain_gang is inherently
+            # lateral-heavy. When leading in 2H, auto-protect by suppressing
+            # the lateral boost and shifting to safer run-based options.
+            if quarter >= 3 and score_diff > 7:
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.5
+                weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.7
+                weights["power"] = weights.get("power", 0.1) * 1.4
+                weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
+
+        elif style_name == "lateral_spread":
+            # V2.3: Style-specific INT protection — lateral_spread is the most
+            # INT-prone style. When leading comfortably in 2H, trade lateral
+            # chaos for safer options to protect the lead.
+            if quarter >= 3 and score_diff > 7:
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.3) * 0.4
+                weights["kick_pass"] = weights.get("kick_pass", 0.28) * 0.6
+                weights["dive_option"] = weights.get("dive_option", 0.02) * 3.0
+                weights["power"] = weights.get("power", 0.02) * 3.0
+                weights["sweep_option"] = weights.get("sweep_option", 0.03) * 2.0
 
         elif style_name == "triple_threat":
             if down <= 2:
@@ -5329,10 +5356,17 @@ class ViperballEngine:
         # vs thrower lateral skill. Laterals are risky — chaos breeds turnovers.
         def_team = self.get_defensive_team()
         avg_def_awareness = sum(getattr(p, 'awareness', 70) for p in def_team.players[:6]) / 6
+
+        # V2.3: Gameday manager INT reduction — better situational coaching
+        # reduces turnover rate on risky plays
+        _off_mods_lat = self._coaching_mods()
+        _gm_int_red = _off_mods_lat.get("classification_effects", {}).get("int_chance_reduction", 1.0)
+
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
             int_chance = 0.03 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance *= _gm_int_red
             int_chance = max(0.015, min(0.06, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
@@ -5865,6 +5899,11 @@ class ViperballEngine:
         # high chance of big returns or pick-sixes.
         # Global rate ≈ P(incomplete) × int_chance ≈ 0.40 × 0.10 ≈ 4-5%.
         int_chance = 0.10
+
+        # V2.3: Gameday manager INT reduction
+        _off_mods_kp = self._coaching_mods()
+        _gm_int_red_kp = _off_mods_kp.get("classification_effects", {}).get("int_chance_reduction", 1.0)
+        int_chance *= _gm_int_red_kp
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -7586,6 +7625,15 @@ class ViperballEngine:
         away_stats["compelled_efficiency"] = round(
             self.state.away_sacrifice_scores / max(1, self.state.away_sacrifice_drives) * 100, 1
         ) if self.state.away_sacrifice_drives > 0 else None
+
+        # ── Bonus Possession stats (pesäpallo-inspired) ──
+        # Count bonus drives from the drive_log and tally yards/scores.
+        for side, stats in [("home", home_stats), ("away", away_stats)]:
+            bonus_drives = [d for d in self.drive_log if d.get("team") == side and d.get("bonus_drive")]
+            stats["bonus_possessions"] = len(bonus_drives)
+            stats["bonus_possession_yards"] = sum(d.get("yards", 0) for d in bonus_drives)
+            bonus_scores = sum(1 for d in bonus_drives if d.get("result") in ("touchdown", "successful_kick"))
+            stats["bonus_possession_scores"] = bonus_scores
 
         for stats, team_obj in [(home_stats, self.home_team), (away_stats, self.away_team)]:
             keeper_deflections = sum(p.game_kick_deflections for p in team_obj.players)

@@ -200,6 +200,9 @@ def generate_box_score_markdown(result):
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
     lines.append(f"| Touchdowns | {hs['touchdowns']} | {as_['touchdowns']} |")
     lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
+    lines.append(f"| KP Interceptions | {hs.get('kick_pass_interceptions', 0)} | {as_.get('kick_pass_interceptions', 0)} |")
+    lines.append(f"| Lateral INTs | {hs.get('lateral_interceptions', 0)} | {as_.get('lateral_interceptions', 0)} |")
+    lines.append(f"| Bonus Possessions | {hs.get('bonus_possessions', 0)} | {as_.get('bonus_possessions', 0)} |")
     return "\n".join(lines)
 
 
@@ -248,6 +251,9 @@ def generate_forum_box_score(result):
     lines.append(_stat_line("Total Yards", hs['total_yards'], as_['total_yards']))
     lines.append(_stat_line("Touchdowns (9pts)", f"{hs['touchdowns']} ({hs['touchdowns']*9}pts)", f"{as_['touchdowns']} ({as_['touchdowns']*9}pts)"))
     lines.append(_stat_line("Fumbles Lost", hs['fumbles_lost'], as_['fumbles_lost']))
+    lines.append(_stat_line("KP Interceptions", hs.get('kick_pass_interceptions', 0), as_.get('kick_pass_interceptions', 0)))
+    lines.append(_stat_line("Lateral INTs", hs.get('lateral_interceptions', 0), as_.get('lateral_interceptions', 0)))
+    lines.append(_stat_line("Bonus Possessions", hs.get('bonus_possessions', 0), as_.get('bonus_possessions', 0)))
     lines.append("")
     lines.append("=" * 60)
     lines.append("CVL Official Box Score | 6-down, 20-yard system")
