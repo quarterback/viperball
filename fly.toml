@@ -24,16 +24,16 @@ primary_region = 'ams'
     hard_limit = 250
     soft_limit = 200
 
-[checks]
-  [checks.alive]
-    type = "http"
-    port = 8080
-    path = "/api/health"
-    interval = "30s"
-    timeout = "10s"
-    grace_period = "120s"
-    method = "GET"
+# Service-level health check: controls whether traffic is routed to this machine.
+# Uses [[http_service.checks]] (not top-level [checks] which blocks deployments on failure).
+# Grace period gives NiceGUI time to initialize socket.io routes and load team data.
+[[http_service.checks]]
+  grace_period = "120s"
+  interval = "30s"
+  method = "GET"
+  timeout = "10s"
+  path = "/api/health"
 
 [[vm]]
   size = "performance-1x"
-  memory = "2048mb"
+  memory = "2gb"
