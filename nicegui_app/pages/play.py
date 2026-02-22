@@ -48,13 +48,22 @@ def _render_mode_selection(state: UserState, shared: dict):
 
     with ui.tab_panels(mode_tabs, value=quick_tab).classes("w-full"):
         with ui.tab_panel(dynasty_tab):
-            render_dynasty_mode(state, shared)
+            try:
+                render_dynasty_mode(state, shared)
+            except Exception as e:
+                ui.label(f"Error loading dynasty mode: {e}").classes("text-red-500")
 
         with ui.tab_panel(season_tab):
-            render_season_simulator(state, shared)
+            try:
+                render_season_simulator(state, shared)
+            except Exception as e:
+                ui.label(f"Error loading season setup: {e}").classes("text-red-500")
 
         with ui.tab_panel(quick_tab):
-            render_game_simulator(state, shared)
+            try:
+                render_game_simulator(state, shared)
+            except Exception as e:
+                ui.label(f"Error loading game simulator: {e}").classes("text-red-500")
 
 
 def _render_season_play(state: UserState, shared: dict):

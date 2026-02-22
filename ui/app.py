@@ -27,11 +27,18 @@ def _ensure_api_server():
     """
     global _api_server_started
 
-    api_base = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8000")
+    from ui.api_client import API_BASE as _client_base
+    api_base = _client_base
     if "127.0.0.1" not in api_base and "localhost" not in api_base:
         return
 
-    if _port_in_use(8000):
+    # Parse the port from the API client's base URL so they always match
+    try:
+        _port = int(api_base.rsplit(":", 1)[1].split("/")[0])
+    except (ValueError, IndexError):
+        _port = 8080
+
+    if _port_in_use(_port):
         return
 
     with _api_server_lock:
@@ -43,7 +50,7 @@ def _ensure_api_server():
     from api.main import app as fastapi_app
 
     def _run():
-        uvicorn.run(fastapi_app, host="127.0.0.1", port=8000, log_level="warning")
+        uvicorn.run(fastapi_app, host="127.0.0.1", port=_port, log_level="warning")
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
