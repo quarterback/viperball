@@ -2,49 +2,133 @@
 
 Replaces Streamlit's st.session_state. Each browser tab gets its own
 UserState instance via the @ui.page decorator scope.
+
+Critical session fields (session_id, mode, human_teams, dynasty_teams)
+are persisted in app.storage.tab so they survive page navigation.
 """
 
 from __future__ import annotations
 from typing import Optional
 
+from nicegui import app
+
 
 class UserState:
-    """Holds all mutable state for a single user session."""
+    """Holds all mutable state for a single user session.
+
+    Core session fields are backed by app.storage.tab (NiceGUI's per-tab
+    persistent storage) so that creating a season/dynasty and navigating
+    back to "/" preserves the active session.
+    """
 
     def __init__(self):
-        # API session
-        self.session_id: Optional[str] = None
-        self.mode: Optional[str] = None  # "season" or "dynasty"
+        self._store = app.storage.tab
 
-        # Season setup
-        self.human_teams: list[str] = []
-        self.playoff_size: int = 8
-        self.bowl_count: int = 4
-        self.season_ai_seed: int = 0
-        self.season_conf_seed: int = 0
-        self.season_phase: str = "setup"  # setup, regular, portal, playoffs, bowls, complete
-
-        # Dynasty setup
-        self.dynasty_teams: list[str] = []
-        self.dyn_season_phase: str = "setup"
-        self.dyn_playoff_size: int = 8
-        self.dyn_bowl_count: int = 4
-
-        # Game simulator
+        # Non-persistent (per-render) state
         self.last_result: Optional[dict] = None
         self.last_seed: int = 0
-
-        # Batch simulator
         self.batch_results: Optional[list] = None
-
-        # Play inspector
         self.play_inspector_results: Optional[list] = None
-
-        # DraftyQueenz
         self.dq_css_injected: bool = False
-
-        # Caches
         self._team_states_cache: Optional[dict] = None
+
+    # ── Persistent properties backed by app.storage.tab ──
+
+    @property
+    def session_id(self) -> Optional[str]:
+        return self._store.get("session_id")
+
+    @session_id.setter
+    def session_id(self, value: Optional[str]):
+        self._store["session_id"] = value
+
+    @property
+    def mode(self) -> Optional[str]:
+        return self._store.get("mode")
+
+    @mode.setter
+    def mode(self, value: Optional[str]):
+        self._store["mode"] = value
+
+    @property
+    def human_teams(self) -> list[str]:
+        return self._store.get("human_teams", [])
+
+    @human_teams.setter
+    def human_teams(self, value: list[str]):
+        self._store["human_teams"] = value
+
+    @property
+    def dynasty_teams(self) -> list[str]:
+        return self._store.get("dynasty_teams", [])
+
+    @dynasty_teams.setter
+    def dynasty_teams(self, value: list[str]):
+        self._store["dynasty_teams"] = value
+
+    @property
+    def playoff_size(self) -> int:
+        return self._store.get("playoff_size", 8)
+
+    @playoff_size.setter
+    def playoff_size(self, value: int):
+        self._store["playoff_size"] = value
+
+    @property
+    def bowl_count(self) -> int:
+        return self._store.get("bowl_count", 4)
+
+    @bowl_count.setter
+    def bowl_count(self, value: int):
+        self._store["bowl_count"] = value
+
+    @property
+    def season_ai_seed(self) -> int:
+        return self._store.get("season_ai_seed", 0)
+
+    @season_ai_seed.setter
+    def season_ai_seed(self, value: int):
+        self._store["season_ai_seed"] = value
+
+    @property
+    def season_conf_seed(self) -> int:
+        return self._store.get("season_conf_seed", 0)
+
+    @season_conf_seed.setter
+    def season_conf_seed(self, value: int):
+        self._store["season_conf_seed"] = value
+
+    @property
+    def season_phase(self) -> str:
+        return self._store.get("season_phase", "setup")
+
+    @season_phase.setter
+    def season_phase(self, value: str):
+        self._store["season_phase"] = value
+
+    @property
+    def dyn_season_phase(self) -> str:
+        return self._store.get("dyn_season_phase", "setup")
+
+    @dyn_season_phase.setter
+    def dyn_season_phase(self, value: str):
+        self._store["dyn_season_phase"] = value
+
+    @property
+    def dyn_playoff_size(self) -> int:
+        return self._store.get("dyn_playoff_size", 8)
+
+    @dyn_playoff_size.setter
+    def dyn_playoff_size(self, value: int):
+        self._store["dyn_playoff_size"] = value
+
+    @property
+    def dyn_bowl_count(self) -> int:
+        return self._store.get("dyn_bowl_count", 4)
+
+    @dyn_bowl_count.setter
+    def dyn_bowl_count(self, value: int):
+        self._store["dyn_bowl_count"] = value
 
     def clear_session(self):
         """Reset all session-related state."""

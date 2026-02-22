@@ -46,41 +46,72 @@ def render_dynasty_mode(state: UserState, shared: dict):
     # ── Team Selection ──
     ui.label("Choose Your Team").classes("font-bold text-slate-700 mt-4")
 
+    # Shared mutable ref so the _create_dynasty callback can read the selection
+    _selected = {"team": all_team_names_sorted[0] if all_team_names_sorted else ""}
+
     # Conference filter + team picker
-    conf_set = sorted(set(t.get("conference", "Independent") for t in teams))
+    conf_set = sorted(set(
+        team_identities.get(t, {}).get("conference", "Independent")
+        for t in all_team_names_sorted
+    ))
     conf_filter_opts = {"all": "All Conferences"}
     for c in conf_set:
         conf_filter_opts[c] = c
 
-    conf_filter = ui.select(conf_filter_opts, value="all", label="Filter by Conference").classes("w-64")
+    with ui.row().classes("w-full gap-4 items-end"):
+        conf_filter = ui.select(conf_filter_opts, value="all", label="Filter by Conference").classes("w-64")
 
-    team_options_container = ui.column().classes("w-full")
+        # Build enriched team options: "Name (Conference) — Archetype [OVR]"
+        def _build_team_options(conf_value):
+            if conf_value == "all":
+                names = all_team_names_sorted
+            else:
+                names = [t for t in all_team_names_sorted
+                         if team_identities.get(t, {}).get("conference", "Independent") == conf_value]
+            opts = {}
+            for t in sorted(names):
+                ident = team_identities.get(t, {})
+                conf = ident.get("conference", "")
+                label = f"{t} ({conf})" if conf else t
+                opts[t] = label
+            return opts
 
-    @ui.refreshable
-    def _team_select():
-        cf = conf_filter.value
-        if cf == "all":
-            filtered = teams
-        else:
-            filtered = [t for t in teams if t.get("conference", "") == cf]
+        initial_opts = _build_team_options("all")
+        team_select = ui.select(
+            initial_opts,
+            label="Your Team",
+            value=_selected["team"],
+        ).classes("flex-1")
 
-        opts = {t["name"]: t["name"] for t in sorted(filtered, key=lambda x: x["name"])}
-        sel = ui.select(opts, label="Your Team", value=list(opts.keys())[0] if opts else None).classes("w-full")
-        sel.props("id=dynasty_team_select")
+    # Keep _selected in sync
+    def _on_team_change(e):
+        if e.value:
+            _selected["team"] = e.value
+    team_select.on_value_change(_on_team_change)
 
-        # Show team info
-        if sel.value:
-            identity = team_identities.get(sel.value, {})
-            mascot = identity.get("mascot", "")
-            conf = identity.get("conference", "")
-            colors = identity.get("colors", [])
-            if mascot or conf:
-                ui.label(f"{mascot} | {conf} | {' / '.join(colors[:2])}").classes("text-sm text-gray-500")
+    def _on_conf_filter_change(e):
+        new_opts = _build_team_options(e.value)
+        team_select.options = new_opts
+        team_select.update()
+        if new_opts and _selected["team"] not in new_opts:
+            first_key = list(new_opts.keys())[0]
+            team_select.set_value(first_key)
+            _selected["team"] = first_key
+    conf_filter.on_value_change(_on_conf_filter_change)
 
-    conf_filter.on_value_change(lambda _: _team_select.refresh())
+    # Show team info below
+    team_info_label = ui.label("").classes("text-sm text-gray-500")
 
-    with team_options_container:
-        _team_select()
+    def _update_team_info():
+        t = _selected["team"]
+        ident = team_identities.get(t, {})
+        mascot = ident.get("mascot", "")
+        conf = ident.get("conference", "")
+        colors = ident.get("colors", [])
+        parts = [p for p in [mascot, conf, " / ".join(colors[:2])] if p]
+        team_info_label.set_text(" | ".join(parts) if parts else "")
+    team_select.on_value_change(lambda _: _update_team_info())
+    _update_team_info()
 
     start_year = ui.number("Starting Year", value=2026, min=1906, max=2050).classes("w-48 mt-2")
 
@@ -112,7 +143,7 @@ def render_dynasty_mode(state: UserState, shared: dict):
     total_teams = len(all_team_names_sorted)
     max_conf = max(1, total_teams // 9)
 
-    ui.label(f"Number of Conferences ({total_teams} teams)").classes("text-sm text-slate-600")
+    ui.label(f"Number of Conferences ({total_teams} teams available)").classes("text-sm text-slate-600")
     num_conferences = ui.slider(
         min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
     ).classes("w-96")
@@ -126,15 +157,72 @@ def render_dynasty_mode(state: UserState, shared: dict):
         if rem == 0:
             teams_per_label.set_text(f"~{per} teams per conference")
         else:
-            teams_per_label.set_text(f"~{per}-{per+1} teams per conference")
+            teams_per_label.set_text(f"~{per}-{per + 1} teams per conference")
 
     num_conferences.on_value_change(lambda _: _update_conf_label())
     _update_conf_label()
 
+    # Conference name editing + geographic defaults
+    _conf_state = {
+        "seed": random.randint(0, 999999),
+        "use_geo": True,
+    }
+
+    conf_names_container = ui.column().classes("w-full mt-2")
+
+    # Track conference name inputs
+    _conf_name_inputs: list = []
+
+    @ui.refreshable
+    def _render_conf_names():
+        _conf_name_inputs.clear()
+        n = int(num_conferences.value)
+
+        # Generate names
+        if _conf_state["use_geo"]:
+            geo_clusters = get_geographic_conference_defaults(TEAMS_DIR, all_team_names_sorted, n)
+            generated = list(geo_clusters.keys())
+            if len(generated) < n:
+                generated.extend(generate_conference_names(
+                    count=n - len(generated), seed=_conf_state["seed"]
+                ))
+        else:
+            generated = generate_conference_names(count=n, seed=_conf_state["seed"])
+
+        # Pad if needed
+        while len(generated) < n:
+            generated.append(f"Conference {len(generated) + 1}")
+
+        # "New Names" button
+        with ui.row().classes("w-full justify-end"):
+            def _regen():
+                _conf_state["seed"] = random.randint(0, 999999)
+                _conf_state["use_geo"] = False
+                _render_conf_names.refresh()
+
+            ui.button("New Names", on_click=_regen, icon="casino")
+
+        # Editable conference name grid (4 per row)
+        cols_per_row = min(n, 4)
+        for row_start in range(0, n, cols_per_row):
+            row_end = min(row_start + cols_per_row, n)
+            with ui.row().classes("w-full gap-4"):
+                for ci in range(row_start, row_end):
+                    inp = ui.input(
+                        f"Conference {ci + 1}",
+                        value=generated[ci],
+                    ).classes("flex-1")
+                    _conf_name_inputs.append(inp)
+
+    num_conferences.on_value_change(lambda _: _render_conf_names.refresh())
+
+    with conf_names_container:
+        _render_conf_names()
+
     # ── League History ──
     ui.separator().classes("my-4")
     ui.label("League History").classes("text-lg font-semibold text-slate-700")
-    ui.label("Generate past seasons for established history with champions, records, and rivalries.").classes("text-sm text-gray-500")
+    ui.label("Generate past seasons so your dynasty has an established history with champions, records, and rivalries.").classes("text-sm text-gray-500")
 
     with ui.row().classes("gap-4 items-center"):
         ui.label("Years of History").classes("text-sm text-slate-600")
@@ -153,11 +241,10 @@ def render_dynasty_mode(state: UserState, shared: dict):
     creating_spinner = ui.spinner(size="lg").classes("hidden")
 
     def _create_dynasty():
-        # Get selected team from the inner select element
-        team_select_el = ui.context.client.page_container
-        # Use a simpler approach - find the select by querying
-        # Since NiceGUI manages state internally, we'll use JavaScript query
-        # For now, use a default approach
+        selected_team = _selected["team"]
+        if not selected_team:
+            notify_error("Please select a team")
+            return
 
         # Ensure session
         if not state.session_id:
@@ -167,11 +254,6 @@ def render_dynasty_mode(state: UserState, shared: dict):
             except api_client.APIError as e:
                 notify_error(f"Failed to create session: {e.detail}")
                 return
-
-        # We need to get the dynasty team select value. Since it's in a refreshable,
-        # we'll need a shared reference. For now, use the first team as fallback.
-        # TODO: Wire up team selection properly after initial migration
-        selected_team = all_team_names_sorted[0] if all_team_names_sorted else ""
 
         creating_spinner.classes(remove="hidden")
 

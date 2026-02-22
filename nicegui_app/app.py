@@ -106,8 +106,8 @@ def index():
                 except api_client.APIError:
                     pass
             state.clear_session()
-            mode_label.set_text("No Active Session")
             ui.notify("Session ended", type="info")
+            ui.navigate.to("/")  # Refresh to show mode selection
 
         ui.button("End Session", on_click=_end_session, icon="stop").classes("w-full mt-2")
 
@@ -118,7 +118,7 @@ def index():
 
         def _on_settings_change(e):
             settings_container.clear()
-            if e.value is None:
+            if e.value == "none":
                 main_container.set_visibility(True)
                 settings_container.set_visibility(False)
             else:
@@ -133,8 +133,8 @@ def index():
                         render_play_inspector(state, shared)
 
         ui.radio(
-            {None: "None", "debug": "Debug Tools", "inspector": "Play Inspector"},
-            value=None,
+            {"none": "Main View", "debug": "Debug Tools", "inspector": "Play Inspector"},
+            value="none",
             on_change=_on_settings_change,
         ).classes("text-slate-300")
 
