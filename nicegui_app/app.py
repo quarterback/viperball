@@ -6,7 +6,7 @@ and mounts the existing FastAPI backend.
 
 from __future__ import annotations
 
-from nicegui import ui, app
+from nicegui import ui, app, Client
 
 from ui import api_client
 from nicegui_app.state import UserState
@@ -83,8 +83,9 @@ def _get_mode_label(state: UserState, shared: dict) -> str:
 
 
 @ui.page("/")
-def index():
+async def index(client: Client):
     """Main application page."""
+    await client.connected()
     state = UserState()
     shared = _load_shared_data()
 
