@@ -1,7 +1,6 @@
 # Viperball: Rules, Mechanics, and Narrative Primer
 
 **A complete reference for understanding the sport of Viperball**
-**For use by narrative engines, writers, commentators, and world-builders**
 
 ---
 
