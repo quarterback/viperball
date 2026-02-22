@@ -873,6 +873,9 @@ class Player:
     game_sacks: int = 0
     game_hurries: int = 0
     game_kick_pass_ints: int = 0
+    # VPA (Viperball Points Added) attribution
+    game_vpa: float = 0.0             # total VPA attributed to this player
+    game_plays_involved: int = 0      # number of plays this player was involved in
     # Per-player in-game fatigue: starts at 100, drains with usage
     game_energy: float = 100.0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
@@ -2845,27 +2848,28 @@ class ViperballEngine:
                     return PlayType.PLACE_KICK
             return None
 
-        # ── Downs 1-3: advancement phase — keep driving ──
+        # ── Downs 1-3: keep driving ──
         if down <= 3:
             return None
 
-        # ── Down 4: MOVEMENT DOWN — the offense decides ──
-        # 4th down is the pivot point of every drive. The coaching AI
-        # chooses: go for advancement or enter kick mode (snap kick specialist).
-        if down == 4:
-            return self._fourth_down_decision(fp, ytg, kicker_skill, dk_success, pk_success)
-
-        # ── Determine best available kick ──
-        # Drop kicks (5 pts) are preferred in close range but coaches
-        # have a "comfort zone" — beyond it they trust the set-piece FG.
-        # The kicker's skill and coaching style determine how far out
-        # a coach will call for a drop kick vs a field goal.
+        # ── Determine kick comfort zone (used by all remaining down logic) ──
         snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
-
-        # Drop kick comfort range matches _drop_kick_success model.
-        # Aggressive styles (boot_raid=1.5) extend the comfort zone.
         dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
         dk_comfort *= snap_kick_agg
+
+        # ── Down 4: THE decisive down ──
+        # With Finnish baseball retention, snap kicks on 4th down are free
+        # shots.  If you miss, you keep the ball on 5th down.  If you make
+        # it, 5 points.  Only attempt when in snap kick range and kicker
+        # is decent.  Short ytg → go for the first down instead.
+        if down == 4:
+            if dk_success >= 0.35 and fg_distance <= dk_comfort:
+                if ytg <= 4:
+                    return None
+                return PlayType.DROP_KICK
+            return None
+
+        # ── Determine best available kick ──
 
         best_kick = None
         best_kick_ev = 0.0
@@ -3195,13 +3199,20 @@ class ViperballEngine:
         return play
 
     def _check_snap_kick_shot_play(self) -> Optional[PlayType]:
-        """Snap kick shot interrupt: downs 2-3 only.
+        """Snap kick: context-dependent drop kick attempt.
 
-        "Pull-up three" — opportunistic snap kick on early downs,
-        driven by the KICKER'S skill and coaching style.
+        Snap kicks are the SIGNATURE scoring play of Viperball — the
+        equivalent of the three-pointer in basketball.  They should be
+        attempted opportunistically throughout a drive, not just as a
+        last resort.
 
-        Downs 4-6 are now handled by the 4th Down Movement system
-        (kick mode decision on 4th, specialist kicks on 5th/6th).
+        Downs 2-3: "Pull-up three" — opportunistic snap kick, frequency
+                   driven by the KICKER'S skill and coaching style.
+        Down 4:    Decisive down — free shot with Finnish baseball retention.
+                   Missed kicks retain possession, so any kicker can attempt.
+        Down 5:    Secondary chance after select_kick_decision says go.
+                   The kicker's skill determines how often this fires.
+        Down 6:    Handled by select_kick_decision, not this function.
         """
         if self.state.down > 3 or self.state.down < 2:
             return None
@@ -3212,8 +3223,6 @@ class ViperballEngine:
 
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
-        if kicker.kicking < 65:
-            return None
 
         is_specialist = kicker.archetype == "kicking_zb" or kicker.kicking >= 82
 
@@ -3224,24 +3233,71 @@ class ViperballEngine:
         # weak kickers (60) fire 60% less often.
         kicker_mult = max(0.4, (kicker.kicking - 60) / 20.0)  # 0.4 at 68, 1.0 at 80, 1.5 at 90
 
-        # ── Down 2-3: Pull-up three — opportunistic shot ──
-        if fg_distance <= 20:
-            shot_chance = 0.14
-        elif fg_distance <= 25:
-            shot_chance = 0.10
-        elif fg_distance <= 30:
-            shot_chance = 0.07
-        elif fg_distance <= 40:
-            shot_chance = 0.05
-        elif fg_distance <= 50:
-            shot_chance = 0.03
-        else:
-            shot_chance = 0.02
-        if is_specialist:
-            shot_chance *= 1.6
-        shot_chance *= snap_kick_agg * kicker_mult
-        if random.random() < shot_chance:
-            return PlayType.DROP_KICK
+        # ── Down 2-3: Pull-up three — opportunistic shot (reduced ~40%) ──
+        if down <= 3:
+            if fg_distance <= 20:
+                shot_chance = 0.14
+            elif fg_distance <= 25:
+                shot_chance = 0.10
+            elif fg_distance <= 30:
+                shot_chance = 0.07
+            elif fg_distance <= 40:
+                shot_chance = 0.05
+            elif fg_distance <= 50:
+                shot_chance = 0.03
+            else:
+                shot_chance = 0.02
+            if is_specialist:
+                shot_chance *= 1.6
+            shot_chance *= snap_kick_agg * kicker_mult
+            if random.random() < shot_chance:
+                return PlayType.DROP_KICK
+            return None
+
+        # ── Down 4: Decisive down — free shot with Finnish baseball retention ──
+        # Missed snap kicks on 4th down retain possession, so the risk is low.
+        # Attempt when in range and ytg is long enough that a first down isn't easy.
+        if down == 4:
+            if ytg <= 4:
+                return None  # Short ytg — go for the first down
+            if fg_distance <= 20:
+                shot_chance = 0.30
+            elif fg_distance <= 25:
+                shot_chance = 0.22
+            elif fg_distance <= 30:
+                shot_chance = 0.15
+            elif fg_distance <= 40:
+                shot_chance = 0.10
+            elif fg_distance <= 50:
+                shot_chance = 0.05
+            else:
+                return None
+            if is_specialist:
+                shot_chance *= 1.4
+            shot_chance *= snap_kick_agg * kicker_mult
+            if random.random() < shot_chance:
+                return PlayType.DROP_KICK
+            return None
+
+        # ── Down 5: Secondary chance (after select_kick_decision) ──
+        # The kicker's skill and style drive the frequency.
+        if down == 5:
+            if ytg < 4:
+                return None  # Very short — go for it
+            if fg_distance <= 25:
+                shot_chance = 0.50
+            elif fg_distance <= 35:
+                shot_chance = 0.35
+            elif fg_distance <= 45:
+                shot_chance = 0.25
+            elif fg_distance <= 55:
+                shot_chance = 0.12
+            else:
+                return None
+            shot_chance *= snap_kick_agg * kicker_mult
+            if random.random() < shot_chance:
+                return PlayType.DROP_KICK
+
         return None
 
     def simulate_play(self) -> Play:
@@ -3431,8 +3487,8 @@ class ViperballEngine:
             weights["draw"] = weights.get("draw", 0.05) * 1.1
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.2
         else:
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.5
-            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.4  # was 1.8
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.8
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.4
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.4
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
@@ -3451,9 +3507,28 @@ class ViperballEngine:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
+        # ── Scoring gravity zones ──
+        if fp >= 85:
+            # Deep red zone: TD hunting — boost all run families, suppress passing
+            for rk in ("dive_option", "power", "sweep_option", "speed_option"):
+                weights[rk] = weights.get(rk, 0.05) * 2.5
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.5
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
+            weights["territory_kick"] = 0.0
+        elif fp >= 75:
+            # Snap kick prime zone — runs stay strong, kick_pass drops
+            for rk in ("dive_option", "power", "sweep_option", "speed_option"):
+                weights[rk] = weights.get(rk, 0.05) * 1.8
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.8
+            weights["territory_kick"] = 0.0
+        elif fp >= 65:
+            # FG/snap kick range — balanced but territory_kick suppressed
+            weights["territory_kick"] = 0.0
+
         if down >= 5 and ytg >= 10:
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.5
-            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.3  # was 1.5
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.5
+            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.3
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
             # Late downs + long yardage: boost kicks as cheap-points option
@@ -5533,10 +5608,12 @@ class ViperballEngine:
         # Hot streak: kicker missed → streak broken
         self._update_player_streak(kicker, False)
 
-        # V2.1: Interception rate — lowered by 7 per user request.
-        # 0.13 - 0.07 = 0.06.  With ~45% incomplete rate, effective INT
-        # rate ≈ 0.45 × 0.06 ≈ 2.7% of all kick passes.
-        int_chance = 0.06
+        # Interception: checked on incomplete kicks only.
+        # Rare but explosive — when it happens, the defender has open
+        # field and a high chance of housing it (pick-six) or getting
+        # major return yards.  INTs are high-burst, high-velocity plays.
+        # Global rate ≈ P(incomplete) × int_chance ≈ 0.37 × 0.01 ≈ 0.37%.
+        int_chance = 0.01
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -6294,37 +6371,32 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
         else:
-            # ── Pesäpallo Rule: Missed snap kick → dead ball at LOS ──
-            # Ball returns to line of scrimmage. Offense retains possession.
-            # Down advances by 1. No live ball, no recovery, no turnover risk.
-            if is_snap_kick:
-                self.state.down += 1
-                self.apply_stamina_drain(1)
-                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-                weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
+            landing_offset = random.randint(5, 15)
+            ball_landing = self.state.field_position + landing_offset
+            kicking_team = self.state.possession
+            receiving = "away" if kicking_team == "home" else "home"
 
-                if self.state.down > 6:
-                    # Out of downs — turnover
-                    self.change_possession()
-                    self.state.field_position = 100 - self.state.field_position
+            # ── Finnish baseball rule: missed kick on downs 4-5 retains possession ──
+            # The kicking team keeps the ball and advances to the next down.
+            # This makes snap kick attempts on 4th/5th essentially risk-free.
+            if self.state.down <= 5:
+                original_ytg = self.state.yards_to_go
+                if ball_landing >= 100:
+                    # Ball went past end zone — retain at current position
+                    landing_spot = self.state.field_position
+                    yards_forward = 0
+                else:
+                    landing_spot = min(99, ball_landing)
+                    yards_forward = max(0, landing_spot - self.state.field_position)
+                self.state.field_position = landing_spot
+                if yards_forward >= original_ytg:
                     self.state.down = 1
                     self.state.yards_to_go = 20
-                    return Play(
-                        play_number=self.state.play_number,
-                        quarter=self.state.quarter,
-                        time=self.state.time_remaining,
-                        possession=self.state.possession,
-                        field_position=self.state.field_position,
-                        down=1, yards_to_go=20,
-                        play_type="drop_kick",
-                        play_family=family.value,
-                        players_involved=[player_label(kicker)],
-                        yards_gained=0,
-                        result=PlayResult.TURNOVER_ON_DOWNS.value,
-                        description=f"{ptag} snap kick {distance}yd — NO GOOD! Out of downs — TURNOVER{weather_tag}",
-                        fatigue=round(stamina, 1),
-                    )
-
+                else:
+                    self.state.down += 1
+                    self.state.yards_to_go = max(1, original_ytg - yards_forward)
+                self.apply_stamina_drain(3)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                 return Play(
                     play_number=self.state.play_number,
                     quarter=self.state.quarter,
@@ -6336,21 +6408,16 @@ class ViperballEngine:
                     play_type="drop_kick",
                     play_family=family.value,
                     players_involved=[player_label(kicker)],
-                    yards_gained=0,
-                    result=PlayResult.MISSED_SNAP_KICK_RETAINED.value,
-                    description=f"{ptag} snap kick {distance}yd — NO GOOD! Ball back to LOS (Down {self.state.down}){weather_tag}",
+                    yards_gained=yards_forward,
+                    result=PlayResult.SNAP_KICK_RECOVERY.value,
+                    description=f"{ptag} snap kick {distance}yd — NO GOOD → retained possession (down {self.state.down})",
                     fatigue=round(stamina, 1),
                 )
 
-            # Non-snap-kick drop kick miss: original live-ball outcome tree
+            # ── Down 6: traditional miss logic (possession at risk) ──
             recovery_chance = 0.35
             if kicker.archetype == "kicking_zb":
                 recovery_chance = 0.40
-
-            landing_offset = random.randint(5, 15)
-            ball_landing = self.state.field_position + landing_offset
-            kicking_team = self.state.possession
-            receiving = "away" if kicking_team == "home" else "home"
 
             if ball_landing >= 100:
                 receiving_team_obj = self.get_defensive_team()
@@ -6559,6 +6626,29 @@ class ViperballEngine:
             receiving = "away" if kicking_team == "home" else "home"
             ball_landing = self.state.field_position + distance + random.randint(-5, 10)
 
+            # ── Finnish baseball rule: missed field goal on downs 4-5 retains possession ──
+            if self.state.down <= 5:
+                self.state.down += 1
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=self.state.down,
+                    yards_to_go=self.state.yards_to_go,
+                    play_type="place_kick",
+                    play_family=family.value,
+                    players_involved=[player_label(kicker)],
+                    yards_gained=0,
+                    result=PlayResult.SNAP_KICK_RECOVERY.value,
+                    description=f"{ptag} field goal {distance}yd — NO GOOD → retained possession (down {self.state.down})",
+                    fatigue=round(stamina, 1),
+                )
+
+            # ── Down 6: traditional miss logic (possession at risk) ──
             if ball_landing >= 100:
                 receiving_team_obj = self.get_defensive_team()
                 is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
@@ -7305,6 +7395,38 @@ class ViperballEngine:
         home_stats["epa"] = home_epa
         away_stats["epa"] = away_epa
 
+        # -- Per-player VPA attribution ----------------------------------------
+        # Build lookup from player label -> Player object for both teams.
+        _player_lookup: Dict[str, "Player"] = {}
+        for _p in self.home_team.players:
+            _player_lookup[player_label(_p)] = _p
+        for _p in self.away_team.players:
+            _player_lookup[player_label(_p)] = _p
+
+        for pd in play_dicts:
+            epa_val = pd.get("epa", 0)
+            involved = pd.get("players", [])
+            if not involved:
+                continue
+            # Last player in the list is the ball carrier / primary actor
+            # Split VPA: primary gets 60%, others split 40% evenly
+            primary_label = involved[-1]
+            assist_labels = involved[:-1]
+
+            primary_share = epa_val if len(involved) == 1 else epa_val * 0.6
+            assist_share = (epa_val * 0.4 / len(assist_labels)) if assist_labels else 0
+
+            primary_player = _player_lookup.get(primary_label)
+            if primary_player:
+                primary_player.game_vpa += primary_share
+                primary_player.game_plays_involved += 1
+
+            for al in assist_labels:
+                assist_player = _player_lookup.get(al)
+                if assist_player:
+                    assist_player.game_vpa += assist_share
+                    assist_player.game_plays_involved += 1
+
         # VIPERBALL SABERMETRICS (Positive metrics, no negative numbers)
         home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home")
         away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away")
@@ -7325,7 +7447,8 @@ class ViperballEngine:
                                p.game_st_tackles > 0 or p.game_tackles > 0 or
                                p.game_sacks > 0 or p.game_hurries > 0 or
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
-                               p.game_kick_pass_receptions > 0)
+                               p.game_kick_pass_receptions > 0 or
+                               p.game_plays_involved > 0)
                 if has_activity:
                     stat_entry = {
                         "tag": player_tag(p),
@@ -7373,6 +7496,9 @@ class ViperballEngine:
                         "sacks": p.game_sacks,
                         "hurries": p.game_hurries,
                         "kick_pass_ints": p.game_kick_pass_ints,
+                        "vpa": round(p.game_vpa, 2),
+                        "plays_involved": p.game_plays_involved,
+                        "vpa_per_play": round(p.game_vpa / max(1, p.game_plays_involved), 3),
                     }
                     stats.append(stat_entry)
             return sorted(stats, key=lambda x: x["touches"] + x["kick_att"] + x["tackles"], reverse=True)

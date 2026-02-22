@@ -175,6 +175,7 @@ def render_game_simulator(state: UserState, shared: dict):
             box_tab = ui.tab("Box Score")
             drives_tab = ui.tab("Drives")
             plays_tab = ui.tab("Play-by-Play")
+            impact_tab = ui.tab("Player Impact")
             analytics_tab = ui.tab("Analytics")
             export_tab = ui.tab("Export")
 
@@ -185,6 +186,8 @@ def render_game_simulator(state: UserState, shared: dict):
                 _render_drives(result, home_name, away_name)
             with ui.tab_panel(plays_tab):
                 _render_play_by_play(plays, home_name, away_name)
+            with ui.tab_panel(impact_tab):
+                _render_player_impact(result, home_name, away_name)
             with ui.tab_panel(analytics_tab):
                 _render_analytics(result, plays, home_name, away_name, hs, as_)
             with ui.tab_panel(export_tab):
@@ -488,6 +491,111 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
                      barmode="group", title="Play Call Distribution (%)")
         fig.update_layout(yaxis_ticksuffix="%", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
+
+
+def _render_player_impact(result, home_name, away_name):
+    """Render the Player Impact Report — per-player VPA attribution."""
+    ui.label("Player Impact Report").classes("font-bold text-slate-700")
+    ui.label("VPA (Viperball Points Added) attributed to individual players.").classes("text-sm text-gray-500")
+
+    player_stats = result.get("player_stats", {})
+
+    for side, team_name in [("home", home_name), ("away", away_name)]:
+        pstats = player_stats.get(side, [])
+        if not pstats:
+            continue
+
+        # Filter to players with involvement and sort by VPA
+        involved = [p for p in pstats if p.get("plays_involved", 0) > 0]
+        if not involved:
+            continue
+
+        involved_by_vpa = sorted(involved, key=lambda x: x.get("vpa", 0), reverse=True)
+
+        ui.label(team_name).classes("text-lg font-bold text-slate-700 mt-4")
+
+        # Team VPA summary
+        team_epa = result["stats"][side].get("epa", {})
+        total_team_vpa = team_epa.get("total_vpa", team_epa.get("total_epa", 0))
+        total_player_vpa = sum(p.get("vpa", 0) for p in involved_by_vpa)
+
+        with ui.row().classes("w-full gap-3 flex-wrap"):
+            metric_card("Team VPA", round(total_team_vpa, 1))
+            metric_card("Top Player VPA", round(involved_by_vpa[0]["vpa"], 1) if involved_by_vpa else 0)
+            metric_card("Top VPA/Play",
+                        round(max((p.get("vpa_per_play", 0) for p in involved_by_vpa if p.get("plays_involved", 0) >= 3), default=0), 3))
+            mvp = involved_by_vpa[0]
+            metric_card("Game MVP", f"{mvp['tag']} {mvp['name']}")
+
+        # Impact table
+        impact_rows = []
+        for p in involved_by_vpa:
+            vpa = p.get("vpa", 0)
+            plays_inv = p.get("plays_involved", 0)
+            vpa_pp = p.get("vpa_per_play", 0)
+            touches = p.get("touches", 0)
+            vpa_per_touch = round(vpa / max(1, touches), 2) if touches > 0 else "--"
+            # VPA share: what % of team VPA did this player contribute
+            vpa_share = round(vpa / max(0.01, total_player_vpa) * 100, 1) if total_player_vpa != 0 else 0
+
+            impact_rows.append({
+                "Player": f"{p['tag']} {p['name']}",
+                "VPA": round(vpa, 2),
+                "VPA/Play": round(vpa_pp, 3),
+                "VPA/Touch": vpa_per_touch,
+                "VPA Share": f"{vpa_share}%",
+                "Plays": plays_inv,
+                "Touches": touches,
+                "Yards": p.get("yards", 0),
+                "TDs": p.get("tds", 0),
+                "Fumbles": p.get("fumbles", 0),
+            })
+        stat_table(impact_rows)
+
+        # VPA bar chart
+        chart_players = involved_by_vpa[:10]
+        if chart_players:
+            names = [f"{p['tag']} {p['name']}" for p in chart_players]
+            vpas = [round(p.get("vpa", 0), 2) for p in chart_players]
+            colors = ["#16a34a" if v >= 0 else "#dc2626" for v in vpas]
+            fig = go.Figure(go.Bar(
+                x=vpas, y=names, orientation="h",
+                marker_color=colors,
+                text=[f"{v:+.1f}" for v in vpas],
+                textposition="outside",
+            ))
+            fig.update_layout(
+                title=f"{team_name} — Player VPA",
+                xaxis_title="VPA", yaxis=dict(autorange="reversed"),
+                height=max(250, len(chart_players) * 35 + 80),
+                template="plotly_white", margin=dict(l=200),
+            )
+            ui.plotly(fig).classes("w-full")
+
+    # Cross-team comparison: top 10 players from both teams
+    all_players = []
+    for side, team_name in [("home", home_name), ("away", away_name)]:
+        for p in player_stats.get(side, []):
+            if p.get("plays_involved", 0) > 0:
+                all_players.append({**p, "_team": team_name})
+
+    if all_players:
+        all_by_vpa = sorted(all_players, key=lambda x: x.get("vpa", 0), reverse=True)[:10]
+        ui.label("Top Players — Both Teams").classes("text-lg font-bold text-slate-700 mt-4")
+        top_rows = []
+        for rank, p in enumerate(all_by_vpa, 1):
+            top_rows.append({
+                "#": rank,
+                "Player": f"{p['tag']} {p['name']}",
+                "Team": p["_team"],
+                "VPA": round(p.get("vpa", 0), 2),
+                "VPA/Play": round(p.get("vpa_per_play", 0), 3),
+                "Plays": p.get("plays_involved", 0),
+                "Touches": p.get("touches", 0),
+                "Yards": p.get("yards", 0),
+                "TDs": p.get("tds", 0),
+            })
+        stat_table(top_rows)
 
 
 def _render_export(result, home_name, away_name, actual_seed):
