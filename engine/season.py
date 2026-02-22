@@ -47,8 +47,14 @@ class TeamRecord:
     offense_style: str = "balanced"
     defense_style: str = "swarm"
 
+    # V2.4: Defensive prestige tracking
+    # Tracks INTs forced per game (rolling window) for No-Fly Zone status
+    defensive_ints_history: list = field(default_factory=list)
+    no_fly_zone: bool = False  # True if team earned "No-Fly Zone" status
+
     def add_game_result(self, won: bool, points_for: float, points_against: float,
-                        metrics: Dict, is_conference_game: bool = False):
+                        metrics: Dict, is_conference_game: bool = False,
+                        defensive_ints: int = 0):
         if won:
             self.wins += 1
             if is_conference_game:
@@ -69,6 +75,11 @@ class TeamRecord:
         self.total_drive_quality += metrics.get('drive_quality', 0.0)
         self.total_turnover_impact += metrics.get('turnover_impact', 0.0)
         self.games_played += 1
+
+        # V2.4: Defensive prestige — track INTs forced and check for No-Fly Zone
+        if defensive_ints > 0 or self.defensive_ints_history:
+            self.defensive_ints_history.append(defensive_ints)
+            self._check_no_fly_zone()
 
     @property
     def avg_opi(self) -> float:
@@ -112,6 +123,30 @@ class TeamRecord:
     def point_differential(self) -> float:
         total_games = self.wins + self.losses
         return (self.points_for - self.points_against) / total_games if total_games > 0 else 0.0
+
+    def _check_no_fly_zone(self):
+        """V2.4: Check if team has earned No-Fly Zone defensive prestige.
+
+        If a team records 2+ interceptions in 3 consecutive games, they earn
+        the "No-Fly Zone" status for the rest of the season.
+
+        Effect: Opposing Zerobacks get a "Rattled" modifier (-5% accuracy)
+        when attempting deep kick passes against this defense.
+
+        Once earned, No-Fly Zone is permanent for the season — dominance
+        doesn't expire.
+        """
+        if self.no_fly_zone:
+            return  # Already earned, permanent
+
+        history = self.defensive_ints_history
+        if len(history) < 3:
+            return
+
+        # Check the last 3 games
+        last_three = history[-3:]
+        if all(ints >= 2 for ints in last_three):
+            self.no_fly_zone = True
 
 
 @dataclass
@@ -754,6 +789,15 @@ class Season:
         # Bowl games and playoff games are neutral site (no home field advantage)
         is_neutral = game.week >= 900
 
+        # V2.4: Pass No-Fly Zone defensive prestige into the engine
+        nfz_kwargs = {}
+        home_record = self.standings.get(game.home_team)
+        away_record = self.standings.get(game.away_team)
+        if home_record and home_record.no_fly_zone:
+            nfz_kwargs["home_no_fly_zone"] = True
+        if away_record and away_record.no_fly_zone:
+            nfz_kwargs["away_no_fly_zone"] = True
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -765,6 +809,7 @@ class Season:
             **injury_kwargs,
             **dq_kwargs,
             **coaching_kwargs,
+            **nfz_kwargs,
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
@@ -788,12 +833,22 @@ class Season:
         home_won = game.home_score > game.away_score
         away_won = game.away_score > game.home_score
 
+        # V2.4: Extract defensive INTs for prestige tracking
+        # Home defensive INTs = away team's thrown INTs (and vice versa)
+        away_stats = result.get("final_score", {}).get("away", {}).get("stats", {})
+        home_stats = result.get("final_score", {}).get("home", {}).get("stats", {})
+        home_def_ints = (away_stats.get("kick_pass_interceptions", 0)
+                         + away_stats.get("lateral_interceptions", 0))
+        away_def_ints = (home_stats.get("kick_pass_interceptions", 0)
+                         + home_stats.get("lateral_interceptions", 0))
+
         self.standings[game.home_team].add_game_result(
             won=home_won,
             points_for=game.home_score,
             points_against=game.away_score,
             metrics=home_metrics,
-            is_conference_game=game.is_conference_game
+            is_conference_game=game.is_conference_game,
+            defensive_ints=home_def_ints,
         )
 
         self.standings[game.away_team].add_game_result(
@@ -801,7 +856,8 @@ class Season:
             points_for=game.away_score,
             points_against=game.home_score,
             metrics=away_metrics,
-            is_conference_game=game.is_conference_game
+            is_conference_game=game.is_conference_game,
+            defensive_ints=away_def_ints,
         )
 
         return result
