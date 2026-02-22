@@ -52,9 +52,20 @@ class TeamRecord:
     defensive_ints_history: list = field(default_factory=list)
     no_fly_zone: bool = False  # True if team earned "No-Fly Zone" status
 
+    # V2.5: Additional defensive prestige tiers
+    # Brick Wall: hold opponents under 200 rushing yards 3 consecutive games
+    rushing_yards_allowed_history: list = field(default_factory=list)
+    brick_wall: bool = False
+
+    # Turnover Machine: force 4+ turnovers in 3 consecutive games
+    turnovers_forced_history: list = field(default_factory=list)
+    turnover_machine: bool = False
+
     def add_game_result(self, won: bool, points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
-                        defensive_ints: int = 0):
+                        defensive_ints: int = 0,
+                        rushing_yards_allowed: int = 0,
+                        turnovers_forced: int = 0):
         if won:
             self.wins += 1
             if is_conference_game:
@@ -80,6 +91,12 @@ class TeamRecord:
         if defensive_ints > 0 or self.defensive_ints_history:
             self.defensive_ints_history.append(defensive_ints)
             self._check_no_fly_zone()
+
+        # V2.5: Track additional defensive prestige tiers
+        self.rushing_yards_allowed_history.append(rushing_yards_allowed)
+        self._check_brick_wall()
+        self.turnovers_forced_history.append(turnovers_forced)
+        self._check_turnover_machine()
 
     @property
     def avg_opi(self) -> float:
@@ -147,6 +164,46 @@ class TeamRecord:
         last_three = history[-3:]
         if all(ints >= 2 for ints in last_three):
             self.no_fly_zone = True
+
+    def _check_brick_wall(self):
+        """V2.5: Check if team has earned Brick Wall defensive prestige.
+
+        If a team holds opponents under 200 rushing yards in 3 consecutive
+        games, they earn "Brick Wall" status for the rest of the season.
+
+        Effect: Opposing run plays get -8% yardage center (applied in engine
+        as a multiplicative modifier on run-family plays).
+        """
+        if self.brick_wall:
+            return
+
+        history = self.rushing_yards_allowed_history
+        if len(history) < 3:
+            return
+
+        last_three = history[-3:]
+        if all(yards < 200 for yards in last_three):
+            self.brick_wall = True
+
+    def _check_turnover_machine(self):
+        """V2.5: Check if team has earned Turnover Machine defensive prestige.
+
+        If a team forces 4+ turnovers in 3 consecutive games, they earn
+        "Turnover Machine" status for the rest of the season.
+
+        Effect: +3% fumble probability on all opposing ball carriers and
+        +2% interception chance on kick passes.
+        """
+        if self.turnover_machine:
+            return
+
+        history = self.turnovers_forced_history
+        if len(history) < 3:
+            return
+
+        last_three = history[-3:]
+        if all(to >= 4 for to in last_three):
+            self.turnover_machine = True
 
 
 @dataclass
@@ -789,7 +846,7 @@ class Season:
         # Bowl games and playoff games are neutral site (no home field advantage)
         is_neutral = game.week >= 900
 
-        # V2.4: Pass No-Fly Zone defensive prestige into the engine
+        # V2.4+: Pass defensive prestige flags into the engine
         nfz_kwargs = {}
         home_record = self.standings.get(game.home_team)
         away_record = self.standings.get(game.away_team)
@@ -797,6 +854,15 @@ class Season:
             nfz_kwargs["home_no_fly_zone"] = True
         if away_record and away_record.no_fly_zone:
             nfz_kwargs["away_no_fly_zone"] = True
+        # V2.5: Brick Wall and Turnover Machine prestige
+        if home_record and home_record.brick_wall:
+            nfz_kwargs["home_brick_wall"] = True
+        if away_record and away_record.brick_wall:
+            nfz_kwargs["away_brick_wall"] = True
+        if home_record and home_record.turnover_machine:
+            nfz_kwargs["home_turnover_machine"] = True
+        if away_record and away_record.turnover_machine:
+            nfz_kwargs["away_turnover_machine"] = True
 
         engine = ViperballEngine(
             home_team,
@@ -842,6 +908,17 @@ class Season:
         away_def_ints = (home_stats.get("kick_pass_interceptions", 0)
                          + home_stats.get("lateral_interceptions", 0))
 
+        # V2.5: Extract rushing yards allowed and total turnovers for prestige tiers
+        # Home defense allows away team's rushing yards (and vice versa)
+        home_def_rush_allowed = away_stats.get("rushing_yards", 0)
+        away_def_rush_allowed = home_stats.get("rushing_yards", 0)
+        home_def_turnovers = (home_def_ints
+                              + away_stats.get("fumbles_lost", 0)
+                              + away_stats.get("turnovers_on_downs", 0))
+        away_def_turnovers = (away_def_ints
+                              + home_stats.get("fumbles_lost", 0)
+                              + home_stats.get("turnovers_on_downs", 0))
+
         self.standings[game.home_team].add_game_result(
             won=home_won,
             points_for=game.home_score,
@@ -849,6 +926,8 @@ class Season:
             metrics=home_metrics,
             is_conference_game=game.is_conference_game,
             defensive_ints=home_def_ints,
+            rushing_yards_allowed=home_def_rush_allowed,
+            turnovers_forced=home_def_turnovers,
         )
 
         self.standings[game.away_team].add_game_result(
@@ -858,6 +937,8 @@ class Season:
             metrics=away_metrics,
             is_conference_game=game.is_conference_game,
             defensive_ints=away_def_ints,
+            rushing_yards_allowed=away_def_rush_allowed,
+            turnovers_forced=away_def_turnovers,
         )
 
         return result
