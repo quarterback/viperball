@@ -56,8 +56,8 @@ V2_ENGINE_CONFIG = {
     "top_model_enabled": True,
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
     # 5.5 (original) → high-scoring, ~900 combined yards.
-    # 3.8 → tighter games, ~600-650 combined yards. Breakaways still produce bursts.
-    "base_yards_multiplier": 3.8,
+    # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
+    "base_yards_multiplier": 4.2,
 }
 
 
@@ -4970,11 +4970,11 @@ class ViperballEngine:
             # Convert power ratio to expected yards
             # Viperball uses 20-yard first downs, so teams need ~3.5 yd/play
             # minimum to sustain drives. Base multiplier is configurable.
-            # At 3.8: power 1.0 → ~3.8 yards (even matchup, tighter drives)
-            #         power 1.5 → ~5.7 yards (offense dominates)
-            #         power 0.67 → ~2.5 yards (defense dominates)
-            # Breakaway system still produces 70+ yard bursts.
-            bym = V2_ENGINE_CONFIG.get("base_yards_multiplier", 3.8)
+            # At 4.2: power 1.0 → ~4.2 yards (even matchup, sustainable)
+            #         power 1.5 → ~6.3 yards (offense dominates)
+            #         power 0.67 → ~2.8 yards (defense dominates)
+            # Film Study Escalation adds late-game ramp on top.
+            bym = V2_ENGINE_CONFIG.get("base_yards_multiplier", 4.2)
             base_yards = bym * power
 
             # Play-type shift
