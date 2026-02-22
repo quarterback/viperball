@@ -64,6 +64,13 @@ TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "te
 sessions: Dict[str, dict] = {}
 
 
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint for Fly.io deployment monitoring."""
+    team_count = len(get_available_teams())
+    return {"status": "ok", "teams": team_count}
+
+
 class SimulateRequest(BaseModel):
     home: str
     away: str

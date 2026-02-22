@@ -1,12 +1,15 @@
-# fly.toml app configuration file generated for viperball on 2026-02-21T00:14:12Z
+# fly.toml app configuration file for viperball
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
 
 app = 'viperball'
 primary_region = 'ams'
 
 [build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  strategy = "rolling"
 
 [http_service]
   internal_port = 8080
@@ -16,13 +19,20 @@ primary_region = 'ams'
   min_machines_running = 1
   processes = ['app']
 
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 250
+    soft_limit = 200
+
 [checks]
   [checks.alive]
-    type = "tcp"
+    type = "http"
     port = 8080
+    path = "/api/health"
     interval = "30s"
     timeout = "10s"
     grace_period = "120s"
+    method = "GET"
 
 [[vm]]
   size = "performance-1x"
