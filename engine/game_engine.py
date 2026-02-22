@@ -2168,6 +2168,15 @@ class ViperballEngine:
         self._current_drive_sacrifice = False
         self._bonus_recipient = ""  # Defensive bonus possession recipient
         self._bonus_drives_remaining = -1  # Countdown: -1 = inactive, 0 = trigger next, 1 = one drive left
+
+        # V2.5: Film Study Escalation — offenses earn yard bonuses as the game
+        # progresses, gated by dice roll, ball carrier ability, and play diversity.
+        # Tracks per-team drive count and the current escalation multiplier.
+        self._home_drive_count = 0
+        self._away_drive_count = 0
+        self._home_escalation = 1.0  # Current drive escalation multiplier
+        self._away_escalation = 1.0
+
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
 
@@ -2541,6 +2550,80 @@ class ViperballEngine:
                     )
             setattr(self, f'_{off_team}_consecutive_non_solved', 0)
 
+    def _roll_drive_escalation(self):
+        """V2.5: Film Study Escalation — offenses get better as the game progresses.
+
+        Three layered checks determine a per-drive yard multiplier:
+
+        1. **Quarter dice roll** — Later quarters have higher trigger chance.
+           Q1: 10%, Q2: 25%, Q3: 40%, Q4: 55%.
+           If the roll fails, escalation stays at 1.0 for this drive.
+
+        2. **Ball carrier ability** — When triggered, the bonus magnitude scales
+           with the ball carrier's raw talent. Elite runners unlock bigger bonuses.
+           A carrier with 90 speed + 85 agility gets more than a 60/60 grinder.
+
+        3. **Play diversity (Offensive Puzzle)** — If the offense has used 3+
+           different DC categories this half, they get extra escalation.
+           Diverse play-calling = the defense can't key on one look.
+           This is the strategic layer: teams that show multiple formations
+           and play types earn more yardage on later drives.
+
+        The combined escalation is capped at 1.35 (35% max boost) to prevent
+        runaway scoring. Stored per-team and applied in _contest_run_yards.
+        """
+        possession = self.state.possession
+        quarter = self.state.quarter
+
+        # Step 1: Quarter-gated dice roll
+        trigger_chance = {1: 0.10, 2: 0.25, 3: 0.40, 4: 0.55}.get(quarter, 0.30)
+        if random.random() > trigger_chance:
+            # No escalation this drive
+            if possession == "home":
+                self._home_escalation = 1.0
+            else:
+                self._away_escalation = 1.0
+            return
+
+        # Step 2: Ball carrier ability check
+        # Sample the team's top ball carriers (speed + agility)
+        team = self.get_offensive_team()
+        skill_pool = self._offense_skill(team)
+        if not skill_pool:
+            return
+        # Use the best available carrier — represents the OC scheming to feature talent
+        top_carriers = sorted(skill_pool, key=lambda p: p.speed + getattr(p, 'agility', 70), reverse=True)[:3]
+        best = top_carriers[0]
+        carrier_talent = (best.speed + getattr(best, 'agility', 70)) / 2.0
+        # Normalize: 60 = baseline (no bonus), 90 = max bonus
+        carrier_bonus = max(0.0, (carrier_talent - 60) / 30.0) * 0.15  # 0.0 to 0.15
+
+        # Step 3: Play diversity (Offensive Puzzle)
+        # Count distinct DC categories used this half
+        if possession == "home":
+            freq_half = self._home_family_freq_half
+        else:
+            freq_half = self._away_family_freq_half
+        categories_used = len([k for k, v in freq_half.items() if v >= 1])
+        # 1-2 categories: no diversity bonus
+        # 3 categories: +0.05
+        # 4 categories: +0.10
+        diversity_bonus = max(0.0, (categories_used - 2) * 0.05)
+
+        # Step 4: Drive number ramp — more drives = offense has more film
+        drive_count = self._home_drive_count if possession == "home" else self._away_drive_count
+        # Gentle ramp: 0.01 per drive after drive 3, capped at 0.08
+        drive_ramp = max(0.0, min(0.08, (drive_count - 3) * 0.01))
+
+        # Combined escalation
+        escalation = 1.0 + carrier_bonus + diversity_bonus + drive_ramp
+        escalation = min(1.35, escalation)  # Hard cap
+
+        if possession == "home":
+            self._home_escalation = escalation
+        else:
+            self._away_escalation = escalation
+
     def _apply_dq_boosts(self):
         for boosts, team in [(self.home_dq_boosts, self.home_team),
                              (self.away_dq_boosts, self.away_team)]:
@@ -2904,6 +2987,13 @@ class ViperballEngine:
             self._home_family_freq_drive = {}
         else:
             self._away_family_freq_drive = {}
+
+        # ── V2.5: Film Study Escalation — roll per drive ──
+        if drive_team == "home":
+            self._home_drive_count += 1
+        else:
+            self._away_drive_count += 1
+        self._roll_drive_escalation()
 
         # Between-drive recovery: players get a brief rest
         self.recover_energy_between_drives()
@@ -4897,6 +4987,13 @@ class ViperballEngine:
             proximity = 1.0 - min(1.0, ratio_distance / 0.5)
             variance = 0.8 + proximity * 1.4
 
+            # ── V2.5: Film Study Escalation ──
+            # Later drives can produce more yards via dice roll + carrier ability
+            # + play diversity. Counterbalanced by DC adaptation (Solved Puzzle).
+            escalation = self._home_escalation if self.state.possession == "home" else self._away_escalation
+            if escalation > 1.0:
+                center *= escalation
+
             if self.state.down >= 4:
                 # Late-down urgency: anchor toward yards-to-go
                 ytg = self.state.yards_to_go
@@ -6193,6 +6290,9 @@ class ViperballEngine:
             # Long kicks = receiver still has momentum, open-field running
             # Deep balls are signature big-play territory in viperball
             receiver_skill = max(0.0, (receiver.speed + getattr(receiver, 'agility', 75)) / 2 - 60) / 40  # 0.0–1.0
+            # V2.5: Film Study Escalation boosts receiver skill component
+            _kp_esc = self._home_escalation if self.state.possession == "home" else self._away_escalation
+            receiver_skill *= _kp_esc
             if kick_distance <= 8:
                 yac = random.randint(3, 8) + int(receiver_skill * random.randint(2, 7))
             elif kick_distance <= 15:
