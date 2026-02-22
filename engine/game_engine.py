@@ -778,10 +778,6 @@ class GameState:
     away_timeouts: int = 3
     # 3-minute warning: auto-stop once per half when clock crosses 180s
     three_min_warning_triggered: bool = False
-    # Power play: man-advantage system (replaces penalty yards)
-    # Positive = that team has advantage; counts down each play
-    home_power_play: int = 0  # plays remaining where home has man-advantage
-    away_power_play: int = 0  # plays remaining where away has man-advantage
     # 4th Down Movement: when True, team has elected kick mode (snap kick specialist)
     kick_mode: bool = False
 
@@ -1003,12 +999,11 @@ class Team:
 @dataclass
 class Penalty:
     name: str
-    yards: int  # legacy — kept for catalog but NOT applied to field position
+    yards: int
     on_team: str
     player: str = ""
     declined: bool = False
     phase: str = "pre_snap"
-    power_play_plays: int = 0  # man-advantage duration (1/2/3 plays)
 
 PENALTY_CATALOG = {
     "pre_snap": [
@@ -3635,16 +3630,12 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
-                # Power play duration: 5yd→1 play, 10yd→2 plays, 15yd→3 plays
-                pp_plays = {5: 1, 10: 2, 15: 3}.get(pen_def["yards"], 2)
-
                 return Penalty(
                     name=pen_def["name"],
                     yards=pen_def["yards"],
                     on_team=team_name,
                     player=ptag,
                     phase=phase,
-                    power_play_plays=pp_plays,
                 )
         return None
 
@@ -3654,64 +3645,26 @@ class ViperballEngine:
         if on_offense:
             if play.result in ("touchdown", "successful_kick"):
                 return True
-            # Decline if the play gained yards and the power play is minor
-            if play.yards_gained > 5 and penalty.power_play_plays <= 1:
+            if play.yards_gained > penalty.yards:
                 return True
         else:
             if play.result in ("fumble", "turnover_on_downs"):
                 return True
+            if play.yards_gained <= -(penalty.yards):
+                return True
 
         return False
 
-    def _start_power_play(self, penalized_team: str, plays: int):
-        """Start a power play — the OTHER team gets man-advantage."""
-        advantaged = "away" if penalized_team == "home" else "home"
-        if advantaged == "home":
-            self.state.home_power_play = max(self.state.home_power_play, plays)
-        else:
-            self.state.away_power_play = max(self.state.away_power_play, plays)
-
-    def get_power_play_bonus(self) -> float:
-        """Return the current power play bonus for the offensive team.
-
-        Positive = offense has man-advantage (boosts offense).
-        Negative = defense has man-advantage (hampers offense).
-        Zero = no active power play.
-        """
-        if self.state.possession == "home":
-            if self.state.home_power_play > 0:
-                return 0.20   # home offense has advantage
-            elif self.state.away_power_play > 0:
-                return -0.15  # away defense has advantage
-        else:
-            if self.state.away_power_play > 0:
-                return 0.20   # away offense has advantage
-            elif self.state.home_power_play > 0:
-                return -0.15  # home defense has advantage
-        return 0.0
-
-    def _tick_power_play(self):
-        """Decrement power play counters after each play."""
-        if self.state.home_power_play > 0:
-            self.state.home_power_play -= 1
-        if self.state.away_power_play > 0:
-            self.state.away_power_play -= 1
-
     def _apply_pre_snap_penalty(self, penalty: Penalty) -> Play:
         on_offense = (penalty.on_team == self.state.possession)
-
-        # Power play: man-advantage replaces yardage penalty
-        self._start_power_play(penalty.on_team, penalty.power_play_plays)
-
-        # Defense penalties with auto_first still grant first down
-        if not on_offense:
-            all_pre = PENALTY_CATALOG.get("pre_snap", [])
-            pen_def = next((p for p in all_pre if p["name"] == penalty.name), None)
-            if pen_def and pen_def.get("auto_first", False):
+        if on_offense:
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+        else:
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+            if penalty.yards >= self.state.yards_to_go:
                 self.state.down = 1
                 self.state.yards_to_go = 20
 
-        pp_dur = penalty.power_play_plays
         team_label = "OFFENSE" if on_offense else "DEFENSE"
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -3728,7 +3681,7 @@ class ViperballEngine:
             players_involved=[penalty.player],
             yards_gained=0,
             result="penalty",
-            description=f"PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY",
+            description=f"PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yards",
             fatigue=round(stamina, 1),
             penalty=penalty,
         )
@@ -3741,32 +3694,28 @@ class ViperballEngine:
             return play
 
         on_offense = (penalty.on_team == self.state.possession)
-        pp_dur = penalty.power_play_plays
-
         if on_offense:
-            # Offense penalized: negate yards gained, start power play for defense
             if play.yards_gained > 0:
                 self.state.field_position = max(1, self.state.field_position - play.yards_gained)
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
             play.yards_gained = 0
             play.result = "penalty"
         else:
-            # Defense penalized: keep play gains, check auto_first
             all_during = PENALTY_CATALOG.get("during_play_run", []) + PENALTY_CATALOG.get("during_play_lateral", []) + PENALTY_CATALOG.get("during_play_kick", [])
             penalty_def = next((p for p in all_during if p["name"] == penalty.name), None)
             auto_first = penalty_def.get("auto_first", False) if penalty_def else False
-            if auto_first:
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+            if auto_first or penalty.yards >= self.state.yards_to_go:
                 self.state.down = 1
                 self.state.yards_to_go = 20
-
-        # Start power play (man-advantage replaces yardage)
-        self._start_power_play(penalty.on_team, pp_dur)
+            play.yards_gained = penalty.yards
 
         play.field_position = self.state.field_position
         play.down = self.state.down
         play.yards_to_go = self.state.yards_to_go
         play.penalty = penalty
         team_label = "OFFENSE" if on_offense else "DEFENSE"
-        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY"
+        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
 
         return play
 
@@ -3778,15 +3727,15 @@ class ViperballEngine:
             return play
 
         on_offense = (penalty.on_team == play.possession)
-        pp_dur = penalty.power_play_plays
-
-        # Power play: man-advantage replaces yardage
-        self._start_power_play(penalty.on_team, pp_dur)
+        if on_offense:
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+        else:
+            self.state.field_position = min(99, self.state.field_position + penalty.yards)
 
         play.field_position = self.state.field_position
         play.penalty = penalty
         team_label = "OFFENSE" if on_offense else "DEFENSE"
-        play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY"
+        play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
 
         return play
 

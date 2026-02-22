@@ -102,6 +102,15 @@ class BoxScoreGenerator:
         lines.append(f"| Touchdowns | {self.away_stats.get('touchdowns', 0)} | {self.home_stats.get('touchdowns', 0)} |")
         lines.append(f"| Lateral Chains | {self.away_stats['lateral_chains']} | {self.home_stats['lateral_chains']} |")
         lines.append(f"| Successful Laterals | {self.away_stats['successful_laterals']} | {self.home_stats['successful_laterals']} |")
+        away_total_to = (self.away_stats.get('fumbles_lost', 0)
+                         + self.away_stats.get('turnovers_on_downs', 0)
+                         + self.away_stats.get('kick_pass_interceptions', 0)
+                         + self.away_stats.get('lateral_interceptions', 0))
+        home_total_to = (self.home_stats.get('fumbles_lost', 0)
+                         + self.home_stats.get('turnovers_on_downs', 0)
+                         + self.home_stats.get('kick_pass_interceptions', 0)
+                         + self.home_stats.get('lateral_interceptions', 0))
+        lines.append(f"| **Total Turnovers** | **{away_total_to}** | **{home_total_to}** |")
         lines.append(f"| Fumbles Lost | {self.away_stats.get('fumbles_lost', 0)} | {self.home_stats.get('fumbles_lost', 0)} |")
         lines.append(f"| Turnovers on Downs | {self.away_stats.get('turnovers_on_downs', 0)} | {self.home_stats.get('turnovers_on_downs', 0)} |")
         lines.append(f"| Kick Pass INTs | {self.away_stats.get('kick_pass_interceptions', 0)} | {self.home_stats.get('kick_pass_interceptions', 0)} |")
@@ -212,9 +221,12 @@ class BoxScoreGenerator:
         if total_laterals > 10:
             lines.append(f"- **High Lateral Usage:** {total_laterals} lateral chains executed")
 
-        total_fumbles = self.home_stats.get('fumbles_lost', 0) + self.away_stats.get('fumbles_lost', 0)
-        if total_fumbles > 0:
-            lines.append(f"- **Turnovers:** {total_fumbles} fumble(s) lost in this game")
+        total_turnovers = (self.home_stats.get('fumbles_lost', 0) + self.away_stats.get('fumbles_lost', 0)
+                           + self.home_stats.get('turnovers_on_downs', 0) + self.away_stats.get('turnovers_on_downs', 0)
+                           + self.home_stats.get('kick_pass_interceptions', 0) + self.away_stats.get('kick_pass_interceptions', 0)
+                           + self.home_stats.get('lateral_interceptions', 0) + self.away_stats.get('lateral_interceptions', 0))
+        if total_turnovers > 0:
+            lines.append(f"- **Turnovers:** {total_turnovers} total turnovers in this game")
 
         lines.append("")
         lines.append("---")
