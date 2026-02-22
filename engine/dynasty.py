@@ -620,8 +620,13 @@ class Dynasty:
                     team_dev_boost = dq_team_boosts[team_name].get("development", 0.0)
                 # Coaching: HC development attribute adds to dev_boost
                 if hasattr(self, '_coaching_staffs') and team_name in self._coaching_staffs:
-                    from engine.coaching import compute_dev_boost
+                    from engine.coaching import compute_dev_boost, get_sub_archetype_effects
                     team_dev_boost += compute_dev_boost(self._coaching_staffs[team_name])
+                    # V2.2: Mentor sub-archetype boosts development
+                    hc = self._coaching_staffs[team_name].get("head_coach")
+                    if hc:
+                        sub_fx = get_sub_archetype_effects(hc)
+                        team_dev_boost *= sub_fx.get("development_bonus_multiplier", 1.0)
                 report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost)
                 for ev in report.notable_events:
                     dev_events.append({
@@ -906,9 +911,14 @@ class Dynasty:
         for tn, staff in self._coaching_staffs.items():
             hc = staff.get("head_coach")
             if hc and hasattr(hc, 'classification') and hc.classification == "players_coach":
-                from engine.coaching import get_classification_effects
+                from engine.coaching import get_classification_effects, get_sub_archetype_effects
                 fx = get_classification_effects(hc)
-                coaching_retention[tn] = fx.get("retention_bonus", 0.0)
+                retention = fx.get("retention_bonus", 0.0)
+                # V2.2: Stabilizer sub-archetype amplifies retention
+                sub_fx = get_sub_archetype_effects(hc)
+                retention *= sub_fx.get("retention_bonus_multiplier", 1.0)
+                retention += sub_fx.get("portal_suppression_bonus", 0.0)
+                coaching_retention[tn] = retention
 
         portal = TransferPortal(year=year)
         populate_portal(portal, player_cards, team_records, rng=rng,
@@ -973,9 +983,15 @@ class Dynasty:
         # Build coaching recruiting scores from staff
         team_coaching_scores: Dict[str, float] = {}
         if self._coaching_staffs:
-            from engine.coaching import compute_recruiting_bonus
+            from engine.coaching import compute_recruiting_bonus, get_sub_archetype_effects
             for tn, staff in self._coaching_staffs.items():
-                team_coaching_scores[tn] = compute_recruiting_bonus(staff)
+                score = compute_recruiting_bonus(staff)
+                # V2.2: Recruiter sub-archetype boosts appeal
+                hc = staff.get("head_coach")
+                if hc:
+                    sub_fx = get_sub_archetype_effects(hc)
+                    score = min(1.0, score * sub_fx.get("recruiting_appeal_multiplier", 1.0))
+                team_coaching_scores[tn] = score
 
         coaching_prestige_bonus = {}
         for tn, staff in self._coaching_staffs.items():
@@ -984,6 +1000,9 @@ class Dynasty:
                 from engine.coaching import get_classification_effects
                 fx = get_classification_effects(hc)
                 bonus = int(fx.get("recruiting_appeal_prestige", 0))
+                # V2.2: Recruiter sub-archetype prestige bonus
+                sub_fx = get_sub_archetype_effects(hc)
+                bonus += int(sub_fx.get("prestige_bonus", 0))
                 if bonus > 0:
                     coaching_prestige_bonus[tn] = bonus
 

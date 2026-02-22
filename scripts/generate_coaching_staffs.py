@@ -123,11 +123,12 @@ def main():
         if args.dry_run:
             print(f"\n{team_name} (prestige: {prestige})")
             for role, card in staff.items():
-                print(f"  {role}: {card.full_name} ({card.classification_label}) "
+                traits = ", ".join(card.hidden_traits) if card.hidden_traits else "none"
+                print(f"  {role}: {card.full_name} ({card.classification_label}/{card.sub_archetype_label}) "
                       f"OVR:{card.overall} INS:{card.instincts} "
                       f"LED:{card.leadership} CMP:{card.composure} "
                       f"ROT:{card.rotations} DEV:{card.development} "
-                      f"REC:{card.recruiting}")
+                      f"REC:{card.recruiting} traits:[{traits}]")
         else:
             data["coaching_staff"] = staff_dict
             with open(filepath, "w") as f:

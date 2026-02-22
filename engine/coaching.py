@@ -100,6 +100,168 @@ CLASSIFICATION_EFFECTS = {
 
 
 # ──────────────────────────────────────────────
+# V2.2 SUB-ARCHETYPES
+# ──────────────────────────────────────────────
+
+SUB_ARCHETYPES = {
+    "disciplinarian": {
+        "enforcer": {
+            "muff_reduction_multiplier": 0.95,
+            "gap_discipline_multiplier": 1.05,
+        },
+        "technician": {
+            "hands_bonus": 2,
+            "tackle_bonus": 2,
+        },
+        "stoic": {
+            "tilt_resistance": 0.90,
+            "composure_floor_bonus": 3,
+        },
+    },
+    "scheme_master": {
+        "tactician": {
+            "gameplan_adaptation_multiplier": 1.10,
+            "defensive_read_bonus": 0.02,
+        },
+        "innovator": {
+            "trick_play_weight_multiplier": 1.25,
+            "kick_pass_weight_multiplier": 1.05,
+        },
+        "analyst": {
+            "q3_boost_multiplier": 1.10,
+            "slow_start_penalty": 0.97,
+        },
+    },
+    "gameday_manager": {
+        "clock_surgeon": {
+            "timeout_efficiency": 1.20,
+            "late_game_fg_bias": 1.10,
+        },
+        "economist": {
+            "take_points_bias": 1.15,
+            "early_fg_bias": 1.10,
+        },
+        "adjuster": {
+            "halftime_adjustment_multiplier": 1.20,
+            "situational_amplification_multiplier": 1.10,
+        },
+    },
+    "motivator": {
+        "firestarter": {
+            "trailing_halftime_boost_multiplier": 1.15,
+            "q4_explosive_play_bias": 1.10,
+        },
+        "believer": {
+            "collapse_resistance": 0.90,
+            "surge_probability_bonus": 0.05,
+        },
+        "emotional": {
+            "variance_multiplier": 1.10,
+            "tilt_sensitivity": 1.10,
+        },
+    },
+    "players_coach": {
+        "mentor": {
+            "development_bonus_multiplier": 1.10,
+            "chemistry_bonus_multiplier": 1.10,
+        },
+        "recruiter": {
+            "recruiting_appeal_multiplier": 1.15,
+            "prestige_bonus": 2,
+        },
+        "stabilizer": {
+            "retention_bonus_multiplier": 1.20,
+            "portal_suppression_bonus": 0.02,
+        },
+    },
+}
+
+SUB_ARCHETYPE_LABELS = {
+    "enforcer": "Enforcer",
+    "technician": "Technician",
+    "stoic": "Stoic",
+    "tactician": "Tactician",
+    "innovator": "Innovator",
+    "analyst": "Analyst",
+    "clock_surgeon": "Clock Surgeon",
+    "economist": "Economist",
+    "adjuster": "Adjuster",
+    "firestarter": "Firestarter",
+    "believer": "Believer",
+    "emotional": "Emotional",
+    "mentor": "Mentor",
+    "recruiter": "Recruiter",
+    "stabilizer": "Stabilizer",
+}
+
+# ──────────────────────────────────────────────
+# V2.2 PERSONALITY SLIDERS
+# ──────────────────────────────────────────────
+
+PERSONALITY_SLIDER_NAMES = (
+    "aggression",
+    "risk_tolerance",
+    "chaos_appetite",
+    "tempo_preference",
+    "composure_tendency",
+    "adaptability",
+    "stubbornness",
+    "player_trust",
+    "variance_tolerance",
+)
+
+# ──────────────────────────────────────────────
+# V2.2 HIDDEN TRAITS
+# ──────────────────────────────────────────────
+
+HIDDEN_TRAIT_EFFECTS = {
+    "red_zone_gambler":       {"go_for_it_redzone_multiplier": 1.20},
+    "chaos_merchant":         {"lateral_weight_multiplier": 1.20},
+    "wind_whisperer":         {"weather_kick_penalty_multiplier": 0.80},
+    "clock_melter":           {"tempo_multiplier": 0.85},
+    "star_whisperer":         {"star_touch_bias": 1.25},
+    "punt_hater":             {"punt_weight_multiplier": 0.50},
+    "field_position_purist":  {"punt_weight_multiplier": 1.50},
+    "trick_play_enjoyer":     {"trick_play_weight_multiplier": 1.30},
+    "late_game_ice":          {"q4_composure_bonus": 10},
+    "early_game_slow":        {"q1_yards_multiplier": 0.95},
+    "weatherproof":           {"weather_penalty_multiplier": 0.70},
+    "lateral_enthusiast":     {"lateral_weight_multiplier": 1.15},
+    "snapkick_specialist":    {"dk_ev_multiplier": 1.15},
+    "fg_conservative":        {"take_points_bias": 1.25},
+    "fg_aggressive":          {"take_points_bias": 0.75},
+    "hero_ball_addict":       {"star_touch_bias": 1.40},
+    "anti_hero_ball":         {"star_touch_bias": 0.70},
+    "timeout_hoarder":        {},
+    "timeout_sprinter":       {},
+    "momentum_rider":         {"momentum_recovery_multiplier": 1.30},
+}
+
+HIDDEN_TRAIT_LABELS = {
+    "red_zone_gambler":      "Red Zone Gambler",
+    "chaos_merchant":        "Chaos Merchant",
+    "wind_whisperer":        "Wind Whisperer",
+    "clock_melter":          "Clock Melter",
+    "star_whisperer":        "Star Whisperer",
+    "punt_hater":            "Punt Hater",
+    "field_position_purist": "Field Position Purist",
+    "trick_play_enjoyer":    "Trick Play Enjoyer",
+    "late_game_ice":         "Late Game Ice",
+    "early_game_slow":       "Slow Starter",
+    "weatherproof":          "Weatherproof",
+    "lateral_enthusiast":    "Lateral Enthusiast",
+    "snapkick_specialist":   "Snapkick Specialist",
+    "fg_conservative":       "FG Conservative",
+    "fg_aggressive":         "FG Aggressive",
+    "hero_ball_addict":      "Hero Ball Addict",
+    "anti_hero_ball":        "Anti Hero Ball",
+    "timeout_hoarder":       "Timeout Hoarder",
+    "timeout_sprinter":      "Timeout Sprinter",
+    "momentum_rider":        "Momentum Rider",
+}
+
+
+# ──────────────────────────────────────────────
 # SALARY TIERS  (coaching budget, not NIL)
 # ──────────────────────────────────────────────
 
@@ -223,6 +385,11 @@ class CoachCard:
     personality: str = ""
     background: str = ""
 
+    # V2.2 Personality System ─────────────────
+    sub_archetype: str = ""
+    personality_sliders: Dict[str, int] = field(default_factory=dict)
+    hidden_traits: List[str] = field(default_factory=list)
+
     # ── computed properties ───────────────────
 
     @property
@@ -236,6 +403,10 @@ class CoachCard:
     @property
     def classification_label(self) -> str:
         return CLASSIFICATION_LABELS.get(self.classification, self.classification)
+
+    @property
+    def sub_archetype_label(self) -> str:
+        return SUB_ARCHETYPE_LABELS.get(self.sub_archetype, self.sub_archetype)
 
     @property
     def composure_label(self) -> str:
@@ -329,6 +500,9 @@ class CoachCard:
             "coaching_style": self.coaching_style,
             "personality": self.personality,
             "background": self.background,
+            "sub_archetype": self.sub_archetype,
+            "personality_sliders": self.personality_sliders,
+            "hidden_traits": self.hidden_traits,
         }
 
     @classmethod
@@ -367,6 +541,9 @@ class CoachCard:
             coaching_style=d.get("coaching_style", ""),
             personality=d.get("personality", ""),
             background=d.get("background", ""),
+            sub_archetype=d.get("sub_archetype", ""),
+            personality_sliders=d.get("personality_sliders", {}),
+            hidden_traits=d.get("hidden_traits", []),
         )
 
 
@@ -767,6 +944,22 @@ def generate_coach_card(
     # ── classification ────────────────────────
     cls_ = classification or _pick_classification(rng=rng)
 
+    # ── V2.2: sub-archetype, personality sliders, hidden traits ──
+    sub_choices = list(SUB_ARCHETYPES.get(cls_, {}).keys())
+    sub_arch = rng.choice(sub_choices) if sub_choices else ""
+
+    sliders = {
+        name: max(0, min(100, int(rng.gauss(50, 15))))
+        for name in PERSONALITY_SLIDER_NAMES
+    }
+
+    traits = []
+    for trait_name in HIDDEN_TRAIT_EFFECTS:
+        if len(traits) >= 2:
+            break
+        if rng.random() < 0.05:
+            traits.append(trait_name)
+
     # ── attributes ────────────────────────────
     attrs = _generate_attributes(
         classification=cls_,
@@ -820,6 +1013,9 @@ def generate_coach_card(
         coaching_style=rng.choice(_COACHING_STYLES),
         personality=rng.choice(_PERSONALITIES),
         background=rng.choice(_COACHING_BACKGROUNDS),
+        sub_archetype=sub_arch,
+        personality_sliders=sliders,
+        hidden_traits=traits,
     )
 
     # Set salary after card exists so calculate_coach_salary can use it
@@ -1273,6 +1469,20 @@ def convert_player_to_coach(
     attrs = derive_coach_attributes_from_player(player_card, rng=rng)
     cls_ = derive_classification_from_player(player_card, rng=rng)
 
+    # V2.2: sub-archetype, personality sliders, hidden traits
+    sub_choices = list(SUB_ARCHETYPES.get(cls_, {}).keys())
+    sub_arch = rng.choice(sub_choices) if sub_choices else ""
+    sliders = {
+        name: max(0, min(100, int(rng.gauss(50, 15))))
+        for name in PERSONALITY_SLIDER_NAMES
+    }
+    traits = []
+    for trait_name in HIDDEN_TRAIT_EFFECTS:
+        if len(traits) >= 2:
+            break
+        if rng.random() < 0.05:
+            traits.append(trait_name)
+
     first = getattr(player_card, "first_name", "Unknown")
     last = getattr(player_card, "last_name", "Coach")
     gender_guess = "neutral"  # We don't store gender on PlayerCard; default neutral
@@ -1303,6 +1513,9 @@ def convert_player_to_coach(
         philosophy=rng.choice(_PHILOSOPHIES),
         coaching_style=rng.choice(_COACHING_STYLES),
         personality=rng.choice(_PERSONALITIES),
+        sub_archetype=sub_arch,
+        personality_sliders=sliders,
+        hidden_traits=traits,
     )
 
     # Lower salary for unproven coaches
@@ -1347,6 +1560,39 @@ def get_classification_effects(
         effects[name] = lo + t * (hi - lo)
 
     return effects
+
+
+# ──────────────────────────────────────────────
+# V2.2 PERSONALITY HELPERS
+# ──────────────────────────────────────────────
+
+def personality_factor(sliders: Dict[str, int], attr: str) -> float:
+    """F(p) = 1 + (p - 50) / 200.  Range: 0.75 (p=0) to 1.25 (p=100)."""
+    return 1.0 + (sliders.get(attr, 50) - 50) / 200.0
+
+
+def get_sub_archetype_effects(card: CoachCard) -> Dict:
+    """Return micro-effect dict for this coach's sub-archetype."""
+    return SUB_ARCHETYPES.get(card.classification, {}).get(card.sub_archetype, {})
+
+
+def compute_hidden_trait_effects(card: CoachCard) -> Dict[str, float]:
+    """Aggregate all hidden trait multipliers into a single dict."""
+    combined: Dict[str, float] = {}
+    for trait in card.hidden_traits:
+        for key, val in HIDDEN_TRAIT_EFFECTS.get(trait, {}).items():
+            if key in combined:
+                combined[key] *= val  # multiplicative stacking
+            else:
+                combined[key] = val
+    return combined
+
+
+def coaching_modifier_chain(
+    base: float, personality_val: float, sub_mult: float, trait_mult: float
+) -> float:
+    """Apply the V2.2 3-layer multiplicative chain, clamped [0.5, 1.5]."""
+    return max(0.5, min(1.5, base * personality_val * sub_mult * trait_mult))
 
 
 def compute_dev_boost(
@@ -1445,6 +1691,15 @@ def compute_gameday_modifiers(
     # Classification effects from HC
     cls_effects = get_classification_effects(hc, rng=rng) if hc else {}
 
+    # V2.2: Sub-archetype, personality, and hidden-trait effects
+    sub_effects = get_sub_archetype_effects(hc) if hc else {}
+    p_factors = (
+        {attr: personality_factor(hc.personality_sliders, attr)
+         for attr in PERSONALITY_SLIDER_NAMES}
+        if hc else {}
+    )
+    h_trait_effects = compute_hidden_trait_effects(hc) if hc else {}
+
     return {
         "instincts_factor": norm(instincts_raw),
         "leadership_factor": norm(leadership_raw),
@@ -1452,4 +1707,9 @@ def compute_gameday_modifiers(
         "fatigue_resistance_mod": fatigue_mod,
         "classification_effects": cls_effects,
         "hc_classification": hc.classification if hc else "scheme_master",
+        # V2.2
+        "sub_archetype": hc.sub_archetype if hc else "",
+        "sub_archetype_effects": sub_effects,
+        "personality_factors": p_factors,
+        "hidden_trait_effects": h_trait_effects,
     }

@@ -2394,8 +2394,16 @@ class ViperballEngine:
             cls = mods.get("hc_classification", "")
             cls_fx = mods.get("classification_effects", {})
 
+            # V2.2: Personality modifiers for halftime adjustments
+            pf = mods.get("personality_factors", {})
+            sub_fx = mods.get("sub_archetype_effects", {})
+            adapt_f = pf.get("adaptability", 1.0)
+            stub_f = pf.get("stubbornness", 1.0)
+
             if cls == "gameday_manager":
                 adj = cls_fx.get("halftime_adjustment_bonus", 0.0)
+                # V2.2: Adaptability + adjuster sub-archetype scale halftime adjustment
+                adj *= adapt_f * (2.0 - stub_f) * sub_fx.get("halftime_adjustment_multiplier", 1.0)
                 if adj > 0:
                     if side == "home":
                         self.home_game_rhythm = 1.0 + (self.home_game_rhythm - 1.0) * (1.0 - adj)
@@ -2404,6 +2412,8 @@ class ViperballEngine:
 
             if cls == "motivator":
                 boost = cls_fx.get("trailing_halftime_boost", 0.0)
+                # V2.2: Firestarter sub-archetype amplifies trailing boost
+                boost *= sub_fx.get("trailing_halftime_boost_multiplier", 1.0)
                 if boost > 0:
                     my_half = self._home_halftime_score if side == "home" else self._away_halftime_score
                     opp_half = self._away_halftime_score if side == "home" else self._home_halftime_score
@@ -2836,6 +2846,18 @@ class ViperballEngine:
             # Kicker skill adjusts: 90 kicker → -3, 75 → 0, 60 → +3
             kicker_adj = (75 - kicker_skill) // 5
             go_threshold = max(1, go_threshold + kicker_adj)
+
+            # V2.2: Aggression lowers go-for-it threshold (more aggressive = go more often)
+            off_mods = self._coaching_mods()
+            pf = off_mods.get("personality_factors", {})
+            trait_fx = off_mods.get("hidden_trait_effects", {})
+            agg = pf.get("aggression", 1.0)
+            go_threshold = max(1, int(go_threshold / agg))
+
+            # V2.2: Red zone gambler trait
+            if fp >= 80:
+                rz_mult = trait_fx.get("go_for_it_redzone_multiplier", 1.0)
+                go_threshold = max(1, int(go_threshold / rz_mult))
 
             # Very short yardage: always go for it
             if ytg <= 2:
@@ -3349,6 +3371,40 @@ class ViperballEngine:
             weights["speed_option"] = weights.get("speed_option", 0.1) * spacing_factor
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * (1.0 + min(0.10, kp_bonus * 0.8))
 
+        # ── V2.2: Coaching personality modulates play family weights ──
+        off_mods = self._coaching_mods()
+        pf = off_mods.get("personality_factors", {})
+        sub_fx = off_mods.get("sub_archetype_effects", {})
+        trait_fx = off_mods.get("hidden_trait_effects", {})
+
+        # Aggression → kick_pass weight
+        agg = pf.get("aggression", 1.0)
+        weights["kick_pass"] = weights.get("kick_pass", 0.05) * agg
+
+        # Risk tolerance → trick_play weight
+        risk = pf.get("risk_tolerance", 1.0)
+        trick_mult = sub_fx.get("trick_play_weight_multiplier", 1.0) * trait_fx.get("trick_play_weight_multiplier", 1.0)
+        weights["trick_play"] = weights.get("trick_play", 0.05) * risk * trick_mult
+
+        # Chaos appetite → lateral_spread weight
+        chaos = pf.get("chaos_appetite", 1.0)
+        lat_mult = trait_fx.get("lateral_weight_multiplier", 1.0)
+        weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * chaos * lat_mult
+
+        # Tempo preference → kick_pass boost (tempo coaches love the air game)
+        tempo = pf.get("tempo_preference", 1.0)
+        kp_sub = sub_fx.get("kick_pass_weight_multiplier", 1.0)
+        weights["kick_pass"] = weights.get("kick_pass", 0.05) * tempo * kp_sub
+
+        # Variance tolerance → explosive play families
+        var_tol = pf.get("variance_tolerance", 1.0)
+        for fam in ("speed_option", "viper_jet", "lateral_spread"):
+            weights[fam] = weights.get(fam, 0.05) * var_tol
+
+        # Punt hater / field position purist
+        punt_mult = trait_fx.get("punt_weight_multiplier", 1.0)
+        weights["territory_kick"] = weights.get("territory_kick", 0.05) * punt_mult
+
         families = list(PlayFamily)
         w = [max(0.01, weights.get(f.value, 0.05)) for f in families]
         return random.choices(families, weights=w)[0]
@@ -3506,6 +3562,18 @@ class ViperballEngine:
             adapt = cls_effects.get("gameplan_adaptation_bonus", 0.0)
             gameplan_bias += adapt
 
+        # V2.2: Adaptability personality boosts defensive reads in late game
+        def_pf = def_mods.get("personality_factors", {})
+        adapt_f = def_pf.get("adaptability", 1.0)
+        stub_f = def_pf.get("stubbornness", 1.0)
+        effective_adapt = adapt_f * (2.0 - stub_f)  # stubbornness counters adaptability
+        if self.state.quarter >= 3:
+            gameplan_bias *= effective_adapt
+
+        # V2.2: Tactician sub-archetype: extra read bonus
+        def_sub_fx = def_mods.get("sub_archetype_effects", {})
+        tactician_bonus = def_sub_fx.get("defensive_read_bonus", 0.0)
+
         # Situational modifiers from scheme
         situational_boost = self._get_defense_situational_boost(defense)
 
@@ -3514,7 +3582,7 @@ class ViperballEngine:
 
         # Coaching: instincts improve defensive reads
         instincts_factor = def_mods.get("instincts_factor", 0.0)
-        coaching_read_boost = instincts_factor * 0.06  # max +0.06 at 95 instincts
+        coaching_read_boost = instincts_factor * 0.06 + tactician_bonus
 
         total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost + coaching_read_boost
         total_read_rate = max(0.10, min(0.65, total_read_rate))
@@ -3642,6 +3710,13 @@ class ViperballEngine:
         # fatigue_resistance of -0.05 INCREASES fatigue penalty by 5%
         adjusted_fatigue = 1.0 + (base_fatigue - 1.0) * (1.0 - fatigue_resistance)
 
+        # V2.2: Opponent tempo pressure (offensive tempo pref → defense tires faster)
+        off_mods = self._coaching_mods()
+        off_pf = off_mods.get("personality_factors", {})
+        tempo_pref = off_pf.get("tempo_preference", 1.0)
+        if tempo_pref > 1.0:
+            adjusted_fatigue *= 1.0 + (tempo_pref - 1.0) * 0.5  # subtle extra tire
+
         return max(1.0, adjusted_fatigue)
 
     def _red_zone_td_check(self, new_position: int, yards_gained: int, team: Team) -> bool:
@@ -3665,17 +3740,19 @@ class ViperballEngine:
             return random.random() < 0.20
         return False
 
-    def _breakaway_check(self, yards_gained: int, team: Team) -> int:
+    def _breakaway_check(self, yards_gained: int, team: Team, family=None) -> int:
         """Breakaway system — big gains can extend into bigger plays.
 
-        Requires 8+ yards to trigger (not 5). Lower base chance (15%).
-        No field-position boosters. Capped at 25 extra yards — no
-        automatic house calls. Speed gap still matters.
+        Requires 8+ yards to trigger (not 5). Base chance from
+        EXPLOSIVE_CHANCE (per play family). Capped at 25 extra yards —
+        no automatic house calls. Speed gap still matters.
         """
         if yards_gained >= 8:
+            # Use play-family explosive base from EXPLOSIVE_CHANCE
+            base = EXPLOSIVE_CHANCE.get(family.value, 0.06) if family else 0.06
             speed_gap = (team.avg_speed - 85) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
-            breakaway_chance = 0.15 + speed_gap + def_fatigue_bonus
+            breakaway_chance = base + speed_gap + def_fatigue_bonus
 
             # Bigger initial gains = more likely to break free
             if yards_gained >= 12:
@@ -3719,6 +3796,12 @@ class ViperballEngine:
         if off_mods.get("hc_classification") == "disciplinarian":
             cls_fx = off_mods.get("classification_effects", {})
             base_fumble *= cls_fx.get("fumble_reduction", 1.0)
+
+        # V2.2: Composure personality affects pressure fumbles
+        off_pf = off_mods.get("personality_factors", {})
+        comp_f = off_pf.get("composure_tendency", 1.0)
+        # High composure (factor > 1.0) reduces fumbles; low increases
+        base_fumble *= (2.0 - comp_f)  # comp=1.25 → 0.75x; comp=0.75 → 1.25x
 
         return random.random() < base_fumble
 
@@ -4060,6 +4143,19 @@ class ViperballEngine:
         elif def_cls == "scheme_master":
             center *= 1.0 - def_fx.get("scheme_amplification", 0.0) * 0.5
 
+        # ── V2.2: Personality variance modifiers ──
+        off_mods_pf = off_mods.get("personality_factors", {})
+        var_tol = off_mods_pf.get("variance_tolerance", 1.0)
+        variance *= var_tol  # high variance_tolerance = more boom/bust
+
+        # Sub-archetype: emotional motivator increases variance
+        sub_fx = off_mods.get("sub_archetype_effects", {})
+        variance *= sub_fx.get("variance_multiplier", 1.0)
+
+        # Analyst sub-archetype: slow start Q1 penalty
+        if self.state.quarter == 1:
+            center *= sub_fx.get("slow_start_penalty", 1.0)
+
         # ── V2: Composure modifier ──
         if V2_ENGINE_CONFIG.get("composure_enabled", False):
             composure = self._get_current_composure()
@@ -4089,6 +4185,10 @@ class ViperballEngine:
 
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
+
+        # ── Game rhythm — all coaching rhythm effects flow through here ──
+        rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
+        center *= rhythm
 
         # ── Roll the dice ──
         yards = random.gauss(center, variance)
@@ -4132,6 +4232,10 @@ class ViperballEngine:
         rep_def = def_players_list[0] if def_players_list else None
         if rep_def:
             def_coverage *= self.player_fatigue_modifier(rep_def) * 0.5 + 0.5
+
+        # Game rhythm — coaching rhythm effects apply to passing too
+        rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
+        off_skill *= rhythm
 
         contest_model = V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid")
 
@@ -4274,9 +4378,14 @@ class ViperballEngine:
         team_side = self.state.possession
         hero_target = self._check_hero_ball(team_side)
         if hero_target:
+            # V2.2: Player trust personality boosts star targeting
+            off_mods = self._coaching_mods()
+            trust = off_mods.get("personality_factors", {}).get("player_trust", 1.0)
+            star_mult = off_mods.get("hidden_trait_effects", {}).get("star_touch_bias", 1.0)
+            hero_weight = 5.0 * trust * star_mult
             for i, p in enumerate(eligible):
                 if p.name == hero_target:
-                    weights[i] *= 5.0  # 5x weight for hero ball target
+                    weights[i] *= hero_weight
                     break
 
         player = random.choices(eligible, weights=weights, k=1)[0]
@@ -4352,7 +4461,7 @@ class ViperballEngine:
         was_explosive = False
 
         # Breakaway check — good plays can become great plays
-        yards_gained = self._breakaway_check(yards_gained, team)
+        yards_gained = self._breakaway_check(yards_gained, team, family=family)
 
         # Update hot streak: positive yards = successful contest
         self._update_player_streak(player, yards_gained > 0)
@@ -4619,7 +4728,7 @@ class ViperballEngine:
 
         # Breakaway check on trick plays (only if defense didn't read it)
         if not defense_read:
-            yards_gained = self._breakaway_check(yards_gained, team)
+            yards_gained = self._breakaway_check(yards_gained, team, family=family)
 
         was_explosive = False
 
