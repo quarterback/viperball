@@ -54,6 +54,10 @@ V2_ENGINE_CONFIG = {
     "play_family_adaptation_enabled": True,
     # V2.4: Time-of-possession model — play clock varies by offensive style
     "top_model_enabled": True,
+    # V2.5: Base yards multiplier — primary lever for total yardage per game.
+    # 5.5 (original) → high-scoring, ~900 combined yards.
+    # 3.8 → tighter games, ~600-650 combined yards. Breakaways still produce bursts.
+    "base_yards_multiplier": 3.8,
 }
 
 
@@ -4875,11 +4879,13 @@ class ViperballEngine:
 
             # Convert power ratio to expected yards
             # Viperball uses 20-yard first downs, so teams need ~3.5 yd/play
-            # minimum to sustain drives. Base is higher than football.
-            # power 1.0 → ~5.5 yards (even matchup)
-            # power 1.5 → ~8.25 yards (offense dominates)
-            # power 0.67 → ~2.5 yards (defense dominates)
-            base_yards = 5.5 * power
+            # minimum to sustain drives. Base multiplier is configurable.
+            # At 3.8: power 1.0 → ~3.8 yards (even matchup, tighter drives)
+            #         power 1.5 → ~5.7 yards (offense dominates)
+            #         power 0.67 → ~2.5 yards (defense dominates)
+            # Breakaway system still produces 70+ yard bursts.
+            bym = V2_ENGINE_CONFIG.get("base_yards_multiplier", 3.8)
+            base_yards = bym * power
 
             # Play-type shift
             base_low, base_high = play_config['base_yards']
@@ -5063,6 +5069,10 @@ class ViperballEngine:
 
         # ── V2: Apply star override (performance floor) ──
         yards = self._apply_star_override(yards, carrier)
+
+        # ── V2.5: Micro-jitter — break up round-number clustering ──
+        # Adds ±0.3 yards of noise so results don't always land on .0 or .5
+        yards += random.uniform(-0.3, 0.3)
 
         return max(-2.0, round(yards, 1))
 
@@ -6006,9 +6016,10 @@ class ViperballEngine:
         for p in players_involved:
             self.drain_player_energy(p, "lateral")
 
-        # V2.3: Lateral efficiency reduced 20% — laterals are chaos spice, not staple yardage
-        base_yards = random.gauss(0.8, 1.0)
-        lateral_bonus = chain_length * 0.4
+        # V2.5: Lateral success halved — laterals are pure chaos plays, not yardage tools.
+        # Value comes from breakaway potential, not base yards.
+        base_yards = random.gauss(0.4, 1.0)
+        lateral_bonus = chain_length * 0.2
 
         # Skill roll from the final ball carrier (lateral skill matters)
         ball_carrier_for_roll = players_involved[-1] if players_involved else None
