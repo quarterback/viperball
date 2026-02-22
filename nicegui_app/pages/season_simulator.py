@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import random
 
-from nicegui import ui
+from nicegui import ui, run
 
 from engine.season import load_teams_from_directory
 from engine.conference_names import generate_conference_names
@@ -299,7 +299,7 @@ def render_season_simulator(state: UserState, shared: dict):
         # Ensure we have a session
         if not state.session_id:
             try:
-                resp = api_client.create_session()
+                resp = await run.io_bound(api_client.create_session)
                 state.session_id = resp["session_id"]
             except api_client.APIError as e:
                 notify_error(f"Failed to create session: {e.detail}")
@@ -325,11 +325,10 @@ def render_season_simulator(state: UserState, shared: dict):
 
         create_btn.disable()
         create_btn.text = "Creating season..."
-        import asyncio
-        await asyncio.sleep(0.05)  # Let the UI update before blocking
 
         try:
-            api_client.create_season(
+            await run.io_bound(
+                api_client.create_season,
                 state.session_id,
                 name=season_name.value,
                 games_per_team=REGULAR_SEASON_GAMES,
