@@ -773,6 +773,8 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    inj_seed = req.ai_seed if req.ai_seed else hash(req.name) % 999999
+    session["injury_tracker"].seed(inj_seed)
     season.injury_tracker = session["injury_tracker"]
     session["dq_manager"] = DraftyQueenzManager(
         manager_name=req.human_teams[0] if req.human_teams else "Coach",
@@ -1496,6 +1498,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    session["injury_tracker"].seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
     season.injury_tracker = session["injury_tracker"]
 
     existing_dq = session.get("dq_manager")
