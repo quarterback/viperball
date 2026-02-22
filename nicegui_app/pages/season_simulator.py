@@ -245,6 +245,7 @@ def render_season_simulator(state: UserState, shared: dict):
         _render_conferences()
 
     # ── Schedule configuration ──
+    total_teams = len(all_team_names)
     REGULAR_SEASON_GAMES = 13
 
     ui.separator().classes("my-4")
