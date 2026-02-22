@@ -358,6 +358,8 @@ def _render_drives(result, home_name, away_name):
     for i, d in enumerate(drives):
         team_label = home_name if d["team"] == "home" else away_name
         result_lbl = drive_result_label(d["result"])
+        if d.get("bonus_drive"):
+            result_lbl += " \u26a1"
         if d.get("sacrifice_drive"):
             result_lbl += " *"
         drive_rows.append({
@@ -380,6 +382,7 @@ def _render_drives(result, home_name, away_name):
         color_discrete_map={
             "TD": "#16a34a", "SK/FG": "#2563eb", "STRIKE (+\u00bd)": "#dc2626",
             "DOWNS": "#d97706", "PUNT": "#94a3b8",
+            "LAT INT": "#dc2626", "KP INT": "#dc2626", "PICK-SIX": "#16a34a",
         },
     )
     fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome",

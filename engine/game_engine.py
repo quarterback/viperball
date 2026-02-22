@@ -2437,6 +2437,7 @@ class ViperballEngine:
                 # award it now before the next drive starts.
                 if self._bonus_drives_remaining == 0 and self._bonus_recipient:
                     bonus_team = self._bonus_recipient
+                    bonus_team_name = self.home_team.name if bonus_team == "home" else self.away_team.name
                     self._bonus_recipient = ""
                     self._bonus_drives_remaining = -1
                     # Force the bonus possession from the 25
@@ -2445,8 +2446,32 @@ class ViperballEngine:
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.state.kick_mode = False
+                    self._next_drive_is_bonus = True
 
-                self.simulate_drive()
+                    # Synthetic play log entry so the UI can display the bonus
+                    stamina = self.state.home_stamina if bonus_team == "home" else self.state.away_stamina
+                    self.state.play_number += 1
+                    bonus_play = Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=bonus_team,
+                        field_position=25,
+                        down=1,
+                        yards_to_go=20,
+                        play_type="bonus_possession",
+                        play_family="none",
+                        players_involved=[],
+                        yards_gained=0,
+                        result="bonus_possession",
+                        description=f"BONUS POSSESSION — {bonus_team_name} gets the ball back after the interception",
+                        fatigue=round(stamina, 1),
+                    )
+                    self.play_log.append(bonus_play)
+
+                _is_bonus = getattr(self, '_next_drive_is_bonus', False)
+                self._next_drive_is_bonus = False
+                self.simulate_drive(is_bonus_drive=_is_bonus)
                 if self.state.time_remaining <= 0:
                     break
 
@@ -2571,7 +2596,7 @@ class ViperballEngine:
         self.state.down = 1
         self.state.yards_to_go = 20
 
-    def simulate_drive(self):
+    def simulate_drive(self, is_bonus_drive: bool = False):
         style = self._current_style()
         tempo = style["tempo"]
         max_plays = int(20 + tempo * 15)
@@ -2764,6 +2789,7 @@ class ViperballEngine:
             "yards": drive_yards,
             "result": drive_result,
             "sacrifice_drive": drive_sacrifice,
+            "bonus_drive": is_bonus_drive,
         })
 
     FIELD_POSITION_VALUE = [
@@ -3662,6 +3688,37 @@ class ViperballEngine:
                 weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.3
                 weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.4
                 weights["trick_play"] = weights.get("trick_play", 0.05) * 0.2
+
+        # ── V2.3: INT Awareness — bonus possession risk management ──
+        # Interceptions gift the opponent a bonus drive. When leading,
+        # coaches suppress high-INT-risk plays (kick pass, laterals).
+        # When trailing, the risk is accepted — you need points.
+        # The suppression scales with lead size, quarter, and coaching
+        # personality (risk_tolerance, aggression).
+        if quarter >= 3 and score_diff > 0:
+            # Leading in 2nd half: protect the lead
+            # Stronger suppression the bigger the lead and later the game
+            lead_factor = min(1.0, score_diff / 20.0)  # 0-1 scale (20+ pts = max)
+            time_pressure = 1.0 - (time_left / 600.0)  # 0=start of quarter, 1=end
+            int_caution = 0.3 + 0.5 * lead_factor + 0.2 * time_pressure  # 0.3-1.0
+
+            # Coaching personality modulates: risk-tolerant coaches suppress less
+            off_mods_int = self._coaching_mods()
+            risk_tol = off_mods_int.get("personality_factors", {}).get("risk_tolerance", 1.0)
+            # risk_tol > 1.0 = risk-seeking → less suppression
+            # risk_tol < 1.0 = risk-averse → more suppression
+            int_caution = int_caution / max(0.5, risk_tol)
+            int_caution = min(1.0, int_caution)
+
+            # Suppress kick pass and lateral (INT-prone plays)
+            kp_suppress = max(0.15, 1.0 - int_caution * 0.6)  # floor at 15% of normal
+            lat_suppress = max(0.10, 1.0 - int_caution * 0.7)  # laterals suppressed harder
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * kp_suppress
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * lat_suppress
+            # Boost safe run plays to compensate
+            run_boost = 1.0 + int_caution * 0.4
+            weights["dive_option"] = weights.get("dive_option", 0.1) * run_boost
+            weights["power"] = weights.get("power", 0.1) * run_boost
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
@@ -5296,7 +5353,7 @@ class ViperballEngine:
                 int_speed = interceptor.speed
                 int_agility = getattr(interceptor, 'agility', 75)
                 return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
-                return_yards = max(0, int(random.gauss(50 + return_talent * 30, 18)))
+                return_yards = max(0, int(random.gauss(35 + return_talent * 25, 18)))
                 new_fp = min(100, raw_fp + return_yards)
 
                 self.apply_stamina_drain(4)
@@ -5614,15 +5671,19 @@ class ViperballEngine:
 
             # Yards after catch — inversely proportional to air distance
             # Short kicks = lots of space to run (like screen passes)
-            # Long kicks = receiver corralled quickly
-            # Elite receivers generate breakaway YAC
+            # Medium kicks = balanced catch-and-run potential
+            # Long kicks = receiver still has momentum, open-field running
+            # Deep balls are signature big-play territory in viperball
             receiver_skill = max(0.0, (receiver.speed + getattr(receiver, 'agility', 75)) / 2 - 60) / 40  # 0.0–1.0
             if kick_distance <= 8:
-                yac = random.randint(3, 7) + int(receiver_skill * random.randint(1, 5))
+                yac = random.randint(3, 8) + int(receiver_skill * random.randint(2, 7))
             elif kick_distance <= 15:
-                yac = random.randint(2, 5) + int(receiver_skill * random.randint(0, 4))
+                yac = random.randint(2, 6) + int(receiver_skill * random.randint(1, 5))
+            elif kick_distance <= 25:
+                yac = random.randint(1, 5) + int(receiver_skill * random.randint(1, 4))
             else:
-                yac = random.randint(0, 3) + int(receiver_skill * random.randint(0, 2))
+                # Deep balls: receiver has beaten coverage, open field ahead
+                yac = random.randint(2, 6) + int(receiver_skill * random.randint(2, 6))
 
             fumble_on_catch = 0.008
             fumble_on_catch -= (receiver.hands / 100) * 0.004
@@ -5826,7 +5887,7 @@ class ViperballEngine:
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
             return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40  # 0–1
-            return_yards = max(0, int(random.gauss(50 + return_talent * 30, 18)))
+            return_yards = max(0, int(random.gauss(35 + return_talent * 20, 18)))
             new_fp = min(100, raw_fp + return_yards)
 
             if new_fp >= 100:
