@@ -5,7 +5,7 @@ A turn-based simulation engine for the Collegiate Viperball League (CVL), featur
 ## Overview
 
 This engine simulates complete Viperball games with:
-- **5-for-20 down system** (5 downs to gain 20 yards)
+- **6-for-20 down system** (6 downs to gain 20 yards)
 - **Lateral chain mechanics** with broken chain (fumble) probability
 - **Live-ball kicking** (punts and drop-kicks as tactical offensive options)
 - **Two-way player fatigue model** affecting late-game performance
