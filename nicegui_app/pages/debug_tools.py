@@ -41,10 +41,14 @@ def render_debug_tools(state, shared):
     team_options = {t["key"]: team_names[t["key"]] for t in teams}
     style_options = {k: styles[k]["label"] for k in style_keys}
 
+    def_style_options = {k: defense_styles[k]["label"] for k in defense_style_keys}
+
     home_key = {"value": team_keys[0] if team_keys else ""}
     away_key = {"value": team_keys[min(1, len(team_keys) - 1)] if team_keys else ""}
     home_style = {"value": style_keys[0] if style_keys else ""}
     away_style = {"value": style_keys[0] if style_keys else ""}
+    home_def_style = {"value": defense_style_keys[0] if defense_style_keys else ""}
+    away_def_style = {"value": defense_style_keys[0] if defense_style_keys else ""}
 
     with ui.row().classes("w-full gap-4"):
         with ui.column().classes("flex-1"):
@@ -53,8 +57,12 @@ def render_debug_tools(state, shared):
                 on_change=lambda e: home_key.update(value=e.value),
             ).classes("w-full")
             ui.select(
-                style_options, label="Home Style", value=home_style["value"],
+                style_options, label="Home Offense", value=home_style["value"],
                 on_change=lambda e: home_style.update(value=e.value),
+            ).classes("w-full")
+            ui.select(
+                def_style_options, label="Home Defense", value=home_def_style["value"],
+                on_change=lambda e: home_def_style.update(value=e.value),
             ).classes("w-full")
         with ui.column().classes("flex-1"):
             ui.select(
@@ -62,8 +70,12 @@ def render_debug_tools(state, shared):
                 on_change=lambda e: away_key.update(value=e.value),
             ).classes("w-full")
             ui.select(
-                style_options, label="Away Style", value=away_style["value"],
+                style_options, label="Away Offense", value=away_style["value"],
                 on_change=lambda e: away_style.update(value=e.value),
+            ).classes("w-full")
+            ui.select(
+                def_style_options, label="Away Defense", value=away_def_style["value"],
+                on_change=lambda e: away_def_style.update(value=e.value),
             ).classes("w-full")
 
     # -- Sim controls ---------------------------------------------------------
@@ -102,6 +114,8 @@ def render_debug_tools(state, shared):
         style_overrides = {
             home_team_data.name: home_style["value"],
             away_team_data.name: away_style["value"],
+            f"{home_team_data.name}_defense": home_def_style["value"],
+            f"{away_team_data.name}_defense": away_def_style["value"],
         }
 
         results_container.clear()
@@ -419,11 +433,278 @@ def _render_results(container, results):
         ]
         ui.table(columns=to_columns, rows=to_rows).classes("w-full").props("dense flat")
 
+        # -- Defensive Stats ----------------------------------------------------
+        _render_defensive_stats(results, n, home_name, away_name)
+
         # -- Player Impact Report -----------------------------------------------
         _render_batch_player_impact(results, n, home_name, away_name)
 
 
-def _render_batch_player_impact(results, n, home_name, away_name):
+def _render_defensive_stats(results, n, home_name, away_name):
+    """Render defensive metrics: INTs, turnovers forced, DC gameplan, adaptation."""
+    from collections import defaultdict
+
+    ui.separator()
+    ui.label("Defensive Performance").classes("text-2xl font-semibold mt-4")
+
+    # ── Turnovers Forced (defense view: your INTs = opponent's thrown INTs) ──
+    # Home defense forces turnovers on away offense, and vice versa
+    home_def_kp_ints = [r["stats"]["away"].get("kick_pass_interceptions", 0) for r in results]
+    home_def_lat_ints = [r["stats"]["away"].get("lateral_interceptions", 0) for r in results]
+    home_def_fumbles = [r["stats"]["away"].get("fumbles_lost", 0) for r in results]
+    away_def_kp_ints = [r["stats"]["home"].get("kick_pass_interceptions", 0) for r in results]
+    away_def_lat_ints = [r["stats"]["home"].get("lateral_interceptions", 0) for r in results]
+    away_def_fumbles = [r["stats"]["home"].get("fumbles_lost", 0) for r in results]
+
+    home_def_total_ints = [k + l for k, l in zip(home_def_kp_ints, home_def_lat_ints)]
+    away_def_total_ints = [k + l for k, l in zip(away_def_kp_ints, away_def_lat_ints)]
+    home_def_total_to = [i + f for i, f in zip(home_def_total_ints, home_def_fumbles)]
+    away_def_total_to = [i + f for i, f in zip(away_def_total_ints, away_def_fumbles)]
+
+    # Yards allowed
+    home_def_yards_allowed = [r["stats"]["away"]["total_yards"] for r in results]
+    away_def_yards_allowed = [r["stats"]["home"]["total_yards"] for r in results]
+    home_def_tds_allowed = [r["stats"]["away"]["touchdowns"] for r in results]
+    away_def_tds_allowed = [r["stats"]["home"]["touchdowns"] for r in results]
+
+    ui.label("Turnovers Forced (Defensive View)").classes("text-xl font-semibold mt-2")
+
+    def_rows = [
+        {
+            "Metric": "Avg KP INTs Forced",
+            f"{home_name} DEF": str(round(sum(home_def_kp_ints) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_kp_ints) / n, 2)),
+        },
+        {
+            "Metric": "Avg Lateral INTs Forced",
+            f"{home_name} DEF": str(round(sum(home_def_lat_ints) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_lat_ints) / n, 2)),
+        },
+        {
+            "Metric": "Avg Total INTs Forced",
+            f"{home_name} DEF": str(round(sum(home_def_total_ints) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_total_ints) / n, 2)),
+        },
+        {
+            "Metric": "Avg Fumbles Forced",
+            f"{home_name} DEF": str(round(sum(home_def_fumbles) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_fumbles) / n, 2)),
+        },
+        {
+            "Metric": "Avg Total Turnovers Forced",
+            f"{home_name} DEF": str(round(sum(home_def_total_to) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_total_to) / n, 2)),
+        },
+        {
+            "Metric": "Avg Yards Allowed",
+            f"{home_name} DEF": str(round(sum(home_def_yards_allowed) / n, 1)),
+            f"{away_name} DEF": str(round(sum(away_def_yards_allowed) / n, 1)),
+        },
+        {
+            "Metric": "Avg TDs Allowed",
+            f"{home_name} DEF": str(round(sum(home_def_tds_allowed) / n, 2)),
+            f"{away_name} DEF": str(round(sum(away_def_tds_allowed) / n, 2)),
+        },
+    ]
+    def_columns = [
+        {"name": "Metric", "label": "Metric", "field": "Metric", "align": "left"},
+        {"name": f"{home_name} DEF", "label": f"{home_name} DEF",
+         "field": f"{home_name} DEF", "align": "right"},
+        {"name": f"{away_name} DEF", "label": f"{away_name} DEF",
+         "field": f"{away_name} DEF", "align": "right"},
+    ]
+    ui.table(columns=def_columns, rows=def_rows).classes("w-full").props("dense flat")
+
+    # ── DC Gameplan & Modifier Stack (V2.4) ──
+    ui.label("DC Gameplan & Modifier Stack").classes("text-xl font-semibold mt-4")
+    ui.label(
+        "Per-game DC suppression rolls and combined modifier picture. "
+        "Values < 1.0 = suppression, > 1.0 = vulnerability."
+    ).classes("text-sm text-gray-500")
+
+    play_types = ("run", "lateral", "kick_pass", "trick")
+
+    # Aggregate DC gameplan values and modifier stack across sims
+    for side, label in [("home_defense", f"{home_name} DEF"), ("away_defense", f"{away_name} DEF")]:
+        dc_accum = {pt: [] for pt in play_types}
+        temp_counts = defaultdict(int)
+        stack_labels = []
+        solved_counts = defaultdict(int)
+        nfz_count = 0
+
+        for r in results:
+            ms = r.get("modifier_stack", {}).get(side, {})
+            if not ms:
+                continue
+            gp = ms.get("dc_gameplan", {})
+            for pt in play_types:
+                if pt in gp:
+                    dc_accum[pt].append(gp[pt])
+            temp = ms.get("game_temperature", "neutral")
+            temp_counts[temp] += 1
+            sl = ms.get("stack_label", "")
+            if sl:
+                stack_labels.append(sl)
+            for fam in ms.get("solved_families", {}):
+                solved_counts[fam] += 1
+            if ms.get("no_fly_zone", False):
+                nfz_count += 1
+
+        # Only render if we have data
+        has_data = any(len(v) > 0 for v in dc_accum.values())
+        if not has_data:
+            ui.label(f"{label}: No V2.4 modifier data (coaching may not be configured)").classes(
+                "text-sm text-gray-400 italic"
+            )
+            continue
+
+        ui.label(label).classes("text-lg font-bold text-slate-700 mt-2")
+
+        # DC gameplan avg suppression per play type
+        gp_rows = []
+        for pt in play_types:
+            vals = dc_accum[pt]
+            if vals:
+                avg_val = round(sum(vals) / len(vals), 3)
+                min_val = round(min(vals), 3)
+                max_val = round(max(vals), 3)
+            else:
+                avg_val = min_val = max_val = "-"
+            pt_label = {"run": "Run", "lateral": "Lateral", "kick_pass": "Kick Pass", "trick": "Trick"}
+            gp_rows.append({
+                "Play Type": pt_label.get(pt, pt),
+                "Avg Suppression": str(avg_val),
+                "Min (Best Game)": str(min_val),
+                "Max (Worst Game)": str(max_val),
+            })
+        gp_columns = [
+            {"name": "Play Type", "label": "Play Type", "field": "Play Type", "align": "left"},
+            {"name": "Avg Suppression", "label": "Avg Suppression", "field": "Avg Suppression", "align": "right"},
+            {"name": "Min (Best Game)", "label": "Min (Best Game)", "field": "Min (Best Game)", "align": "right"},
+            {"name": "Max (Worst Game)", "label": "Max (Worst Game)", "field": "Max (Worst Game)", "align": "right"},
+        ]
+        ui.table(columns=gp_columns, rows=gp_rows).classes("w-full").props("dense flat")
+
+        # Game temperature distribution
+        total_temps = sum(temp_counts.values())
+        if total_temps > 0:
+            with ui.row().classes("w-full gap-4 flex-wrap mt-1"):
+                for temp in ["cold", "neutral", "hot"]:
+                    count = temp_counts.get(temp, 0)
+                    pct = round(count / total_temps * 100, 1)
+                    color = {"cold": "#3b82f6", "neutral": "#94a3b8", "hot": "#ef4444"}.get(temp, "#94a3b8")
+                    emoji = {"cold": "Cold", "neutral": "Neutral", "hot": "Hot"}.get(temp, temp)
+                    metric_card(f"{emoji} Games", f"{count}/{total_temps} ({pct}%)")
+
+        # Solved families frequency
+        if solved_counts:
+            with ui.row().classes("w-full gap-4 flex-wrap mt-1"):
+                for fam, count in sorted(solved_counts.items(), key=lambda x: -x[1]):
+                    metric_card(f"Solved: {fam}", f"{count}/{n} games")
+
+        # NFZ count
+        if nfz_count > 0:
+            metric_card("No-Fly Zone Active", f"{nfz_count}/{n} games")
+
+        # Most common stack label
+        if stack_labels:
+            from collections import Counter
+            most_common = Counter(stack_labels).most_common(1)[0]
+            ui.label(f"Most frequent modifier story: \"{most_common[0]}\" ({most_common[1]}x)").classes(
+                "text-sm text-gray-600 italic mt-1"
+            )
+
+    # ── DC Suppression Heatmap ──
+    # Build a heatmap showing avg suppression per play type per side
+    heatmap_data = []
+    for side, label in [("home_defense", f"{home_name} DEF"), ("away_defense", f"{away_name} DEF")]:
+        for pt in play_types:
+            vals = []
+            for r in results:
+                ms = r.get("modifier_stack", {}).get(side, {})
+                gp = ms.get("dc_gameplan", {})
+                if pt in gp:
+                    # Combine DC gameplan with solved family suppression
+                    base = gp[pt]
+                    solved = ms.get("solved_families", {})
+                    if pt in solved:
+                        base *= solved[pt]
+                    vals.append(base)
+            if vals:
+                pt_label = {"run": "Run", "lateral": "Lateral", "kick_pass": "Kick Pass", "trick": "Trick"}
+                heatmap_data.append({
+                    "side": label, "play_type": pt_label.get(pt, pt),
+                    "value": round(sum(vals) / len(vals), 3),
+                })
+
+    if heatmap_data:
+        ui.label("Suppression Heatmap (DC + Adaptation Combined)").classes("text-xl font-semibold mt-4")
+
+        sides = list(dict.fromkeys(d["side"] for d in heatmap_data))
+        pts = list(dict.fromkeys(d["play_type"] for d in heatmap_data))
+        z = []
+        for s in sides:
+            row = []
+            for pt in pts:
+                match = [d for d in heatmap_data if d["side"] == s and d["play_type"] == pt]
+                row.append(match[0]["value"] if match else 1.0)
+            z.append(row)
+
+        fig = go.Figure(data=go.Heatmap(
+            z=z, x=pts, y=sides,
+            colorscale=[[0, "#1e40af"], [0.5, "#fbbf24"], [1, "#dc2626"]],
+            zmin=0.75, zmax=1.12,
+            text=[[f"{v:.3f}" for v in row] for row in z],
+            texttemplate="%{text}",
+            hovertemplate="Side: %{y}<br>Play Type: %{x}<br>Suppression: %{z:.3f}<extra></extra>",
+        ))
+        fig.update_layout(
+            title="Avg Effective Suppression by Play Type",
+            height=250,
+            xaxis_title="Play Type",
+            yaxis_title="",
+            margin=dict(l=200),
+        )
+        ui.plotly(fig).classes("w-full")
+
+    # ── Adaptation Log ──
+    all_adaptation_events = []
+    for r in results:
+        events = r.get("adaptation_log", [])
+        all_adaptation_events.extend(events)
+
+    if all_adaptation_events:
+        ui.label("Defensive Adaptation Events").classes("text-xl font-semibold mt-4")
+
+        from collections import Counter
+        event_counts = Counter(all_adaptation_events)
+        total_events = len(all_adaptation_events)
+
+        with ui.row().classes("w-full gap-4 flex-wrap"):
+            metric_card("Total Adaptation Events", total_events)
+            metric_card("Avg Events/Game", round(total_events / n, 1))
+
+            solve_events = sum(c for e, c in event_counts.items() if "INSIGHT" in e or "solved" in e.lower())
+            decay_events = sum(c for e, c in event_counts.items() if "BROKEN" in e or "reset" in e.lower())
+            metric_card("Solves", solve_events)
+            metric_card("Resets (Tendency Broken)", decay_events)
+
+        # Top adaptation events
+        top_events = event_counts.most_common(8)
+        if top_events:
+            event_rows = [
+                {"Event": ev, "Count": str(ct), "Per Game": str(round(ct / n, 2))}
+                for ev, ct in top_events
+            ]
+            event_columns = [
+                {"name": "Event", "label": "Event", "field": "Event", "align": "left"},
+                {"name": "Count", "label": "Count", "field": "Count", "align": "right"},
+                {"name": "Per Game", "label": "Per Game", "field": "Per Game", "align": "right"},
+            ]
+            ui.table(columns=event_columns, rows=event_rows).classes("w-full").props("dense flat")
+
+
+
     """Aggregate per-player VPA across all batch simulations."""
     from collections import defaultdict
 
