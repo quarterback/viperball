@@ -195,25 +195,63 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.separator().classes("my-4")
     ui.label("Conference Setup").classes("text-lg font-semibold text-slate-700")
 
-    total_teams = len(all_team_names)
-    max_conf = max(1, total_teams // 9)
+    # Load stock conferences from team files
+    from engine.geography import read_conferences_from_team_files
+    stock_conferences = read_conferences_from_team_files(TEAMS_DIR, all_team_names) or {}
+    # Track editable conference assignments (team → conference name)
+    _conf_assignments: dict[str, str] = {}
+    for conf_name, members in stock_conferences.items():
+        for t in members:
+            _conf_assignments[t] = conf_name
+    # Fill in unassigned teams
+    for t in all_team_names:
+        if t not in _conf_assignments:
+            _conf_assignments[t] = "Independent"
 
-    ui.label(f"Number of Conferences ({total_teams} teams)").classes("text-sm text-slate-600")
-    num_conferences = ui.slider(
-        min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
-    ).classes("w-96")
+    conf_container = ui.column().classes("w-full")
+
+    @ui.refreshable
+    def _render_conferences():
+        # Build conference → team list from current assignments
+        conf_map: dict[str, list[str]] = {}
+        for t, c in sorted(_conf_assignments.items()):
+            conf_map.setdefault(c, []).append(t)
+
+        ui.label(f"{len(conf_map)} conferences, {len(all_team_names)} teams").classes("text-sm text-gray-500")
+
+        with ui.expansion("View / Edit Conferences", icon="groups").classes("w-full"):
+            for conf_name in sorted(conf_map.keys()):
+                members = sorted(conf_map[conf_name])
+                with ui.expansion(f"{conf_name} ({len(members)} teams)").classes("w-full"):
+                    for t in members:
+                        with ui.row().classes("items-center gap-2"):
+                            ui.label(t).classes("text-sm flex-1")
+                            # Reassign dropdown
+                            all_conf_names = sorted(set(_conf_assignments.values()))
+                            conf_opts = {c: c for c in all_conf_names}
+
+                            def _make_reassign(team_name):
+                                def _reassign(e):
+                                    _conf_assignments[team_name] = e.value
+                                    _render_conferences.refresh()
+                                return _reassign
+
+                            ui.select(
+                                conf_opts, value=conf_name,
+                                on_change=_make_reassign(t),
+                            ).classes("w-48").props("dense")
+
+    with conf_container:
+        _render_conferences()
 
     # ── Schedule configuration ──
+    REGULAR_SEASON_GAMES = 13
+
     ui.separator().classes("my-4")
     with ui.row().classes("w-full gap-8"):
         with ui.column().classes("flex-1"):
-            ui.label("Regular Season Games Per Team").classes("text-sm text-slate-600")
-            games_per_team = ui.slider(min=8, max=12, value=10).classes("w-full")
-            games_label = ui.label("10 games").classes("text-sm font-semibold text-slate-700")
-
-            def _update_games_label():
-                games_label.set_text(f"{int(games_per_team.value)} games")
-            games_per_team.on_value_change(lambda _: _update_games_label())
+            ui.label("Regular Season").classes("text-sm text-slate-600")
+            ui.label(f"{REGULAR_SEASON_GAMES} games per team").classes("text-lg font-semibold text-slate-700")
 
         with ui.column().classes("flex-1"):
             ui.label("Playoff Format").classes("text-sm text-slate-600")
@@ -251,7 +289,7 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.separator().classes("my-4")
 
     # Create button
-    def _create_season():
+    async def _create_season():
         selected_humans = list(_human_teams)
         if len(selected_humans) > 4:
             notify_error("Maximum 4 human-coached teams")
@@ -278,16 +316,28 @@ def render_season_simulator(state: UserState, shared: dict):
                 "st_scheme": sels["st"].value,
             }
 
+        # Build conferences dict from current assignments
+        conf_dict: dict[str, list[str]] = {}
+        for tname, cname in _conf_assignments.items():
+            if cname and cname != "Independent":
+                conf_dict.setdefault(cname, []).append(tname)
+
+        create_btn.disable()
+        create_btn.text = "Creating season..."
+        import asyncio
+        await asyncio.sleep(0.05)  # Let the UI update before blocking
+
         try:
             api_client.create_season(
                 state.session_id,
                 name=season_name.value,
-                games_per_team=int(games_per_team.value),
+                games_per_team=REGULAR_SEASON_GAMES,
                 playoff_size=int(playoff_format.value),
                 bowl_count=int(bowl_count.value),
                 human_teams=selected_humans,
                 human_configs=human_configs,
-                num_conferences=int(num_conferences.value),
+                num_conferences=len(conf_dict),
+                conferences=conf_dict,
                 ai_seed=actual_seed,
                 history_years=int(history_years.value),
             )
@@ -299,5 +349,8 @@ def render_season_simulator(state: UserState, shared: dict):
             ui.navigate.to("/")
         except api_client.APIError as e:
             notify_error(f"Failed to create season: {e.detail}")
+        finally:
+            create_btn.enable()
+            create_btn.text = "Create Season"
 
-    ui.button("Create Season", on_click=_create_season, icon="sports_score").props("color=primary size=lg").classes("mt-2")
+    create_btn = ui.button("Create Season", on_click=_create_season, icon="sports_score").props("color=primary size=lg").classes("mt-2")

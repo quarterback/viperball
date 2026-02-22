@@ -2133,7 +2133,12 @@ class ViperballEngine:
                  is_trap_game: bool = False,
                  # V2.4: Defensive prestige — No-Fly Zone
                  home_no_fly_zone: bool = False,
-                 away_no_fly_zone: bool = False):
+                 away_no_fly_zone: bool = False,
+                 # V2.5: Additional defensive prestige tiers
+                 home_brick_wall: bool = False,
+                 away_brick_wall: bool = False,
+                 home_turnover_machine: bool = False,
+                 away_turnover_machine: bool = False):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -2143,6 +2148,12 @@ class ViperballEngine:
         # V2.4: Defensive prestige — "No-Fly Zone" reduces opponent kick pass accuracy
         self.home_no_fly_zone = home_no_fly_zone
         self.away_no_fly_zone = away_no_fly_zone
+        # V2.5: Brick Wall — opposing run plays get -8% yardage center
+        self.home_brick_wall = home_brick_wall
+        self.away_brick_wall = away_brick_wall
+        # V2.5: Turnover Machine — +3% fumble rate, +2% INT chance
+        self.home_turnover_machine = home_turnover_machine
+        self.away_turnover_machine = away_turnover_machine
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
@@ -2288,6 +2299,9 @@ class ViperballEngine:
         # ── Coaching staff modifiers (must init before rhythm) ──
         self.home_coaching_mods: Dict = {}
         self.away_coaching_mods: Dict = {}
+        # Store raw coaching staffs for halftime DC re-roll
+        self._home_coaching_staff = home_coaching
+        self._away_coaching_staff = away_coaching
         # DC gameplan: per-game defensive suppression roll (empty = no effect)
         self.home_dc_gameplan: Dict[str, float] = {}
         self.away_dc_gameplan: Dict[str, float] = {}
@@ -2736,6 +2750,63 @@ class ViperballEngine:
                         else:
                             self.away_game_rhythm = min(1.35, self.away_game_rhythm + boost)
 
+        # ── V2.5: Halftime DC gameplan re-roll ──
+        # Re-roll each DC's gameplan at halftime, biased by first-half play
+        # distribution. If the opposing offense leaned heavily on one play type
+        # in the first half, the DC tightens suppression on that category.
+        self._reroll_dc_gameplan_at_halftime()
+
+    def _reroll_dc_gameplan_at_halftime(self):
+        """Re-roll DC gameplans at halftime using first-half tendencies.
+
+        The DC "watches film" at halftime: play types the opposing offense
+        ran most frequently get a suppression bias shift of up to -0.06.
+        The re-roll still uses the normal stochastic process, but the center
+        shifts toward the offense's heaviest tendency.
+        """
+        from engine.coaching import roll_dc_gameplan
+
+        play_types = ("run", "lateral", "kick_pass", "trick")
+
+        for def_side, off_freq, coaching_staff, gp_attr in [
+            ("home", self._away_family_freq_half, self._home_coaching_staff, "home_dc_gameplan"),
+            ("away", self._home_family_freq_half, self._away_coaching_staff, "away_dc_gameplan"),
+        ]:
+            if not coaching_staff:
+                continue
+
+            # Re-roll base gameplan
+            new_gp = roll_dc_gameplan(coaching_staff)
+
+            # Calculate tendency bias from first-half play distribution
+            total_plays = sum(off_freq.get(pt, 0) for pt in play_types)
+            if total_plays >= 8:  # Need enough data to draw conclusions
+                for pt in play_types:
+                    pt_count = off_freq.get(pt, 0)
+                    pt_pct = pt_count / total_plays
+                    # If a play type was run > 40% of the time, apply bias
+                    if pt_pct > 0.40:
+                        # Bias scales from 0 at 40% to -0.06 at 80%+
+                        bias = min(0.06, (pt_pct - 0.40) * 0.15)
+                        new_gp[pt] = max(0.75, new_gp[pt] - bias)
+
+                # Recalculate game temperature after bias adjustments
+                avg_val = sum(new_gp.get(pt, 1.0) for pt in play_types) / len(play_types)
+                if avg_val <= 0.90:
+                    new_gp["game_temperature"] = "cold"
+                elif avg_val >= 1.02:
+                    new_gp["game_temperature"] = "hot"
+                else:
+                    new_gp["game_temperature"] = "neutral"
+
+            setattr(self, gp_attr, new_gp)
+
+            # Log the re-roll
+            self._adaptation_log.append(
+                f"HALFTIME ADJUSTMENT: {def_side.upper()} DC re-evaluated gameplan "
+                f"(temp: {new_gp.get('game_temperature', 'neutral')})"
+            )
+
     def _check_rouge_pindown(self, receiving_team_obj, kicking_possession: str) -> bool:
         return_speed = receiving_team_obj.avg_speed
         pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
@@ -3030,6 +3101,55 @@ class ViperballEngine:
                     self.state.down = 1
                     self.state.yards_to_go = 20
                 break
+
+        # ── V2.5: Clock-management final play ──
+        # When a drive ends because time expired (drive_result == "stall"),
+        # the coaching AI forces a final play instead of wasting the drive:
+        #   - FG range (field_position >= 55): attempt a place kick
+        #   - Snap kick range (fp >= 40): attempt a snap kick
+        #   - Otherwise: punt for field position / pindown
+        # This prevents the ~10% "end of quarter" dead drives.
+        if drive_result == "stall" and drive_plays > 0:
+            fp = self.state.field_position
+            # Give the team one last play with 1 second on the clock
+            self.state.time_remaining = 1
+            self.drive_play_count += 1
+
+            if fp >= 55:
+                # FG range — attempt a place kick
+                final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
+            elif fp >= 40:
+                # Snap kick range — attempt a snap kick
+                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            else:
+                # Punt for field position
+                final_play = self.simulate_punt(PlayFamily.PUNT)
+
+            self.play_log.append(final_play)
+            drive_plays += 1
+            if final_play.yards_gained > 0:
+                drive_yards += final_play.yards_gained
+            self.state.time_remaining = 0
+
+            if final_play.result in ("successful_kick", "touchdown", "punt",
+                                      "pindown", "punt_return_td", "fumble",
+                                      "missed_kick"):
+                drive_result = final_play.result
+
+                # Handle scoring / possession changes from the final play
+                if final_play.result in ("touchdown", "successful_kick", "punt_return_td"):
+                    scoring_team = self.state.possession
+                    receiving = "away" if scoring_team == "home" else "home"
+                    self.kickoff(receiving)
+                elif final_play.result in ("punt", "pindown", "missed_kick"):
+                    # Possession changes — opponent gets the ball
+                    self.state.possession = "away" if drive_team == "home" else "home"
+                    if final_play.result == "pindown":
+                        self.state.field_position = max(1, min(5, 100 - fp))
+                    else:
+                        self.state.field_position = max(1, 100 - fp)
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
 
         # Track compelled efficiency: did a sacrifice drive end in a score?
         is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td")
@@ -4470,6 +4590,11 @@ class ViperballEngine:
         # High composure (factor > 1.0) reduces fumbles; low increases
         base_fumble *= (2.0 - comp_f)  # comp=1.25 → 0.75x; comp=0.75 → 1.25x
 
+        # V2.5: Turnover Machine defensive prestige — +3% fumble chance
+        if (self.state.possession == "home" and self.away_turnover_machine) or \
+           (self.state.possession == "away" and self.home_turnover_machine):
+            base_fumble += 0.03
+
         return random.random() < base_fumble
 
     def _pick_returner(self, team):
@@ -4872,6 +4997,15 @@ class ViperballEngine:
                 dc_gp = self._def_dc_gameplan()
                 dc_suppression = dc_gp.get(dc_type, 1.0)
                 center *= dc_suppression
+
+        # ── V2.5: Brick Wall defensive prestige — run suppression ──
+        # Opposing run plays get -8% yardage center against a Brick Wall defense.
+        if play_family is not None:
+            dc_type = PLAY_FAMILY_TO_DC_TYPE.get(play_family)
+            if dc_type == "run":
+                if (self.state.possession == "home" and self.away_brick_wall) or \
+                   (self.state.possession == "away" and self.home_brick_wall):
+                    center *= 0.92
 
         # ── V2.4: Play-family adaptation — "Solved Puzzle" mechanic ──
         # If the DC has seen too many plays from the same family this drive/half,
@@ -6243,6 +6377,11 @@ class ViperballEngine:
         _off_mods_kp = self._coaching_mods()
         _gm_int_red_kp = _off_mods_kp.get("classification_effects", {}).get("int_chance_reduction", 1.0)
         int_chance *= _gm_int_red_kp
+
+        # V2.5: Turnover Machine defensive prestige — +2% INT chance
+        if (self.state.possession == "home" and self.away_turnover_machine) or \
+           (self.state.possession == "away" and self.home_turnover_machine):
+            int_chance += 0.02
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -8248,11 +8387,11 @@ class ViperballEngine:
         }
         """
         result = {}
-        for side, gp, nfz, solved in [
+        for side, gp, nfz, solved, bw, tm in [
             ("home_defense", self.home_dc_gameplan, self.home_no_fly_zone,
-             self._away_solved_families),  # home DC solves away offense
+             self._away_solved_families, self.home_brick_wall, self.home_turnover_machine),
             ("away_defense", self.away_dc_gameplan, self.away_no_fly_zone,
-             self._home_solved_families),  # away DC solves home offense
+             self._home_solved_families, self.away_brick_wall, self.away_turnover_machine),
         ]:
             temp = gp.get("game_temperature", "neutral")
             # Find the most suppressed play type
@@ -8311,6 +8450,8 @@ class ViperballEngine:
                 "weather": self.weather,
                 "weather_speed_modifier": weather_mod,
                 "no_fly_zone": nfz,
+                "brick_wall": bw,
+                "turnover_machine": tm,
                 "solved_families": dict(solved) if solved else {},
                 "stack_label": stack_label,
             }
