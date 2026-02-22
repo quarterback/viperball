@@ -47,20 +47,104 @@ def render_season_simulator(state: UserState, shared: dict):
         ui.label("Not enough teams loaded to run a season.").classes("text-yellow-600")
         return
 
+    # Count conferences
+    conf_set = sorted(set(
+        team_identities.get(t, {}).get("conference", "Independent")
+        for t in all_team_names
+    ))
+
     # ── Season Setup Form ──
     ui.label("Season Setup").classes("text-lg font-semibold text-slate-700 mt-2")
 
     season_name = ui.input("Season Name", value="2026 CVL Season").classes("w-96")
 
-    # Human team selection
-    ui.label("Your Teams (up to 4)").classes("font-semibold text-slate-600 mt-4")
-    ui.label("Pick teams to coach yourself. Everyone else is AI-controlled.").classes("text-sm text-gray-500")
+    # ── Human team selection with conference browsing ──
+    ui.label("Your Teams (human-coached, up to 4)").classes("font-semibold text-slate-600 mt-4")
+    ui.label(f"{len(all_team_names)} teams across {len(conf_set)} conferences").classes("text-sm text-gray-500")
 
-    human_select = ui.select(
-        {name: name for name in all_team_names},
-        label="Select teams",
-        multiple=True,
-    ).classes("w-full").props("use-chips")
+    # Browse mode
+    browse_mode = ui.radio(
+        {"conference": "Conference", "all": "All Teams (A-Z)"},
+        value="conference",
+    ).props("inline").classes("mt-1")
+
+    # Conference selector for browse
+    conf_browse_select = ui.select(
+        {c: c for c in conf_set},
+        value=conf_set[0] if conf_set else None,
+        label="Select Conference",
+    ).classes("w-64")
+
+    # Track selected human teams
+    _human_teams: list[str] = []
+
+    # Team add controls
+    team_add_container = ui.column().classes("w-full")
+
+    @ui.refreshable
+    def _render_team_add():
+        mode = browse_mode.value
+        if mode == "conference":
+            conf = conf_browse_select.value
+            if conf:
+                available = [t for t in all_team_names
+                             if team_identities.get(t, {}).get("conference", "Independent") == conf
+                             and t not in _human_teams]
+            else:
+                available = [t for t in all_team_names if t not in _human_teams]
+        else:
+            available = [t for t in all_team_names if t not in _human_teams]
+
+        # Build enriched labels
+        opts = {}
+        for t in sorted(available):
+            ident = team_identities.get(t, {})
+            conf = ident.get("conference", "")
+            label = f"{t} ({conf})" if conf else t
+            opts[t] = label
+
+        with ui.row().classes("w-full gap-4 items-end"):
+            add_select = ui.select(
+                opts,
+                label=f"Add team ({len(available)} available)",
+                value=list(opts.keys())[0] if opts else None,
+            ).classes("flex-1")
+
+            def _add_team():
+                if add_select.value and add_select.value not in _human_teams:
+                    if len(_human_teams) >= 4:
+                        notify_error("Maximum 4 human-coached teams")
+                        return
+                    _human_teams.append(add_select.value)
+                    _render_team_add.refresh()
+                    _render_human_config.refresh()
+
+            ui.button("Add", on_click=_add_team, icon="add").props("color=primary")
+
+        # Show current selections
+        if _human_teams:
+            ui.label("Selected teams:").classes("text-sm font-semibold text-slate-600 mt-2")
+            for t in list(_human_teams):
+                with ui.row().classes("items-center gap-2"):
+                    ident = team_identities.get(t, {})
+                    mascot = ident.get("mascot", "")
+                    conf = ident.get("conference", "")
+                    info = f" — {mascot} ({conf})" if mascot else f" ({conf})" if conf else ""
+                    ui.label(f"{t}{info}").classes("text-sm")
+
+                    def _make_remove(team_name):
+                        def _remove():
+                            _human_teams.remove(team_name)
+                            _render_team_add.refresh()
+                            _render_human_config.refresh()
+                        return _remove
+                    ui.button(icon="close", on_click=_make_remove(t)).props("flat round dense size=xs color=red")
+
+    browse_mode.on_value_change(lambda _: _render_team_add.refresh())
+    conf_browse_select.on_value_change(lambda _: _render_team_add.refresh())
+
+    with team_add_container:
+        _render_team_add()
 
     # AI Seed
     with ui.row().classes("gap-4 items-end mt-4"):
@@ -71,7 +155,43 @@ def render_season_simulator(state: UserState, shared: dict):
 
         ui.button("Re-roll AI", on_click=_reroll, icon="casino")
 
-    # Conference setup
+    # Human team style config
+    style_options = {k: styles[k]["label"] for k in style_keys}
+    def_options = {k: defense_styles[k]["label"] for k in defense_style_keys}
+    st_options = {k: st_schemes[k]["label"] for k in st_scheme_keys} if st_scheme_keys else {"aces": "Aces"}
+
+    # Track style selections per human team
+    _style_selects: dict = {}
+
+    style_container = ui.column().classes("w-full mt-4")
+
+    @ui.refreshable
+    def _render_human_config():
+        _style_selects.clear()
+        if not _human_teams:
+            return
+
+        ui.label("Your Team Configuration").classes("text-lg font-semibold text-slate-700")
+        for tname in _human_teams[:4]:  # max 4
+            identity = team_identities.get(tname, {})
+            mascot = identity.get("mascot", "")
+            conf = identity.get("conference", "")
+
+            with ui.card().classes("w-full p-4 mb-2"):
+                ui.label(f"{tname}").classes("font-bold text-slate-800")
+                if mascot or conf:
+                    ui.label(f"{mascot} | {conf}").classes("text-sm text-gray-500")
+
+                with ui.row().classes("gap-4"):
+                    off_sel = ui.select(style_options, value="balanced", label="Offense").classes("w-48")
+                    def_sel = ui.select(def_options, value="swarm", label="Defense").classes("w-48")
+                    st_sel = ui.select(st_options, value="aces", label="Special Teams").classes("w-48")
+                    _style_selects[tname] = {"off": off_sel, "def": def_sel, "st": st_sel}
+
+    with style_container:
+        _render_human_config()
+
+    # ── Conference setup ──
     ui.separator().classes("my-4")
     ui.label("Conference Setup").classes("text-lg font-semibold text-slate-700")
 
@@ -83,41 +203,37 @@ def render_season_simulator(state: UserState, shared: dict):
         min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
     ).classes("w-96")
 
-    # Human team style config
-    style_options = {k: styles[k]["label"] for k in style_keys}
-    def_options = {k: defense_styles[k]["label"] for k in defense_style_keys}
-    st_options = {k: st_schemes[k]["label"] for k in st_scheme_keys} if st_scheme_keys else {"aces": "Aces"}
+    # ── Schedule configuration ──
+    ui.separator().classes("my-4")
+    with ui.row().classes("w-full gap-8"):
+        with ui.column().classes("flex-1"):
+            ui.label("Regular Season Games Per Team").classes("text-sm text-slate-600")
+            games_per_team = ui.slider(min=8, max=12, value=10).classes("w-full")
+            games_label = ui.label("10 games").classes("text-sm font-semibold text-slate-700")
 
-    style_container = ui.column().classes("w-full mt-4")
+            def _update_games_label():
+                games_label.set_text(f"{int(games_per_team.value)} games")
+            games_per_team.on_value_change(lambda _: _update_games_label())
 
-    @ui.refreshable
-    def _render_human_config():
-        selected = human_select.value or []
-        if not selected:
-            return
+        with ui.column().classes("flex-1"):
+            ui.label("Playoff Format").classes("text-sm text-slate-600")
+            playoff_options = [p for p in [4, 8, 12, 16, 24, 32] if p <= total_teams]
+            if not playoff_options:
+                playoff_options = [total_teams]
+            playoff_opts = {str(p): str(p) for p in playoff_options}
+            playoff_format = ui.radio(playoff_opts, value=str(playoff_options[0])).props("inline")
 
-        ui.label("Your Team Configuration").classes("text-lg font-semibold text-slate-700")
-        for tname in selected[:4]:  # max 4
-            identity = team_identities.get(tname, {})
-            mascot = identity.get("mascot", "")
-            conf = identity.get("conference", "")
+    with ui.column().classes("w-full mt-2"):
+        ui.label("Number of Bowl Games").classes("text-sm text-slate-600")
+        max_bowls = min(12, (total_teams - int(playoff_options[0])) // 2)
+        bowl_count = ui.slider(min=0, max=max(max_bowls, 1), value=min(4, max(max_bowls, 0))).classes("w-96")
+        bowl_label = ui.label("4 bowls").classes("text-sm font-semibold text-slate-700")
 
-            with ui.card().classes("w-full p-4 mb-2"):
-                ui.label(f"{tname}").classes("font-bold text-slate-800")
-                if mascot or conf:
-                    ui.label(f"{mascot} | {conf}").classes("text-sm text-gray-500")
+        def _update_bowl_label():
+            bowl_label.set_text(f"{int(bowl_count.value)} bowls")
+        bowl_count.on_value_change(lambda _: _update_bowl_label())
 
-                with ui.row().classes("gap-4"):
-                    ui.select(style_options, value="balanced", label="Offense").classes("w-48").props(f"id=off_{tname}")
-                    ui.select(def_options, value="swarm", label="Defense").classes("w-48").props(f"id=def_{tname}")
-                    ui.select(st_options, value="aces", label="Special Teams").classes("w-48").props(f"id=st_{tname}")
-
-    human_select.on_value_change(lambda _: _render_human_config.refresh())
-
-    with style_container:
-        _render_human_config()
-
-    # League history
+    # ── League History ──
     ui.separator().classes("my-4")
     ui.label("League History").classes("text-lg font-semibold text-slate-700")
     ui.label("Generate pre-existing seasons so the league has history.").classes("text-sm text-gray-500")
@@ -126,24 +242,17 @@ def render_season_simulator(state: UserState, shared: dict):
         ui.label("Years of History").classes("text-sm text-slate-600")
         history_years = ui.slider(min=0, max=100, value=0).classes("w-64")
         history_years_label = ui.label("0 years").classes("text-sm font-semibold text-slate-700 min-w-[60px]")
-        ui.label("Games per Team").classes("text-sm text-slate-600")
-        games_per_team = ui.slider(min=8, max=12, value=10).classes("w-64")
-        games_label = ui.label("10 games").classes("text-sm font-semibold text-slate-700 min-w-[60px]")
 
     def _update_history_label():
         v = int(history_years.value)
         history_years_label.set_text(f"{v} year{'s' if v != 1 else ''}")
     history_years.on_value_change(lambda _: _update_history_label())
 
-    def _update_games_label():
-        games_label.set_text(f"{int(games_per_team.value)} games")
-    games_per_team.on_value_change(lambda _: _update_games_label())
-
     ui.separator().classes("my-4")
 
     # Create button
     def _create_season():
-        selected_humans = human_select.value or []
+        selected_humans = list(_human_teams)
         if len(selected_humans) > 4:
             notify_error("Maximum 4 human-coached teams")
             return
@@ -160,18 +269,32 @@ def render_season_simulator(state: UserState, shared: dict):
         seed_val = int(ai_seed.value or 0)
         actual_seed = seed_val if seed_val > 0 else hash(season_name.value) % 999999
 
+        # Build human configs from style selects
+        human_configs = {}
+        for tname, sels in _style_selects.items():
+            human_configs[tname] = {
+                "offense_style": sels["off"].value,
+                "defense_style": sels["def"].value,
+                "st_scheme": sels["st"].value,
+            }
+
         try:
             api_client.create_season(
                 state.session_id,
                 name=season_name.value,
                 games_per_team=int(games_per_team.value),
+                playoff_size=int(playoff_format.value),
+                bowl_count=int(bowl_count.value),
                 human_teams=selected_humans,
+                human_configs=human_configs,
                 num_conferences=int(num_conferences.value),
                 ai_seed=actual_seed,
                 history_years=int(history_years.value),
             )
             state.mode = "season"
             state.human_teams = selected_humans
+            state.playoff_size = int(playoff_format.value)
+            state.bowl_count = int(bowl_count.value)
             notify_success("Season created! Switch to the Play tab to start simulating.")
             ui.navigate.to("/")
         except api_client.APIError as e:
