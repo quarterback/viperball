@@ -53,6 +53,7 @@ def run_batch(num_games=200):
     kick_pass_ints = []
     first_downs_total = []
     drives_total = []
+    play_family_totals = defaultdict(int)
 
     for i in range(num_games):
         # Pick two random different teams
@@ -149,6 +150,14 @@ def run_batch(num_games=200):
         kick_pass_attempts.append(kp_att)
         kick_pass_completions.append(kp_comp)
         kick_pass_ints.append(kp_int)
+
+        # Play family breakdown from stats
+        h_pfb = hs.get('play_family_breakdown', {})
+        a_pfb = aws.get('play_family_breakdown', {})
+        for fam, count in h_pfb.items():
+            play_family_totals[fam] += count
+        for fam, count in a_pfb.items():
+            play_family_totals[fam] += count
 
         # First downs from play-by-play
         pbp = result.get('play_by_play', [])
@@ -284,6 +293,62 @@ def run_batch(num_games=200):
         for k in sorted(outcomes.keys(), key=lambda x: -outcomes[x]):
             pct_val = outcomes[k] / total_dr * 100 if total_dr > 0 else 0
             print(f"  {k:<33} {outcomes[k]:>8} {pct_val:>7.1f}%")
+
+    # ── V2.1: Play Family Distribution ──
+    total_family_plays = sum(play_family_totals.values())
+    if total_family_plays > 0:
+        print(f"\n{'='*60}")
+        print("PLAY FAMILY DISTRIBUTION (V2.1)")
+        print(f"{'='*60}")
+        print(f"{'Family':<25} {'Count':>8} {'%':>8} {'Target':>12}")
+        print(f"{'-'*55}")
+
+        # Aggregate runs
+        run_families = ['dive_option', 'power', 'sweep_option', 'speed_option', 'counter', 'draw', 'viper_jet']
+        run_total = sum(play_family_totals.get(f, 0) for f in run_families)
+        run_pct = run_total / total_family_plays * 100
+        print(f"{'RUN (aggregate)':<25} {run_total:>8} {run_pct:>7.1f}% {'~28%':>12}")
+        for f in run_families:
+            c = play_family_totals.get(f, 0)
+            if c > 0:
+                print(f"{'  ' + f:<25} {c:>8} {c/total_family_plays*100:>7.1f}%")
+
+        kp_total = play_family_totals.get('kick_pass', 0)
+        kp_pct = kp_total / total_family_plays * 100
+        print(f"{'KICK PASS':<25} {kp_total:>8} {kp_pct:>7.1f}% {'~34%':>12}")
+
+        sk_total = play_family_totals.get('snap_kick', 0)
+        sk_pct = sk_total / total_family_plays * 100
+        print(f"{'SNAP KICK':<25} {sk_total:>8} {sk_pct:>7.1f}% {'15-18%':>12}")
+
+        fg_total = play_family_totals.get('field_goal', 0)
+        fg_pct = fg_total / total_family_plays * 100
+        print(f"{'FIELD GOAL':<25} {fg_total:>8} {fg_pct:>7.1f}% {'5-8%':>12}")
+
+        punt_total = play_family_totals.get('punt', 0)
+        punt_pct = punt_total / total_family_plays * 100
+        print(f"{'PUNT':<25} {punt_total:>8} {punt_pct:>7.1f}% {'3-5%':>12}")
+
+        lat_total = play_family_totals.get('lateral_spread', 0)
+        lat_pct = lat_total / total_family_plays * 100
+        print(f"{'LATERAL':<25} {lat_total:>8} {lat_pct:>7.1f}% {'4-6%':>12}")
+
+        trick_total = play_family_totals.get('trick_play', 0)
+        trick_pct = trick_total / total_family_plays * 100
+        print(f"{'TRICK/OTHER':<25} {trick_total:>8} {trick_pct:>7.1f}% {'5-6%':>12}")
+
+        # Also show territory_kick (deprecated) if any
+        tk_total = play_family_totals.get('territory_kick', 0)
+        if tk_total > 0:
+            tk_pct = tk_total / total_family_plays * 100
+            print(f"{'TERRITORY_KICK (legacy)':<25} {tk_total:>8} {tk_pct:>7.1f}%")
+
+        # Per-team-game averages
+        print(f"\n{'Per-team-game averages:'}")
+        teams_total = n * 2  # each game has 2 teams
+        print(f"  Snap kicks called/team:  {sk_total / max(1, teams_total):.1f}")
+        print(f"  Field goals called/team: {fg_total / max(1, teams_total):.1f}")
+        print(f"  Punts called/team:       {punt_total / max(1, teams_total):.1f}")
 
     # Avg fatigue (from the single-game sample)
     print(f"\n{'='*60}")
