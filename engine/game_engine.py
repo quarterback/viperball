@@ -173,11 +173,14 @@ class PlayFamily(Enum):
     LATERAL_SPREAD = "lateral_spread"
     KICK_PASS = "kick_pass"
     TRICK_PLAY = "trick_play"
-    TERRITORY_KICK = "territory_kick"
+    TERRITORY_KICK = "territory_kick"  # deprecated — resolves to PUNT
     POWER = "power"
     COUNTER = "counter"
     DRAW = "draw"
     VIPER_JET = "viper_jet"
+    SNAP_KICK = "snap_kick"
+    FIELD_GOAL = "field_goal"
+    PUNT = "punt"
 
 
 class PlayResult(Enum):
@@ -196,6 +199,7 @@ class PlayResult(Enum):
     MUFFED_PUNT = "muffed_punt"
     BLOCKED_KICK = "blocked_kick"
     SNAP_KICK_RECOVERY = "snap_kick_recovery"
+    MISSED_SNAP_KICK_RETAINED = "missed_snap_kick_retained"
     KICK_PASS_COMPLETE = "kick_pass_complete"
     KICK_PASS_INCOMPLETE = "kick_pass_incomplete"
     KICK_PASS_INTERCEPTED = "kick_pass_intercepted"
@@ -214,7 +218,10 @@ PLAY_FAMILY_TO_TYPE = {
     PlayFamily.LATERAL_SPREAD: PlayType.LATERAL_CHAIN,
     PlayFamily.KICK_PASS: PlayType.KICK_PASS,
     PlayFamily.TRICK_PLAY: PlayType.TRICK_PLAY,
-    PlayFamily.TERRITORY_KICK: PlayType.PUNT,
+    PlayFamily.TERRITORY_KICK: PlayType.PUNT,  # deprecated
+    PlayFamily.SNAP_KICK: PlayType.DROP_KICK,
+    PlayFamily.FIELD_GOAL: PlayType.PLACE_KICK,
+    PlayFamily.PUNT: PlayType.PUNT,
 }
 
 RUN_PLAY_CONFIG = {
@@ -721,7 +728,7 @@ def player_label(player) -> str:
 @dataclass
 class GameState:
     quarter: int = 1
-    time_remaining: int = 900
+    time_remaining: int = 600  # 10-minute quarters (40-min game)
     home_score: float = 0.0
     away_score: float = 0.0
     possession: str = "home"
@@ -740,6 +747,14 @@ class GameState:
     # Timeout tracking: 3 per half per team
     home_timeouts: int = 3
     away_timeouts: int = 3
+    # 3-minute warning: auto-stop once per half when clock crosses 180s
+    three_min_warning_triggered: bool = False
+    # Power play: man-advantage system (replaces penalty yards)
+    # Positive = that team has advantage; counts down each play
+    home_power_play: int = 0  # plays remaining where home has man-advantage
+    away_power_play: int = 0  # plays remaining where away has man-advantage
+    # 4th Down Movement: when True, team has elected kick mode (snap kick specialist)
+    kick_mode: bool = False
 
     # --- V2: Composure System ---
     home_composure: float = 100.0    # Dynamic: 60-140 range
@@ -951,11 +966,12 @@ class Team:
 @dataclass
 class Penalty:
     name: str
-    yards: int
+    yards: int  # legacy — kept for catalog but NOT applied to field position
     on_team: str
     player: str = ""
     declined: bool = False
     phase: str = "pre_snap"
+    power_play_plays: int = 0  # man-advantage duration (1/2/3 plays)
 
 PENALTY_CATALOG = {
     "pre_snap": [
@@ -1040,17 +1056,19 @@ OFFENSE_STYLES = {
         "label": "Ground & Pound",
         "description": "Grind 20 yards, punch it in. Old-school power football using all 6 downs.",
         "weights": {
-            "dive_option": 0.12,
-            "power": 0.11,
-            "sweep_option": 0.07,
-            "speed_option": 0.03,
-            "counter": 0.03,
-            "draw": 0.02,
-            "viper_jet": 0.02,
-            "lateral_spread": 0.20,
-            "kick_pass": 0.30,
-            "trick_play": 0.05,
-            "territory_kick": 0.05,
+            "dive_option": 0.14,
+            "power": 0.13,
+            "sweep_option": 0.08,
+            "speed_option": 0.04,
+            "counter": 0.04,
+            "draw": 0.03,
+            "viper_jet": 0.03,
+            "lateral_spread": 0.08,
+            "kick_pass": 0.22,
+            "trick_play": 0.04,
+            "snap_kick": 0.08,
+            "field_goal": 0.06,
+            "punt": 0.04,
         },
         "tempo": 0.4,
         "lateral_risk": 0.6,
@@ -1066,22 +1084,25 @@ OFFENSE_STYLES = {
         "run_vs_lateral": 0.70,
         "early_down_aggression": 0.70,
         "red_zone_run_pct": 0.85,
+        "kick_mode_aggression": 0.25,
     },
     "lateral_spread": {
         "label": "Lateral Spread",
         "description": "Stretch the defense horizontally with 2-4 lateral chains. High-variance, big-play offense.",
         "weights": {
-            "dive_option": 0.01,
-            "power": 0.01,
-            "sweep_option": 0.02,
-            "speed_option": 0.02,
-            "counter": 0.02,
+            "dive_option": 0.02,
+            "power": 0.02,
+            "sweep_option": 0.03,
+            "speed_option": 0.03,
+            "counter": 0.03,
             "draw": 0.02,
-            "viper_jet": 0.02,
-            "lateral_spread": 0.42,
-            "kick_pass": 0.38,
-            "trick_play": 0.03,
-            "territory_kick": 0.05,
+            "viper_jet": 0.03,
+            "lateral_spread": 0.30,
+            "kick_pass": 0.28,
+            "trick_play": 0.04,
+            "snap_kick": 0.10,
+            "field_goal": 0.06,
+            "punt": 0.04,
         },
         "tempo": 0.7,
         "lateral_risk": 1.4,
@@ -1100,6 +1121,7 @@ OFFENSE_STYLES = {
         "early_down_aggression": 0.85,
         "red_zone_run_pct": 0.55,
         "kick_pass_bonus": 0.06,
+        "kick_mode_aggression": 0.35,
     },
     "boot_raid": {
         "label": "Boot Raid",
@@ -1108,21 +1130,24 @@ OFFENSE_STYLES = {
             "dive_option": 0.04,
             "power": 0.03,
             "sweep_option": 0.03,
-            "speed_option": 0.02,
-            "counter": 0.01,
-            "draw": 0.01,
+            "speed_option": 0.03,
+            "counter": 0.02,
+            "draw": 0.02,
             "viper_jet": 0.02,
-            "lateral_spread": 0.15,
-            "kick_pass": 0.55,
-            "trick_play": 0.04,
-            "territory_kick": 0.10,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.30,
+            "trick_play": 0.03,
+            "snap_kick": 0.28,
+            "field_goal": 0.10,
+            "punt": 0.02,
         },
         "weights_attack": {
-            "kick_pass": 0.55,
-            "territory_kick": 0.15,
-            "lateral_spread": 0.15,
+            "kick_pass": 0.30,
+            "snap_kick": 0.35,
+            "field_goal": 0.08,
+            "lateral_spread": 0.08,
             "speed_option": 0.10,
-            "dive_option": 0.05,
+            "dive_option": 0.04,
         },
         "tempo": 0.6,
         "lateral_risk": 0.9,
@@ -1138,22 +1163,25 @@ OFFENSE_STYLES = {
         "snap_kick_aggression": 1.5,
         "launch_pad_threshold": 55,
         "kick_pass_bonus": 0.12,
+        "kick_mode_aggression": 0.80,
     },
     "ball_control": {
         "label": "Ball Control",
         "description": "Conservative, mistake-free football. Take the points when available. Win 24-21.",
         "weights": {
             "dive_option": 0.12,
-            "power": 0.09,
+            "power": 0.10,
             "sweep_option": 0.07,
             "speed_option": 0.04,
-            "counter": 0.02,
-            "draw": 0.02,
-            "viper_jet": 0.01,
-            "lateral_spread": 0.18,
-            "kick_pass": 0.35,
+            "counter": 0.03,
+            "draw": 0.03,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.25,
             "trick_play": 0.03,
-            "territory_kick": 0.07,
+            "snap_kick": 0.14,
+            "field_goal": 0.10,
+            "punt": 0.04,
         },
         "tempo": 0.3,
         "lateral_risk": 0.5,
@@ -1170,22 +1198,25 @@ OFFENSE_STYLES = {
         "run_vs_lateral": 0.75,
         "early_down_aggression": 0.50,
         "clock_burn_multiplier": 1.3,
+        "kick_mode_aggression": 0.60,
     },
     "ghost": {
         "label": "Ghost Formation",
         "description": "Viper chaos and pre-snap confusion. The defense never knows where the playmaker is.",
         "weights": {
-            "dive_option": 0.02,
-            "power": 0.01,
-            "sweep_option": 0.03,
-            "speed_option": 0.02,
-            "counter": 0.04,
-            "draw": 0.02,
-            "viper_jet": 0.04,
-            "lateral_spread": 0.30,
-            "kick_pass": 0.40,
-            "trick_play": 0.07,
-            "territory_kick": 0.05,
+            "dive_option": 0.03,
+            "power": 0.02,
+            "sweep_option": 0.04,
+            "speed_option": 0.03,
+            "counter": 0.05,
+            "draw": 0.03,
+            "viper_jet": 0.05,
+            "lateral_spread": 0.12,
+            "kick_pass": 0.28,
+            "trick_play": 0.08,
+            "snap_kick": 0.14,
+            "field_goal": 0.06,
+            "punt": 0.04,
         },
         "tempo": 0.65,
         "lateral_risk": 1.1,
@@ -1202,6 +1233,7 @@ OFFENSE_STYLES = {
         "pre_snap_motion": 0.80,
         "misdirection_bonus": 1.3,
         "kick_pass_bonus": 0.08,
+        "kick_mode_aggression": 0.40,
     },
     "rouge_hunt": {
         "label": "Rouge Hunt",
@@ -1211,13 +1243,15 @@ OFFENSE_STYLES = {
             "power": 0.07,
             "sweep_option": 0.04,
             "speed_option": 0.03,
-            "counter": 0.02,
-            "draw": 0.01,
-            "viper_jet": 0.01,
-            "lateral_spread": 0.20,
-            "kick_pass": 0.25,
+            "counter": 0.03,
+            "draw": 0.02,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.18,
             "trick_play": 0.03,
-            "territory_kick": 0.25,
+            "snap_kick": 0.12,
+            "field_goal": 0.08,
+            "punt": 0.22,
         },
         "tempo": 0.35,
         "lateral_risk": 0.6,
@@ -1233,22 +1267,25 @@ OFFENSE_STYLES = {
         "snap_kick_aggression": 1.4,
         "early_punt_threshold": 3,
         "pindown_priority": 1.5,
+        "kick_mode_aggression": 0.55,
     },
     "chain_gang": {
         "label": "Chain Gang",
         "description": "Maximum laterals, maximum chaos. Every play is a 4-5 lateral chain. Showtime Viperball.",
         "weights": {
-            "dive_option": 0.01,
-            "power": 0.01,
-            "sweep_option": 0.01,
-            "speed_option": 0.01,
-            "counter": 0.01,
-            "draw": 0.01,
-            "viper_jet": 0.01,
-            "lateral_spread": 0.50,
-            "kick_pass": 0.35,
-            "trick_play": 0.03,
-            "territory_kick": 0.05,
+            "dive_option": 0.02,
+            "power": 0.02,
+            "sweep_option": 0.02,
+            "speed_option": 0.02,
+            "counter": 0.02,
+            "draw": 0.02,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.30,
+            "kick_pass": 0.24,
+            "trick_play": 0.04,
+            "snap_kick": 0.12,
+            "field_goal": 0.06,
+            "punt": 0.04,
         },
         "tempo": 0.8,
         "lateral_risk": 1.6,
@@ -1266,22 +1303,25 @@ OFFENSE_STYLES = {
         "chain_length_preference": 4,
         "risk_tolerance": 0.90,
         "kick_pass_bonus": 0.06,
+        "kick_mode_aggression": 0.30,
     },
     "triple_threat": {
         "label": "Triple Threat",
         "description": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
         "weights": {
-            "dive_option": 0.04,
-            "power": 0.05,
-            "sweep_option": 0.04,
-            "speed_option": 0.04,
-            "counter": 0.04,
+            "dive_option": 0.05,
+            "power": 0.06,
+            "sweep_option": 0.05,
+            "speed_option": 0.05,
+            "counter": 0.05,
             "draw": 0.04,
-            "viper_jet": 0.03,
-            "lateral_spread": 0.25,
-            "kick_pass": 0.35,
-            "trick_play": 0.07,
-            "territory_kick": 0.05,
+            "viper_jet": 0.04,
+            "lateral_spread": 0.08,
+            "kick_pass": 0.25,
+            "trick_play": 0.08,
+            "snap_kick": 0.12,
+            "field_goal": 0.06,
+            "punt": 0.04,
         },
         "tempo": 0.45,
         "lateral_risk": 0.7,
@@ -1296,22 +1336,25 @@ OFFENSE_STYLES = {
         "pindown_bonus": 0.0,
         "direct_snap_rate": 0.25,
         "misdirection_bonus": 1.2,
+        "kick_mode_aggression": 0.30,
     },
     "balanced": {
         "label": "Balanced",
         "description": "No strong tendency, adapts to situation. Multiple threats, adaptable gameplan.",
         "weights": {
-            "dive_option": 0.04,
-            "speed_option": 0.03,
-            "sweep_option": 0.03,
-            "power": 0.04,
+            "dive_option": 0.05,
+            "speed_option": 0.04,
+            "sweep_option": 0.04,
+            "power": 0.05,
             "counter": 0.04,
             "draw": 0.04,
             "viper_jet": 0.03,
-            "lateral_spread": 0.25,
-            "kick_pass": 0.40,
+            "lateral_spread": 0.08,
+            "kick_pass": 0.28,
             "trick_play": 0.05,
-            "territory_kick": 0.05,
+            "snap_kick": 0.14,
+            "field_goal": 0.08,
+            "punt": 0.04,
         },
         "tempo": 0.5,
         "lateral_risk": 1.0,
@@ -1325,6 +1368,7 @@ OFFENSE_STYLES = {
         "broken_play_bonus": 0.05,
         "pindown_bonus": 0.05,
         "snap_kick_aggression": 1.1,
+        "kick_mode_aggression": 0.50,
     },
 }
 
@@ -2366,14 +2410,15 @@ class ViperballEngine:
 
         for quarter in range(1, 5):
             self.state.quarter = quarter
-            self.state.time_remaining = 900
+            self.state.time_remaining = 600  # 10-minute quarters
 
             if quarter == 3:
                 self._apply_halftime_coaching_adjustments()
                 self.recover_energy_halftime()
-                # Reset timeouts for second half
+                # Reset timeouts and 3-minute warning for second half
                 self.state.home_timeouts = 3
                 self.state.away_timeouts = 3
+                self.state.three_min_warning_triggered = False
 
             while self.state.time_remaining > 0:
                 self.simulate_drive()
@@ -2478,6 +2523,7 @@ class ViperballEngine:
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
+        self.state.kick_mode = False
 
         if self.state.possession == "home" and self._home_momentum_plays > 0:
             self.home_game_rhythm = min(1.35, self.home_game_rhythm + 0.04 * self._home_momentum_plays)
@@ -2509,17 +2555,18 @@ class ViperballEngine:
             else:
                 self._drive_chain_positive = 0
 
-            # Play clock: tempo-driven pace differentiation
-            # Ball Control/Rouge Hunt grind ~140-160 plays/game
-            # Balanced teams play ~170-180 plays/game
-            # Chain Gang/Lateral Spread sprint ~210-220 plays/game
-            base_time = random.randint(14, 30)
-            tempo_mult = 1.40 - tempo * 0.75
+            # ── Play clock: fixed 18 seconds per play ──
+            # Tempo multiplier differentiates styles:
+            #   Grind teams (Ball Control/Rouge Hunt): ~1.15x = ~21s/play
+            #   Balanced: ~1.0x = 18s/play
+            #   Tempo teams (Chain Gang/Lateral Spread): ~0.85x = ~15s/play
+            base_time = 18
+            tempo_mult = 1.30 - tempo * 0.55
 
-            # ── Two-minute drill clock management ──
-            is_two_min = (self.state.quarter in (2, 4) and
-                          self.state.time_remaining < 120)
-            if is_two_min:
+            # ── 3-minute warning clock management ──
+            is_three_min = (self.state.quarter in (2, 4) and
+                            self.state.time_remaining < 180)
+            if is_three_min:
                 score_diff = self._get_score_diff()
                 if score_diff < 0:
                     # Trailing: hurry-up, cut clock to 1/3
@@ -2528,8 +2575,18 @@ class ViperballEngine:
                     # Leading: burn clock at full speed
                     tempo_mult *= 1.2
 
-            time_elapsed = int(base_time * tempo_mult)
+            time_elapsed = max(8, int(base_time * tempo_mult))
+            prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
+
+            # ── 3-minute warning auto-stop ──
+            # Clock freezes at 180s once per half (Q2 and Q4).
+            # Drive continues but next play starts from exactly 180.
+            if (self.state.quarter in (2, 4)
+                    and not self.state.three_min_warning_triggered
+                    and prev_time > 180 >= self.state.time_remaining):
+                self.state.time_remaining = 180
+                self.state.three_min_warning_triggered = True
 
             # Coaching AI considers calling a timeout after this play
             if self.call_timeout():
@@ -2543,8 +2600,8 @@ class ViperballEngine:
                 if player_label(p) not in involved_names:
                     p.plays_since_last_touch += 1
 
-            if play.result == "snap_kick_recovery":
-                drive_result = "snap_kick_recovery"
+            if play.result in ("snap_kick_recovery", "missed_snap_kick_retained"):
+                drive_result = play.result
                 continue
 
             if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted"]:
@@ -2827,24 +2884,27 @@ class ViperballEngine:
                 best_kick = PlayType.PLACE_KICK
                 best_kick_ev = fg_ev
 
-        # ── Down 5: THE key decision point (like 4th down in NFL) ──
-        # The kicker determines how aggressive the team is about kicking.
-        # Elite kickers (90+) lower the "go for it" threshold so the team
-        # takes the points.  Weak kickers raise it so the team converts.
+        # ── Down 5: decision depends on kick mode ──
         if down == 5:
+            if self.state.kick_mode:
+                # Kick mode active: always attempt snap kick on 5th
+                if dk_success >= 0.15:
+                    return PlayType.DROP_KICK
+                if pk_success >= 0.20:
+                    return PlayType.PLACE_KICK
+                return None  # Out of range, go for it as last resort
+
+            # Non-kick-mode: original decision logic
             go_threshold = self._go_for_it_threshold(fp, 5)
-            # Kicker skill adjusts: 90 kicker → -3, 75 → 0, 60 → +3
             kicker_adj = (75 - kicker_skill) // 5
             go_threshold = max(1, go_threshold + kicker_adj)
 
-            # Very short yardage: always go for it
             if ytg <= 2:
                 return None
             if ytg <= go_threshold:
                 return None
             if best_kick:
                 return best_kick
-            # No kick available — try to convert (punt on 6th if needed)
             return None
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
@@ -2865,6 +2925,71 @@ class ViperballEngine:
             return PlayType.PUNT
 
         return None
+
+    def _fourth_down_decision(self, fp, ytg, kicker_skill, dk_success, pk_success):
+        """4th Down Movement: decide advancement vs. kick mode.
+
+        Factors:
+        - Field position: Inside opponent's 45 favors kick mode
+        - Yards to go: ytg > 10 favors kick mode, ytg < 5 favors advancement
+        - Kicker skill: Elite kicker = more willing to kick from further
+        - Game situation: Trailing late = advancement, leading = kick mode
+        - Team style: boot_raid favors kick mode, power favors advancement
+        """
+        fg_distance = (100 - fp) + 10
+        style = self._current_style()
+        kick_mode_agg = style.get("kick_mode_aggression", 0.5)
+
+        # Can't kick if out of range (beyond ~55 yards)
+        if fg_distance > 55 or dk_success < 0.15:
+            return None  # Go for advancement — kick not viable
+
+        # Red zone (fp >= 85): always go for TD
+        if fp >= 85:
+            return None
+
+        # Score factors
+        score_diff = self._get_score_diff()
+        urgency = 0.0
+        if self.state.quarter >= 3 and score_diff < -9:
+            urgency = -0.3  # Need TDs, not 5-pointers
+        elif score_diff > 9:
+            urgency = 0.2  # Comfortable lead, take the points
+
+        # Base probability of entering kick mode
+        kick_prob = 0.0
+
+        # YTG factor: the more yards to go, the more likely to kick
+        if ytg <= 3:
+            kick_prob += 0.05
+        elif ytg <= 6:
+            kick_prob += 0.15
+        elif ytg <= 10:
+            kick_prob += 0.30
+        elif ytg <= 15:
+            kick_prob += 0.50
+        else:
+            kick_prob += 0.65
+
+        # Field position factor: closer to goal = more tempting to kick
+        if fp >= 65:
+            kick_prob += 0.20  # Prime snap kick range
+        elif fp >= 55:
+            kick_prob += 0.10
+
+        # Kicker quality
+        kick_prob += (kicker_skill - 75) * 0.005
+
+        # Style and urgency
+        kick_prob += kick_mode_agg - 0.5  # Centered at 0
+        kick_prob += urgency
+
+        kick_prob = max(0.05, min(0.85, kick_prob))
+
+        if random.random() < kick_prob:
+            self.state.kick_mode = True
+            return PlayType.DROP_KICK
+        return None  # Go for advancement
 
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":
@@ -2918,12 +3043,16 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
+                # Power play duration: 5yd→1 play, 10yd→2 plays, 15yd→3 plays
+                pp_plays = {5: 1, 10: 2, 15: 3}.get(pen_def["yards"], 2)
+
                 return Penalty(
                     name=pen_def["name"],
                     yards=pen_def["yards"],
                     on_team=team_name,
                     player=ptag,
                     phase=phase,
+                    power_play_plays=pp_plays,
                 )
         return None
 
@@ -2933,26 +3062,64 @@ class ViperballEngine:
         if on_offense:
             if play.result in ("touchdown", "successful_kick"):
                 return True
-            if play.yards_gained > penalty.yards:
+            # Decline if the play gained yards and the power play is minor
+            if play.yards_gained > 5 and penalty.power_play_plays <= 1:
                 return True
         else:
             if play.result in ("fumble", "turnover_on_downs"):
                 return True
-            if play.yards_gained <= -(penalty.yards):
-                return True
 
         return False
 
+    def _start_power_play(self, penalized_team: str, plays: int):
+        """Start a power play — the OTHER team gets man-advantage."""
+        advantaged = "away" if penalized_team == "home" else "home"
+        if advantaged == "home":
+            self.state.home_power_play = max(self.state.home_power_play, plays)
+        else:
+            self.state.away_power_play = max(self.state.away_power_play, plays)
+
+    def get_power_play_bonus(self) -> float:
+        """Return the current power play bonus for the offensive team.
+
+        Positive = offense has man-advantage (boosts offense).
+        Negative = defense has man-advantage (hampers offense).
+        Zero = no active power play.
+        """
+        if self.state.possession == "home":
+            if self.state.home_power_play > 0:
+                return 0.20   # home offense has advantage
+            elif self.state.away_power_play > 0:
+                return -0.15  # away defense has advantage
+        else:
+            if self.state.away_power_play > 0:
+                return 0.20   # away offense has advantage
+            elif self.state.home_power_play > 0:
+                return -0.15  # home defense has advantage
+        return 0.0
+
+    def _tick_power_play(self):
+        """Decrement power play counters after each play."""
+        if self.state.home_power_play > 0:
+            self.state.home_power_play -= 1
+        if self.state.away_power_play > 0:
+            self.state.away_power_play -= 1
+
     def _apply_pre_snap_penalty(self, penalty: Penalty) -> Play:
         on_offense = (penalty.on_team == self.state.possession)
-        if on_offense:
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
-        else:
-            self.state.field_position = min(99, self.state.field_position + penalty.yards)
-            if penalty.yards >= self.state.yards_to_go:
+
+        # Power play: man-advantage replaces yardage penalty
+        self._start_power_play(penalty.on_team, penalty.power_play_plays)
+
+        # Defense penalties with auto_first still grant first down
+        if not on_offense:
+            all_pre = PENALTY_CATALOG.get("pre_snap", [])
+            pen_def = next((p for p in all_pre if p["name"] == penalty.name), None)
+            if pen_def and pen_def.get("auto_first", False):
                 self.state.down = 1
                 self.state.yards_to_go = 20
 
+        pp_dur = penalty.power_play_plays
         team_label = "OFFENSE" if on_offense else "DEFENSE"
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
@@ -2969,7 +3136,7 @@ class ViperballEngine:
             players_involved=[penalty.player],
             yards_gained=0,
             result="penalty",
-            description=f"PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yards",
+            description=f"PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY",
             fatigue=round(stamina, 1),
             penalty=penalty,
         )
@@ -2982,28 +3149,32 @@ class ViperballEngine:
             return play
 
         on_offense = (penalty.on_team == self.state.possession)
+        pp_dur = penalty.power_play_plays
+
         if on_offense:
+            # Offense penalized: negate yards gained, start power play for defense
             if play.yards_gained > 0:
                 self.state.field_position = max(1, self.state.field_position - play.yards_gained)
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
             play.yards_gained = 0
             play.result = "penalty"
         else:
+            # Defense penalized: keep play gains, check auto_first
             all_during = PENALTY_CATALOG.get("during_play_run", []) + PENALTY_CATALOG.get("during_play_lateral", []) + PENALTY_CATALOG.get("during_play_kick", [])
             penalty_def = next((p for p in all_during if p["name"] == penalty.name), None)
             auto_first = penalty_def.get("auto_first", False) if penalty_def else False
-            self.state.field_position = min(99, self.state.field_position + penalty.yards)
-            if auto_first or penalty.yards >= self.state.yards_to_go:
+            if auto_first:
                 self.state.down = 1
                 self.state.yards_to_go = 20
-            play.yards_gained = penalty.yards
+
+        # Start power play (man-advantage replaces yardage)
+        self._start_power_play(penalty.on_team, pp_dur)
 
         play.field_position = self.state.field_position
         play.down = self.state.down
         play.yards_to_go = self.state.yards_to_go
         play.penalty = penalty
         team_label = "OFFENSE" if on_offense else "DEFENSE"
-        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
+        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY"
 
         return play
 
@@ -3015,15 +3186,15 @@ class ViperballEngine:
             return play
 
         on_offense = (penalty.on_team == play.possession)
-        if on_offense:
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
-        else:
-            self.state.field_position = min(99, self.state.field_position + penalty.yards)
+        pp_dur = penalty.power_play_plays
+
+        # Power play: man-advantage replaces yardage
+        self._start_power_play(penalty.on_team, pp_dur)
 
         play.field_position = self.state.field_position
         play.penalty = penalty
         team_label = "OFFENSE" if on_offense else "DEFENSE"
-        play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
+        play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {pp_dur}-play POWER PLAY"
 
         return play
 
@@ -3043,7 +3214,7 @@ class ViperballEngine:
                    The kicker's skill determines how often this fires.
         Down 6:    Handled by select_kick_decision, not this function.
         """
-        if self.state.down > 5 or self.state.down < 2:
+        if self.state.down > 3 or self.state.down < 2:
             return None
         fp = self.state.field_position
         fg_distance = (100 - fp) + 10
@@ -3054,8 +3225,6 @@ class ViperballEngine:
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
 
         is_specialist = kicker.archetype == "kicking_zb" or kicker.kicking >= 82
-        down = self.state.down
-        ytg = self.state.yards_to_go
 
         # Coaching style snap kick aggression (boot_raid=1.5, ball_control=1.2, etc.)
         snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
@@ -3144,66 +3313,73 @@ class ViperballEngine:
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
 
-        # ── Kick decision: evaluate on down 4+ ──
-        # The coaching decision chart considers field position, down,
-        # yards-to-go, and game state to determine whether to kick.
-        if self.state.down >= 4:
+        # ── Kick mode active (downs 4-6): snap kick specialist path ──
+        # When the offense elected kick mode on 4th down, all subsequent
+        # downs are snap kick attempts under the pesäpallo rule.
+        if self.state.kick_mode and self.state.down >= 4:
+            play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            return self._apply_post_play_penalties(play)
+
+        # ── Down 4: movement decision point ──
+        # If not already in kick mode, the coaching AI decides here.
+        if self.state.down == 4:
+            kick_decision = self.select_kick_decision()
+            if kick_decision == PlayType.DROP_KICK:
+                play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+                return self._apply_post_play_penalties(play)
+            # else: go for advancement, fall through to normal play
+
+        # ── Down 5-6 without kick mode: forced kick decision ──
+        if self.state.down >= 5:
             kick_decision = self.select_kick_decision()
             if kick_decision is not None:
-                family = PlayFamily.TERRITORY_KICK
                 if kick_decision == PlayType.PUNT:
-                    play = self.simulate_punt(family)
+                    family = PlayFamily.PUNT
                 elif kick_decision == PlayType.DROP_KICK:
-                    play = self.simulate_drop_kick(family)
+                    family = PlayFamily.SNAP_KICK
                 elif kick_decision == PlayType.PLACE_KICK:
-                    play = self.simulate_place_kick(family)
+                    family = PlayFamily.FIELD_GOAL
                 else:
-                    play = self.simulate_punt(family)
+                    family = PlayFamily.PUNT
+                play_type = kick_decision
+                play = self._dispatch_play(play_type, family)
+                return self._apply_post_play_penalties(play)
 
-                post_pen = self._check_penalties("post_play", play_type=play.play_type)
-                if post_pen:
-                    play = self._apply_post_play_penalty(post_pen, play)
-                return play
-
-        # Snap kick shot play — only for specialists in close range
-        if self.state.down <= 5:
+        # ── Snap kick shot interrupt (downs 2-3 only, specialist kickers) ──
+        # Downs 4-6 are handled above. Downs 2-3 get opportunistic
+        # "pull-up three" snap kicks driven by kicker skill and style.
+        if self.state.down <= 3 and self.state.down >= 2:
             shot_play = self._check_snap_kick_shot_play()
             if shot_play == PlayType.DROP_KICK:
-                family = PlayFamily.TERRITORY_KICK
-                play = self.simulate_drop_kick(family)
-                post_pen = self._check_penalties("post_play", play_type=play.play_type)
-                if post_pen:
-                    play = self._apply_post_play_penalty(post_pen, play)
-                return play
+                play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+                return self._apply_post_play_penalties(play)
 
+        # ── Normal play family selection — direct dispatch ──
         play_family = self.select_play_family()
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
-        if play_type == PlayType.PUNT:
-            if self.state.down == 6:
-                play_type = self._resolve_kick_type()
-            else:
-                play_type = PlayType.RUN
-                play_family = PlayFamily.DIVE_OPTION
-            play_family = PlayFamily.TERRITORY_KICK if play_type != PlayType.RUN else play_family
+        play = self._dispatch_play(play_type, play_family)
+        return self._apply_post_play_penalties(play)
 
+    def _dispatch_play(self, play_type: PlayType, play_family: PlayFamily) -> Play:
         if play_type == PlayType.RUN:
-            play = self.simulate_run(play_family)
+            return self.simulate_run(play_family)
         elif play_type == PlayType.LATERAL_CHAIN:
-            play = self.simulate_lateral_chain(play_family)
+            return self.simulate_lateral_chain(play_family)
         elif play_type == PlayType.KICK_PASS:
-            play = self.simulate_kick_pass(play_family)
+            return self.simulate_kick_pass(play_family)
         elif play_type == PlayType.TRICK_PLAY:
-            play = self.simulate_trick_play(play_family)
+            return self.simulate_trick_play(play_family)
         elif play_type == PlayType.PUNT:
-            play = self.simulate_punt(play_family)
+            return self.simulate_punt(play_family)
         elif play_type == PlayType.DROP_KICK:
-            play = self.simulate_drop_kick(play_family)
+            return self.simulate_drop_kick(play_family)
         elif play_type == PlayType.PLACE_KICK:
-            play = self.simulate_place_kick(play_family)
+            return self.simulate_place_kick(play_family)
         else:
-            play = self.simulate_run(play_family)
+            return self.simulate_run(play_family)
 
+    def _apply_post_play_penalties(self, play: Play) -> Play:
         actual_type = play.play_type if play else "run"
         during_pen = self._check_penalties("during_play", play_type=actual_type)
         if during_pen:
@@ -3212,7 +3388,6 @@ class ViperballEngine:
             post_pen = self._check_penalties("post_play", play_type=actual_type)
             if post_pen:
                 play = self._apply_post_play_penalty(post_pen, play)
-
         return play
 
     def select_play_family(self) -> PlayFamily:
@@ -3223,23 +3398,83 @@ class ViperballEngine:
         ytg = self.state.yards_to_go
         fp = self.state.field_position
 
-        weights["territory_kick"] = max(0.01, weights.get("territory_kick", 0.2) * 0.05)
+        # ── V2.1: Deprecated territory_kick zeroed out ──
+        weights["territory_kick"] = 0.0
 
-        kick_pass_base = weights.get("kick_pass", 0.05)
-        weights["kick_pass"] = kick_pass_base * 1.4
+        # ── V2.1: Range-gating for kick families ──
+        # Compute kicker range to determine if kicks are viable
+        fg_distance = (100 - fp) + 10
+        team = self.get_offensive_team()
+        kicker_candidates = self._kicker_candidates(team)
+        kicker = max(kicker_candidates, key=lambda p: p.kicking) if kicker_candidates else None
+        kicker_skill = kicker.kicking if kicker else 60
 
-        for rk in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw"):
-            weights[rk] = weights.get(rk, 0.1) * 2.2
+        dk_comfort = 30 + (kicker_skill - 60) * 0.75
+        pk_comfort = 45 + (kicker_skill - 60) * 0.9
+        dk_success = self._drop_kick_success(fg_distance, kicker_skill)
+        pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
-        weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
+        # V2.1: Soft range-gating — teams can kick from anywhere but the
+        # weight scales with how realistic the attempt is. Comfortable range
+        # gets boosted, long range gets suppressed. No hard zeroes.
+        if fg_distance <= dk_comfort:
+            # Comfortable range: boost snap kicks — this is the sweet spot
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
+        elif fg_distance <= dk_comfort + 10:
+            # Stretch range: full weight, kicker is reaching
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.3
+        elif fg_distance <= dk_comfort + 20:
+            # Long range: reduce but allow (hero kicks)
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 0.5
+        else:
+            # Very long range: strongly suppress (pointless attempts)
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 0.1
 
+        if fg_distance <= pk_comfort:
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 1.6
+        elif fg_distance <= pk_comfort + 10:
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 1.2
+        elif fg_distance <= pk_comfort + 20:
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 0.4
+        else:
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 0.1
+
+        # Punt: suppress from opponent territory
+        if fp > 65:
+            weights["punt"] = 0.0
+
+        # ── V2.1: Scoring Gravity Zones ──
+        if fp >= 85:
+            # TD gravity: nearly zero kicks, strong run/kick_pass boost
+            for rk in ("dive_option", "power", "sweep_option", "speed_option"):
+                weights[rk] = weights.get(rk, 0.05) * 2.5
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.5
+            weights["snap_kick"] = weights.get("snap_kick", 0.0) * 0.05
+            weights["field_goal"] = weights.get("field_goal", 0.0) * 0.05
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
+        elif fp >= 75:
+            # Snapkick gravity: strongly boost snap kick, moderate FG
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * 2.5
+            weights["field_goal"] = weights.get("field_goal", 0.05) * 1.4
+            weights["punt"] = 0.0
+        elif fp >= 65:
+            # FG gravity: boost FG and snap kick, suppress punt
+            weights["field_goal"] = weights.get("field_goal", 0.05) * 1.5
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * 2.0
+            weights["punt"] = 0.0
+
+        # ── Lateral hard cap (4-6% of plays) ──
+        weights["lateral_spread"] = min(weights.get("lateral_spread", 0.2), 0.08)
+
+        # ── Down/YTG modifiers ──
         if ytg <= 3:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 2.2
             weights["power"] = weights.get("power", 0.1) * 2.2
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.5
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.4
-            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.5
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.4
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.5
             weights["counter"] = weights.get("counter", 0.05) * 0.8
             weights["draw"] = weights.get("draw", 0.05) * 0.6
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.8
@@ -3247,7 +3482,7 @@ class ViperballEngine:
         elif ytg <= 10:
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
-            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.4
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.4
             weights["counter"] = weights.get("counter", 0.05) * 1.2
             weights["draw"] = weights.get("draw", 0.05) * 1.1
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.2
@@ -3262,16 +3497,13 @@ class ViperballEngine:
             weights["power"] = weights.get("power", 0.1) * 0.7
 
         # ── "2nd & Short" aggression ──
-        # With down 2 and < 5 to go, the offense has 4 downs of cushion.
-        # Go-like aggression: hunt the 9-point TD with big-play calls.
         if down == 2 and ytg < 5:
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.8
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 2.2
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.5
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 2.0
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.8
-            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.5
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.5
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.4
-            # Dial back conservative grinds — we can afford to miss
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
@@ -3299,6 +3531,9 @@ class ViperballEngine:
             weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.3
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.3
+            # Late downs + long yardage: boost kicks as cheap-points option
+            weights["snap_kick"] = weights.get("snap_kick", 0.0) * 1.5
+            weights["field_goal"] = weights.get("field_goal", 0.0) * 1.5
 
         score_diff = self._get_score_diff()
         quarter = self.state.quarter
@@ -3307,50 +3542,55 @@ class ViperballEngine:
             weights["dive_option"] = weights.get("dive_option", 0.1) * 1.6
             weights["power"] = weights.get("power", 0.1) * 1.4
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.5
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.5
             weights["draw"] = weights.get("draw", 0.05) * 0.6
             weights["trick_play"] = weights.get("trick_play", 0.05) * 0.3
         elif quarter == 4 and time_left <= 300 and score_diff < -7:
             weights["speed_option"] = weights.get("speed_option", 0.1) * 1.5
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.6
-            weights["kick_pass"] = weights.get("kick_pass", 0.05) * 1.5
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.6
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.5
             weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.4
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.8
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
 
-        # ── Two-minute drill play selection ──
-        if (quarter in (2, 4) and time_left < 120):
+        # ── 3-minute warning drill play selection ──
+        if (quarter in (2, 4) and time_left < 180):
             if score_diff < 0:
-                # Trailing: maximum aggression, big-play attempts
-                weights["kick_pass"] = weights.get("kick_pass", 0.05) * 2.0
-                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.5
+                # Trailing: suppress all kicks except desperation FG
+                weights["kick_pass"] = weights.get("kick_pass", 0.3) * 2.0
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.5
                 weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
-                weights["territory_kick"] = weights.get("territory_kick", 0.05) * 0.2
+                weights["snap_kick"] = weights.get("snap_kick", 0.0) * 0.2
+                weights["punt"] = 0.0
                 weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
                 weights["power"] = weights.get("power", 0.1) * 0.4
             elif score_diff > 0:
-                # Leading: conservative, burn clock
+                # Leading: conservative, burn clock, boost FG for safe points
                 weights["dive_option"] = weights.get("dive_option", 0.1) * 2.0
                 weights["power"] = weights.get("power", 0.1) * 1.5
-                weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 0.3
-                weights["kick_pass"] = weights.get("kick_pass", 0.05) * 0.4
+                weights["field_goal"] = weights.get("field_goal", 0.0) * 1.5
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.3
+                weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.4
                 weights["trick_play"] = weights.get("trick_play", 0.05) * 0.2
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
 
-        kp_weight = weights.get("kick_pass", 0.05)
+        kp_weight = weights.get("kick_pass", 0.3)
         kp_bonus = style.get("kick_pass_bonus", 0.0)
         if kp_weight >= 0.10 or kp_bonus >= 0.06:
             spacing_factor = 1.0 + min(0.15, kp_weight * 0.5 + kp_bonus)
             weights["dive_option"] = weights.get("dive_option", 0.1) * spacing_factor
             weights["sweep_option"] = weights.get("sweep_option", 0.1) * spacing_factor
             weights["speed_option"] = weights.get("speed_option", 0.1) * spacing_factor
-            weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * (1.0 + min(0.10, kp_bonus * 0.8))
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * (1.0 + min(0.10, kp_bonus * 0.8))
+
+        # Re-enforce lateral hard cap after all modifiers
+        weights["lateral_spread"] = min(weights.get("lateral_spread", 0.05), 0.08)
 
         families = list(PlayFamily)
-        w = [max(0.01, weights.get(f.value, 0.05)) for f in families]
+        w = [max(0.001, weights.get(f.value, 0.0)) for f in families]
         return random.choices(families, weights=w)[0]
 
     def _current_style(self) -> Dict:
@@ -3405,7 +3645,7 @@ class ViperballEngine:
         elif style_name == "rouge_hunt":
             early_punt = self._current_style().get("early_punt_threshold", 3)
             if down >= early_punt and fp < 50 and ytg >= 10:
-                weights["territory_kick"] = weights.get("territory_kick", 0.2) * 3.0
+                weights["punt"] = weights.get("punt", 0.18) * 3.0
 
         elif style_name == "chain_gang":
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.3
@@ -3997,10 +4237,12 @@ class ViperballEngine:
             power = ratio ** exponent
 
             # Convert power ratio to expected yards
-            # power 1.0 → ~4.5 yards (even matchup)
-            # power 1.5 → ~6.75 yards (offense dominates)
-            # power 0.67 → ~2.0 yards (defense dominates)
-            base_yards = 4.5 * power
+            # Viperball uses 20-yard first downs, so teams need ~3.5 yd/play
+            # minimum to sustain drives. Base is higher than football.
+            # power 1.0 → ~5.5 yards (even matchup)
+            # power 1.5 → ~8.25 yards (offense dominates)
+            # power 0.67 → ~2.5 yards (defense dominates)
+            base_yards = 5.5 * power
 
             # Play-type shift
             base_low, base_high = play_config['base_yards']
@@ -4090,8 +4332,27 @@ class ViperballEngine:
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
 
-        # ── Roll the dice ──
-        yards = random.gauss(center, variance)
+        # ── V2.1: Yardage polarization ──
+        # Bimodal distribution: occasional busts and explosives,
+        # but offenses nickel-and-dime consistently with 6 downs / 20 yards.
+        variance *= 1.2
+        mode_roll = random.random()
+        if self.state.down >= 4:
+            # Late downs: minimal bust, offense is locked in
+            if mode_roll < 0.03:
+                yards = random.gauss(center * 0.4, variance * 0.7)
+            elif mode_roll < 0.28:
+                yards = random.gauss(center * 1.6, variance * 1.0)
+            else:
+                yards = random.gauss(center, variance)
+        else:
+            # Early downs: 4% bust rate per user spec
+            if mode_roll < 0.04:
+                yards = random.gauss(center * 0.4, variance * 0.7)
+            elif mode_roll < 0.30:
+                yards = random.gauss(center * 1.8, variance * 1.1)
+            else:
+                yards = random.gauss(center, variance)
 
         # ── V2: Apply R/E/C variance archetype ──
         yards = self._apply_variance_archetype(yards, carrier)
@@ -4154,10 +4415,10 @@ class ViperballEngine:
         # commitment.  This is the primary lever for hit-rate targets.
         if self.state.down >= 4:
             off_talent = max(0.0, (off_skill - 50) / 49.0)
-            # Aggressive urgency: boost completion from ~55% to target
-            # 4th: +25% → ~80%, 5th: +18% → ~73%, 6th: +11% → ~66%
-            urgency = {4: 0.35, 5: 0.26, 6: 0.18}.get(self.state.down, 0.18)
-            base_prob = min(0.92, base_prob + urgency * (0.5 + off_talent * 0.5))
+            # Aggressive urgency: boost completion to target conversion rates
+            # 4th: ~85%, 5th: ~73%, 6th: ~66%
+            urgency = {4: 0.40, 5: 0.28, 6: 0.18}.get(self.state.down, 0.18)
+            base_prob = min(0.94, base_prob + urgency * (0.6 + off_talent * 0.4))
 
         # ── V2: Composure modifier ──
         if V2_ENGINE_CONFIG.get("composure_enabled", False):
@@ -4502,6 +4763,7 @@ class ViperballEngine:
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
+            self.state.kick_mode = False
             player.game_yards += yards_gained
             player.game_rushing_yards += yards_gained
             description = f"{ptag} {action} → {yards_gained} — FIRST DOWN{mech_tag}"
@@ -4752,6 +5014,7 @@ class ViperballEngine:
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
+            self.state.kick_mode = False
             carrier.game_yards += yards_gained
             carrier.game_rushing_yards += yards_gained
             description = f"{ptag} {variant['action']} via {sec_tag} → {yards_gained} — FIRST DOWN{mech_tag}"
@@ -5000,8 +5263,9 @@ class ViperballEngine:
         for p in players_involved:
             self.drain_player_energy(p, "lateral")
 
-        base_yards = random.gauss(2.5, 1.2)
-        lateral_bonus = chain_length * 0.8
+        # V2.1: Reduced lateral yardage — laterals are chaos spice, not staple yardage
+        base_yards = random.gauss(1.5, 1.0)
+        lateral_bonus = chain_length * 0.5
 
         # Skill roll from the final ball carrier (lateral skill matters)
         ball_carrier_for_roll = players_involved[-1] if players_involved else None
@@ -5009,10 +5273,10 @@ class ViperballEngine:
             skill_bonus = self._player_skill_roll(ball_carrier_for_roll, play_type="lateral")
             base_yards += skill_bonus
 
-        # Late-down urgency: lateral chains target what the team needs
+        # Late-down urgency: lateral chains get modest boost
         if self.state.down >= 4:
             ytg = self.state.yards_to_go
-            urgency_boost = {4: 2.5, 5: 1.8, 6: 1.2}.get(self.state.down, 1.2)
+            urgency_boost = {4: 1.5, 5: 1.0, 6: 0.5}.get(self.state.down, 0.5)
             base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
@@ -5059,6 +5323,7 @@ class ViperballEngine:
             self.state.field_position = new_position
             self.state.down = 1
             self.state.yards_to_go = 20
+            self.state.kick_mode = False
             ball_carrier.game_yards += yards_gained
             ball_carrier.game_lateral_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained} — FIRST DOWN"
@@ -5133,8 +5398,8 @@ class ViperballEngine:
         if self.state.down >= 4:
             ytg = self.state.yards_to_go
             # Target distance is ~ytg (receiver will add YAC on top)
-            target = max(5, min(14, ytg - 2))  # aim short of ytg, YAC covers rest
-            kick_distance = random.randint(max(5, target - 2), min(14, target + 3))
+            target = max(5, min(14, ytg))  # aim for ytg directly, YAC adds on top
+            kick_distance = random.randint(max(5, target - 1), min(14, target + 3))
         else:
             kick_distance = random.randint(5, 14)
         kick_skill_bonus = self._player_skill_roll(kicker, play_type="kick_pass")
@@ -5299,6 +5564,7 @@ class ViperballEngine:
                 self.state.field_position = new_position
                 self.state.down = 1
                 self.state.yards_to_go = 20
+                self.state.kick_mode = False
                 description = f"{kicker_tag} kick pass to {receiver_tag} → {yards_gained} — FIRST DOWN"
             else:
                 result = PlayResult.GAIN
@@ -5948,136 +6214,126 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
+        is_snap_kick = (family == PlayFamily.SNAP_KICK)
 
-        # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
-        block_prob = self.calculate_block_probability(kick_type="kick")
-        if random.random() < block_prob:
-            # BLOCKED KICK!
-            def_team = self.get_defensive_team()
-            blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
-            btag = player_tag(blocker)
-
-            # 70% defense recovers, 30% offense recovers
-            if random.random() < 0.70:
-                # Defense recovers - chance for return TD or short field
-                self.change_possession()
-                # Ball is behind LOS
-                block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
-                self.state.field_position = 100 - block_spot  # Flip for receiving team
-                self.state.down = 1
-                self.state.yards_to_go = 20
-                self.apply_stamina_drain(2)
-                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-
-                # 15% chance of return TD
-                if random.random() < 0.15:
-                    self.add_score(9)
-                    return Play(
-                        play_number=self.state.play_number, quarter=self.state.quarter,
-                        time=self.state.time_remaining, possession=self.state.possession,
-                        field_position=self.state.field_position, down=1, yards_to_go=20,
-                        play_type="drop_kick", play_family=family.value,
-                        players_involved=[player_label(kicker), player_label(blocker)],
-                        yards_gained=-block_spot,
-                        result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} snap kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
-                        fatigue=round(stamina, 1),
-                    )
+        # ── Pesäpallo Rule: Snap kicks are dead-ball attempts ──
+        # Blocked kicks and keeper deflections only apply to NON-snap-kick
+        # drop kicks. Snap kicks under the pesäpallo rule are safe: miss = dead
+        # ball at LOS, retain possession, advance down.
+        if not is_snap_kick:
+            # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
+            block_prob = self.calculate_block_probability(kick_type="kick")
+            if random.random() < block_prob:
+                def_team = self.get_defensive_team()
+                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+                btag = player_tag(blocker)
+                if random.random() < 0.70:
+                    self.change_possession()
+                    block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
+                    self.state.field_position = 100 - block_spot
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    if random.random() < 0.15:
+                        self.add_score(9)
+                        return Play(
+                            play_number=self.state.play_number, quarter=self.state.quarter,
+                            time=self.state.time_remaining, possession=self.state.possession,
+                            field_position=self.state.field_position, down=1, yards_to_go=20,
+                            play_type="drop_kick", play_family=family.value,
+                            players_involved=[player_label(kicker), player_label(blocker)],
+                            yards_gained=-block_spot,
+                            result=PlayResult.BLOCKED_KICK.value,
+                            description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                            fatigue=round(stamina, 1),
+                        )
+                    else:
+                        return Play(
+                            play_number=self.state.play_number, quarter=self.state.quarter,
+                            time=self.state.time_remaining, possession=self.state.possession,
+                            field_position=self.state.field_position, down=1, yards_to_go=20,
+                            play_type="drop_kick", play_family=family.value,
+                            players_involved=[player_label(kicker), player_label(blocker)],
+                            yards_gained=-block_spot,
+                            result=PlayResult.BLOCKED_KICK.value,
+                            description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                            fatigue=round(stamina, 1),
+                        )
                 else:
+                    self.change_possession()
+                    self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(2)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                     return Play(
                         play_number=self.state.play_number, quarter=self.state.quarter,
                         time=self.state.time_remaining, possession=self.state.possession,
                         field_position=self.state.field_position, down=1, yards_to_go=20,
                         play_type="drop_kick", play_family=family.value,
-                        players_involved=[player_label(kicker), player_label(blocker)],
-                        yards_gained=-block_spot,
+                        players_involved=[player_label(kicker)],
+                        yards_gained=0,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} snap kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        description=f"{ptag} drop kick BLOCKED! Kicking team recovers but turnover on downs!",
                         fatigue=round(stamina, 1),
                     )
-            else:
-                # Offense recovers - treated like failed 4th down
+
+            # Keeper deflection check (non-snap-kick only)
+            def_team = self.get_defensive_team()
+            keeper = None
+            for p in def_team.players:
+                if p.position == "Keeper":
+                    keeper = p
+                    break
+            if keeper is None:
+                keeper = max(def_team.players[-3:], key=lambda p: p.speed)
+            keeper.game_coverage_snaps += 1
+            keeper_arch = get_archetype_info(keeper.archetype)
+            deflection_base = 0.05
+            deflection_base += keeper_arch.get("deflection_bonus", 0.0)
+            if keeper.speed >= 90:
+                deflection_base += 0.03
+            if keeper.tackling >= 80:
+                deflection_base += 0.02
+            keeper_stamina = keeper.current_stamina if hasattr(keeper, 'current_stamina') else 100.0
+            if keeper_stamina < 70:
+                deflection_base *= 0.75
+            weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+            if weather_mod < -0.05:
+                deflection_base += 0.03
+            if random.random() < deflection_base:
+                keeper.game_kick_deflections += 1
+                ktag = player_tag(keeper)
                 self.change_possession()
-                self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
+                recover_spot = max(1, min(99, 100 - self.state.field_position + random.randint(-5, 5)))
+                self.state.field_position = recover_spot
                 self.state.down = 1
                 self.state.yards_to_go = 20
-                self.apply_stamina_drain(2)
+                self.add_score(0.5)
+                keeper.game_keeper_bells += 1
+                self.apply_stamina_drain(3)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-
+                weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
                 return Play(
-                    play_number=self.state.play_number, quarter=self.state.quarter,
-                    time=self.state.time_remaining, possession=self.state.possession,
-                    field_position=self.state.field_position, down=1, yards_to_go=20,
-                    play_type="drop_kick", play_family=family.value,
-                    players_involved=[player_label(kicker)],
+                    play_number=self.state.play_number,
+                    quarter=self.state.quarter,
+                    time=self.state.time_remaining,
+                    possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=1, yards_to_go=20,
+                    play_type="drop_kick",
+                    play_family=family.value,
+                    players_involved=[player_label(kicker), player_label(keeper)],
                     yards_gained=0,
                     result=PlayResult.BLOCKED_KICK.value,
-                    description=f"{ptag} snap kick BLOCKED! Kicking team recovers but turnover on downs!",
+                    description=f"{ptag} drop kick — DEFLECTED by Keeper {ktag}! Defense recovers (+½){weather_tag}",
                     fatigue=round(stamina, 1),
                 )
-
-        def_team = self.get_defensive_team()
-        keeper = None
-        for p in def_team.players:
-            if p.position == "Keeper":
-                keeper = p
-                break
-        if keeper is None:
-            keeper = max(def_team.players[-3:], key=lambda p: p.speed)
-
-        keeper.game_coverage_snaps += 1
-
-        keeper_arch = get_archetype_info(keeper.archetype)
-        deflection_base = 0.05
-        deflection_base += keeper_arch.get("deflection_bonus", 0.0)
-        if keeper.speed >= 90:
-            deflection_base += 0.03
-        if keeper.tackling >= 80:
-            deflection_base += 0.02
-
-        keeper_stamina = keeper.current_stamina if hasattr(keeper, 'current_stamina') else 100.0
-        if keeper_stamina < 70:
-            deflection_base *= 0.75
-
-        weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
-        if weather_mod < -0.05:
-            deflection_base += 0.03
-
-        if random.random() < deflection_base:
-            keeper.game_kick_deflections += 1
-            ktag = player_tag(keeper)
-            self.change_possession()
-            recover_spot = max(1, min(99, 100 - self.state.field_position + random.randint(-5, 5)))
-            self.state.field_position = recover_spot
-            self.state.down = 1
-            self.state.yards_to_go = 20
-            self.add_score(0.5)
-            keeper.game_keeper_bells += 1
-            self.apply_stamina_drain(3)
-            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-            weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
-            return Play(
-                play_number=self.state.play_number,
-                quarter=self.state.quarter,
-                time=self.state.time_remaining,
-                possession=self.state.possession,
-                field_position=self.state.field_position,
-                down=1, yards_to_go=20,
-                play_type="drop_kick",
-                play_family=family.value,
-                players_involved=[player_label(kicker), player_label(keeper)],
-                yards_gained=0,
-                result=PlayResult.BLOCKED_KICK.value,
-                description=f"{ptag} snap kick — DEFLECTED by Keeper {ktag}! Defense recovers (+½){weather_tag}",
-                fatigue=round(stamina, 1),
-            )
 
         distance = 100 - self.state.field_position + 10
 
         # ── Kicker-range success model ──
-        # Uses the same model as _drop_kick_success: the kicker determines
-        # a comfortable range.  Within range, kicks are very reliable.
-        # Beyond range, success drops off.
         success_prob = self._drop_kick_success(distance, kicker.kicking)
 
         # Style, archetype, and weather modifiers (secondary adjustments)
@@ -6177,7 +6433,7 @@ class ViperballEngine:
                         play_type="drop_kick", play_family=family.value,
                         players_involved=[player_label(kicker)], yards_gained=0,
                         result=PlayResult.PINDOWN.value,
-                        description=f"{ptag} snap kick {distance}yd — NO GOOD, into the end zone — PINDOWN! +1",
+                        description=f"{ptag} drop kick {distance}yd — NO GOOD, into the end zone — PINDOWN! +1",
                         fatigue=round(stamina, 1),
                     )
                     self._apply_rouge_pindown(kicking_team, receiving)
@@ -6196,7 +6452,7 @@ class ViperballEngine:
                         play_type="drop_kick", play_family=family.value,
                         players_involved=[player_label(kicker)], yards_gained=0,
                         result=PlayResult.MISSED_KICK.value,
-                        description=f"{ptag} snap kick {distance}yd — NO GOOD, returned out of end zone to {self.state.field_position}",
+                        description=f"{ptag} drop kick {distance}yd — NO GOOD, returned out of end zone to {self.state.field_position}",
                         fatigue=round(stamina, 1),
                     )
 
@@ -6221,7 +6477,7 @@ class ViperballEngine:
                     players_involved=[player_label(kicker)],
                     yards_gained=landing_offset,
                     result=PlayResult.SNAP_KICK_RECOVERY.value,
-                    description=f"{ptag} snap kick {distance}yd — NO GOOD → LIVE BALL! Kicking team recovers at {landing_spot}!",
+                    description=f"{ptag} drop kick {distance}yd — NO GOOD → LIVE BALL! Kicking team recovers at {landing_spot}!",
                     fatigue=round(stamina, 1),
                 )
             else:
@@ -6247,7 +6503,7 @@ class ViperballEngine:
                     players_involved=[player_label(kicker)],
                     yards_gained=0,
                     result=PlayResult.MISSED_KICK.value,
-                    description=f"{ptag} snap kick {distance}yd — NO GOOD → LIVE BALL! Defense recovers (+½)",
+                    description=f"{ptag} drop kick {distance}yd — NO GOOD → LIVE BALL! Defense recovers (+½)",
                     fatigue=round(stamina, 1),
                 )
 
@@ -6481,6 +6737,7 @@ class ViperballEngine:
 
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
+        self.state.kick_mode = False
 
     def get_available_players(self, team: Team, top_n: int = 8) -> List:
         """Return top_n players from team who are not injured in this game."""
