@@ -3235,7 +3235,9 @@ class ViperballEngine:
                    The kicker's skill determines how often this fires.
         Down 6:    Handled by select_kick_decision, not this function.
         """
-        if self.state.down > 3 or self.state.down < 2:
+        down = self.state.down
+        ytg = self.state.yards_to_go
+        if down > 5 or down < 2:
             return None
         fp = self.state.field_position
         fg_distance = (100 - fp) + 10
