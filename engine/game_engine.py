@@ -224,6 +224,21 @@ PLAY_FAMILY_TO_TYPE = {
     PlayFamily.PUNT: PlayType.PUNT,
 }
 
+# Map PlayFamily → DC gameplan play type category for suppression lookups.
+# Kicking families (punt, field_goal, snap_kick) are not suppressed by DC gameplan.
+PLAY_FAMILY_TO_DC_TYPE = {
+    PlayFamily.DIVE_OPTION:    "run",
+    PlayFamily.SPEED_OPTION:   "run",
+    PlayFamily.SWEEP_OPTION:   "run",
+    PlayFamily.POWER:          "run",
+    PlayFamily.COUNTER:        "run",
+    PlayFamily.DRAW:           "run",
+    PlayFamily.VIPER_JET:      "run",
+    PlayFamily.LATERAL_SPREAD: "lateral",
+    PlayFamily.KICK_PASS:      "kick_pass",
+    PlayFamily.TRICK_PLAY:     "trick",
+}
+
 RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
         'base_yards': (2.0, 3.5),
@@ -2258,12 +2273,17 @@ class ViperballEngine:
         # ── Coaching staff modifiers (must init before rhythm) ──
         self.home_coaching_mods: Dict = {}
         self.away_coaching_mods: Dict = {}
+        # DC gameplan: per-game defensive suppression roll (empty = no effect)
+        self.home_dc_gameplan: Dict[str, float] = {}
+        self.away_dc_gameplan: Dict[str, float] = {}
         if home_coaching or away_coaching:
-            from engine.coaching import compute_gameday_modifiers
+            from engine.coaching import compute_gameday_modifiers, roll_dc_gameplan
             if home_coaching:
                 self.home_coaching_mods = compute_gameday_modifiers(home_coaching)
+                self.home_dc_gameplan = roll_dc_gameplan(home_coaching)
             if away_coaching:
                 self.away_coaching_mods = compute_gameday_modifiers(away_coaching)
+                self.away_dc_gameplan = roll_dc_gameplan(away_coaching)
 
         self.home_game_rhythm = random.gauss(1.0, 0.15)
         self.away_game_rhythm = random.gauss(1.0, 0.15)
@@ -2328,6 +2348,12 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.away_coaching_mods
         return self.home_coaching_mods
+
+    def _def_dc_gameplan(self) -> Dict[str, float]:
+        """Return the DC gameplan for the team currently on defense."""
+        if self.state.possession == "home":
+            return self.away_dc_gameplan
+        return self.home_dc_gameplan
 
     def _apply_dq_boosts(self):
         for boosts, team in [(self.home_dq_boosts, self.home_team),
@@ -2652,7 +2678,9 @@ class ViperballEngine:
                     tempo_mult *= 0.33
                 elif score_diff > 0:
                     # Leading: burn clock at full speed
-                    tempo_mult *= 1.2
+                    # V2.3: clock_burn_multiplier from offense style amplifies clock burning
+                    clock_burn = style.get("clock_burn_multiplier", 1.0)
+                    tempo_mult *= 1.2 * clock_burn
 
             time_elapsed = max(8, int(base_time * tempo_mult))
             prev_time = self.state.time_remaining
@@ -3777,6 +3805,16 @@ class ViperballEngine:
         punt_mult = trait_fx.get("punt_weight_multiplier", 1.0)
         weights["territory_kick"] = weights.get("territory_kick", 0.05) * punt_mult
 
+        # V2.3: Take points bias — coaching preference for kicking FGs
+        # fg_conservative (1.25) = more FG attempts; fg_aggressive (0.75) = fewer
+        # economist sub-archetype (1.15) also stacks
+        tp_bias = trait_fx.get("take_points_bias", 1.0)
+        tp_sub = sub_fx.get("take_points_bias", 1.0)
+        fg_mult = tp_bias * tp_sub
+        if fg_mult != 1.0:
+            weights["field_goal"] = weights.get("field_goal", 0.06) * fg_mult
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * fg_mult
+
         families = list(PlayFamily)
         w = [max(0.001, weights.get(f.value, 0.0)) for f in families]
         return random.choices(families, weights=w)[0]
@@ -4445,7 +4483,8 @@ class ViperballEngine:
         # 90% halo, 10% individual (for non-star plays)
         return random.random() < 0.90
 
-    def _contest_run_yards(self, carrier, tackler, play_config) -> float:
+    def _contest_run_yards(self, carrier, tackler, play_config,
+                           play_family: "PlayFamily | None" = None) -> float:
         """Contest-based stochastic resolution for run plays.
 
         V2 supports dual-mode:
@@ -4454,6 +4493,7 @@ class ViperballEngine:
 
         With halo enabled, non-star plays use team-level ratings.
         R/E/C variance and star override are applied post-roll.
+        DC gameplan suppression stacks multiplicatively with weather.
         """
         contest_model = V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid")
         use_halo = self._should_use_halo(carrier)
@@ -4587,6 +4627,24 @@ class ViperballEngine:
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
 
+        # ── V2.3: DC gameplan suppression (stacks multiplicatively with weather) ──
+        # The opposing DC's film prep creates per-play-type suppression.
+        # A cold defensive game in the rain compounds: 0.85 DC * 0.95 weather effect.
+        if play_family is not None:
+            dc_type = PLAY_FAMILY_TO_DC_TYPE.get(play_family)
+            if dc_type:
+                dc_gp = self._def_dc_gameplan()
+                dc_suppression = dc_gp.get(dc_type, 1.0)
+                center *= dc_suppression
+
+        # ── V2.3: HC affinity offensive bonus ──
+        # offensive_mind HC amplifies yard production when on offense.
+        off_mods_aff = self._coaching_mods()
+        aff_fx = off_mods_aff.get("hc_affinity_effects", {})
+        off_yard_bonus = aff_fx.get("offensive_yard_bonus", 0.0)
+        if off_yard_bonus:
+            center *= (1.0 + off_yard_bonus)
+
         # ── Game rhythm — all coaching rhythm effects flow through here ──
         rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
         center *= rhythm
@@ -4690,6 +4748,12 @@ class ViperballEngine:
                 base_prob *= 0.85  # Tilted: less accurate
             elif composure > 120:
                 base_prob = min(0.92, base_prob * 1.05)
+
+        # ── V2.3: DC gameplan suppression on kick pass completion ──
+        # A DC who studied film on kick passes suppresses the probability.
+        dc_gp = self._def_dc_gameplan()
+        dc_kp_supp = dc_gp.get("kick_pass", 1.0)
+        base_prob *= dc_kp_supp
 
         # Hot streak
         streak_bonus, streak_var = self._hot_streak_modifier(kicker)
@@ -4865,7 +4929,7 @@ class ViperballEngine:
         tackler = self._pick_def_tackler(def_team_for_tackle, 3)  # pick before knowing yards
         tackler.game_tackles += 1
 
-        yards_gained = int(self._contest_run_yards(player, tackler, config))
+        yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
         yards_gained = max(-5, yards_gained)
 
         # ── V2: Defensive keying penalty ──
@@ -5133,6 +5197,11 @@ class ViperballEngine:
         # Carrier skill roll
         skill_bonus = self._player_skill_roll(carrier, play_type="run")
         base_yards += skill_bonus
+
+        # ── V2.3: DC gameplan suppression on trick plays ──
+        dc_gp_trick = self._def_dc_gameplan()
+        dc_trick_supp = dc_gp_trick.get("trick", 1.0)
+        base_yards *= dc_trick_supp
 
         # Defensive read check — if defense reads the trick, it's a disaster
         defense = self._current_defense()
@@ -5565,6 +5634,12 @@ class ViperballEngine:
         # Tackling reduces lateral chain yards
         lat_tackle_red = self._tackle_reduction(lat_tackler, yards_gained)
         yards_gained = max(-5, int(yards_gained - lat_tackle_red))
+
+        # ── V2.3: DC gameplan suppression on lateral chains ──
+        dc_gp_lat = self._def_dc_gameplan()
+        dc_lat_supp = dc_gp_lat.get("lateral", 1.0)
+        if dc_lat_supp != 1.0 and yards_gained > 0:
+            yards_gained = max(0, int(yards_gained * dc_lat_supp))
 
         if yards_gained <= 0:
             lat_tackler.game_tfl += 1

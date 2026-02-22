@@ -50,6 +50,70 @@ CLASSIFICATIONS = (
     "disciplinarian",
 )
 
+# ──────────────────────────────────────────────
+# HC AFFINITY — every HC has a side-of-ball identity
+# ──────────────────────────────────────────────
+# When coordinators become head coaches (or any HC), this field determines
+# which phase of the game they amplify.  A defensive_mind HC stacks with
+# their DC's gameplan to create elite defensive programs.
+
+HC_AFFINITIES = (
+    "defensive_mind",
+    "offensive_mind",
+    "special_teams_guru",
+    "balanced",
+)
+
+HC_AFFINITY_LABELS = {
+    "defensive_mind":     "Defensive Mind",
+    "offensive_mind":     "Offensive Mind",
+    "special_teams_guru": "Special Teams Guru",
+    "balanced":           "Balanced",
+}
+
+HC_AFFINITY_DESCRIPTIONS = {
+    "defensive_mind":     "Program identity built around defense. Amplifies DC gameplan effectiveness.",
+    "offensive_mind":     "Program identity built around offense. Amplifies OC scheme and yard production.",
+    "special_teams_guru": "Program identity built around special teams. Amplifies return, coverage, and kicking.",
+    "balanced":           "No side-of-ball amplification. Slight all-around consistency bonus.",
+}
+
+# How HC affinity modifies the DC gameplan roll and offensive/ST output.
+# defensive_mind: tightens DC roll variance AND shifts center (better suppression)
+# offensive_mind: direct yard center multiplier when on offense
+# special_teams_guru: muff reduction, return bonus, kick accuracy
+# balanced: small variance compression on both sides
+HC_AFFINITY_EFFECTS = {
+    "defensive_mind": {
+        "dc_gameplan_center_shift": -0.04,     # DC roll center shifted 4% toward suppression
+        "dc_gameplan_variance_mult": 0.80,     # DC roll variance narrowed 20% (more consistent)
+        "offensive_yard_bonus": 0.0,
+        "st_muff_mult": 1.0,
+        "st_return_bonus": 0.0,
+    },
+    "offensive_mind": {
+        "dc_gameplan_center_shift": 0.0,
+        "dc_gameplan_variance_mult": 1.0,
+        "offensive_yard_bonus": 0.03,          # +3% yard center when on offense
+        "st_muff_mult": 1.0,
+        "st_return_bonus": 0.0,
+    },
+    "special_teams_guru": {
+        "dc_gameplan_center_shift": 0.0,
+        "dc_gameplan_variance_mult": 1.0,
+        "offensive_yard_bonus": 0.0,
+        "st_muff_mult": 0.85,                 # 15% muff reduction
+        "st_return_bonus": 3.0,               # +3 yards on returns
+    },
+    "balanced": {
+        "dc_gameplan_center_shift": -0.01,     # tiny DC help
+        "dc_gameplan_variance_mult": 0.95,     # slight consistency
+        "offensive_yard_bonus": 0.01,          # tiny offense help
+        "st_muff_mult": 0.97,
+        "st_return_bonus": 0.5,
+    },
+}
+
 CLASSIFICATION_LABELS = {
     "scheme_master":   "Scheme Master",
     "gameday_manager": "Gameday Manager",
@@ -408,6 +472,9 @@ class CoachCard:
     personality_sliders: Dict[str, int] = field(default_factory=dict)
     hidden_traits: List[str] = field(default_factory=list)
 
+    # V2.3 HC Affinity ──────────────────────
+    hc_affinity: str = "balanced"        # one of HC_AFFINITIES
+
     # ── computed properties ───────────────────
 
     @property
@@ -425,6 +492,10 @@ class CoachCard:
     @property
     def sub_archetype_label(self) -> str:
         return SUB_ARCHETYPE_LABELS.get(self.sub_archetype, self.sub_archetype)
+
+    @property
+    def hc_affinity_label(self) -> str:
+        return HC_AFFINITY_LABELS.get(self.hc_affinity, self.hc_affinity)
 
     @property
     def composure_label(self) -> str:
@@ -521,6 +592,7 @@ class CoachCard:
             "sub_archetype": self.sub_archetype,
             "personality_sliders": self.personality_sliders,
             "hidden_traits": self.hidden_traits,
+            "hc_affinity": self.hc_affinity,
         }
 
     @classmethod
@@ -562,6 +634,7 @@ class CoachCard:
             sub_archetype=d.get("sub_archetype", ""),
             personality_sliders=d.get("personality_sliders", {}),
             hidden_traits=d.get("hidden_traits", []),
+            hc_affinity=d.get("hc_affinity", "balanced"),
         )
 
 
@@ -1007,6 +1080,21 @@ def generate_coach_card(
     salary = 0
     buyout = 0
 
+    # ── HC affinity (all coaches get one, but only HC's matters in-game) ──
+    # Weighted toward balanced; classification biases the roll:
+    #   disciplinarian → defensive_mind more likely
+    #   scheme_master  → offensive_mind more likely
+    #   others         → balanced/mixed
+    _affinity_weights = {
+        "disciplinarian": [0.50, 0.10, 0.05, 0.35],  # def, off, st, bal
+        "scheme_master":  [0.15, 0.45, 0.05, 0.35],
+        "gameday_manager": [0.15, 0.15, 0.15, 0.55],
+        "motivator":      [0.15, 0.20, 0.10, 0.55],
+        "players_coach":  [0.15, 0.15, 0.10, 0.60],
+    }
+    aff_w = _affinity_weights.get(cls_, [0.15, 0.15, 0.10, 0.60])
+    hc_aff = rng.choices(list(HC_AFFINITIES), weights=aff_w, k=1)[0]
+
     card = CoachCard(
         coach_id=coach_id,
         first_name=first,
@@ -1034,6 +1122,7 @@ def generate_coach_card(
         sub_archetype=sub_arch,
         personality_sliders=sliders,
         hidden_traits=traits,
+        hc_affinity=hc_aff,
     )
 
     # Set salary after card exists so calculate_coach_salary can use it
@@ -1718,6 +1807,10 @@ def compute_gameday_modifiers(
     )
     h_trait_effects = compute_hidden_trait_effects(hc) if hc else {}
 
+    # V2.3: Pre-compute HC affinity effects so the engine doesn't need to import constants
+    hc_aff = hc.hc_affinity if hc else "balanced"
+    aff_fx = HC_AFFINITY_EFFECTS.get(hc_aff, HC_AFFINITY_EFFECTS["balanced"])
+
     return {
         "instincts_factor": norm(instincts_raw),
         "leadership_factor": norm(leadership_raw),
@@ -1725,9 +1818,116 @@ def compute_gameday_modifiers(
         "fatigue_resistance_mod": fatigue_mod,
         "classification_effects": cls_effects,
         "hc_classification": hc.classification if hc else "scheme_master",
+        "hc_affinity": hc_aff,
+        "hc_affinity_effects": aff_fx,
         # V2.2
         "sub_archetype": hc.sub_archetype if hc else "",
         "sub_archetype_effects": sub_effects,
         "personality_factors": p_factors,
         "hidden_trait_effects": h_trait_effects,
     }
+
+
+# ──────────────────────────────────────────────
+# V2.3: DC GAMEPLAN ROLL
+# ──────────────────────────────────────────────
+# At game init, each team's DC (blended with HC) rolls per-play-type
+# suppression values.  These multiply against opponent yard center
+# and completion probability.  The roll creates hot/neutral/cold
+# defensive games that vary week to week.
+#
+# Play types for suppression:
+#   run      — dive, speed, sweep, power, counter, draw, viper_jet
+#   lateral  — lateral_spread
+#   kick_pass — kick_pass
+#   trick    — trick_play
+#
+# The DC's instincts set the center, classification skews specific
+# categories, and HC affinity amplifies the whole roll.
+
+DC_GAMEPLAN_PLAY_TYPES = ("run", "lateral", "kick_pass", "trick")
+
+# Classification → which play types the DC is especially good at suppressing
+# Values are additional center shifts (negative = more suppression)
+DC_CLASSIFICATION_BIAS = {
+    "disciplinarian": {"run": -0.04, "lateral": -0.01, "kick_pass": 0.0,  "trick": -0.01},
+    "scheme_master":  {"run": 0.0,   "lateral": -0.02, "kick_pass": -0.03, "trick": -0.04},
+    "gameday_manager": {"run": -0.01, "lateral": -0.01, "kick_pass": -0.01, "trick": -0.01},
+    "motivator":      {"run": -0.01, "lateral": 0.0,   "kick_pass": 0.0,  "trick": 0.0},
+    "players_coach":  {"run": 0.0,   "lateral": 0.0,   "kick_pass": 0.0,  "trick": 0.0},
+}
+
+
+def roll_dc_gameplan(
+    coaching_staff: Dict[str, CoachCard],
+    rng: Optional[random.Random] = None,
+) -> Dict[str, float]:
+    """
+    Roll the DC's per-game defensive gameplan effectiveness.
+
+    Called once at game init.  Returns a dict of play_type → suppression
+    multiplier.  Values < 1.0 mean the defense suppresses that play type;
+    values > 1.0 mean the offense exploits a weakness.
+
+    The roll is high-variance: a good DC might roll 0.80 (cold) or 1.05
+    (offense figured them out).  This creates emergent hot/neutral/cold
+    defensive games.
+
+    Returns:
+        {
+            "run": 0.92,          # 8% yard suppression vs runs
+            "lateral": 0.78,      # 22% vs laterals (DC was ready)
+            "kick_pass": 1.03,    # offense has slight edge
+            "trick": 0.85,        # DC sniffed out the tricks
+            "game_temperature": "cold",  # label for display
+        }
+    """
+    if rng is None:
+        rng = random.Random()
+
+    hc = coaching_staff.get("head_coach")
+    dc = coaching_staff.get("dc")
+
+    # DC instincts drive the base center.
+    # instincts 25 → center 1.02 (bad DC, slight offense advantage)
+    # instincts 60 → center 0.96 (average DC)
+    # instincts 95 → center 0.90 (elite DC, 10% suppression baseline)
+    dc_inst = getattr(dc, "instincts", 50) if dc else 50
+    hc_inst = getattr(hc, "instincts", 50) if hc else 50
+    # Blend: DC 70% weight, HC 30% (DC drives the scheme, HC sets the tone)
+    blended_instincts = dc_inst * 0.70 + hc_inst * 0.30
+
+    # Map instincts to center: 25 → 1.02, 60 → 0.96, 95 → 0.90
+    base_center = 1.02 - (blended_instincts - ATTR_MIN) / (ATTR_MAX - ATTR_MIN) * 0.12
+
+    # HC affinity shifts the center and narrows variance
+    hc_aff = getattr(hc, "hc_affinity", "balanced") if hc else "balanced"
+    aff_effects = HC_AFFINITY_EFFECTS.get(hc_aff, HC_AFFINITY_EFFECTS["balanced"])
+    center_shift = aff_effects["dc_gameplan_center_shift"]
+    var_mult = aff_effects["dc_gameplan_variance_mult"]
+
+    # Classification bias per play type
+    dc_cls = getattr(dc, "classification", "scheme_master") if dc else "scheme_master"
+    cls_bias = DC_CLASSIFICATION_BIAS.get(dc_cls, {})
+
+    # Roll variance: base 0.08, modified by HC affinity
+    # This means ±1 std dev is ~8% swing, ±2 std dev is ~16%
+    base_variance = 0.08 * var_mult
+
+    result = {}
+    for pt in DC_GAMEPLAN_PLAY_TYPES:
+        pt_center = base_center + center_shift + cls_bias.get(pt, 0.0)
+        roll = rng.gauss(pt_center, base_variance)
+        # Clamp: 0.75 (dominant defense) to 1.12 (offense exploits)
+        result[pt] = max(0.75, min(1.12, round(roll, 3)))
+
+    # Determine game temperature label from average suppression
+    avg = sum(result[pt] for pt in DC_GAMEPLAN_PLAY_TYPES) / len(DC_GAMEPLAN_PLAY_TYPES)
+    if avg <= 0.90:
+        result["game_temperature"] = "cold"
+    elif avg >= 1.02:
+        result["game_temperature"] = "hot"
+    else:
+        result["game_temperature"] = "neutral"
+
+    return result
