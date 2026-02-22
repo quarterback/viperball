@@ -276,6 +276,9 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         {"Stat": "Lat Chains", home_name: str(hs["lateral_chains"]), away_name: str(as_["lateral_chains"])},
         {"Stat": "Lat Eff", home_name: f"{hs['lateral_efficiency']}%", away_name: f"{as_['lateral_efficiency']}%"},
         {"Stat": "Fumbles Lost", home_name: str(hs["fumbles_lost"]), away_name: str(as_["fumbles_lost"])},
+        {"Stat": "KP INTs", home_name: str(hs.get("kick_pass_interceptions", 0)), away_name: str(as_.get("kick_pass_interceptions", 0))},
+        {"Stat": "Lat INTs", home_name: str(hs.get("lateral_interceptions", 0)), away_name: str(as_.get("lateral_interceptions", 0))},
+        {"Stat": "Bonus Poss.", home_name: str(hs.get("bonus_possessions", 0)), away_name: str(as_.get("bonus_possessions", 0))},
         {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
     ]
     stat_table(off_rows)
@@ -358,6 +361,8 @@ def _render_drives(result, home_name, away_name):
     for i, d in enumerate(drives):
         team_label = home_name if d["team"] == "home" else away_name
         result_lbl = drive_result_label(d["result"])
+        if d.get("bonus_drive"):
+            result_lbl += " \u26a1"
         if d.get("sacrifice_drive"):
             result_lbl += " *"
         drive_rows.append({
@@ -380,6 +385,7 @@ def _render_drives(result, home_name, away_name):
         color_discrete_map={
             "TD": "#16a34a", "SK/FG": "#2563eb", "STRIKE (+\u00bd)": "#dc2626",
             "DOWNS": "#d97706", "PUNT": "#94a3b8",
+            "LAT INT": "#dc2626", "KP INT": "#dc2626", "PICK-SIX": "#16a34a",
         },
     )
     fig.update_layout(showlegend=False, height=300, xaxis_title="Outcome",
