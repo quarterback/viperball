@@ -166,7 +166,7 @@ def render_game_simulator(state: UserState, shared: dict):
         with ui.row().classes("w-full gap-3 flex-wrap"):
             metric_card("Total Plays", hs["total_plays"] + as_["total_plays"])
             metric_card("Total Yards", hs["total_yards"] + as_["total_yards"])
-            metric_card("Turnovers", hs["fumbles_lost"] + as_["fumbles_lost"] + hs["turnovers_on_downs"] + as_["turnovers_on_downs"])
+            metric_card("Turnovers", hs["fumbles_lost"] + as_["fumbles_lost"] + hs["turnovers_on_downs"] + as_["turnovers_on_downs"] + hs.get("kick_pass_interceptions", 0) + as_.get("kick_pass_interceptions", 0) + hs.get("lateral_interceptions", 0) + as_.get("lateral_interceptions", 0))
             metric_card("Snap Kicks", hs.get("drop_kicks_made", 0) + as_.get("drop_kicks_made", 0))
             metric_card("Touchdowns", hs.get("touchdowns", 0) + as_.get("touchdowns", 0))
 

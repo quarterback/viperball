@@ -140,7 +140,7 @@ def render_game_simulator(shared):
         m1, m2, m3, m4, m5, m6 = st.columns(6)
         m1.metric("Total Plays", hs["total_plays"] + as_["total_plays"])
         m2.metric("Total Yards", f"{hs['total_yards'] + as_['total_yards']}")
-        m3.metric("Turnovers", f"{hs['fumbles_lost'] + as_['fumbles_lost'] + hs['turnovers_on_downs'] + as_['turnovers_on_downs']}")
+        m3.metric("Turnovers", f"{hs['fumbles_lost'] + as_['fumbles_lost'] + hs['turnovers_on_downs'] + as_['turnovers_on_downs'] + hs.get('kick_pass_interceptions', 0) + as_.get('kick_pass_interceptions', 0) + hs.get('lateral_interceptions', 0) + as_.get('lateral_interceptions', 0)}")
         m4.metric("Penalties", f"{hs.get('penalties', 0) + as_.get('penalties', 0)}")
         h_dk = hs.get('drop_kicks_made', 0)
         a_dk = as_.get('drop_kicks_made', 0)
