@@ -228,7 +228,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DIVE_OPTION: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.006,
+        'fumble_rate': 0.018,
         'primary_positions': ['HB', 'SB', 'ZB'],
         'carrier_weights': [0.45, 0.35, 0.20],
         'archetype_bonus': {'power_flanker': 1.3, 'reliable_flanker': 1.2},
@@ -237,7 +237,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.POWER: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.007,
+        'fumble_rate': 0.020,
         'primary_positions': ['HB', 'SB'],
         'carrier_weights': [0.60, 0.40],
         'archetype_bonus': {'power_flanker': 1.4},
@@ -246,7 +246,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SWEEP_OPTION: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.008,
+        'fumble_rate': 0.024,
         'primary_positions': ['WB', 'HB', 'SB'],
         'carrier_weights': [0.40, 0.35, 0.25],
         'archetype_bonus': {'speed_flanker': 1.4, 'elusive_flanker': 1.3},
@@ -255,7 +255,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.SPEED_OPTION: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.008,
+        'fumble_rate': 0.024,
         'primary_positions': ['ZB', 'WB', 'SB'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'running_zb': 1.3, 'dual_threat_zb': 1.2},
@@ -264,7 +264,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.COUNTER: {
         'base_yards': (2.0, 4.0),
         'variance': 1.4,
-        'fumble_rate': 0.007,
+        'fumble_rate': 0.022,
         'primary_positions': ['WB', 'HB', 'VP'],
         'carrier_weights': [0.35, 0.35, 0.30],
         'archetype_bonus': {'elusive_flanker': 1.3, 'hybrid_viper': 1.2},
@@ -273,7 +273,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.DRAW: {
         'base_yards': (2.0, 3.5),
         'variance': 1.2,
-        'fumble_rate': 0.007,
+        'fumble_rate': 0.020,
         'primary_positions': ['HB', 'ZB'],
         'carrier_weights': [0.55, 0.45],
         'archetype_bonus': {'running_zb': 1.2},
@@ -282,7 +282,7 @@ RUN_PLAY_CONFIG = {
     PlayFamily.VIPER_JET: {
         'base_yards': (2.5, 4.5),
         'variance': 1.5,
-        'fumble_rate': 0.011,
+        'fumble_rate': 0.030,
         'primary_positions': ['VP'],
         'carrier_weights': [1.0],
         'archetype_bonus': {'receiving_viper': 1.3, 'hybrid_viper': 1.4},
@@ -358,15 +358,16 @@ ALIGNMENT_VS_PLAY = {
 }
 
 EXPLOSIVE_CHANCE = {
-    'dive_option': 0.05,
-    'power': 0.06,
-    'sweep_option': 0.10,
-    'speed_option': 0.09,
-    'counter': 0.12,
-    'draw': 0.07,
-    'viper_jet': 0.15,
-    'lateral_spread': 0.12,
-    'trick_play': 0.18,
+    'dive_option': 0.14,
+    'power': 0.16,
+    'sweep_option': 0.24,
+    'speed_option': 0.22,
+    'counter': 0.26,
+    'draw': 0.18,
+    'viper_jet': 0.30,
+    'lateral_spread': 0.26,
+    'trick_play': 0.32,
+    'kick_pass': 0.22,
 }
 
 VIPER_ALIGNMENT_BONUS = {
@@ -755,6 +756,14 @@ class GameState:
     away_power_play: int = 0  # plays remaining where away has man-advantage
     # 4th Down Movement: when True, team has elected kick mode (snap kick specialist)
     kick_mode: bool = False
+
+    # Defensive Bonus Possession (pesäpallo-inspired):
+    # When a team throws an interception (kick pass or lateral), the
+    # intercepting team gets their drive, then the original team gets
+    # the ball back as a bonus possession — unless the intercepting
+    # team's drive also ends in an interception (cancels the bonus)
+    # or the half ends.
+    bonus_possession_team: str = ""  # team that will receive bonus possession ("home"/"away"/"")
 
     # --- V2: Composure System ---
     home_composure: float = 100.0    # Dynamic: 60-140 range
@@ -2112,6 +2121,8 @@ class ViperballEngine:
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
         self._current_drive_sacrifice = False
+        self._bonus_recipient = ""  # Defensive bonus possession recipient
+        self._bonus_drives_remaining = -1  # Countdown: -1 = inactive, 0 = trigger next, 1 = one drive left
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
 
@@ -2421,11 +2432,44 @@ class ViperballEngine:
                 self.state.three_min_warning_triggered = False
 
             while self.state.time_remaining > 0:
+                # ── Defensive Bonus Possession: pre-drive check ──
+                # If a bonus is ready to trigger (drives_until_bonus == 0),
+                # award it now before the next drive starts.
+                if self._bonus_drives_remaining == 0 and self._bonus_recipient:
+                    bonus_team = self._bonus_recipient
+                    self._bonus_recipient = ""
+                    self._bonus_drives_remaining = -1
+                    # Force the bonus possession from the 25
+                    self.state.possession = bonus_team
+                    self.state.field_position = 25
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
+
                 self.simulate_drive()
                 if self.state.time_remaining <= 0:
                     break
+
+                # ── Defensive Bonus Possession: post-drive countdown ──
+                # When an INT sets bonus_possession_team, we need the
+                # intercepting team to run ONE full drive before the
+                # bonus triggers.
+                if self.state.bonus_possession_team and self.state.bonus_possession_team not in ("", "_armed"):
+                    # Fresh INT this drive — start the countdown
+                    self._bonus_recipient = self.state.bonus_possession_team
+                    self._bonus_drives_remaining = 1  # 1 more drive before bonus
+                    self.state.bonus_possession_team = ""
+                elif self._bonus_drives_remaining > 0:
+                    # Intercepting team just finished their drive
+                    self._bonus_drives_remaining -= 1
+
                 # V2: Underdog surge check each drive
                 self._check_underdog_surge()
+
+            # Clear bonus possession at end of half — does not carry over
+            self.state.bonus_possession_team = ""
+            self._bonus_recipient = ""
+            self._bonus_drives_remaining = -1
 
             if quarter == 2:
                 self._home_halftime_score = self.state.home_score
@@ -2657,6 +2701,28 @@ class ViperballEngine:
                             self._home_momentum_plays = mom_plays
                         else:
                             self._away_momentum_plays = mom_plays
+
+                # ── Defensive Bonus Possession (pesäpallo-inspired) ──
+                # Interceptions (only) grant the intercepted team a bonus
+                # possession after the intercepting team's next drive.
+                # If this drive ends in an INT and there was already a
+                # bonus pending, the INT-back cancels it.
+                is_interception = play.result in ("lateral_intercepted", "kick_pass_intercepted", "int_return_td")
+
+                if is_interception:
+                    if self._bonus_recipient and self._bonus_drives_remaining >= 0:
+                        # INT back — cancel the pending bonus possession.
+                        # Per pesäpallo rule: an interception back neutralizes
+                        # the bonus. No new bonus is created.
+                        self._bonus_recipient = ""
+                        self._bonus_drives_remaining = -1
+                        self.state.bonus_possession_team = ""
+                    else:
+                        # Fresh INT (no pending bonus) — grant bonus
+                        # possession to the team that threw it (drive_team
+                        # is the offense that got intercepted)
+                        self.state.bonus_possession_team = drive_team
+
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
@@ -3982,28 +4048,36 @@ class ViperballEngine:
         return False
 
     def _breakaway_check(self, yards_gained: int, team: Team, family=None) -> int:
-        """Breakaway system — big gains can extend into bigger plays.
+        """Breakaway system — big gains can extend into huge plays.
 
-        Requires 8+ yards to trigger (not 5). Base chance from
-        EXPLOSIVE_CHANCE (per play family). Capped at 25 extra yards —
-        no automatic house calls. Speed gap still matters.
+        Requires 5+ yards to trigger. Base chance from EXPLOSIVE_CHANCE
+        (per play family). Viperball is a chaotic sport with open-field
+        action — breakaways of 70+ yards should be routine, with house
+        calls a real possibility on any explosive play.
         """
-        if yards_gained >= 8:
+        if yards_gained >= 5:
             # Use play-family explosive base from EXPLOSIVE_CHANCE
-            base = EXPLOSIVE_CHANCE.get(family.value, 0.06) if family else 0.06
+            base = EXPLOSIVE_CHANCE.get(family.value, 0.14) if family else 0.14
             speed_gap = (team.avg_speed - 85) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
             breakaway_chance = base + speed_gap + def_fatigue_bonus
 
             # Bigger initial gains = more likely to break free
-            if yards_gained >= 12:
-                breakaway_chance += 0.10
+            if yards_gained >= 10:
+                breakaway_chance += 0.15
+            elif yards_gained >= 7:
+                breakaway_chance += 0.08
 
             if random.random() < breakaway_chance:
+                # Explosive plays produce huge yardage — 70+ yard
+                # breakaways are a signature of viperball's open-field chaos.
+                # House calls (90+ yards) are a real possibility.
                 if yards_gained >= 12:
-                    extra = random.randint(8, 25)
+                    extra = random.randint(40, 85)
+                elif yards_gained >= 8:
+                    extra = random.randint(25, 70)
                 else:
-                    extra = random.randint(5, 18)
+                    extra = random.randint(15, 55)
                 return yards_gained + extra
         return yards_gained
 
@@ -5194,15 +5268,15 @@ class ViperballEngine:
 
         # ── Lateral interception check ──
         # Defenders can read the lateral and pick it off.
-        # 3% base per lateral in the chain, modified by defender awareness
-        # vs thrower lateral skill. Conservative start to avoid "lateral extinction."
+        # ~3% base per lateral in the chain, modified by defender awareness
+        # vs thrower lateral skill. Laterals are risky — chaos breeds turnovers.
         def_team = self.get_defensive_team()
         avg_def_awareness = sum(getattr(p, 'awareness', 70) for p in def_team.players[:6]) / 6
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
-            int_chance = 0.005 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
-            int_chance = max(0.001, min(0.015, int_chance))
+            int_chance = 0.03 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance = max(0.015, min(0.06, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
                 int_spot = self.state.field_position + random.randint(0, 3)
@@ -5218,10 +5292,11 @@ class ViperballEngine:
 
                 # Explosive INT return — laterals intercepted in the open
                 # field often lead to big returns or pick-sixes.
+                # INTs should produce 70+ yard returns routinely.
                 int_speed = interceptor.speed
                 int_agility = getattr(interceptor, 'agility', 75)
                 return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
-                return_yards = max(0, int(random.gauss(30 + return_talent * 20, 12)))
+                return_yards = max(0, int(random.gauss(50 + return_talent * 30, 18)))
                 new_fp = min(100, raw_fp + return_yards)
 
                 self.apply_stamina_drain(4)
@@ -5274,8 +5349,8 @@ class ViperballEngine:
                     )
 
         # ── Lateral fumble check ──
-        base_lateral_fumble = 0.08
-        fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.04
+        base_lateral_fumble = 0.12
+        fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.05
         fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
@@ -5373,9 +5448,9 @@ class ViperballEngine:
         for p in players_involved:
             self.drain_player_energy(p, "lateral")
 
-        # V2.1: Reduced lateral yardage — laterals are chaos spice, not staple yardage
-        base_yards = random.gauss(1.5, 1.0)
-        lateral_bonus = chain_length * 0.5
+        # V2.3: Lateral efficiency reduced 20% — laterals are chaos spice, not staple yardage
+        base_yards = random.gauss(0.8, 1.0)
+        lateral_bonus = chain_length * 0.4
 
         # Skill roll from the final ball carrier (lateral skill matters)
         ball_carrier_for_roll = players_involved[-1] if players_involved else None
@@ -5654,6 +5729,10 @@ class ViperballEngine:
             if yards_gained <= 0:
                 kp_tackler.game_tfl += 1
 
+            # Breakaway check on kick pass completions — deep balls and
+            # catch-and-run plays can produce 70+ yard house calls
+            yards_gained = self._breakaway_check(yards_gained, team, family=family)
+
             new_position = min(100, self.state.field_position + yards_gained)
             kicker.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
@@ -5718,12 +5797,13 @@ class ViperballEngine:
         # Hot streak: kicker missed → streak broken
         self._update_player_streak(kicker, False)
 
-        # Interception: checked on incomplete kicks only.
-        # Rare but explosive — when it happens, the defender has open
-        # field and a high chance of housing it (pick-six) or getting
-        # major return yards.  INTs are high-burst, high-velocity plays.
-        # Global rate ≈ P(incomplete) × int_chance ≈ 0.37 × 0.01 ≈ 0.37%.
-        int_chance = 0.01
+        # Interception: checked on incomplete kicks.
+        # Viperball's chaotic kick passes produce ~5% overall INT rate.
+        # With ~40% incomplete rate, this means ~12% of incompletes are
+        # picked off. INTs are explosive — defenders have open field and
+        # high chance of big returns or pick-sixes.
+        # Global rate ≈ P(incomplete) × int_chance ≈ 0.40 × 0.10 ≈ 4-5%.
+        int_chance = 0.10
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -5741,11 +5821,12 @@ class ViperballEngine:
 
             # ── Explosive INT return ──
             # Interceptors have open field.  Speed + agility determine
-            # return distance.  >60% of INTs should produce a score.
+            # return distance.  INTs produce big-play returns — 70+ yards
+            # is routine, pick-sixes are common.
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
             return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40  # 0–1
-            return_yards = max(0, int(random.gauss(30 + return_talent * 20, 12)))
+            return_yards = max(0, int(random.gauss(50 + return_talent * 30, 18)))
             new_fp = min(100, raw_fp + return_yards)
 
             if new_fp >= 100:
