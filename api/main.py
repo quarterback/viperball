@@ -773,6 +773,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    season.injury_tracker = session["injury_tracker"]
     session["dq_manager"] = DraftyQueenzManager(
         manager_name=req.human_teams[0] if req.human_teams else "Coach",
         season_year=2026,
@@ -816,11 +817,6 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
 
     actual_week = games[0].week
 
-    tracker = session.get("injury_tracker")
-    if tracker:
-        tracker.process_week(actual_week, season.teams, season.standings)
-        tracker.resolve_week(actual_week)
-
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
 
@@ -842,13 +838,6 @@ def simulate_through(session_id: str, req: SimulateThroughRequest):
         raise HTTPException(status_code=400, detail=f"Cannot simulate in phase '{session['phase']}'")
 
     all_games = season.simulate_through_week(req.target_week)
-
-    tracker = session.get("injury_tracker")
-    if tracker and all_games:
-        weeks_simmed = sorted(set(g.week for g in all_games))
-        for wk in weeks_simmed:
-            tracker.process_week(wk, season.teams, season.standings)
-            tracker.resolve_week(wk)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -872,13 +861,6 @@ def simulate_rest(session_id: str):
     games_before = sum(1 for g in season.schedule if g.completed)
     season.simulate_season(generate_polls=True)
     games_after = sum(1 for g in season.schedule if g.completed)
-
-    tracker = session.get("injury_tracker")
-    if tracker:
-        max_week = max((g.week for g in season.schedule if g.completed), default=0)
-        for wk in range(1, max_week + 1):
-            tracker.process_week(wk, season.teams, season.standings)
-            tracker.resolve_week(wk)
 
     session["phase"] = "playoffs_pending"
 
@@ -977,7 +959,7 @@ def season_injuries(session_id: str, team: Optional[str] = Query(None)):
     if tracker is None:
         return {"active": [], "season_log": [], "counts": {}}
 
-    current_week = season.current_week
+    current_week = season.get_last_completed_week()
     if team:
         active = tracker.get_active_injuries(team, current_week)
         active_list = [inj.to_dict() for inj in active]
@@ -1016,7 +998,7 @@ def get_team_roster(session_id: str, team_name: str):
     unavail = set()
     dtd = set()
     if tracker:
-        current_week = _require_season(session).current_week
+        current_week = _require_season(session).get_last_completed_week()
         unavail = tracker.get_unavailable_names(team_name, current_week)
         dtd = tracker.get_dtd_names(team_name, current_week)
 
@@ -1514,6 +1496,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
+    season.injury_tracker = session["injury_tracker"]
 
     existing_dq = session.get("dq_manager")
     if existing_dq:
@@ -1807,7 +1790,7 @@ def team_roster(session_id: str, team_name: str):
     unavail = set()
     dtd = set()
     if tracker:
-        current_week = season.current_week
+        current_week = season.get_last_completed_week()
         unavail = tracker.get_unavailable_names(team_name, current_week)
         dtd = tracker.get_dtd_names(team_name, current_week)
 
