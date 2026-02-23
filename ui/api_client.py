@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from typing import Dict, List, Optional, Any, Callable, Tuple
 
-_default_port = os.environ.get("PORT", "8080")
+_default_port = os.environ.get("PORT", "5000")
 API_BASE = os.environ.get("VIPERBALL_API_URL", f"http://127.0.0.1:{_default_port}")
 
 # ---------------------------------------------------------------------------
