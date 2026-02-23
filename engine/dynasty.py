@@ -1425,6 +1425,7 @@ class Dynasty:
                 style_configs,
                 conferences=conf_dict,
                 games_per_team=games_per_team,
+                dynasty_year=year,
             )
             injury_tracker = InjuryTracker()
             injury_tracker.seed(hash(f"history_{self.dynasty_name}_{year}_inj") % 999999)

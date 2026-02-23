@@ -1488,6 +1488,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         pinned_matchups=pinned,
         rivalries=rivalries_dict,
         coaching_staffs=dynasty._coaching_staffs if dynasty._coaching_staffs else None,
+        dynasty_year=dynasty.current_year,
     )
 
     session["season"] = season
