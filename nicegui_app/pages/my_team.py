@@ -767,11 +767,18 @@ async def _render_roster(session_id: str, team_name: str):
 # ---------------------------------------------------------------------------
 
 async def _render_schedule(session_id: str, mode: str, team_name: str):
+    # Fetch completed games (with full result) AND all games (for upcoming)
     try:
-        sched_resp = await run.io_bound(lambda: api_client.get_schedule(session_id, team=team_name, completed_only=True, include_full_result=True))
-        team_games = sched_resp.get("games", [])
+        def _fetch_both():
+            completed = api_client.get_schedule(session_id, team=team_name, completed_only=True, include_full_result=True)
+            all_games = api_client.get_schedule(session_id, team=team_name)
+            return completed, all_games
+        completed_resp, all_resp = await run.io_bound(_fetch_both)
+        completed_games = completed_resp.get("games", [])
+        all_games = all_resp.get("games", [])
     except api_client.APIError:
-        team_games = []
+        completed_games = []
+        all_games = []
 
     try:
         bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
@@ -787,7 +794,8 @@ async def _render_schedule(session_id: str, mode: str, team_name: str):
 
     entries: list[dict] = []
 
-    for g in team_games:
+    # Completed games (with full result data)
+    for g in completed_games:
         if g.get("completed") and (g.get("home_team") == team_name or g.get("away_team") == team_name):
             is_home = g.get("home_team") == team_name
             opponent = g.get("away_team") if is_home else g.get("home_team")
@@ -804,6 +812,28 @@ async def _render_schedule(session_id: str, mode: str, team_name: str):
                 "phase": "Regular Season",
                 "sort_key": g.get("week", 0),
                 "label": f"Wk {g.get('week', 0)}",
+            })
+
+    # Upcoming games
+    completed_weeks = {e["week"] for e in entries}
+    for g in all_games:
+        if not g.get("completed") and (g.get("home_team") == team_name or g.get("away_team") == team_name):
+            wk = g.get("week", 0)
+            if wk in completed_weeks:
+                continue
+            is_home = g.get("home_team") == team_name
+            opponent = g.get("away_team") if is_home else g.get("home_team")
+            is_conf = g.get("is_conference_game", False)
+            entries.append({
+                "game": g,
+                "week": wk,
+                "opponent": opponent,
+                "result": "—",
+                "score": f"{'Conf' if is_conf else 'NC'}",
+                "location": "Home" if is_home else "Away",
+                "phase": "Regular Season",
+                "sort_key": wk,
+                "label": f"Wk {wk}",
             })
 
     if bracket:
@@ -855,11 +885,12 @@ async def _render_schedule(session_id: str, mode: str, team_name: str):
     entries.sort(key=lambda e: e["sort_key"])
 
     if not entries:
-        notify_info("No games found for this team in the current season.")
+        notify_info("No games scheduled for this team yet.")
         return
 
-    wins = sum(1 for e in entries if e["result"] == "W")
-    losses = len(entries) - wins
+    played = [e for e in entries if e["result"] in ("W", "L")]
+    wins = sum(1 for e in played if e["result"] == "W")
+    losses = len(played) - wins
 
     # Schedule table
     sched_rows = []
