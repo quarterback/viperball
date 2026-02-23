@@ -72,6 +72,147 @@ def _render_mode_selection(state: UserState, shared: dict):
 
 _PORTAL_POSITIONS = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
 
+_ROLE_LABELS = {
+    "head_coach": "Head Coach",
+    "oc": "Off. Coordinator",
+    "dc": "Def. Coordinator",
+    "stc": "Special Teams",
+}
+
+
+async def _render_coaching_selection(state: UserState, refresh_fn):
+    """Coaching staff selection — shown during the portal phase.
+
+    Users can view their current staff, generate a pool of candidates,
+    and hire replacements for HC, OC, DC, or STC before the season starts.
+    """
+    ui.label("Coaching Staff").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label(
+        "Review your coaching staff and optionally hire new coaches before the season."
+    ).classes("text-sm text-gray-500 mb-2")
+
+    # ── Current staff ────────────────────────────────────────────────
+    try:
+        staff_resp = await run.io_bound(
+            api_client.season_coaching_staff_get, state.session_id,
+        )
+    except api_client.APIError as e:
+        notify_error(f"Could not load coaching staff: {e.detail}")
+        return
+
+    staff = staff_resp.get("staff", {})
+    team_name = staff_resp.get("team", "")
+    dev_aura_pct = staff_resp.get("dev_aura_max_boost_pct", 0)
+
+    with ui.row().classes("w-full gap-3 flex-wrap mb-2"):
+        metric_card("Team", team_name)
+        metric_card("Dev Aura", f"+{dev_aura_pct}%")
+
+    staff_rows = []
+    for role_key, label in _ROLE_LABELS.items():
+        coach = staff.get(role_key)
+        if coach:
+            staff_rows.append({
+                "Role": label,
+                "Name": coach.get("name", "—"),
+                "OVR": coach.get("visible_score", ""),
+                "Style": coach.get("classification_label", ""),
+                "Stars": coach.get("star_rating", ""),
+                "LDR": coach.get("leadership", ""),
+                "DEV": coach.get("development", ""),
+                "REC": coach.get("recruiting", ""),
+            })
+        else:
+            staff_rows.append({
+                "Role": label, "Name": "— Vacant —",
+                "OVR": "", "Style": "", "Stars": "",
+                "LDR": "", "DEV": "", "REC": "",
+            })
+    stat_table(staff_rows)
+
+    # ── Pool generation & hiring ─────────────────────────────────────
+    pool_container = ui.column().classes("w-full")
+
+    async def _generate_pool():
+        try:
+            pool_resp = await run.io_bound(
+                api_client.season_coaching_pool_generate, state.session_id,
+            )
+            pool = pool_resp.get("pool", [])
+            _show_pool(pool)
+        except api_client.APIError as e:
+            notify_error(f"Could not generate pool: {e.detail}")
+
+    def _show_pool(pool: list):
+        pool_container.clear()
+        with pool_container:
+            if not pool:
+                ui.label("No candidates available.").classes(
+                    "text-sm text-gray-400 italic"
+                )
+                return
+
+            for role_key, label in _ROLE_LABELS.items():
+                candidates = [c for c in pool if c.get("role") == role_key]
+                if not candidates:
+                    continue
+
+                with ui.expansion(
+                    f"{label} Candidates ({len(candidates)})",
+                    icon="person_search",
+                ).classes("w-full mt-2"):
+                    rows = []
+                    for c in candidates:
+                        rows.append({
+                            "Name": c.get("name", ""),
+                            "OVR": c.get("visible_score", ""),
+                            "Style": c.get("classification_label", ""),
+                            "Stars": c.get("star_rating", ""),
+                            "LDR": c.get("leadership", ""),
+                            "CMP": c.get("composure", ""),
+                            "DEV": c.get("development", ""),
+                            "REC": c.get("recruiting", ""),
+                        })
+                    stat_table(rows)
+
+                    hire_options = {
+                        i: f"{c.get('name', '')} (OVR {c.get('visible_score', '?')}, {c.get('classification_label', '')})"
+                        for i, c in enumerate(candidates)
+                    }
+                    sel = ui.select(
+                        hire_options, value=0, label="Select Coach to Hire",
+                    ).classes("w-full max-w-lg")
+
+                    async def _hire(sel=sel, candidates=candidates, role_key=role_key):
+                        idx = sel.value
+                        if idx is None:
+                            return
+                        coach = candidates[idx]
+                        cid = coach.get("coach_id", "")
+                        if not cid:
+                            notify_error("Missing coach ID.")
+                            return
+                        try:
+                            result = await run.io_bound(
+                                api_client.season_coaching_hire,
+                                state.session_id,
+                                coach_id=cid,
+                                role=role_key,
+                            )
+                            hired_name = result.get("coach", {}).get("name", "")
+                            notify_success(f"Hired {hired_name} as {_ROLE_LABELS.get(role_key, role_key)}!")
+                            refresh_fn.refresh()
+                        except api_client.APIError as e:
+                            notify_error(f"Hire failed: {e.detail}")
+
+                    ui.button(
+                        f"Hire as {label}", on_click=_hire, icon="how_to_reg",
+                    ).props("color=primary").classes("mt-2")
+
+    ui.button(
+        "Browse Available Coaches", on_click=_generate_pool, icon="group_add",
+    ).classes("mt-2")
+
 
 async def _render_season_portal(state: UserState, refresh_fn):
     """Render the transfer portal UI for season mode.
@@ -214,6 +355,10 @@ async def _render_season_portal(state: UserState, refresh_fn):
     ovr_filter.on_value_change(lambda _: _rebuild_table())
     _rebuild_table()
 
+    # ── Coaching Staff Selection ─────────────────────────────────────
+    ui.separator().classes("my-4")
+    await _render_coaching_selection(state, refresh_fn)
+
     # ── Action buttons ───────────────────────────────────────────────
     ui.separator().classes("my-4")
     with ui.row().classes("gap-4"):
@@ -283,7 +428,7 @@ async def _render_season_play(state: UserState, shared: dict):
                 async def _sim_week():
                     try:
                         result = await run.io_bound(api_client.simulate_week, state.session_id)
-                        week = result.get("week_simulated", current_week + 1)
+                        week = result.get("week", current_week + 1)
                         notify_success(f"Week {week} simulated!")
                         _season_actions.refresh()
                     except api_client.APIError as e:
@@ -300,7 +445,7 @@ async def _render_season_play(state: UserState, shared: dict):
                 ui.button(f"Simulate Week {current_week + 1}", on_click=_sim_week, icon="play_arrow").props("color=primary")
                 ui.button("Sim Rest of Season", on_click=_sim_rest, icon="fast_forward")
 
-        elif phase == "postseason" or phase == "playoffs":
+        elif phase == "playoffs_pending":
             async def _run_playoffs():
                 try:
                     await run.io_bound(api_client.run_playoffs, state.session_id)
@@ -311,7 +456,7 @@ async def _render_season_play(state: UserState, shared: dict):
 
             ui.button("Run Playoffs", on_click=_run_playoffs, icon="emoji_events").props("color=primary")
 
-        elif phase == "bowls":
+        elif phase == "bowls_pending":
             async def _run_bowls():
                 try:
                     await run.io_bound(api_client.run_bowls, state.session_id)
@@ -327,22 +472,44 @@ async def _render_season_play(state: UserState, shared: dict):
                 ui.label("Season Complete!").classes("font-bold text-green-700")
                 ui.label("Check the League tab for final standings and awards.").classes("text-sm text-green-600")
 
-        # Show recent results
+        # Show full schedule (completed + upcoming)
         try:
-            schedule = await run.io_bound(api_client.get_schedule, state.session_id, completed_only=True)
-            games = schedule.get("games", [])
-            if games:
-                recent = games[-min(10, len(games)):]
-                with ui.expansion(f"Recent Results ({len(games)} games played)", icon="history").classes("w-full mt-4"):
-                    rows = []
-                    for g in reversed(recent):
-                        rows.append({
-                            "Week": g.get("week", ""),
-                            "Home": g.get("home_team", ""),
-                            "Score": f"{fmt_vb_score(g.get('home_score', 0))} - {fmt_vb_score(g.get('away_score', 0))}",
-                            "Away": g.get("away_team", ""),
-                        })
-                    stat_table(rows)
+            schedule = await run.io_bound(api_client.get_schedule, state.session_id)
+            all_games = schedule.get("games", [])
+            if all_games:
+                completed = [g for g in all_games if g.get("completed")]
+                upcoming = [g for g in all_games if not g.get("completed")]
+
+                if completed:
+                    recent = completed[-min(10, len(completed)):]
+                    with ui.expansion(
+                        f"Recent Results ({len(completed)} games played)",
+                        icon="history",
+                    ).classes("w-full mt-4"):
+                        rows = []
+                        for g in reversed(recent):
+                            rows.append({
+                                "Week": g.get("week", ""),
+                                "Home": g.get("home_team", ""),
+                                "Score": f"{fmt_vb_score(g.get('home_score', 0))} - {fmt_vb_score(g.get('away_score', 0))}",
+                                "Away": g.get("away_team", ""),
+                            })
+                        stat_table(rows)
+
+                if upcoming:
+                    with ui.expansion(
+                        f"Upcoming Games ({len(upcoming)} remaining)",
+                        icon="event",
+                    ).classes("w-full mt-2"):
+                        rows = []
+                        for g in upcoming[:30]:
+                            rows.append({
+                                "Week": g.get("week", ""),
+                                "Home": g.get("home_team", ""),
+                                "Away": g.get("away_team", ""),
+                                "Conf": "Yes" if g.get("is_conference_game") else "",
+                            })
+                        stat_table(rows)
         except api_client.APIError:
             pass
 
