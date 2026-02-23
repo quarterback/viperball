@@ -42,7 +42,7 @@ The project maintains a clear separation of concerns:
 - **`main.py`**: The application's entry point, initiating both FastAPI and Streamlit processes.
 
 ### Feature Specifications
-- **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
+- **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards, missed DK live ball returns from 50+ yards), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and game stat tracking.
 - **ZB Style System**: Zerobacks classified as kick_dominant (primary passer, rarely carries), run_dominant (STARTER rusher, less accurate kicker), dual_threat (blend), or distributor (lateral chain orchestrator). Style maps from archetype and influences play selection.
 - **Starter-First-Look System (All 3 Phases)**: Replaces complex 4-tier role system. Applied to offense, defense, AND special teams.

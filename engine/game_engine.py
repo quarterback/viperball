@@ -213,6 +213,8 @@ class PlayResult(Enum):
     BLOCKED_KICK = "blocked_kick"
     SNAP_KICK_RECOVERY = "snap_kick_recovery"
     MISSED_SNAP_KICK_RETAINED = "missed_snap_kick_retained"
+    MISSED_DK_RETURNED = "missed_dk_returned"
+    MISSED_DK_RETURN_TD = "missed_dk_return_td"
     KICK_PASS_COMPLETE = "kick_pass_complete"
     KICK_PASS_INCOMPLETE = "kick_pass_incomplete"
     KICK_PASS_INTERCEPTED = "kick_pass_intercepted"
@@ -3523,7 +3525,7 @@ class ViperballEngine:
                 drive_result = play.result
                 continue
 
-            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted"]:
+            if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted", "missed_dk_returned", "missed_dk_return_td"]:
                 drive_result = play.result
 
                 # ── V2: Composure events ──
@@ -3537,9 +3539,11 @@ class ViperballEngine:
                     self._adjust_composure(def_team_side, "turnover_forced")
                 elif play.result == "turnover_on_downs":
                     self._adjust_composure(off_team, "failed_conversion")
-                elif play.result in ("punt_return_td", "int_return_td"):
+                elif play.result in ("punt_return_td", "int_return_td", "missed_dk_return_td"):
                     self._adjust_composure(def_team_side, "touchdown_scored")
                     self._adjust_composure(off_team, "touchdown_allowed")
+                elif play.result == "missed_dk_returned":
+                    self._adjust_composure(off_team, "failed_conversion")
                 elif play.result == "successful_kick":
                     self._adjust_composure(off_team, "successful_conversion_late")
 
@@ -3601,10 +3605,15 @@ class ViperballEngine:
                     receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
                 elif play.result == "int_return_td":
-                    # Pick-six: intercepting team scored, kickoff to other team
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
+                elif play.result == "missed_dk_return_td":
+                    scoring_team = self.state.possession
+                    receiving = "away" if scoring_team == "home" else "home"
+                    self.kickoff(receiving)
+                elif play.result == "missed_dk_returned":
+                    pass
                 elif play.result == "safety":
                     scored_team = "away" if drive_team == "home" else "home"
                     self.state.possession = drive_team
@@ -3644,15 +3653,15 @@ class ViperballEngine:
 
             if final_play.result in ("successful_kick", "touchdown", "punt",
                                       "pindown", "punt_return_td", "fumble",
-                                      "missed_kick"):
+                                      "missed_kick", "missed_dk_returned",
+                                      "missed_dk_return_td"):
                 drive_result = final_play.result
 
-                # Handle scoring / possession changes from the final play
-                if final_play.result in ("touchdown", "successful_kick", "punt_return_td"):
+                if final_play.result in ("touchdown", "successful_kick", "punt_return_td", "missed_dk_return_td"):
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
                     self.kickoff(receiving)
-                elif final_play.result in ("punt", "pindown", "missed_kick"):
+                elif final_play.result in ("punt", "pindown", "missed_kick", "missed_dk_returned"):
                     # Possession changes — opponent gets the ball
                     self.state.possession = "away" if drive_team == "home" else "home"
                     if final_play.result == "pindown":
@@ -3663,7 +3672,7 @@ class ViperballEngine:
                     self.state.yards_to_go = 20
 
         # Track compelled efficiency: did a sacrifice drive end in a score?
-        is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td")
+        is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td")
         if drive_sacrifice and is_score:
             if drive_team == "home":
                 self.state.home_sacrifice_scores += 1
@@ -7703,13 +7712,95 @@ class ViperballEngine:
             kicking_team = self.state.possession
             receiving = "away" if kicking_team == "home" else "home"
 
-            # ── Finnish baseball rule: missed kick on downs 4-5 retains possession ──
+            # ── LIVE BALL CHECK: long missed DKs can be caught and returned ──
+            # Short misses bounce dead, but 50+ yard misses have a real chance
+            # of staying airborne and catchable. 60+ are very likely live.
+            # This creates genuine risk for long-range DK attempts.
+            live_ball_rate = 0.0
+            if distance >= 65:
+                live_ball_rate = 0.55
+            elif distance >= 60:
+                live_ball_rate = 0.40
+            elif distance >= 55:
+                live_ball_rate = 0.25
+            elif distance >= 50:
+                live_ball_rate = 0.15
+            elif distance >= 46:
+                live_ball_rate = 0.05
+
+            if live_ball_rate > 0 and random.random() < live_ball_rate:
+                def_team = self.get_defensive_team()
+                returner = self._pick_returner(def_team)
+                if returner:
+                    rtag = player_tag(returner)
+                    # catch_spot: from returner's perspective (flipped).
+                    # ball_landing is kicking-team yard line; returner catches
+                    # near there, flipped to their own orientation.
+                    raw_catch = min(99, max(1, ball_landing))
+                    catch_spot_returner = max(1, 100 - raw_catch + random.randint(-5, 5))
+
+                    td_rate = 0.04
+                    if returner.speed >= 92:
+                        td_rate = 0.08
+                    elif returner.speed >= 85:
+                        td_rate = 0.06
+
+                    if random.random() < td_rate:
+                        return_yds = catch_spot_returner
+                        returner.game_kick_returns += 1
+                        returner.game_kick_return_tds += 1
+                        returner.game_kick_return_yards += return_yds
+                        self.change_possession()
+                        self.add_score(9)
+                        self.apply_stamina_drain(3)
+                        stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                        return Play(
+                            play_number=self.state.play_number,
+                            quarter=self.state.quarter,
+                            time=self.state.time_remaining,
+                            possession=self.state.possession,
+                            field_position=self.state.field_position,
+                            down=1, yards_to_go=20,
+                            play_type="drop_kick", play_family=family.value,
+                            players_involved=[player_label(kicker), player_label(returner)],
+                            yards_gained=return_yds,
+                            result=PlayResult.MISSED_DK_RETURN_TD.value,
+                            description=f"{ptag} drop kick {distance}yd — NO GOOD! LIVE BALL caught by {rtag} — RETURNED FOR TOUCHDOWN! +9",
+                            fatigue=round(stamina, 1),
+                        )
+
+                    return_yards = self._calculate_punt_return_yards(returner, def_team, self.get_offensive_team())
+                    returner.game_kick_returns += 1
+                    returner.game_kick_return_yards += return_yards
+                    new_fp = max(1, min(99, catch_spot_returner + return_yards))
+
+                    self.change_possession()
+                    self.state.field_position = new_fp
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.apply_stamina_drain(3)
+                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=self.state.time_remaining,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(returner)],
+                        yards_gained=return_yards,
+                        result=PlayResult.MISSED_DK_RETURNED.value,
+                        description=f"{ptag} drop kick {distance}yd — NO GOOD! LIVE BALL caught by {rtag}, returned {return_yards} yds to the {new_fp}",
+                        fatigue=round(stamina, 1),
+                    )
+
+            # ── Finnish baseball rule: missed kick on downs 1-5 retains possession ──
+            # If the live ball check didn't trigger, the ball is dead.
             # The kicking team keeps the ball and advances to the next down.
-            # This makes snap kick attempts on 4th/5th essentially risk-free.
             if self.state.down <= 5:
                 original_ytg = self.state.yards_to_go
                 if ball_landing >= 100:
-                    # Ball went past end zone — retain at current position
                     landing_spot = self.state.field_position
                     yards_forward = 0
                 else:
