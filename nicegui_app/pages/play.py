@@ -392,8 +392,10 @@ async def _render_season_play(state: UserState, shared: dict):
 
     try:
         status = await run.io_bound(api_client.get_season_status, state.session_id)
-    except api_client.APIError as e:
-        notify_error(f"Failed to load season: {e.detail}")
+    except api_client.APIError:
+        state.clear_session()
+        notify_info("Previous session expired. Please start a new one.")
+        _render_mode_selection(state, shared)
         return
 
     season_name = status.get("name", "Season")
@@ -425,47 +427,84 @@ async def _render_season_play(state: UserState, shared: dict):
 
         elif phase == "regular":
             with ui.row().classes("gap-4"):
+                week_btn = ui.button(f"Simulate Week {current_week + 1}", icon="play_arrow").props("color=primary")
+                rest_btn = ui.button("Sim Rest of Season", icon="fast_forward")
+
                 async def _sim_week():
+                    week_btn.disable()
+                    rest_btn.disable()
                     try:
                         result = await run.io_bound(api_client.simulate_week, state.session_id)
                         week = result.get("week", current_week + 1)
                         notify_success(f"Week {week} simulated!")
-                        _season_actions.refresh()
+                        try:
+                            _season_actions.refresh()
+                        except RuntimeError:
+                            pass
                     except api_client.APIError as e:
                         notify_error(f"Simulation failed: {e.detail}")
+                        week_btn.enable()
+                        rest_btn.enable()
 
                 async def _sim_rest():
+                    week_btn.disable()
+                    rest_btn.disable()
+                    rest_btn.text = "Simulating..."
                     try:
                         await run.io_bound(api_client.simulate_rest, state.session_id)
                         notify_success("Regular season complete!")
-                        _season_actions.refresh()
+                        try:
+                            _season_actions.refresh()
+                        except RuntimeError:
+                            pass
                     except api_client.APIError as e:
                         notify_error(f"Simulation failed: {e.detail}")
+                        week_btn.enable()
+                        rest_btn.enable()
+                        rest_btn.text = "Sim Rest of Season"
 
-                ui.button(f"Simulate Week {current_week + 1}", on_click=_sim_week, icon="play_arrow").props("color=primary")
-                ui.button("Sim Rest of Season", on_click=_sim_rest, icon="fast_forward")
+                week_btn.on_click(_sim_week)
+                rest_btn.on_click(_sim_rest)
 
         elif phase == "playoffs_pending":
+            playoff_btn = ui.button("Run Playoffs", icon="emoji_events").props("color=primary")
+
             async def _run_playoffs():
+                playoff_btn.disable()
+                playoff_btn.text = "Running playoffs..."
                 try:
                     await run.io_bound(api_client.run_playoffs, state.session_id)
                     notify_success("Playoffs complete!")
-                    _season_actions.refresh()
+                    try:
+                        _season_actions.refresh()
+                    except RuntimeError:
+                        pass
                 except api_client.APIError as e:
                     notify_error(f"Playoffs failed: {e.detail}")
+                    playoff_btn.enable()
+                    playoff_btn.text = "Run Playoffs"
 
-            ui.button("Run Playoffs", on_click=_run_playoffs, icon="emoji_events").props("color=primary")
+            playoff_btn.on_click(_run_playoffs)
 
         elif phase == "bowls_pending":
+            bowl_btn = ui.button("Run Bowl Games", icon="stadium").props("color=primary")
+
             async def _run_bowls():
+                bowl_btn.disable()
+                bowl_btn.text = "Running bowls..."
                 try:
                     await run.io_bound(api_client.run_bowls, state.session_id)
                     notify_success("Bowl games complete!")
-                    _season_actions.refresh()
+                    try:
+                        _season_actions.refresh()
+                    except RuntimeError:
+                        pass
                 except api_client.APIError as e:
                     notify_error(f"Bowls failed: {e.detail}")
+                    bowl_btn.enable()
+                    bowl_btn.text = "Run Bowl Games"
 
-            ui.button("Run Bowl Games", on_click=_run_bowls, icon="stadium").props("color=primary")
+            bowl_btn.on_click(_run_bowls)
 
         elif phase == "complete":
             with ui.card().classes("w-full bg-green-50 p-4 rounded"):
@@ -525,8 +564,10 @@ async def _render_dynasty_play(state: UserState, shared: dict):
 
     try:
         dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
-    except api_client.APIError as e:
-        notify_error(f"Failed to load dynasty: {e.detail}")
+    except api_client.APIError:
+        state.clear_session()
+        notify_info("Previous session expired. Please start a new one.")
+        _render_mode_selection(state, shared)
         return
 
     dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
@@ -577,7 +618,11 @@ async def _render_dynasty_play(state: UserState, shared: dict):
             def_sel = ui.select(def_options, value="swarm", label="Defense Style").classes("w-64")
             st_sel = ui.select(st_options, value="aces", label="Special Teams").classes("w-64")
 
+            start_btn = ui.button("Start Season", icon="play_arrow").props("color=primary").classes("mt-2")
+
             async def _start_season():
+                start_btn.disable()
+                start_btn.text = "Starting season..."
                 try:
                     await run.io_bound(
                         api_client.dynasty_start_season,
@@ -587,11 +632,16 @@ async def _render_dynasty_play(state: UserState, shared: dict):
                         st_scheme=st_sel.value,
                     )
                     notify_success("Season started!")
-                    _dynasty_actions.refresh()
+                    try:
+                        _dynasty_actions.refresh()
+                    except RuntimeError:
+                        pass
                 except api_client.APIError as e:
                     notify_error(f"Failed to start season: {e.detail}")
+                    start_btn.enable()
+                    start_btn.text = "Start Season"
 
-            ui.button("Start Season", on_click=_start_season, icon="play_arrow").props("color=primary").classes("mt-2")
+            start_btn.on_click(_start_season)
 
         else:
             # Season is active — show simulation controls

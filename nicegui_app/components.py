@@ -72,17 +72,24 @@ def download_button(label: str, data, filename: str, mime: str = "text/csv"):
     ui.button(label, on_click=_download, icon="download").classes("w-full")
 
 
+def _safe_notify(msg: str, **kwargs):
+    try:
+        ui.notify(msg, **kwargs)
+    except RuntimeError:
+        pass
+
+
 def notify_success(msg: str):
-    ui.notify(msg, type="positive", position="top")
+    _safe_notify(msg, type="positive", position="top")
 
 
 def notify_error(msg: str):
-    ui.notify(msg, type="negative", position="top")
+    _safe_notify(msg, type="negative", position="top")
 
 
 def notify_warning(msg: str):
-    ui.notify(msg, type="warning", position="top")
+    _safe_notify(msg, type="warning", position="top")
 
 
 def notify_info(msg: str):
-    ui.notify(msg, type="info", position="top")
+    _safe_notify(msg, type="info", position="top")

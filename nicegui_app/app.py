@@ -215,20 +215,23 @@ async def index(client: Client):
                     return
                 loaded_tabs.add(tab_name)
 
-                if tab_name == "League":
-                    league_container.clear()
-                    with league_container:
-                        from nicegui_app.pages.league import render_league_section
-                        await render_league_section(state, shared)
-                elif tab_name == "My Team":
-                    team_container.clear()
-                    with team_container:
-                        from nicegui_app.pages.my_team import render_my_team_section
-                        await render_my_team_section(state, shared)
-                elif tab_name == "Export":
-                    export_container.clear()
-                    with export_container:
-                        from nicegui_app.pages.export import render_export_section
-                        await render_export_section(state, shared)
+                try:
+                    if tab_name == "League":
+                        league_container.clear()
+                        with league_container:
+                            from nicegui_app.pages.league import render_league_section
+                            await render_league_section(state, shared)
+                    elif tab_name == "My Team":
+                        team_container.clear()
+                        with team_container:
+                            from nicegui_app.pages.my_team import render_my_team_section
+                            await render_my_team_section(state, shared)
+                    elif tab_name == "Export":
+                        export_container.clear()
+                        with export_container:
+                            from nicegui_app.pages.export import render_export_section
+                            await render_export_section(state, shared)
+                except RuntimeError:
+                    loaded_tabs.discard(tab_name)
 
             tabs.on_value_change(_on_tab_change)
