@@ -12,7 +12,7 @@ import csv
 
 import plotly.graph_objects as go
 
-from nicegui import ui
+from nicegui import ui, run
 
 from ui import api_client
 from nicegui_app.helpers import (
@@ -377,7 +377,7 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
 # Dashboard tab
 # ---------------------------------------------------------------------------
 
-def _render_dashboard(session_id: str, mode: str, team_name: str, standings: list):
+async def _render_dashboard(session_id: str, mode: str, team_name: str, standings: list):
     record = next((r for r in standings if r["team_name"] == team_name), None)
     if not record:
         notify_warning(f"No standings data found for {team_name}.")
@@ -402,7 +402,7 @@ def _render_dashboard(session_id: str, mode: str, team_name: str, standings: lis
             if record.get("conference"):
                 conf_standing_val = "\u2014"
                 try:
-                    conf_resp = api_client.get_conference_standings(session_id)
+                    conf_resp = await run.io_bound(api_client.get_conference_standings, session_id)
                     conf_standings_data = conf_resp.get("conference_standings", {})
                     team_conf = record.get("conference", "")
                     conf_teams = conf_standings_data.get(team_conf, [])
@@ -483,7 +483,7 @@ def _render_dashboard(session_id: str, mode: str, team_name: str, standings: lis
         ui.separator()
         ui.label("Coach Profile").classes("text-xl font-bold")
         try:
-            dyn_status = api_client.get_dynasty_status(session_id)
+            dyn_status = await run.io_bound(api_client.get_dynasty_status, session_id)
             coach = dyn_status.get("coach", {})
             with ui.row().classes("w-full flex-wrap gap-4"):
                 with ui.column():
@@ -501,7 +501,7 @@ def _render_dashboard(session_id: str, mode: str, team_name: str, standings: lis
     ui.separator()
     ui.label("Injury Report").classes("text-xl font-bold")
     try:
-        inj_resp = api_client.get_injuries(session_id, team=team_name)
+        inj_resp = await run.io_bound(api_client.get_injuries, session_id, team=team_name)
         active_inj = inj_resp.get("active", [])
         team_log = inj_resp.get("season_log", [])
         penalties = inj_resp.get("penalties", {})
@@ -618,9 +618,9 @@ def _render_dashboard(session_id: str, mode: str, team_name: str, standings: lis
 # Roster tab
 # ---------------------------------------------------------------------------
 
-def _render_roster(session_id: str, team_name: str):
+async def _render_roster(session_id: str, team_name: str):
     try:
-        roster_resp = api_client.get_team_roster(session_id, team_name)
+        roster_resp = await run.io_bound(api_client.get_team_roster, session_id, team_name)
         players = roster_resp.get("players", [])
     except api_client.APIError:
         notify_warning(f"Could not load roster for {team_name}.")
@@ -628,7 +628,7 @@ def _render_roster(session_id: str, team_name: str):
 
     inj_map: dict[str, str] = {}
     try:
-        inj_resp = api_client.get_injuries(session_id, team=team_name)
+        inj_resp = await run.io_bound(api_client.get_injuries, session_id, team=team_name)
         for inj in inj_resp.get("active", []):
             pname = inj.get("player_name", "")
             if inj.get("is_season_ending") or inj.get("tier") == "severe":
@@ -766,21 +766,21 @@ def _render_roster(session_id: str, team_name: str):
 # Schedule tab
 # ---------------------------------------------------------------------------
 
-def _render_schedule(session_id: str, mode: str, team_name: str):
+async def _render_schedule(session_id: str, mode: str, team_name: str):
     try:
-        sched_resp = api_client.get_schedule(session_id, team=team_name, completed_only=True, include_full_result=True)
+        sched_resp = await run.io_bound(lambda: api_client.get_schedule(session_id, team=team_name, completed_only=True, include_full_result=True))
         team_games = sched_resp.get("games", [])
     except api_client.APIError:
         team_games = []
 
     try:
-        bracket_resp = api_client.get_playoff_bracket(session_id)
+        bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
         bracket = bracket_resp.get("bracket", [])
     except api_client.APIError:
         bracket = []
 
     try:
-        bowls_resp = api_client.get_bowl_results(session_id)
+        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
         bowl_results = bowls_resp.get("bowl_results", [])
     except api_client.APIError:
         bowl_results = []
@@ -971,9 +971,9 @@ def _render_schedule(session_id: str, mode: str, team_name: str):
 # History tab (dynasty only)
 # ---------------------------------------------------------------------------
 
-def _render_history(session_id: str):
+async def _render_history(session_id: str):
     try:
-        dyn_status = api_client.get_dynasty_status(session_id)
+        dyn_status = await run.io_bound(api_client.get_dynasty_status, session_id)
         coach = dyn_status.get("coach", {})
     except api_client.APIError:
         notify_error("Could not load dynasty data.")
@@ -1025,7 +1025,7 @@ def _render_history(session_id: str):
     ui.separator()
     ui.label("Coaching History").classes("text-xl font-bold")
     try:
-        ch_resp = api_client.get_dynasty_coaching_history(session_id)
+        ch_resp = await run.io_bound(api_client.get_dynasty_coaching_history, session_id)
         coaching_hist = ch_resp.get("coaching_history", {})
         current_staffs = ch_resp.get("current_staffs", {})
     except api_client.APIError:
@@ -1077,7 +1077,7 @@ def _render_history(session_id: str):
     ui.separator()
     ui.label("Team History").classes("text-xl font-bold")
     try:
-        histories_resp = api_client.get_dynasty_team_histories(session_id)
+        histories_resp = await run.io_bound(api_client.get_dynasty_team_histories, session_id)
         team_hist = histories_resp.get("team_histories", {}).get(team_name, {})
     except api_client.APIError:
         team_hist = {}
@@ -1106,7 +1106,7 @@ def _render_history(session_id: str):
     ui.separator()
     ui.label("Record Book").classes("text-xl font-bold")
     try:
-        rb = api_client.get_dynasty_record_book(session_id)
+        rb = await run.io_bound(api_client.get_dynasty_record_book, session_id)
     except api_client.APIError:
         rb = {}
 
@@ -1183,7 +1183,7 @@ def _render_history(session_id: str):
 # Main entry point
 # ---------------------------------------------------------------------------
 
-def render_my_team_section(state, shared):
+async def render_my_team_section(state, shared):
     """Render the My Team page.
 
     Parameters
@@ -1204,10 +1204,12 @@ def render_my_team_section(state, shared):
     # -- Parallel initial fetch ------------------------------------------------
     if mode == "dynasty":
         try:
-            dyn_resp, standings_resp = api_client.fetch_parallel(
-                lambda: api_client.get_dynasty_status(session_id),
-                lambda: api_client.get_standings(session_id),
-            )
+            def _do_fetch():
+                return api_client.fetch_parallel(
+                    lambda: api_client.get_dynasty_status(session_id),
+                    lambda: api_client.get_standings(session_id),
+                )
+            dyn_resp, standings_resp = await run.io_bound(_do_fetch)
             human_teams = [dyn_resp.get("coach", {}).get("team", "")]
         except api_client.APIError:
             ui.label("My Team").classes("text-2xl font-bold")
@@ -1216,7 +1218,7 @@ def render_my_team_section(state, shared):
     else:
         human_teams = state.human_teams or []
         try:
-            standings_resp = api_client.get_standings(session_id)
+            standings_resp = await run.io_bound(api_client.get_standings, session_id)
         except api_client.APIError:
             ui.label("My Team").classes("text-2xl font-bold")
             notify_info("No season data available yet. Simulate a season from Play to see your team's data.")
@@ -1249,7 +1251,7 @@ def render_my_team_section(state, shared):
     # Content container that gets refreshed when team selection changes
     content_container = ui.column().classes("w-full")
 
-    def _render_content(team_name: str):
+    async def _render_content(team_name: str):
         content_container.clear()
         with content_container:
             with ui.tabs().classes("w-full") as tabs:
@@ -1262,22 +1264,22 @@ def render_my_team_section(state, shared):
 
             with ui.tab_panels(tabs, value=dashboard_tab).classes("w-full"):
                 with ui.tab_panel(dashboard_tab):
-                    _render_dashboard(session_id, mode, team_name, standings)
+                    await _render_dashboard(session_id, mode, team_name, standings)
 
                 with ui.tab_panel(roster_tab):
-                    _render_roster(session_id, team_name)
+                    await _render_roster(session_id, team_name)
 
                 with ui.tab_panel(schedule_tab):
-                    _render_schedule(session_id, mode, team_name)
+                    await _render_schedule(session_id, mode, team_name)
 
                 if mode == "dynasty" and history_tab is not None:
                     with ui.tab_panel(history_tab):
-                        _render_history(session_id)
+                        await _render_history(session_id)
 
     if len(human_teams) > 1:
-        def _on_team_change(e):
+        async def _on_team_change(e):
             selected_team_ref["value"] = e.value
-            _render_content(e.value)
+            await _render_content(e.value)
 
         ui.select(
             human_teams,
@@ -1286,4 +1288,4 @@ def render_my_team_section(state, shared):
             on_change=_on_team_change,
         )
 
-    _render_content(selected_team_ref["value"])
+    await _render_content(selected_team_ref["value"])

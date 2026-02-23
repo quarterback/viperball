@@ -491,6 +491,10 @@ class Dynasty:
                 history.total_championships += 1
                 history.championship_years.append(year)
 
+            # Conference champion check
+            conf_champs = season.get_conference_champions() if self.conferences else {}
+            is_conf_champ = team_name in set(conf_champs.values())
+
             # Store season record
             history.season_records[year] = {
                 "wins": record.wins,
@@ -500,12 +504,87 @@ class Dynasty:
                 "avg_opi": record.avg_opi,
                 "champion": (team_name == season.champion),
                 "playoff": (team_name in playoff_teams),
+                "conference_champion": is_conf_champ,
             }
 
             # Check if best season ever for this team
             if record.wins > history.best_season_wins:
                 history.best_season_wins = record.wins
                 history.best_season_year = year
+
+        # ── Update coaching staff postseason stats & coaching trees ──
+        if hasattr(self, '_coaching_staffs') and self._coaching_staffs:
+            # Conference champions
+            conf_champions = season.get_conference_champions() if self.conferences else {}
+            conf_champ_teams = set(conf_champions.values())
+
+            # Playoff bracket: determine which teams won playoff games
+            # and who reached the championship game
+            playoff_teams_set = set()
+            try:
+                playoff_records = season.get_playoff_teams(num_teams=8)
+                playoff_teams_set = {r.team_name for r in playoff_records}
+            except Exception:
+                pass
+
+            # Count playoff wins per team from the bracket
+            playoff_wins_by_team: Dict[str, int] = {}
+            championship_game_teams: set = set()
+            for game in season.playoff_bracket:
+                if not game.completed:
+                    continue
+                winner = None
+                loser = None
+                if game.home_score is not None and game.away_score is not None:
+                    if game.home_score > game.away_score:
+                        winner = game.home_team
+                        loser = game.away_team
+                    elif game.away_score > game.home_score:
+                        winner = game.away_team
+                        loser = game.home_team
+                if winner:
+                    playoff_wins_by_team[winner] = playoff_wins_by_team.get(winner, 0) + 1
+                # Week 1000 = championship game
+                if getattr(game, 'week', 0) == 1000:
+                    championship_game_teams.add(game.home_team)
+                    championship_game_teams.add(game.away_team)
+
+            for team_name, staff in self._coaching_staffs.items():
+                hc = staff.get("head_coach")
+                if hc is None:
+                    continue
+
+                # Conference title
+                if team_name in conf_champ_teams:
+                    hc.conference_titles += 1
+                # Playoff appearance
+                if team_name in playoff_teams_set:
+                    hc.playoff_appearances += 1
+                # Playoff wins
+                pw = playoff_wins_by_team.get(team_name, 0)
+                hc.playoff_wins += pw
+                # Championship game appearance
+                if team_name in championship_game_teams:
+                    hc.championship_appearances += 1
+
+                # Update coaching tree for all assistant coaches
+                for role, card in staff.items():
+                    if role == "head_coach":
+                        continue
+                    # Check if this HC is already the last entry in the tree
+                    tree = card.coaching_tree
+                    if tree and tree[-1].get("coach_id") == hc.coach_id:
+                        # Same HC — extend year_end
+                        tree[-1]["year_end"] = year
+                    else:
+                        # New HC for this assistant
+                        tree.append({
+                            "coach_name": hc.full_name,
+                            "coach_id": hc.coach_id,
+                            "team_name": team_name,
+                            "year_start": year,
+                            "year_end": year,
+                        })
 
         # Update coach record (if coaching this season)
         if self.coach.team_name in season.standings:
@@ -730,45 +809,35 @@ class Dynasty:
             )
         result["prestige"] = dict(self.team_prestige)
 
-        # ── 1b. Coaching staff management ──
+        # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
         from engine.coaching import (
             CoachCard, CoachMarketplace, CoachingSalaryPool,
             auto_coaching_pool, generate_coaching_staff,
             evaluate_coaching_staff, ai_fill_vacancies,
             calculate_coach_salary,
         )
+        from engine.coaching_portal import (
+            CoachingPortal as CPortal,
+            populate_coaching_portal,
+            run_coaching_match,
+        )
 
         # Initialise coaching staffs if not present
+        all_team_names = list(self.team_histories.keys())
         if not self._coaching_staffs:
             for team_name in self.team_histories:
                 prestige = self.team_prestige.get(team_name, 50)
                 self._coaching_staffs[team_name] = generate_coaching_staff(
                     team_name=team_name, prestige=prestige, year=year, rng=rng,
+                    all_team_names=all_team_names,
                 )
-
-        # Build coaching salary pools
-        coaching_pools: Dict[str, CoachingSalaryPool] = {}
-        for team_name in self.team_histories:
-            prestige = self.team_prestige.get(team_name, 50)
-            sr = self.team_histories[team_name].season_records.get(prev_year, {})
-            prev_wins = sr.get("wins", 5)
-            champ = False
-            if prev_year in self.awards_history:
-                if team_name == self.awards_history[prev_year].champion:
-                    champ = True
-            coaching_pools[team_name] = auto_coaching_pool(
-                team_name=team_name, prestige=prestige,
-                previous_wins=prev_wins, championship=champ, rng=rng,
-            )
 
         # CPU teams evaluate and potentially fire coaches
         human_team = self.coach.team_name
-        marketplace = CoachMarketplace(year=year)
-        marketplace.generate_free_agents(num_coaches=40, rng=rng)
-        marketplace.add_poaching_targets(self._coaching_staffs, rng=rng)
-
         coaching_changes: Dict[str, list] = {}
-        for team_name, staff in self._coaching_staffs.items():
+        fired_roles: Dict[str, List[str]] = {}
+
+        for team_name, staff in list(self._coaching_staffs.items()):
             if team_name == human_team:
                 continue  # Human decides their own coaching
             sr = self.team_histories[team_name].season_records.get(prev_year, {})
@@ -777,27 +846,16 @@ class Dynasty:
             fire_list = evaluate_coaching_staff(staff, tw, tl, rng=rng)
             if fire_list:
                 coaching_changes[team_name] = fire_list
-                # Tick contract years for remaining staff
-                for role, card in staff.items():
-                    if role not in fire_list:
-                        card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                        card.seasons_coached += 1
-                        card.career_wins += tw
-                        card.career_losses += tl
-                        card.age += 1
-                staff = ai_fill_vacancies(
-                    staff, fire_list, marketplace,
-                    coaching_pools[team_name], team_name, year, rng=rng,
-                )
-                self._coaching_staffs[team_name] = staff
-            else:
-                # Normal end-of-season updates for all coaches
-                for role, card in staff.items():
-                    card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                    card.seasons_coached += 1
-                    card.career_wins += tw
-                    card.career_losses += tl
-                    card.age += 1
+                fired_roles[team_name] = fire_list
+            # Tick contract years and update career stats for ALL coaches
+            for role, card in staff.items():
+                if team_name in fired_roles and role in fired_roles[team_name]:
+                    continue  # fired coaches don't get updated
+                card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
+                card.seasons_coached += 1
+                card.career_wins += tw
+                card.career_losses += tl
+                card.age += 1
 
         # Update human team coaches too (career stats, age)
         if human_team in self._coaching_staffs:
@@ -811,9 +869,86 @@ class Dynasty:
                 card.career_losses += hl
                 card.age += 1
 
+        # ── 1c. HC meter advancement + coach attribute development ──
+        from engine.coaching import advance_hc_meter, apply_coach_development
+        _OFFENSE_POS = {"Zeroback", "Halfback", "Wingback", "Slotback", "Viper", "Offensive Line"}
+        _DEFENSE_POS = {"Defensive Line", "Keeper"}
+
+        for team_name, staff in self._coaching_staffs.items():
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            tw = sr.get("wins", 5)
+            tl = sr.get("losses", 5)
+            made_playoff = sr.get("playoff", False)
+            won_conf = sr.get("conference_champion", False)
+
+            hc_card = staff.get("head_coach")
+
+            # Compute best player overall in each area from player_cards
+            best_in_area: Dict[str, int] = {"oc": 0, "dc": 0, "stc": 0}
+            team_cards = player_cards.get(team_name, [])
+            for pc in team_cards:
+                pos = getattr(pc, "position", "")
+                ovr = getattr(pc, "overall", 60)
+                if pos in _OFFENSE_POS:
+                    best_in_area["oc"] = max(best_in_area["oc"], ovr)
+                if pos in _DEFENSE_POS:
+                    best_in_area["dc"] = max(best_in_area["dc"], ovr)
+                # ST: kicking-related positions (Keeper) + top kicker
+                kicking = getattr(pc, "kicking", 0)
+                if kicking > 0:
+                    best_in_area["stc"] = max(best_in_area["stc"], ovr)
+
+            for role, card in staff.items():
+                # Advance HC meter for assistants
+                if role != "head_coach":
+                    area_key = role if role in best_in_area else "oc"
+                    advance_hc_meter(
+                        card, tw, tl,
+                        hc_card=hc_card,
+                        best_player_ovr_in_area=best_in_area.get(area_key, 0),
+                        made_playoff=made_playoff,
+                        won_conference=won_conf,
+                        rng=rng,
+                    )
+
+                # All coaches develop their attributes each offseason
+                apply_coach_development(card, tw, tl, rng=rng)
+
+        # Build team records for portal population
+        team_records_for_portal: Dict[str, tuple] = {}
+        for team_name in self.team_histories:
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            team_records_for_portal[team_name] = (
+                sr.get("wins", 5), sr.get("losses", 5)
+            )
+
+        # Run the coaching portal (NRMP-style matching)
+        coaching_portal = CPortal(year=year)
+        populate_coaching_portal(
+            coaching_portal,
+            self._coaching_staffs,
+            team_records_for_portal,
+            self.team_prestige,
+            fired_roles=fired_roles,
+            human_team=human_team,
+            rng=rng,
+        )
+
+        conf_dict = self.get_conferences_dict() if self.conferences else None
+        portal_changes = run_coaching_match(
+            coaching_portal,
+            self._coaching_staffs,
+            self.team_prestige,
+            team_rosters=player_cards,
+            conferences=conf_dict,
+            year=year,
+            rng=rng,
+        )
+
         self.coaching_history[year] = {
             "changes": coaching_changes,
-            "marketplace_summary": marketplace.get_summary(),
+            "portal_summary": coaching_portal.get_summary(),
+            "portal_hires": coaching_portal.hires,
         }
         result["coaching"] = self.coaching_history[year]
 
@@ -1425,6 +1560,7 @@ class Dynasty:
                 style_configs,
                 conferences=conf_dict,
                 games_per_team=games_per_team,
+                dynasty_year=year,
             )
             injury_tracker = InjuryTracker()
             injury_tracker.seed(hash(f"history_{self.dynasty_name}_{year}_inj") % 999999)

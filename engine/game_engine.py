@@ -2674,34 +2674,144 @@ class ViperballEngine:
             p.awareness = min(99, p.awareness + total_boost)
             p.tackling = min(99, p.tackling + intensity_boost)
 
+    def _injured_in_game(self, team) -> set:
+        """Return set of player names injured during this game."""
+        if team == self.home_team:
+            return self._home_injured_in_game
+        return self._away_injured_in_game
+
     def _offense_skill(self, team):
-        """Return offensive skill-position players (ball carriers, receivers)."""
+        """Return offensive skill-position players (ball carriers, receivers).
+
+        Excludes players injured during this game so backups step in immediately.
+        """
+        injured = self._injured_in_game(team)
         skill = [p for p in team.players if p.position in
-                 ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")]
-        return skill if skill else team.players[:8]
+                 ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
+                 and p.name not in injured]
+        if skill:
+            return skill
+        # Fallback: any non-injured players
+        fallback = [p for p in team.players if p.name not in injured]
+        return fallback[:8] if fallback else team.players[:8]
 
     def _offense_all(self, team):
         """Return all offensive players including OL."""
-        off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")]
+        injured = self._injured_in_game(team)
+        off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
+               and p.name not in injured]
         return off if off else team.players[:8]
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
-        defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")]
+        injured = self._injured_in_game(team)
+        defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
+                and p.name not in injured]
         return defs if defs else team.players[:5]
 
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
-        zbs = [p for p in team.players if p.position == "Zeroback"]
+        injured = self._injured_in_game(team)
+        zbs = [p for p in team.players if p.position == "Zeroback" and p.name not in injured]
         if zbs:
             return zbs
-        vps = [p for p in team.players if p.position == "Viper"]
+        vps = [p for p in team.players if p.position == "Viper" and p.name not in injured]
         if vps:
             return vps
-        sbs = [p for p in team.players if p.position == "Slotback"]
+        sbs = [p for p in team.players if p.position == "Slotback" and p.name not in injured]
         if sbs:
             return sbs
         return self._offense_skill(team)
+
+    def _is_blowout(self) -> bool:
+        """Check if the current game is a blowout (20+ point lead in Q3/Q4)."""
+        if self.state.quarter < 3:
+            return False
+        home_score = self.state.home_score
+        away_score = self.state.away_score
+        diff = abs(home_score - away_score)
+        return diff >= 20
+
+    def _spread_the_love_offense(self, eligible, weights):
+        """Adjust carrier selection weights to spread touches across the lineup.
+
+        Three mechanisms work together:
+        1. Underused boost: players with few touches when team average is
+           high get a weight boost so they aren't frozen out.
+        2. Overused decay: players with many touches get diminishing returns
+           (steeper than the old v2.6 decay, starts at 5 touches).
+        3. Blowout reserves: in blowouts, all players get more equal weights
+           so backups see meaningful action.
+        """
+        if not eligible:
+            return weights
+
+        all_touches = [getattr(p, "game_touches", 0) for p in eligible]
+        avg_touches = sum(all_touches) / max(1, len(all_touches))
+
+        for i, p in enumerate(eligible):
+            touches = getattr(p, "game_touches", 0)
+
+            # ── Overused decay: starts at 5 touches (was 8), steeper curve ──
+            if touches >= 5:
+                _usage_decay = 0.6 ** ((touches - 4) / 4.0)
+                weights[i] *= max(0.12, _usage_decay)
+
+            # ── Underused boost: players frozen out get a bump ──
+            # If the team average is 3+ and this player has <2 touches,
+            # boost them so they see the field.
+            elif avg_touches >= 3 and touches <= 1:
+                # Scale boost by how far behind they are
+                underuse_boost = 1.5 + (avg_touches - touches) * 0.15
+                weights[i] *= min(3.0, underuse_boost)
+
+        # ── Blowout reserve boost: flatten weights so everyone plays ──
+        if self._is_blowout():
+            # In blowouts, reduce the gap between best and worst weights
+            # so reserves see meaningful snaps
+            max_w = max(weights) if weights else 1.0
+            for i in range(len(weights)):
+                # Pull low weights up toward the mean
+                floor = max_w * 0.25
+                if weights[i] < floor:
+                    weights[i] = floor + weights[i] * 0.5
+
+        return weights
+
+    def _spread_the_love_defense(self, pool, weights):
+        """Adjust defensive player weights to spread tackles across the lineup.
+
+        Ensures all defensive starters get involved and reserves see action
+        in blowouts.
+        """
+        if not pool:
+            return weights
+
+        all_tackles = [getattr(p, "game_tackles", 0) for p in pool]
+        avg_tackles = sum(all_tackles) / max(1, len(all_tackles))
+
+        for i, p in enumerate(pool):
+            tackles = getattr(p, "game_tackles", 0)
+
+            # Overused decay: defenders with many tackles get less likely
+            if tackles >= 4:
+                _decay = 0.65 ** ((tackles - 3) / 3.0)
+                weights[i] *= max(0.15, _decay)
+
+            # Underused boost: defenders who haven't been involved
+            elif avg_tackles >= 2 and tackles <= 1:
+                underuse_boost = 1.4 + (avg_tackles - tackles) * 0.2
+                weights[i] *= min(2.5, underuse_boost)
+
+        # Blowout: flatten weights for reserve playing time
+        if self._is_blowout():
+            max_w = max(weights) if weights else 1.0
+            for i in range(len(weights)):
+                floor = max_w * 0.25
+                if weights[i] < floor:
+                    weights[i] = floor + weights[i] * 0.5
+
+        return weights
 
     def simulate_game(self) -> Dict:
         # V2: Apply pregame composure modifiers
@@ -4708,8 +4818,9 @@ class ViperballEngine:
         return max(0, int(base_return * returner_modifier))
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
-        dl = [p for p in def_team.players if p.position == "Defensive Line"]
-        kp = [p for p in def_team.players if p.position == "Keeper"]
+        injured = self._injured_in_game(def_team)
+        dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
+        kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
         if yards_gained <= 0:
             pool = dl * 4 + kp
         elif yards_gained <= 4:
@@ -4719,13 +4830,15 @@ class ViperballEngine:
         else:
             pool = dl + kp * 4
         if not pool:
-            pool = def_team.players
+            pool = [p for p in def_team.players if p.name not in injured] or def_team.players
         weights = []
         for p in pool:
             w = p.tackling * 0.5 + p.speed * 0.3 + getattr(p, 'awareness', 75) * 0.2
             stamina_pct = getattr(p, 'current_stamina', 100.0) / 100.0
             w *= max(0.5, stamina_pct)
             weights.append(max(1.0, w))
+        # ── Spread the Love: balance tackles across defensive lineup ──
+        weights = self._spread_the_love_defense(pool, weights)
         return random.choices(pool, weights=weights, k=1)[0]
 
     def _resolve_fumble_recovery(self, fumble_spot, fumbling_player=None):
@@ -4985,6 +5098,16 @@ class ViperballEngine:
         def_cls = def_mods.get("hc_classification", "")
         cls_fx = off_mods.get("classification_effects", {})
         def_fx = def_mods.get("classification_effects", {})
+
+        # V2.4: Coaching dev aura — rolling boost based on staff development
+        # Reads the team's dev_aura from coaching modifiers and scales with
+        # the ball carrier's games played this season.
+        dev_aura = off_mods.get("dev_aura", 0.0)
+        if dev_aura > 0 and carrier is not None:
+            games_played = getattr(carrier, 'season_games_played', 0)
+            season_len = 13
+            progress = min(1.0, games_played / max(1, season_len))
+            center *= 1.0 + dev_aura * progress
 
         if hc_cls == "scheme_master":
             center *= 1.0 + cls_fx.get("scheme_amplification", 0.0)
@@ -5311,20 +5434,23 @@ class ViperballEngine:
             eligible = skill_pool[:5]
             weights = [1.0] * len(eligible)
 
-        # ── V2: Hero Ball force-feed ──
-        # If hero ball is active, massively boost the star's selection weight
+        # ── V2: Hero Ball force-feed (tuned v2.6) ──
+        # Boost star's weight but cap it so one player can't absorb
+        # the majority of team touches.
         team_side = self.state.possession
         hero_target = self._check_hero_ball(team_side)
         if hero_target:
-            # V2.2: Player trust personality boosts star targeting
             off_mods = self._coaching_mods()
             trust = off_mods.get("personality_factors", {}).get("player_trust", 1.0)
             star_mult = off_mods.get("hidden_trait_effects", {}).get("star_touch_bias", 1.0)
-            hero_weight = 5.0 * trust * star_mult
+            hero_weight = 2.0 * trust * star_mult  # was 5.0, now 2.0
             for i, p in enumerate(eligible):
                 if p.name == hero_target:
                     weights[i] *= hero_weight
                     break
+
+        # ── Spread the Love: balance touches across the lineup ──
+        weights = self._spread_the_love_offense(eligible, weights)
 
         player = random.choices(eligible, weights=weights, k=1)[0]
         plabel = player_label(player)
@@ -5869,7 +5995,21 @@ class ViperballEngine:
 
         chain_length = random.randint(2, 5)
         skill_pool = self._offense_skill(team)
-        players_involved = random.sample(skill_pool, min(chain_length, len(skill_pool)))
+        # Weighted selection for the lateral chain — spread touches across the roster
+        _lat_count = min(chain_length, len(skill_pool))
+        _lat_weights = [max(1.0, (p.speed + getattr(p, 'lateral_skill', 70)) / 2.0 - 40) for p in skill_pool]
+        _lat_weights = self._spread_the_love_offense(skill_pool, _lat_weights)
+        players_involved = []
+        _remaining_pool = list(skill_pool)
+        _remaining_weights = list(_lat_weights)
+        for _ in range(_lat_count):
+            if not _remaining_pool:
+                break
+            pick = random.choices(_remaining_pool, weights=_remaining_weights, k=1)[0]
+            players_involved.append(pick)
+            idx = _remaining_pool.index(pick)
+            _remaining_pool.pop(idx)
+            _remaining_weights.pop(idx)
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
 
@@ -5897,9 +6037,13 @@ class ViperballEngine:
                 self.change_possession()
                 raw_fp = max(1, 100 - int_spot)
 
-                # Pick the interceptor
-                int_candidates = def_team.players[:6]
+                # Pick the interceptor (exclude injured defenders)
+                _inj_set = self._injured_in_game(def_team)
+                int_candidates = [p for p in def_team.players[:8] if p.name not in _inj_set]
+                if not int_candidates:
+                    int_candidates = def_team.players[:6]
                 int_weights = [getattr(p, 'awareness', 70) + p.speed for p in int_candidates]
+                int_weights = self._spread_the_love_defense(int_candidates, int_weights)
                 interceptor = random.choices(int_candidates, weights=int_weights, k=1)[0]
                 interceptor.game_lateral_interceptions += 1
                 int_tag = player_tag(interceptor)
@@ -6188,7 +6332,19 @@ class ViperballEngine:
         eligible_receivers = [p for p in skill if p != kicker]
         if not eligible_receivers:
             eligible_receivers = [p for p in skill]
-        receiver = max(eligible_receivers, key=lambda p: p.hands + p.speed)
+        # Weighted random selection: favour hands+speed but spread targets.
+        # Players who already have many receptions get a usage decay so the
+        # offense doesn't force-feed a single receiver all game.
+        _recv_weights = []
+        for _r in eligible_receivers:
+            _base_w = max(1.0, (_r.hands + _r.speed) / 2.0 - 40)
+            # Usage decay: halve weight per 3 prior receptions (was 4)
+            _prior = getattr(_r, "game_kick_pass_receptions", 0)
+            _decay = 0.5 ** (_prior / 3.0)
+            _recv_weights.append(max(0.1, _base_w * _decay))
+        # ── Spread the Love: balance targets across receivers ──
+        _recv_weights = self._spread_the_love_offense(eligible_receivers, _recv_weights)
+        receiver = random.choices(eligible_receivers, weights=_recv_weights, k=1)[0]
 
         kicker_tag = player_tag(kicker)
         receiver_tag = player_tag(receiver)
@@ -6451,8 +6607,12 @@ class ViperballEngine:
             raw_fp = max(1, 100 - int_spot)
 
             def_team = self.get_defensive_team()
-            def_candidates = def_team.players[:6]
+            _inj_kp = self._injured_in_game(def_team)
+            def_candidates = [p for p in def_team.players[:8] if p.name not in _inj_kp]
+            if not def_candidates:
+                def_candidates = def_team.players[:6]
             int_weights = [p.awareness + p.hands for p in def_candidates]
+            int_weights = self._spread_the_love_defense(def_candidates, int_weights)
             interceptor = random.choices(def_candidates, weights=int_weights)[0]
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
@@ -8069,9 +8229,11 @@ class ViperballEngine:
             target = self.state.away_hero_ball_target
             touches = self.state.away_consecutive_star_touches
 
-        if carrier.name == target and touches >= 4:
-            # Defense is keying: effectiveness drops with each touch
-            key_penalty = min(0.30, (touches - 3) * 0.08)
+        if carrier.name == target and touches >= 3:
+            # Defense is keying: effectiveness drops with each touch.
+            # Ramps faster and caps higher so defenses actually punish
+            # one-dimensional offences.  (was 0.08 step, 0.30 cap)
+            key_penalty = min(0.50, (touches - 2) * 0.12)
             return 1.0 - key_penalty
 
         return 1.0

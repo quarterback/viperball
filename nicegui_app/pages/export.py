@@ -10,7 +10,7 @@ import io
 import csv
 import json
 
-from nicegui import ui
+from nicegui import ui, run
 
 from engine.season import BOWL_TIERS
 from ui import api_client
@@ -64,7 +64,7 @@ def _build_schedule_csv(games):
     return buf.getvalue()
 
 
-def _build_season_context_json(session_id, standings, games, conferences):
+async def _build_season_context_json(session_id, standings, games, conferences):
     has_conferences = bool(conferences) and len(conferences) >= 1
 
     standings_list = []
@@ -95,7 +95,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
     conferences_dict = {}
     if has_conferences:
         try:
-            conf_standings_resp = api_client.get_conference_standings(session_id)
+            conf_standings_resp = await run.io_bound(api_client.get_conference_standings, session_id)
             champions = conf_standings_resp.get("champions", {})
         except api_client.APIError:
             champions = {}
@@ -157,7 +157,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
     }
     playoffs_list = []
     try:
-        bracket_resp = api_client.get_playoff_bracket(session_id)
+        bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
         bracket = bracket_resp.get("bracket", [])
         champion = bracket_resp.get("champion")
     except api_client.APIError:
@@ -183,7 +183,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
 
     bowls_list = []
     try:
-        bowls_resp = api_client.get_bowl_results(session_id)
+        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
         bowl_results = bowls_resp.get("bowl_results", [])
     except api_client.APIError:
         bowl_results = []
@@ -207,7 +207,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
 
     power_rankings = []
     try:
-        polls_resp = api_client.get_polls(session_id)
+        polls_resp = await run.io_bound(api_client.get_polls, session_id)
         all_polls = polls_resp.get("polls", [])
         if all_polls:
             final_poll = all_polls[-1]
@@ -254,7 +254,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
 
     awards_list = []
     try:
-        awards = api_client.get_season_awards(session_id)
+        awards = await run.io_bound(api_client.get_season_awards, session_id)
         for a in awards.get("individual_awards", []):
             awards_list.append({
                 "award_name": a.get("award_name", ""),
@@ -283,7 +283,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
         pass
 
     try:
-        status = api_client.get_season_status(session_id)
+        status = await run.io_bound(api_client.get_season_status, session_id)
         season_name = status.get("name", "Season")
     except api_client.APIError:
         season_name = "Season"
@@ -312,7 +312,7 @@ def _build_season_context_json(session_id, standings, games, conferences):
 # Main render function
 # ---------------------------------------------------------------------------
 
-def render_export_section(state, shared):
+async def render_export_section(state, shared):
     session_id = state.session_id
     mode = state.mode
 
@@ -322,7 +322,7 @@ def render_export_section(state, shared):
         return
 
     try:
-        standings_resp = api_client.get_standings(session_id)
+        standings_resp = await run.io_bound(api_client.get_standings, session_id)
         standings = standings_resp.get("standings", [])
     except api_client.APIError:
         ui.label("Export").classes("text-3xl font-bold")
@@ -353,7 +353,7 @@ def render_export_section(state, shared):
 
             standings_csv = _build_standings_csv(standings)
             try:
-                status = api_client.get_season_status(session_id)
+                status = await run.io_bound(api_client.get_season_status, session_id)
                 season_name = status.get("name", "season")
             except api_client.APIError:
                 season_name = "season"
@@ -366,7 +366,7 @@ def render_export_section(state, shared):
             )
 
             try:
-                sched_resp = api_client.get_schedule(session_id, completed_only=True)
+                sched_resp = await run.io_bound(api_client.get_schedule, session_id, completed_only=True)
                 all_games = sched_resp.get("games", [])
             except api_client.APIError:
                 all_games = []
@@ -380,20 +380,20 @@ def render_export_section(state, shared):
             )
 
             try:
-                conf_resp = api_client.get_conferences(session_id)
+                conf_resp = await run.io_bound(api_client.get_conferences, session_id)
                 conferences = conf_resp.get("conferences", {})
             except api_client.APIError:
                 conferences = {}
 
             try:
-                sched_with_details = api_client.get_schedule(
+                sched_with_details = await run.io_bound(lambda: api_client.get_schedule(
                     session_id, completed_only=True, include_full_result=True
-                )
+                ))
                 games_with_details = sched_with_details.get("games", [])
             except api_client.APIError:
                 games_with_details = all_games
 
-            context_json = _build_season_context_json(
+            context_json = await _build_season_context_json(
                 session_id, standings, games_with_details, conferences
             )
             download_button(
@@ -408,13 +408,13 @@ def render_export_section(state, shared):
                 ui.label("Dynasty Exports").classes("text-xl font-semibold mt-2")
 
                 try:
-                    dyn_status = api_client.get_dynasty_status(session_id)
+                    dyn_status = await run.io_bound(api_client.get_dynasty_status, session_id)
                 except api_client.APIError:
                     notify_error("Could not load dynasty data.")
                     return
 
                 try:
-                    histories_resp = api_client.get_dynasty_team_histories(session_id)
+                    histories_resp = await run.io_bound(api_client.get_dynasty_team_histories, session_id)
                     team_histories = histories_resp.get("team_histories", {})
                 except api_client.APIError:
                     team_histories = {}
@@ -440,7 +440,7 @@ def render_export_section(state, shared):
                     )
 
                 try:
-                    awards_resp = api_client.get_dynasty_awards(session_id)
+                    awards_resp = await run.io_bound(api_client.get_dynasty_awards, session_id)
                     awards_history = awards_resp.get("awards_history", [])
                 except api_client.APIError:
                     awards_history = []

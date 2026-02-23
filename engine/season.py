@@ -341,7 +341,7 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
     return min(best, remaining // 2)
 
 
-MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
+MAX_CONFERENCE_GAMES = 9  # hard cap on conference games per team per season
 
 
 def get_non_conference_slots(
@@ -350,7 +350,7 @@ def get_non_conference_slots(
 ) -> int:
     """Calculate how many non-conference game slots a team has.
 
-    Conference games are capped at MAX_CONFERENCE_GAMES (8). If the conference
+    Conference games are capped at MAX_CONFERENCE_GAMES (9). If the conference
     round-robin is smaller than that cap, conference games = conf_size - 1.
     All remaining game slots are non-conference.
 
@@ -551,6 +551,7 @@ class Season:
         conference_weight: float = 0.6,
         non_conf_weeks: int = 3,
         pinned_matchups: Optional[List[Tuple[str, str]]] = None,
+        dynasty_year: Optional[int] = None,
     ):
         """
         Generate a season schedule with configurable game count.
@@ -562,16 +563,19 @@ class Season:
             non_conf_weeks: Number of early weeks reserved for non-conference games (1-4).
             pinned_matchups: Optional list of (home, away) tuples for user-selected
                            non-conference games. These are guaranteed to appear in the schedule.
+            dynasty_year: If set, home/away for recurring matchups flips deterministically
+                         each year so opponents alternate venues.
         """
         team_names = list(self.teams.keys())
         num_teams = len(team_names)
 
         if games_per_team <= 0 or games_per_team >= num_teams - 1:
-            self._generate_round_robin(team_names)
+            self._generate_round_robin(team_names, dynasty_year=dynasty_year)
         else:
             self._generate_partial_schedule(
                 team_names, games_per_team, conference_weight,
                 pinned_matchups=pinned_matchups or [],
+                dynasty_year=dynasty_year,
             )
 
         self._assign_weeks_by_type(non_conf_weeks)
@@ -631,14 +635,19 @@ class Season:
 
         self.schedule = sorted(non_conf + conf, key=lambda g: g.week)
 
-    def _generate_round_robin(self, team_names: List[str]):
+    def _generate_round_robin(self, team_names: List[str], dynasty_year: Optional[int] = None):
         """Full round-robin: each team plays each other once"""
         games = []
         for i in range(len(team_names)):
             for j in range(i + 1, len(team_names)):
                 home = team_names[i]
                 away = team_names[j]
-                if random.random() < 0.5:
+                if dynasty_year is not None:
+                    # Deterministic flip: same pair alternates home/away each year
+                    pair_key = tuple(sorted([home, away]))
+                    if (hash(pair_key) + dynasty_year) % 2 == 1:
+                        home, away = away, home
+                elif random.random() < 0.5:
                     home, away = away, home
 
                 is_conf = (self.team_conferences.get(home, "") == self.team_conferences.get(away, "")
@@ -653,10 +662,11 @@ class Season:
         games_per_team: int,
         conference_weight: float,
         pinned_matchups: Optional[List[Tuple[str, str]]] = None,
+        dynasty_year: Optional[int] = None,
     ):
         """Generate a schedule: conference round-robin first, then non-conference fill.
 
-        Conference games are capped at MAX_CONFERENCE_GAMES (8) per team. If the
+        Conference games are capped at MAX_CONFERENCE_GAMES (9) per team. If the
         conference round-robin is smaller than that, each team plays all conference
         opponents. All remaining game slots are non-conference.
 
@@ -672,8 +682,14 @@ class Season:
         has_conferences = bool(self.conferences) and len(self.conferences) > 1
 
         def _add_game(home, away, is_conf, preserve_home_away=False):
-            if not preserve_home_away and random.random() < 0.5:
-                home, away = away, home
+            if not preserve_home_away:
+                if dynasty_year is not None:
+                    # Deterministic flip: same pair alternates home/away each year
+                    pair_key = tuple(sorted([home, away]))
+                    if (hash(pair_key) + dynasty_year) % 2 == 1:
+                        home, away = away, home
+                elif random.random() < 0.5:
+                    home, away = away, home
             games.append(Game(week=0, home_team=home, away_team=away, is_conference_game=is_conf))
             scheduled_pairs.add(tuple(sorted([home, away])))
             game_counts[home] += 1
@@ -1706,6 +1722,7 @@ def create_season(
     pinned_matchups: Optional[List[Tuple[str, str]]] = None,
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
     coaching_staffs: Optional[Dict[str, dict]] = None,
+    dynasty_year: Optional[int] = None,
 ) -> Season:
     """
     Create a season with teams and optional style configurations
@@ -1719,6 +1736,7 @@ def create_season(
         team_states: Optional dict of team_name -> US state abbreviation for geo-aware weather
         pinned_matchups: Optional list of (home, away) tuples for user-selected
                         non-conference games that are locked into the schedule.
+        dynasty_year: If set, home/away flips deterministically each year for dynasty mode.
 
     Returns:
         Season object ready for simulation
@@ -1744,6 +1762,7 @@ def create_season(
     season.generate_schedule(
         games_per_team=games_per_team,
         pinned_matchups=pinned_matchups,
+        dynasty_year=dynasty_year,
     )
 
     return season
