@@ -6762,9 +6762,9 @@ class ViperballEngine:
             total_yards = kick_distance + yac
 
             if random.random() < fumble_on_catch:
-                # Fumble on the catch
                 receiver.game_fumbles += 1
                 fumble_spot = min(99, self.state.field_position + kick_distance)
+                throwing_team_fum = self.state.possession
                 recovered_by, is_bell = self._resolve_fumble_recovery(fumble_spot, receiver)
 
                 if recovered_by == 'defense':
@@ -6781,7 +6781,7 @@ class ViperballEngine:
                         play_number=self.state.play_number,
                         quarter=self.state.quarter,
                         time=self.state.time_remaining,
-                        possession=self.state.possession,
+                        possession=throwing_team_fum,
                         field_position=self.state.field_position,
                         down=1,
                         yards_to_go=20,
@@ -6795,7 +6795,6 @@ class ViperballEngine:
                         fumble=True,
                     )
                 else:
-                    # Offense recovers fumble
                     self.state.field_position = min(99, fumble_spot)
                     self.state.down += 1
                     self.state.yards_to_go = max(1, self.state.yards_to_go - kick_distance)
@@ -6814,7 +6813,7 @@ class ViperballEngine:
                             play_number=self.state.play_number,
                             quarter=self.state.quarter,
                             time=self.state.time_remaining,
-                            possession=self.state.possession,
+                            possession=throwing_team_fum,
                             field_position=self.state.field_position,
                             down=1, yards_to_go=20,
                             play_type="kick_pass",
@@ -6834,7 +6833,7 @@ class ViperballEngine:
                         play_number=self.state.play_number,
                         quarter=self.state.quarter,
                         time=self.state.time_remaining,
-                        possession=self.state.possession,
+                        possession=throwing_team_fum,
                         field_position=self.state.field_position,
                         down=self.state.down,
                         yards_to_go=self.state.yards_to_go,
@@ -6865,8 +6864,6 @@ class ViperballEngine:
             yards_gained = self._breakaway_check(yards_gained, team, family=family)
 
             new_position = min(100, self.state.field_position + yards_gained)
-            kicker.game_kick_pass_yards += yards_gained
-            receiver.game_yards += yards_gained
 
             is_td = new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team)
             if is_td:
@@ -6876,8 +6873,6 @@ class ViperballEngine:
                 receiver.game_tds += 1
                 receiver.game_kick_pass_tds = getattr(receiver, 'game_kick_pass_tds', 0) + 1
                 kicker.game_kick_pass_tds += 1
-                kicker.game_kick_pass_yards += (yards_gained - total_yards)  # adjust for TD
-                receiver.game_yards += (yards_gained - total_yards)
                 description = f"{kicker_tag} kick pass to {receiver_tag} → {yards_gained} — TOUCHDOWN!"
             elif yards_gained >= self.state.yards_to_go:
                 result = PlayResult.FIRST_DOWN
@@ -6899,7 +6894,9 @@ class ViperballEngine:
                     self.state.field_position = 100 - self.state.field_position
                     description += " — TURNOVER ON DOWNS"
 
-            # In-game injury check on receiver after catch
+            kicker.game_kick_pass_yards += yards_gained
+            receiver.game_yards += yards_gained
+
             injury_note = ""
             recv_inj = self.check_in_game_injury(receiver, play_type="kick_pass")
             if recv_inj:
@@ -6949,8 +6946,8 @@ class ViperballEngine:
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
             int_spot = min(99, self.state.field_position + kick_distance)
+            throwing_team = self.state.possession
             self.change_possession()
-            # Field position from the intercepting team's perspective
             raw_fp = max(1, 100 - int_spot)
 
             def_team = self.get_defensive_team()
@@ -6964,22 +6961,17 @@ class ViperballEngine:
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
 
-            # ── Explosive INT return ──
-            # Interceptors have open field.  Speed + agility determine
-            # return distance.  INTs produce big-play returns — 70+ yards
-            # is routine, pick-sixes are common.
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
-            return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40  # 0–1
+            return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
             return_yards = max(0, int(random.gauss(35 + return_talent * 20, 18)))
             new_fp = min(100, raw_fp + return_yards)
 
             if new_fp >= 100:
-                # Pick-six!  Interceptor returns it all the way.
-                self.state.field_position = 25  # kickoff position after TD
+                self.state.field_position = 25
                 self.state.down = 1
                 self.state.yards_to_go = 20
-                self.add_score(9)  # TD for intercepting team
+                self.add_score(9)
                 interceptor.game_tds += 1
 
                 self.apply_stamina_drain(4)
@@ -6989,7 +6981,7 @@ class ViperballEngine:
                     play_number=self.state.play_number,
                     quarter=self.state.quarter,
                     time=self.state.time_remaining,
-                    possession=self.state.possession,
+                    possession=throwing_team,
                     field_position=self.state.field_position,
                     down=1,
                     yards_to_go=20,
@@ -7002,7 +6994,6 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
             else:
-                # INT with return yards — great field position
                 self.state.field_position = new_fp
                 self.state.down = 1
                 self.state.yards_to_go = 20
@@ -7014,7 +7005,7 @@ class ViperballEngine:
                     play_number=self.state.play_number,
                     quarter=self.state.quarter,
                     time=self.state.time_remaining,
-                    possession=self.state.possession,
+                    possession=throwing_team,
                     field_position=self.state.field_position,
                     down=1,
                     yards_to_go=20,
@@ -7027,6 +7018,7 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
 
+        throwing_team_inc = self.state.possession
         self.state.down += 1
 
         description = f"{kicker_tag} kick pass intended for {receiver_tag} — INCOMPLETE"
@@ -7048,7 +7040,7 @@ class ViperballEngine:
             play_number=self.state.play_number,
             quarter=self.state.quarter,
             time=self.state.time_remaining,
-            possession=self.state.possession,
+            possession=throwing_team_inc,
             field_position=self.state.field_position,
             down=self.state.down,
             yards_to_go=self.state.yards_to_go,
