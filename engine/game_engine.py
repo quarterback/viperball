@@ -3331,8 +3331,8 @@ class ViperballEngine:
         pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
         pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
-        return_chance = (return_speed / 200) * (1.0 - pindown_bonus) / pindown_defense_factor
-        return_chance = max(0.0, return_chance)
+        return_chance = (return_speed / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
+        return_chance = max(0.75, min(0.98, return_chance))
         can_return_out = random.random() < return_chance
         return not can_return_out
 
@@ -5829,15 +5829,14 @@ class ViperballEngine:
         fp = self.state.field_position
 
         # Safety check — pinned deep in own territory
+        # Target: ~2-3% per team per game
         safety_chance = 0.0
         if self.state.field_position <= 2:
-            safety_chance = 0.10
+            safety_chance = 0.018
         elif self.state.field_position <= 5:
-            safety_chance = 0.06
-        elif self.state.field_position <= 10:
-            safety_chance = 0.03
-        elif self.state.field_position <= 15:
-            safety_chance = 0.015
+            safety_chance = 0.008
+        elif self.state.field_position <= 8:
+            safety_chance = 0.003
         if safety_chance > 0 and random.random() < safety_chance:
             self.change_possession()
             self.add_score(2)
