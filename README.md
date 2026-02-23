@@ -18,7 +18,7 @@ The sport assumes a timeline where the forward pass never took over. Where kicki
 
 ## What Kind of Game Is This
 
-Viperball is physically closer to rugby. Strategically closer to chess.
+Viperball is physically closer to rugby. Strategically closer to **Backgammon meets Mario Kart**, (where Mario Kart's rubber-banding has been tuned by someone who actually cares about competitive integrity). *The chaos is real, but it's purposeful chaos.*
 
 There is no forward pass. The ball moves through running plays, lateral chains (pitches between teammates), and kick passes — punting the ball to a teammate downfield as a designed offensive play. The field is 100 yards. Games run 40 minutes of live time across 4 quarters. Scores typically land between 45 and 75 points per team, and a 20-point lead is genuinely not safe.
 
