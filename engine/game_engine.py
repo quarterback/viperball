@@ -5311,20 +5311,28 @@ class ViperballEngine:
             eligible = skill_pool[:5]
             weights = [1.0] * len(eligible)
 
-        # ── V2: Hero Ball force-feed ──
-        # If hero ball is active, massively boost the star's selection weight
+        # ── V2: Hero Ball force-feed (tuned v2.6) ──
+        # Boost star's weight but cap it so one player can't absorb
+        # the majority of team touches.
         team_side = self.state.possession
         hero_target = self._check_hero_ball(team_side)
         if hero_target:
-            # V2.2: Player trust personality boosts star targeting
             off_mods = self._coaching_mods()
             trust = off_mods.get("personality_factors", {}).get("player_trust", 1.0)
             star_mult = off_mods.get("hidden_trait_effects", {}).get("star_touch_bias", 1.0)
-            hero_weight = 5.0 * trust * star_mult
+            hero_weight = 2.0 * trust * star_mult  # was 5.0, now 2.0
             for i, p in enumerate(eligible):
                 if p.name == hero_target:
                     weights[i] *= hero_weight
                     break
+
+        # Usage-based decay: penalise players who already have many touches
+        # so the offence naturally spreads the ball.
+        for i, p in enumerate(eligible):
+            _touches = getattr(p, "game_touches", 0)
+            if _touches >= 8:
+                _usage_decay = 0.5 ** ((_touches - 7) / 5.0)
+                weights[i] *= max(0.15, _usage_decay)
 
         player = random.choices(eligible, weights=weights, k=1)[0]
         plabel = player_label(player)
@@ -6188,7 +6196,17 @@ class ViperballEngine:
         eligible_receivers = [p for p in skill if p != kicker]
         if not eligible_receivers:
             eligible_receivers = [p for p in skill]
-        receiver = max(eligible_receivers, key=lambda p: p.hands + p.speed)
+        # Weighted random selection: favour hands+speed but spread targets.
+        # Players who already have many receptions get a usage decay so the
+        # offense doesn't force-feed a single receiver all game.
+        _recv_weights = []
+        for _r in eligible_receivers:
+            _base_w = max(1.0, (_r.hands + _r.speed) / 2.0 - 40)
+            # Usage decay: halve weight per 4 prior receptions
+            _prior = getattr(_r, "game_kick_pass_receptions", 0)
+            _decay = 0.5 ** (_prior / 4.0)
+            _recv_weights.append(max(0.1, _base_w * _decay))
+        receiver = random.choices(eligible_receivers, weights=_recv_weights, k=1)[0]
 
         kicker_tag = player_tag(kicker)
         receiver_tag = player_tag(receiver)
@@ -8069,9 +8087,11 @@ class ViperballEngine:
             target = self.state.away_hero_ball_target
             touches = self.state.away_consecutive_star_touches
 
-        if carrier.name == target and touches >= 4:
-            # Defense is keying: effectiveness drops with each touch
-            key_penalty = min(0.30, (touches - 3) * 0.08)
+        if carrier.name == target and touches >= 3:
+            # Defense is keying: effectiveness drops with each touch.
+            # Ramps faster and caps higher so defenses actually punish
+            # one-dimensional offences.  (was 0.08 step, 0.30 cap)
+            key_penalty = min(0.50, (touches - 2) * 0.12)
             return 1.0 - key_penalty
 
         return 1.0
