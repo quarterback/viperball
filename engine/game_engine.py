@@ -758,20 +758,26 @@ ZB_STYLE_MAP = {
 
 
 def assign_game_roles(team, offense_style: str = "balanced") -> dict:
-    """Assign offensive starter/rotation roles at game start.
+    """Assign starter/rotation roles for offense, defense, and special teams.
 
-    Starter-based system:
+    Starter-based system applied to ALL three phases:
+
+    OFFENSE:
     1. ZB Style: Classifies each Zeroback as kick_dominant, run_dominant,
        dual_threat, or distributor based on archetype.
     2. Rush Starters: Top player at each position group (HB1, WB1, SB1,
-       VP1, and run-capable ZBs) become STARTER for rushing. Everyone
-       else is ROTATION. Starters get first-look at carries.
+       VP1, and run-capable ZBs) become STARTER for rushing.
     3. Receiving Starters: Top receivers by hands/speed become STARTER
-       for kick pass targets. Separate from rushing hierarchy.
+       for kick pass targets.
 
-    The engine then uses starter-first-look probability (style-dependent)
-    to decide whether each play goes to a starter or the full rotation.
-    Ratings influence execution quality (yards, completion%), not volume.
+    DEFENSE:
+    4. Defensive Starters: Top 2 Keepers and top 3 DL by tackle_score
+       become STARTER. Starters get first-look at tackles/sacks.
+
+    SPECIAL TEAMS:
+    5. Return Specialist: Best returner by return_score becomes STARTER.
+       Gets strong first-look on kick/punt returns (~80% of touches).
+    6. Coverage Specialist: Best coverage tackler becomes ST STARTER.
 
     Returns dict mapping player names to roles for logging.
     """
@@ -780,6 +786,7 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
         if getattr(p, 'injured_in_game', False):
             injured.add(p.name)
 
+    # ── OFFENSE ──────────────────────────────────────────────────────
     skill = [p for p in team.players
              if p.position in ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
              and p.name not in injured]
@@ -850,10 +857,107 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
     for p in receivers_ranked[:starter_recv_count]:
         p.game_role_recv = "STARTER"
 
+    # ── DEFENSE ──────────────────────────────────────────────────────
+    def tackle_score(p):
+        tck = p.tackling
+        spd = p.speed
+        aware = getattr(p, 'awareness', 75)
+        pwr = getattr(p, 'power', 75)
+        base = tck * 1.3 + spd * 0.9 + aware * 0.8 + pwr * 0.5
+        if p.position == "Keeper" and p.archetype == "tackle_keeper":
+            base *= 1.15
+        return base
+
+    defenders = [p for p in team.players
+                 if p.position in ("Keeper", "Defensive Line")
+                 and p.name not in injured]
+
+    for p in defenders:
+        p.game_def_role = "ROTATION"
+
+    keepers = sorted([p for p in defenders if p.position == "Keeper"],
+                     key=tackle_score, reverse=True)
+    dl = sorted([p for p in defenders if p.position == "Defensive Line"],
+                key=tackle_score, reverse=True)
+
+    for p in keepers[:2]:
+        p.game_def_role = "STARTER"
+    for p in dl[:3]:
+        p.game_def_role = "STARTER"
+
+    # ── SPECIAL TEAMS ────────────────────────────────────────────────
+    # Philosophy: ST is where backups and depth players earn field time.
+    # Offensive starters should NOT be returning kicks — that's for your
+    # 3rd-string wingback or backup viper with elite speed. Defensive
+    # rotation players get coverage duty. return_keeper archetype is
+    # the exception — that's literally their job.
+
+    def return_score(p):
+        spd = p.speed
+        agi = getattr(p, 'agility', 75)
+        hands = getattr(p, 'hands', 75)
+        base = spd * 1.4 + agi * 1.0 + hands * 0.6
+        if p.position == "Keeper" and p.archetype == "return_keeper":
+            base *= 1.50
+        elif p.archetype in ("speed_flanker", "elusive_flanker"):
+            base *= 1.12
+        if p.game_role == "STARTER":
+            base *= 0.40
+        elif p.game_role_recv == "STARTER" and p.game_role != "STARTER":
+            base *= 0.65
+        return base
+
+    def coverage_score(p):
+        tck = p.tackling
+        spd = p.speed
+        aware = getattr(p, 'awareness', 75)
+        base = tck * 1.2 + spd * 1.0 + aware * 0.8
+        if p.position == "Keeper" and p.archetype == "tackle_keeper":
+            base *= 1.20
+        if getattr(p, 'game_def_role', 'ROTATION') == "ROTATION":
+            base *= 1.25
+        return base
+
+    st_eligible = [p for p in team.players
+                   if p.position in ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")
+                   and p.name not in injured]
+
+    for p in st_eligible:
+        p.game_st_role = "ROTATION"
+
+    if st_eligible:
+        returners_ranked = sorted(st_eligible, key=return_score, reverse=True)
+        st_starter_count = min(3, max(1, len(returners_ranked) // 3))
+        for p in returners_ranked[:st_starter_count]:
+            p.game_st_role = "STARTER"
+
+    coverage_eligible = [p for p in team.players
+                         if p.position in ("Keeper", "Defensive Line")
+                         and p.name not in injured]
+    if coverage_eligible:
+        coverage_ranked = sorted(coverage_eligible, key=coverage_score, reverse=True)
+        cov_count = min(2, len(coverage_ranked))
+        for p in coverage_ranked[:cov_count]:
+            p.game_st_role = "STARTER"
+
+    # ── Build role map ───────────────────────────────────────────────
     role_map = {}
     for p in skill:
         zb_tag = f" [{p.game_zb_style}]" if p.game_zb_style else ""
         role_map[p.name] = f"{p.game_role}/{p.game_role_recv}{zb_tag}"
+    for p in defenders:
+        def_tag = f"DEF:{p.game_def_role}"
+        if p.name in role_map:
+            role_map[p.name] += f" {def_tag}"
+        else:
+            role_map[p.name] = def_tag
+    for p in st_eligible + coverage_eligible:
+        if p.game_st_role == "STARTER" and p.name not in [n for n, r in role_map.items() if "ST:STARTER" in r]:
+            st_tag = "ST:STARTER"
+            if p.name in role_map:
+                role_map[p.name] += f" {st_tag}"
+            else:
+                role_map[p.name] = st_tag
 
     return role_map
 
@@ -2972,31 +3076,46 @@ class ViperballEngine:
         return weights
 
     def _spread_the_love_defense(self, pool, weights):
-        """Adjust defensive player weights to spread tackles across the lineup.
+        """Starter-first-look for defense + spread tackles across the lineup.
 
-        Ensures all defensive starters get involved and reserves see action
-        in blowouts.
+        Phase 1: Starter-first-look — roll a probability to see if only
+        starters compete for this tackle. If it misses, full rotation.
+        Phase 2: Overuse decay and underuse boost for balance.
+        Phase 3: Blowout reserves get flattened weights.
         """
         if not pool:
             return weights
+
+        starters = [i for i, p in enumerate(pool) if getattr(p, 'game_def_role', 'ROTATION') == "STARTER"]
+        has_starters = len(starters) >= 2
+
+        if has_starters:
+            starter_first_look_prob = 0.65
+            if self._is_blowout():
+                starter_first_look_prob = 0.30
+            if random.random() < starter_first_look_prob:
+                for i in range(len(weights)):
+                    if i not in starters:
+                        weights[i] *= 0.08
 
         all_tackles = [getattr(p, "game_tackles", 0) for p in pool]
         avg_tackles = sum(all_tackles) / max(1, len(all_tackles))
 
         for i, p in enumerate(pool):
             tackles = getattr(p, "game_tackles", 0)
+            is_starter = getattr(p, 'game_def_role', 'ROTATION') == "STARTER"
 
-            # Overused decay: defenders with many tackles get less likely
-            if tackles >= 4:
+            starter_ceiling = 10 if is_starter else 6
+            if tackles >= starter_ceiling:
+                _decay = 0.60 ** ((tackles - starter_ceiling + 1) / 3.0)
+                weights[i] *= max(0.10, _decay)
+            elif tackles >= 4:
                 _decay = 0.65 ** ((tackles - 3) / 3.0)
                 weights[i] *= max(0.15, _decay)
-
-            # Underused boost: defenders who haven't been involved
             elif avg_tackles >= 2 and tackles <= 1:
                 underuse_boost = 1.4 + (avg_tackles - tackles) * 0.2
                 weights[i] *= min(2.5, underuse_boost)
 
-        # Blowout: flatten weights for reserve playing time
         if self._is_blowout():
             max_w = max(weights) if weights else 1.0
             for i in range(len(weights)):
@@ -4944,37 +5063,64 @@ class ViperballEngine:
         return random.random() < base_fumble
 
     def _pick_returner(self, team):
-        """Skill-weighted returner selection — speed and hands matter."""
+        """ST starter-first-look returner — backups and depth players get the returns.
+
+        ST starters are specifically chosen to be non-offensive-starters
+        (via assign_game_roles), so this concentrates returns on depth
+        players who earn their field time on special teams.
+        """
         eligible = [p for p in team.players if p.position in
                     ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
         if not eligible:
             eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
         if not eligible:
             return None
-        # Weight by return ability: speed dominant, hands for ball security
+
+        st_starters = [p for p in eligible if getattr(p, 'game_st_role', 'ROTATION') == "STARTER"]
+
+        if st_starters and random.random() < 0.75:
+            weights = []
+            for p in st_starters:
+                w = p.speed * 0.55 + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * 0.20
+                if p.position == "Keeper" and p.archetype == "return_keeper":
+                    w *= 1.40
+                weights.append(max(1.0, w))
+            return random.choices(st_starters, weights=weights, k=1)[0]
+
         weights = []
         for p in eligible:
             w = p.speed * 0.55 + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * 0.20
-            # Keeper return_keeper archetype gets a big boost
             if p.position == "Keeper" and p.archetype == "return_keeper":
                 w *= 1.40
+            if getattr(p, 'game_role', 'ROTATION') == "STARTER":
+                w *= 0.30
             weights.append(max(1.0, w))
         return random.choices(eligible, weights=weights, k=1)[0]
 
     def _pick_coverage_tackler(self, team):
-        """Skill-weighted coverage tackler — tackling and speed matter."""
+        """Coverage tackler — favors defensive rotation/depth players on ST duty.
+
+        Special teams coverage is where backup defenders earn playing time.
+        Defensive starters are resting; rotation guys make the tackle.
+        """
         eligible = [p for p in team.players if p.position in
                     ("Keeper", "Defensive Line")]
         if not eligible:
             eligible = team.players
         if not eligible:
             return None
+
+        st_starters = [p for p in eligible if getattr(p, 'game_st_role', 'ROTATION') == "STARTER"]
+        if st_starters and random.random() < 0.55:
+            eligible = st_starters
+
         weights = []
         for p in eligible:
             w = p.tackling * 0.40 + p.speed * 0.35 + getattr(p, 'awareness', 75) * 0.25
-            # Tackle keeper archetype excels on coverage
             if p.position == "Keeper" and p.archetype == "tackle_keeper":
                 w *= 1.30
+            if getattr(p, 'game_def_role', 'ROTATION') == "ROTATION":
+                w *= 1.20
             weights.append(max(1.0, w))
         return random.choices(eligible, weights=weights, k=1)[0]
 
@@ -8645,12 +8791,18 @@ class ViperballEngine:
                     role_label = getattr(p, 'game_role', 'DEPTH')
                     recv_role = getattr(p, 'game_role_recv', 'DEPTH')
                     zb_style = getattr(p, 'game_zb_style', '')
+                    def_role = getattr(p, 'game_def_role', 'ROTATION')
+                    st_role = getattr(p, 'game_st_role', 'ROTATION')
                     if role_label == recv_role:
                         combined_role = role_label
                     else:
                         combined_role = f"{role_label}/{recv_role}"
                     if zb_style:
                         combined_role += f" [{zb_style}]"
+                    if def_role == "STARTER":
+                        combined_role += " DEF:STARTER"
+                    if st_role == "STARTER":
+                        combined_role += " ST:STARTER"
                     stat_entry = {
                         "tag": player_tag(p),
                         "name": p.name,
@@ -8701,6 +8853,8 @@ class ViperballEngine:
                         "vpa": round(p.game_vpa, 2),
                         "plays_involved": p.game_plays_involved,
                         "vpa_per_play": round(p.game_vpa / max(1, p.game_plays_involved), 3),
+                        "def_role": getattr(p, 'game_def_role', 'ROTATION'),
+                        "st_role": getattr(p, 'game_st_role', 'ROTATION'),
                     }
                     stats.append(stat_entry)
             return sorted(stats, key=lambda x: x["touches"] + x["kick_att"] + x["tackles"], reverse=True)
