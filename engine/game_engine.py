@@ -621,7 +621,7 @@ POSITION_ARCHETYPES = {
             "fumble_modifier": 0.90,
             "td_rate_modifier": 0.75,
             "touches_target": (3, 6),
-            "dk_block_bonus": 0.008,
+            "dk_block_bonus_base": 0.004,
         },
     },
     "keeper": {
@@ -680,14 +680,14 @@ def assign_archetype(player) -> str:
         else:
             return "hybrid_viper"
     elif any(p in pos for p in ["Halfback", "Wingback", "Slotback"]):
-        if tck >= 82 and spd >= 88 and kick >= 60:
-            return "diving_wing"
-        elif spd >= 93:
+        if spd >= 93:
             return "speed_flanker"
         elif tck >= 80 and stam >= 88:
             return "power_flanker"
         elif lat >= 88 and spd >= 85:
             return "elusive_flanker"
+        elif tck >= 72 and spd >= 80 and kick >= 45:
+            return "diving_wing"
         else:
             return "reliable_flanker"
     elif "Keeper" in pos:
@@ -7566,11 +7566,16 @@ class ViperballEngine:
         dw_bonus = 0.0
         dw_blocker = None
         for p in def_team.players:
-            arch = get_archetype_info(p.archetype)
-            b = arch.get("dk_block_bonus", 0.0)
-            if b > dw_bonus:
-                dw_bonus = b
-                dw_blocker = p
+            if p.archetype == "diving_wing":
+                tck_score = max(0, p.tackling - 70) / 30.0
+                spd_score = max(0, p.speed - 78) / 22.0
+                kick_score = max(0, p.kicking - 40) / 50.0
+                attr_index = (tck_score * 0.45 + spd_score * 0.35 + kick_score * 0.20)
+                attr_index = min(1.0, attr_index)
+                b = 0.004 + attr_index * 0.008
+                if b > dw_bonus:
+                    dw_bonus = b
+                    dw_blocker = p
         dk_block_prob += dw_bonus
 
         offense_style_name = self._current_style().get("name", "")
