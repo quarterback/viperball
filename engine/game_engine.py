@@ -613,6 +613,16 @@ POSITION_ARCHETYPES = {
             "td_rate_modifier": 0.85,
             "touches_target": (8, 12),
         },
+        "diving_wing": {
+            "label": "Diving Wing",
+            "description": "Kick-block specialist — dives at the kicker's release point like a cover corner",
+            "yards_per_touch_modifier": 0.80,
+            "breakaway_bonus": 0.0,
+            "fumble_modifier": 0.90,
+            "td_rate_modifier": 0.75,
+            "touches_target": (3, 6),
+            "dk_block_bonus": 0.008,
+        },
     },
     "keeper": {
         "return_keeper": {
@@ -670,7 +680,9 @@ def assign_archetype(player) -> str:
         else:
             return "hybrid_viper"
     elif any(p in pos for p in ["Halfback", "Wingback", "Slotback"]):
-        if spd >= 93:
+        if tck >= 82 and spd >= 88 and kick >= 60:
+            return "diving_wing"
+        elif spd >= 93:
             return "speed_flanker"
         elif tck >= 80 and stam >= 88:
             return "power_flanker"
@@ -2212,7 +2224,8 @@ DEFENSE_STYLES = {
 # These are modulated by offensive and defensive styles
 
 BASE_BLOCK_PUNT = 0.03   # 3% base chance of blocked punt
-BASE_BLOCK_KICK = 0.04   # 4% base chance of blocked FG/snapkick
+BASE_BLOCK_KICK = 0.04   # 4% base chance of blocked FG/place kick
+BASE_BLOCK_DK = 0.025    # 2.5% base chance of blocked drop kick
 BASE_MUFF_PUNT = 0.05    # 5% base chance of muffed punt return
 
 # Offensive style modifiers for blocks (lower = better special teams)
@@ -7538,124 +7551,94 @@ class ViperballEngine:
     def get_defensive_team(self) -> Team:
         return self.away_team if self.state.possession == "home" else self.home_team
 
-    def simulate_drop_kick(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
+    def simulate_drop_kick(self, family: PlayFamily = PlayFamily.SNAP_KICK) -> Play:
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
-        is_snap_kick = (family == PlayFamily.SNAP_KICK)
+        kicking_team = self.state.possession
 
-        # ── Pesäpallo Rule: Snap kicks are dead-ball attempts ──
-        # Blocked kicks and keeper deflections only apply to NON-snap-kick
-        # drop kicks. Snap kicks under the pesäpallo rule are safe: miss = dead
-        # ball at LOS, retain possession, advance down.
-        if not is_snap_kick:
-            # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
-            block_prob = self.calculate_block_probability(kick_type="kick")
-            if random.random() < block_prob:
-                def_team = self.get_defensive_team()
-                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
-                btag = player_tag(blocker)
-                if random.random() < 0.70:
-                    self.change_possession()
-                    block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
-                    self.state.field_position = 100 - block_spot
-                    self.state.down = 1
-                    self.state.yards_to_go = 20
-                    self.apply_stamina_drain(2)
-                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-                    if random.random() < 0.15:
-                        self.add_score(9)
-                        return Play(
-                            play_number=self.state.play_number, quarter=self.state.quarter,
-                            time=self.state.time_remaining, possession=self.state.possession,
-                            field_position=self.state.field_position, down=1, yards_to_go=20,
-                            play_type="drop_kick", play_family=family.value,
-                            players_involved=[player_label(kicker), player_label(blocker)],
-                            yards_gained=-block_spot,
-                            result=PlayResult.BLOCKED_KICK.value,
-                            description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
-                            fatigue=round(stamina, 1),
-                        )
-                    else:
-                        return Play(
-                            play_number=self.state.play_number, quarter=self.state.quarter,
-                            time=self.state.time_remaining, possession=self.state.possession,
-                            field_position=self.state.field_position, down=1, yards_to_go=20,
-                            play_type="drop_kick", play_family=family.value,
-                            players_involved=[player_label(kicker), player_label(blocker)],
-                            yards_gained=-block_spot,
-                            result=PlayResult.BLOCKED_KICK.value,
-                            description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
-                            fatigue=round(stamina, 1),
-                        )
-                else:
-                    self.change_possession()
-                    self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
-                    self.state.down = 1
-                    self.state.yards_to_go = 20
-                    self.apply_stamina_drain(2)
-                    stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-                    return Play(
-                        play_number=self.state.play_number, quarter=self.state.quarter,
-                        time=self.state.time_remaining, possession=self.state.possession,
-                        field_position=self.state.field_position, down=1, yards_to_go=20,
-                        play_type="drop_kick", play_family=family.value,
-                        players_involved=[player_label(kicker)],
-                        yards_gained=0,
-                        result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} drop kick BLOCKED! Kicking team recovers but turnover on downs!",
-                        fatigue=round(stamina, 1),
-                    )
+        # ── Blocked drop kick check ──
+        # Drop kicks have a small chance of being blocked.  Diving Wing
+        # flankers on the defensive side are specialists at timing the
+        # kicker's release and getting a hand on it.
+        def_team = self.get_defensive_team()
+        dk_block_prob = BASE_BLOCK_DK
 
-            # Keeper deflection check (non-snap-kick only)
-            def_team = self.get_defensive_team()
-            keeper = None
-            for p in def_team.players:
-                if p.position == "Keeper":
-                    keeper = p
-                    break
-            if keeper is None:
-                keeper = max(def_team.players[-3:], key=lambda p: p.speed)
-            keeper.game_coverage_snaps += 1
-            keeper_arch = get_archetype_info(keeper.archetype)
-            deflection_base = 0.05
-            deflection_base += keeper_arch.get("deflection_bonus", 0.0)
-            if keeper.speed >= 90:
-                deflection_base += 0.03
-            if keeper.tackling >= 80:
-                deflection_base += 0.02
-            keeper_stamina = keeper.current_stamina if hasattr(keeper, 'current_stamina') else 100.0
-            if keeper_stamina < 70:
-                deflection_base *= 0.75
-            weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
-            if weather_mod < -0.05:
-                deflection_base += 0.03
-            if random.random() < deflection_base:
-                keeper.game_kick_deflections += 1
-                ktag = player_tag(keeper)
+        dw_bonus = 0.0
+        dw_blocker = None
+        for p in def_team.players:
+            arch = get_archetype_info(p.archetype)
+            b = arch.get("dk_block_bonus", 0.0)
+            if b > dw_bonus:
+                dw_bonus = b
+                dw_blocker = p
+        dk_block_prob += dw_bonus
+
+        offense_style_name = self._current_style().get("name", "")
+        dk_block_prob *= OFFENSE_BLOCK_MODIFIERS.get(offense_style_name, 1.0)
+        defense_style_name = self._current_defense_name()
+        dk_block_prob *= DEFENSE_BLOCK_MODIFIERS.get(defense_style_name, 1.0)
+
+        weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        if weather_mod < -0.05:
+            dk_block_prob += 0.005
+
+        dk_block_prob = max(0.0, min(0.06, dk_block_prob))
+
+        if random.random() < dk_block_prob:
+            blocker = dw_blocker if dw_blocker else max(self._defense_players(def_team), key=lambda p: p.speed)
+            btag = player_tag(blocker)
+            if random.random() < 0.70:
                 self.change_possession()
-                recover_spot = max(1, min(99, 100 - self.state.field_position + random.randint(-5, 5)))
-                self.state.field_position = recover_spot
+                block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
+                self.state.field_position = 100 - block_spot
                 self.state.down = 1
                 self.state.yards_to_go = 20
-                self.add_score(0.5)
-                keeper.game_keeper_bells += 1
-                self.apply_stamina_drain(3)
+                self.apply_stamina_drain(2)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
-                weather_tag = f" [{self.weather_info['label']}]" if self.weather != "clear" else ""
+                if random.random() < 0.15:
+                    self.add_score(9)
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=kicking_team,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        fatigue=round(stamina, 1),
+                    )
+                else:
+                    return Play(
+                        play_number=self.state.play_number, quarter=self.state.quarter,
+                        time=self.state.time_remaining, possession=kicking_team,
+                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        play_type="drop_kick", play_family=family.value,
+                        players_involved=[player_label(kicker), player_label(blocker)],
+                        yards_gained=-block_spot,
+                        result=PlayResult.BLOCKED_KICK.value,
+                        description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        fatigue=round(stamina, 1),
+                    )
+            else:
+                self.state.down += 1
+                if self.state.down > 6:
+                    self.change_possession()
+                    self.state.field_position = 100 - self.state.field_position
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                self.apply_stamina_drain(2)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                 return Play(
-                    play_number=self.state.play_number,
-                    quarter=self.state.quarter,
-                    time=self.state.time_remaining,
-                    possession=self.state.possession,
-                    field_position=self.state.field_position,
-                    down=1, yards_to_go=20,
-                    play_type="drop_kick",
-                    play_family=family.value,
-                    players_involved=[player_label(kicker), player_label(keeper)],
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=kicking_team,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="drop_kick", play_family=family.value,
+                    players_involved=[player_label(kicker), player_label(blocker)],
                     yards_gained=0,
                     result=PlayResult.BLOCKED_KICK.value,
-                    description=f"{ptag} drop kick — DEFLECTED by Keeper {ktag}! Defense recovers (+½){weather_tag}",
+                    description=f"{ptag} drop kick BLOCKED by {btag}! Kicking team recovers — dead ball",
                     fatigue=round(stamina, 1),
                 )
 
