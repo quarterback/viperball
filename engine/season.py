@@ -857,7 +857,9 @@ class Season:
                 coaching_kwargs["home_coaching"] = home_staff
             if away_staff:
                 coaching_kwargs["away_coaching"] = away_staff
-            coaching_kwargs["game_week"] = game.week
+            # Only set game_week here if injury_kwargs didn't already
+            if "game_week" not in injury_kwargs:
+                coaching_kwargs["game_week"] = game.week
 
         # Bowl games and playoff games are neutral site (no home field advantage)
         is_neutral = game.week >= 900

@@ -283,7 +283,7 @@ async def _render_season_play(state: UserState, shared: dict):
                 async def _sim_week():
                     try:
                         result = await run.io_bound(api_client.simulate_week, state.session_id)
-                        week = result.get("week_simulated", current_week + 1)
+                        week = result.get("week", current_week + 1)
                         notify_success(f"Week {week} simulated!")
                         _season_actions.refresh()
                     except api_client.APIError as e:
@@ -300,7 +300,7 @@ async def _render_season_play(state: UserState, shared: dict):
                 ui.button(f"Simulate Week {current_week + 1}", on_click=_sim_week, icon="play_arrow").props("color=primary")
                 ui.button("Sim Rest of Season", on_click=_sim_rest, icon="fast_forward")
 
-        elif phase == "postseason" or phase == "playoffs":
+        elif phase == "playoffs_pending":
             async def _run_playoffs():
                 try:
                     await run.io_bound(api_client.run_playoffs, state.session_id)
@@ -311,7 +311,7 @@ async def _render_season_play(state: UserState, shared: dict):
 
             ui.button("Run Playoffs", on_click=_run_playoffs, icon="emoji_events").props("color=primary")
 
-        elif phase == "bowls":
+        elif phase == "bowls_pending":
             async def _run_bowls():
                 try:
                     await run.io_bound(api_client.run_bowls, state.session_id)
@@ -327,22 +327,44 @@ async def _render_season_play(state: UserState, shared: dict):
                 ui.label("Season Complete!").classes("font-bold text-green-700")
                 ui.label("Check the League tab for final standings and awards.").classes("text-sm text-green-600")
 
-        # Show recent results
+        # Show full schedule (completed + upcoming)
         try:
-            schedule = await run.io_bound(api_client.get_schedule, state.session_id, completed_only=True)
-            games = schedule.get("games", [])
-            if games:
-                recent = games[-min(10, len(games)):]
-                with ui.expansion(f"Recent Results ({len(games)} games played)", icon="history").classes("w-full mt-4"):
-                    rows = []
-                    for g in reversed(recent):
-                        rows.append({
-                            "Week": g.get("week", ""),
-                            "Home": g.get("home_team", ""),
-                            "Score": f"{fmt_vb_score(g.get('home_score', 0))} - {fmt_vb_score(g.get('away_score', 0))}",
-                            "Away": g.get("away_team", ""),
-                        })
-                    stat_table(rows)
+            schedule = await run.io_bound(api_client.get_schedule, state.session_id)
+            all_games = schedule.get("games", [])
+            if all_games:
+                completed = [g for g in all_games if g.get("completed")]
+                upcoming = [g for g in all_games if not g.get("completed")]
+
+                if completed:
+                    recent = completed[-min(10, len(completed)):]
+                    with ui.expansion(
+                        f"Recent Results ({len(completed)} games played)",
+                        icon="history",
+                    ).classes("w-full mt-4"):
+                        rows = []
+                        for g in reversed(recent):
+                            rows.append({
+                                "Week": g.get("week", ""),
+                                "Home": g.get("home_team", ""),
+                                "Score": f"{fmt_vb_score(g.get('home_score', 0))} - {fmt_vb_score(g.get('away_score', 0))}",
+                                "Away": g.get("away_team", ""),
+                            })
+                        stat_table(rows)
+
+                if upcoming:
+                    with ui.expansion(
+                        f"Upcoming Games ({len(upcoming)} remaining)",
+                        icon="event",
+                    ).classes("w-full mt-2"):
+                        rows = []
+                        for g in upcoming[:30]:
+                            rows.append({
+                                "Week": g.get("week", ""),
+                                "Home": g.get("home_team", ""),
+                                "Away": g.get("away_team", ""),
+                                "Conf": "Yes" if g.get("is_conference_game") else "",
+                            })
+                        stat_table(rows)
         except api_client.APIError:
             pass
 
