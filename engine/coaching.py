@@ -479,6 +479,21 @@ class CoachCard:
     wants_hc: bool = False               # assistant coaches who aspire to be HC
     alma_mater: str = ""                 # school name — alumni bonus in portal matching
 
+    # V2.5 HC Ambition & Coaching Tree ──
+    conference_titles: int = 0           # career conference championships won
+    playoff_appearances: int = 0         # career playoff berths
+    playoff_wins: int = 0               # career individual playoff game wins
+    championship_appearances: int = 0    # career finals reached
+    # coaching_tree: every HC this coach worked under as an assistant
+    # Each entry: {"coach_name", "coach_id", "team_name", "year_start", "year_end"}
+    coaching_tree: List[dict] = field(default_factory=list)
+
+    # V2.5 HC Readiness Meter (assistants only) ──
+    # 0-100 meter that fills over time. When it crosses 75, the coach
+    # flips wants_hc=True and actively seeks HC positions.  At 90+
+    # they're a "hot name" that gets ranking boosts in portal matching.
+    hc_meter: int = 0
+
     # ── computed properties ───────────────────
 
     @property
@@ -599,6 +614,12 @@ class CoachCard:
             "hc_affinity": self.hc_affinity,
             "wants_hc": self.wants_hc,
             "alma_mater": self.alma_mater,
+            "conference_titles": self.conference_titles,
+            "playoff_appearances": self.playoff_appearances,
+            "playoff_wins": self.playoff_wins,
+            "championship_appearances": self.championship_appearances,
+            "coaching_tree": list(self.coaching_tree),
+            "hc_meter": self.hc_meter,
         }
 
     @classmethod
@@ -643,6 +664,12 @@ class CoachCard:
             hc_affinity=d.get("hc_affinity", "balanced"),
             wants_hc=d.get("wants_hc", False),
             alma_mater=d.get("alma_mater", ""),
+            conference_titles=d.get("conference_titles", 0),
+            playoff_appearances=d.get("playoff_appearances", 0),
+            playoff_wins=d.get("playoff_wins", 0),
+            championship_appearances=d.get("championship_appearances", 0),
+            coaching_tree=d.get("coaching_tree", []),
+            hc_meter=d.get("hc_meter", 0),
         )
 
 
@@ -1673,6 +1700,220 @@ def convert_player_to_coach(
 
 
 # ──────────────────────────────────────────────
+# V2.5 HC READINESS METER + COACH DEVELOPMENT
+# ──────────────────────────────────────────────
+# Assistants accumulate "HC Meter" points each offseason based on:
+#   - Coaching a top-tier player (+5-10 if best player in their area is 85+ ovr)
+#   - Team winning record (+3-8 based on wins above .500)
+#   - Working for a successful HC (+2-6 based on HC win% and postseason)
+#   - Pure tenure (+2 per year as a coordinator)
+#   - Their own overall rating (+1-3 if 75+ overall)
+#
+# At meter >= 75 the coach flips wants_hc = True.
+# At meter >= 90 they're a "hot name" with portal ranking boosts.
+#
+# Coaches also develop their attributes each offseason (like players),
+# though gains are smaller: 0-2 points per attribute.
+
+def advance_hc_meter(
+    card: CoachCard,
+    team_wins: int,
+    team_losses: int,
+    hc_card: Optional[CoachCard] = None,
+    best_player_ovr_in_area: int = 0,
+    made_playoff: bool = False,
+    won_conference: bool = False,
+    rng: Optional[random.Random] = None,
+) -> int:
+    """
+    Advance an assistant coach's HC readiness meter for one offseason.
+
+    Args:
+        card:                    The assistant coach.
+        team_wins:               Team's wins this season.
+        team_losses:             Team's losses this season.
+        hc_card:                 The HC they worked under (for success bonus).
+        best_player_ovr_in_area: Highest overall among players in their area.
+        made_playoff:            Whether the team made the playoffs.
+        won_conference:          Whether the team won the conference.
+        rng:                     Seeded Random.
+
+    Returns:
+        The meter gain this year.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    if card.role == "head_coach":
+        return 0  # HCs don't need the meter
+
+    gain = 0
+
+    # 1. Tenure: +2 per year as a coordinator
+    gain += 2
+
+    # 2. Coaching a star player: +5-10 if best player in area is 85+ ovr
+    if best_player_ovr_in_area >= 90:
+        gain += rng.randint(7, 10)
+    elif best_player_ovr_in_area >= 85:
+        gain += rng.randint(5, 7)
+    elif best_player_ovr_in_area >= 80:
+        gain += rng.randint(2, 4)
+
+    # 3. Team winning: +3-8 based on wins above .500
+    total = team_wins + team_losses
+    if total > 0:
+        wp = team_wins / total
+        if wp >= 0.75:
+            gain += rng.randint(6, 8)
+        elif wp >= 0.60:
+            gain += rng.randint(4, 6)
+        elif wp >= 0.50:
+            gain += rng.randint(2, 4)
+
+    # 4. Postseason: bonus for playoff / conference championship
+    if made_playoff:
+        gain += rng.randint(3, 5)
+    if won_conference:
+        gain += rng.randint(2, 4)
+
+    # 5. HC success: working for a great HC rubs off
+    if hc_card:
+        hc_wp = hc_card.win_percentage
+        if hc_wp >= 0.70:
+            gain += rng.randint(4, 6)
+        elif hc_wp >= 0.55:
+            gain += rng.randint(2, 4)
+        # Bonus if HC has championships
+        if hc_card.championships > 0:
+            gain += rng.randint(1, 3)
+
+    # 6. Own quality: already-good coaches learn faster
+    if card.overall >= 80:
+        gain += rng.randint(2, 3)
+    elif card.overall >= 75:
+        gain += rng.randint(1, 2)
+
+    # Apply
+    old_meter = card.hc_meter
+    card.hc_meter = min(100, card.hc_meter + gain)
+
+    # Flip wants_hc when meter crosses 75
+    if card.hc_meter >= 75 and not card.wants_hc:
+        card.wants_hc = True
+
+    return gain
+
+
+def apply_coach_development(
+    card: CoachCard,
+    team_wins: int = 6,
+    team_losses: int = 6,
+    rng: Optional[random.Random] = None,
+) -> Dict[str, int]:
+    """
+    Apply offseason attribute development to a coach.
+
+    Coaches improve slowly over time (0-2 per attribute per year),
+    with a small boost for winning and a decline for old age.
+
+    Args:
+        card:         The coach to develop.
+        team_wins:    Team wins this season (winning breeds improvement).
+        team_losses:  Team losses.
+        rng:          Seeded Random.
+
+    Returns:
+        Dict of attribute_name -> change amount.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    changes: Dict[str, int] = {}
+    total = team_wins + team_losses
+    wp = team_wins / total if total > 0 else 0.5
+
+    # Winning coaches improve more
+    if wp >= 0.65:
+        gain_range = (0, 2)
+    elif wp >= 0.50:
+        gain_range = (0, 1)
+    else:
+        gain_range = (-1, 1)
+
+    # Age decline: coaches over 60 start losing a step
+    age_penalty = 0
+    if card.age >= 65:
+        age_penalty = -2
+    elif card.age >= 60:
+        age_penalty = -1
+
+    for attr_name in ("instincts", "leadership", "composure", "rotations",
+                       "development", "recruiting"):
+        base_change = rng.randint(*gain_range) + age_penalty
+        old_val = getattr(card, attr_name)
+        new_val = _clamp_attr(old_val + base_change)
+        delta = new_val - old_val
+        if delta != 0:
+            setattr(card, attr_name, new_val)
+            changes[attr_name] = delta
+
+    return changes
+
+
+# ──────────────────────────────────────────────
+# V2.5 ROLE FLUIDITY: HC ↔ COORDINATOR
+# ──────────────────────────────────────────────
+# Head coaches can accept coordinator roles (demotions) and
+# coordinators can be promoted to HC.  When a coach changes roles,
+# their attributes and classification stay the same but their
+# contract/salary adjusts.
+
+def get_acceptable_roles(card: CoachCard) -> List[str]:
+    """
+    Return all roles a coach would consider accepting.
+
+    Every coach can move between HC and coordinator roles — it's not
+    a permanent designation.  A fired HC might take a coordinator
+    job to stay in the game; a coordinator with high HC meter
+    wants an HC gig.
+
+    Rules:
+    - HCs accept: head_coach + their original coordinator role
+      (inferred from hc_affinity) + any role if desperate (fired).
+    - Coordinators accept: their current role, head_coach (if
+      wants_hc), and adjacent coordinator roles (30% each).
+    """
+    roles = [card.role]
+
+    if card.role == "head_coach":
+        # Former HCs can take coordinator roles
+        # Their hc_affinity hints at where they'd fit best
+        if card.hc_affinity == "defensive_mind":
+            if "dc" not in roles:
+                roles.append("dc")
+        elif card.hc_affinity == "offensive_mind":
+            if "oc" not in roles:
+                roles.append("oc")
+        elif card.hc_affinity == "special_teams_guru":
+            if "stc" not in roles:
+                roles.append("stc")
+        else:
+            # Balanced: pick one coordinator role
+            for r in ("oc", "dc"):
+                if r not in roles:
+                    roles.append(r)
+                    break
+    else:
+        # Coordinators
+        if card.wants_hc or card.hc_meter >= 75:
+            if "head_coach" not in roles:
+                roles.append("head_coach")
+
+    return roles
+
+
+# ──────────────────────────────────────────────
 # GAMEDAY EFFECT CALCULATORS
 # ──────────────────────────────────────────────
 
@@ -1772,6 +2013,99 @@ def compute_recruiting_bonus(
     if hc is None:
         return 0.0
     return hc.recruiting / ATTR_MAX
+
+
+def compute_hc_ambition(coach: CoachCard) -> int:
+    """
+    Compute the prestige level an HC believes they deserve.
+
+    An HC's ambition is built from their career win percentage plus
+    bonuses from postseason success.  This drives whether the HC seeks
+    a move to a higher-prestige program when their contract expires.
+
+    Formula:
+        base  = win_percentage * 80                            (0-80)
+        + conference_titles * 5                                (up to ~25)
+        + playoff_appearances * 3                              (up to ~15)
+        + playoff_wins * 4          (deeper runs = more wins)  (up to ~20)
+        + championship_appearances * 5                         (up to ~10)
+        + championships * 8                                    (up to ~24)
+
+    Returns:
+        int in [10, 99] — the prestige level this HC expects.
+    """
+    wp = coach.win_percentage
+    base = int(wp * 80)
+
+    base += coach.conference_titles * 5
+    base += coach.playoff_appearances * 3
+    base += coach.playoff_wins * 4
+    base += coach.championship_appearances * 5
+    base += coach.championships * 8
+
+    return max(10, min(99, base))
+
+
+def try_hc_contract_extension(
+    coach: CoachCard,
+    team_prestige: int,
+    team_wins: int,
+    team_losses: int,
+    year: int,
+    rng: Optional[random.Random] = None,
+) -> bool:
+    """
+    Attempt to give a successful HC a contract extension (parlay).
+
+    A head coach whose contract just expired can parlay their success
+    into a new deal at their current school instead of entering the
+    portal.  This happens when:
+    1. The HC's ambition <= current team prestige + 10
+       (they're not reaching for something significantly better)
+    2. They had a winning record in the most recent season
+
+    If extended, the coach gets:
+    - 3-5 new contract years
+    - A salary bump (re-calculated from current attributes + record)
+
+    Args:
+        coach:         The HC whose contract expired.
+        team_prestige: Current prestige of the team.
+        team_wins:     Most recent season wins.
+        team_losses:   Most recent season losses.
+        year:          Current dynasty year.
+        rng:           Seeded Random.
+
+    Returns:
+        True if the coach extended (stays), False if they want out.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    ambition = compute_hc_ambition(coach)
+
+    # If their ambition exceeds team prestige by more than 10 points,
+    # they feel they've outgrown the program
+    if ambition > team_prestige + 10:
+        return False
+
+    # Need at least a .500 record to feel good about staying
+    total = team_wins + team_losses
+    if total > 0 and team_wins / total < 0.50:
+        return False
+
+    # Extension: 3-5 years, re-calculated salary
+    new_years = rng.randint(3, 5)
+    new_salary = calculate_coach_salary(coach, rng=rng)
+    # Loyalty bump: +10% salary for staying
+    new_salary = int(new_salary * 1.10)
+
+    coach.contract_years_remaining = new_years
+    coach.contract_salary = new_salary
+    coach.contract_buyout = int(new_salary * new_years * 0.5)
+    coach.year_signed = year
+
+    return True
 
 
 def compute_scouting_error(

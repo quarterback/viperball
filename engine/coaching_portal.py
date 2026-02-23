@@ -64,6 +64,9 @@ from engine.coaching import (
     ROLES,
     generate_coach_card,
     calculate_coach_salary,
+    compute_hc_ambition,
+    try_hc_contract_extension,
+    get_acceptable_roles,
 )
 
 
@@ -120,6 +123,8 @@ class CoachingPortalEntry:
             "seeking_roles": self.seeking_roles,
             "wants_hc": self.coach.wants_hc,
             "matched_to": self.matched_to,
+            "ambition": compute_hc_ambition(self.coach) if self.coach.role == "head_coach" else None,
+            "coaching_tree": self.coach.coaching_tree,
         }
 
 
@@ -196,10 +201,14 @@ def populate_coaching_portal(
     Populate the coaching portal with available coaches.
 
     Sources:
-    1. Coaches whose contracts expired (years_remaining == 0)
-    2. Fired coaches (from fired_roles)
-    3. Assistants with wants_hc who have offers from HC-seeking teams
-    4. Generated free agents to fill the pool
+    1. Fired coaches (from fired_roles) — any role.
+    2. Head coaches whose contracts expired AND whose ambition exceeds
+       their current team's prestige (they want a bigger job).
+       If their ambition fits the current program, they get an extension
+       instead (contract parlay).
+    3. Non-HC coaches whose contracts expired — 50% re-sign, 50% portal.
+    4. Assistants with wants_hc who have offers from HC-seeking teams.
+    5. Generated free agents to fill the pool.
 
     Args:
         portal:           CoachingPortal to populate.
@@ -229,16 +238,27 @@ def populate_coaching_portal(
             if team_name in fired_roles and role in fired_roles[team_name]:
                 reason = "fired"
             elif card.contract_years_remaining <= 0:
-                # Contract expired — 50% chance they re-sign, 50% hit portal
-                if rng.random() < 0.50:
-                    reason = "contract_expired"
+                if role == "head_coach":
+                    # HC departure: only leave if ambition > team prestige.
+                    # Otherwise they parlay their success into an extension.
+                    tw, tl = team_records.get(team_name, (5, 5))
+                    tp = team_prestige.get(team_name, 50)
+                    extended = try_hc_contract_extension(
+                        card, tp, tw, tl, portal.year, rng=rng,
+                    )
+                    if not extended:
+                        reason = "contract_expired"
+                else:
+                    # Non-HC: 50% chance they re-sign, 50% hit portal
+                    if rng.random() < 0.50:
+                        reason = "contract_expired"
 
             if reason is not None:
-                # Determine what roles they'll accept
-                seeking = [card.role]
-                if card.wants_hc and card.role != "head_coach":
-                    seeking.append("head_coach")
-                # Coordinators can also accept other coordinator roles
+                # Determine what roles they'll accept.
+                # Roles are fluid: HCs can take coordinator jobs and
+                # coordinators can seek HC positions.
+                seeking = get_acceptable_roles(card)
+                # Coordinators also consider adjacent coordinator roles
                 if card.role in ("oc", "dc", "stc"):
                     for r in ("oc", "dc", "stc"):
                         if r not in seeking:
@@ -259,29 +279,37 @@ def populate_coaching_portal(
 
     # ── 2. HC-aspiring assistants who are still under contract ──
     # These coaches don't leave automatically but are available if
-    # a team offers them an HC position.
+    # a team offers them an HC position.  The HC meter determines
+    # readiness: 75+ = wants_hc, 90+ = "hot name".
     for team_name, staff in coaching_staffs.items():
         if team_name == human_team:
             continue
         for role, card in staff.items():
             if role == "head_coach":
                 continue
-            if not card.wants_hc:
+            if not card.wants_hc and card.hc_meter < 75:
                 continue
             # Already in portal?
             if any(e.coach_id == card.coach_id for e in portal.entries):
                 continue
-            # Only high-overall assistants get noticed league-wide
-            if card.overall < 65:
-                continue
-            # 30% chance of entering portal as HC candidate
-            if rng.random() < 0.30:
+            # HC meter 90+ = hot name, always enters pool (if overall ok)
+            # HC meter 75-89 = wants it, needs overall 65+ and 30% chance
+            if card.hc_meter >= 90 and card.overall >= 60:
                 entry = CoachingPortalEntry(
                     coach=card,
                     origin_team=team_name,
                     reason="seeking_hc",
                     year_entered=portal.year,
-                    seeking_roles=["head_coach"],
+                    seeking_roles=get_acceptable_roles(card),
+                )
+                portal.add_entry(entry)
+            elif card.overall >= 65 and rng.random() < 0.30:
+                entry = CoachingPortalEntry(
+                    coach=card,
+                    origin_team=team_name,
+                    reason="seeking_hc",
+                    year_entered=portal.year,
+                    seeking_roles=get_acceptable_roles(card),
                 )
                 portal.add_entry(entry)
                 # Note: no vacancy created — their team keeps them unless matched
@@ -302,10 +330,8 @@ def populate_coaching_portal(
             year=portal.year,
             rng=rng,
         )
-        # Free agents will consider any compatible role
-        seeking = [role]
-        if role != "head_coach" and rng.random() < 0.20:
-            seeking.append("head_coach")
+        # Free agents will consider any compatible role (roles are fluid)
+        seeking = get_acceptable_roles(card)
 
         # Give free agents a random alma mater from the league
         if all_team_names and rng.random() < 0.35:
@@ -379,6 +405,22 @@ def _team_score_coach(
     elif role == "stc" and coach.classification in ("disciplinarian", "scheme_master"):
         cls_bonus = 5
 
+    # Postseason pedigree bonus: teams value HCs with playoff/championship success
+    pedigree = 0
+    if role == "head_coach":
+        pedigree += coach.conference_titles * 2
+        pedigree += coach.playoff_wins * 1.5
+        pedigree += coach.championship_appearances * 3
+        pedigree += coach.championships * 5
+
+    # HC meter "hot name" bonus: coordinators with 90+ meter are in-demand
+    hot_name_bonus = 0
+    if role == "head_coach" and coach.role != "head_coach":
+        if coach.hc_meter >= 90:
+            hot_name_bonus = 8
+        elif coach.hc_meter >= 75:
+            hot_name_bonus = 4
+
     # Noise
     noise = rng.uniform(-4, 4)
 
@@ -387,6 +429,8 @@ def _team_score_coach(
         + role_score * 0.30
         + dev_score * 0.20
         + cls_bonus
+        + pedigree
+        + hot_name_bonus
         + noise
     )
 
@@ -449,6 +493,17 @@ def _coach_score_team(
     hc_bonus = 12 if (role == "head_coach" and coach.wants_hc
                       and coach.role != "head_coach") else 0
 
+    # HC ambition: successful coaches gravitate toward programs that
+    # match their ambition level.  They penalise teams far below their
+    # perceived worth and slightly prefer teams slightly above it.
+    ambition_bonus = 0.0
+    if coach.role == "head_coach" or (role == "head_coach" and coach.wants_hc):
+        ambition = compute_hc_ambition(coach)
+        gap = team_prestige - ambition
+        # Positive gap = program prestige exceeds ambition → attractive
+        # Negative gap = program prestige below ambition → penalty
+        ambition_bonus = max(-15, min(10, gap * 0.3))
+
     noise = rng.uniform(-5, 5)
 
     return (
@@ -458,6 +513,7 @@ def _coach_score_team(
         + conf_score * 0.15
         + alumni_bonus
         + hc_bonus
+        + ambition_bonus
         + noise
     )
 
