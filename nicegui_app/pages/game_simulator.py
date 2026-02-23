@@ -269,8 +269,8 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     off_rows = [
         {"Stat": "Total Yards", home_name: str(hs["total_yards"]), away_name: str(as_["total_yards"])},
         {"Stat": "Rush Yds", home_name: str(hs.get("rushing_yards", 0)), away_name: str(as_.get("rushing_yards", 0))},
+        {"Stat": "Receiving Yds", home_name: str(hs.get("kick_pass_yards", 0)), away_name: str(as_.get("kick_pass_yards", 0))},
         {"Stat": "Lateral Yds", home_name: str(hs.get("lateral_yards", 0)), away_name: str(as_.get("lateral_yards", 0))},
-        {"Stat": "KP Yds", home_name: str(hs.get("kick_pass_yards", 0)), away_name: str(as_.get("kick_pass_yards", 0))},
         {"Stat": "Yds/Play", home_name: str(hs["yards_per_play"]), away_name: str(as_["yards_per_play"])},
         {"Stat": "Total Plays", home_name: str(hs["total_plays"]), away_name: str(as_["total_plays"])},
         {"Stat": "Lat Chains", home_name: str(hs["lateral_chains"]), away_name: str(as_["lateral_chains"])},
@@ -295,18 +295,47 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
 
                 rushers = [p for p in pstats if p.get("touches", 0) > 0]
                 if rushers:
-                    ui.label("Rushing & Laterals").classes("text-sm text-gray-500 mt-1")
+                    ui.label("Rushing").classes("text-sm text-gray-500 mt-1")
                     rush_rows = [
                         {
                             "Player": f"{p['tag']} {p['name']}",
-                            "TCH": p["touches"], "YDS": p["yards"],
-                            "RUSH": p.get("rushing_yards", 0),
-                            "LAT": p.get("lateral_yards", 0),
+                            "CAR": p["touches"], "Rush Yds": p.get("rushing_yards", 0),
+                            "Lat Yds": p.get("lateral_yards", 0),
                             "TD": p["tds"], "FUM": p["fumbles"],
                         }
                         for p in rushers
                     ]
                     stat_table(rush_rows)
+
+                receivers = [p for p in pstats if p.get("kick_pass_receptions", 0) > 0]
+                if receivers:
+                    ui.label("Receiving").classes("text-sm text-gray-500 mt-1")
+                    recv_rows = [
+                        {
+                            "Player": f"{p['tag']} {p['name']}",
+                            "REC": p.get("kick_pass_receptions", 0),
+                            "Rec Yds": p.get("kick_pass_yards", 0),
+                            "Rec TD": p.get("kick_pass_tds", 0),
+                        }
+                        for p in receivers
+                    ]
+                    stat_table(recv_rows)
+
+                passers = [p for p in pstats if p.get("kick_passes_thrown", 0) > 0]
+                if passers:
+                    ui.label("Kick Passing").classes("text-sm text-gray-500 mt-1")
+                    kp_rows = [
+                        {
+                            "Player": f"{p['tag']} {p['name']}",
+                            "Att": p.get("kick_passes_thrown", 0),
+                            "Comp": p.get("kick_passes_completed", 0),
+                            "Yds": p.get("kick_pass_yards", 0),
+                            "TD": p.get("kick_pass_tds", 0),
+                            "INT": p.get("kick_pass_interceptions_thrown", 0),
+                        }
+                        for p in passers
+                    ]
+                    stat_table(kp_rows)
 
                 kickers = [p for p in pstats if p.get("kick_att", 0) > 0]
                 if kickers:
@@ -320,22 +349,6 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                         for p in kickers
                     ]
                     stat_table(kick_rows)
-
-                kp_players = [p for p in pstats if (p.get("kick_passes_thrown", 0) + p.get("kick_pass_receptions", 0)) > 0]
-                if kp_players:
-                    ui.label("Kick Passing").classes("text-sm text-gray-500 mt-1")
-                    kp_rows = [
-                        {
-                            "Player": f"{p['tag']} {p['name']}",
-                            "KP Att": p.get("kick_passes_thrown", 0),
-                            "KP Comp": p.get("kick_passes_completed", 0),
-                            "KP Yds": p.get("kick_pass_yards", 0),
-                            "KP TD": p.get("kick_pass_tds", 0),
-                            "KP INT": p.get("kick_pass_interceptions_thrown", 0),
-                        }
-                        for p in kp_players
-                    ]
-                    stat_table(kp_rows)
 
                 ui.separator().classes("my-2")
 

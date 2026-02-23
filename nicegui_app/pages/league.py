@@ -770,8 +770,9 @@ async def _render_player_stats(session_id, standings, conferences, has_conferenc
 
             with ui.tabs().classes("w-full") as stat_tabs:
                 rush_tab = ui.tab("Rushing & Scoring")
+                recv_tab = ui.tab("Receiving")
                 lat_tab = ui.tab("Lateral Game")
-                kp_tab = ui.tab("Kick Pass")
+                kp_tab = ui.tab("Kick Passing")
                 kick_tab = ui.tab("Kicking")
                 def_tab = ui.tab("Defense")
                 ret_tab = ui.tab("Returns & Special Teams")
@@ -797,6 +798,28 @@ async def _render_player_stats(session_id, standings, conferences, has_conferenc
                         })
                     if rush_data:
                         stat_table(rush_data)
+
+                # -- Receiving --
+                with ui.tab_panel(recv_tab):
+                    recv_data = []
+                    recv_sorted = sorted(players, key=lambda x: x.get("kick_pass_receptions", 0) * 10 + x.get("kick_pass_yards", 0), reverse=True)
+                    for p in recv_sorted[:100]:
+                        recs = p.get("kick_pass_receptions", 0)
+                        if recs > 0:
+                            recv_data.append({
+                                "Player": p["name"],
+                                "Team": p["team"],
+                                "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
+                                "GP": p["games_played"],
+                                "REC": recs,
+                                "Rec Yds": p.get("kick_pass_yards", 0),
+                                "Yds/Rec": round(p.get("kick_pass_yards", 0) / max(1, recs), 1),
+                                "Rec TD": p.get("kick_pass_tds", 0),
+                            })
+                    if recv_data:
+                        stat_table(recv_data)
+                    else:
+                        ui.label("No receiving stats available yet.").classes("text-sm text-gray-500")
 
                 # -- Lateral Game --
                 with ui.tab_panel(lat_tab):

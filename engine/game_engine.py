@@ -736,6 +736,128 @@ def designate_stars(players: List, max_stars: int = 3) -> List[str]:
     return stars
 
 
+STARTER_FIRST_LOOK = {
+    "ground_pound":   {"run_starter_pct": 0.78, "recv_starter_pct": 0.60, "starter_ceiling": 30, "rotation_ceiling": 8},
+    "ball_control":   {"run_starter_pct": 0.72, "recv_starter_pct": 0.58, "starter_ceiling": 28, "rotation_ceiling": 8},
+    "balanced":       {"run_starter_pct": 0.65, "recv_starter_pct": 0.55, "starter_ceiling": 24, "rotation_ceiling": 9},
+    "triple_threat":  {"run_starter_pct": 0.60, "recv_starter_pct": 0.58, "starter_ceiling": 22, "rotation_ceiling": 9},
+    "ghost":          {"run_starter_pct": 0.55, "recv_starter_pct": 0.52, "starter_ceiling": 22, "rotation_ceiling": 10},
+    "lateral_spread": {"run_starter_pct": 0.52, "recv_starter_pct": 0.50, "starter_ceiling": 20, "rotation_ceiling": 10},
+    "chain_gang":     {"run_starter_pct": 0.48, "recv_starter_pct": 0.48, "starter_ceiling": 18, "rotation_ceiling": 11},
+    "boot_raid":      {"run_starter_pct": 0.62, "recv_starter_pct": 0.65, "starter_ceiling": 22, "rotation_ceiling": 9},
+    "rouge_hunt":     {"run_starter_pct": 0.70, "recv_starter_pct": 0.55, "starter_ceiling": 26, "rotation_ceiling": 9},
+}
+
+
+ZB_STYLE_MAP = {
+    "kicking_zb": "kick_dominant",
+    "running_zb": "run_dominant",
+    "distributor_zb": "distributor",
+    "dual_threat_zb": "dual_threat",
+}
+
+
+def assign_game_roles(team, offense_style: str = "balanced") -> dict:
+    """Assign offensive starter/rotation roles at game start.
+
+    Starter-based system:
+    1. ZB Style: Classifies each Zeroback as kick_dominant, run_dominant,
+       dual_threat, or distributor based on archetype.
+    2. Rush Starters: Top player at each position group (HB1, WB1, SB1,
+       VP1, and run-capable ZBs) become STARTER for rushing. Everyone
+       else is ROTATION. Starters get first-look at carries.
+    3. Receiving Starters: Top receivers by hands/speed become STARTER
+       for kick pass targets. Separate from rushing hierarchy.
+
+    The engine then uses starter-first-look probability (style-dependent)
+    to decide whether each play goes to a starter or the full rotation.
+    Ratings influence execution quality (yards, completion%), not volume.
+
+    Returns dict mapping player names to roles for logging.
+    """
+    injured = set()
+    for p in team.players:
+        if getattr(p, 'injured_in_game', False):
+            injured.add(p.name)
+
+    skill = [p for p in team.players
+             if p.position in ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
+             and p.name not in injured]
+
+    if len(skill) < 2:
+        for p in skill:
+            p.game_role = "STARTER"
+            p.game_role_recv = "STARTER"
+        return {p.name: "STARTER" for p in skill}
+
+    zbs = [p for p in skill if p.position == "Zeroback"]
+    flankers_vipers = [p for p in skill if p.position != "Zeroback"]
+
+    for zb in zbs:
+        zb.game_zb_style = ZB_STYLE_MAP.get(zb.archetype, "dual_threat")
+
+    def rush_score(p):
+        spd = p.speed
+        pwr = getattr(p, 'power', 75)
+        agi = getattr(p, 'agility', 75)
+        stam = p.stamina
+        aware = getattr(p, 'awareness', 75)
+        base = spd * 1.2 + pwr * 1.0 + agi * 1.1 + stam * 0.7 + aware * 0.5
+        arch_mult = 1.0
+        if p.archetype in ("running_zb", "power_flanker"):
+            arch_mult = 1.10
+        elif p.archetype in ("speed_flanker", "elusive_flanker"):
+            arch_mult = 1.08
+        elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
+            arch_mult = 1.04
+        return base * arch_mult
+
+    def recv_score(p):
+        hands = getattr(p, 'hands', 75)
+        spd = p.speed
+        lat = p.lateral_skill
+        base = hands * 1.3 + spd * 1.0 + lat * 0.8
+        arch_mult = 1.0
+        if p.archetype in ("receiving_viper", "hybrid_viper"):
+            arch_mult = 1.12
+        elif p.archetype in ("speed_flanker", "elusive_flanker"):
+            arch_mult = 1.08
+        elif p.archetype in ("reliable_flanker",):
+            arch_mult = 1.04
+        return base * arch_mult
+
+    for p in skill:
+        p.game_role = "ROTATION"
+        p.game_role_recv = "ROTATION"
+
+    pos_groups = {}
+    for p in flankers_vipers:
+        pos_groups.setdefault(p.position, []).append(p)
+    for pos, players in pos_groups.items():
+        best = max(players, key=rush_score)
+        best.game_role = "STARTER"
+
+    for zb in zbs:
+        if zb.game_zb_style in ("run_dominant",):
+            zb.game_role = "STARTER"
+        elif zb.game_zb_style == "dual_threat":
+            best_zb = max(zbs, key=rush_score)
+            if zb == best_zb:
+                zb.game_role = "STARTER"
+
+    receivers_ranked = sorted(skill, key=recv_score, reverse=True)
+    starter_recv_count = min(5, max(2, len(skill) // 3))
+    for p in receivers_ranked[:starter_recv_count]:
+        p.game_role_recv = "STARTER"
+
+    role_map = {}
+    for p in skill:
+        zb_tag = f" [{p.game_zb_style}]" if p.game_zb_style else ""
+        role_map[p.name] = f"{p.game_role}/{p.game_role_recv}{zb_tag}"
+
+    return role_map
+
+
 def get_archetype_info(archetype: str) -> dict:
     for category, archetypes in POSITION_ARCHETYPES.items():
         if archetype in archetypes:
@@ -861,6 +983,11 @@ class Player:
     archetype: str = "none"
     injured_in_game: bool = False     # set True if injured during this game
     is_dtd: bool = False              # day-to-day: playing through minor injury
+
+    # --- Role-based usage (assigned pregame, reset each game) ---
+    game_role: str = "ROTATION"       # "STARTER" | "ROTATION"
+    game_role_recv: str = "ROTATION"  # receiving role (can differ from rushing role)
+    game_zb_style: str = ""           # "kick_dominant" | "run_dominant" | "dual_threat" | "distributor" (ZBs only)
 
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
@@ -2233,6 +2360,12 @@ class ViperballEngine:
             self.state.home_stars = designate_stars(self.home_team.players, max_stars=3)
             self.state.away_stars = designate_stars(self.away_team.players, max_stars=3)
 
+        # ── V3: Pregame role assignment (FEATURE/PLAYMAKER/ROTATIONAL/DEPTH) ──
+        home_style = getattr(self.home_team, 'offense_style', 'balanced')
+        away_style = getattr(self.away_team, 'offense_style', 'balanced')
+        assign_game_roles(self.home_team, home_style)
+        assign_game_roles(self.away_team, away_style)
+
         if seed is not None:
             random.seed(seed)
 
@@ -2732,49 +2865,107 @@ class ViperballEngine:
         diff = abs(home_score - away_score)
         return diff >= 20
 
-    def _spread_the_love_offense(self, eligible, weights):
-        """Adjust carrier selection weights to spread touches across the lineup.
+    def _spread_the_love_offense(self, eligible, weights, for_receiving=False):
+        """Starter-first-look touch distribution.
 
-        Three mechanisms work together:
-        1. Underused boost: players with few touches when team average is
-           high get a weight boost so they aren't frozen out.
-        2. Overused decay: players with many touches get diminishing returns
-           (steeper than the old v2.6 decay, starts at 5 touches).
-        3. Blowout reserves: in blowouts, all players get more equal weights
-           so backups see meaningful action.
+        Two-phase selection:
+        1. Roll starter-first-look check (style-dependent probability).
+           If it hits, zero out all ROTATION weights — only starters
+           compete for this touch.
+        2. If the roll misses, everyone competes but starters still get
+           a mild edge from their base position weights.
+
+        Ceiling management prevents any single player from monopolizing
+        touches. When a starter hits their ceiling, the system naturally
+        flows to rotation players (backup breakout games).
+
+        Kick-dominant ZBs are suppressed in the run context since they're
+        passers, not carriers.
         """
         if not eligible:
             return weights
 
-        all_touches = [getattr(p, "game_touches", 0) for p in eligible]
-        avg_touches = sum(all_touches) / max(1, len(all_touches))
+        team = self.get_offensive_team()
+        style = getattr(team, 'offense_style', 'balanced')
+        profile = STARTER_FIRST_LOOK.get(style, STARTER_FIRST_LOOK["balanced"])
+
+        if for_receiving:
+            starter_pct = profile["recv_starter_pct"]
+        else:
+            starter_pct = profile["run_starter_pct"]
+
+        starter_ceiling = profile["starter_ceiling"]
+        rotation_ceiling = profile["rotation_ceiling"]
+
+        def _relevant_touches(p):
+            total = getattr(p, "game_touches", 0)
+            if for_receiving:
+                return getattr(p, "game_kick_pass_receptions", 0)
+            else:
+                kp_thrown = getattr(p, "game_kick_passes_thrown", 0)
+                return max(0, total - kp_thrown)
+
+        starter_indices = []
+        rotation_indices = []
+        for i, p in enumerate(eligible):
+            if for_receiving:
+                role = getattr(p, "game_role_recv", "ROTATION")
+            else:
+                role = getattr(p, "game_role", "ROTATION")
+
+            if not for_receiving:
+                zb_style = getattr(p, "game_zb_style", "")
+                if zb_style == "kick_dominant":
+                    weights[i] *= 0.05
+                    rotation_indices.append(i)
+                    continue
+
+            if role == "STARTER":
+                starter_indices.append(i)
+            else:
+                rotation_indices.append(i)
+
+        any_starter_available = False
+        for si in starter_indices:
+            touches = _relevant_touches(eligible[si])
+            if touches < starter_ceiling:
+                any_starter_available = True
+                break
+
+        is_starter_look = any_starter_available and random.random() < starter_pct
 
         for i, p in enumerate(eligible):
-            touches = getattr(p, "game_touches", 0)
+            touches = _relevant_touches(p)
+            is_starter = i in starter_indices
 
-            # ── Overused decay: starts at 5 touches (was 8), steeper curve ──
-            if touches >= 5:
-                _usage_decay = 0.6 ** ((touches - 4) / 4.0)
-                weights[i] *= max(0.12, _usage_decay)
+            if is_starter:
+                ceiling = starter_ceiling
+            else:
+                ceiling = rotation_ceiling
 
-            # ── Underused boost: players frozen out get a bump ──
-            # If the team average is 3+ and this player has <2 touches,
-            # boost them so they see the field.
-            elif avg_touches >= 3 and touches <= 1:
-                # Scale boost by how far behind they are
-                underuse_boost = 1.5 + (avg_touches - touches) * 0.15
-                weights[i] *= min(3.0, underuse_boost)
+            if touches >= ceiling:
+                overage = touches - ceiling
+                decay = 0.75 ** (overage + 1)
+                weights[i] *= max(0.04, decay)
+            elif touches >= ceiling * 0.75:
+                approach_pct = (touches - ceiling * 0.75) / (ceiling * 0.25)
+                soft_decay = 1.0 - (approach_pct * 0.35)
+                weights[i] *= max(0.3, soft_decay)
 
-        # ── Blowout reserve boost: flatten weights so everyone plays ──
+            if is_starter_look and not is_starter:
+                weights[i] *= 0.03
+
         if self._is_blowout():
-            # In blowouts, reduce the gap between best and worst weights
-            # so reserves see meaningful snaps
             max_w = max(weights) if weights else 1.0
-            for i in range(len(weights)):
-                # Pull low weights up toward the mean
-                floor = max_w * 0.25
+            for i in starter_indices:
+                weights[i] *= 0.5
+            for i in rotation_indices:
+                floor = max_w * 0.30
                 if weights[i] < floor:
-                    weights[i] = floor + weights[i] * 0.5
+                    weights[i] = floor
+
+        for i in range(len(weights)):
+            weights[i] = max(0.03, weights[i])
 
         return weights
 
@@ -6342,8 +6533,7 @@ class ViperballEngine:
             _prior = getattr(_r, "game_kick_pass_receptions", 0)
             _decay = 0.5 ** (_prior / 3.0)
             _recv_weights.append(max(0.1, _base_w * _decay))
-        # ── Spread the Love: balance targets across receivers ──
-        _recv_weights = self._spread_the_love_offense(eligible_receivers, _recv_weights)
+        _recv_weights = self._spread_the_love_offense(eligible_receivers, _recv_weights, for_receiving=True)
         receiver = random.choices(eligible_receivers, weights=_recv_weights, k=1)[0]
 
         kicker_tag = player_tag(kicker)
@@ -8450,9 +8640,19 @@ class ViperballEngine:
                                p.game_kick_pass_receptions > 0 or
                                p.game_plays_involved > 0)
                 if has_activity:
+                    role_label = getattr(p, 'game_role', 'DEPTH')
+                    recv_role = getattr(p, 'game_role_recv', 'DEPTH')
+                    zb_style = getattr(p, 'game_zb_style', '')
+                    if role_label == recv_role:
+                        combined_role = role_label
+                    else:
+                        combined_role = f"{role_label}/{recv_role}"
+                    if zb_style:
+                        combined_role += f" [{zb_style}]"
                     stat_entry = {
                         "tag": player_tag(p),
                         "name": p.name,
+                        "role": combined_role,
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "touches": p.game_touches,
                         "yards": p.game_yards,

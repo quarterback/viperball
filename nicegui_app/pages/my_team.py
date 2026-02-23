@@ -199,8 +199,8 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
         {"Stat": "Rushing Yards", home_name: str(hs.get('rushing_yards', 0)), away_name: str(as_.get('rushing_yards', 0))},
         {"Stat": "Lateral Yards", home_name: str(hs.get('lateral_yards', 0)), away_name: str(as_.get('lateral_yards', 0))},
         {"Stat": "KP (Comp/Att)", home_name: f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", away_name: f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"},
-        {"Stat": "KP Yards", home_name: str(hs.get('kick_pass_yards', 0)), away_name: str(as_.get('kick_pass_yards', 0))},
-        {"Stat": "KP TDs", home_name: str(hs.get('kick_pass_tds', 0)), away_name: str(as_.get('kick_pass_tds', 0))},
+        {"Stat": "Receiving Yds", home_name: str(hs.get('kick_pass_yards', 0)), away_name: str(as_.get('kick_pass_yards', 0))},
+        {"Stat": "Receiving TDs", home_name: str(hs.get('kick_pass_tds', 0)), away_name: str(as_.get('kick_pass_tds', 0))},
         {"Stat": "KP INTs", home_name: str(hs.get('kick_pass_interceptions', 0)), away_name: str(as_.get('kick_pass_interceptions', 0))},
         {"Stat": "Yards/Play", home_name: str(hs['yards_per_play']), away_name: str(as_['yards_per_play'])},
         {"Stat": "Total Plays", home_name: str(hs['total_plays']), away_name: str(as_['total_plays'])},
@@ -240,22 +240,47 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
 
                 rush_rows = [p for p in side_ps if p.get("touches", 0) > 0]
                 if rush_rows:
-                    ui.label("Rushing & Laterals").classes("text-sm text-gray-500")
+                    ui.label("Rushing").classes("text-sm text-gray-500")
                     rush_data = []
                     for p in rush_rows:
                         rush_data.append({
                             "Player": f"{p['tag']} {p['name']}",
                             "Arch": p.get("archetype", ""),
-                            "TCH": p["touches"], "YDS": p["yards"],
-                            "RUSH": p.get("rushing_yards", 0),
-                            "LAT": p.get("lateral_yards", 0),
+                            "CAR": p["touches"],
+                            "Rush Yds": p.get("rushing_yards", 0),
+                            "Lat Yds": p.get("lateral_yards", 0),
                             "TD": p["tds"], "FUM": p["fumbles"],
-                            "L.Thr": p.get("laterals_thrown", 0),
-                            "L.Rec": p.get("lateral_receptions", 0),
-                            "L.Ast": p.get("lateral_assists", 0),
-                            "L.TD": p.get("lateral_tds", 0),
                         })
                     stat_table(rush_data)
+
+                recv_rows = [p for p in side_ps if p.get("kick_pass_receptions", 0) > 0]
+                if recv_rows:
+                    ui.label("Receiving").classes("text-sm text-gray-500")
+                    recv_data = []
+                    for p in recv_rows:
+                        recv_data.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "Arch": p.get("archetype", ""),
+                            "REC": p.get("kick_pass_receptions", 0),
+                            "Rec Yds": p.get("kick_pass_yards", 0),
+                            "Rec TD": p.get("kick_pass_tds", 0),
+                        })
+                    stat_table(recv_data)
+
+                passer_rows = [p for p in side_ps if p.get("kick_passes_thrown", 0) > 0]
+                if passer_rows:
+                    ui.label("Kick Passing").classes("text-sm text-gray-500")
+                    kp_data = []
+                    for p in passer_rows:
+                        kp_data.append({
+                            "Player": f"{p['tag']} {p['name']}",
+                            "Att": p.get("kick_passes_thrown", 0),
+                            "Comp": p.get("kick_passes_completed", 0),
+                            "Yds": p.get("kick_pass_yards", 0),
+                            "TD": p.get("kick_pass_tds", 0),
+                            "INT": p.get("kick_pass_interceptions_thrown", 0),
+                        })
+                    stat_table(kp_data)
 
                 kick_rows = [p for p in side_ps if p.get("kick_att", 0) > 0]
                 if kick_rows:
@@ -269,23 +294,6 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
                             "BLK": p.get("kick_deflections", 0),
                         })
                     stat_table(kick_data)
-
-                kp_rows = [p for p in side_ps if (p.get("kick_passes_thrown", 0) + p.get("kick_pass_receptions", 0) + p.get("kick_pass_ints", 0)) > 0]
-                if kp_rows:
-                    ui.label("Kick Passing").classes("text-sm text-gray-500")
-                    kp_data = []
-                    for p in kp_rows:
-                        kp_data.append({
-                            "Player": f"{p['tag']} {p['name']}",
-                            "KP Att": p.get("kick_passes_thrown", 0),
-                            "KP Comp": p.get("kick_passes_completed", 0),
-                            "KP Yds": p.get("kick_pass_yards", 0),
-                            "KP TD": p.get("kick_pass_tds", 0),
-                            "KP INT": p.get("kick_pass_interceptions_thrown", 0),
-                            "KP Rec": p.get("kick_pass_receptions", 0),
-                            "Def KP INT": p.get("kick_pass_ints", 0),
-                        })
-                    stat_table(kp_data)
 
                 st_rows = [p for p in side_ps if (
                     p.get("kick_returns", 0) + p.get("punt_returns", 0)
