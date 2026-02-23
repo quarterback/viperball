@@ -9,7 +9,7 @@ from __future__ import annotations
 import plotly.express as px
 import plotly.graph_objects as go
 
-from nicegui import ui
+from nicegui import ui, run
 from ui import api_client
 from engine.season import BOWL_TIERS
 from nicegui_app.helpers import fmt_vb_score
@@ -48,7 +48,7 @@ _CATEGORY_LABELS = {
 # Main entry point
 # ---------------------------------------------------------------------------
 
-def render_league_section(state, shared):
+async def render_league_section(state, shared):
     """Render the full League page inside the current NiceGUI layout context."""
 
     session_id = state.session_id
@@ -78,7 +78,9 @@ def render_league_section(state, shared):
             lambda: _safe(lambda: api_client.get_dynasty_status(session_id), {})
         )
 
-    _results = api_client.fetch_parallel(*_fetchers)
+    def _do_fetch():
+        return api_client.fetch_parallel(*_fetchers)
+    _results = await run.io_bound(_do_fetch)
     standings_resp = _results[0] or {}
     status = _results[1] or {}
     schedule_resp = _results[2] or {}
@@ -148,29 +150,29 @@ def render_league_section(state, shared):
             _render_standings(session_id, standings, has_conferences, user_team)
 
         with ui.tab_panel(tab_objects["Power Rankings"]):
-            _render_power_rankings(session_id, standings, user_team)
+            await _render_power_rankings(session_id, standings, user_team)
 
         if has_conferences:
             with ui.tab_panel(tab_objects["Conferences"]):
-                _render_conferences(session_id, conferences, user_team)
+                await _render_conferences(session_id, conferences, user_team)
 
         with ui.tab_panel(tab_objects["Player Stats"]):
-            _render_player_stats(session_id, standings, conferences, has_conferences)
+            await _render_player_stats(session_id, standings, conferences, has_conferences)
 
         with ui.tab_panel(tab_objects["Team Browser"]):
-            _render_team_browser(session_id, standings, conferences, has_conferences)
+            await _render_team_browser(session_id, standings, conferences, has_conferences)
 
         with ui.tab_panel(tab_objects["Postseason"]):
-            _render_postseason(session_id, user_team)
+            await _render_postseason(session_id, user_team)
 
         with ui.tab_panel(tab_objects["Schedule"]):
-            _render_schedule(session_id, completed_games, user_team)
+            await _render_schedule(session_id, completed_games, user_team)
 
         with ui.tab_panel(tab_objects["Awards & Stats"]):
-            _render_awards_stats(session_id, standings, user_team)
+            await _render_awards_stats(session_id, standings, user_team)
 
         with ui.tab_panel(tab_objects["Injury Report"]):
-            _render_injury_report(session_id, standings)
+            await _render_injury_report(session_id, standings)
 
 
 # ---------------------------------------------------------------------------
@@ -204,9 +206,9 @@ def _render_standings(session_id, standings, has_conferences, user_team):
 # Power Rankings
 # ---------------------------------------------------------------------------
 
-def _render_power_rankings(session_id, standings, user_team):
+async def _render_power_rankings(session_id, standings, user_team):
     try:
-        polls_resp = api_client.get_polls(session_id)
+        polls_resp = await run.io_bound(api_client.get_polls, session_id)
         all_polls = polls_resp.get("polls", [])
     except api_client.APIError:
         all_polls = []
@@ -339,9 +341,9 @@ def _render_poll_table(poll, user_team):
 # Conferences
 # ---------------------------------------------------------------------------
 
-def _render_conferences(session_id, conferences, user_team):
+async def _render_conferences(session_id, conferences, user_team):
     try:
-        conf_standings_resp = api_client.get_conference_standings(session_id)
+        conf_standings_resp = await run.io_bound(api_client.get_conference_standings, session_id)
         conf_standings_data = conf_standings_resp.get("conference_standings", {})
         champions = conf_standings_resp.get("champions", {})
     except api_client.APIError:
@@ -381,9 +383,9 @@ def _render_conferences(session_id, conferences, user_team):
 # Postseason
 # ---------------------------------------------------------------------------
 
-def _render_postseason(session_id, user_team):
+async def _render_postseason(session_id, user_team):
     try:
-        bracket_resp = api_client.get_playoff_bracket(session_id)
+        bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
         bracket = bracket_resp.get("bracket", [])
         bracket_champion = bracket_resp.get("champion")
     except api_client.APIError:
@@ -398,7 +400,7 @@ def _render_postseason(session_id, user_team):
             playoff_team_set.add(g.get("away_team", ""))
 
         try:
-            standings_resp = api_client.get_standings(session_id)
+            standings_resp = await run.io_bound(api_client.get_standings, session_id)
             standings = standings_resp.get("standings", [])
             playoff_teams = [s for s in standings if s["team_name"] in playoff_team_set]
         except api_client.APIError:
@@ -463,7 +465,7 @@ def _render_postseason(session_id, user_team):
 
     # -- Bowl Games --
     try:
-        bowls_resp = api_client.get_bowl_results(session_id)
+        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
         bowl_results = bowls_resp.get("bowl_results", [])
     except api_client.APIError:
         bowl_results = []
@@ -500,22 +502,22 @@ def _render_postseason(session_id, user_team):
 # Schedule
 # ---------------------------------------------------------------------------
 
-def _render_schedule(session_id, completed_games, user_team):
+async def _render_schedule(session_id, completed_games, user_team):
     # Fetch ALL games (completed + upcoming)
     try:
-        all_schedule_resp = api_client.get_schedule(session_id)
+        all_schedule_resp = await run.io_bound(api_client.get_schedule, session_id)
         all_reg_games = all_schedule_resp.get("games", [])
     except api_client.APIError:
         all_reg_games = completed_games
 
     try:
-        bracket_resp = api_client.get_playoff_bracket(session_id)
+        bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
         bracket = bracket_resp.get("bracket", [])
     except api_client.APIError:
         bracket = []
 
     try:
-        bowls_resp = api_client.get_bowl_results(session_id)
+        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
         bowl_results = bowls_resp.get("bowl_results", [])
     except api_client.APIError:
         bowl_results = []
@@ -699,7 +701,7 @@ def _render_schedule(session_id, completed_games, user_team):
 # Player Stats
 # ---------------------------------------------------------------------------
 
-def _render_player_stats(session_id, standings, conferences, has_conferences):
+async def _render_player_stats(session_id, standings, conferences, has_conferences):
     ui.label("Individual Player Statistics").classes("text-lg font-semibold text-slate-700")
 
     # -- Filters --
@@ -735,20 +737,20 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
 
     stats_container = ui.column().classes("w-full")
 
-    def _load_player_stats():
+    async def _load_player_stats():
         conf_param = sel_conf.value if sel_conf.value != "__all__" else None
         team_param = sel_team.value if sel_team.value != "__all__" else None
         pos_param = sel_pos.value if sel_pos.value != "All Positions" else None
         min_t = int(min_touches_slider.value)
 
         try:
-            resp = api_client.get_player_stats(
+            resp = await run.io_bound(lambda: api_client.get_player_stats(
                 session_id,
                 conference=conf_param,
                 team=team_param,
                 position=pos_param,
                 min_touches=min_t,
-            )
+            ))
             players = resp.get("players", [])
         except api_client.APIError:
             stats_container.clear()
@@ -945,14 +947,14 @@ def _render_player_stats(session_id, standings, conferences, has_conferences):
     # Wire up the Load button
     load_btn = ui.button("Load Player Stats", on_click=_load_player_stats, icon="refresh").classes("mt-2")
     # Auto-load on first render
-    _load_player_stats()
+    await _load_player_stats()
 
 
 # ---------------------------------------------------------------------------
 # Team Browser
 # ---------------------------------------------------------------------------
 
-def _render_team_browser(session_id, standings, conferences, has_conferences):
+async def _render_team_browser(session_id, standings, conferences, has_conferences):
     ui.label("Team Browser").classes("text-lg font-semibold text-slate-700")
     ui.label("Browse any team's roster, view individual player cards with full attributes and season stats").classes("text-sm text-gray-500")
 
@@ -994,7 +996,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
     team_detail_container = ui.column().classes("w-full")
 
-    def _load_team():
+    async def _load_team():
         selected = browse_team.value
         if not selected:
             return
@@ -1014,7 +1016,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
                     metric_card("OPI", f"{team_record.get('avg_opi', 0):.1f}")
 
             try:
-                roster_resp = api_client.get_roster(session_id, selected)
+                roster_resp = await run.io_bound(api_client.get_roster, session_id, selected)
                 roster = roster_resp.get("roster", [])
                 team_prestige = roster_resp.get("prestige")
             except api_client.APIError:
@@ -1042,7 +1044,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
             # Injury map
             inj_map: dict[str, str] = {}
             try:
-                inj_resp = api_client.get_injuries(session_id, team=selected)
+                inj_resp = await run.io_bound(api_client.get_injuries, session_id, team=selected)
                 for inj in inj_resp.get("active", []):
                     pname = inj.get("player_name", "")
                     if inj.get("is_season_ending") or inj.get("tier") == "severe":
@@ -1126,7 +1128,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
             player_card_container = ui.column().classes("w-full")
 
-            def _render_player_card():
+            async def _render_player_card():
                 sel = player_select.value
                 player_card_container.clear()
                 if not sel or sel == "__none__":
@@ -1205,7 +1207,7 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
                     # Season Stats
                     try:
-                        ps_resp = api_client.get_player_stats(session_id, team=selected)
+                        ps_resp = await run.io_bound(api_client.get_player_stats, session_id, team=selected)
                         team_players = ps_resp.get("players", [])
                         player_season = next((tp for tp in team_players if tp["name"] == sel), None)
                         if player_season and player_season.get("games_played", 0) > 0:
@@ -1293,16 +1295,16 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
 
     browse_team.on("update:model-value", lambda: _load_team())
     # Initial load
-    _load_team()
+    await _load_team()
 
 
 # ---------------------------------------------------------------------------
 # Awards & Stats
 # ---------------------------------------------------------------------------
 
-def _render_awards_stats(session_id, standings, user_team):
+async def _render_awards_stats(session_id, standings, user_team):
     try:
-        awards = api_client.get_season_awards(session_id)
+        awards = await run.io_bound(api_client.get_season_awards, session_id)
     except api_client.APIError:
         awards = {}
 
@@ -1434,7 +1436,7 @@ def _render_awards_stats(session_id, standings, user_team):
     with ui.expansion("Score Distribution").classes("w-full"):
         score_data = []
         try:
-            sched_resp = api_client.get_schedule(session_id, completed_only=True)
+            sched_resp = await run.io_bound(api_client.get_schedule, session_id, completed_only=True)
             for g in sched_resp.get("games", []):
                 score_data.append({"Team": g.get("home_team", ""), "Score": g.get("home_score") or 0, "Location": "Home"})
                 score_data.append({"Team": g.get("away_team", ""), "Score": g.get("away_score") or 0, "Location": "Away"})
@@ -1455,9 +1457,9 @@ def _render_awards_stats(session_id, standings, user_team):
 # Injury Report
 # ---------------------------------------------------------------------------
 
-def _render_injury_report(session_id, standings):
+async def _render_injury_report(session_id, standings):
     try:
-        inj_resp = api_client.get_injuries(session_id)
+        inj_resp = await run.io_bound(api_client.get_injuries, session_id)
     except api_client.APIError:
         ui.label("Injury data not available.").classes("text-sm text-gray-500")
         return

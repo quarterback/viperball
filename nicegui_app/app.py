@@ -2,11 +2,18 @@
 
 Defines the root page layout with sidebar navigation, tab panels,
 and mounts the existing FastAPI backend.
+
+IMPORTANT: NiceGUI + FastAPI share a single uvicorn event-loop.
+Every blocking HTTP call to the local API must go through
+``await run.io_bound(...)`` so the event-loop stays free to
+process the request.  Tab panels other than the default (Play)
+are lazy-loaded on first selection to avoid blocking the
+initial page render.
 """
 
 from __future__ import annotations
 
-from nicegui import ui, app, Client
+from nicegui import ui, app, run, Client
 
 from ui import api_client
 from nicegui_app.state import UserState
@@ -62,7 +69,8 @@ def _load_shared_data() -> dict:
     }
 
 
-def _get_mode_label(state: UserState, shared: dict) -> str:
+def _get_mode_label_sync(state: UserState) -> str:
+    """Compute mode label — runs in a thread-pool via run.io_bound."""
     if not state.session_id or not state.mode:
         return "No Active Session"
     if state.mode == "dynasty":
@@ -82,6 +90,13 @@ def _get_mode_label(state: UserState, shared: dict) -> str:
     return "No Active Session"
 
 
+def _loading_placeholder(label: str = "Loading..."):
+    """Render a spinner + label as a placeholder while a tab loads."""
+    with ui.column().classes("w-full items-center justify-center py-12"):
+        ui.spinner("dots", size="lg")
+        ui.label(label).classes("text-gray-400 text-sm mt-2")
+
+
 @ui.page("/")
 async def index(client: Client):
     """Main application page."""
@@ -98,12 +113,14 @@ async def index(client: Client):
         ui.html('<p class="sidebar-tagline">Collegiate Viperball League Simulator</p>')
         ui.separator().classes("my-3").style("border-color: #334155;")
 
-        mode_label = ui.label(_get_mode_label(state, shared)).classes("font-bold text-sm text-white")
+        # Mode label — fetched without blocking the event-loop
+        mode_text = await run.io_bound(_get_mode_label_sync, state)
+        mode_label = ui.label(mode_text).classes("font-bold text-sm text-white")
 
-        def _end_session():
+        async def _end_session():
             if state.session_id:
                 try:
-                    api_client.delete_session(state.session_id)
+                    await run.io_bound(api_client.delete_session, state.session_id)
                 except api_client.APIError:
                     pass
             state.clear_session()
@@ -167,18 +184,51 @@ async def index(client: Client):
                 export_tab = ui.tab("Export")
 
             with ui.tab_panels(tabs, value=play_tab).classes("w-full"):
+                # Play tab — rendered immediately (async-safe)
                 with ui.tab_panel(play_tab):
                     from nicegui_app.pages.play import render_play_section
-                    render_play_section(state, shared)
+                    await render_play_section(state, shared)
 
+                # Remaining tabs — lazy-loaded on first selection to avoid
+                # blocking the event-loop with synchronous HTTP calls.
                 with ui.tab_panel(league_tab):
-                    from nicegui_app.pages.league import render_league_section
-                    render_league_section(state, shared)
+                    league_container = ui.column().classes("w-full")
+                    with league_container:
+                        _loading_placeholder("Select this tab to load league data")
 
                 with ui.tab_panel(team_tab):
-                    from nicegui_app.pages.my_team import render_my_team_section
-                    render_my_team_section(state, shared)
+                    team_container = ui.column().classes("w-full")
+                    with team_container:
+                        _loading_placeholder("Select this tab to load team data")
 
                 with ui.tab_panel(export_tab):
-                    from nicegui_app.pages.export import render_export_section
-                    render_export_section(state, shared)
+                    export_container = ui.column().classes("w-full")
+                    with export_container:
+                        _loading_placeholder("Select this tab to load export options")
+
+            # --- Lazy tab loader ---
+            loaded_tabs: set[str] = {"Play"}
+
+            async def _on_tab_change(e):
+                tab_name = e.value
+                if tab_name in loaded_tabs:
+                    return
+                loaded_tabs.add(tab_name)
+
+                if tab_name == "League":
+                    league_container.clear()
+                    with league_container:
+                        from nicegui_app.pages.league import render_league_section
+                        await render_league_section(state, shared)
+                elif tab_name == "My Team":
+                    team_container.clear()
+                    with team_container:
+                        from nicegui_app.pages.my_team import render_my_team_section
+                        await render_my_team_section(state, shared)
+                elif tab_name == "Export":
+                    export_container.clear()
+                    with export_container:
+                        from nicegui_app.pages.export import render_export_section
+                        await render_export_section(state, shared)
+
+            tabs.on_value_change(_on_tab_change)

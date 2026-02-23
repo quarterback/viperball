@@ -3,6 +3,10 @@
 Orchestrates the main Play tab: mode selection (New Dynasty / New Season /
 Quick Game) when no session is active, or the active season/dynasty
 simulation UI when a session exists.
+
+All API calls use ``await run.io_bound()`` so that the blocking HTTP
+round-trip runs in a thread-pool, keeping the NiceGUI / uvicorn event-loop
+free to actually process the request (NiceGUI + FastAPI share one process).
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ from __future__ import annotations
 import os
 import random
 
-from nicegui import ui
+from nicegui import ui, run
 
 from ui import api_client
 from nicegui_app.state import UserState
@@ -21,19 +25,19 @@ from nicegui_app.pages.season_simulator import render_season_simulator
 from nicegui_app.pages.dynasty_mode import render_dynasty_mode
 
 
-def render_play_section(state: UserState, shared: dict):
+async def render_play_section(state: UserState, shared: dict):
     """Main play section entry point."""
 
     @ui.refreshable
-    def _play_content():
+    async def _play_content():
         if state.mode == "dynasty":
-            _render_dynasty_play(state, shared)
+            await _render_dynasty_play(state, shared)
         elif state.mode == "season":
-            _render_season_play(state, shared)
+            await _render_season_play(state, shared)
         else:
             _render_mode_selection(state, shared)
 
-    _play_content()
+    await _play_content()
 
 
 def _render_mode_selection(state: UserState, shared: dict):
@@ -66,14 +70,14 @@ def _render_mode_selection(state: UserState, shared: dict):
                 ui.label(f"Error loading game simulator: {e}").classes("text-red-500")
 
 
-def _render_season_play(state: UserState, shared: dict):
+async def _render_season_play(state: UserState, shared: dict):
     """Render the active season simulation UI."""
     if not state.session_id:
         ui.label("No active session.").classes("text-gray-400 italic")
         return
 
     try:
-        status = api_client.get_season_status(state.session_id)
+        status = await run.io_bound(api_client.get_season_status, state.session_id)
     except api_client.APIError as e:
         notify_error(f"Failed to load season: {e.detail}")
         return
@@ -92,9 +96,9 @@ def _render_season_play(state: UserState, shared: dict):
     results_container = ui.column().classes("w-full")
 
     @ui.refreshable
-    def _season_actions():
+    async def _season_actions():
         try:
-            status = api_client.get_season_status(state.session_id)
+            status = await run.io_bound(api_client.get_season_status, state.session_id)
         except api_client.APIError:
             return
 
@@ -104,18 +108,18 @@ def _render_season_play(state: UserState, shared: dict):
 
         if phase == "regular":
             with ui.row().classes("gap-4"):
-                def _sim_week():
+                async def _sim_week():
                     try:
-                        result = api_client.simulate_week(state.session_id)
+                        result = await run.io_bound(api_client.simulate_week, state.session_id)
                         week = result.get("week_simulated", current_week + 1)
                         notify_success(f"Week {week} simulated!")
                         _season_actions.refresh()
                     except api_client.APIError as e:
                         notify_error(f"Simulation failed: {e.detail}")
 
-                def _sim_rest():
+                async def _sim_rest():
                     try:
-                        api_client.simulate_rest(state.session_id)
+                        await run.io_bound(api_client.simulate_rest, state.session_id)
                         notify_success("Regular season complete!")
                         _season_actions.refresh()
                     except api_client.APIError as e:
@@ -125,9 +129,9 @@ def _render_season_play(state: UserState, shared: dict):
                 ui.button("Sim Rest of Season", on_click=_sim_rest, icon="fast_forward")
 
         elif phase == "postseason" or phase == "playoffs":
-            def _run_playoffs():
+            async def _run_playoffs():
                 try:
-                    api_client.run_playoffs(state.session_id)
+                    await run.io_bound(api_client.run_playoffs, state.session_id)
                     notify_success("Playoffs complete!")
                     _season_actions.refresh()
                 except api_client.APIError as e:
@@ -136,9 +140,9 @@ def _render_season_play(state: UserState, shared: dict):
             ui.button("Run Playoffs", on_click=_run_playoffs, icon="emoji_events").props("color=primary")
 
         elif phase == "bowls":
-            def _run_bowls():
+            async def _run_bowls():
                 try:
-                    api_client.run_bowls(state.session_id)
+                    await run.io_bound(api_client.run_bowls, state.session_id)
                     notify_success("Bowl games complete!")
                     _season_actions.refresh()
                 except api_client.APIError as e:
@@ -153,7 +157,7 @@ def _render_season_play(state: UserState, shared: dict):
 
         # Show recent results
         try:
-            schedule = api_client.get_schedule(state.session_id, completed_only=True)
+            schedule = await run.io_bound(api_client.get_schedule, state.session_id, completed_only=True)
             games = schedule.get("games", [])
             if games:
                 recent = games[-min(10, len(games)):]
@@ -171,17 +175,17 @@ def _render_season_play(state: UserState, shared: dict):
             pass
 
     with results_container:
-        _season_actions()
+        await _season_actions()
 
 
-def _render_dynasty_play(state: UserState, shared: dict):
+async def _render_dynasty_play(state: UserState, shared: dict):
     """Render the active dynasty simulation UI."""
     if not state.session_id:
         ui.label("No active session.").classes("text-gray-400 italic")
         return
 
     try:
-        dyn_status = api_client.get_dynasty_status(state.session_id)
+        dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
     except api_client.APIError as e:
         notify_error(f"Failed to load dynasty: {e.detail}")
         return
@@ -206,9 +210,9 @@ def _render_dynasty_play(state: UserState, shared: dict):
     results_container = ui.column().classes("w-full")
 
     @ui.refreshable
-    def _dynasty_actions():
+    async def _dynasty_actions():
         try:
-            dyn_status = api_client.get_dynasty_status(state.session_id)
+            dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
         except api_client.APIError:
             return
 
@@ -234,9 +238,10 @@ def _render_dynasty_play(state: UserState, shared: dict):
             def_sel = ui.select(def_options, value="swarm", label="Defense Style").classes("w-64")
             st_sel = ui.select(st_options, value="aces", label="Special Teams").classes("w-64")
 
-            def _start_season():
+            async def _start_season():
                 try:
-                    api_client.dynasty_start_season(
+                    await run.io_bound(
+                        api_client.dynasty_start_season,
                         state.session_id,
                         offense_style=off_sel.value,
                         defense_style=def_sel.value,
@@ -251,7 +256,7 @@ def _render_dynasty_play(state: UserState, shared: dict):
 
         else:
             # Season is active — show simulation controls
-            _render_season_play(state, shared)
+            await _render_season_play(state, shared)
 
     with results_container:
-        _dynasty_actions()
+        await _dynasty_actions()
