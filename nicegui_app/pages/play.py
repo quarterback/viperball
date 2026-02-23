@@ -23,6 +23,7 @@ from nicegui_app.components import metric_card, stat_table, notify_error, notify
 from nicegui_app.pages.game_simulator import render_game_simulator
 from nicegui_app.pages.season_simulator import render_season_simulator
 from nicegui_app.pages.dynasty_mode import render_dynasty_mode
+from nicegui_app.pages.draftyqueenz import render_dq_bankroll_banner, render_dq_pre_sim, render_dq_post_sim
 
 
 async def render_play_section(state: UserState, shared: dict):
@@ -221,10 +222,28 @@ async def _render_season_portal(state: UserState, refresh_fn):
     their roster, and advance past the portal phase to start the regular
     season.
     """
-    ui.label("Transfer Portal").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label("Pre-Season Portal").classes("text-xl font-bold text-slate-700 mt-2")
     ui.label(
-        "Browse available transfer players and add them to your roster before the season begins."
+        "Pick transfer players and coaching staff, then start the season when ready."
     ).classes("text-sm text-gray-500 mb-2")
+
+    # ── Prominent Start Season bar at top ─────────────────────────
+    async def _start_season():
+        try:
+            await run.io_bound(api_client.season_portal_skip, state.session_id)
+            notify_success("Portal complete — starting regular season!")
+            refresh_fn.refresh()
+        except api_client.APIError as e:
+            notify_error(f"Could not advance: {e.detail}")
+
+    with ui.card().classes("w-full bg-green-50 p-4 rounded mb-4"):
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("When you're done picking transfers and coaches:").classes("text-green-800")
+            ui.button(
+                "Start Season", on_click=_start_season, icon="sports_football",
+            ).props("color=primary size=lg")
+
+    ui.label("Transfer Portal").classes("text-lg font-semibold text-slate-700 mt-2")
 
     try:
         portal_resp = await run.io_bound(api_client.season_portal_get, state.session_id)
@@ -359,29 +378,14 @@ async def _render_season_portal(state: UserState, refresh_fn):
     ui.separator().classes("my-4")
     await _render_coaching_selection(state, refresh_fn)
 
-    # ── Action buttons ───────────────────────────────────────────────
+    # ── Bottom Start Season button (mirrors the top one) ────────────
     ui.separator().classes("my-4")
-    with ui.row().classes("gap-4"):
-        async def _done_portal():
-            try:
-                await run.io_bound(api_client.season_portal_skip, state.session_id)
-                notify_success("Portal complete — starting regular season!")
-                refresh_fn.refresh()
-            except api_client.APIError as e:
-                notify_error(f"Could not advance: {e.detail}")
-
-        async def _skip_portal():
-            try:
-                await run.io_bound(api_client.season_portal_skip, state.session_id)
-                notify_info("Portal skipped.")
-                refresh_fn.refresh()
-            except api_client.APIError as e:
-                notify_error(f"Could not skip: {e.detail}")
-
-        ui.button(
-            "Done with Portal — Start Season", on_click=_done_portal, icon="sports_football",
-        ).props("color=primary")
-        ui.button("Skip Portal", on_click=_skip_portal, icon="skip_next")
+    with ui.card().classes("w-full bg-green-50 p-4 rounded"):
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("Ready to play? Start the regular season.").classes("text-green-800")
+            ui.button(
+                "Start Season", on_click=_start_season, icon="sports_football",
+            ).props("color=primary size=lg")
 
 
 async def _fetch_bracket(session_id: str) -> dict:
@@ -492,6 +496,29 @@ async def _render_season_play(state: UserState, shared: dict):
             await _render_season_portal(state, _season_actions)
 
         elif phase == "regular":
+            next_week = status.get("next_week", current_week + 1)
+
+            # DraftyQueenz post-sim results for last completed week
+            if current_week > 0:
+                try:
+                    render_dq_post_sim(state, state.session_id, current_week)
+                except Exception:
+                    pass
+
+            # DraftyQueenz bankroll banner
+            try:
+                render_dq_bankroll_banner(state, state.session_id)
+            except Exception:
+                pass
+
+            # DraftyQueenz pre-sim section (predictions, fantasy, donate)
+            if next_week:
+                try:
+                    render_dq_pre_sim(state, state.session_id, next_week)
+                except Exception:
+                    pass
+
+            ui.separator().classes("my-4")
             with ui.row().classes("gap-4"):
                 week_btn = ui.button(f"Simulate Week {current_week + 1}", icon="play_arrow").props("color=primary")
                 rest_btn = ui.button("Sim Rest of Season", icon="fast_forward")
