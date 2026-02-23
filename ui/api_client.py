@@ -16,7 +16,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from typing import Dict, List, Optional, Any, Callable, Tuple
 
-API_BASE = os.environ.get("VIPERBALL_API_URL", "http://127.0.0.1:8080")
+_default_port = os.environ.get("PORT", "8080")
+API_BASE = os.environ.get("VIPERBALL_API_URL", f"http://127.0.0.1:{_default_port}")
 
 # ---------------------------------------------------------------------------
 # GET cache – avoids duplicate loopback HTTP calls within a render cycle.
