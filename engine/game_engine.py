@@ -985,9 +985,11 @@ class Player:
     is_dtd: bool = False              # day-to-day: playing through minor injury
 
     # --- Role-based usage (assigned pregame, reset each game) ---
-    game_role: str = "ROTATION"       # "STARTER" | "ROTATION"
+    game_role: str = "ROTATION"       # "STARTER" | "ROTATION" (offense rushing)
     game_role_recv: str = "ROTATION"  # receiving role (can differ from rushing role)
     game_zb_style: str = ""           # "kick_dominant" | "run_dominant" | "dual_threat" | "distributor" (ZBs only)
+    game_def_role: str = "ROTATION"   # "STARTER" | "ROTATION" (defense)
+    game_st_role: str = "ROTATION"    # "STARTER" | "ROTATION" (special teams)
 
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
