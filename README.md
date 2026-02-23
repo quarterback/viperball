@@ -18,7 +18,7 @@ Games are high-scoring (typically 45-75 points per team), fast-paced, and volati
 
 **The field** is 100 yards long with end zones at each end, identical to an American football field.
 
-**Game length:** 4 quarters of 15 minutes each (60 minutes total). Each play consumes 11-36 seconds of game clock. A typical game produces roughly 80-85 plays per team.
+**Game length:** 4 quarters of 10 minutes each (40 minutes total)
 
 **There are no kickoffs.** Possession alternates after every scoring play and at the start of each half. Starting field position is determined by the Sacrifice system (explained below).
 
