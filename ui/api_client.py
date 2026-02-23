@@ -498,6 +498,20 @@ def season_portal_skip(session_id: str) -> dict:
     return _post(f"/sessions/{session_id}/season/portal/skip")
 
 
+def season_coaching_staff_get(session_id: str, team: str = "") -> dict:
+    params = {"team": team} if team else None
+    return _get(f"/sessions/{session_id}/season/coaching-staff", params=params)
+
+
+def season_coaching_pool_generate(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/season/coaching-staff/generate-pool")
+
+
+def season_coaching_hire(session_id: str, coach_id: str, role: str) -> dict:
+    return _post(f"/sessions/{session_id}/season/coaching-staff/hire",
+                 json={"coach_id": coach_id, "role": role})
+
+
 def simulate_quick_game(home: str, away: str,
                         home_offense: str = "balanced",
                         home_defense: str = "swarm",
