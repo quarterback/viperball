@@ -231,8 +231,46 @@ def render_game_simulator(state: UserState, shared: dict):
 
 # ── Sub-renderers ──
 
+def _style_tag(result, side):
+    """Return a human-readable style tag like 'Boot Raid | Tempo: Fast'."""
+    from engine import OFFENSE_STYLES
+    style_key = result.get(f"{side}_style", "balanced")
+    info = OFFENSE_STYLES.get(style_key, {})
+    label = info.get("label", style_key.replace("_", " ").title())
+    tempo = info.get("tempo", 0.5)
+    if tempo >= 0.7:
+        tempo_label = "Fast"
+    elif tempo >= 0.45:
+        tempo_label = "Mid"
+    else:
+        tempo_label = "Slow"
+    return f"{label} | Tempo: {tempo_label}"
+
+
+def _kp_comp_pct(stats):
+    att = stats.get("kick_passes_attempted", 0)
+    comp = stats.get("kick_passes_completed", 0)
+    if att == 0:
+        return "0.0%"
+    return f"{comp / att * 100:.1f}%"
+
+
+def _trick_plays_from_breakdown(stats):
+    fb = stats.get("play_family_breakdown", {})
+    return fb.get("trick_play", 0)
+
+
 def _render_box_score(result, plays, home_name, away_name, home_score, away_score, hs, as_):
     home_q, away_q = compute_quarter_scores(plays)
+
+    # Style fingerprint header
+    with ui.row().classes("w-full gap-4 mb-2"):
+        with ui.card().classes("flex-1 p-2 bg-blue-50"):
+            ui.label(home_name).classes("font-bold text-sm text-slate-700")
+            ui.label(_style_tag(result, "home")).classes("text-xs text-blue-600")
+        with ui.card().classes("flex-1 p-2 bg-red-50"):
+            ui.label(away_name).classes("font-bold text-sm text-slate-700")
+            ui.label(_style_tag(result, "away")).classes("text-xs text-red-600")
 
     # Quarter scoring table
     qtr_rows = [
@@ -264,24 +302,81 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     ]
     stat_table(scoring_rows)
 
-    # Offensive stats
-    ui.label("Offensive Stats").classes("font-bold text-slate-700 mt-4")
-    off_rows = [
+    # Rushing
+    ui.label("Rushing").classes("font-bold text-slate-700 mt-4")
+    h_rush_att = sum(
+        v for k, v in hs.get("play_family_breakdown", {}).items()
+        if k in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw", "viper_jet")
+    )
+    a_rush_att = sum(
+        v for k, v in as_.get("play_family_breakdown", {}).items()
+        if k in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw", "viper_jet")
+    )
+    h_rush_yds = hs.get("rushing_yards", 0)
+    a_rush_yds = as_.get("rushing_yards", 0)
+    h_rush_ypc = round(h_rush_yds / max(1, h_rush_att), 1)
+    a_rush_ypc = round(a_rush_yds / max(1, a_rush_att), 1)
+    rush_rows = [
+        {"Stat": "Carries", home_name: str(h_rush_att), away_name: str(a_rush_att)},
+        {"Stat": "Yards", home_name: str(h_rush_yds), away_name: str(a_rush_yds)},
+        {"Stat": "YPC", home_name: str(h_rush_ypc), away_name: str(a_rush_ypc)},
+        {"Stat": "Rush TDs", home_name: str(hs.get("rushing_touchdowns", 0)), away_name: str(as_.get("rushing_touchdowns", 0))},
+    ]
+    stat_table(rush_rows)
+
+    # Kick Passing
+    ui.label("Kick Passing").classes("font-bold text-slate-700 mt-4")
+    kp_rows = [
+        {"Stat": "Att", home_name: str(hs.get("kick_passes_attempted", 0)), away_name: str(as_.get("kick_passes_attempted", 0))},
+        {"Stat": "Comp", home_name: str(hs.get("kick_passes_completed", 0)), away_name: str(as_.get("kick_passes_completed", 0))},
+        {"Stat": "Comp %", home_name: _kp_comp_pct(hs), away_name: _kp_comp_pct(as_)},
+        {"Stat": "Yards", home_name: str(hs.get("kick_pass_yards", 0)), away_name: str(as_.get("kick_pass_yards", 0))},
+        {"Stat": "TDs", home_name: str(hs.get("kick_pass_tds", 0)), away_name: str(as_.get("kick_pass_tds", 0))},
+        {"Stat": "INTs", home_name: str(hs.get("kick_pass_interceptions", 0)), away_name: str(as_.get("kick_pass_interceptions", 0))},
+    ]
+    stat_table(kp_rows)
+
+    # Laterals
+    ui.label("Lateral Game").classes("font-bold text-slate-700 mt-4")
+    lat_rows = [
+        {"Stat": "Chains", home_name: str(hs.get("lateral_chains", 0)), away_name: str(as_.get("lateral_chains", 0))},
+        {"Stat": "Successful", home_name: str(hs.get("successful_laterals", 0)), away_name: str(as_.get("successful_laterals", 0))},
+        {"Stat": "Efficiency", home_name: f"{hs.get('lateral_efficiency', 0)}%", away_name: f"{as_.get('lateral_efficiency', 0)}%"},
+        {"Stat": "Yards", home_name: str(hs.get("lateral_yards", 0)), away_name: str(as_.get("lateral_yards", 0))},
+        {"Stat": "Lat INTs", home_name: str(hs.get("lateral_interceptions", 0)), away_name: str(as_.get("lateral_interceptions", 0))},
+    ]
+    stat_table(lat_rows)
+
+    # Kicking
+    ui.label("Kicking").classes("font-bold text-slate-700 mt-4")
+    kick_rows = [
+        {"Stat": "Snap Kicks (DK)", home_name: f"{hs.get('drop_kicks_made', 0)}/{hs.get('drop_kicks_attempted', 0)}", away_name: f"{as_.get('drop_kicks_made', 0)}/{as_.get('drop_kicks_attempted', 0)}"},
+        {"Stat": "Field Goals (PK)", home_name: f"{hs.get('place_kicks_made', 0)}/{hs.get('place_kicks_attempted', 0)}", away_name: f"{as_.get('place_kicks_made', 0)}/{as_.get('place_kicks_attempted', 0)}"},
+        {"Stat": "Punts", home_name: str(hs.get("punts", 0)), away_name: str(as_.get("punts", 0))},
+    ]
+    stat_table(kick_rows)
+
+    # Trick Plays & Special
+    h_tricks = _trick_plays_from_breakdown(hs)
+    a_tricks = _trick_plays_from_breakdown(as_)
+    if h_tricks > 0 or a_tricks > 0:
+        ui.label("Trick Plays").classes("font-bold text-slate-700 mt-4")
+        trick_rows = [
+            {"Stat": "Attempts", home_name: str(h_tricks), away_name: str(a_tricks)},
+        ]
+        stat_table(trick_rows)
+
+    # Team Totals
+    ui.label("Team Totals").classes("font-bold text-slate-700 mt-4")
+    totals_rows = [
         {"Stat": "Total Yards", home_name: str(hs["total_yards"]), away_name: str(as_["total_yards"])},
-        {"Stat": "Rush Yds", home_name: str(hs.get("rushing_yards", 0)), away_name: str(as_.get("rushing_yards", 0))},
-        {"Stat": "Receiving Yds", home_name: str(hs.get("kick_pass_yards", 0)), away_name: str(as_.get("kick_pass_yards", 0))},
-        {"Stat": "Lateral Yds", home_name: str(hs.get("lateral_yards", 0)), away_name: str(as_.get("lateral_yards", 0))},
         {"Stat": "Yds/Play", home_name: str(hs["yards_per_play"]), away_name: str(as_["yards_per_play"])},
         {"Stat": "Total Plays", home_name: str(hs["total_plays"]), away_name: str(as_["total_plays"])},
-        {"Stat": "Lat Chains", home_name: str(hs["lateral_chains"]), away_name: str(as_["lateral_chains"])},
-        {"Stat": "Lat Eff", home_name: f"{hs['lateral_efficiency']}%", away_name: f"{as_['lateral_efficiency']}%"},
         {"Stat": "Fumbles Lost", home_name: str(hs["fumbles_lost"]), away_name: str(as_["fumbles_lost"])},
-        {"Stat": "KP INTs", home_name: str(hs.get("kick_pass_interceptions", 0)), away_name: str(as_.get("kick_pass_interceptions", 0))},
-        {"Stat": "Lat INTs", home_name: str(hs.get("lateral_interceptions", 0)), away_name: str(as_.get("lateral_interceptions", 0))},
         {"Stat": "Bonus Poss.", home_name: str(hs.get("bonus_possessions", 0)), away_name: str(as_.get("bonus_possessions", 0))},
         {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
     ]
-    stat_table(off_rows)
+    stat_table(totals_rows)
 
     # Player stats
     player_stats = result.get("player_stats", {})

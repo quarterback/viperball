@@ -703,8 +703,100 @@ def _render_defensive_stats(results, n, home_name, away_name):
             ]
             ui.table(columns=event_columns, rows=event_rows).classes("w-full").props("dense flat")
 
+    # ── Offensive Performance ──
+    _render_offensive_stats(results, n, home_name, away_name)
 
 
+def _render_offensive_stats(results, n, home_name, away_name):
+    """Render offensive performance: rushing, kick passing, laterals, trick plays by style."""
+    ui.separator()
+    ui.label("Offensive Performance").classes("text-2xl font-semibold mt-4")
+
+    def _avg(vals):
+        return round(sum(vals) / max(1, len(vals)), 2)
+
+    def _side_stats(side):
+        return [r["stats"][side] for r in results]
+
+    for side, label in [("home", home_name), ("away", away_name)]:
+        stats_list = _side_stats(side)
+        ui.label(f"{label} Offense").classes("text-xl font-semibold mt-4")
+
+        rush_yds = [s.get("rushing_yards", 0) for s in stats_list]
+        rush_tds = [s.get("rushing_touchdowns", 0) for s in stats_list]
+        kp_att = [s.get("kick_passes_attempted", 0) for s in stats_list]
+        kp_comp = [s.get("kick_passes_completed", 0) for s in stats_list]
+        kp_yds = [s.get("kick_pass_yards", 0) for s in stats_list]
+        kp_tds = [s.get("kick_pass_tds", 0) for s in stats_list]
+        kp_ints = [s.get("kick_pass_interceptions", 0) for s in stats_list]
+        lat_chains = [s.get("lateral_chains", 0) for s in stats_list]
+        lat_eff = [s.get("lateral_efficiency", 0) for s in stats_list]
+        lat_yds = [s.get("lateral_yards", 0) for s in stats_list]
+        dk_att = [s.get("drop_kicks_attempted", 0) for s in stats_list]
+        dk_made = [s.get("drop_kicks_made", 0) for s in stats_list]
+        pk_att = [s.get("place_kicks_attempted", 0) for s in stats_list]
+        pk_made = [s.get("place_kicks_made", 0) for s in stats_list]
+        total_yds = [s.get("total_yards", 0) for s in stats_list]
+        total_plays = [s.get("total_plays", 0) for s in stats_list]
+        tds = [s.get("touchdowns", 0) for s in stats_list]
+        tricks = [s.get("play_family_breakdown", {}).get("trick_play", 0) for s in stats_list]
+
+        avg_comp_pct = round(sum(kp_comp) / max(1, sum(kp_att)) * 100, 1)
+        avg_dk_pct = round(sum(dk_made) / max(1, sum(dk_att)) * 100, 1)
+
+        with ui.row().classes("w-full gap-3 flex-wrap"):
+            metric_card("Avg Total Yds", _avg(total_yds))
+            metric_card("Avg TDs", _avg(tds))
+            metric_card("Avg Yds/Play", round(sum(total_yds) / max(1, sum(total_plays)), 1))
+            metric_card("Avg Plays", _avg(total_plays))
+
+        off_rows = [
+            {"Category": "Rushing", "Avg/Game": f"{_avg(rush_yds)} yds", "Total": str(sum(rush_yds)), "Avg TDs": str(_avg(rush_tds))},
+            {"Category": "Kick Pass", "Avg/Game": f"{_avg(kp_att)} att, {_avg(kp_comp)} comp ({avg_comp_pct}%)", "Total": f"{sum(kp_yds)} yds", "Avg TDs": str(_avg(kp_tds))},
+            {"Category": "KP Yards", "Avg/Game": f"{_avg(kp_yds)} yds", "Total": str(sum(kp_yds)), "Avg TDs": f"{_avg(kp_ints)} INTs"},
+            {"Category": "Laterals", "Avg/Game": f"{_avg(lat_chains)} chains", "Total": f"{sum(lat_yds)} yds", "Avg TDs": f"{_avg(lat_eff)}% eff"},
+            {"Category": "Snap Kicks", "Avg/Game": f"{_avg(dk_att)} att, {_avg(dk_made)} made ({avg_dk_pct}%)", "Total": f"{sum(dk_made)}/{sum(dk_att)}", "Avg TDs": "-"},
+            {"Category": "Field Goals", "Avg/Game": f"{_avg(pk_att)} att, {_avg(pk_made)} made", "Total": f"{sum(pk_made)}/{sum(pk_att)}", "Avg TDs": "-"},
+            {"Category": "Trick Plays", "Avg/Game": f"{_avg(tricks)}/game", "Total": str(sum(tricks)), "Avg TDs": "-"},
+        ]
+        off_columns = [
+            {"name": "Category", "label": "Category", "field": "Category", "align": "left"},
+            {"name": "Avg/Game", "label": "Avg/Game", "field": "Avg/Game", "align": "right"},
+            {"name": "Total", "label": "Total", "field": "Total", "align": "right"},
+            {"name": "Avg TDs", "label": "Extra", "field": "Avg TDs", "align": "right"},
+        ]
+        ui.table(columns=off_columns, rows=off_rows).classes("w-full").props("dense flat")
+
+        # Play family distribution for this side
+        fam_accum = {}
+        for s in stats_list:
+            fb = s.get("play_family_breakdown", {})
+            for fam, count in fb.items():
+                fam_accum[fam] = fam_accum.get(fam, 0) + count
+        total_fam = sum(fam_accum.values()) or 1
+
+        if fam_accum:
+            sorted_fams = sorted(fam_accum.items(), key=lambda x: -x[1])
+            fam_rows = [
+                {
+                    "Play Family": fam.replace("_", " ").title(),
+                    "Total Calls": str(count),
+                    "Avg/Game": str(round(count / n, 1)),
+                    "Share": f"{round(count / total_fam * 100, 1)}%",
+                }
+                for fam, count in sorted_fams
+            ]
+            with ui.expansion(f"{label} Play Call Distribution", icon="analytics").classes("w-full mt-2"):
+                fam_columns = [
+                    {"name": "Play Family", "label": "Play Family", "field": "Play Family", "align": "left"},
+                    {"name": "Total Calls", "label": "Total", "field": "Total Calls", "align": "right"},
+                    {"name": "Avg/Game", "label": "Avg/Game", "field": "Avg/Game", "align": "right"},
+                    {"name": "Share", "label": "Share %", "field": "Share", "align": "right"},
+                ]
+                ui.table(columns=fam_columns, rows=fam_rows).classes("w-full").props("dense flat")
+
+
+def _render_batch_player_impact(results, n, home_name, away_name):
     """Aggregate per-player VPA across all batch simulations."""
     from collections import defaultdict
 
