@@ -5099,6 +5099,16 @@ class ViperballEngine:
         cls_fx = off_mods.get("classification_effects", {})
         def_fx = def_mods.get("classification_effects", {})
 
+        # V2.4: Coaching dev aura — rolling boost based on staff development
+        # Reads the team's dev_aura from coaching modifiers and scales with
+        # the ball carrier's games played this season.
+        dev_aura = off_mods.get("dev_aura", 0.0)
+        if dev_aura > 0 and carrier is not None:
+            games_played = getattr(carrier, 'season_games_played', 0)
+            season_len = 13
+            progress = min(1.0, games_played / max(1, season_len))
+            center *= 1.0 + dev_aura * progress
+
         if hc_cls == "scheme_master":
             center *= 1.0 + cls_fx.get("scheme_amplification", 0.0)
         elif hc_cls == "motivator":

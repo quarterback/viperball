@@ -475,6 +475,10 @@ class CoachCard:
     # V2.3 HC Affinity ──────────────────────
     hc_affinity: str = "balanced"        # one of HC_AFFINITIES
 
+    # V2.4 Coaching Portal ────────────────
+    wants_hc: bool = False               # assistant coaches who aspire to be HC
+    alma_mater: str = ""                 # school name — alumni bonus in portal matching
+
     # ── computed properties ───────────────────
 
     @property
@@ -593,6 +597,8 @@ class CoachCard:
             "personality_sliders": self.personality_sliders,
             "hidden_traits": self.hidden_traits,
             "hc_affinity": self.hc_affinity,
+            "wants_hc": self.wants_hc,
+            "alma_mater": self.alma_mater,
         }
 
     @classmethod
@@ -635,6 +641,8 @@ class CoachCard:
             personality_sliders=d.get("personality_sliders", {}),
             hidden_traits=d.get("hidden_traits", []),
             hc_affinity=d.get("hc_affinity", "balanced"),
+            wants_hc=d.get("wants_hc", False),
+            alma_mater=d.get("alma_mater", ""),
         )
 
 
@@ -1075,10 +1083,30 @@ def generate_coach_card(
     # ── coach ID ──────────────────────────────
     coach_id = f"coach_{first.lower()}_{last.lower().replace(' ', '_')}_{rng.randint(100, 999)}"
 
-    # ── contract ──────────────────────────────
-    contract_years = rng.randint(2, 5) if team_name else 0
+    # ── contract (staggered: offset by role so not all expire at once) ──
+    _role_year_ranges = {"head_coach": (3, 5), "oc": (2, 4), "dc": (2, 4), "stc": (1, 3)}
+    yr_lo, yr_hi = _role_year_ranges.get(role, (2, 4))
+    contract_years = rng.randint(yr_lo, yr_hi) if team_name else 0
+    # Stagger remaining years so existing staffs have different expiry dates
+    if team_name and contract_years > 1:
+        contract_years_remaining_init = rng.randint(1, contract_years)
+    else:
+        contract_years_remaining_init = contract_years
     salary = 0
     buyout = 0
+
+    # ── wants_hc flag (assistants only) ──
+    wants_hc_flag = False
+    if role != "head_coach":
+        hc_aspiration_chance = 0.15
+        if attrs.get("leadership", 50) >= 70:
+            hc_aspiration_chance += 0.15
+        if age <= 45:
+            hc_aspiration_chance += 0.15
+        wants_hc_flag = rng.random() < hc_aspiration_chance
+
+    # ── alma mater (assigned later from full league list if available) ──
+    alma = ""
 
     # ── HC affinity (all coaches get one, but only HC's matters in-game) ──
     # Weighted toward balanced; classification biases the roll:
@@ -1123,12 +1151,14 @@ def generate_coach_card(
         personality_sliders=sliders,
         hidden_traits=traits,
         hc_affinity=hc_aff,
+        wants_hc=wants_hc_flag,
+        alma_mater=alma,
     )
 
     # Set salary after card exists so calculate_coach_salary can use it
     salary = calculate_coach_salary(card, rng=rng)
     card.contract_salary = salary
-    card.contract_years_remaining = contract_years
+    card.contract_years_remaining = contract_years_remaining_init
     card.contract_buyout = int(salary * contract_years * 0.5) if contract_years > 0 else 0
 
     return card
@@ -1139,9 +1169,14 @@ def generate_coaching_staff(
     prestige: int = 50,
     year: int = 2026,
     rng: Optional[random.Random] = None,
+    all_team_names: Optional[List[str]] = None,
 ) -> Dict[str, CoachCard]:
     """
     Generate a full 4-person coaching staff: HC, OC, DC, STC.
+
+    Args:
+        all_team_names: If provided, coaches get a random alma_mater
+                        from this list (~35% chance per coach).
 
     Returns:
         Dict mapping role -> CoachCard.
@@ -1158,6 +1193,9 @@ def generate_coaching_staff(
             year=year,
             rng=rng,
         )
+        # Assign alma mater from the league's school list
+        if all_team_names and rng.random() < 0.35:
+            card.alma_mater = rng.choice(all_team_names)
         staff[role] = card
 
     return staff
@@ -1825,6 +1863,8 @@ def compute_gameday_modifiers(
         "sub_archetype_effects": sub_effects,
         "personality_factors": p_factors,
         "hidden_trait_effects": h_trait_effects,
+        # V2.4 — coaching dev aura (in-game rolling stat boost)
+        "dev_aura": compute_dev_aura(coaching_staff),
     }
 
 
@@ -1931,3 +1971,76 @@ def roll_dc_gameplan(
         result["game_temperature"] = "neutral"
 
     return result
+
+
+# ──────────────────────────────────────────────
+# V2.4 COACHING DEV AURA (IN-GAME ROLLING BOOST)
+# ──────────────────────────────────────────────
+# Each coach's ``development`` attribute creates a per-game aura.
+# Players on the roster receive a small, cumulative stat multiplier
+# for every game played under that staff.  The aura travels with
+# the coaching staff — if they leave, the boost disappears.
+#
+# Formula:  effective_stat = base_stat * (1 + aura * games_played / season_length)
+#
+# With a max aura of ~0.08 and 13-game season the peak boost is ~8%.
+# This makes high-development coaching staffs meaningfully overperform
+# their roster ratings, exactly as described.
+
+def compute_dev_aura(
+    coaching_staff: Dict[str, CoachCard],
+) -> float:
+    """
+    Compute the in-game development aura from a coaching staff.
+
+    Blends HC (40%), OC (30%), DC (20%), STC (10%) development ratings
+    and maps the result to a 0.0-0.08 aura multiplier.
+
+    Returns:
+        Float in [0.0, 0.08] — the per-game-fraction stat boost.
+    """
+    weights = {"head_coach": 0.40, "oc": 0.30, "dc": 0.20, "stc": 0.10}
+    total_dev = 0.0
+    total_weight = 0.0
+    for role, wt in weights.items():
+        card = coaching_staff.get(role)
+        if card:
+            total_dev += card.development * wt
+            total_weight += wt
+
+    if total_weight == 0:
+        return 0.0
+
+    blended = total_dev / total_weight
+    # Map 25-95 → 0.0-0.08
+    return max(0.0, (blended - ATTR_MIN) / (ATTR_MAX - ATTR_MIN) * 0.08)
+
+
+def apply_dev_aura_to_stats(
+    base_stats: Dict[str, int],
+    aura: float,
+    games_played: int,
+    season_length: int = 13,
+) -> Dict[str, int]:
+    """
+    Apply the coaching dev aura to a player's stats for a single game.
+
+    The boost scales linearly with games played under this staff,
+    reaching its maximum at the end of the season.
+
+    Args:
+        base_stats:    Dict of stat_name -> base value.
+        aura:          Result of compute_dev_aura().
+        games_played:  How many games this player has played this season.
+        season_length: Total games in the season (for scaling).
+
+    Returns:
+        Dict of stat_name -> boosted value (ints, capped at 99).
+    """
+    if aura <= 0 or games_played <= 0:
+        return dict(base_stats)
+
+    progress = min(1.0, games_played / max(1, season_length))
+    multiplier = 1.0 + aura * progress
+
+    return {k: min(99, int(v * multiplier)) for k, v in base_stats.items()}

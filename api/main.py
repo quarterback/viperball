@@ -795,6 +795,11 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         session["quick_portal"] = portal
         session["portal_human_team"] = ht
 
+    # Coaching staffs are already on season.coaching_staffs (loaded from JSON).
+    # Store a session reference so the human can browse/swap via the coaching
+    # portal endpoints before starting the season.
+    session["coaching_staffs"] = season.coaching_staffs
+
     result = _serialize_season_status(session)
     if history_results:
         result["history"] = history_results
@@ -2391,6 +2396,172 @@ def season_portal_skip(session_id: str):
     _require_season(session)
     session["phase"] = "regular"
     return {"phase": "regular", "skipped": True}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# COACHING STAFF ENDPOINTS (season mode — browse & pick staff pre-game)
+# ──────────────────────────────────────────────────────────────────────
+
+def _serialize_coach_card(card) -> dict:
+    """Serialize a CoachCard for API responses."""
+    from engine.coaching import CoachCard, CLASSIFICATION_LABELS, HC_AFFINITY_LABELS
+    if isinstance(card, dict):
+        return card
+    return {
+        "coach_id": card.coach_id,
+        "name": card.full_name,
+        "role": card.role,
+        "overall": card.overall,
+        "star_rating": card.star_rating,
+        "classification": card.classification,
+        "classification_label": card.classification_label,
+        "sub_archetype": card.sub_archetype,
+        "sub_archetype_label": card.sub_archetype_label,
+        "hc_affinity": card.hc_affinity,
+        "hc_affinity_label": card.hc_affinity_label,
+        "composure_label": card.composure_label,
+        "leadership": card.leadership,
+        "composure": card.composure,
+        "rotations": card.rotations,
+        "development": card.development,
+        "recruiting": card.recruiting,
+        "visible_score": card.visible_score,
+        "career_wins": card.career_wins,
+        "career_losses": card.career_losses,
+        "win_percentage": round(card.win_percentage, 3),
+        "championships": card.championships,
+        "seasons_coached": card.seasons_coached,
+        "contract_years_remaining": card.contract_years_remaining,
+        "contract_salary": card.contract_salary,
+        "philosophy": card.philosophy,
+        "coaching_style": card.coaching_style,
+        "personality": card.personality,
+        "background": card.background,
+        "wants_hc": card.wants_hc,
+        "alma_mater": card.alma_mater,
+    }
+
+
+@app.get("/sessions/{session_id}/season/coaching-staff")
+def season_coaching_staff_get(session_id: str, team: Optional[str] = Query(None)):
+    """Get the current coaching staff for a team (or the human team)."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+    staffs = session.get("coaching_staffs", season.coaching_staffs)
+
+    human_teams = session.get("human_teams", [])
+    team_name = team or (human_teams[0] if human_teams else "")
+    if not team_name:
+        raise HTTPException(status_code=400, detail="No team specified")
+
+    staff = staffs.get(team_name, {})
+    serialized = {}
+    for role, card in staff.items():
+        serialized[role] = _serialize_coach_card(card)
+
+    from engine.coaching import compute_dev_aura
+    aura = compute_dev_aura(staff)
+
+    return {
+        "team": team_name,
+        "staff": serialized,
+        "dev_aura": round(aura, 4),
+        "dev_aura_max_boost_pct": round(aura * 100, 1),
+    }
+
+
+@app.post("/sessions/{session_id}/season/coaching-staff/generate-pool")
+def season_coaching_pool_generate(session_id: str):
+    """Generate a pool of available coaches the human can pick from."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    from engine.coaching import generate_coach_card, ROLES
+
+    human_teams = session.get("human_teams", [])
+    human_team = human_teams[0] if human_teams else ""
+    prestige = 50
+    if human_team and human_team in season.teams:
+        prestige = estimate_prestige_from_roster(season.teams[human_team].players)
+
+    rng = random.Random()
+    pool = []
+    # Generate 5 candidates per role (HC, OC, DC, STC) = 20 total
+    for role in ROLES:
+        for _ in range(5):
+            card = generate_coach_card(
+                role=role, team_name="", prestige=rng.randint(max(20, prestige - 20), min(95, prestige + 15)),
+                year=2026, rng=rng,
+            )
+            pool.append(card)
+
+    session["coaching_pool"] = pool
+    serialized = [_serialize_coach_card(c) for c in pool]
+
+    return {
+        "pool": serialized,
+        "total": len(pool),
+        "team_prestige": prestige,
+    }
+
+
+class CoachHireRequest(BaseModel):
+    coach_id: str
+    role: str  # role to hire them into
+
+
+@app.post("/sessions/{session_id}/season/coaching-staff/hire")
+def season_coaching_hire(session_id: str, req: CoachHireRequest):
+    """Hire a coach from the pool into a specific role on the human team."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    pool = session.get("coaching_pool", [])
+    if not pool:
+        raise HTTPException(status_code=400, detail="No coaching pool generated. POST to /season/coaching-staff/generate-pool first.")
+
+    human_teams = session.get("human_teams", [])
+    human_team = human_teams[0] if human_teams else ""
+    if not human_team:
+        raise HTTPException(status_code=400, detail="No human team")
+
+    # Find the coach in the pool
+    target = None
+    for card in pool:
+        if card.coach_id == req.coach_id:
+            target = card
+            break
+
+    if target is None:
+        raise HTTPException(status_code=404, detail="Coach not found in pool")
+
+    from engine.coaching import ROLES
+    if req.role not in ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
+
+    # Set the coach on the team
+    target.team_name = human_team
+    target.role = req.role
+    staffs = session.get("coaching_staffs", season.coaching_staffs)
+    if human_team not in staffs:
+        staffs[human_team] = {}
+    old_coach = staffs[human_team].get(req.role)
+    staffs[human_team][req.role] = target
+    season.coaching_staffs = staffs
+
+    # Remove from pool
+    pool.remove(target)
+
+    from engine.coaching import compute_dev_aura
+    aura = compute_dev_aura(staffs[human_team])
+
+    return {
+        "hired": True,
+        "coach": _serialize_coach_card(target),
+        "role": req.role,
+        "replaced": _serialize_coach_card(old_coach) if old_coach else None,
+        "dev_aura": round(aura, 4),
+    }
 
 
 @app.get("/sessions/{session_id}/rivalries")

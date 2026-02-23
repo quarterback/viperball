@@ -730,45 +730,35 @@ class Dynasty:
             )
         result["prestige"] = dict(self.team_prestige)
 
-        # ── 1b. Coaching staff management ──
+        # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
         from engine.coaching import (
             CoachCard, CoachMarketplace, CoachingSalaryPool,
             auto_coaching_pool, generate_coaching_staff,
             evaluate_coaching_staff, ai_fill_vacancies,
             calculate_coach_salary,
         )
+        from engine.coaching_portal import (
+            CoachingPortal as CPortal,
+            populate_coaching_portal,
+            run_coaching_match,
+        )
 
         # Initialise coaching staffs if not present
+        all_team_names = list(self.team_histories.keys())
         if not self._coaching_staffs:
             for team_name in self.team_histories:
                 prestige = self.team_prestige.get(team_name, 50)
                 self._coaching_staffs[team_name] = generate_coaching_staff(
                     team_name=team_name, prestige=prestige, year=year, rng=rng,
+                    all_team_names=all_team_names,
                 )
-
-        # Build coaching salary pools
-        coaching_pools: Dict[str, CoachingSalaryPool] = {}
-        for team_name in self.team_histories:
-            prestige = self.team_prestige.get(team_name, 50)
-            sr = self.team_histories[team_name].season_records.get(prev_year, {})
-            prev_wins = sr.get("wins", 5)
-            champ = False
-            if prev_year in self.awards_history:
-                if team_name == self.awards_history[prev_year].champion:
-                    champ = True
-            coaching_pools[team_name] = auto_coaching_pool(
-                team_name=team_name, prestige=prestige,
-                previous_wins=prev_wins, championship=champ, rng=rng,
-            )
 
         # CPU teams evaluate and potentially fire coaches
         human_team = self.coach.team_name
-        marketplace = CoachMarketplace(year=year)
-        marketplace.generate_free_agents(num_coaches=40, rng=rng)
-        marketplace.add_poaching_targets(self._coaching_staffs, rng=rng)
-
         coaching_changes: Dict[str, list] = {}
-        for team_name, staff in self._coaching_staffs.items():
+        fired_roles: Dict[str, List[str]] = {}
+
+        for team_name, staff in list(self._coaching_staffs.items()):
             if team_name == human_team:
                 continue  # Human decides their own coaching
             sr = self.team_histories[team_name].season_records.get(prev_year, {})
@@ -777,27 +767,16 @@ class Dynasty:
             fire_list = evaluate_coaching_staff(staff, tw, tl, rng=rng)
             if fire_list:
                 coaching_changes[team_name] = fire_list
-                # Tick contract years for remaining staff
-                for role, card in staff.items():
-                    if role not in fire_list:
-                        card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                        card.seasons_coached += 1
-                        card.career_wins += tw
-                        card.career_losses += tl
-                        card.age += 1
-                staff = ai_fill_vacancies(
-                    staff, fire_list, marketplace,
-                    coaching_pools[team_name], team_name, year, rng=rng,
-                )
-                self._coaching_staffs[team_name] = staff
-            else:
-                # Normal end-of-season updates for all coaches
-                for role, card in staff.items():
-                    card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                    card.seasons_coached += 1
-                    card.career_wins += tw
-                    card.career_losses += tl
-                    card.age += 1
+                fired_roles[team_name] = fire_list
+            # Tick contract years and update career stats for ALL coaches
+            for role, card in staff.items():
+                if team_name in fired_roles and role in fired_roles[team_name]:
+                    continue  # fired coaches don't get updated
+                card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
+                card.seasons_coached += 1
+                card.career_wins += tw
+                card.career_losses += tl
+                card.age += 1
 
         # Update human team coaches too (career stats, age)
         if human_team in self._coaching_staffs:
@@ -811,9 +790,41 @@ class Dynasty:
                 card.career_losses += hl
                 card.age += 1
 
+        # Build team records for portal population
+        team_records_for_portal: Dict[str, tuple] = {}
+        for team_name in self.team_histories:
+            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+            team_records_for_portal[team_name] = (
+                sr.get("wins", 5), sr.get("losses", 5)
+            )
+
+        # Run the coaching portal (NRMP-style matching)
+        coaching_portal = CPortal(year=year)
+        populate_coaching_portal(
+            coaching_portal,
+            self._coaching_staffs,
+            team_records_for_portal,
+            self.team_prestige,
+            fired_roles=fired_roles,
+            human_team=human_team,
+            rng=rng,
+        )
+
+        conf_dict = self.get_conferences_dict() if self.conferences else None
+        portal_changes = run_coaching_match(
+            coaching_portal,
+            self._coaching_staffs,
+            self.team_prestige,
+            team_rosters=player_cards,
+            conferences=conf_dict,
+            year=year,
+            rng=rng,
+        )
+
         self.coaching_history[year] = {
             "changes": coaching_changes,
-            "marketplace_summary": marketplace.get_summary(),
+            "portal_summary": coaching_portal.get_summary(),
+            "portal_hires": coaching_portal.hires,
         }
         result["coaching"] = self.coaching_history[year]
 
