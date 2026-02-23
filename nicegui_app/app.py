@@ -206,14 +206,10 @@ async def index(client: Client):
                     with export_container:
                         _loading_placeholder("Select this tab to load export options")
 
-            # --- Lazy tab loader ---
-            loaded_tabs: set[str] = {"Play"}
-
             async def _on_tab_change(e):
                 tab_name = e.value
-                if tab_name in loaded_tabs:
+                if tab_name == "Play":
                     return
-                loaded_tabs.add(tab_name)
 
                 try:
                     if tab_name == "League":
@@ -232,6 +228,6 @@ async def index(client: Client):
                             from nicegui_app.pages.export import render_export_section
                             await render_export_section(state, shared)
                 except RuntimeError:
-                    loaded_tabs.discard(tab_name)
+                    pass
 
             tabs.on_value_change(_on_tab_change)
