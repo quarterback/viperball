@@ -2323,6 +2323,7 @@ def season_portal_get(session_id: str):
         "available_count": len(available),
         "transfer_cap": portal.transfer_cap,
         "transfers_remaining": remaining,
+        "human_team": human_team,
     }
 
 

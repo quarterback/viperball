@@ -70,6 +70,175 @@ def _render_mode_selection(state: UserState, shared: dict):
                 ui.label(f"Error loading game simulator: {e}").classes("text-red-500")
 
 
+_PORTAL_POSITIONS = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
+
+
+async def _render_season_portal(state: UserState, refresh_fn):
+    """Render the transfer portal UI for season mode.
+
+    Lets the human player browse available transfers, commit players to
+    their roster, and advance past the portal phase to start the regular
+    season.
+    """
+    ui.label("Transfer Portal").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label(
+        "Browse available transfer players and add them to your roster before the season begins."
+    ).classes("text-sm text-gray-500 mb-2")
+
+    try:
+        portal_resp = await run.io_bound(api_client.season_portal_get, state.session_id)
+    except api_client.APIError as e:
+        notify_error(f"Could not load portal: {e.detail}")
+        return
+
+    entries = portal_resp.get("entries", [])
+    committed = portal_resp.get("committed", [])
+    cap = portal_resp.get("transfer_cap", 0)
+    remaining = portal_resp.get("transfers_remaining", 0)
+    if remaining == -1:
+        remaining = cap
+
+    # ── Metrics ──────────────────────────────────────────────────────
+    with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
+        metric_card("Available Players", len(entries))
+        metric_card("Transfer Cap", cap)
+        metric_card("Slots Remaining", remaining)
+
+    # ── Committed players ────────────────────────────────────────────
+    if committed:
+        ui.label("Your Incoming Transfers").classes("font-bold text-slate-700 mt-2")
+        committed_rows = []
+        for c in committed:
+            committed_rows.append({
+                "Name": c.get("name", ""),
+                "Pos": c.get("position", ""),
+                "OVR": c.get("overall", 0),
+                "Year": c.get("year", ""),
+                "From": c.get("origin_team", ""),
+            })
+        stat_table(committed_rows)
+
+    ui.separator().classes("my-4")
+
+    # ── Filters ──────────────────────────────────────────────────────
+    with ui.row().classes("gap-4 items-end mb-2"):
+        pos_filter = ui.select(
+            {p: p for p in _PORTAL_POSITIONS},
+            value="All", label="Position Filter",
+        ).classes("w-40")
+        ovr_filter = ui.number(
+            "Min Overall", value=0, min=0, max=99, step=1,
+        ).classes("w-32")
+
+    # Container that re-renders the player table when filters change
+    table_container = ui.column().classes("w-full")
+
+    def _apply_filters():
+        filtered = entries
+        pv = pos_filter.value
+        ov = ovr_filter.value or 0
+        if pv and pv != "All":
+            filtered = [e for e in filtered if e.get("position", "") == pv]
+        if ov > 0:
+            filtered = [e for e in filtered if e.get("overall", 0) >= ov]
+        return filtered
+
+    def _rebuild_table():
+        table_container.clear()
+        filtered = _apply_filters()
+        with table_container:
+            if not filtered:
+                ui.label("No available portal players matching your filters.").classes(
+                    "text-sm text-gray-400 italic"
+                )
+                return
+
+            rows = []
+            for e in filtered:
+                reason = e.get("reason", "").replace("_", " ").title()
+                rows.append({
+                    "Name": e.get("name", ""),
+                    "Pos": e.get("position", ""),
+                    "OVR": e.get("overall", 0),
+                    "Year": e.get("year", ""),
+                    "From": e.get("origin_team", ""),
+                    "Reason": reason,
+                    "Stars": e.get("potential", 0),
+                })
+            stat_table(rows)
+
+            if remaining > 0:
+                ui.label("Commit a Player").classes("font-bold text-slate-700 mt-4")
+                player_options = {
+                    i: f"{e.get('name', '')} ({e.get('position', '')}, OVR {e.get('overall', 0)}) — from {e.get('origin_team', '')}"
+                    for i, e in enumerate(filtered)
+                }
+                sel = ui.select(player_options, value=0, label="Select Player").classes("w-full max-w-lg")
+
+                async def _commit_player():
+                    idx = sel.value
+                    if idx is None:
+                        return
+                    selected = filtered[idx]
+                    global_idx = selected.get("global_index", -1)
+                    if global_idx < 0:
+                        notify_error("Cannot interact with this player — try refreshing.")
+                        return
+                    team_name = portal_resp.get("human_team", "")
+                    if not team_name:
+                        notify_error("Could not determine your team name.")
+                        return
+                    try:
+                        result = await run.io_bound(
+                            api_client.season_portal_commit,
+                            state.session_id,
+                            team_name=team_name,
+                            entry_index=global_idx,
+                        )
+                        pname = result.get("player", {}).get("name", selected.get("name", ""))
+                        slots = result.get("transfers_remaining", 0)
+                        notify_success(f"Committed {pname}! ({slots} slots remaining)")
+                        refresh_fn.refresh()
+                    except api_client.APIError as e:
+                        notify_error(f"Commit failed: {e.detail}")
+
+                ui.button(
+                    "Commit Selected Player", on_click=_commit_player, icon="person_add",
+                ).props("color=primary").classes("mt-2")
+            else:
+                ui.label("You've used all your transfer slots.").classes(
+                    "text-sm text-amber-600 italic mt-2"
+                )
+
+    pos_filter.on_value_change(lambda _: _rebuild_table())
+    ovr_filter.on_value_change(lambda _: _rebuild_table())
+    _rebuild_table()
+
+    # ── Action buttons ───────────────────────────────────────────────
+    ui.separator().classes("my-4")
+    with ui.row().classes("gap-4"):
+        async def _done_portal():
+            try:
+                await run.io_bound(api_client.season_portal_skip, state.session_id)
+                notify_success("Portal complete — starting regular season!")
+                refresh_fn.refresh()
+            except api_client.APIError as e:
+                notify_error(f"Could not advance: {e.detail}")
+
+        async def _skip_portal():
+            try:
+                await run.io_bound(api_client.season_portal_skip, state.session_id)
+                notify_info("Portal skipped.")
+                refresh_fn.refresh()
+            except api_client.APIError as e:
+                notify_error(f"Could not skip: {e.detail}")
+
+        ui.button(
+            "Done with Portal — Start Season", on_click=_done_portal, icon="sports_football",
+        ).props("color=primary")
+        ui.button("Skip Portal", on_click=_skip_portal, icon="skip_next")
+
+
 async def _render_season_play(state: UserState, shared: dict):
     """Render the active season simulation UI."""
     if not state.session_id:
@@ -106,7 +275,10 @@ async def _render_season_play(state: UserState, shared: dict):
         current_week = status.get("current_week", 0)
         total_weeks = status.get("total_weeks", 10)
 
-        if phase == "regular":
+        if phase == "portal":
+            await _render_season_portal(state, _season_actions)
+
+        elif phase == "regular":
             with ui.row().classes("gap-4"):
                 async def _sim_week():
                     try:
