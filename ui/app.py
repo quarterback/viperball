@@ -306,8 +306,8 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption("v0.9 Beta — CVL Engine")
-    st.caption(f"{len(teams)} teams across 12 conferences")
+    st.caption("v2.5 — CVL Engine")
+    st.caption(f"{len(teams)} teams across 16 conferences")
 
 if settings_page:
     if settings_page == "Debug Tools":

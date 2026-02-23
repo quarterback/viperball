@@ -158,8 +158,8 @@ async def index(client: Client):
 
         ui.separator().classes("my-3").style("border-color: #334155;")
         num_teams = len(shared["teams"])
-        ui.label("v0.9 Beta - CVL Engine").classes("text-xs text-slate-500")
-        ui.label(f"{num_teams} teams across 12 conferences").classes("text-xs text-slate-500")
+        ui.label("v2.5 — CVL Engine").classes("text-xs text-slate-500")
+        ui.label(f"{num_teams} teams across 16 conferences").classes("text-xs text-slate-500")
 
     # Header
     with ui.header().classes("bg-white shadow-sm px-6 py-3 items-center"):

@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import random
 
-from nicegui import ui
+from nicegui import ui, run
 
 from engine.season import load_teams_from_directory
 from engine.conference_names import generate_conference_names
@@ -240,16 +240,15 @@ def render_dynasty_mode(state: UserState, shared: dict):
 
     creating_spinner = ui.spinner(size="lg").classes("hidden")
 
-    def _create_dynasty():
+    async def _create_dynasty():
         selected_team = _selected["team"]
         if not selected_team:
             notify_error("Please select a team")
             return
 
-        # Ensure session
         if not state.session_id:
             try:
-                resp = api_client.create_session()
+                resp = await run.io_bound(api_client.create_session)
                 state.session_id = resp["session_id"]
             except api_client.APIError as e:
                 notify_error(f"Failed to create session: {e.detail}")
@@ -258,7 +257,8 @@ def render_dynasty_mode(state: UserState, shared: dict):
         creating_spinner.classes(remove="hidden")
 
         try:
-            api_client.create_dynasty(
+            await run.io_bound(
+                api_client.create_dynasty,
                 state.session_id,
                 dynasty_name=dynasty_name.value,
                 coach_name=coach_name.value,
