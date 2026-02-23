@@ -26,19 +26,34 @@ from nicegui_app.pages.dynasty_mode import render_dynasty_mode
 from nicegui_app.pages.draftyqueenz import render_dq_bankroll_banner, render_dq_pre_sim, render_dq_post_sim
 
 
-async def render_play_section(state: UserState, shared: dict):
-    """Main play section entry point."""
+def render_play_section_sync(state: UserState, shared: dict):
+    """Synchronous entry point — used for initial page render in NiceGUI 3.x."""
+    if state.mode == "dynasty" or state.mode == "season":
+        ui.label("Loading session...").classes("text-slate-400")
+        ui.timer(0.1, lambda: _deferred_play_load(state, shared), once=True)
+    else:
+        _render_mode_selection(state, shared)
 
-    @ui.refreshable
-    async def _play_content():
+
+async def _deferred_play_load(state: UserState, shared: dict):
+    """Load active session content asynchronously after page render."""
+    try:
         if state.mode == "dynasty":
             await _render_dynasty_play(state, shared)
         elif state.mode == "season":
             await _render_season_play(state, shared)
-        else:
-            _render_mode_selection(state, shared)
+    except Exception as exc:
+        ui.label(f"Error: {exc}").classes("text-red-500")
 
-    await _play_content()
+
+async def render_play_section(state: UserState, shared: dict):
+    """Async entry point — used when switching tabs via nav buttons."""
+    if state.mode == "dynasty":
+        await _render_dynasty_play(state, shared)
+    elif state.mode == "season":
+        await _render_season_play(state, shared)
+    else:
+        _render_mode_selection(state, shared)
 
 
 def _render_mode_selection(state: UserState, shared: dict):

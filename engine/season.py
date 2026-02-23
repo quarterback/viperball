@@ -341,7 +341,7 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
     return min(best, remaining // 2)
 
 
-MAX_CONFERENCE_GAMES = 9  # hard cap on conference games per team per season
+MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
 
 
 def get_non_conference_slots(
@@ -581,6 +581,62 @@ class Season:
         self._assign_weeks_by_type(non_conf_weeks)
         self._mark_rivalry_games()
 
+    @staticmethod
+    def _balanced_conference_pairs(
+        team_list: List[str],
+        target_per_team: int,
+        already_scheduled: set,
+        existing_conf_counts: dict,
+    ) -> List[Tuple[str, str]]:
+        """Build a balanced set of conference pairs via subtraction from full round-robin.
+
+        Start with all possible pairs, then remove excess pairs so each team
+        ends up with exactly `target_per_team` conference games (accounting for
+        games already scheduled via rivalries).
+        """
+        all_pairs = []
+        for i in range(len(team_list)):
+            for j in range(i + 1, len(team_list)):
+                pair = tuple(sorted([team_list[i], team_list[j]]))
+                if pair not in already_scheduled:
+                    all_pairs.append(pair)
+
+        degree = {t: 0 for t in team_list}
+        for h, a in all_pairs:
+            degree[h] += 1
+            degree[a] += 1
+
+        needed = {}
+        for t in team_list:
+            already = existing_conf_counts.get(t, 0)
+            needed[t] = max(0, target_per_team - already)
+
+        excess = {t: degree[t] - needed[t] for t in team_list}
+
+        pairs_set = set(all_pairs)
+        pair_list = list(all_pairs)
+        random.shuffle(pair_list)
+
+        changed = True
+        while changed:
+            changed = False
+            pair_list = [p for p in pair_list if p in pairs_set]
+            pair_list.sort(
+                key=lambda p: excess[p[0]] + excess[p[1]],
+                reverse=True,
+            )
+            for pair in pair_list:
+                h, a = pair
+                if excess[h] > 0 and excess[a] > 0:
+                    pairs_set.discard(pair)
+                    excess[h] -= 1
+                    excess[a] -= 1
+                    degree[h] -= 1
+                    degree[a] -= 1
+                    changed = True
+
+        return list(pairs_set)
+
     def _mark_rivalry_games(self):
         """Mark games involving rivalry pairs with is_rivalry_game flag."""
         rivalry_pairs = set()
@@ -728,37 +784,32 @@ class Season:
 
         # ── Step 2: Conference games (capped at MAX_CONFERENCE_GAMES per team) ──
         if has_conferences:
-            for conf_name, conf_teams in self.conferences.items():
-                conf_team_list = [t for t in conf_teams if t in self.teams]
+            for conf_name, conf_teams_list in self.conferences.items():
+                conf_team_list = [t for t in conf_teams_list if t in self.teams]
                 if len(conf_team_list) < 2:
                     continue
 
                 conf_opponents = len(conf_team_list) - 1
                 max_conf = min(conf_opponents, MAX_CONFERENCE_GAMES)
 
+                available_pairs = []
+                for i in range(len(conf_team_list)):
+                    for j in range(i + 1, len(conf_team_list)):
+                        pair = tuple(sorted([conf_team_list[i], conf_team_list[j]]))
+                        if pair not in scheduled_pairs:
+                            available_pairs.append(pair)
+
                 if conf_opponents <= MAX_CONFERENCE_GAMES:
-                    # Full round-robin within conference
-                    for i in range(len(conf_team_list)):
-                        for j in range(i + 1, len(conf_team_list)):
-                            h, a = conf_team_list[i], conf_team_list[j]
-                            pair = tuple(sorted([h, a]))
-                            if pair not in scheduled_pairs:
-                                if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
-                                    _add_game(h, a, True)
+                    for h, a in available_pairs:
+                        if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
+                            _add_game(h, a, True)
                 else:
-                    # Conference too large — each team plays a random subset capped at max_conf
-                    for team in conf_team_list:
-                        opponents = [t for t in conf_team_list if t != team]
-                        random.shuffle(opponents)
-                        for opp in opponents[:max_conf]:
-                            pair = tuple(sorted([team, opp]))
-                            if pair in scheduled_pairs:
-                                continue
-                            if conf_game_counts[team] >= max_conf or conf_game_counts[opp] >= max_conf:
-                                continue
-                            if game_counts[team] >= games_per_team or game_counts[opp] >= games_per_team:
-                                continue
-                            _add_game(team, opp, True)
+                    selected = self._balanced_conference_pairs(
+                        conf_team_list, max_conf, scheduled_pairs, conf_game_counts,
+                    )
+                    for h, a in selected:
+                        if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
+                            _add_game(h, a, True)
 
             # ── Step 3: Fill remaining non-conference slots (AI auto-fill) ──
             nonconf_matchups = []

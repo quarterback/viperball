@@ -1,10 +1,8 @@
 """Per-user state management for the NiceGUI Viperball app.
 
-Replaces Streamlit's st.session_state. Each browser tab gets its own
-UserState instance via the @ui.page decorator scope.
-
-Critical session fields (session_id, mode, human_teams, dynasty_teams)
-are persisted in app.storage.tab so they survive page navigation.
+Uses app.storage.user (cookie-based, no await required) so that the
+page can render synchronously. This works with NiceGUI 3.x without
+needing ``await client.connected()``.
 """
 
 from __future__ import annotations
@@ -16,23 +14,20 @@ from nicegui import app
 class UserState:
     """Holds all mutable state for a single user session.
 
-    Core session fields are backed by app.storage.tab (NiceGUI's per-tab
-    persistent storage) so that creating a season/dynasty and navigating
-    back to "/" preserves the active session.
+    Core session fields are backed by app.storage.user (NiceGUI's
+    cookie-based persistent storage) so that creating a season/dynasty
+    and refreshing the page preserves the active session.
     """
 
     def __init__(self):
-        self._store = app.storage.tab
+        self._store = app.storage.user
 
-        # Non-persistent (per-render) state
         self.last_result: Optional[dict] = None
         self.last_seed: int = 0
         self.batch_results: Optional[list] = None
         self.play_inspector_results: Optional[list] = None
         self.dq_css_injected: bool = False
         self._team_states_cache: Optional[dict] = None
-
-    # ── Persistent properties backed by app.storage.tab ──
 
     @property
     def session_id(self) -> Optional[str]:

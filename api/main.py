@@ -97,7 +97,7 @@ class DebugPlayRequest(BaseModel):
 
 class CreateSeasonRequest(BaseModel):
     name: str = "2026 CVL Season"
-    games_per_team: int = 10
+    games_per_team: int = 12
     playoff_size: int = 8
     bowl_count: int = 4
     human_teams: List[str] = []
@@ -132,7 +132,7 @@ class SimulateThroughRequest(BaseModel):
 
 
 class DynastyStartSeasonRequest(BaseModel):
-    games_per_team: int = 10
+    games_per_team: int = 12
     playoff_size: int = 8
     bowl_count: int = 4
     offense_style: str = "balanced"
@@ -515,8 +515,8 @@ def non_conference_opponents(
 
 @app.get("/non-conference-slots")
 def non_conference_slots_endpoint(
-    games_per_team: int = Query(10),
-    conference_size: int = Query(13),
+    games_per_team: int = Query(12),
+    conference_size: int = Query(12),
 ):
     """Calculate how many non-conference slots a team has given league settings."""
     slots = get_non_conference_slots(games_per_team, conference_size)
@@ -1363,7 +1363,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty.simulate_history(
             num_years=req.history_years,
             teams_dir=TEAMS_DIR,
-            games_per_team=10,
+            games_per_team=12,
             playoff_size=8,
         )
 
@@ -1380,7 +1380,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
 def dynasty_non_conference_opponents(
     session_id: str,
     team: Optional[str] = Query(None, description="Team name (defaults to coach team)"),
-    games_per_team: int = Query(10),
+    games_per_team: int = Query(12),
 ):
     """Get available non-conference opponents for a dynasty team, using dynasty prestige."""
     session = _get_session(session_id)
