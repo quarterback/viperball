@@ -20,6 +20,7 @@ from ui import api_client
 from nicegui_app.state import UserState
 from nicegui_app.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS, fmt_vb_score
 from nicegui_app.components import metric_card, stat_table, notify_error, notify_info, notify_success
+from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_games
 from nicegui_app.pages.game_simulator import render_game_simulator
 from nicegui_app.pages.season_simulator import render_season_simulator
 from nicegui_app.pages.dynasty_mode import render_dynasty_mode
@@ -417,64 +418,6 @@ async def _fetch_bowls(session_id: str) -> dict:
         return {}
 
 
-def _render_bracket_table(data: dict, title: str = "Playoff Bracket",
-                          as_expansion: bool = False, show_winner: bool = False):
-    bracket = data.get("bracket", [])
-    if not bracket:
-        return
-    rows = []
-    for g in bracket:
-        score_str = ""
-        if g.get("completed"):
-            score_str = f"{fmt_vb_score(g.get('home_score', 0))} - {fmt_vb_score(g.get('away_score', 0))}"
-        row = {
-            "Round": g.get("round", ""),
-            "Home": g.get("home_team", ""),
-            "Score": score_str,
-            "Away": g.get("away_team", ""),
-        }
-        if show_winner:
-            row["Winner"] = g.get("winner", "")
-        rows.append(row)
-
-    if as_expansion:
-        with ui.expansion(title, icon="emoji_events").classes("w-full mt-2"):
-            stat_table(rows)
-    else:
-        ui.label(title).classes("font-bold text-slate-700 mt-2")
-        stat_table(rows)
-
-
-def _render_bowl_table(data: dict, title: str = "Bowl Results",
-                       as_expansion: bool = False, show_winner: bool = False):
-    bowls = data.get("bowl_results", [])
-    if not bowls:
-        return
-    rows = []
-    for b in bowls:
-        game = b.get("game", {})
-        score_str = ""
-        if game.get("completed"):
-            score_str = f"{fmt_vb_score(game.get('home_score', 0))} - {fmt_vb_score(game.get('away_score', 0))}"
-        row = {
-            "Bowl": b.get("name", ""),
-            "Tier": b.get("tier", ""),
-            "Home": game.get("home_team", ""),
-            "Score": score_str,
-            "Away": game.get("away_team", ""),
-        }
-        if show_winner:
-            row["Winner"] = game.get("winner", "")
-        rows.append(row)
-
-    if as_expansion:
-        with ui.expansion(title, icon="stadium").classes("w-full mt-2"):
-            stat_table(rows)
-    else:
-        ui.label(title).classes("font-bold text-slate-700 mt-2")
-        stat_table(rows)
-
-
 async def _render_season_play(state: UserState, shared: dict):
     """Render the active season simulation UI."""
     if not state.session_id:
@@ -555,10 +498,9 @@ async def _render_season_play(state: UserState, shared: dict):
             week_btn.on_click(_sim_week)
 
         elif phase == "playoffs_pending":
-            _render_bracket_table(
-                await _fetch_bracket(state.session_id),
-                title="Playoff Bracket",
-            )
+            bracket_data = await _fetch_bracket(state.session_id)
+            if bracket_data.get("bracket"):
+                render_playoff_bracket(bracket_data, user_team=state.human_teams[0] if state.human_teams else None)
 
             playoff_btn = ui.button("Run Playoffs", icon="emoji_events").props("color=primary")
 
@@ -581,11 +523,12 @@ async def _render_season_play(state: UserState, shared: dict):
 
         elif phase == "bowls_pending":
             bracket_data = await _fetch_bracket(state.session_id)
-            _render_bracket_table(bracket_data, title="Playoff Results", as_expansion=True)
-            _render_bowl_table(
-                await _fetch_bowls(state.session_id),
-                title="Bowl Matchups",
-            )
+            user_t = state.human_teams[0] if state.human_teams else None
+            render_playoff_bracket(bracket_data, user_team=user_t)
+
+            bowls_data = await _fetch_bowls(state.session_id)
+            if bowls_data.get("bowl_results"):
+                render_bowl_games(bowls_data, user_team=user_t, show_results=False)
 
             bowl_btn = ui.button("Run Bowl Games", icon="stadium").props("color=primary")
 
@@ -607,21 +550,17 @@ async def _render_season_play(state: UserState, shared: dict):
             bowl_btn.on_click(_run_bowls)
 
         elif phase in ("playoffs_complete", "bowls_complete", "complete"):
-            with ui.card().classes("w-full bg-green-50 p-4 rounded"):
-                ui.label("Season Complete!").classes("font-bold text-green-700")
-                ui.label("Check the League tab for final standings, postseason results, and awards.").classes("text-sm text-green-600")
-
+            user_t = state.human_teams[0] if state.human_teams else None
             bracket_data = await _fetch_bracket(state.session_id)
-            champ = bracket_data.get("champion", "")
-            if champ:
-                ui.label(f"Champion: {champ}").classes("text-xl font-bold text-green-700 mt-2")
-            _render_bracket_table(bracket_data, title="Playoff Results", as_expansion=True, show_winner=True)
-            _render_bowl_table(
-                await _fetch_bowls(state.session_id),
-                title="Bowl Results",
-                as_expansion=True,
-                show_winner=True,
-            )
+            render_playoff_bracket(bracket_data, user_team=user_t)
+
+            bowls_data = await _fetch_bowls(state.session_id)
+            if bowls_data.get("bowl_results"):
+                ui.separator().classes("my-3")
+                render_bowl_games(bowls_data, user_team=user_t)
+
+            with ui.card().classes("w-full bg-green-50 p-3 rounded mt-3"):
+                ui.label("Season Complete! Check the League tab for full standings and awards.").classes("text-sm text-green-600")
 
         try:
             schedule = await run.io_bound(api_client.get_schedule, state.session_id)

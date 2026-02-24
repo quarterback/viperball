@@ -14,6 +14,7 @@ from ui import api_client
 from engine.season import BOWL_TIERS
 from nicegui_app.helpers import fmt_vb_score
 from nicegui_app.components import metric_card, stat_table, notify_error, notify_info
+from nicegui_app.pages.postseason import render_playoff_bracket, render_playoff_field, render_bowl_games
 
 
 # ---------------------------------------------------------------------------
@@ -387,13 +388,11 @@ async def _render_postseason(session_id, user_team):
     try:
         bracket_resp = await run.io_bound(api_client.get_playoff_bracket, session_id)
         bracket = bracket_resp.get("bracket", [])
-        bracket_champion = bracket_resp.get("champion")
     except api_client.APIError:
+        bracket_resp = {}
         bracket = []
-        bracket_champion = None
 
     if bracket:
-        ui.markdown("**Playoff Field**")
         playoff_team_set = set()
         for g in bracket:
             playoff_team_set.add(g.get("home_team", ""))
@@ -407,95 +406,20 @@ async def _render_postseason(session_id, user_team):
             playoff_teams = []
 
         if playoff_teams:
-            pf_data = []
-            for i, t in enumerate(playoff_teams, 1):
-                pf_data.append({
-                    "Seed": i,
-                    "Team": _team_label(t["team_name"], user_team),
-                    "Record": f"{t['wins']}-{t['losses']}",
-                    "Conf": t.get("conference", ""),
-                    "Conf Record": f"{t.get('conf_wins', 0)}-{t.get('conf_losses', 0)}",
-                })
-            stat_table(pf_data)
+            render_playoff_field(playoff_teams, user_team)
 
-        ui.markdown("**Bracket Results**")
-        round_info = [
-            ("Opening Round", 996),
-            ("First Round", 997),
-            ("National Quarterfinals", 998),
-            ("National Semi-Finals", 999),
-        ]
-        for label, week in round_info:
-            round_games = [g for g in bracket if g.get("week") == week and g.get("completed")]
-            if round_games:
-                ui.markdown(f"*{label}*")
-                for i, game in enumerate(round_games, 1):
-                    hs = game.get("home_score") or 0
-                    aws = game.get("away_score") or 0
-                    home = game.get("home_team", "")
-                    away = game.get("away_team", "")
-                    winner = home if hs > aws else away
-                    loser = away if hs > aws else home
-                    w_score = max(hs, aws)
-                    l_score = min(hs, aws)
-                    prefix = ">>> " if user_team and user_team in (home, away) else ""
-                    ui.markdown(
-                        f"{prefix}Game {i}: **{winner}** {fmt_vb_score(w_score)} def. "
-                        f"{loser} {fmt_vb_score(l_score)}"
-                    )
-
-        championship = [g for g in bracket if g.get("week") == 1000 and g.get("completed")]
-        if championship:
-            game = championship[0]
-            hs = game.get("home_score") or 0
-            aws = game.get("away_score") or 0
-            home = game.get("home_team", "")
-            away = game.get("away_team", "")
-            winner = home if hs > aws else away
-            loser = away if hs > aws else home
-            w_score = max(hs, aws)
-            l_score = min(hs, aws)
-            with ui.card().classes("bg-green-50 p-3 rounded w-full"):
-                ui.label(
-                    f"NATIONAL CHAMPIONS: {winner} {fmt_vb_score(w_score)} def. "
-                    f"{loser} {fmt_vb_score(l_score)}"
-                ).classes("font-bold text-green-800")
+        render_playoff_bracket(bracket_resp, user_team)
     else:
         ui.label("No playoffs ran this season.").classes("text-sm text-gray-500")
 
-    # -- Bowl Games --
     try:
         bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
-        bowl_results = bowls_resp.get("bowl_results", [])
     except api_client.APIError:
-        bowl_results = []
+        bowls_resp = {}
 
-    if bowl_results:
-        ui.separator()
-        ui.markdown("**Bowl Games**")
-        current_tier = 0
-        for bowl in bowl_results:
-            tier = bowl.get("tier", 0)
-            if tier != current_tier:
-                current_tier = tier
-                tier_label = BOWL_TIERS.get(tier, "Standard")
-                ui.markdown(f"*{tier_label} Bowls*")
-            g = bowl.get("game", {})
-            hs = g.get("home_score") or 0
-            aws = g.get("away_score") or 0
-            home = g.get("home_team", "")
-            away = g.get("away_team", "")
-            winner = home if hs > aws else away
-            loser = away if hs > aws else home
-            w_score = max(hs, aws)
-            l_score = min(hs, aws)
-            w_rec = bowl.get("team_1_record", "") if winner == home else bowl.get("team_2_record", "")
-            l_rec = bowl.get("team_2_record", "") if winner == home else bowl.get("team_1_record", "")
-            prefix = ">>> " if user_team and user_team in (home, away) else ""
-            ui.markdown(
-                f"{prefix}**{bowl.get('name', 'Bowl')}**: **{winner}** ({w_rec}) "
-                f"{fmt_vb_score(w_score)} def. {loser} ({l_rec}) {fmt_vb_score(l_score)}"
-            )
+    if bowls_resp.get("bowl_results"):
+        ui.separator().classes("my-4")
+        render_bowl_games(bowls_resp, user_team)
 
 
 # ---------------------------------------------------------------------------
