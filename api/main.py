@@ -23,6 +23,7 @@ from engine.season import (
     MAX_CONFERENCE_GAMES,
     auto_assign_rivalries,
     load_coaching_staffs_from_directory,
+    fast_generate_history,
 )
 from engine.dynasty import create_dynasty, Dynasty
 from engine.conference_names import generate_conference_names
@@ -728,40 +729,14 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     history_results = []
     history_years = max(0, min(100, req.history_years))
     if history_years > 0:
-        history_rng = random.Random(req.ai_seed if req.ai_seed else 42)
-        for hy in range(history_years):
-            hist_year = 2026 - history_years + hy
-            hist_teams_copy, hist_states = load_teams_with_states(TEAMS_DIR, fresh=True)
-            hist_ai = auto_assign_all_teams(
-                TEAMS_DIR,
-                human_teams=[],
-                human_configs={},
-                seed=history_rng.randint(0, 999999),
-            )
-            hist_styles = {}
-            for tname in hist_teams_copy:
-                hist_styles[tname] = hist_ai.get(
-                    tname, {"offense_style": "balanced", "defense_style": "swarm"}
-                )
-            hist_season = create_season(
-                f"Year {hist_year}",
-                hist_teams_copy,
-                hist_styles,
-                conferences=conferences,
-                games_per_team=req.games_per_team,
-                team_states=hist_states,
-            )
-            for w in range(1, req.games_per_team + 1):
-                hist_season.simulate_week(rng=history_rng)
-            hist_season.run_playoffs(num_teams=req.playoff_size, rng=history_rng)
-            hist_season.run_bowl_games(num_bowls=req.bowl_count, rng=history_rng)
-            standings = hist_season.get_standings_sorted()
-            champ = hist_season.champion or (standings[0].team_name if standings else "N/A")
-            history_results.append({
-                "year": hist_year,
-                "champion": champ,
-                "top_5": [r.team_name for r in standings[:5]],
-            })
+        history_results = fast_generate_history(
+            teams=teams,
+            conferences=conferences,
+            num_years=history_years,
+            games_per_team=req.games_per_team,
+            playoff_size=req.playoff_size,
+            base_seed=req.ai_seed if req.ai_seed else 42,
+        )
 
     session["season"] = season
     session["human_teams"] = req.human_teams or []

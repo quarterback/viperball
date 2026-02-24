@@ -2128,3 +2128,233 @@ def auto_assign_rivalries(
                 rivalries[best_rival]["non_conference"] = team
 
     return rivalries
+
+
+# ── Fast History Simulation ──────────────────────────────────────────
+# Generates lightweight season results (standings + champion) using
+# team-rating-based win probability instead of full game simulation.
+# ~1000x faster than running the game engine for every game.
+
+def _team_avg_overall(team: Team) -> float:
+    """Average player overall rating for a team."""
+    if not team.players:
+        return 60.0
+    return sum(p.overall for p in team.players) / len(team.players)
+
+
+def fast_sim_season(
+    teams: Dict[str, Team],
+    conferences: Dict[str, List[str]],
+    games_per_team: int,
+    rng: random.Random,
+    playoff_size: int = 8,
+) -> dict:
+    """Simulate an entire season using rating-based outcomes (no game engine).
+
+    Returns dict with keys: champion, top_5, standings (list of dicts).
+    """
+    ratings = {name: _team_avg_overall(t) for name, t in teams.items()}
+    team_names = list(teams.keys())
+
+    records: Dict[str, dict] = {
+        name: {"wins": 0, "losses": 0, "pf": 0.0, "pa": 0.0,
+               "conf_wins": 0, "conf_losses": 0}
+        for name in team_names
+    }
+
+    team_conf = {}
+    for conf, members in conferences.items():
+        for m in members:
+            team_conf[m] = conf
+
+    schedule = _fast_build_schedule(team_names, conferences, games_per_team, rng)
+
+    for home, away, is_conf in schedule:
+        winner, h_score, a_score = _fast_sim_game(home, away, ratings, rng)
+        records[home]["pf"] += h_score
+        records[home]["pa"] += a_score
+        records[away]["pf"] += a_score
+        records[away]["pa"] += h_score
+        if winner == home:
+            records[home]["wins"] += 1
+            records[away]["losses"] += 1
+            if is_conf:
+                records[home]["conf_wins"] += 1
+                records[away]["conf_losses"] += 1
+        else:
+            records[away]["wins"] += 1
+            records[home]["losses"] += 1
+            if is_conf:
+                records[away]["conf_wins"] += 1
+                records[home]["conf_losses"] += 1
+
+    conf_champs = {}
+    for conf, members in conferences.items():
+        valid = [m for m in members if m in records]
+        if valid:
+            valid.sort(key=lambda n: (
+                records[n]["conf_wins"],
+                records[n]["wins"],
+                records[n]["pf"] - records[n]["pa"],
+            ), reverse=True)
+            conf_champs[conf] = valid[0]
+
+    ranked = sorted(
+        team_names,
+        key=lambda n: (records[n]["wins"], records[n]["pf"] - records[n]["pa"]),
+        reverse=True,
+    )
+
+    playoff_pool = set(conf_champs.values())
+    for name in ranked:
+        if len(playoff_pool) >= playoff_size:
+            break
+        playoff_pool.add(name)
+    playoff_list = sorted(playoff_pool, key=lambda n: ranked.index(n))[:playoff_size]
+
+    champion = _fast_sim_bracket(playoff_list, ratings, rng)
+
+    return {
+        "champion": champion,
+        "top_5": ranked[:5],
+        "_records": records,
+        "_playoff_teams": set(playoff_list),
+    }
+
+
+def _fast_build_schedule(
+    team_names: list,
+    conferences: Dict[str, List[str]],
+    games_per_team: int,
+    rng: random.Random,
+) -> List[tuple]:
+    """Build a simplified schedule: (home, away, is_conference_game).
+
+    Uses round-robin within conferences (capped) + random non-conf fill.
+    Much faster than the full scheduler — no balancing needed for history.
+    """
+    games = []
+    team_game_counts: Dict[str, int] = {n: 0 for n in team_names}
+    team_conf = {}
+    for conf, members in conferences.items():
+        for m in members:
+            team_conf[m] = conf
+
+    conf_games_target = min(8, games_per_team)
+
+    for conf, members in conferences.items():
+        members = [m for m in members if m in team_game_counts]
+        if len(members) < 2:
+            continue
+        pairs = []
+        for i in range(len(members)):
+            for j in range(i + 1, len(members)):
+                pairs.append((members[i], members[j]))
+        rng.shuffle(pairs)
+        for a, b in pairs:
+            if team_game_counts[a] >= conf_games_target:
+                continue
+            if team_game_counts[b] >= conf_games_target:
+                continue
+            home, away = (a, b) if rng.random() < 0.5 else (b, a)
+            games.append((home, away, True))
+            team_game_counts[a] += 1
+            team_game_counts[b] += 1
+
+    need_games = [n for n in team_names if team_game_counts[n] < games_per_team]
+    rng.shuffle(need_games)
+    attempts = 0
+    max_attempts = len(team_names) * games_per_team
+    while need_games and attempts < max_attempts:
+        attempts += 1
+        rng.shuffle(need_games)
+        paired = set()
+        for i in range(0, len(need_games) - 1, 2):
+            a, b = need_games[i], need_games[i + 1]
+            if a in paired or b in paired:
+                continue
+            home, away = (a, b) if rng.random() < 0.5 else (b, a)
+            games.append((home, away, False))
+            team_game_counts[a] += 1
+            team_game_counts[b] += 1
+            paired.add(a)
+            paired.add(b)
+        need_games = [n for n in team_names if team_game_counts[n] < games_per_team]
+
+    return games
+
+
+def _fast_sim_game(
+    home: str, away: str,
+    ratings: Dict[str, float],
+    rng: random.Random,
+) -> tuple:
+    """Determine winner and approximate scores from team ratings.
+
+    Returns (winner_name, home_score, away_score).
+    """
+    h_rat = ratings.get(home, 65.0)
+    a_rat = ratings.get(away, 65.0)
+
+    diff = h_rat - a_rat + rng.gauss(0, 8)
+    home_advantage = 2.5
+    diff += home_advantage
+
+    base_score = 28 + rng.gauss(0, 8)
+    h_score = max(0, base_score + diff * 0.6 + rng.gauss(0, 5))
+    a_score = max(0, base_score - diff * 0.6 + rng.gauss(0, 5))
+
+    h_score = round(h_score)
+    a_score = round(a_score)
+    if h_score == a_score:
+        if diff >= 0:
+            h_score += rng.choice([2, 3, 5])
+        else:
+            a_score += rng.choice([2, 3, 5])
+
+    winner = home if h_score > a_score else away
+    return winner, h_score, a_score
+
+
+def _fast_sim_bracket(
+    teams: list,
+    ratings: Dict[str, float],
+    rng: random.Random,
+) -> str:
+    """Single-elimination bracket simulation."""
+    if not teams:
+        return "N/A"
+    bracket = list(teams)
+    while len(bracket) > 1:
+        next_round = []
+        for i in range(0, len(bracket) - 1, 2):
+            winner, _, _ = _fast_sim_game(bracket[i], bracket[i + 1], ratings, rng)
+            next_round.append(winner)
+        if len(bracket) % 2 == 1:
+            next_round.append(bracket[-1])
+        bracket = next_round
+    return bracket[0]
+
+
+def fast_generate_history(
+    teams: Dict[str, Team],
+    conferences: Dict[str, List[str]],
+    num_years: int,
+    games_per_team: int = 12,
+    playoff_size: int = 8,
+    base_seed: int = 42,
+) -> list:
+    """Generate num_years of fast-simulated history.
+
+    Returns list of dicts: [{year, champion, top_5}, ...]
+    """
+    rng = random.Random(base_seed)
+    results = []
+    for y in range(num_years):
+        year = 2026 - num_years + y
+        year_result = fast_sim_season(
+            teams, conferences, games_per_team, rng, playoff_size,
+        )
+        year_result["year"] = year
+        results.append(year_result)
+    return results
