@@ -3053,6 +3053,50 @@ def dq_portfolio(session_id: str):
     }
 
 
+@app.get("/sessions/{session_id}/dq/history")
+def dq_history(session_id: str):
+    """Return all picks across all weeks with running P&L totals."""
+    session = _get_session(session_id)
+    mgr = _require_dq(session)
+    all_picks = []
+    total_won = 0
+    total_lost = 0
+    total_pending = 0
+    for week_num in sorted(mgr.weekly_contests.keys()):
+        contest = mgr.weekly_contests[week_num]
+        for pick in contest.picks:
+            d = pick.to_dict()
+            d["week"] = week_num
+            d["resolved"] = contest.resolved
+            all_picks.append(d)
+            if pick.result == "win":
+                total_won += pick.payout
+            elif pick.result == "loss":
+                total_lost += pick.amount
+            elif not contest.resolved:
+                total_pending += pick.amount
+        for parlay in contest.parlays:
+            d = parlay.to_dict()
+            d["week"] = week_num
+            d["resolved"] = contest.resolved
+            d["pick_type"] = "parlay"
+            d["matchup"] = f"{len(parlay.legs)}-leg parlay"
+            all_picks.append(d)
+            if parlay.result == "win":
+                total_won += parlay.payout
+            elif parlay.result == "loss":
+                total_lost += parlay.amount
+            elif not contest.resolved:
+                total_pending += parlay.amount
+    return {
+        "picks": all_picks,
+        "total_won": total_won,
+        "total_lost": total_lost,
+        "net": total_won - total_lost,
+        "total_pending": total_pending,
+    }
+
+
 @app.get("/sessions/{session_id}/dq/summary")
 def dq_summary(session_id: str):
     session = _get_session(session_id)

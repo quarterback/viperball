@@ -657,6 +657,10 @@ def dq_portfolio(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/dq/portfolio")
 
 
+def dq_history(session_id: str) -> dict:
+    return _get(f"/sessions/{session_id}/dq/history")
+
+
 def dq_summary(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/dq/summary")
 
