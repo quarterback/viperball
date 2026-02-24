@@ -534,47 +534,25 @@ async def _render_season_play(state: UserState, shared: dict):
                     pass
 
             ui.separator().classes("my-4")
-            with ui.row().classes("gap-4"):
-                week_btn = ui.button(f"Simulate Week {current_week + 1}", icon="play_arrow").props("color=primary")
-                rest_btn = ui.button("Sim Rest of Season", icon="fast_forward")
+            week_btn = ui.button(f"Simulate Week {current_week + 1}", icon="play_arrow").props("color=primary")
 
-                async def _sim_week():
-                    week_btn.disable()
-                    rest_btn.disable()
-                    week_btn.text = "Simulating..."
+            async def _sim_week():
+                week_btn.disable()
+                week_btn.text = "Simulating..."
+                try:
+                    result = await run.io_bound(api_client.simulate_week, state.session_id)
+                    week = result.get("week", current_week + 1)
+                    notify_success(f"Week {week} simulated!")
                     try:
-                        result = await run.io_bound(api_client.simulate_week, state.session_id)
-                        week = result.get("week", current_week + 1)
-                        notify_success(f"Week {week} simulated!")
-                        try:
-                            _season_actions.refresh()
-                        except RuntimeError:
-                            pass
-                    except api_client.APIError as e:
-                        notify_error(f"Simulation failed: {e.detail}")
-                        week_btn.enable()
-                        rest_btn.enable()
-                        week_btn.text = f"Simulate Week {current_week + 1}"
+                        _season_actions.refresh()
+                    except RuntimeError:
+                        pass
+                except api_client.APIError as e:
+                    notify_error(f"Simulation failed: {e.detail}")
+                    week_btn.enable()
+                    week_btn.text = f"Simulate Week {current_week + 1}"
 
-                async def _sim_rest():
-                    week_btn.disable()
-                    rest_btn.disable()
-                    rest_btn.text = "Simulating all weeks..."
-                    try:
-                        await run.io_bound(api_client.simulate_rest, state.session_id)
-                        notify_success("Regular season complete!")
-                        try:
-                            _season_actions.refresh()
-                        except RuntimeError:
-                            pass
-                    except api_client.APIError as e:
-                        notify_error(f"Simulation failed: {e.detail}")
-                        week_btn.enable()
-                        rest_btn.enable()
-                        rest_btn.text = "Sim Rest of Season"
-
-                week_btn.on_click(_sim_week)
-                rest_btn.on_click(_sim_rest)
+            week_btn.on_click(_sim_week)
 
         elif phase == "playoffs_pending":
             _render_bracket_table(

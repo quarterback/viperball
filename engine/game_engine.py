@@ -3049,10 +3049,12 @@ class ViperballEngine:
                 pancaker.game_plays_involved += 1
 
     def _injured_names(self, team) -> set:
-        """Return set of injured player names for a team."""
+        """Return set of injured player names for a team (non-DTD injuries)."""
         if hasattr(self, 'injury_tracker') and self.injury_tracker:
-            return {inj.player_name for inj in self.injury_tracker.active_injuries
-                    if inj.status == "OUT"}
+            team_name = team.name if hasattr(team, 'name') else str(team)
+            injuries = self.injury_tracker.active_injuries.get(team_name, [])
+            return {inj.player_name for inj in injuries
+                    if not inj.is_day_to_day}
         return set()
 
     def _is_blowout(self) -> bool:
