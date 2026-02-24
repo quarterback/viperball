@@ -3041,7 +3041,7 @@ class ViperballEngine:
                 b.game_plays_involved += 1
                 seen.add(b.name)
 
-        if yards_gained >= 8 and random.random() < 0.25:
+        if yards_gained >= 5 and random.random() < 0.35:
             pancaker = random.choices(ol_players, weights=block_weights, k=1)[0]
             pancaker.game_pancakes += 1
             if pancaker.name not in seen:
@@ -6012,6 +6012,13 @@ class ViperballEngine:
         tackler = self._pick_def_tackler(def_team_for_tackle, 3)  # pick before knowing yards
         tackler.game_tackles += 1
 
+        # Assist tackle: ~30% of run plays involve a second defender
+        if random.random() < 0.30:
+            assist_tackler = self._pick_def_tackler(def_team_for_tackle, 3)
+            if assist_tackler != tackler:
+                assist_tackler.game_tackles += 1
+                assist_tackler.game_plays_involved += 1
+
         yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
         yards_gained = max(-5, yards_gained)
 
@@ -6715,10 +6722,11 @@ class ViperballEngine:
         for p in players_involved:
             self.drain_player_energy(p, "lateral")
 
-        # V2.5: Lateral success halved — laterals are pure chaos plays, not yardage tools.
-        # Value comes from breakaway potential, not base yards.
-        base_yards = random.gauss(0.4, 1.0)
-        lateral_bonus = chain_length * 0.2
+        # Lateral yards: chaotic but meaningful. Base yards reflect the
+        # lateral creating confusion and open-field running opportunities.
+        # Longer chains are riskier but create more space when they work.
+        base_yards = random.gauss(3.0, 2.5)
+        lateral_bonus = chain_length * 1.2
 
         # Skill roll from the final ball carrier (lateral skill matters)
         ball_carrier_for_roll = players_involved[-1] if players_involved else None
@@ -6733,7 +6741,7 @@ class ViperballEngine:
             base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
-        yards_gained = max(-5, yards_gained)
+        yards_gained = max(-5, min(25, yards_gained))
 
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
@@ -6889,6 +6897,93 @@ class ViperballEngine:
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
+        # ── Pass Rush / Sack Check ──
+        # Before the kick pass is thrown, the defensive line can break
+        # through and sack the kicker. ~8-12% of kick passes get sacked.
+        # DL with high tackling + power are most likely to get through.
+        # OL block quality reduces sack probability.
+        sack_base_rate = 0.10
+        ol_players = [p for p in team.players if p.position == "Offensive Line"
+                      and p.name not in self._injured_names(team)]
+        if ol_players:
+            avg_ol_power = sum(p.power for p in ol_players) / len(ol_players)
+            ol_protection = min(0.04, (avg_ol_power - 70) * 0.002)
+            sack_base_rate -= ol_protection
+
+        if random.random() < sack_base_rate:
+            sack_yards = random.randint(3, 8)
+            sack_def_team = self.get_defensive_team()
+            sack_eligible = [p for p in sack_def_team.players
+                             if p.position in ("Defensive Line", "Keeper")
+                             and p.name not in self._injured_names(sack_def_team)]
+            if not sack_eligible:
+                sack_eligible = [p for p in sack_def_team.players
+                                 if p.position in ("Defensive Line", "Keeper")][:3]
+            if sack_eligible:
+                sack_weights = []
+                for sp in sack_eligible:
+                    w = sp.tackling * 0.5 + sp.power * 0.3 + sp.speed * 0.2
+                    if sp.position == "Defensive Line":
+                        w *= 2.5
+                    sack_weights.append(w)
+                sacker = random.choices(sack_eligible, weights=sack_weights, k=1)[0]
+            else:
+                sacker = random.choice(sack_def_team.players[:5])
+            sacker.game_sacks += 1
+            sacker.game_tackles += 1
+            sacker.game_plays_involved += 1
+
+            new_fp = max(1, self.state.field_position - sack_yards)
+            if new_fp <= 0:
+                self.change_possession()
+                self.state.field_position = 25
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                self.add_score(2)
+                self.apply_stamina_drain(4)
+                stamina_s = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    play_type="kick_pass", play_family=family.value,
+                    players_involved=[kicker_lbl], yards_gained=-sack_yards,
+                    result=PlayResult.SAFETY.value,
+                    description=f"{kicker_tag} SACKED by {player_tag(sacker)} for -{sack_yards} — SAFETY!",
+                    fatigue=round(stamina_s, 1),
+                )
+
+            self.state.field_position = new_fp
+            self.state.down += 1
+            sack_result = PlayResult.GAIN
+            sack_desc = f"{kicker_tag} SACKED by {player_tag(sacker)} for -{sack_yards}"
+            if self.state.down > 6:
+                sack_result = PlayResult.TURNOVER_ON_DOWNS
+                self.change_possession()
+                self.state.field_position = 100 - self.state.field_position
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                sack_desc += " — TURNOVER ON DOWNS"
+
+            self.apply_stamina_drain(3)
+            stamina_s = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number, quarter=self.state.quarter,
+                time=self.state.time_remaining, possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=self.state.down, yards_to_go=self.state.yards_to_go,
+                play_type="kick_pass", play_family=family.value,
+                players_involved=[kicker_lbl], yards_gained=-sack_yards,
+                result=sack_result.value,
+                description=sack_desc,
+                fatigue=round(stamina_s, 1),
+            )
+
+        # ── OL Protection Credits on KP ──
+        # Even on non-sack plays, OL earns block credits for protection
+        if ol_players and random.random() < 0.35:
+            self._credit_ol_blocks(team, 3)
+
         roll = random.random()
         if roll < completion_prob:
             # Hot streak: kicker completed → streak continues
@@ -7015,6 +7110,11 @@ class ViperballEngine:
             kp_def_team = self.get_defensive_team()
             kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
             kp_tackler.game_tackles += 1
+            if random.random() < 0.25:
+                kp_assist = self._pick_def_tackler(kp_def_team, total_yards)
+                if kp_assist != kp_tackler:
+                    kp_assist.game_tackles += 1
+                    kp_assist.game_plays_involved += 1
             kp_tackle_red = self._tackle_reduction(kp_tackler, total_yards)
             yards_gained = max(1, int(total_yards - kp_tackle_red))
             if yards_gained <= 0:
@@ -7086,6 +7186,26 @@ class ViperballEngine:
 
         # Hot streak: kicker missed → streak broken
         self._update_player_streak(kicker, False)
+
+        # ── Hurry credit ──
+        # On incomplete passes, there's a chance a defender pressured
+        # the kicker (hurry = affected the throw without getting a sack).
+        # DL preferred but Keepers eligible (blitzing linebackers).
+        if random.random() < 0.35:
+            hurry_def_team = self.get_defensive_team()
+            hurry_eligible = [p for p in hurry_def_team.players
+                              if p.position in ("Defensive Line", "Keeper")
+                              and p.name not in self._injured_names(hurry_def_team)]
+            if hurry_eligible:
+                hurry_weights = []
+                for hp in hurry_eligible:
+                    hw = hp.tackling * 0.4 + hp.power * 0.3 + hp.speed * 0.3
+                    if hp.position == "Defensive Line":
+                        hw *= 2.0
+                    hurry_weights.append(hw)
+                hurrier = random.choices(hurry_eligible, weights=hurry_weights, k=1)[0]
+                hurrier.game_hurries += 1
+                hurrier.game_plays_involved += 1
 
         # Interception: checked on incomplete kicks.
         # Viperball's chaotic kick passes produce ~5% overall INT rate.

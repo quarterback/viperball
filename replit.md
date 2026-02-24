@@ -75,6 +75,12 @@ The project maintains a clear separation of concerns:
 - **Go-for-it aggression**: 1.6/1.5/1.7 multipliers on 4th/5th/6th down
 - **Current batch results** (20-game avg per team): Score 57.6, TDs/game 5.20, DK att 11.15/made 4.53, PK att 4.10, KP att 43.75 (58% comp), KP TDs 2.17, Rush 87.6 yds, Punts 0.78
 - **Remaining gaps**: KP TDs below ~4 target, rush yards below 100-120 target, KP INTs slightly over 1.0 target
+- **Sack mechanic**: ~10% base rate before KP throw, reduced by OL power. DL gets 2.5x weight preference; Keepers eligible as fallback. Sack = -3 to -8 yards, tackle+sack credited, safety edge case handled.
+- **Hurry mechanic**: 35% chance on incomplete KP, DL preferred (2x weight), Keepers eligible. Distinct from sacks (no yardage loss).
+- **Pancake tuning**: Threshold lowered to 5+ yards (was 8+), rate raised to 35% (was 25%). OL also earn protection blocks on 35% of KP plays.
+- **Assist tackles**: 30% of run plays and 25% of KP completions credit a second tackler. ST tackles merged into defense box score display.
+- **Lateral yards**: Base mean 3.0 (was 0.4), std 2.5, chain bonus 1.2/link (was 0.2), soft cap at 25 yards pre-tackle.
+- **Stat results** (20-game avg): Pancakes 3.5, Sacks 1.4, Hurries 0.8, Tackles 36.2, Lateral yds 18.6, OL Blocks 31.7
 
 ## Conference Structure (16 Conferences, 187 Teams)
 Conference assignments are the **source of truth** in each team's JSON file at `data/teams/<id>.json` under `team_info.conference`. The canonical directory is also maintained at `data/conferences.json` and exported as `data/cvl_conference_directory.txt`.

@@ -460,16 +460,18 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 defenders = [p for p in pstats
                              if p.get("tackles", 0) > 0 or p.get("tfl", 0) > 0
                              or p.get("sacks", 0) > 0 or p.get("hurries", 0) > 0
-                             or p.get("kick_pass_ints", 0) > 0]
+                             or p.get("kick_pass_ints", 0) > 0
+                             or p.get("st_tackles", 0) > 0]
                 if defenders:
                     defenders = sorted(defenders, key=lambda p: (
-                        p.get("tackles", 0) + p.get("tfl", 0) * 2
+                        p.get("tackles", 0) + p.get("st_tackles", 0)
+                        + p.get("tfl", 0) * 2
                         + p.get("sacks", 0) * 3), reverse=True)
                     ui.label("Defense").classes("text-sm text-gray-500 mt-1")
                     def_rows = [
                         {
                             "Player": f"{p['tag']} {p['name']}",
-                            "TKL": p.get("tackles", 0),
+                            "TKL": p.get("tackles", 0) + p.get("st_tackles", 0),
                             "TFL": p.get("tfl", 0),
                             "SACK": p.get("sacks", 0),
                             "HUR": p.get("hurries", 0),
