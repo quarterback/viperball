@@ -33,7 +33,7 @@ The sport evolved from early American football's pre-forward-pass era, retaining
 
 ## Overview
 
-Viperball is played between two teams of 11 players on a 120-yard field (100 yards of playing field plus two 10-yard end zones). The objective is to advance the ball into the opposing team's end zone or score through kicking. There is no forward pass. The ball is advanced by running, lateral passing (backward or sideways), and kick passing (a kicked ball to a teammate downfield). Kicking is both an offensive weapon and a scoring method — teams routinely score by drop-kicking the ball through the uprights during live play.
+Viperball is played between two teams of 11 players on a 100-yard field. The objective is to advance the ball into the opposing team's end zone or score through kicking. There is no forward pass. The ball is advanced by running, lateral passing (backward or sideways), and kick passing (a kicked ball to a teammate downfield). Kicking is both an offensive weapon and a scoring method — teams routinely score by drop-kicking the ball through the uprights during live play.
 
 A typical CVL game produces scores in the 45–70 point range per team, with points coming from touchdowns, snap kicks, field goals, safeties, pindowns, and bells. The sport rewards versatile athletes who can run, kick, catch, and tackle — most players contribute on both sides of the ball.
 
@@ -55,15 +55,16 @@ The Canadian football's slightly rounder profile compared to an American footbal
 
 ## The Field
 
-The playing surface is a standard gridiron:
+The playing surface is a standard 100-yard gridiron:
 
-- **Total length:** 120 yards (100-yard playing field plus two 10-yard end zones)
+- **Playing field:** 100 yards, goal line to goal line
+- **End zones:** 10 yards deep at each end
 - **Width:** 53⅓ yards
 - **Yard lines** marked every 5 yards, numbered every 10 from each goal line to midfield
 - **Hash marks** at standard NCAA spacing
 - **Goal posts** at the back of each end zone, standard dimensions
 
-The field is identical to an American college football field. No additional markings are required.
+The field is identical to a standard American college football field. No additional markings are required.
 
 ---
 
@@ -419,9 +420,9 @@ A player who exhibits signs of a concussion is immediately removed from the game
 
 ## Special Teams and Restarts
 
-### Kickoffs
+### Restarts After Scoring
 
-After every score, the non-scoring team receives the ball. The receiving team begins its possession from a starting field position determined by the kickoff and return, typically between their own 20 and 35-yard line.
+Viperball does not use traditional kickoffs. After every score, the non-scoring team receives the ball and begins its possession from a designated starting field position, typically between their own 20 and 35-yard line. The elimination of the kickoff removes the most dangerous collision play in gridiron sports while maintaining the flow of the game.
 
 ### Punt Returns
 
