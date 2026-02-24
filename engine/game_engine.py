@@ -177,6 +177,7 @@ class PlayType(Enum):
     PUNT = "punt"
     DROP_KICK = "drop_kick"
     PLACE_KICK = "place_kick"
+    KNEEL = "kneel"
 
 
 class PlayFamily(Enum):
@@ -194,6 +195,7 @@ class PlayFamily(Enum):
     SNAP_KICK = "snap_kick"
     FIELD_GOAL = "field_goal"
     PUNT = "punt"
+    KNEEL = "kneel"
 
 
 class PlayResult(Enum):
@@ -237,6 +239,7 @@ PLAY_FAMILY_TO_TYPE = {
     PlayFamily.SNAP_KICK: PlayType.DROP_KICK,
     PlayFamily.FIELD_GOAL: PlayType.PLACE_KICK,
     PlayFamily.PUNT: PlayType.PUNT,
+    PlayFamily.KNEEL: PlayType.KNEEL,
 }
 
 # Map PlayFamily → DC gameplan play type category for suppression lookups.
@@ -3613,6 +3616,13 @@ class ViperballEngine:
             else:
                 self._drive_chain_positive = 0
 
+            # Kneel plays manage their own clock — skip normal time deduction
+            if play.play_type == "kneel":
+                if self.state.time_remaining <= 0:
+                    drive_result = "kneel"
+                    break
+                continue
+
             # ── V2.4: Time-of-possession model ──
             # Play clock varies significantly by offensive style, creating
             # a real time-of-possession differential between grind and tempo teams.
@@ -3801,14 +3811,18 @@ class ViperballEngine:
             self.state.time_remaining = 1
             self.drive_play_count += 1
 
+            final_fg_dist = (100 - fp) + 10
+            team_final = self.get_offensive_team()
+            kc_final = self._kicker_candidates(team_final)
+            k_final = max(kc_final, key=lambda p: p.kicking) if kc_final else None
+            k_skill = k_final.kicking if k_final else 60
+            dk_range = 30 + (k_skill - 60) * 0.75 + 5
+
             if fp >= 55:
-                # FG range — attempt a place kick
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif fp >= 40:
-                # Snap kick range — attempt a snap kick
+            elif final_fg_dist <= min(58, dk_range):
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             else:
-                # Punt for field position
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
             self.play_log.append(final_play)
@@ -4440,8 +4454,70 @@ class ViperballEngine:
 
         return None
 
+    def _should_kneel(self) -> bool:
+        """Victory formation check: kneel instead of running plays when
+        the leading team can run out the clock safely.
+
+        Triggers:
+        - Q4, under 90s, lead > 5 points
+        - Q4, under 45s, any lead
+        """
+        if self.state.quarter != 4:
+            return False
+        time_left = self.state.time_remaining
+        score_diff = self._get_score_diff()
+        if score_diff <= 0:
+            return False
+        if time_left <= 90 and score_diff > 5:
+            return True
+        if time_left <= 45 and score_diff > 0:
+            return True
+        return False
+
+    def simulate_kneel(self) -> Play:
+        """Victory formation: kneel-down that burns 35-40 seconds of clock
+        and loses 1-2 yards. No risk of fumble or penalty."""
+        yards_lost = random.randint(1, 2)
+        self.state.field_position = max(1, self.state.field_position - yards_lost)
+
+        time_burn = random.randint(35, 40)
+        self.state.time_remaining = max(0, self.state.time_remaining - time_burn)
+
+        off_team = self.get_offensive_team()
+        team_name = off_team.name
+        stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+
+        skill = self._offense_skill(off_team)
+        zb = next((p for p in skill if p.position == "Zeroback"), skill[0] if skill else None)
+        zb_label = player_label(zb) if zb else "ZB"
+
+        play = Play(
+            play_number=self.state.play_number,
+            quarter=self.state.quarter,
+            time=self.state.time_remaining,
+            possession=self.state.possession,
+            field_position=self.state.field_position,
+            down=self.state.down,
+            yards_to_go=self.state.yards_to_go,
+            play_type="kneel",
+            play_family="kneel",
+            players_involved=[zb_label],
+            yards_gained=-yards_lost,
+            result="kneel",
+            description=f"Victory formation — {zb_label} takes a knee. {team_name} running out the clock.",
+            fatigue=round(stamina, 1),
+        )
+
+        self.state.down += 1
+        self.state.yards_to_go += yards_lost
+        return play
+
     def simulate_play(self) -> Play:
         self.state.play_number += 1
+
+        # Victory formation: kneel when leading late
+        if self._should_kneel():
+            return self.simulate_kneel()
 
         # Kick pass "floor-spacing": a successful kick pass spreads the
         # defense thin, reducing tackle effectiveness on the NEXT play only.
@@ -4516,6 +4592,8 @@ class ViperballEngine:
             return self.simulate_drop_kick(play_family)
         elif play_type == PlayType.PLACE_KICK:
             return self.simulate_place_kick(play_family)
+        elif play_type == PlayType.KNEEL:
+            return self.simulate_kneel()
         else:
             return self.simulate_run(play_family)
 
@@ -4554,21 +4632,20 @@ class ViperballEngine:
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
         pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
-        # V2.1: Soft range-gating — teams can kick from anywhere but the
-        # weight scales with how realistic the attempt is. Comfortable range
-        # gets boosted, long range gets suppressed. No hard zeroes.
-        if fg_distance <= dk_comfort:
-            # Comfortable range: boost snap kicks — this is the sweet spot
+        # V2.6: Tight range-gating — comfortable range gets boosted,
+        # stretch range is plausible, anything beyond is hard zero.
+        # Max realistic DK attempt ~58 yards (95-skill elite).
+        # Hard cutoff at 58 yards — no team should ever attempt beyond this.
+        if fg_distance > 58:
+            weights["snap_kick"] = 0.0
+        elif fg_distance <= dk_comfort:
             weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
+        elif fg_distance <= dk_comfort + 5:
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.0
         elif fg_distance <= dk_comfort + 10:
-            # Stretch range: full weight, kicker is reaching
-            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.3
-        elif fg_distance <= dk_comfort + 20:
-            # Long range: reduce but allow (hero kicks)
-            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 0.5
+            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 0.20
         else:
-            # Very long range: strongly suppress (pointless attempts)
-            weights["snap_kick"] = weights.get("snap_kick", 0.12) * 0.1
+            weights["snap_kick"] = 0.0
 
         if fg_distance <= pk_comfort:
             weights["field_goal"] = weights.get("field_goal", 0.06) * 1.6
@@ -4805,8 +4882,24 @@ class ViperballEngine:
             weights["field_goal"] = weights.get("field_goal", 0.06) * fg_mult
             weights["snap_kick"] = weights.get("snap_kick", 0.08) * fg_mult
 
+        # V2.6: Hard snap kick range enforcement after all modifiers.
+        # Any code above (boot_raid attack weights, take_points_bias, etc.)
+        # may have re-added snap_kick weight — zero it out if out of range.
+        if fg_distance > 58:
+            weights["snap_kick"] = 0.0
+
         families = list(PlayFamily)
-        w = [max(0.001, weights.get(f.value, 0.0)) for f in families]
+        hard_zero = set()
+        if weights.get("snap_kick", 0.0) <= 0.0:
+            hard_zero.add(PlayFamily.SNAP_KICK)
+        hard_zero.add(PlayFamily.KNEEL)
+
+        w = []
+        for f in families:
+            if f in hard_zero:
+                w.append(0.0)
+            else:
+                w.append(max(0.001, weights.get(f.value, 0.0)))
         return random.choices(families, weights=w)[0]
 
     def _current_style(self) -> Dict:
@@ -8688,50 +8781,67 @@ class ViperballEngine:
         """Coaching AI decides whether to call a timeout.
 
         Considers: star player fatigue, clock management, momentum.
-        Returns True if timeout was called.
+        Returns True if timeout was called (by either offense or defense).
         """
-        if self.state.possession == "home":
-            timeouts = self.state.home_timeouts
-        else:
-            timeouts = self.state.away_timeouts
+        off_side = self.state.possession
+        def_side = "away" if off_side == "home" else "home"
 
-        if timeouts <= 0:
-            return False
+        off_timeouts = self.state.home_timeouts if off_side == "home" else self.state.away_timeouts
+        def_timeouts = self.state.home_timeouts if def_side == "home" else self.state.away_timeouts
 
-        team = self.get_offensive_team()
         quarter = self.state.quarter
         time_left = self.state.time_remaining
 
-        # Check star player fatigue (any skill player below 50% energy)
-        skill_players = self._offense_skill(team)
-        fatigued_stars = [p for p in skill_players
-                         if p.game_energy < 50 and p.overall >= 75]
-
+        off_team = self.get_offensive_team()
         should_call = False
+        caller = None
 
-        # Star player critically fatigued on a crucial drive
-        if fatigued_stars and self.state.field_position >= 50:
-            should_call = random.random() < 0.40
+        if off_timeouts > 0:
+            skill_players = self._offense_skill(off_team)
+            fatigued_stars = [p for p in skill_players
+                             if p.game_energy < 50 and p.overall >= 75]
 
-        # Last 2 minutes of half — clock management
-        if quarter in (2, 4) and time_left < 120:
-            score_diff = self._get_score_diff()
-            if score_diff < 0:
-                # Trailing: use timeouts to stop the clock
-                should_call = random.random() < 0.60
-            elif score_diff > 0 and time_left < 30:
-                # Leading with very little time: defensive timeout
-                should_call = random.random() < 0.30
+            if fatigued_stars and self.state.field_position >= 50:
+                should_call = random.random() < 0.40
+                caller = off_side
 
-        if should_call:
-            # Call the timeout
-            if self.state.possession == "home":
+            if quarter in (2, 4) and time_left < 120:
+                score_diff = self._get_score_diff()
+                if score_diff < 0:
+                    should_call = random.random() < 0.60
+                    caller = off_side
+
+        if not should_call and def_timeouts > 0:
+            if quarter == 4 and time_left < 180:
+                if off_side == "home":
+                    def_score_diff = self.state.away_score - self.state.home_score
+                else:
+                    def_score_diff = self.state.home_score - self.state.away_score
+
+                if def_score_diff < 0 and def_score_diff >= -14:
+                    urgency = min(1.0, (180 - time_left) / 180.0)
+                    deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
+                    call_prob = 0.35 + 0.45 * urgency + 0.15 * deficit_factor
+                    call_prob = min(0.85, call_prob)
+
+                    def_mods = self.home_coaching_mods if def_side == "home" else self.away_coaching_mods
+                    awareness = def_mods.get("personality_factors", {}).get("clock_awareness", 1.0)
+                    call_prob *= awareness
+
+                    if random.random() < call_prob:
+                        should_call = True
+                        caller = def_side
+
+        if should_call and caller:
+            if caller == "home":
                 self.state.home_timeouts -= 1
             else:
                 self.state.away_timeouts -= 1
 
-            # Recover energy for all players on the field
-            for p in team.players:
+            rest_team = off_team if caller == off_side else (
+                self.home_team if def_side == "home" else self.away_team
+            )
+            for p in rest_team.players:
                 p.game_energy = min(100.0, p.game_energy + 15.0)
 
             return True
