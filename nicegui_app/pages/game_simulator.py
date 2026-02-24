@@ -391,9 +391,21 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 rushers = [p for p in pstats if p.get("touches", 0) > 0]
                 if rushers:
                     ui.label("Rushing").classes("text-sm text-gray-500 mt-1")
+
+                    def _rush_label(p):
+                        rank = p.get("rush_rank", "")
+                        tag = ""
+                        if rank == "LEAD":
+                            tag = " *"
+                        elif rank == "COMPLEMENT":
+                            tag = " ^"
+                        elif rank == "CHANGE_OF_PACE":
+                            tag = " ~"
+                        return f"{p['tag']} {p['name']}{tag}"
+
                     rush_rows = [
                         {
-                            "Player": f"{p['tag']} {p['name']}",
+                            "Player": _rush_label(p),
                             "CAR": p["touches"], "Rush Yds": p.get("rushing_yards", 0),
                             "Lat Yds": p.get("lateral_yards", 0),
                             "TD": p["tds"], "FUM": p["fumbles"],
@@ -444,6 +456,42 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                         for p in kickers
                     ]
                     stat_table(kick_rows)
+
+                defenders = [p for p in pstats
+                             if p.get("tackles", 0) > 0 or p.get("tfl", 0) > 0
+                             or p.get("sacks", 0) > 0 or p.get("hurries", 0) > 0
+                             or p.get("kick_pass_ints", 0) > 0]
+                if defenders:
+                    defenders = sorted(defenders, key=lambda p: (
+                        p.get("tackles", 0) + p.get("tfl", 0) * 2
+                        + p.get("sacks", 0) * 3), reverse=True)
+                    ui.label("Defense").classes("text-sm text-gray-500 mt-1")
+                    def_rows = [
+                        {
+                            "Player": f"{p['tag']} {p['name']}",
+                            "TKL": p.get("tackles", 0),
+                            "TFL": p.get("tfl", 0),
+                            "SACK": p.get("sacks", 0),
+                            "HUR": p.get("hurries", 0),
+                            "INT": p.get("kick_pass_ints", 0),
+                        }
+                        for p in defenders
+                    ]
+                    stat_table(def_rows)
+
+                blockers = [p for p in pstats if p.get("blocks", 0) > 0]
+                if blockers:
+                    blockers = sorted(blockers, key=lambda p: p.get("blocks", 0), reverse=True)
+                    ui.label("Blocking").classes("text-sm text-gray-500 mt-1")
+                    block_rows = [
+                        {
+                            "Player": f"{p['tag']} {p['name']}",
+                            "BLK": p.get("blocks", 0),
+                            "PKE": p.get("pancakes", 0),
+                        }
+                        for p in blockers
+                    ]
+                    stat_table(block_rows)
 
                 ui.separator().classes("my-2")
 

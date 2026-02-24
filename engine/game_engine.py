@@ -866,6 +866,41 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
             if zb == best_zb:
                 zb.game_role = "STARTER"
 
+    # ── Lead Back Designation ──────────────────────────────────────
+    # Three-role backfield hierarchy:
+    #   LEAD        — workhorse, gets bulk of carries
+    #   COMPLEMENT  — 1-2 punch partner (if close in rush_score to LEAD)
+    #   CHANGE_OF_PACE — speed specialist for designed sprint plays
+    #                    (speed_option, sweep_option, viper_jet)
+    #
+    # LEAD/COMPLEMENT ranked by rush_score (power/agility weighted).
+    # CHANGE_OF_PACE ranked by pure speed among remaining skill players
+    # who aren't already LEAD/COMPLEMENT. Can be a rotation player —
+    # that's the whole point (depth guys earn carries on speed plays).
+    # Kick-dominant ZBs are excluded from all rushing ranks.
+    rush_capable = [p for p in skill
+                    if getattr(p, 'game_zb_style', '') != "kick_dominant"]
+    rush_starters = [p for p in rush_capable if p.game_role == "STARTER"]
+    for p in skill:
+        p.game_rush_rank = ""
+
+    if rush_starters:
+        rush_starters_ranked = sorted(rush_starters, key=rush_score, reverse=True)
+        rush_starters_ranked[0].game_rush_rank = "LEAD"
+        if len(rush_starters_ranked) >= 2:
+            top_score = rush_score(rush_starters_ranked[0])
+            second_score = rush_score(rush_starters_ranked[1])
+            if top_score > 0 and second_score / top_score >= 0.88:
+                rush_starters_ranked[1].game_rush_rank = "COMPLEMENT"
+
+    # Change-of-pace: fastest rush-capable player NOT already LEAD/COMPLEMENT.
+    # Must have speed >= 82 to qualify (needs to be genuinely fast).
+    cop_candidates = [p for p in rush_capable
+                      if p.game_rush_rank == "" and p.speed >= 82]
+    if cop_candidates:
+        fastest = max(cop_candidates, key=lambda p: p.speed + getattr(p, 'agility', 75) * 0.3)
+        fastest.game_rush_rank = "CHANGE_OF_PACE"
+
     receivers_ranked = sorted(skill, key=recv_score, reverse=True)
     starter_recv_count = min(5, max(2, len(skill) // 3))
     for p in receivers_ranked[:starter_recv_count]:
@@ -958,7 +993,8 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
     role_map = {}
     for p in skill:
         zb_tag = f" [{p.game_zb_style}]" if p.game_zb_style else ""
-        role_map[p.name] = f"{p.game_role}/{p.game_role_recv}{zb_tag}"
+        rank_tag = f" {p.game_rush_rank}" if p.game_rush_rank else ""
+        role_map[p.name] = f"{p.game_role}/{p.game_role_recv}{zb_tag}{rank_tag}"
     for p in defenders:
         def_tag = f"DEF:{p.game_def_role}"
         if p.name in role_map:
@@ -1105,6 +1141,7 @@ class Player:
     # --- Role-based usage (assigned pregame, reset each game) ---
     game_role: str = "ROTATION"       # "STARTER" | "ROTATION" (offense rushing)
     game_role_recv: str = "ROTATION"  # receiving role (can differ from rushing role)
+    game_rush_rank: str = ""          # "LEAD" | "COMPLEMENT" | "" — feature back designation
     game_zb_style: str = ""           # "kick_dominant" | "run_dominant" | "dual_threat" | "distributor" (ZBs only)
     game_def_role: str = "ROTATION"   # "STARTER" | "ROTATION" (defense)
     game_st_role: str = "ROTATION"    # "STARTER" | "ROTATION" (special teams)
@@ -1152,6 +1189,8 @@ class Player:
     game_tfl: int = 0
     game_sacks: int = 0
     game_hurries: int = 0
+    game_blocks: int = 0
+    game_pancakes: int = 0
     game_kick_pass_ints: int = 0
     # VPA (Viperball Points Added) attribution
     game_vpa: float = 0.0             # total VPA attributed to this player
@@ -2977,6 +3016,45 @@ class ViperballEngine:
             return sbs
         return self._offense_skill(team)
 
+    def _credit_ol_blocks(self, team, yards_gained: int):
+        """Credit OL players with blocks on positive-yard run plays.
+
+        1-2 OL get a block credit per positive-yard rush, weighted by
+        power + awareness. On big gainers (8+ yards), one blocker may
+        earn a pancake (dominant block that sprung the runner).
+        """
+        ol_players = [p for p in team.players
+                      if p.position == "Offensive Line"
+                      and p.name not in self._injured_names(team)]
+        if not ol_players:
+            return
+
+        block_weights = [p.power * 0.6 + p.awareness * 0.4 for p in ol_players]
+        num_blocks = 1 if yards_gained < 5 else 2
+        num_blocks = min(num_blocks, len(ol_players))
+
+        blockers = random.choices(ol_players, weights=block_weights, k=num_blocks)
+        seen = set()
+        for b in blockers:
+            if b.name not in seen:
+                b.game_blocks += 1
+                b.game_plays_involved += 1
+                seen.add(b.name)
+
+        if yards_gained >= 8 and random.random() < 0.25:
+            pancaker = random.choices(ol_players, weights=block_weights, k=1)[0]
+            pancaker.game_pancakes += 1
+            if pancaker.name not in seen:
+                pancaker.game_blocks += 1
+                pancaker.game_plays_involved += 1
+
+    def _injured_names(self, team) -> set:
+        """Return set of injured player names for a team."""
+        if hasattr(self, 'injury_tracker') and self.injury_tracker:
+            return {inj.player_name for inj in self.injury_tracker.active_injuries
+                    if inj.status == "OUT"}
+        return set()
+
     def _is_blowout(self) -> bool:
         """Check if the current game is a blowout (20+ point lead in Q3/Q4)."""
         if self.state.quarter < 3:
@@ -2986,7 +3064,7 @@ class ViperballEngine:
         diff = abs(home_score - away_score)
         return diff >= 20
 
-    def _spread_the_love_offense(self, eligible, weights, for_receiving=False):
+    def _spread_the_love_offense(self, eligible, weights, for_receiving=False, play_family=None):
         """Starter-first-look touch distribution.
 
         Two-phase selection:
@@ -3075,6 +3153,71 @@ class ViperballEngine:
 
             if is_starter_look and not is_starter:
                 weights[i] *= 0.03
+
+        # ── Forced Carry Percentage ──
+        # Instead of weight multipliers, assign guaranteed carry shares to
+        # LEAD/COMPLEMENT/COP. Pre-roll a die: if it lands in a ranked
+        # player's forced range, that player IS the carrier (weights are
+        # zeroed for everyone else). If the roll misses all forced ranges,
+        # fall through to normal weight-based selection.
+        #
+        # Forced %s are style-dependent — ground_pound leans hardest on LEAD.
+        # COP only gets forced carries on speed-family plays.
+        if not for_receiving:
+            lead_forced = {"ground_pound": 0.45, "rouge_hunt": 0.42, "ball_control": 0.40,
+                           "balanced": 0.35, "triple_threat": 0.30, "ghost": 0.25,
+                           "boot_raid": 0.22, "lateral_spread": 0.20, "chain_gang": 0.18}
+            comp_forced = {"ground_pound": 0.18, "rouge_hunt": 0.16, "ball_control": 0.15,
+                           "balanced": 0.14, "triple_threat": 0.14, "ghost": 0.12,
+                           "boot_raid": 0.10, "lateral_spread": 0.10, "chain_gang": 0.10}
+            cop_forced_speed = 0.40
+            cop_forced_normal = 0.04
+
+            speed_play_families = {"speed_option", "sweep_option", "viper_jet"}
+            is_speed_play = (play_family and
+                             hasattr(play_family, 'value') and
+                             play_family.value in speed_play_families) or (
+                             isinstance(play_family, str) and
+                             play_family in speed_play_families)
+
+            lead_player = None
+            comp_player = None
+            cop_player = None
+            for i, p in enumerate(eligible):
+                rank = getattr(p, "game_rush_rank", "")
+                if rank == "LEAD":
+                    lead_player = (i, p)
+                elif rank == "COMPLEMENT":
+                    comp_player = (i, p)
+                elif rank == "CHANGE_OF_PACE":
+                    cop_player = (i, p)
+
+            if lead_player or comp_player or cop_player:
+                roll = random.random()
+                lead_pct = lead_forced.get(style, 0.30) if lead_player else 0.0
+                comp_pct = comp_forced.get(style, 0.12) if comp_player else 0.0
+                if is_speed_play:
+                    lead_pct *= 0.5
+                    cop_pct = cop_forced_speed if cop_player else 0.0
+                else:
+                    cop_pct = cop_forced_normal if cop_player else 0.0
+
+                if roll < lead_pct and lead_player:
+                    touches = _relevant_touches(lead_player[1])
+                    if touches < starter_ceiling:
+                        for j in range(len(weights)):
+                            weights[j] = 0.01
+                        weights[lead_player[0]] = 100.0
+                elif roll < lead_pct + comp_pct and comp_player:
+                    touches = _relevant_touches(comp_player[1])
+                    if touches < starter_ceiling:
+                        for j in range(len(weights)):
+                            weights[j] = 0.01
+                        weights[comp_player[0]] = 100.0
+                elif roll < lead_pct + comp_pct + cop_pct and cop_player:
+                    for j in range(len(weights)):
+                        weights[j] = 0.01
+                    weights[cop_player[0]] = 100.0
 
         if self._is_blowout():
             max_w = max(weights) if weights else 1.0
@@ -5811,7 +5954,7 @@ class ViperballEngine:
                     break
 
         # ── Spread the Love: balance touches across the lineup ──
-        weights = self._spread_the_love_offense(eligible, weights)
+        weights = self._spread_the_love_offense(eligible, weights, play_family=family)
 
         player = random.choices(eligible, weights=weights, k=1)[0]
         plabel = player_label(player)
@@ -6052,6 +6195,12 @@ class ViperballEngine:
                 self.change_possession()
                 self.state.field_position = 100 - self.state.field_position
                 description += " — TURNOVER ON DOWNS"
+
+        # ── OL Block Credits ──
+        # On positive-yard run plays, credit 1-2 OL with blocks.
+        # Pancakes on big gainers (8+ yards).
+        if yards_gained > 0:
+            self._credit_ol_blocks(team, yards_gained)
 
         # In-game injury checks on ball carrier and tackler
         injury_note = ""
@@ -6907,6 +7056,7 @@ class ViperballEngine:
                     description += " — TURNOVER ON DOWNS"
 
             kicker.game_kick_pass_yards += yards_gained
+            receiver.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
 
             injury_note = ""
@@ -8856,6 +9006,7 @@ class ViperballEngine:
                                p.game_sacks > 0 or p.game_hurries > 0 or
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
                                p.game_kick_pass_receptions > 0 or
+                               p.game_blocks > 0 or p.game_pancakes > 0 or
                                p.game_plays_involved > 0)
                 if has_activity:
                     role_label = getattr(p, 'game_role', 'DEPTH')
@@ -8878,6 +9029,7 @@ class ViperballEngine:
                         "name": p.name,
                         "role": combined_role,
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
+                        "rush_rank": p.game_rush_rank,
                         "touches": p.game_touches,
                         "yards": p.game_yards,
                         "rushing_yards": p.game_rushing_yards,
@@ -8919,6 +9071,8 @@ class ViperballEngine:
                         "tfl": p.game_tfl,
                         "sacks": p.game_sacks,
                         "hurries": p.game_hurries,
+                        "blocks": p.game_blocks,
+                        "pancakes": p.game_pancakes,
                         "kick_pass_ints": p.game_kick_pass_ints,
                         "vpa": round(p.game_vpa, 2),
                         "plays_involved": p.game_plays_involved,

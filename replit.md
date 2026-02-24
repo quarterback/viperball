@@ -64,6 +64,9 @@ The project maintains a clear separation of concerns:
 - **Enhanced My Team Injury Report**: Dashboard injury table shows Timeline (current vs original weeks), expected Return week, and Recovery notes (ahead of schedule / suffered setback / progressing on schedule). Season injury history available in expandable section.
 
 ## Recent Engine Tuning (Feb 2026)
+- **Forced Carry Percentage System**: LEAD/COMPLEMENT/COP backs get guaranteed carry shares via pre-roll (not weight multipliers). Style-dependent: ground_pound 45% LEAD / 18% COMP, balanced 35% / 14%, chain_gang 18% / 10%. COP gets 40% forced on speed plays (speed_option, sweep_option, viper_jet), 4% on others. Results: LEAD gets ~20% of team rush yards, 50+ yd games in 37% of games.
+- **OL Block/Pancake Stats**: Offensive linemen credited with blocks on positive-yard run plays (1-2 per play, power+awareness weighted). Pancakes on 8+ yard gains (25% chance). ~25 blocks/team/game.
+- **Box Score: Defense + Blocking Sections**: Defense section shows TKL/TFL/SACK/HUR/INT sorted by impact. Blocking section shows BLK/PKE for OL. Rush rank indicators: * LEAD, ^ COMPLEMENT, ~ CHANGE_OF_PACE.
 - **Play selection weights**: KP 3.5x boost, run families 1.8x boost, punt suppressed to 5% of original
 - **Clock timing**: 11-36 second base range per play (~82 plays/team/game)
 - **DK accuracy**: Boosted table (96% at ≤20yd, 68% at ≤40yd, skill_factor floor 0.88)
