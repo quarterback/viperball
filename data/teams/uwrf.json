@@ -1,14 +1,14 @@
 {
   "team_info": {
-    "school_id": "sioux",
-    "school_name": "University of the Sioux",
-    "abbreviation": "SIOU",
-    "mascot": "Thunderbirds",
+    "school_id": "uwrf",
+    "school_name": "University of Wisconsin-River Falls",
+    "abbreviation": "UWRF",
+    "mascot": "Falcons",
     "conference": "Pioneer Athletic Association",
-    "city": "Devils Lake",
-    "state": "ND",
+    "city": "River Falls",
+    "state": "WI",
     "colors": [
-      "Green",
+      "Red",
       "White"
     ]
   },
