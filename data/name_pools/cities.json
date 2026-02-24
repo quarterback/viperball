@@ -1,64 +1,486 @@
 {
   "northeast": {
-    "major": ["New York NY", "Boston MA", "Philadelphia PA", "Providence RI"],
-    "secondary": ["Worcester MA", "Manchester NH", "Albany NY", "New Haven CT", "Hartford CT", "Burlington VT", "Portland ME", "Syracuse NY", "Rochester NY"],
-    "small": ["Nashua NH", "Lowell MA", "Cambridge MA", "Springfield MA", "Stamford CT", "Bridgeport CT", "Bangor ME", "Concord NH"]
+    "major": [
+      "New York NY",
+      "Boston MA",
+      "Philadelphia PA",
+      "Providence RI"
+    ],
+    "secondary": [
+      "Worcester MA",
+      "Manchester NH",
+      "Albany NY",
+      "New Haven CT",
+      "Hartford CT",
+      "Burlington VT",
+      "Portland ME",
+      "Syracuse NY",
+      "Rochester NY"
+    ],
+    "small": [
+      "Nashua NH",
+      "Lowell MA",
+      "Cambridge MA",
+      "Springfield MA",
+      "Stamford CT",
+      "Bridgeport CT",
+      "Bangor ME",
+      "Concord NH"
+    ]
   },
   "mid_atlantic": {
-    "major": ["Washington DC", "Baltimore MD", "Richmond VA", "Virginia Beach VA"],
-    "secondary": ["Arlington VA", "Norfolk VA", "Chesapeake VA", "Alexandria VA", "Annapolis MD", "Frederick MD", "Charlottesville VA", "Roanoke VA"],
-    "small": ["Hampton VA", "Newport News VA", "Silver Spring MD", "Bethesda MD", "Rockville MD", "Fairfax VA", "Winchester VA"]
+    "major": [
+      "Washington DC",
+      "Baltimore MD",
+      "Richmond VA",
+      "Virginia Beach VA"
+    ],
+    "secondary": [
+      "Arlington VA",
+      "Norfolk VA",
+      "Chesapeake VA",
+      "Alexandria VA",
+      "Annapolis MD",
+      "Frederick MD",
+      "Charlottesville VA",
+      "Roanoke VA"
+    ],
+    "small": [
+      "Hampton VA",
+      "Newport News VA",
+      "Silver Spring MD",
+      "Bethesda MD",
+      "Rockville MD",
+      "Fairfax VA",
+      "Winchester VA"
+    ]
   },
   "south": {
-    "major": ["Atlanta GA", "Charlotte NC", "Nashville TN", "Memphis TN", "Birmingham AL", "Jacksonville FL", "Tampa FL", "Orlando FL", "Miami FL"],
-    "secondary": ["Chattanooga TN", "Knoxville TN", "Asheville NC", "Raleigh NC", "Durham NC", "Greensboro NC", "Charleston SC", "Columbia SC", "Savannah GA", "Augusta GA"],
-    "small": ["Greenville SC", "Winston-Salem NC", "Fayetteville NC", "Wilmington NC", "Mobile AL", "Montgomery AL", "Pensacola FL", "Tallahassee FL"]
+    "major": [
+      "Atlanta GA",
+      "Charlotte NC",
+      "Nashville TN",
+      "Memphis TN",
+      "Birmingham AL",
+      "Jacksonville FL",
+      "Tampa FL",
+      "Orlando FL",
+      "Miami FL"
+    ],
+    "secondary": [
+      "Chattanooga TN",
+      "Knoxville TN",
+      "Asheville NC",
+      "Raleigh NC",
+      "Durham NC",
+      "Greensboro NC",
+      "Charleston SC",
+      "Columbia SC",
+      "Savannah GA",
+      "Augusta GA"
+    ],
+    "small": [
+      "Greenville SC",
+      "Winston-Salem NC",
+      "Fayetteville NC",
+      "Wilmington NC",
+      "Mobile AL",
+      "Montgomery AL",
+      "Pensacola FL",
+      "Tallahassee FL"
+    ]
   },
   "midwest": {
-    "major": ["Chicago IL", "Milwaukee WI", "Minneapolis MN", "Detroit MI", "St. Louis MO", "Kansas City MO", "Indianapolis IN", "Columbus OH", "Cleveland OH"],
-    "secondary": ["Madison WI", "Des Moines IA", "Omaha NE", "Cincinnati OH", "Dayton OH", "Toledo OH", "Green Bay WI", "Duluth MN", "Grand Rapids MI"],
-    "small": ["Eau Claire WI", "La Crosse WI", "Cedar Rapids IA", "Sioux City IA", "Lincoln NE", "Springfield IL", "Rockford IL", "Ann Arbor MI", "Lansing MI"]
+    "major": [
+      "Chicago IL",
+      "Milwaukee WI",
+      "Minneapolis MN",
+      "Detroit MI",
+      "St. Louis MO",
+      "Kansas City MO",
+      "Indianapolis IN",
+      "Columbus OH",
+      "Cleveland OH"
+    ],
+    "secondary": [
+      "Madison WI",
+      "Des Moines IA",
+      "Omaha NE",
+      "Cincinnati OH",
+      "Dayton OH",
+      "Toledo OH",
+      "Green Bay WI",
+      "Duluth MN",
+      "Grand Rapids MI"
+    ],
+    "small": [
+      "Eau Claire WI",
+      "La Crosse WI",
+      "Cedar Rapids IA",
+      "Sioux City IA",
+      "Lincoln NE",
+      "Springfield IL",
+      "Rockford IL",
+      "Ann Arbor MI",
+      "Lansing MI"
+    ]
   },
   "west_coast_california": [
-    "Los Angeles CA", "San Diego CA", "San Francisco CA", "Sacramento CA", "Fresno CA", "Oakland CA", "San Jose CA", "Long Beach CA", "Bakersfield CA", "Anaheim CA", "Santa Ana CA", "Riverside CA", "Irvine CA", "Santa Barbara CA", "Stockton CA", "Modesto CA", "San Bernardino CA"
+    "Los Angeles CA",
+    "San Diego CA",
+    "San Francisco CA",
+    "Sacramento CA",
+    "Fresno CA",
+    "Oakland CA",
+    "San Jose CA",
+    "Long Beach CA",
+    "Bakersfield CA",
+    "Anaheim CA",
+    "Santa Ana CA",
+    "Riverside CA",
+    "Irvine CA",
+    "Santa Barbara CA",
+    "Stockton CA",
+    "Modesto CA",
+    "San Bernardino CA"
   ],
   "west_coast_northwest": [
-    "Seattle WA", "Portland OR", "Spokane WA", "Eugene OR", "Boise ID", "Tacoma WA", "Salem OR", "Bellevue WA", "Bend OR", "Olympia WA", "Vancouver WA", "Corvallis OR"
+    "Seattle WA",
+    "Portland OR",
+    "Spokane WA",
+    "Eugene OR",
+    "Boise ID",
+    "Tacoma WA",
+    "Salem OR",
+    "Bellevue WA",
+    "Bend OR",
+    "Olympia WA",
+    "Vancouver WA",
+    "Corvallis OR"
   ],
   "texas_southwest": {
-    "major": ["Dallas TX", "Houston TX", "Austin TX", "San Antonio TX", "Fort Worth TX", "Phoenix AZ", "Albuquerque NM", "Las Vegas NV"],
-    "secondary": ["El Paso TX", "Arlington TX", "Plano TX", "Lubbock TX", "Waco TX", "Corpus Christi TX", "Tucson AZ", "Mesa AZ", "Scottsdale AZ", "Santa Fe NM", "Reno NV"],
-    "small": ["Amarillo TX", "Abilene TX", "Midland TX", "Odessa TX", "Beaumont TX", "Brownsville TX", "Flagstaff AZ", "Tempe AZ", "Las Cruces NM"]
+    "major": [
+      "Dallas TX",
+      "Houston TX",
+      "Austin TX",
+      "San Antonio TX",
+      "Fort Worth TX",
+      "Phoenix AZ",
+      "Albuquerque NM",
+      "Las Vegas NV"
+    ],
+    "secondary": [
+      "El Paso TX",
+      "Arlington TX",
+      "Plano TX",
+      "Lubbock TX",
+      "Waco TX",
+      "Corpus Christi TX",
+      "Tucson AZ",
+      "Mesa AZ",
+      "Scottsdale AZ",
+      "Santa Fe NM",
+      "Reno NV"
+    ],
+    "small": [
+      "Amarillo TX",
+      "Abilene TX",
+      "Midland TX",
+      "Odessa TX",
+      "Beaumont TX",
+      "Brownsville TX",
+      "Flagstaff AZ",
+      "Tempe AZ",
+      "Las Cruces NM"
+    ]
   },
   "mountain_west": [
-    "Denver CO", "Colorado Springs CO", "Boulder CO", "Salt Lake City UT", "Provo UT", "Billings MT", "Missoula MT", "Bozeman MT", "Cheyenne WY", "Casper WY", "Jackson WY"
+    "Denver CO",
+    "Colorado Springs CO",
+    "Boulder CO",
+    "Salt Lake City UT",
+    "Provo UT",
+    "Billings MT",
+    "Missoula MT",
+    "Bozeman MT",
+    "Cheyenne WY",
+    "Casper WY",
+    "Jackson WY"
   ],
   "australia": {
-    "major": ["Melbourne VIC", "Sydney NSW", "Brisbane QLD", "Perth WA", "Adelaide SA"],
-    "secondary": ["Gold Coast QLD", "Canberra ACT", "Newcastle NSW", "Wollongong NSW", "Hobart TAS", "Geelong VIC", "Townsville QLD", "Cairns QLD", "Darwin NT"]
+    "major": [
+      "Melbourne VIC",
+      "Sydney NSW",
+      "Brisbane QLD",
+      "Perth WA",
+      "Adelaide SA"
+    ],
+    "secondary": [
+      "Gold Coast QLD",
+      "Canberra ACT",
+      "Newcastle NSW",
+      "Wollongong NSW",
+      "Hobart TAS",
+      "Geelong VIC",
+      "Townsville QLD",
+      "Cairns QLD",
+      "Darwin NT"
+    ]
   },
-  "new_zealand": ["Auckland", "Wellington", "Christchurch", "Hamilton", "Dunedin", "Tauranga", "Palmerston North", "Nelson", "Rotorua", "New Plymouth", "Whanganui", "Invercargill", "Napier", "Hastings", "Whangarei"],
-  "pacific_islands": ["Honolulu HI", "Hilo HI", "Pago Pago", "Apia", "Nuku'alofa", "Suva"],
+  "new_zealand": [
+    "Auckland",
+    "Wellington",
+    "Christchurch",
+    "Hamilton",
+    "Dunedin",
+    "Tauranga",
+    "Palmerston North",
+    "Nelson",
+    "Rotorua",
+    "New Plymouth",
+    "Whanganui",
+    "Invercargill",
+    "Napier",
+    "Hastings",
+    "Whangarei"
+  ],
+  "pacific_islands": [
+    "Honolulu HI",
+    "Hilo HI",
+    "Pago Pago",
+    "Apia",
+    "Nuku'alofa",
+    "Suva"
+  ],
   "canada": {
-    "major": ["Toronto ON", "Montreal QC", "Vancouver BC", "Calgary AB", "Ottawa ON", "Edmonton AB"],
-    "secondary": ["Winnipeg MB", "Quebec City QC", "Hamilton ON", "Kitchener ON", "London ON", "Halifax NS", "Saskatoon SK", "Regina SK", "Victoria BC", "Kelowna BC", "Gatineau QC", "Windsor ON"],
-    "small": ["Barrie ON", "Kingston ON", "Sudbury ON", "Thunder Bay ON", "Fredericton NB", "Moncton NB", "Lethbridge AB", "Red Deer AB"]
+    "major": [
+      "Toronto ON",
+      "Montreal QC",
+      "Vancouver BC",
+      "Calgary AB",
+      "Ottawa ON",
+      "Edmonton AB"
+    ],
+    "secondary": [
+      "Winnipeg MB",
+      "Quebec City QC",
+      "Hamilton ON",
+      "Kitchener ON",
+      "London ON",
+      "Halifax NS",
+      "Saskatoon SK",
+      "Regina SK",
+      "Victoria BC",
+      "Kelowna BC",
+      "Gatineau QC",
+      "Windsor ON"
+    ],
+    "small": [
+      "Barrie ON",
+      "Kingston ON",
+      "Sudbury ON",
+      "Thunder Bay ON",
+      "Fredericton NB",
+      "Moncton NB",
+      "Lethbridge AB",
+      "Red Deer AB"
+    ]
   },
   "uk_europe": {
-    "england": ["London ENG", "Manchester ENG", "Birmingham ENG", "Liverpool ENG", "Leeds ENG", "Sheffield ENG", "Bristol ENG", "Newcastle ENG"],
-    "france": ["Paris FRA", "Lyon FRA", "Marseille FRA", "Toulouse FRA", "Nice FRA", "Bordeaux FRA", "Lille FRA", "Nantes FRA"],
-    "germany": ["Berlin GER", "Hamburg GER", "Munich GER", "Cologne GER", "Frankfurt GER", "Stuttgart GER", "Düsseldorf GER", "Dortmund GER"],
-    "spain": ["Madrid ESP", "Barcelona ESP", "Valencia ESP", "Seville ESP", "Bilbao ESP", "Málaga ESP", "Zaragoza ESP"],
-    "other_europe": ["Amsterdam NED", "Rotterdam NED", "Brussels BEL", "Ghent BEL", "Lisbon POR", "Porto POR", "Rome ITA", "Milan ITA", "Stockholm SWE", "Gothenburg SWE", "Oslo NOR", "Copenhagen DEN"]
+    "england": [
+      "London ENG",
+      "Manchester ENG",
+      "Birmingham ENG",
+      "Liverpool ENG",
+      "Leeds ENG",
+      "Sheffield ENG",
+      "Bristol ENG",
+      "Newcastle ENG"
+    ],
+    "france": [
+      "Paris FRA",
+      "Lyon FRA",
+      "Marseille FRA",
+      "Toulouse FRA",
+      "Nice FRA",
+      "Bordeaux FRA",
+      "Lille FRA",
+      "Nantes FRA"
+    ],
+    "germany": [
+      "Berlin GER",
+      "Hamburg GER",
+      "Munich GER",
+      "Cologne GER",
+      "Frankfurt GER",
+      "Stuttgart GER",
+      "Düsseldorf GER",
+      "Dortmund GER"
+    ],
+    "spain": [
+      "Madrid ESP",
+      "Barcelona ESP",
+      "Valencia ESP",
+      "Seville ESP",
+      "Bilbao ESP",
+      "Málaga ESP",
+      "Zaragoza ESP"
+    ],
+    "other_europe": [
+      "Amsterdam NED",
+      "Rotterdam NED",
+      "Brussels BEL",
+      "Ghent BEL",
+      "Lisbon POR",
+      "Porto POR",
+      "Rome ITA",
+      "Milan ITA",
+      "Stockholm SWE",
+      "Gothenburg SWE",
+      "Oslo NOR",
+      "Copenhagen DEN"
+    ]
   },
   "latin_america": {
-    "brazil": ["São Paulo BRA", "Rio de Janeiro BRA", "Belo Horizonte BRA", "Brasília BRA", "Salvador BRA", "Fortaleza BRA", "Curitiba BRA", "Manaus BRA", "Recife BRA", "Porto Alegre BRA"],
-    "south_america": ["Buenos Aires ARG", "Córdoba ARG", "Rosario ARG", "Bogotá COL", "Medellín COL", "Cali COL", "Lima PER", "Arequipa PER", "Santiago CHI", "Valparaíso CHI", "Montevideo URU", "Asunción PAR", "Quito ECU", "Guayaquil ECU"]
+    "brazil": [
+      "São Paulo BRA",
+      "Rio de Janeiro BRA",
+      "Belo Horizonte BRA",
+      "Brasília BRA",
+      "Salvador BRA",
+      "Fortaleza BRA",
+      "Curitiba BRA",
+      "Manaus BRA",
+      "Recife BRA",
+      "Porto Alegre BRA"
+    ],
+    "south_america": [
+      "Buenos Aires ARG",
+      "Córdoba ARG",
+      "Rosario ARG",
+      "Bogotá COL",
+      "Medellín COL",
+      "Cali COL",
+      "Lima PER",
+      "Arequipa PER",
+      "Santiago CHI",
+      "Valparaíso CHI",
+      "Montevideo URU",
+      "Asunción PAR",
+      "Quito ECU",
+      "Guayaquil ECU"
+    ]
   },
   "africa": {
-    "west_africa": ["Lagos NGA", "Abuja NGA", "Kano NGA", "Ibadan NGA", "Accra GHA", "Kumasi GHA", "Tamale GHA", "Dakar SEN", "Conakry GIN", "Abidjan CIV", "Lomé TOG", "Bamako MLI"],
-    "east_africa": ["Nairobi KEN", "Mombasa KEN", "Kampala UGA", "Dar es Salaam TZA", "Addis Ababa ETH", "Kigali RWA"],
-    "southern_africa": ["Johannesburg ZAF", "Cape Town ZAF", "Durban ZAF", "Pretoria ZAF", "Harare ZWE", "Lusaka ZMB", "Gaborone BWA"]
+    "west_africa": [
+      "Lagos NGA",
+      "Abuja NGA",
+      "Kano NGA",
+      "Ibadan NGA",
+      "Accra GHA",
+      "Kumasi GHA",
+      "Tamale GHA",
+      "Dakar SEN",
+      "Conakry GIN",
+      "Abidjan CIV",
+      "Lomé TOG",
+      "Bamako MLI"
+    ],
+    "east_africa": [
+      "Nairobi KEN",
+      "Mombasa KEN",
+      "Kampala UGA",
+      "Dar es Salaam TZA",
+      "Addis Ababa ETH",
+      "Kigali RWA"
+    ],
+    "southern_africa": [
+      "Johannesburg ZAF",
+      "Cape Town ZAF",
+      "Durban ZAF",
+      "Pretoria ZAF",
+      "Harare ZWE",
+      "Lusaka ZMB",
+      "Gaborone BWA"
+    ]
   },
-  "caribbean": ["Kingston JAM", "Montego Bay JAM", "Port of Spain TTO", "Chaguanas TTO", "Bridgetown BRB", "Nassau BAH", "Freeport BAH", "Port-au-Prince HAI", "Santo Domingo DOM", "San Juan PRI", "Georgetown GUY", "Paramaribo SUR", "Castries LCA", "Roseau DMA", "Basseterre SKN"]
+  "caribbean": [
+    "Kingston JAM",
+    "Montego Bay JAM",
+    "Port of Spain TTO",
+    "Chaguanas TTO",
+    "Bridgetown BRB",
+    "Nassau BAH",
+    "Freeport BAH",
+    "Port-au-Prince HAI",
+    "Santo Domingo DOM",
+    "San Juan PRI",
+    "Georgetown GUY",
+    "Paramaribo SUR",
+    "Castries LCA",
+    "Roseau DMA",
+    "Basseterre SKN"
+  ],
+  "nordic": {
+    "finland": [
+      "Helsinki FIN",
+      "Espoo FIN",
+      "Tampere FIN",
+      "Vantaa FIN",
+      "Oulu FIN",
+      "Turku FIN",
+      "Jyväskylä FIN",
+      "Kuopio FIN",
+      "Lahti FIN",
+      "Kouvola FIN",
+      "Pori FIN",
+      "Joensuu FIN",
+      "Lappeenranta FIN",
+      "Rovaniemi FIN",
+      "Vaasa FIN",
+      "Seinäjoki FIN",
+      "Hämeenlinna FIN",
+      "Porvoo FIN"
+    ],
+    "sweden": [
+      "Stockholm SWE",
+      "Gothenburg SWE",
+      "Malmö SWE",
+      "Uppsala SWE",
+      "Linköping SWE",
+      "Västerås SWE",
+      "Örebro SWE",
+      "Helsingborg SWE",
+      "Norrköping SWE",
+      "Lund SWE",
+      "Umeå SWE",
+      "Gävle SWE",
+      "Sundsvall SWE",
+      "Borås SWE",
+      "Eskilstuna SWE",
+      "Karlstad SWE",
+      "Växjö SWE",
+      "Kristianstad SWE"
+    ],
+    "norway": [
+      "Oslo NOR",
+      "Bergen NOR",
+      "Trondheim NOR",
+      "Stavanger NOR",
+      "Drammen NOR",
+      "Fredrikstad NOR",
+      "Kristiansand NOR",
+      "Tromsø NOR",
+      "Sandnes NOR",
+      "Bodø NOR",
+      "Ålesund NOR",
+      "Tønsberg NOR",
+      "Sandefjord NOR",
+      "Haugesund NOR",
+      "Moss NOR",
+      "Lillehammer NOR",
+      "Molde NOR",
+      "Skien NOR"
+    ]
+  }
 }

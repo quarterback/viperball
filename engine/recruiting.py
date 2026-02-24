@@ -69,6 +69,7 @@ _REGIONS = [
 _INTL_REGIONS = [
     "australian", "canadian_english", "canadian_french",
     "new_zealand", "uk_european", "latin_american", "african",
+    "nordic", "caribbean",
 ]
 
 
@@ -279,6 +280,7 @@ def _region_to_nationality(region: str) -> str:
         "canadian_french": "Canadian", "new_zealand": "New Zealander",
         "uk_european": "British", "latin_american": "Mexican",
         "african": "Nigerian", "caribbean": "Jamaican",
+        "nordic": "Nordic",
     }
     return mapping.get(region, "American")
 
@@ -403,6 +405,14 @@ _HOMETOWN_BY_REGION = {
     ],
     "african": [
         "Lagos, NGA", "Nairobi, KEN", "Accra, GHA", "Johannesburg, RSA",
+    ],
+    "nordic": [
+        "Helsinki, FIN", "Stockholm, SWE", "Oslo, NOR", "Tampere, FIN",
+        "Gothenburg, SWE", "Bergen, NOR", "Malmö, SWE", "Trondheim, NOR",
+    ],
+    "caribbean": [
+        "Kingston, JAM", "Port of Spain, TTO", "Bridgetown, BRB", "Nassau, BAH",
+        "Port-au-Prince, HAI", "Santo Domingo, DOM", "San Juan, PRI", "Georgetown, GUY",
     ],
 }
 

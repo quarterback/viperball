@@ -66,29 +66,31 @@ DEFAULT_PIPELINE = {
     'west_coast': 0.10,
     'texas_southwest': 0.10,
     # International (34%)
-    'australian': 0.102,
-    'canadian_english': 0.034,
-    'canadian_french': 0.034,
-    'new_zealand': 0.024,
-    'pacific_islander': 0.007,
-    'uk_european': 0.058,
-    'latin_american': 0.020,
-    'african': 0.031,
-    'caribbean': 0.020,
+    'australian': 0.062,
+    'canadian_english': 0.021,
+    'canadian_french': 0.021,
+    'new_zealand': 0.014,
+    'pacific_islander': 0.004,
+    'uk_european': 0.035,
+    'latin_american': 0.012,
+    'african': 0.019,
+    'nordic': 0.100,
+    'caribbean': 0.050,
     'other_intl': 0.003,
 }
 
 # International baseline (sums to 0.34) — applied on top of any school's domestic pipeline
 INTERNATIONAL_BASELINE = {
-    'australian': 0.102,
-    'canadian_english': 0.034,
-    'canadian_french': 0.034,
-    'new_zealand': 0.024,
-    'pacific_islander': 0.007,
-    'uk_european': 0.058,
-    'latin_american': 0.020,
-    'african': 0.031,
-    'caribbean': 0.020,
+    'australian': 0.062,
+    'canadian_english': 0.021,
+    'canadian_french': 0.021,
+    'new_zealand': 0.014,
+    'pacific_islander': 0.004,
+    'uk_european': 0.035,
+    'latin_american': 0.012,
+    'african': 0.019,
+    'nordic': 0.100,
+    'caribbean': 0.050,
     'other_intl': 0.003,
 }
 
@@ -112,6 +114,7 @@ REGION_TO_ORIGIN = {
     'latin_american': ('latin_american', 'Latin American'),
     'african': ('african', 'African'),
     'caribbean': ('caribbean', 'Caribbean'),
+    'nordic': ('nordic', 'Nordic'),
     'other_intl': ('irish_european', 'European'),
 }
 
@@ -270,6 +273,7 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
         'latin_american': 'latin_american',
         'african': 'african',
         'caribbean': 'caribbean',
+        'nordic': 'nordic',
         'irish_european': 'irish_european',
     }
 
@@ -350,6 +354,8 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
         selected_pool = 'african'
     elif origin == 'caribbean':
         selected_pool = 'caribbean'
+    elif origin == 'nordic':
+        selected_pool = 'nordic' if 'nordic' in surnames else 'scandinavian'
     elif origin == 'irish_european':
         selected_pool = 'irish'
     else:
@@ -446,6 +452,21 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         country = country_map.get(country_code, 'Africa')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'african'}
 
+    elif origin == 'nordic':
+        nrd = cities['nordic']
+        all_cities = []
+        for sub in nrd.values():
+            all_cities.extend(sub)
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'FIN'
+        country_map = {
+            'FIN': 'Finland', 'SWE': 'Sweden', 'NOR': 'Norway'
+        }
+        country = country_map.get(country_code, 'Nordic')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'nordic'}
+
     elif origin == 'caribbean':
         city_full = random.choice(cities['caribbean'])
         parts = city_full.rsplit(' ', 1)
@@ -525,6 +546,15 @@ def select_high_school(origin: str, hometown: Dict, pools: Dict) -> str:
 
     elif origin == 'caribbean':
         return f"{hometown['city']} High School"
+
+    elif origin == 'nordic':
+        country_code = hometown.get('state', 'FIN')
+        if country_code == 'FIN':
+            return f"{hometown['city']} lukio"
+        elif country_code == 'SWE':
+            return f"{hometown['city']} gymnasium"
+        else:
+            return f"{hometown['city']} videregående skole"
 
     else:  # American
         city = hometown['city'].lower().replace(' ', '_')
