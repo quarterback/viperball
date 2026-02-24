@@ -3055,3 +3055,106 @@ def dq_summary(session_id: str):
     session = _get_session(session_id)
     mgr = _require_dq(session)
     return mgr.season_summary()
+
+
+# ---------------------------------------------------------------------------
+# DraftyQueenz Standalone Mode
+# ---------------------------------------------------------------------------
+
+class DQCreateRequest(BaseModel):
+    name: str = "DQ Fantasy Season"
+    ai_seed: int = 0
+    num_conferences: int = 16
+    games_per_team: int = 12
+    playoff_size: int = 8
+    bowl_count: int = 4
+
+
+@app.post("/sessions/{session_id}/dq/create-season")
+def dq_create_season(session_id: str, req: DQCreateRequest):
+    """Create a season specifically for DQ standalone mode (no human teams)."""
+    session = _get_session(session_id)
+
+    teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
+    team_names = list(teams.keys())
+
+    conferences = get_geographic_conference_defaults(TEAMS_DIR, team_names, req.num_conferences)
+
+    ai_configs = auto_assign_all_teams(
+        TEAMS_DIR, human_teams=[], human_configs={},
+        seed=req.ai_seed if req.ai_seed else None,
+    )
+    style_configs = {}
+    for tname in teams:
+        style_configs[tname] = ai_configs.get(
+            tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
+        )
+
+    rivalries_dict = auto_assign_rivalries(
+        conferences=conferences, team_states=team_states,
+        human_team=None, existing_rivalries=None,
+    )
+
+    coaching_staffs = load_coaching_staffs_from_directory(TEAMS_DIR)
+
+    season = create_season(
+        req.name, teams, style_configs,
+        conferences=conferences, games_per_team=req.games_per_team,
+        team_states=team_states, rivalries=rivalries_dict,
+        coaching_staffs=coaching_staffs,
+    )
+
+    session["season"] = season
+    session["human_teams"] = []
+    session["phase"] = "regular"
+    session["config"] = {
+        "playoff_size": req.playoff_size,
+        "bowl_count": req.bowl_count,
+        "games_per_team": req.games_per_team,
+    }
+    session["injury_tracker"] = InjuryTracker()
+    session["injury_tracker"].seed(req.ai_seed if req.ai_seed else 42)
+    season.injury_tracker = session["injury_tracker"]
+    session["dq_manager"] = DraftyQueenzManager(
+        manager_name="Fantasy GM", season_year=2026,
+    )
+    session["history"] = []
+    session["coaching_staffs"] = season.coaching_staffs
+
+    return {
+        "status": _serialize_season_status(session),
+        "dq": {
+            "bankroll": session["dq_manager"].bankroll.balance,
+            "booster_tier": session["dq_manager"].booster_tier[0],
+        },
+        "total_weeks": season.get_total_weeks(),
+    }
+
+
+@app.post("/sessions/{session_id}/dq/advance-week")
+def dq_advance_week(session_id: str):
+    """Simulate the next week and return DQ-relevant results."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+    mgr = _require_dq(session)
+
+    if session["phase"] != "regular":
+        raise HTTPException(status_code=400, detail=f"Season not in regular phase: {session['phase']}")
+
+    next_week = season.get_next_unplayed_week()
+    if next_week is None:
+        raise HTTPException(status_code=400, detail="Regular season is complete")
+
+    dq_boosts = mgr.get_all_team_boosts()
+    games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts)
+
+    if season.is_regular_season_complete():
+        session["phase"] = "playoffs_pending"
+
+    return {
+        "week": next_week,
+        "games_count": len(games),
+        "season_complete": season.is_regular_season_complete(),
+        "phase": session["phase"],
+        "status": _serialize_season_status(session),
+    }

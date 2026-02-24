@@ -125,6 +125,14 @@ class UserState:
     def dyn_bowl_count(self, value: int):
         self._store["dyn_bowl_count"] = value
 
+    @property
+    def dq_current_week(self) -> int:
+        return self._store.get("dq_current_week", 0)
+
+    @dq_current_week.setter
+    def dq_current_week(self, value: int):
+        self._store["dq_current_week"] = value
+
     def clear_session(self):
         """Reset all session-related state."""
         self.session_id = None
@@ -139,6 +147,7 @@ class UserState:
         self.dyn_season_phase = "setup"
         self.dyn_playoff_size = 8
         self.dyn_bowl_count = 4
+        self.dq_current_week = 0
         self.last_result = None
         self.last_seed = 0
         self.batch_results = None

@@ -24,12 +24,12 @@ from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_gam
 from nicegui_app.pages.game_simulator import render_game_simulator
 from nicegui_app.pages.season_simulator import render_season_simulator
 from nicegui_app.pages.dynasty_mode import render_dynasty_mode
-from nicegui_app.pages.draftyqueenz import render_dq_bankroll_banner, render_dq_pre_sim, render_dq_post_sim
+from nicegui_app.pages.dq_mode import render_dq_setup, render_dq_play
 
 
 def render_play_section_sync(state: UserState, shared: dict):
     """Synchronous entry point — used for initial page render in NiceGUI 3.x."""
-    if state.mode == "dynasty" or state.mode == "season":
+    if state.mode in ("dynasty", "season", "dq"):
         ui.label("Loading session...").classes("text-slate-400")
         ui.timer(0.1, lambda: _deferred_play_load(state, shared), once=True)
     else:
@@ -43,6 +43,8 @@ async def _deferred_play_load(state: UserState, shared: dict):
             await _render_dynasty_play(state, shared)
         elif state.mode == "season":
             await _render_season_play(state, shared)
+        elif state.mode == "dq":
+            await render_dq_play(state, shared)
     except Exception as exc:
         ui.label(f"Error: {exc}").classes("text-red-500")
 
@@ -53,6 +55,8 @@ async def render_play_section(state: UserState, shared: dict):
         await _render_dynasty_play(state, shared)
     elif state.mode == "season":
         await _render_season_play(state, shared)
+    elif state.mode == "dq":
+        await render_dq_play(state, shared)
     else:
         _render_mode_selection(state, shared)
 
@@ -66,6 +70,7 @@ def _render_mode_selection(state: UserState, shared: dict):
         dynasty_tab = ui.tab("New Dynasty")
         season_tab = ui.tab("New Season")
         quick_tab = ui.tab("Quick Game")
+        dq_tab = ui.tab("DraftyQueenz")
 
     with ui.tab_panels(mode_tabs, value=quick_tab).classes("w-full"):
         with ui.tab_panel(dynasty_tab):
@@ -85,6 +90,12 @@ def _render_mode_selection(state: UserState, shared: dict):
                 render_game_simulator(state, shared)
             except Exception as e:
                 ui.label(f"Error loading game simulator: {e}").classes("text-red-500")
+
+        with ui.tab_panel(dq_tab):
+            try:
+                render_dq_setup(state, shared)
+            except Exception as e:
+                ui.label(f"Error loading DraftyQueenz: {e}").classes("text-red-500")
 
 
 _PORTAL_POSITIONS = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
@@ -460,25 +471,6 @@ async def _render_season_play(state: UserState, shared: dict):
             await _render_season_portal(state, _season_actions)
 
         elif phase == "regular":
-            has_human = bool(state.human_teams)
-            if has_human:
-                if current_week > 0:
-                    try:
-                        await render_dq_post_sim(state, state.session_id, current_week)
-                    except Exception:
-                        pass
-
-                try:
-                    await render_dq_bankroll_banner(state, state.session_id)
-                except Exception:
-                    pass
-
-                if next_week:
-                    try:
-                        await render_dq_pre_sim(state, state.session_id, next_week)
-                    except Exception:
-                        pass
-
             ui.separator().classes("my-4")
 
             week_label = f"Simulate Week {next_week}" if next_week else "Season Complete"

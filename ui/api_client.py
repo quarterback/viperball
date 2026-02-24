@@ -659,3 +659,19 @@ def dq_portfolio(session_id: str) -> dict:
 
 def dq_summary(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/dq/summary")
+
+
+def dq_create_season(session_id: str, name: str = "DQ Fantasy Season",
+                     ai_seed: int = 0, games_per_team: int = 12,
+                     playoff_size: int = 8, bowl_count: int = 4) -> dict:
+    return _post(f"/sessions/{session_id}/dq/create-season", json={
+        "name": name,
+        "ai_seed": ai_seed,
+        "games_per_team": games_per_team,
+        "playoff_size": playoff_size,
+        "bowl_count": bowl_count,
+    })
+
+
+def dq_advance_week(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/dq/advance-week")
