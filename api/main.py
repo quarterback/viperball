@@ -741,6 +741,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
 
     session["season"] = season
     session["human_teams"] = req.human_teams or []
+    season.human_teams = list(req.human_teams or [])
     has_human = bool(req.human_teams)
     session["phase"] = "portal" if has_human else "regular"
     session["config"] = {
@@ -793,7 +794,8 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
     week = req.week
     dq_mgr = session.get("dq_manager")
     dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
-    games = season.simulate_week(week=week, dq_team_boosts=dq_boosts)
+    games = season.simulate_week(week=week, dq_team_boosts=dq_boosts,
+                                  use_fast_sim=True)
 
     if not games:
         return {"week": week, "games": [], "message": "No games to simulate"}
@@ -820,7 +822,7 @@ def simulate_through(session_id: str, req: SimulateThroughRequest):
     if session["phase"] not in ("regular",):
         raise HTTPException(status_code=400, detail=f"Cannot simulate in phase '{session['phase']}'")
 
-    all_games = season.simulate_through_week(req.target_week)
+    all_games = season.simulate_through_week(req.target_week, use_fast_sim=True)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -842,7 +844,7 @@ def simulate_rest(session_id: str):
         raise HTTPException(status_code=400, detail=f"Cannot simulate rest in phase '{session['phase']}'")
 
     games_before = sum(1 for g in season.schedule if g.completed)
-    season.simulate_season(generate_polls=True)
+    season.simulate_season(generate_polls=True, use_fast_sim=True)
     games_after = sum(1 for g in season.schedule if g.completed)
 
     session["phase"] = "playoffs_pending"
@@ -1477,6 +1479,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     )
 
     session["season"] = season
+    season.human_teams = list(session.get("human_teams", []))
     session["phase"] = "regular"
     session["config"] = {
         "playoff_size": req.playoff_size,
@@ -3106,6 +3109,7 @@ def dq_create_season(session_id: str, req: DQCreateRequest):
 
     session["season"] = season
     session["human_teams"] = []
+    season.human_teams = []
     session["phase"] = "regular"
     session["config"] = {
         "playoff_size": req.playoff_size,
@@ -3146,7 +3150,8 @@ def dq_advance_week(session_id: str):
         raise HTTPException(status_code=400, detail="Regular season is complete")
 
     dq_boosts = mgr.get_all_team_boosts()
-    games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts)
+    games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts,
+                                  use_fast_sim=True)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"

@@ -20,6 +20,7 @@ from pathlib import Path
 from engine.game_engine import ViperballEngine, Team, load_team_from_json
 from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
+from engine.fast_sim import fast_sim_game
 
 
 FCS_PREFIXES = [
@@ -684,6 +685,9 @@ class Season:
     # Injury tracker — when set, injuries affect game simulation
     injury_tracker: Optional[object] = None
 
+    # Human-controlled teams — fast-sim skips these games
+    human_teams: List[str] = field(default_factory=list)
+
     def __post_init__(self):
         for team_name, team in self.teams.items():
             style_config = self.style_configs.get(team_name, {})
@@ -1121,8 +1125,24 @@ class Season:
         """Legacy method - generates full round-robin"""
         self.generate_schedule(games_per_team=0)
 
-    def simulate_game(self, game: Game, verbose: bool = False, dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None) -> Dict:
-        """Simulate a single game and update standings"""
+    def _is_human_game(self, game: Game) -> bool:
+        """Check if either team in this game is human-controlled."""
+        if not self.human_teams:
+            return False
+        return game.home_team in self.human_teams or game.away_team in self.human_teams
+
+    def simulate_game(self, game: Game, verbose: bool = False,
+                      dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
+                      use_fast_sim: bool = False) -> Dict:
+        """Simulate a single game and update standings.
+
+        Args:
+            game: The Game to simulate.
+            verbose: Enable verbose output (full engine only).
+            dq_team_boosts: DraftyQueenz team boosts.
+            use_fast_sim: If True, use fast statistical model for CPU-vs-CPU
+                          games. Human-team games always use the full engine.
+        """
         fcs_side = None
         if game.is_fcs_game:
             if game.home_team in self.fcs_teams:
@@ -1141,6 +1161,59 @@ class Season:
             home_team = self.teams[game.home_team]
             away_team = self.teams[game.away_team]
 
+        # Geo-aware weather: use home team's state if available
+        home_state = self.team_states.get(game.home_team)
+        total_weeks = max((g.week for g in self.schedule), default=18)
+        season_weather = generate_game_weather(
+            state=home_state,
+            week=game.week,
+            total_weeks=total_weeks,
+        )
+
+        is_neutral = game.week >= 900
+
+        # ── Fast-Sim Path ──
+        # CPU-vs-CPU games use lightweight statistical model.
+        # Human-team games always get full play-by-play engine.
+        should_fast_sim = use_fast_sim and not self._is_human_game(game)
+
+        if should_fast_sim:
+            weather_code = season_weather if isinstance(season_weather, str) else "clear"
+            weather_label = weather_code.replace("_", " ").title()
+
+            result = fast_sim_game(
+                home_team, away_team,
+                seed=random.randint(1, 1000000),
+                weather=weather_code,
+                weather_label=weather_label,
+                weather_description=f"{weather_label} conditions",
+                is_rivalry=game.is_rivalry_game,
+                neutral_site=is_neutral,
+            )
+            result["is_rivalry_game"] = game.is_rivalry_game
+
+            if fcs_side != "home":
+                for p in home_team.players:
+                    p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+            if fcs_side != "away":
+                for p in away_team.players:
+                    p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+
+            game.home_score = result['final_score']['home']['score']
+            game.away_score = result['final_score']['away']['score']
+            game.completed = True
+
+            home_metrics = result.get("_fast_sim_metrics", {}).get("home", {})
+            away_metrics = result.get("_fast_sim_metrics", {}).get("away", {})
+
+            game.home_metrics = home_metrics
+            game.away_metrics = away_metrics
+            game.full_result = result
+
+            self._update_standings(game, result, home_metrics, away_metrics, fcs_side)
+            return result
+
+        # ── Full Engine Path ──
         home_style_config = self.style_configs.get(game.home_team, {})
         away_style_config = self.style_configs.get(game.away_team, {})
 
@@ -1152,15 +1225,6 @@ class Season:
             f"{away_team.name}_defense": away_style_config.get('defense_style', 'swarm'),
             f"{away_team.name}_st": away_style_config.get('st_scheme', 'aces'),
         }
-
-        # Geo-aware weather: use home team's state if available
-        home_state = self.team_states.get(game.home_team)
-        total_weeks = max((g.week for g in self.schedule), default=18)
-        season_weather = generate_game_weather(
-            state=home_state,
-            week=game.week,
-            total_weeks=total_weeks,
-        )
 
         injury_kwargs = {}
         if self.injury_tracker is not None:
@@ -1195,14 +1259,9 @@ class Season:
                 coaching_kwargs["home_coaching"] = home_staff
             if away_staff:
                 coaching_kwargs["away_coaching"] = away_staff
-            # Only set game_week here if injury_kwargs didn't already
             if "game_week" not in injury_kwargs:
                 coaching_kwargs["game_week"] = game.week
 
-        # Bowl games and playoff games are neutral site (no home field advantage)
-        is_neutral = game.week >= 900
-
-        # V2.4+: Pass defensive prestige flags into the engine
         nfz_kwargs = {}
         home_record = self.standings.get(game.home_team)
         away_record = self.standings.get(game.away_team)
@@ -1210,7 +1269,6 @@ class Season:
             nfz_kwargs["home_no_fly_zone"] = True
         if away_record and away_record.no_fly_zone:
             nfz_kwargs["away_no_fly_zone"] = True
-        # V2.5: Brick Wall and Turnover Machine prestige
         if home_record and home_record.brick_wall:
             nfz_kwargs["home_brick_wall"] = True
         if away_record and away_record.brick_wall:
@@ -1254,6 +1312,13 @@ class Season:
         game.away_metrics = away_metrics
         game.full_result = result
 
+        self._update_standings(game, result, home_metrics, away_metrics, fcs_side)
+        return result
+
+    def _update_standings(self, game: Game, result: Dict,
+                          home_metrics: Dict, away_metrics: Dict,
+                          fcs_side: Optional[str]):
+        """Update standings for both teams after a game."""
         home_won = game.home_score > game.away_score
         away_won = game.away_score > game.home_score
 
@@ -1297,11 +1362,10 @@ class Season:
                 turnovers_forced=away_def_turnovers,
             )
 
-        return result
-
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
                       generate_polls: bool = True, rng=None,
-                      dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None) -> List[Game]:
+                      dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
+                      use_fast_sim: bool = False) -> List[Game]:
         """Simulate a single week of games. Returns list of games played.
 
         Args:
@@ -1310,6 +1374,8 @@ class Season:
             generate_polls: Whether to generate a poll after this week.
             verbose: Enable verbose output.
             dq_team_boosts: Optional dict of team_name -> boost_type -> boost_amount.
+            use_fast_sim: If True, use fast statistical model for CPU-vs-CPU
+                          games. Human-team games always use the full engine.
 
         Returns:
             List of Game objects that were simulated this week, or empty list
@@ -1320,14 +1386,14 @@ class Season:
             if week is None:
                 return []
 
-        # Process weekly injuries/returns BEFORE games if tracker is connected
         if self.injury_tracker is not None:
             self.injury_tracker.resolve_week(week)
             self.injury_tracker.process_week(week, self.teams, self.standings)
 
         week_games = [g for g in self.schedule if g.week == week and not g.completed]
         for game in week_games:
-            self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts)
+            self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts,
+                               use_fast_sim=use_fast_sim)
 
         if generate_polls and week_games:
             self._generate_weekly_poll(week)
@@ -1335,7 +1401,8 @@ class Season:
         return week_games
 
     def simulate_through_week(self, target_week: int, verbose: bool = False,
-                              generate_polls: bool = True) -> List[Game]:
+                              generate_polls: bool = True,
+                              use_fast_sim: bool = False) -> List[Game]:
         """Simulate all unplayed weeks up to and including target_week.
 
         Returns all games simulated across those weeks.
@@ -1346,7 +1413,8 @@ class Season:
             if next_week is None or next_week > target_week:
                 break
             games = self.simulate_week(next_week, verbose=verbose,
-                                       generate_polls=generate_polls)
+                                       generate_polls=generate_polls,
+                                       use_fast_sim=use_fast_sim)
             all_games.extend(games)
         return all_games
 
@@ -1377,10 +1445,17 @@ class Season:
         """Return True if all scheduled regular-season games have been played."""
         return all(g.completed for g in self.schedule)
 
-    def simulate_season(self, verbose: bool = False, generate_polls: bool = True):
-        """Simulate all remaining regular season games, optionally generating weekly polls"""
+    def simulate_season(self, verbose: bool = False, generate_polls: bool = True,
+                        use_fast_sim: bool = False):
+        """Simulate all remaining regular season games, optionally generating weekly polls.
+
+        Args:
+            use_fast_sim: If True, CPU-vs-CPU games use fast statistical model.
+                          Human-team games always use the full engine.
+        """
         while True:
-            games = self.simulate_week(verbose=verbose, generate_polls=generate_polls)
+            games = self.simulate_week(verbose=verbose, generate_polls=generate_polls,
+                                        use_fast_sim=use_fast_sim)
             if not games:
                 break
 
