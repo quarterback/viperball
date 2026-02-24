@@ -262,6 +262,7 @@ def _serialize_game(game: Game, include_full_result: bool = False) -> dict:
         "completed": game.completed,
         "is_conference_game": game.is_conference_game,
         "is_rivalry_game": getattr(game, 'is_rivalry_game', False),
+        "is_fcs_game": getattr(game, 'is_fcs_game', False),
         "home_metrics": game.home_metrics if hasattr(game, 'home_metrics') else None,
         "away_metrics": game.away_metrics if hasattr(game, 'away_metrics') else None,
         "has_full_result": bool(getattr(game, 'full_result', None)),

@@ -446,30 +446,31 @@ async def _render_season_play(state: UserState, shared: dict):
         current_week = status.get("current_week", 0)
         total_weeks = status.get("total_weeks", 10)
 
+        next_week = status.get("next_week")
+        games_played = status.get("games_played", 0)
+        total_games = status.get("total_games", 0)
+
         with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
             metric_card("Week", f"{current_week}/{total_weeks}")
             metric_card("Phase", phase.replace("_", " ").title())
+            if phase == "regular" and total_games > 0:
+                metric_card("Games", f"{games_played}/{total_games}")
 
         if phase == "portal":
             await _render_season_portal(state, _season_actions)
 
         elif phase == "regular":
-            next_week = status.get("next_week", current_week + 1)
-
-            # DraftyQueenz post-sim results for last completed week
             if current_week > 0:
                 try:
                     render_dq_post_sim(state, state.session_id, current_week)
                 except Exception:
                     pass
 
-            # DraftyQueenz bankroll banner
             try:
                 render_dq_bankroll_banner(state, state.session_id)
             except Exception:
                 pass
 
-            # DraftyQueenz pre-sim section (predictions, fantasy, donate)
             if next_week:
                 try:
                     render_dq_pre_sim(state, state.session_id, next_week)
@@ -477,15 +478,21 @@ async def _render_season_play(state: UserState, shared: dict):
                     pass
 
             ui.separator().classes("my-4")
-            week_btn = ui.button(f"Simulate Week {current_week + 1}", icon="play_arrow").props("color=primary")
+
+            week_label = f"Simulate Week {next_week}" if next_week else "Season Complete"
+            with ui.row().classes("gap-3 items-center"):
+                week_btn = ui.button(week_label, icon="play_arrow").props("color=primary")
+                rest_btn = ui.button("Sim Rest of Season", icon="fast_forward").props("color=secondary outlined")
 
             async def _sim_week():
                 week_btn.disable()
+                rest_btn.disable()
                 week_btn.text = "Simulating..."
                 try:
                     result = await run.io_bound(api_client.simulate_week, state.session_id)
-                    week = result.get("week", current_week + 1)
-                    notify_success(f"Week {week} simulated!")
+                    week = result.get("week", "?")
+                    games_count = result.get("games_count", 0)
+                    notify_success(f"Week {week} simulated — {games_count} games")
                     try:
                         _season_actions.refresh()
                     except RuntimeError:
@@ -493,9 +500,28 @@ async def _render_season_play(state: UserState, shared: dict):
                 except api_client.APIError as e:
                     notify_error(f"Simulation failed: {e.detail}")
                     week_btn.enable()
-                    week_btn.text = f"Simulate Week {current_week + 1}"
+                    rest_btn.enable()
+                    week_btn.text = week_label
+
+            async def _sim_rest():
+                rest_btn.disable()
+                week_btn.disable()
+                rest_btn.text = "Simulating season..."
+                try:
+                    result = await run.io_bound(api_client.simulate_rest, state.session_id)
+                    notify_success("Regular season complete!")
+                    try:
+                        _season_actions.refresh()
+                    except RuntimeError:
+                        pass
+                except api_client.APIError as e:
+                    notify_error(f"Simulation failed: {e.detail}")
+                    rest_btn.enable()
+                    week_btn.enable()
+                    rest_btn.text = "Sim Rest of Season"
 
             week_btn.on_click(_sim_week)
+            rest_btn.on_click(_sim_rest)
 
         elif phase == "playoffs_pending":
             bracket_data = await _fetch_bracket(state.session_id)

@@ -176,6 +176,78 @@ def compute_quarter_scores(plays: list) -> tuple[dict, dict]:
 
 # ── CSV/Text generators (unchanged from Streamlit version) ──
 
+def _player_stats_markdown(player_list, team_name):
+    """Generate markdown tables for player stats from a team's player_stats list."""
+    if not player_list:
+        return []
+    lines = []
+    lines.append(f"### {team_name}")
+
+    rushers = [p for p in player_list if p.get("touches", 0) > 0]
+    if rushers:
+        rushers.sort(key=lambda p: p.get("rushing_yards", 0), reverse=True)
+        lines.append("")
+        lines.append("**Rushing**")
+        lines.append("| Player | Car | Yds | Lat | TDs | Fum |")
+        lines.append("|--------|----:|----:|----:|----:|----:|")
+        for p in rushers:
+            tag = p.get("tag", "")
+            name = p.get("name", "?")
+            lines.append(f"| {tag} {name} | {p.get('touches',0)} | {p.get('rushing_yards',0)} | {p.get('lateral_yards',0)} | {p.get('rushing_tds',0)} | {p.get('fumbles',0)} |")
+
+    receivers = [p for p in player_list if p.get("kick_pass_receptions", 0) > 0]
+    if receivers:
+        receivers.sort(key=lambda p: p.get("kick_pass_receptions", 0), reverse=True)
+        lines.append("")
+        lines.append("**Receiving (Kick Pass)**")
+        lines.append("| Player | Rec | KP Yds |")
+        lines.append("|--------|----:|-------:|")
+        for p in receivers:
+            tag = p.get("tag", "")
+            name = p.get("name", "?")
+            kp_yds = p.get("kick_pass_yards", 0)
+            lines.append(f"| {tag} {name} | {p.get('kick_pass_receptions',0)} | {kp_yds} |")
+
+    passers = [p for p in player_list if p.get("kick_passes_thrown", 0) > 0]
+    if passers:
+        passers.sort(key=lambda p: p.get("kick_passes_thrown", 0), reverse=True)
+        lines.append("")
+        lines.append("**Kick Passing**")
+        lines.append("| Player | Att | Comp | Yds | TDs | INTs |")
+        lines.append("|--------|----:|-----:|----:|----:|-----:|")
+        for p in passers:
+            tag = p.get("tag", "")
+            name = p.get("name", "?")
+            lines.append(f"| {tag} {name} | {p.get('kick_passes_thrown',0)} | {p.get('kick_passes_completed',0)} | {p.get('kick_pass_yards',0)} | {p.get('kick_pass_tds',0)} | {p.get('kick_pass_interceptions_thrown',0)} |")
+
+    kickers = [p for p in player_list if p.get("kick_att", 0) > 0 or p.get("dk_att", 0) > 0]
+    if kickers:
+        lines.append("")
+        lines.append("**Kicking**")
+        lines.append("| Player | DK | PK | Punts |")
+        lines.append("|--------|---:|---:|------:|")
+        for p in kickers:
+            tag = p.get("tag", "")
+            name = p.get("name", "?")
+            dk = f"{p.get('dk_made',0)}/{p.get('dk_att',0)}" if p.get('dk_att',0) else "-"
+            pk = f"{p.get('pk_made',0)}/{p.get('pk_att',0)}" if p.get('pk_att',0) else "-"
+            lines.append(f"| {tag} {name} | {dk} | {pk} | - |")
+
+    defenders = [p for p in player_list if p.get("tackles", 0) > 0]
+    if defenders:
+        defenders.sort(key=lambda p: p.get("tackles", 0), reverse=True)
+        lines.append("")
+        lines.append("**Defense**")
+        lines.append("| Player | Tkl | TFL | Sck | Hur | INTs |")
+        lines.append("|--------|----:|----:|----:|----:|-----:|")
+        for p in defenders[:8]:
+            tag = p.get("tag", "")
+            name = p.get("name", "?")
+            lines.append(f"| {tag} {name} | {p.get('tackles',0)} | {p.get('tfl',0)} | {p.get('sacks',0)} | {p.get('hurries',0)} | {p.get('kick_pass_ints',0)} |")
+
+    return lines
+
+
 def generate_box_score_markdown(result):
     home = result["final_score"]["home"]
     away = result["final_score"]["away"]
@@ -199,10 +271,28 @@ def generate_box_score_markdown(result):
     lines.append(f"|------|{'---:|' * 2}")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
     lines.append(f"| Touchdowns | {hs['touchdowns']} | {as_['touchdowns']} |")
+    lines.append(f"| Rushing Yards | {hs['rushing_yards']} | {as_['rushing_yards']} |")
+    lines.append(f"| KP Comp/Att | {hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)} | {as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)} |")
+    lines.append(f"| KP Yards | {hs.get('kick_pass_yards',0)} | {as_.get('kick_pass_yards',0)} |")
+    lines.append(f"| Snap Kicks | {hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)} | {as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)} |")
+    lines.append(f"| Field Goals | {hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)} | {as_.get('place_kicks_made',0)}/{as_.get('place_kicks_attempted',0)} |")
     lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
     lines.append(f"| KP Interceptions | {hs.get('kick_pass_interceptions', 0)} | {as_.get('kick_pass_interceptions', 0)} |")
-    lines.append(f"| Lateral INTs | {hs.get('lateral_interceptions', 0)} | {as_.get('lateral_interceptions', 0)} |")
-    lines.append(f"| Bonus Possessions | {hs.get('bonus_possessions', 0)} | {as_.get('bonus_possessions', 0)} |")
+    lines.append(f"| Lateral Chains | {hs.get('lateral_chains',0)} | {as_.get('lateral_chains',0)} |")
+    lines.append(f"| Penalties | {hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds | {as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds |")
+
+    ps = result.get("player_stats", {})
+    home_players = ps.get("home", [])
+    away_players = ps.get("away", [])
+    if home_players or away_players:
+        lines.append("")
+        lines.append("## Player Performance")
+        if home_players:
+            lines.extend(_player_stats_markdown(home_players, home['team']))
+        if away_players:
+            lines.append("")
+            lines.extend(_player_stats_markdown(away_players, away['team']))
+
     return "\n".join(lines)
 
 
@@ -250,10 +340,53 @@ def generate_forum_box_score(result):
     lines.append(f"  {'':22} {home['team']:>{stat_w}}  {away['team']:>{stat_w}}")
     lines.append(_stat_line("Total Yards", hs['total_yards'], as_['total_yards']))
     lines.append(_stat_line("Touchdowns (9pts)", f"{hs['touchdowns']} ({hs['touchdowns']*9}pts)", f"{as_['touchdowns']} ({as_['touchdowns']*9}pts)"))
+    lines.append(_stat_line("Rushing Yards", hs.get('rushing_yards', 0), as_.get('rushing_yards', 0)))
+    lines.append(_stat_line("KP Comp/Att", f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"))
+    lines.append(_stat_line("KP Yards", hs.get('kick_pass_yards', 0), as_.get('kick_pass_yards', 0)))
+    lines.append(_stat_line("Snap Kicks", f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}", f"{as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)}"))
+    lines.append(_stat_line("Field Goals", f"{hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)}", f"{as_.get('place_kicks_made',0)}/{as_.get('place_kicks_attempted',0)}"))
     lines.append(_stat_line("Fumbles Lost", hs['fumbles_lost'], as_['fumbles_lost']))
     lines.append(_stat_line("KP Interceptions", hs.get('kick_pass_interceptions', 0), as_.get('kick_pass_interceptions', 0)))
-    lines.append(_stat_line("Lateral INTs", hs.get('lateral_interceptions', 0), as_.get('lateral_interceptions', 0)))
-    lines.append(_stat_line("Bonus Possessions", hs.get('bonus_possessions', 0), as_.get('bonus_possessions', 0)))
+    lines.append(_stat_line("Lateral Chains", hs.get('lateral_chains', 0), as_.get('lateral_chains', 0)))
+    lines.append(_stat_line("Penalties", f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)}yds", f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)}yds"))
+
+    ps = result.get("player_stats", {})
+    home_players = ps.get("home", [])
+    away_players = ps.get("away", [])
+    if home_players or away_players:
+        lines.append("")
+        lines.append("-" * 60)
+        lines.append("INDIVIDUAL LEADERS")
+        lines.append("-" * 60)
+        for side_name, plist in [(home['team'], home_players), (away['team'], away_players)]:
+            if not plist:
+                continue
+            lines.append(f"\n  {side_name}")
+            lines.append(f"  {'-' * len(side_name)}")
+            rushers = sorted([p for p in plist if p.get("touches", 0) > 0],
+                             key=lambda x: x.get("rushing_yards", 0), reverse=True)
+            if rushers:
+                lines.append("  RUSHING:")
+                for p in rushers[:5]:
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('touches',0)} car, {p.get('rushing_yards',0)} yds, {p.get('rushing_tds',0)} TDs")
+            passers = [p for p in plist if p.get("kick_passes_thrown", 0) > 0]
+            if passers:
+                lines.append("  KICK PASSING:")
+                for p in passers[:3]:
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('kick_passes_completed',0)}/{p.get('kick_passes_thrown',0)}, {p.get('kick_pass_yards',0)} yds, {p.get('kick_pass_tds',0)} TDs")
+            receivers = sorted([p for p in plist if p.get("kick_pass_receptions", 0) > 0],
+                               key=lambda x: x.get("kick_pass_receptions", 0), reverse=True)
+            if receivers:
+                lines.append("  RECEIVING:")
+                for p in receivers[:5]:
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('kick_pass_receptions',0)} rec")
+            defenders = sorted([p for p in plist if p.get("tackles", 0) > 0],
+                               key=lambda x: x.get("tackles", 0), reverse=True)
+            if defenders:
+                lines.append("  DEFENSE:")
+                for p in defenders[:5]:
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('tackles',0)} tkl, {p.get('tfl',0)} tfl, {p.get('sacks',0)} sck")
+
     lines.append("")
     lines.append("=" * 60)
     lines.append("CVL Official Box Score | 6-down, 20-yard system")

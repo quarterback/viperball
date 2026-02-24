@@ -22,6 +22,155 @@ from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
 
 
+FCS_PREFIXES = [
+    "North", "South", "East", "West", "Central", "Upper", "Lower",
+    "Greater", "New", "Old", "Fort", "Lake", "Mount", "River",
+    "Saint", "Grand", "Little", "Big", "Prairie", "Desert",
+]
+FCS_ROOTS = [
+    "Valley", "Ridge", "Creek", "Springs", "Falls", "Plains",
+    "Bluff", "Hollow", "Crossing", "Harbor", "Haven", "Grove",
+    "Meadow", "Summit", "Pines", "Oaks", "Willows", "Brook",
+    "Field", "Dale", "Glen", "Hill", "Landing", "Bend",
+]
+FCS_SUFFIXES = [
+    "State", "A&M", "Tech", "College", "University", "Institute",
+    "Polytechnic", "Seminary", "Academy",
+]
+FCS_MASCOTS = [
+    "Wolves", "Hawks", "Bears", "Wildcats", "Panthers", "Eagles",
+    "Stallions", "Coyotes", "Owls", "Foxes", "Ravens", "Jaguars",
+    "Rams", "Falcons", "Bobcats", "Bison", "Hornets", "Badgers",
+    "Cougars", "Mustangs", "Lynx", "Otters", "Scorpions", "Herons",
+]
+
+_fcs_used_names: set = set()
+
+
+def generate_fcs_team_name() -> Tuple[str, str]:
+    """Generate a unique fictional FCS/lower-division school name and mascot."""
+    for _ in range(200):
+        style = random.choice(["prefix_root", "root_suffix", "prefix_root_suffix"])
+        if style == "prefix_root":
+            name = f"{random.choice(FCS_PREFIXES)} {random.choice(FCS_ROOTS)}"
+        elif style == "root_suffix":
+            name = f"{random.choice(FCS_ROOTS)} {random.choice(FCS_SUFFIXES)}"
+        else:
+            name = f"{random.choice(FCS_PREFIXES)} {random.choice(FCS_ROOTS)} {random.choice(FCS_SUFFIXES)}"
+        if name not in _fcs_used_names:
+            _fcs_used_names.add(name)
+            mascot = random.choice(FCS_MASCOTS)
+            return name, mascot
+    num = random.randint(100, 999)
+    name = f"Division II School #{num}"
+    return name, "Generals"
+
+
+def generate_fcs_team(name: str, mascot: str) -> Team:
+    """Generate a weak FCS/lower-division Team object for schedule-fill games.
+
+    These are throwaway teams with low ratings — the CVL team should win
+    comfortably, just like real FBS vs FCS matchups.
+    """
+    from engine.game_engine import Player, derive_halo
+
+    positions = [
+        ("Viper", True), ("Viper", False), ("Viper", False),
+        ("Zeroback", False), ("Zeroback", False), ("Zeroback", False),
+        ("Halfback", False), ("Halfback", False), ("Halfback", False), ("Halfback", False),
+        ("Wingback", False), ("Wingback", False), ("Wingback", False), ("Wingback", False),
+        ("Slotback", False), ("Slotback", False), ("Slotback", False), ("Slotback", False),
+        ("Keeper", False), ("Keeper", False), ("Keeper", False),
+        ("Offensive Line", False), ("Offensive Line", False), ("Offensive Line", False),
+        ("Offensive Line", False), ("Offensive Line", False), ("Offensive Line", False),
+        ("Offensive Line", False), ("Offensive Line", False),
+        ("Defensive Line", False), ("Defensive Line", False), ("Defensive Line", False),
+        ("Defensive Line", False), ("Defensive Line", False), ("Defensive Line", False),
+        ("Defensive Line", False),
+    ]
+
+    first_names = [
+        "Anna", "Beth", "Clara", "Diana", "Elena", "Fiona", "Grace", "Holly",
+        "Iris", "Julia", "Kate", "Lily", "Maya", "Nina", "Olivia", "Paige",
+        "Quinn", "Rosa", "Sara", "Tina", "Uma", "Val", "Wendy", "Xena",
+        "Yara", "Zoe", "Amber", "Brooke", "Celia", "Dawn", "Eve", "Faith",
+        "Gwen", "Hope", "Ivy",
+    ]
+    last_names = [
+        "Smith", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor",
+        "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin", "Garcia",
+        "Clark", "Lewis", "Lee", "Walker", "Hall", "Allen", "Young", "King",
+        "Wright", "Lopez", "Hill", "Scott", "Green", "Adams", "Baker",
+        "Nelson", "Carter", "Mitchell", "Perez", "Roberts",
+    ]
+
+    is_upset_team = random.randint(1, 100) == 1
+    if is_upset_team:
+        stat_low, stat_high = 45, 70
+    else:
+        stat_low, stat_high = 10, 30
+
+    players = []
+    used_nums: set = set()
+    for i, (pos, is_viper) in enumerate(positions):
+        num = 1 if is_viper and i == 0 else None
+        while num is None or num in used_nums:
+            num = random.randint(2, 99)
+        used_nums.add(num)
+
+        base = random.randint(stat_low, stat_high)
+        p_name = f"{random.choice(first_names)} {random.choice(last_names)}"
+        year = random.choice(["Freshman", "Sophomore", "Junior", "Senior"])
+
+        players.append(Player(
+            number=num,
+            name=p_name,
+            position=pos,
+            speed=base + random.randint(-5, 10),
+            stamina=base + random.randint(-5, 10),
+            kicking=base + random.randint(-10, 5),
+            lateral_skill=base + random.randint(-5, 5),
+            tackling=base + random.randint(-5, 10),
+            agility=base + random.randint(-5, 5),
+            power=base + random.randint(-5, 5),
+            awareness=base + random.randint(-5, 5),
+            hands=base + random.randint(-5, 5),
+            kick_power=base + random.randint(-10, 5),
+            kick_accuracy=base + random.randint(-10, 5),
+            archetype="",
+            year=year,
+        ))
+
+    abbrev = "".join(w[0] for w in name.split()[:3]).upper()
+    avg_speed = sum(p.speed for p in players) // len(players)
+    avg_stamina = sum(p.stamina for p in players) // len(players)
+    kicking = sum(p.kicking for p in players) // len(players)
+    lateral = sum(p.lateral_skill for p in players) // len(players)
+    defense = sum(p.tackling for p in players) // len(players)
+
+    prestige = random.randint(30, 55) if is_upset_team else random.randint(5, 15)
+
+    team = Team(
+        name=name,
+        abbreviation=abbrev,
+        mascot=mascot,
+        players=players,
+        avg_speed=avg_speed,
+        avg_stamina=avg_stamina,
+        kicking_strength=kicking,
+        lateral_proficiency=lateral,
+        defensive_strength=defense,
+        offense_style="balanced",
+        defense_style="base_defense",
+        st_scheme="aces",
+        prestige=prestige,
+    )
+    h_off, h_def = derive_halo(prestige)
+    team.halo_offense = h_off
+    team.halo_defense = h_def
+    return team
+
+
 @dataclass
 class TeamRecord:
     """Season record for a single team"""
@@ -245,6 +394,7 @@ class Game:
     completed: bool = False
     is_conference_game: bool = False
     is_rivalry_game: bool = False
+    is_fcs_game: bool = False
 
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
@@ -528,6 +678,9 @@ class Season:
     # Coaching staffs: team_name -> { role -> CoachCard }
     coaching_staffs: Dict[str, dict] = field(default_factory=dict)
 
+    # FCS/lower-division teams generated for schedule fill (name -> mascot)
+    fcs_teams: Dict[str, str] = field(default_factory=dict)
+
     # Injury tracker — when set, injuries affect game simulation
     injury_tracker: Optional[object] = None
 
@@ -719,11 +872,13 @@ class Season:
                 game.is_rivalry_game = True
 
     def _assign_weeks_by_type(self, non_conf_weeks: int = 3):
-        """Assign week numbers ensuring no team plays more than once per week.
+        """Assign week numbers with natural bye weeks, like real college football.
 
         Non-conference games fill early weeks (1..non_conf_weeks), conference
-        games fill later weeks.  Uses greedy slot assignment: each game goes
-        into the earliest eligible week where neither team already has a game.
+        games fill later weeks.  Each game goes into the earliest eligible week
+        where neither team already has a game.  The schedule stretches as many
+        weeks as needed — teams naturally get byes when they aren't scheduled
+        in a given week, just like Army-Navy being the only game in its week.
         """
         if not self.schedule:
             return
@@ -901,35 +1056,45 @@ class Season:
                         continue
                     _add_game(home, away, False)
 
-            short_teams = [t for t in team_names if game_counts[t] < games_per_team]
-            if short_teams:
+            for _fill_pass in range(3):
+                short_teams = [t for t in team_names if game_counts[t] < games_per_team]
+                if not short_teams:
+                    break
+
                 all_remaining = []
-                for i in range(len(short_teams)):
-                    for j in range(i + 1, len(short_teams)):
-                        pair = tuple(sorted([short_teams[i], short_teams[j]]))
+                for st in short_teams:
+                    st_conf = self.team_conferences.get(st, "")
+                    for ot in team_names:
+                        if ot == st:
+                            continue
+                        ot_conf = self.team_conferences.get(ot, "")
+                        if st_conf and ot_conf and st_conf == ot_conf:
+                            continue
+                        pair = tuple(sorted([st, ot]))
                         if pair not in scheduled_pairs:
                             all_remaining.append(pair)
-                if not all_remaining:
-                    for st in short_teams:
-                        for ot in team_names:
-                            if ot == st:
-                                continue
-                            pair = tuple(sorted([st, ot]))
-                            if pair not in scheduled_pairs and game_counts[ot] < games_per_team:
-                                all_remaining.append(pair)
                 random.shuffle(all_remaining)
                 all_remaining.sort(
-                    key=lambda p: (games_per_team - game_counts[p[0]]) + (games_per_team - game_counts[p[1]]),
+                    key=lambda p: (games_per_team - game_counts.get(p[0], 0))
+                                + (games_per_team - game_counts.get(p[1], 0)),
                     reverse=True,
                 )
                 for pair in all_remaining:
                     h, a = pair
-                    if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
-                        is_conf = (
-                            self.team_conferences.get(h, "") == self.team_conferences.get(a, "")
-                            and self.team_conferences.get(h, "") != ""
-                        )
-                        _add_game(h, a, is_conf)
+                    if game_counts[h] >= games_per_team and game_counts[a] >= games_per_team:
+                        continue
+                    _add_game(h, a, False)
+
+            short_teams = [t for t in team_names if game_counts[t] < games_per_team]
+            for st in short_teams:
+                while game_counts[st] < games_per_team:
+                    fcs_name, fcs_mascot = generate_fcs_team_name()
+                    game = Game(week=0, home_team=st, away_team=fcs_name,
+                                is_conference_game=False, is_fcs_game=True)
+                    games.append(game)
+                    scheduled_pairs.add(tuple(sorted([st, fcs_name])))
+                    game_counts[st] += 1
+                    self.fcs_teams[fcs_name] = fcs_mascot
         else:
             single_conf = len(self.conferences) == 1
             all_matchups = []
@@ -958,8 +1123,23 @@ class Season:
 
     def simulate_game(self, game: Game, verbose: bool = False, dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None) -> Dict:
         """Simulate a single game and update standings"""
-        home_team = self.teams[game.home_team]
-        away_team = self.teams[game.away_team]
+        fcs_side = None
+        if game.is_fcs_game:
+            if game.home_team in self.fcs_teams:
+                fcs_side = "home"
+                mascot = self.fcs_teams[game.home_team]
+                fcs_team_obj = generate_fcs_team(game.home_team, mascot)
+                home_team = fcs_team_obj
+                away_team = self.teams[game.away_team]
+            else:
+                fcs_side = "away"
+                mascot = self.fcs_teams[game.away_team]
+                fcs_team_obj = generate_fcs_team(game.away_team, mascot)
+                home_team = self.teams[game.home_team]
+                away_team = fcs_team_obj
+        else:
+            home_team = self.teams[game.home_team]
+            away_team = self.teams[game.away_team]
 
         home_style_config = self.style_configs.get(game.home_team, {})
         away_style_config = self.style_configs.get(game.away_team, {})
@@ -982,19 +1162,25 @@ class Season:
             total_weeks=total_weeks,
         )
 
-        # Pass injury data to game engine if tracker is available
         injury_kwargs = {}
         if self.injury_tracker is not None:
+            fcs_teams_set = set(getattr(self, 'fcs_teams', {}).keys())
+            home_is_fcs = game.home_team in fcs_teams_set
+            away_is_fcs = game.away_team in fcs_teams_set
             injury_kwargs["injury_tracker"] = self.injury_tracker
             injury_kwargs["game_week"] = game.week
-            injury_kwargs["unavailable_home"] = self.injury_tracker.get_unavailable_names(
-                game.home_team, game.week)
-            injury_kwargs["unavailable_away"] = self.injury_tracker.get_unavailable_names(
-                game.away_team, game.week)
-            injury_kwargs["dtd_home"] = self.injury_tracker.get_dtd_names(
-                game.home_team, game.week)
-            injury_kwargs["dtd_away"] = self.injury_tracker.get_dtd_names(
-                game.away_team, game.week)
+            injury_kwargs["unavailable_home"] = (
+                [] if home_is_fcs else
+                self.injury_tracker.get_unavailable_names(game.home_team, game.week))
+            injury_kwargs["unavailable_away"] = (
+                [] if away_is_fcs else
+                self.injury_tracker.get_unavailable_names(game.away_team, game.week))
+            injury_kwargs["dtd_home"] = (
+                [] if home_is_fcs else
+                self.injury_tracker.get_dtd_names(game.home_team, game.week))
+            injury_kwargs["dtd_away"] = (
+                [] if away_is_fcs else
+                self.injury_tracker.get_dtd_names(game.away_team, game.week))
 
         dq_kwargs = {}
         if dq_team_boosts:
@@ -1050,10 +1236,12 @@ class Season:
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
 
-        for p in home_team.players:
-            p.season_games_played = getattr(p, 'season_games_played', 0) + 1
-        for p in away_team.players:
-            p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+        if fcs_side != "home":
+            for p in home_team.players:
+                p.season_games_played = getattr(p, 'season_games_played', 0) + 1
+        if fcs_side != "away":
+            for p in away_team.players:
+                p.season_games_played = getattr(p, 'season_games_played', 0) + 1
 
         game.home_score = result['final_score']['home']['score']
         game.away_score = result['final_score']['away']['score']
@@ -1069,8 +1257,6 @@ class Season:
         home_won = game.home_score > game.away_score
         away_won = game.away_score > game.home_score
 
-        # V2.4: Extract defensive INTs for prestige tracking
-        # Home defensive INTs = away team's thrown INTs (and vice versa)
         away_stats = result.get("final_score", {}).get("away", {}).get("stats", {})
         home_stats = result.get("final_score", {}).get("home", {}).get("stats", {})
         home_def_ints = (away_stats.get("kick_pass_interceptions", 0)
@@ -1078,8 +1264,6 @@ class Season:
         away_def_ints = (home_stats.get("kick_pass_interceptions", 0)
                          + home_stats.get("lateral_interceptions", 0))
 
-        # V2.5: Extract rushing yards allowed and total turnovers for prestige tiers
-        # Home defense allows away team's rushing yards (and vice versa)
         home_def_rush_allowed = away_stats.get("rushing_yards", 0)
         away_def_rush_allowed = home_stats.get("rushing_yards", 0)
         home_def_turnovers = (home_def_ints
@@ -1089,27 +1273,29 @@ class Season:
                               + home_stats.get("fumbles_lost", 0)
                               + home_stats.get("turnovers_on_downs", 0))
 
-        self.standings[game.home_team].add_game_result(
-            won=home_won,
-            points_for=game.home_score,
-            points_against=game.away_score,
-            metrics=home_metrics,
-            is_conference_game=game.is_conference_game,
-            defensive_ints=home_def_ints,
-            rushing_yards_allowed=home_def_rush_allowed,
-            turnovers_forced=home_def_turnovers,
-        )
+        if fcs_side != "home" and game.home_team in self.standings:
+            self.standings[game.home_team].add_game_result(
+                won=home_won,
+                points_for=game.home_score,
+                points_against=game.away_score,
+                metrics=home_metrics,
+                is_conference_game=game.is_conference_game,
+                defensive_ints=home_def_ints,
+                rushing_yards_allowed=home_def_rush_allowed,
+                turnovers_forced=home_def_turnovers,
+            )
 
-        self.standings[game.away_team].add_game_result(
-            won=away_won,
-            points_for=game.away_score,
-            points_against=game.home_score,
-            metrics=away_metrics,
-            is_conference_game=game.is_conference_game,
-            defensive_ints=away_def_ints,
-            rushing_yards_allowed=away_def_rush_allowed,
-            turnovers_forced=away_def_turnovers,
-        )
+        if fcs_side != "away" and game.away_team in self.standings:
+            self.standings[game.away_team].add_game_result(
+                won=away_won,
+                points_for=game.away_score,
+                points_against=game.home_score,
+                metrics=away_metrics,
+                is_conference_game=game.is_conference_game,
+                defensive_ints=away_def_ints,
+                rushing_yards_allowed=away_def_rush_allowed,
+                turnovers_forced=away_def_turnovers,
+            )
 
         return result
 
