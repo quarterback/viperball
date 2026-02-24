@@ -112,9 +112,9 @@ PHILOSOPHIES = {
     'boot_raid': "Snap kick-heavy air raid with the foot",
     'ball_control': "Conservative, mistake-free football",
     'ghost': "Pre-snap chaos and Viper misdirection",
-    'rouge_hunt': "Defense-first, punt early and pin deep",
+    'stampede': "High-tempo speed run attack, outside zone",
     'chain_gang': "Maximum laterals, maximum chaos",
-    'triple_threat': "Single-wing misdirection with direct snaps",
+    'slick_n_slide': "Go-Go 2-back zone reads and run-kick options",
     'tempo_chaos': "Fast-paced, high-risk offensive tempo",
     'hybrid': "Balanced approach adapting to opponent",
     'defensive_first': "Defensive stability and ball control"

@@ -63,9 +63,9 @@ def main():
         "Xavier": {"offense_style": "balanced", "defense_style": "pressure_defense"},
         "Marquette": {"offense_style": "ground_pound", "defense_style": "run_stop_defense"},
         "Butler": {"offense_style": "ghost", "defense_style": "base_defense"},
-        "Creighton": {"offense_style": "rouge_hunt", "defense_style": "base_defense"},
+        "Creighton": {"offense_style": "stampede", "defense_style": "base_defense"},
         "Providence": {"offense_style": "chain_gang", "defense_style": "pressure_defense"},
-        "St. John's": {"offense_style": "triple_threat", "defense_style": "contain_defense"},
+        "St. John's": {"offense_style": "slick_n_slide", "defense_style": "contain_defense"},
     }
 
     # Simulate 10 seasons

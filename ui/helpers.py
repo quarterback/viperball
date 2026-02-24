@@ -35,9 +35,9 @@ OFFENSE_TOOLTIPS = {
     "boot_raid": "Air Raid with the foot. Get to the Launch Pad (opp 40-45), then fire snap kicks. Kick-heavy.",
     "ball_control": "Conservative, mistake-free football. Take the 3-point place kick when available. Win 24-21.",
     "ghost": "Pre-snap chaos. Viper misdirection, counters, and broken plays. Defense never knows who has the ball.",
-    "rouge_hunt": "Punt early, pin deep, force mistakes. Score via Pindowns, Bells, Safeties. Defense-first offense.",
+    "stampede": "High-tempo speed run offense. Stretch the defense outside with sweeps, speed options, and counters. Gets stronger as the game goes on.",
     "chain_gang": "Maximum laterals, maximum chaos. Every play is a 4-5 lateral chain. Showtime Viperball.",
-    "triple_threat": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
+    "slick_n_slide": "Go-Go inspired 2-back attack. Zone reads + run-kick pass options. Adapts to any roster by reading the defense.",
     "balanced": "No strong tendency — mixes run, chain, and kick based on game state. Jack of all trades.",
 }
 

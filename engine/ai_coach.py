@@ -22,10 +22,10 @@ from typing import Dict, Optional, Tuple
 
 
 PHILOSOPHY_TO_OFFENSE = {
-    "kick_heavy": ["boot_raid", "rouge_hunt", "ball_control"],
+    "kick_heavy": ["boot_raid", "ball_control", "stampede"],
     "lateral_heavy": ["lateral_spread", "chain_gang", "ghost"],
-    "ground_and_pound": ["ground_pound", "ball_control", "triple_threat"],
-    "hybrid": ["balanced", "ghost", "triple_threat", "ground_pound"],
+    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide"],
+    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound"],
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
@@ -71,32 +71,32 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
     if kicking >= 77 and "boot_raid" not in offense_candidates:
         offense_candidates.append("boot_raid")
-    if kicking >= 72 and "rouge_hunt" not in offense_candidates:
-        offense_candidates.append("rouge_hunt")
+    if speed >= 86 and "stampede" not in offense_candidates:
+        offense_candidates.append("stampede")
     if lateral >= 87 and "lateral_spread" not in offense_candidates:
         offense_candidates.append("lateral_spread")
     if lateral >= 85 and "chain_gang" not in offense_candidates:
         offense_candidates.append("chain_gang")
     if speed >= 87 and "ghost" not in offense_candidates:
         offense_candidates.append("ghost")
-    if speed >= 85 and "triple_threat" not in offense_candidates:
-        offense_candidates.append("triple_threat")
+    if speed >= 83 and "slick_n_slide" not in offense_candidates:
+        offense_candidates.append("slick_n_slide")
 
     weights = []
     for c in offense_candidates:
         w = 1.0
         if c == "boot_raid" and kicking >= 77:
             w += (kicking - 70) * 0.15
-        elif c == "rouge_hunt" and kicking >= 72:
-            w += (kicking - 68) * 0.10
+        elif c == "stampede" and speed >= 86:
+            w += (speed - 83) * 0.15
         elif c == "lateral_spread" and lateral >= 85:
             w += (lateral - 80) * 0.12
         elif c == "chain_gang" and lateral >= 85:
             w += (lateral - 80) * 0.10
         elif c == "ghost" and speed >= 86:
             w += (speed - 84) * 0.2
-        elif c == "triple_threat" and speed >= 85:
-            w += (speed - 83) * 0.15
+        elif c == "slick_n_slide" and speed >= 83:
+            w += (speed - 80) * 0.12
         elif c == "ground_pound" and defense >= 78:
             w += (defense - 75) * 0.1
         elif c == "ball_control":
@@ -179,9 +179,9 @@ def get_scheme_label(offense: str, defense: str) -> str:
         "boot_raid": "Boot Raid",
         "ball_control": "Ball Control",
         "ghost": "Ghost Formation",
-        "rouge_hunt": "Rouge Hunt",
+        "stampede": "Stampede",
         "chain_gang": "Chain Gang",
-        "triple_threat": "Triple Threat",
+        "slick_n_slide": "Slick 'n Slide",
         "balanced": "Balanced",
     }
     defense_labels = {

@@ -23,9 +23,9 @@ OFFENSE_STYLE_NAMES = {
     "boot_raid": "Boot Raid",
     "ball_control": "Ball Control",
     "ghost": "Ghost Formation",
-    "rouge_hunt": "Rouge Hunt",
+    "stampede": "Stampede",
     "chain_gang": "Chain Gang",
-    "triple_threat": "Triple Threat",
+    "slick_n_slide": "Slick 'n Slide",
     "balanced": "Balanced",
 }
 

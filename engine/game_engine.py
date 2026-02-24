@@ -754,12 +754,12 @@ STARTER_FIRST_LOOK = {
     "ground_pound":   {"run_starter_pct": 0.78, "recv_starter_pct": 0.60, "starter_ceiling": 30, "rotation_ceiling": 8},
     "ball_control":   {"run_starter_pct": 0.72, "recv_starter_pct": 0.58, "starter_ceiling": 28, "rotation_ceiling": 8},
     "balanced":       {"run_starter_pct": 0.65, "recv_starter_pct": 0.55, "starter_ceiling": 24, "rotation_ceiling": 9},
-    "triple_threat":  {"run_starter_pct": 0.60, "recv_starter_pct": 0.58, "starter_ceiling": 22, "rotation_ceiling": 9},
+    "slick_n_slide":  {"run_starter_pct": 0.65, "recv_starter_pct": 0.60, "starter_ceiling": 24, "rotation_ceiling": 9},
     "ghost":          {"run_starter_pct": 0.55, "recv_starter_pct": 0.52, "starter_ceiling": 22, "rotation_ceiling": 10},
     "lateral_spread": {"run_starter_pct": 0.52, "recv_starter_pct": 0.50, "starter_ceiling": 20, "rotation_ceiling": 10},
     "chain_gang":     {"run_starter_pct": 0.48, "recv_starter_pct": 0.48, "starter_ceiling": 18, "rotation_ceiling": 11},
     "boot_raid":      {"run_starter_pct": 0.62, "recv_starter_pct": 0.65, "starter_ceiling": 22, "rotation_ceiling": 9},
-    "rouge_hunt":     {"run_starter_pct": 0.70, "recv_starter_pct": 0.55, "starter_ceiling": 26, "rotation_ceiling": 9},
+    "stampede":       {"run_starter_pct": 0.68, "recv_starter_pct": 0.55, "starter_ceiling": 26, "rotation_ceiling": 9},
 }
 
 
@@ -1553,39 +1553,40 @@ OFFENSE_STYLES = {
         "kick_pass_bonus": 0.08,
         "kick_mode_aggression": 0.40,
     },
-    "rouge_hunt": {
-        "label": "Rouge Hunt",
-        "description": "Defense-first offense. Punt early, pin deep, force mistakes. Score Pindowns, Bells, Safeties.",
+    "stampede": {
+        "label": "Stampede",
+        "description": "High-tempo speed run offense. Stretch the defense outside with sweeps and speed options, exploit tired defenders.",
         "weights": {
-            "dive_option": 0.09,
-            "power": 0.07,
-            "sweep_option": 0.04,
-            "speed_option": 0.03,
-            "counter": 0.03,
-            "draw": 0.02,
-            "viper_jet": 0.02,
+            "dive_option": 0.06,
+            "power": 0.05,
+            "sweep_option": 0.14,
+            "speed_option": 0.14,
+            "counter": 0.08,
+            "draw": 0.05,
+            "viper_jet": 0.06,
             "lateral_spread": 0.06,
             "kick_pass": 0.18,
             "trick_play": 0.03,
-            "snap_kick": 0.12,
-            "field_goal": 0.08,
-            "punt": 0.22,
+            "snap_kick": 0.08,
+            "field_goal": 0.04,
+            "punt": 0.03,
         },
-        "tempo": 0.35,
-        "lateral_risk": 0.6,
-        "kick_rate": 0.50,
-        "option_rate": 0.25,
-        "run_bonus": 0.03,
-        "fatigue_resistance": 0.05,
-        "kick_accuracy_bonus": 0.05,
-        "explosive_lateral_bonus": 0.0,
-        "option_read_bonus": 0.0,
-        "broken_play_bonus": 0.0,
-        "pindown_bonus": 0.20,
-        "snap_kick_aggression": 1.4,
-        "early_punt_threshold": 3,
-        "pindown_priority": 1.5,
-        "kick_mode_aggression": 0.55,
+        "tempo": 0.85,
+        "lateral_risk": 0.8,
+        "kick_rate": 0.15,
+        "option_rate": 0.60,
+        "run_bonus": 0.05,
+        "fatigue_resistance": 0.03,
+        "kick_accuracy_bonus": 0.0,
+        "explosive_lateral_bonus": 0.05,
+        "option_read_bonus": 0.06,
+        "broken_play_bonus": 0.04,
+        "pindown_bonus": 0.0,
+        "run_vs_lateral": 0.65,
+        "early_down_aggression": 0.80,
+        "red_zone_run_pct": 0.80,
+        "fatigue_exploit_bonus": 0.10,
+        "kick_mode_aggression": 0.25,
     },
     "chain_gang": {
         "label": "Chain Gang",
@@ -1623,38 +1624,42 @@ OFFENSE_STYLES = {
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.30,
     },
-    "triple_threat": {
-        "label": "Triple Threat",
-        "description": "Single-wing misdirection. Power Flankers take direct snaps. No one knows who has the ball.",
+    "slick_n_slide": {
+        "label": "Slick 'n Slide",
+        "description": "Go-Go inspired 2-back attack. Zone reads + run-kick pass options. Reads the defense, adapts to any roster.",
         "weights": {
-            "dive_option": 0.05,
-            "power": 0.06,
-            "sweep_option": 0.05,
-            "speed_option": 0.05,
-            "counter": 0.05,
-            "draw": 0.04,
+            "dive_option": 0.12,
+            "power": 0.08,
+            "sweep_option": 0.08,
+            "speed_option": 0.08,
+            "counter": 0.07,
+            "draw": 0.05,
             "viper_jet": 0.04,
-            "lateral_spread": 0.08,
-            "kick_pass": 0.25,
-            "trick_play": 0.08,
-            "snap_kick": 0.12,
-            "field_goal": 0.06,
-            "punt": 0.04,
+            "lateral_spread": 0.05,
+            "kick_pass": 0.24,
+            "trick_play": 0.04,
+            "snap_kick": 0.08,
+            "field_goal": 0.04,
+            "punt": 0.03,
         },
-        "tempo": 0.45,
+        "tempo": 0.55,
         "lateral_risk": 0.7,
         "kick_rate": 0.20,
-        "option_rate": 0.45,
-        "run_bonus": 0.03,
+        "option_rate": 0.55,
+        "run_bonus": 0.04,
         "fatigue_resistance": 0.04,
         "kick_accuracy_bonus": 0.0,
-        "explosive_lateral_bonus": 0.0,
-        "option_read_bonus": 0.05,
-        "broken_play_bonus": 0.05,
+        "explosive_lateral_bonus": 0.03,
+        "option_read_bonus": 0.08,
+        "broken_play_bonus": 0.03,
         "pindown_bonus": 0.0,
-        "direct_snap_rate": 0.25,
-        "misdirection_bonus": 1.2,
-        "kick_mode_aggression": 0.30,
+        "run_vs_lateral": 0.60,
+        "early_down_aggression": 0.70,
+        "red_zone_run_pct": 0.75,
+        "rkpo_rate": 0.30,
+        "lead_back_bonus": 0.15,
+        "kick_pass_bonus": 0.06,
+        "kick_mode_aggression": 0.35,
     },
     "balanced": {
         "label": "Balanced",
@@ -1694,6 +1699,8 @@ STYLE_MIGRATION = {
     "power_option": "ground_pound",
     "territorial": "boot_raid",
     "option_spread": "ghost",
+    "rouge_hunt": "stampede",
+    "triple_threat": "slick_n_slide",
 }
 
 # Migration map: old 5 defense styles → new 8 schemes
@@ -1722,9 +1729,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "swarm"): 1.12,
     ("ball_control", "swarm"): 0.98,
     ("ghost", "swarm"): 0.90,
-    ("rouge_hunt", "swarm"): 1.00,
+    ("stampede", "swarm"): 0.88,
     ("chain_gang", "swarm"): 0.78,
-    ("triple_threat", "swarm"): 0.92,
+    ("slick_n_slide", "swarm"): 0.95,
     ("balanced", "swarm"): 0.95,
     # Blitz Pack pressures everything but counters/draws exploit vacated gaps
     ("ground_pound", "blitz_pack"): 0.88,
@@ -1732,9 +1739,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "blitz_pack"): 0.90,
     ("ball_control", "blitz_pack"): 0.85,
     ("ghost", "blitz_pack"): 1.15,
-    ("rouge_hunt", "blitz_pack"): 0.92,
+    ("stampede", "blitz_pack"): 1.05,
     ("chain_gang", "blitz_pack"): 1.10,
-    ("triple_threat", "blitz_pack"): 1.12,
+    ("slick_n_slide", "blitz_pack"): 1.10,
     ("balanced", "blitz_pack"): 1.00,
     # Shadow shuts down viper-based schemes but power run eats it alive
     ("ground_pound", "shadow"): 1.12,
@@ -1742,9 +1749,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "shadow"): 0.95,
     ("ball_control", "shadow"): 1.08,
     ("ghost", "shadow"): 0.80,
-    ("rouge_hunt", "shadow"): 1.00,
+    ("stampede", "shadow"): 1.10,
     ("chain_gang", "shadow"): 0.88,
-    ("triple_threat", "shadow"): 0.85,
+    ("slick_n_slide", "shadow"): 0.92,
     ("balanced", "shadow"): 0.98,
     # Fortress walls off the run game but lateral/kick pass go around
     ("ground_pound", "fortress"): 0.78,
@@ -1752,9 +1759,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "fortress"): 1.18,
     ("ball_control", "fortress"): 0.82,
     ("ghost", "fortress"): 1.05,
-    ("rouge_hunt", "fortress"): 0.95,
+    ("stampede", "fortress"): 0.85,
     ("chain_gang", "fortress"): 1.20,
-    ("triple_threat", "fortress"): 0.95,
+    ("slick_n_slide", "fortress"): 1.00,
     ("balanced", "fortress"): 1.02,
     # Predator gambles — great vs predictable offenses, burned by chaos
     ("ground_pound", "predator"): 0.90,
@@ -1762,9 +1769,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "predator"): 0.88,
     ("ball_control", "predator"): 0.85,
     ("ghost", "predator"): 1.10,
-    ("rouge_hunt", "predator"): 0.92,
+    ("stampede", "predator"): 1.08,
     ("chain_gang", "predator"): 1.05,
-    ("triple_threat", "predator"): 1.08,
+    ("slick_n_slide", "predator"): 1.05,
     ("balanced", "predator"): 0.95,
     # Drift bends but doesn't break — dies to patient ball control
     ("ground_pound", "drift"): 1.05,
@@ -1772,9 +1779,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "drift"): 0.88,
     ("ball_control", "drift"): 1.15,
     ("ghost", "drift"): 0.95,
-    ("rouge_hunt", "drift"): 0.85,
+    ("stampede", "drift"): 1.10,
     ("chain_gang", "drift"): 0.90,
-    ("triple_threat", "drift"): 1.00,
+    ("slick_n_slide", "drift"): 0.95,
     ("balanced", "drift"): 0.98,
     # Chaos wrecks predictable teams, but experienced/balanced offenses adapt
     ("ground_pound", "chaos"): 0.88,
@@ -1782,9 +1789,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "chaos"): 0.90,
     ("ball_control", "chaos"): 0.92,
     ("ghost", "chaos"): 1.05,
-    ("rouge_hunt", "chaos"): 0.90,
+    ("stampede", "chaos"): 0.92,
     ("chain_gang", "chaos"): 0.98,
-    ("triple_threat", "chaos"): 1.00,
+    ("slick_n_slide", "chaos"): 1.02,
     ("balanced", "chaos"): 1.08,
     # Lockdown denies kick pass but ground game bulldozes the light box
     ("ground_pound", "lockdown"): 1.15,
@@ -1792,9 +1799,9 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("boot_raid", "lockdown"): 0.80,
     ("ball_control", "lockdown"): 1.10,
     ("ghost", "lockdown"): 0.95,
-    ("rouge_hunt", "lockdown"): 0.88,
+    ("stampede", "lockdown"): 1.12,
     ("chain_gang", "lockdown"): 0.90,
-    ("triple_threat", "lockdown"): 1.05,
+    ("slick_n_slide", "lockdown"): 0.90,
     ("balanced", "lockdown"): 0.95,
 }
 
@@ -2271,9 +2278,9 @@ BASE_MUFF_PUNT = 0.05    # 5% base chance of muffed punt return
 OFFENSE_BLOCK_MODIFIERS = {
     "boot_raid": 0.8,
     "ball_control": 0.85,
-    "rouge_hunt": 0.85,
+    "stampede": 1.0,
     "balanced": 1.0,
-    "triple_threat": 1.05,
+    "slick_n_slide": 1.05,
     "ground_pound": 1.1,
     "ghost": 1.15,
     "lateral_spread": 1.2,
@@ -3166,11 +3173,11 @@ class ViperballEngine:
         # Forced %s are style-dependent — ground_pound leans hardest on LEAD.
         # COP only gets forced carries on speed-family plays.
         if not for_receiving:
-            lead_forced = {"ground_pound": 0.45, "rouge_hunt": 0.42, "ball_control": 0.40,
-                           "balanced": 0.35, "triple_threat": 0.30, "ghost": 0.25,
+            lead_forced = {"ground_pound": 0.45, "stampede": 0.42, "ball_control": 0.40,
+                           "slick_n_slide": 0.38, "balanced": 0.35, "ghost": 0.25,
                            "boot_raid": 0.22, "lateral_spread": 0.20, "chain_gang": 0.18}
-            comp_forced = {"ground_pound": 0.18, "rouge_hunt": 0.16, "ball_control": 0.15,
-                           "balanced": 0.14, "triple_threat": 0.14, "ghost": 0.12,
+            comp_forced = {"ground_pound": 0.18, "stampede": 0.16, "ball_control": 0.15,
+                           "slick_n_slide": 0.15, "balanced": 0.14, "ghost": 0.12,
                            "boot_raid": 0.10, "lateral_spread": 0.10, "chain_gang": 0.10}
             cop_forced_speed = 0.40
             cop_forced_normal = 0.04
@@ -4850,10 +4857,20 @@ class ViperballEngine:
             if down <= 2:
                 weights["draw"] = weights.get("draw", 0.05) * 1.5
 
-        elif style_name == "rouge_hunt":
-            early_punt = self._current_style().get("early_punt_threshold", 3)
-            if down >= early_punt and fp < 50 and ytg >= 10:
-                weights["punt"] = weights.get("punt", 0.18) * 3.0
+        elif style_name == "stampede":
+            fatigue_bonus = self._current_style().get("fatigue_exploit_bonus", 0.10)
+            if quarter >= 3:
+                weights["sweep_option"] = weights.get("sweep_option", 0.1) * (1.3 + fatigue_bonus)
+                weights["speed_option"] = weights.get("speed_option", 0.1) * (1.3 + fatigue_bonus)
+                weights["counter"] = weights.get("counter", 0.05) * (1.2 + fatigue_bonus)
+                weights["viper_jet"] = weights.get("viper_jet", 0.05) * 1.2
+            if down <= 2:
+                weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
+                weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
+            if fp >= 80:
+                weights["speed_option"] = weights.get("speed_option", 0.1) * 1.4
+                weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.4
+                weights["counter"] = weights.get("counter", 0.05) * 1.3
 
         elif style_name == "chain_gang":
             weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * 1.3
@@ -4880,13 +4897,19 @@ class ViperballEngine:
                 weights["power"] = weights.get("power", 0.02) * 3.0
                 weights["sweep_option"] = weights.get("sweep_option", 0.03) * 2.0
 
-        elif style_name == "triple_threat":
+        elif style_name == "slick_n_slide":
+            rkpo = self._current_style().get("rkpo_rate", 0.30)
+            if down <= 3 and ytg >= 5:
+                weights["kick_pass"] = weights.get("kick_pass", 0.24) * (1.0 + rkpo)
+                weights["dive_option"] = weights.get("dive_option", 0.12) * 1.2
             if down <= 2:
-                weights["counter"] = weights.get("counter", 0.05) * 1.5
-                weights["draw"] = weights.get("draw", 0.05) * 1.3
+                weights["counter"] = weights.get("counter", 0.07) * 1.4
+                weights["power"] = weights.get("power", 0.08) * 1.3
             if fp >= 70:
-                weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
-                weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.3
+                weights["dive_option"] = weights.get("dive_option", 0.12) * 1.4
+                weights["speed_option"] = weights.get("speed_option", 0.08) * 1.3
+                weights["sweep_option"] = weights.get("sweep_option", 0.08) * 1.3
+                weights["kick_pass"] = weights.get("kick_pass", 0.24) * 1.2
 
     def calculate_block_probability(self, kick_type: str = "punt") -> float:
         """

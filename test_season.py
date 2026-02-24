@@ -64,7 +64,7 @@ def main():
             "defense_style": "base_defense"
         },
         "Creighton": {
-            "offense_style": "rouge_hunt",
+            "offense_style": "stampede",
             "defense_style": "base_defense"
         },
         "Providence": {
@@ -72,7 +72,7 @@ def main():
             "defense_style": "pressure_defense"
         },
         "St. John's": {
-            "offense_style": "triple_threat",
+            "offense_style": "slick_n_slide",
             "defense_style": "contain_defense"
         },
     }
