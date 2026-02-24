@@ -30,7 +30,7 @@ The project maintains a clear separation of concerns:
 - **`main.py`**: Application entry point.
 
 ### Feature Specifications
-- **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, and a Penalty System (30+ types).
+- **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 58 yards hard cap), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, Penalty System (30+ types), Victory Formation (kneel-down with 35-40s clock burn), and Defensive Timeout Strategy (Q4 trailing defense calls TOs to preserve clock).
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions with auto-assignment and stat tracking. ZB Style System classifies Zerobacks (kick_dominant, run_dominant, dual_threat, distributor).
 - **Starter-First-Look System**: Replaces a complex role system and is applied to offense, defense, and special teams to determine player involvement and stat distribution.
 - **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays, Viper and Defensive Alignment systems, and a detailed Run Fumble System.
