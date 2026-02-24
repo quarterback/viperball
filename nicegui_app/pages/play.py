@@ -460,22 +460,24 @@ async def _render_season_play(state: UserState, shared: dict):
             await _render_season_portal(state, _season_actions)
 
         elif phase == "regular":
-            if current_week > 0:
+            has_human = bool(state.human_teams)
+            if has_human:
+                if current_week > 0:
+                    try:
+                        await render_dq_post_sim(state, state.session_id, current_week)
+                    except Exception:
+                        pass
+
                 try:
-                    render_dq_post_sim(state, state.session_id, current_week)
+                    await render_dq_bankroll_banner(state, state.session_id)
                 except Exception:
                     pass
 
-            try:
-                render_dq_bankroll_banner(state, state.session_id)
-            except Exception:
-                pass
-
-            if next_week:
-                try:
-                    render_dq_pre_sim(state, state.session_id, next_week)
-                except Exception:
-                    pass
+                if next_week:
+                    try:
+                        await render_dq_pre_sim(state, state.session_id, next_week)
+                    except Exception:
+                        pass
 
             ui.separator().classes("my-4")
 

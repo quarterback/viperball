@@ -17,7 +17,7 @@ Key changes from the Streamlit version:
 
 from __future__ import annotations
 
-from nicegui import ui
+from nicegui import ui, run
 
 from ui import api_client
 from nicegui_app.components import (
@@ -128,9 +128,9 @@ def _inject_dq_css(state):
 # Public entry points
 # ---------------------------------------------------------------------------
 
-def render_dq_bankroll_banner(state, session_id: str):
+async def render_dq_bankroll_banner(state, session_id: str):
     try:
-        status = api_client.dq_status(session_id)
+        status = await run.io_bound(api_client.dq_status, session_id)
     except api_client.APIError:
         return
 
@@ -144,11 +144,11 @@ def render_dq_bankroll_banner(state, session_id: str):
         metric_card("ROI", f"{roi:+.1f}%")
 
 
-def render_dq_pre_sim(state, session_id: str, next_week: int, key_prefix: str = ""):
+async def render_dq_pre_sim(state, session_id: str, next_week: int, key_prefix: str = ""):
     _inject_dq_css(state)
 
     try:
-        start_resp = api_client.dq_start_week(session_id, next_week)
+        start_resp = await run.io_bound(api_client.dq_start_week, session_id, next_week)
     except api_client.APIError as e:
         notify_warning(f"DraftyQueenz unavailable: {e.detail}")
         return
@@ -916,9 +916,9 @@ def render_dq_history(state, session_id: str, key_prefix: str = ""):
 # Post-sim results
 # ---------------------------------------------------------------------------
 
-def render_dq_post_sim(state, session_id: str, week: int, key_prefix: str = ""):
+async def render_dq_post_sim(state, session_id: str, week: int, key_prefix: str = ""):
     try:
-        resolve_resp = api_client.dq_resolve_week(session_id, week)
+        resolve_resp = await run.io_bound(api_client.dq_resolve_week, session_id, week)
     except api_client.APIError:
         return
 
