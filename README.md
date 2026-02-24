@@ -170,7 +170,7 @@ Viperball uses a **six-channel scoring system**. Points are awarded for the foll
 | **Snap Kick (DK)** | **5** | Drop-kicking the ball through the uprights during live play |
 | **Field Goal (PK)** | **3** | Place-kicking the ball through the uprights from scrimmage |
 | **Safety** | **2** | Tackling the ball carrier in their own end zone, or the offense committing a foul in their own end zone |
-| **Pindown** | **1** | Forcing the opponent to begin a possession inside their own 10-yard line (see [Pindown](#pindown)) |
+| **Pindown** | **1** | A single is awarded when the ball is kicked into the end zone by any legal means—other than a convert (successful or not) or a successful field goal—and the receiving team does not return (or kick) the ball out of its end zone (see [Pindown](#pindown)) |
 | **Bell** | **0.5** | Recovering a loose ball — fumble, muff, or bouncing kick (see [Bell](#bell)) |
 
 There are **no extra point attempts or conversion plays** after touchdowns. The 9-point touchdown is a terminal score — after a TD, play restarts with the opposing team receiving.
