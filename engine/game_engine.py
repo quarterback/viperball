@@ -1148,6 +1148,7 @@ class Player:
 
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
+    game_rush_carries: int = 0
     game_yards: int = 0
     game_rushing_yards: int = 0
     game_lateral_yards: int = 0
@@ -5985,6 +5986,7 @@ class ViperballEngine:
         plabel = player_label(player)
         ptag = player_tag(player)
         player.game_touches += 1
+        player.game_rush_carries += 1
         action = config['action']
 
         viper_align = self._determine_viper_alignment()
@@ -6304,6 +6306,7 @@ class ViperballEngine:
         plabel = player_label(carrier)
         ptag = player_tag(carrier)
         carrier.game_touches += 1
+        carrier.game_rush_carries += 1
 
         # Pick a secondary player involved in the trick
         secondary_pool = [p for p in skill_pool if p != carrier]
@@ -9176,6 +9179,7 @@ class ViperballEngine:
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "rush_rank": p.game_rush_rank,
                         "touches": p.game_touches,
+                        "rush_carries": p.game_rush_carries,
                         "yards": p.game_yards,
                         "rushing_yards": p.game_rushing_yards,
                         "rushing_tds": p.game_rushing_tds,
@@ -9242,10 +9246,10 @@ class ViperballEngine:
                     "score": self.state.away_score,
                 },
             },
-            "home_style": self.home_team.offense_style,
-            "away_style": self.away_team.offense_style,
-            "home_defense_style": self.home_team.defense_style,
-            "away_defense_style": self.away_team.defense_style,
+            "home_style": STYLE_MIGRATION.get(self.home_team.offense_style, self.home_team.offense_style),
+            "away_style": STYLE_MIGRATION.get(self.away_team.offense_style, self.away_team.offense_style),
+            "home_defense_style": DEFENSE_STYLE_MIGRATION.get(self.home_team.defense_style, self.home_team.defense_style),
+            "away_defense_style": DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style),
             "home_st_scheme": self.home_team.st_scheme,
             "away_st_scheme": self.away_team.st_scheme,
             "sacrifice_yards": {
@@ -9460,13 +9464,15 @@ class ViperballEngine:
         penalty_yards = sum(p.penalty.yards for p in penalties_accepted)
 
         run_plays = [p for p in plays if p.play_type in ("run", "trick_play")]
-        rushing_yards = sum(max(0, p.yards_gained) for p in run_plays)
+        rushing_carries = len(run_plays)
+        rushing_yards = sum(p.yards_gained for p in run_plays)
         rushing_tds = len([p for p in run_plays if p.result == "touchdown"])
         lateral_chain_plays = [p for p in plays if p.play_type == "lateral_chain" and not p.fumble]
         lateral_yards = sum(max(0, p.yards_gained) for p in lateral_chain_plays)
 
         return {
             "total_yards": total_yards,
+            "rushing_carries": rushing_carries,
             "rushing_yards": rushing_yards,
             "rushing_touchdowns": rushing_tds,
             "lateral_yards": lateral_yards,

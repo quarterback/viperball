@@ -712,11 +712,12 @@ async def _render_player_stats(session_id, standings, conferences, has_conferenc
                             "Team": p["team"],
                             "Pos": p["tag"].split(" ")[0] if " " in p["tag"] else p["tag"][:2],
                             "GP": p["games_played"],
-                            "Touches": p["touches"],
+                            "CAR": p.get("rush_carries", 0),
                             "Rush Yds": p["rushing_yards"],
+                            "YPC": p.get("yards_per_carry", 0),
+                            "Rush TDs": p.get("rushing_tds", 0),
                             "Lat Yds": p["lateral_yards"],
                             "Total Yds": p["yards"],
-                            "Yds/Touch": p["yards_per_touch"],
                             "TDs": p["tds"],
                             "Fumbles": p["fumbles"],
                         })
@@ -1166,11 +1167,13 @@ async def _render_team_browser(session_id, standings, conferences, has_conferenc
                                 metric_card("TDs", player_season["tds"])
                                 metric_card("Fumbles", player_season["fumbles"])
 
-                            if player_season["rushing_yards"] > 0 or player_season["lateral_yards"] > 0:
+                            if player_season.get("rush_carries", 0) > 0 or player_season["rushing_yards"] > 0 or player_season["lateral_yards"] > 0:
                                 with ui.row().classes("w-full flex-wrap gap-3"):
+                                    metric_card("Carries", player_season.get("rush_carries", 0))
                                     metric_card("Rush Yards", player_season["rushing_yards"])
+                                    metric_card("YPC", player_season.get("yards_per_carry", 0))
+                                    metric_card("Rush TDs", player_season.get("rushing_tds", 0))
                                     metric_card("Lateral Yards", player_season["lateral_yards"])
-                                    metric_card("Yds/Touch", player_season["yards_per_touch"])
 
                             if player_season["kick_att"] > 0:
                                 with ui.row().classes("w-full flex-wrap gap-3"):

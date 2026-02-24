@@ -196,7 +196,7 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
         {"Stat": "Pindowns (1pt)", home_name: str(hs.get('pindowns', 0)), away_name: str(as_.get('pindowns', 0))},
         {"Stat": "Strikes (1/2pt)", home_name: str(hs.get('fumble_recoveries', 0)), away_name: str(as_.get('fumble_recoveries', 0))},
         {"Stat": "Total Yards", home_name: str(hs['total_yards']), away_name: str(as_['total_yards'])},
-        {"Stat": "Rushing Yards", home_name: str(hs.get('rushing_yards', 0)), away_name: str(as_.get('rushing_yards', 0))},
+        {"Stat": "Rushing", home_name: f"{hs.get('rushing_carries',0)} car, {hs.get('rushing_yards',0)} yds", away_name: f"{as_.get('rushing_carries',0)} car, {as_.get('rushing_yards',0)} yds"},
         {"Stat": "Lateral Yards", home_name: str(hs.get('lateral_yards', 0)), away_name: str(as_.get('lateral_yards', 0))},
         {"Stat": "KP (Comp/Att)", home_name: f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", away_name: f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"},
         {"Stat": "Receiving Yds", home_name: str(hs.get('kick_pass_yards', 0)), away_name: str(as_.get('kick_pass_yards', 0))},
@@ -238,7 +238,7 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
                     continue
                 ui.markdown(f"**{side_name}**")
 
-                rush_rows = [p for p in side_ps if p.get("touches", 0) > 0]
+                rush_rows = [p for p in side_ps if p.get("rush_carries", 0) > 0]
                 if rush_rows:
                     ui.label("Rushing").classes("text-sm text-gray-500")
                     rush_data = []
@@ -246,7 +246,7 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
                         rush_data.append({
                             "Player": f"{p['tag']} {p['name']}",
                             "Arch": p.get("archetype", ""),
-                            "CAR": p["touches"],
+                            "CAR": p.get("rush_carries", 0),
                             "Rush Yds": p.get("rushing_yards", 0),
                             "Lat Yds": p.get("lateral_yards", 0),
                             "TD": p["tds"], "FUM": p["fumbles"],

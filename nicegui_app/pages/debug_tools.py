@@ -722,6 +722,7 @@ def _render_offensive_stats(results, n, home_name, away_name):
         stats_list = _side_stats(side)
         ui.label(f"{label} Offense").classes("text-xl font-semibold mt-4")
 
+        rush_car = [s.get("rushing_carries", 0) for s in stats_list]
         rush_yds = [s.get("rushing_yards", 0) for s in stats_list]
         rush_tds = [s.get("rushing_touchdowns", 0) for s in stats_list]
         kp_att = [s.get("kick_passes_attempted", 0) for s in stats_list]
@@ -751,7 +752,7 @@ def _render_offensive_stats(results, n, home_name, away_name):
             metric_card("Avg Plays", _avg(total_plays))
 
         off_rows = [
-            {"Category": "Rushing", "Avg/Game": f"{_avg(rush_yds)} yds", "Total": str(sum(rush_yds)), "Avg TDs": str(_avg(rush_tds))},
+            {"Category": "Rushing", "Avg/Game": f"{_avg(rush_car)} car, {_avg(rush_yds)} yds ({round(sum(rush_yds)/max(1,sum(rush_car)),1)} YPC)", "Total": str(sum(rush_yds)), "Avg TDs": str(_avg(rush_tds))},
             {"Category": "Kick Pass", "Avg/Game": f"{_avg(kp_att)} att, {_avg(kp_comp)} comp ({avg_comp_pct}%)", "Total": f"{sum(kp_yds)} yds", "Avg TDs": str(_avg(kp_tds))},
             {"Category": "KP Yards", "Avg/Game": f"{_avg(kp_yds)} yds", "Total": str(sum(kp_yds)), "Avg TDs": f"{_avg(kp_ints)} INTs"},
             {"Category": "Laterals", "Avg/Game": f"{_avg(lat_chains)} chains", "Total": f"{sum(lat_yds)} yds", "Avg TDs": f"{_avg(lat_eff)}% eff"},

@@ -1103,8 +1103,10 @@ def season_player_stats(
                         "archetype": p.get("archetype", ""),
                         "games_played": 0,
                         "touches": 0,
+                        "rush_carries": 0,
                         "yards": 0,
                         "rushing_yards": 0,
+                        "rushing_tds": 0,
                         "lateral_yards": 0,
                         "tds": 0,
                         "fumbles": 0,
@@ -1149,7 +1151,8 @@ def season_player_stats(
                 if not agg["archetype"] or agg["archetype"] == "—":
                     agg["archetype"] = p.get("archetype", "")
                 for stat in [
-                    "touches", "yards", "rushing_yards", "lateral_yards",
+                    "touches", "rush_carries", "yards", "rushing_yards",
+                    "rushing_tds", "lateral_yards",
                     "tds", "fumbles", "laterals_thrown", "lateral_receptions",
                     "lateral_assists", "lateral_tds", "kick_att", "kick_made",
                     "pk_att", "pk_made", "dk_att", "dk_made",
@@ -1175,6 +1178,7 @@ def season_player_stats(
 
     for r in results:
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
+        r["yards_per_carry"] = round(r["rushing_yards"] / max(1, r["rush_carries"]), 1)
         r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
         r["pk_pct"] = round(r["pk_made"] / max(1, r["pk_att"]) * 100, 1)
         r["dk_pct"] = round(r["dk_made"] / max(1, r["dk_att"]) * 100, 1)

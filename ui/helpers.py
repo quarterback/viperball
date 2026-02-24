@@ -331,17 +331,17 @@ def generate_forum_box_score(result):
         lines.append(f"INDIVIDUAL STATS — {side_name.upper()}")
         lines.append("-" * 60)
 
-        rushers = [p for p in side_ps if p.get("touches", 0) > 0]
+        rushers = [p for p in side_ps if p.get("rush_carries", 0) > 0]
         if rushers:
             lines.append("")
             lines.append("  Rushing & Laterals")
-            lines.append(f"  {'Player':<28} TCH  YDS  RUSH  LAT   TD  FUM  L.Thr L.Rec")
+            lines.append(f"  {'Player':<28} CAR  YDS  RUSH  LAT   TD  FUM  L.Thr L.Rec")
             lines.append(f"  {'-'*28} ---  ---  ----  ---   --  ---  ----- -----")
             for p in rushers:
                 name = f"{p['tag']} {p['name']}"
                 if len(name) > 28:
                     name = name[:27] + "."
-                lines.append(f"  {name:<28} {p['touches']:>3}  {p['yards']:>3}  {p.get('rushing_yards',0):>4}  {p.get('lateral_yards',0):>3}   {p['tds']:>2}  {p['fumbles']:>3}  {p.get('laterals_thrown',0):>5} {p.get('lateral_receptions',0):>5}")
+                lines.append(f"  {name:<28} {p.get('rush_carries',0):>3}  {p['yards']:>3}  {p.get('rushing_yards',0):>4}  {p.get('lateral_yards',0):>3}   {p['tds']:>2}  {p['fumbles']:>3}  {p.get('laterals_thrown',0):>5} {p.get('lateral_receptions',0):>5}")
 
         kickers = [p for p in side_ps if p.get("kick_att", 0) > 0]
         if kickers:
@@ -632,7 +632,7 @@ def render_game_detail(result, key_prefix="gd"):
                     continue
                 st.markdown(f"**{side_name}**")
 
-                rush_rows = [p for p in side_ps if p.get("touches", 0) > 0]
+                rush_rows = [p for p in side_ps if p.get("rush_carries", 0) > 0]
                 if rush_rows:
                     st.caption("Rushing & Laterals")
                     rush_df = []
@@ -640,9 +640,8 @@ def render_game_detail(result, key_prefix="gd"):
                         rush_df.append({
                             "Player": f"{p['tag']} {p['name']}",
                             "Arch": p.get("archetype", ""),
-                            "TCH": p["touches"],
-                            "YDS": p["yards"],
-                            "RUSH": p.get("rushing_yards", 0),
+                            "CAR": p.get("rush_carries", 0),
+                            "Rush Yds": p.get("rushing_yards", 0),
                             "LAT": p.get("lateral_yards", 0),
                             "TD": p["tds"],
                             "FUM": p["fumbles"],

@@ -304,14 +304,8 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
 
     # Rushing
     ui.label("Rushing").classes("font-bold text-slate-700 mt-4")
-    h_rush_att = sum(
-        v for k, v in hs.get("play_family_breakdown", {}).items()
-        if k in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw", "viper_jet")
-    )
-    a_rush_att = sum(
-        v for k, v in as_.get("play_family_breakdown", {}).items()
-        if k in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw", "viper_jet")
-    )
+    h_rush_att = hs.get("rushing_carries", 0)
+    a_rush_att = as_.get("rushing_carries", 0)
     h_rush_yds = hs.get("rushing_yards", 0)
     a_rush_yds = as_.get("rushing_yards", 0)
     h_rush_ypc = round(h_rush_yds / max(1, h_rush_att), 1)
@@ -388,7 +382,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                     continue
                 ui.label(tname).classes("font-bold text-slate-700 mt-2")
 
-                rushers = [p for p in pstats if p.get("touches", 0) > 0]
+                rushers = [p for p in pstats if p.get("rush_carries", 0) > 0]
                 if rushers:
                     ui.label("Rushing").classes("text-sm text-gray-500 mt-1")
 
@@ -406,7 +400,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                     rush_rows = [
                         {
                             "Player": _rush_label(p),
-                            "CAR": p["touches"], "Rush Yds": p.get("rushing_yards", 0),
+                            "CAR": p.get("rush_carries", 0), "Rush Yds": p.get("rushing_yards", 0),
                             "Lat Yds": p.get("lateral_yards", 0),
                             "TD": p["tds"], "FUM": p["fumbles"],
                         }

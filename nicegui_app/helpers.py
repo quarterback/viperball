@@ -183,7 +183,7 @@ def _player_stats_markdown(player_list, team_name):
     lines = []
     lines.append(f"### {team_name}")
 
-    rushers = [p for p in player_list if p.get("touches", 0) > 0]
+    rushers = [p for p in player_list if p.get("rush_carries", 0) > 0]
     if rushers:
         rushers.sort(key=lambda p: p.get("rushing_yards", 0), reverse=True)
         lines.append("")
@@ -193,7 +193,7 @@ def _player_stats_markdown(player_list, team_name):
         for p in rushers:
             tag = p.get("tag", "")
             name = p.get("name", "?")
-            lines.append(f"| {tag} {name} | {p.get('touches',0)} | {p.get('rushing_yards',0)} | {p.get('lateral_yards',0)} | {p.get('rushing_tds',0)} | {p.get('fumbles',0)} |")
+            lines.append(f"| {tag} {name} | {p.get('rush_carries',0)} | {p.get('rushing_yards',0)} | {p.get('lateral_yards',0)} | {p.get('rushing_tds',0)} | {p.get('fumbles',0)} |")
 
     receivers = [p for p in player_list if p.get("kick_pass_receptions", 0) > 0]
     if receivers:
@@ -271,7 +271,9 @@ def generate_box_score_markdown(result):
     lines.append(f"|------|{'---:|' * 2}")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
     lines.append(f"| Touchdowns | {hs['touchdowns']} | {as_['touchdowns']} |")
-    lines.append(f"| Rushing Yards | {hs['rushing_yards']} | {as_['rushing_yards']} |")
+    h_car = hs.get('rushing_carries', 0)
+    a_car = as_.get('rushing_carries', 0)
+    lines.append(f"| Rushing | {h_car} car, {hs['rushing_yards']} yds ({round(hs['rushing_yards']/max(1,h_car),1)} YPC) | {a_car} car, {as_['rushing_yards']} yds ({round(as_['rushing_yards']/max(1,a_car),1)} YPC) |")
     lines.append(f"| KP Comp/Att | {hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)} | {as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)} |")
     lines.append(f"| KP Yards | {hs.get('kick_pass_yards',0)} | {as_.get('kick_pass_yards',0)} |")
     lines.append(f"| Snap Kicks | {hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)} | {as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)} |")
@@ -340,7 +342,9 @@ def generate_forum_box_score(result):
     lines.append(f"  {'':22} {home['team']:>{stat_w}}  {away['team']:>{stat_w}}")
     lines.append(_stat_line("Total Yards", hs['total_yards'], as_['total_yards']))
     lines.append(_stat_line("Touchdowns (9pts)", f"{hs['touchdowns']} ({hs['touchdowns']*9}pts)", f"{as_['touchdowns']} ({as_['touchdowns']*9}pts)"))
-    lines.append(_stat_line("Rushing Yards", hs.get('rushing_yards', 0), as_.get('rushing_yards', 0)))
+    h_car2 = hs.get('rushing_carries', 0)
+    a_car2 = as_.get('rushing_carries', 0)
+    lines.append(_stat_line("Rushing", f"{h_car2} car, {hs.get('rushing_yards',0)} yds", f"{a_car2} car, {as_.get('rushing_yards',0)} yds"))
     lines.append(_stat_line("KP Comp/Att", f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"))
     lines.append(_stat_line("KP Yards", hs.get('kick_pass_yards', 0), as_.get('kick_pass_yards', 0)))
     lines.append(_stat_line("Snap Kicks", f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}", f"{as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)}"))
@@ -363,12 +367,12 @@ def generate_forum_box_score(result):
                 continue
             lines.append(f"\n  {side_name}")
             lines.append(f"  {'-' * len(side_name)}")
-            rushers = sorted([p for p in plist if p.get("touches", 0) > 0],
+            rushers = sorted([p for p in plist if p.get("rush_carries", 0) > 0],
                              key=lambda x: x.get("rushing_yards", 0), reverse=True)
             if rushers:
                 lines.append("  RUSHING:")
                 for p in rushers[:5]:
-                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('touches',0)} car, {p.get('rushing_yards',0)} yds, {p.get('rushing_tds',0)} TDs")
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('rush_carries',0)} car, {p.get('rushing_yards',0)} yds, {p.get('rushing_tds',0)} TDs")
             passers = [p for p in plist if p.get("kick_passes_thrown", 0) > 0]
             if passers:
                 lines.append("  KICK PASSING:")
