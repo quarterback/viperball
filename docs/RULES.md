@@ -160,7 +160,7 @@ Viperball uses a **six-channel scoring system**. Points are awarded for the foll
 | **Snap Kick (DK)** | **5** | Drop-kicking the ball through the uprights during live play |
 | **Field Goal (PK)** | **3** | Place-kicking the ball through the uprights from scrimmage |
 | **Safety** | **2** | Tackling the ball carrier in their own end zone, or the offense committing a foul in their own end zone |
-| **Pindown** | **1** | Forcing the opponent to begin a possession inside their own 10-yard line (see [Pindown](#pindown)) |
+| **Pindown** | **1** | Awarded when a kick enters the end zone and the receiving team does not return it out (see [Pindown](#pindown)) |
 | **Bell** | **0.5** | Recovering a loose ball — fumble, muff, or bouncing kick (see [Bell](#bell)) |
 
 There are **no extra point attempts or conversion plays** after touchdowns. The 9-point touchdown is a terminal score — after a TD, play restarts with the opposing team receiving.
@@ -190,11 +190,11 @@ Teams typically attempt place kicks when:
 
 ### Pindown
 
-A pindown is worth **1 point** and is awarded to the kicking team when the receiving team begins a possession inside its own 10-yard line. This occurs most commonly after punts that pin the opponent deep.
+A pindown is worth **1 point** and is awarded to the kicking team when a kicked ball enters the opponent's end zone and the receiving team does not return or kick it back out. This can occur on punts, missed field goals, or missed snap kicks — any kick other than a successful score or a convert attempt.
 
-The pindown is Viperball's equivalent of the **rouge** or **single** in Canadian football — a field-position score that rewards directional kicking. Teams that specialize in territorial offense (notably those running the **Rouge Hunt** scheme) actively hunt pindowns as a scoring strategy, treating punts as offensive weapons rather than concessions.
+The pindown is Viperball's version of the **rouge** or **single** in Canadian football. If the receiving team fields the ball in the end zone and runs it out, no pindown is awarded and play continues from wherever the returner is tackled. If the ball sails through the end zone untouched, or the returner is tackled or takes a knee in the end zone, the kicking team earns the point and the receiving team restarts from their own 25-yard line.
 
-A team that earns 4–6 pindowns in a game has added 4–6 points to its total without ever crossing midfield on offense. In close games, pindowns are often the margin of victory.
+Teams that specialize in territorial offense (notably those running the **Rouge Hunt** scheme) actively hunt pindowns as a scoring strategy, treating punts as offensive weapons rather than concessions. A team that earns 4–6 pindowns in a game has added 4–6 points to its total without ever crossing midfield on offense. In close games, pindowns are often the margin of victory.
 
 ### Bell
 
@@ -295,9 +295,9 @@ The place kick is a set-piece scoring kick worth 3 points. The ball is held on t
 
 ### Punt
 
-A punt is a territorial kick used to surrender possession while pushing the opponent deep into their own territory. The punter drops the ball and kicks it before it hits the ground. Punts are the primary weapon for teams seeking **pindowns** — a punt that pins the opponent inside the 10-yard line scores 1 point.
+A punt is a territorial kick used to surrender possession while pushing the opponent deep into their own territory. The punter drops the ball and kicks it before it hits the ground. Punts are the primary weapon for teams seeking **pindowns** — a punt that enters the end zone and is not returned scores 1 point for the kicking team.
 
-A punt that enters the end zone without being fielded results in a **touchback** — the receiving team takes over at the 25-yard line.
+If a punt enters the end zone and the receiving team successfully returns it out, play continues from the spot of the tackle and no pindown is awarded.
 
 ### Kick Pass
 
@@ -607,7 +607,7 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Lateral Spread** — An offensive scheme that stretches the defense horizontally using 2–4 lateral chains per play.
 
-**Pindown** — 1-point score awarded when the opponent begins a possession inside their own 10-yard line.
+**Pindown** — 1-point score awarded when a kicked ball enters the end zone and the receiving team does not return it out. Viperball's version of the CFL rouge.
 
 **PK** — Abbreviation for place kick. See Field Goal.
 

@@ -1,0 +1,78 @@
+{
+  "team_info": {
+    "school_id": "michigan_flint",
+    "school": "University of Michigan-Flint",
+    "school_name": "University of Michigan-Flint",
+    "abbreviation": "UMF",
+    "mascot": "Wolverines",
+    "conference": "Giant 14",
+    "city": "Flint",
+    "state": "MI",
+    "colors": [
+      "Maize",
+      "Blue"
+    ]
+  },
+  "identity": {
+    "style": "aggressive",
+    "philosophy": "hybrid",
+    "tempo": "medium",
+    "two_way_emphasis": "medium"
+  },
+  "recruiting_pipeline": {
+    "south": 0.1,
+    "midwest": 0.5,
+    "mid_atlantic": 0.15,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "caribbean": 0.1,
+    "canadian_french": 0.05
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "base_defense"
+  },
+  "coaching_staff": {
+    "head_coach": {
+      "coach_id": "coach_tanya_williams_188",
+      "first_name": "Tanya",
+      "last_name": "Williams",
+      "gender": "female",
+      "age": 44,
+      "role": "head_coach",
+      "classification": "tactician",
+      "instincts": 62,
+      "leadership": 71,
+      "composure": 58,
+      "rotations": 65,
+      "development": 70,
+      "recruiting": 55,
+      "contract_salary": 195000,
+      "contract_years_remaining": 4,
+      "contract_buyout": 292500,
+      "year_signed": 2026,
+      "team_name": "University of Michigan-Flint",
+      "career_wins": 28,
+      "career_losses": 36,
+      "championships": 0,
+      "seasons_coached": 6,
+      "career_history": [],
+      "is_former_player": false,
+      "former_player_id": null,
+      "philosophy": "Balanced attack with opportunistic kicking",
+      "coaching_style": "structured",
+      "personality": "disciplined motivator",
+      "background": "Former Division II coordinator promoted to head coach",
+      "sub_archetype": "builder",
+      "personality_sliders": {
+        "aggression": 55,
+        "risk_tolerance": 48,
+        "chaos_appetite": 40,
+        "tempo_preference": 50,
+        "composure_tendency": 62,
+        "adaptability": 58
+      }
+    }
+  },
+  "name": "University of Michigan-Flint"
+}

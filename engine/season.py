@@ -619,13 +619,18 @@ class Season:
         already_scheduled: set,
         existing_conf_counts: dict,
     ) -> List[Tuple[str, str]]:
-        """Build a balanced set of conference pairs guaranteeing exact counts.
+        """Build a balanced set of conference pairs using the round-dropping method.
 
-        For even-sized conferences, selects K rounds from a round-robin which
-        gives every team exactly K games.  For odd-sized conferences, uses a
-        round-robin with a dummy team (bye), selects rounds, then patches any
-        shortfalls from the remaining opponent pool.  Retries with different
-        shuffles if the first attempt doesn't fill perfectly.
+        Algorithm (works for any conference size N, target K):
+          1. Generate a full round-robin (circle method, ghost team for odd N).
+             This produces N-1 (even) or N (odd) rounds.
+          2. If K >= opponents, use full round-robin.
+          3. Otherwise, keep exactly K rounds and drop the rest.
+             Dropping full rounds guarantees every team loses exactly one
+             opponent per dropped round, preserving perfect balance.
+          4. For odd N, one team has a bye each round. Keeping K rounds means
+             each team plays in K or K-1 of them (depending on whether their
+             bye round was kept). A greedy patch fills any 1-game shortfalls.
         """
         needed = {}
         for t in team_list:
@@ -645,65 +650,49 @@ class Season:
                         result.append(pair)
             return result
 
+        rounds = Season._round_robin_rounds(team_list)
+        rounds_to_keep = max(needed.values())
+
         best_selected: List[Tuple[str, str]] = []
         best_deficit = n * target_per_team
 
-        for _attempt in range(20):
-            rounds = Season._round_robin_rounds(team_list)
+        for _attempt in range(10):
             random.shuffle(rounds)
+            kept_rounds = rounds[:rounds_to_keep]
 
-            selected_set: set = set()
             selected: List[Tuple[str, str]] = []
+            selected_set: set = set()
             counts = {t: 0 for t in team_list}
 
-            for rnd in rounds:
-                eligible = []
+            for rnd in kept_rounds:
                 for pair in rnd:
-                    if pair in already_scheduled or pair in selected_set:
+                    if pair in already_scheduled:
                         continue
                     h, a = pair
-                    if counts[h] < needed[h] and counts[a] < needed[a]:
-                        eligible.append(pair)
-                for pair in eligible:
-                    h, a = pair
-                    if counts[h] < needed[h] and counts[a] < needed[a]:
-                        selected.append(pair)
-                        selected_set.add(pair)
-                        counts[h] += 1
-                        counts[a] += 1
+                    selected.append(pair)
+                    selected_set.add(pair)
+                    counts[h] += 1
+                    counts[a] += 1
 
             deficit = sum(max(0, needed[t] - counts[t]) for t in team_list)
-
             if deficit == 0:
                 return selected
 
-            remaining = []
-            for i in range(n):
-                for j in range(i + 1, n):
-                    pair = tuple(sorted([team_list[i], team_list[j]]))
+            short_teams = [t for t in team_list if counts[t] < needed[t]]
+            patch_pairs = []
+            for i in range(len(short_teams)):
+                for j in range(i + 1, len(short_teams)):
+                    pair = tuple(sorted([short_teams[i], short_teams[j]]))
                     if pair not in already_scheduled and pair not in selected_set:
-                        remaining.append(pair)
-
-            for _fill in range(20):
-                if all(counts[t] >= needed[t] for t in team_list):
-                    break
-                random.shuffle(remaining)
-                remaining.sort(
-                    key=lambda p: (needed[p[0]] - counts[p[0]]) + (needed[p[1]] - counts[p[1]]),
-                    reverse=True,
-                )
-                added = False
-                for pair in remaining:
-                    h, a = pair
-                    if counts[h] < needed[h] and counts[a] < needed[a]:
-                        selected.append(pair)
-                        selected_set.add(pair)
-                        counts[h] += 1
-                        counts[a] += 1
-                        added = True
-                if not added:
-                    break
-                remaining = [p for p in remaining if p not in selected_set]
+                        patch_pairs.append(pair)
+            random.shuffle(patch_pairs)
+            for pair in patch_pairs:
+                h, a = pair
+                if counts[h] < needed[h] and counts[a] < needed[a]:
+                    selected.append(pair)
+                    selected_set.add(pair)
+                    counts[h] += 1
+                    counts[a] += 1
 
             deficit = sum(max(0, needed[t] - counts[t]) for t in team_list)
             if deficit == 0:
@@ -899,13 +888,48 @@ class Season:
                         nonconf_matchups.append((t1, t2))
             random.shuffle(nonconf_matchups)
 
-            for home, away in nonconf_matchups:
-                if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
-                    continue
-                pair = tuple(sorted([home, away]))
-                if pair in scheduled_pairs:
-                    continue
-                _add_game(home, away, False)
+            for _pass in range(3):
+                nonconf_matchups.sort(
+                    key=lambda p: (games_per_team - game_counts[p[0]]) + (games_per_team - game_counts[p[1]]),
+                    reverse=True,
+                )
+                for home, away in nonconf_matchups:
+                    if game_counts[home] >= games_per_team or game_counts[away] >= games_per_team:
+                        continue
+                    pair = tuple(sorted([home, away]))
+                    if pair in scheduled_pairs:
+                        continue
+                    _add_game(home, away, False)
+
+            short_teams = [t for t in team_names if game_counts[t] < games_per_team]
+            if short_teams:
+                all_remaining = []
+                for i in range(len(short_teams)):
+                    for j in range(i + 1, len(short_teams)):
+                        pair = tuple(sorted([short_teams[i], short_teams[j]]))
+                        if pair not in scheduled_pairs:
+                            all_remaining.append(pair)
+                if not all_remaining:
+                    for st in short_teams:
+                        for ot in team_names:
+                            if ot == st:
+                                continue
+                            pair = tuple(sorted([st, ot]))
+                            if pair not in scheduled_pairs and game_counts[ot] < games_per_team:
+                                all_remaining.append(pair)
+                random.shuffle(all_remaining)
+                all_remaining.sort(
+                    key=lambda p: (games_per_team - game_counts[p[0]]) + (games_per_team - game_counts[p[1]]),
+                    reverse=True,
+                )
+                for pair in all_remaining:
+                    h, a = pair
+                    if game_counts[h] < games_per_team and game_counts[a] < games_per_team:
+                        is_conf = (
+                            self.team_conferences.get(h, "") == self.team_conferences.get(a, "")
+                            and self.team_conferences.get(h, "") != ""
+                        )
+                        _add_game(h, a, is_conf)
         else:
             single_conf = len(self.conferences) == 1
             all_matchups = []
