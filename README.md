@@ -12,8 +12,6 @@ Someone in r/CFB posted a hypothetical: *[What if the entire 1894 Yale team came
 
 That question is Viperball.
 
-# Viperball
-
 **Viperball** is a gridiron football code designed for speed, tactical kicking, and lateral ball movement. It is the primary sport of the **Collegiate Viperball League (CVL)**, a 187-team women's collegiate athletic conference system across the United States.
 
 The sport evolved from early American football's pre-forward-pass era, retaining the centrality of kicking, two-way play, and lateral ball handling while developing its own modern strategic identity. Viperball uses a Canadian football (CFL-spec) ball, employs no forward passing of any kind, and features a distinctive multi-channel scoring system.
