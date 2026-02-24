@@ -1,7 +1,7 @@
 # Viperball Simulation Sandbox
 
 ## Overview
-The Viperball Simulation Sandbox is a browser-accessible platform for the Collegiate Viperball League (CVL) engine. It serves as an internal tool for playtesting, debugging, and tuning game mechanics across various devices. The platform supports detailed simulation and analysis of Viperball game logic, season progression, and multi-season dynasty modes. It offers insights through features like detailed box scores, play-by-play logs, and custom sabermetrics, aiming to enhance game development and understanding.
+The Viperball Simulation Sandbox is a browser-accessible platform for the Collegiate Viperball League (CVL) engine. It functions as an internal tool for playtesting, debugging, and tuning game mechanics across various devices. The platform facilitates detailed simulation and analysis of Viperball game logic, season progression, and multi-season dynasty modes. Its purpose is to enhance game development and understanding by providing insights through features like detailed box scores, play-by-play logs, and custom sabermetrics.
 
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
@@ -15,96 +15,34 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## System Architecture
 
 ### UI/UX Decisions
-The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings:
-- **Play**: Manages game modes (New Dynasty, New Season, Quick Game) and simulation controls during active sessions.
-- **League**: Displays read-only league-wide data (Standings, Power Rankings, Conferences, Postseason, Schedule, Awards & Stats, Injury Report).
-- **My Team**: Provides a focused view of user-coached teams, including Dashboard (with Injury Report), Roster, Schedule, and History (for dynasty mode).
-- **Export**: Offers tools for exporting various season and dynasty data in CSV and JSON formats.
-- **Settings (sidebar)**: Contains Debug Tools and Play Inspector.
-- Session management is handled via the sidebar, indicating the current mode and an option to end the session.
-- All 187 teams across 16 conferences are included in seasons, with up to 4 human-coached teams and the rest AI-controlled.
-- Dynasty mode supports pre-dynasty history simulation (1-100 years).
+The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings: Play, League, My Team, and Export. The sidebar contains Debug Tools and Play Inspector, and handles session management. The system supports up to 4 human-coached teams out of 187 across 16 conferences, with the rest AI-controlled. Dynasty mode includes pre-dynasty history simulation (1-100 years).
 
 ### API-First Architecture
-The project utilizes a FastAPI backend as the single source of truth for all simulation logic, with the Streamlit UI acting as a thin display layer that interacts with API endpoints.
-- **Session-based state management**: All game objects (Season, Dynasty, InjuryTracker) are managed in-memory on the FastAPI server, keyed by session IDs. The UI only stores `api_session_id` and `api_mode`.
-- `main.py` launches both FastAPI (port 8000) and Streamlit (port 5000) as dual processes.
-- A comprehensive set of API endpoints (45+) manages session lifecycle, season and dynasty operations, roster management, injury tracking, and data retrieval.
+The project utilizes a FastAPI backend as the single source of truth for all simulation logic, with the Streamlit UI acting as a thin display layer that interacts with API endpoints. Game objects are managed in-memory on the FastAPI server, keyed by session IDs. `main.py` launches both FastAPI (port 8000) and Streamlit (port 5000) as dual processes. A comprehensive set of API endpoints (45+) manages session lifecycle, season and dynasty operations, roster management, injury tracking, and data retrieval.
 
 ### Technical Implementations
 The project maintains a clear separation of concerns:
-- **`engine/`**: Contains core Python simulation logic for game mechanics, season/dynasty simulations, and custom metrics.
-- **`api/main.py`**: FastAPI backend exposing REST endpoints for all simulation operations and state management.
-- **`ui/api_client.py`**: A typed Python wrapper for all API HTTP calls.
-- **`ui/`**: The Streamlit web application, designed with a modular structure, fetching all data via `api_client`.
-- **`data/teams/`**: Stores team configuration in JSON files for 187 teams.
-- **`scripts/generate_new_teams.py`**: Script for generating new team data.
-- **`main.py`**: The application's entry point, initiating both FastAPI and Streamlit processes.
+- **`engine/`**: Core Python simulation logic.
+- **`api/main.py`**: FastAPI backend.
+- **`ui/api_client.py`**: Typed Python wrapper for API calls.
+- **`ui/`**: Streamlit web application.
+- **`data/teams/`**: Stores team configuration in JSON files.
+- **`main.py`**: Application entry point.
 
 ### Feature Specifications
-- **Engine Mechanics**: Includes a comprehensive Style System (9 offense, 5 defense), detailed Play Families, Tempo System, unique Scoring (9pts for Touchdowns), a 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards, missed DK live ball returns from 50+ yards), Lateral Risk & Chaos, Fatigue & Breakaways, a dynamic Weather System (6 conditions), and a robust Penalty System (30+ types).
-- **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions, with auto-assignment and game stat tracking.
-- **ZB Style System**: Zerobacks classified as kick_dominant (primary passer, rarely carries), run_dominant (STARTER rusher, less accurate kicker), dual_threat (blend), or distributor (lateral chain orchestrator). Style maps from archetype and influences play selection.
-- **Starter-First-Look System (All 3 Phases)**: Replaces complex 4-tier role system. Applied to offense, defense, AND special teams.
-  - **Offense**: Top player at each position group becomes STARTER, rest are ROTATION. Style-dependent first-look probability (78% ground_pound, 48% chain_gang). Produces ~1000-1500 rush yards/season for feature backs.
-  - **Defense**: Top 2 Keepers + top 3 DL by tackle_score become DEF:STARTER (~65% of tackles). Rotation defenders still contribute (~35%). Ceiling management prevents tackle monopolization.
-  - **Special Teams**: Backup-first philosophy — offensive ROTATION players become ST return specialists (93%+ of returns go to non-offensive-starters). Defensive ROTATION players handle coverage tackles (~65% of ST tackles). return_keeper archetype gets massive boost. This is where depth players earn field time.
-- **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays with unique mechanics, Viper and Defensive Alignment systems, and a detailed Run Fumble System with recovery contests.
-- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats (tackles, TFL, sacks, hurries). Player Stats UI has 6 tabs: Rushing & Scoring, Lateral Game, Kick Pass, Kicking, Defense, Returns & Special Teams.
-- **Drive Tracking**: Logs all possessions and outcomes.
-- **Dynamic Roster System**: Generates 36-player rosters for each season/dynasty, with balanced class years and geographic name pipelines. Dynasty mode includes automatic roster maintenance (graduation, recruitment).
-- **Pre-Season History**: Supports simulating prior seasons (0-100 years) for historical context in standalone Season mode.
+- **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 55 yards), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, and a Penalty System (30+ types).
+- **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions with auto-assignment and stat tracking. ZB Style System classifies Zerobacks (kick_dominant, run_dominant, dual_threat, distributor).
+- **Starter-First-Look System**: Replaces a complex role system and is applied to offense, defense, and special teams to determine player involvement and stat distribution.
+- **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays, Viper and Defensive Alignment systems, and a detailed Run Fumble System.
+- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats.
+- **Dynamic Roster System**: Generates 36-player rosters, with balanced class years and geographic name pipelines. Dynasty mode includes automatic roster maintenance.
 - **Dynasty Mode Enhancements**: Integrated injury tracking, player development, awards system, roster maintenance, and extensive data export.
-- **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings, considering win %, Strength of Schedule, Quality Wins, Non-conference record, Conference Strength, and Point Differential.
+- **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings.
 - **Playoff Selection**: Combines conference champion auto-bids with at-large bids based on Power Index.
-- **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games, in-game boosts, AI assignment, and historical tracking in Dynasty mode.
-- **DraftyQueenz System**: An integrated fantasy/prediction mini-game allowing users to bet on games (winner, spread, O/U, chaos factor, kick pass O/U props), play fantasy football (with kick pass scoring), and donate to unlock dynasty boosts.
-- **Injury-Aware Auto Depth Chart**: Depth chart automatically adjusts when players are injured — OUT players drop to bottom, healthy players slide up. DTD players stay in their spot but flagged as Questionable. Both roster endpoints (season + dynasty) pass injury data to compute_depth_chart(). UI depth chart view shows Status column (Active/Questionable/OUT) with healthy-first sorting.
-- **Injury Recovery Variance**: Weekly resolve_week() applies probabilistic recovery — 25% early return chance when within 1 week of return, 15% when within 2 weeks, 8% setback chance adding 1-3 extra weeks. Injury dataclass tracks original_weeks_out and recovery_note for UI display. Distribution: ~35% early, ~53% on-time, ~12% setback.
-- **Enhanced My Team Injury Report**: Dashboard injury table shows Timeline (current vs original weeks), expected Return week, and Recovery notes (ahead of schedule / suffered setback / progressing on schedule). Season injury history available in expandable section.
-
-## Recent Engine Tuning (Feb 2026)
-- **Forced Carry Percentage System**: LEAD/COMPLEMENT/COP backs get guaranteed carry shares via pre-roll (not weight multipliers). Style-dependent: ground_pound 45% LEAD / 18% COMP, balanced 35% / 14%, chain_gang 18% / 10%. COP gets 40% forced on speed plays (speed_option, sweep_option, viper_jet), 4% on others. Results: LEAD gets ~20% of team rush yards, 50+ yd games in 37% of games.
-- **OL Block/Pancake Stats**: Offensive linemen credited with blocks on positive-yard run plays (1-2 per play, power+awareness weighted). Pancakes on 8+ yard gains (25% chance). ~25 blocks/team/game.
-- **Box Score: Defense + Blocking Sections**: Defense section shows TKL/TFL/SACK/HUR/INT sorted by impact. Blocking section shows BLK/PKE for OL. Rush rank indicators: * LEAD, ^ COMPLEMENT, ~ CHANGE_OF_PACE.
-- **Play selection weights**: KP 3.5x boost, run families 1.8x boost, punt suppressed to 5% of original
-- **Clock timing**: 11-36 second base range per play (~82 plays/team/game)
-- **DK accuracy**: Boosted table (96% at ≤20yd, 68% at ≤40yd, skill_factor floor 0.88)
-- **KP mechanics**: INT base 0.055, YAC 3-18 + speed bonus, big-play TD mechanic for 20+ yard completions
-- **Run base yards**: Boosted to 6-11+ range across play families
-- **Go-for-it aggression**: 1.6/1.5/1.7 multipliers on 4th/5th/6th down
-- **Current batch results** (20-game avg per team): Score 57.6, TDs/game 5.20, DK att 11.15/made 4.53, PK att 4.10, KP att 43.75 (58% comp), KP TDs 2.17, Rush 87.6 yds, Punts 0.78
-- **Remaining gaps**: KP TDs below ~4 target, rush yards below 100-120 target, KP INTs slightly over 1.0 target
-- **Sack mechanic**: ~10% base rate before KP throw, reduced by OL power. DL gets 2.5x weight preference; Keepers eligible as fallback. Sack = -3 to -8 yards, tackle+sack credited, safety edge case handled.
-- **Hurry mechanic**: 35% chance on incomplete KP, DL preferred (2x weight), Keepers eligible. Distinct from sacks (no yardage loss).
-- **Pancake tuning**: Threshold lowered to 5+ yards (was 8+), rate raised to 35% (was 25%). OL also earn protection blocks on 35% of KP plays.
-- **Assist tackles**: 30% of run plays and 25% of KP completions credit a second tackler. ST tackles merged into defense box score display.
-- **Lateral yards**: Base mean 3.0 (was 0.4), std 2.5, chain bonus 1.2/link (was 0.2), soft cap at 25 yards pre-tackle.
-- **Stat results** (20-game avg): Pancakes 3.5, Sacks 1.4, Hurries 0.8, Tackles 36.2, Lateral yds 18.6, OL Blocks 31.7
-
-## Conference Structure (16 Conferences, 187 Teams)
-Conference assignments are the **source of truth** in each team's JSON file at `data/teams/<id>.json` under `team_info.conference`. The canonical directory is also maintained at `data/conferences.json` and exported as `data/cvl_conference_directory.txt`.
-
-| Conference | Teams |
-|---|---|
-| Big Pacific | 12 |
-| Border Conference | 14 |
-| Collegiate Commonwealth | 9 |
-| Galactic League | 10 |
-| Giant 14 | 13 |
-| Interstate Athletic Association | 12 |
-| Midwest States Interscholastic Association | 13 |
-| Moonshine League | 13 |
-| National Collegiate League | 8 |
-| Northern Shield | 12 |
-| Outlands Coast Conference | 12 |
-| Pioneer Athletic Association | 14 |
-| Potomac Athletic Conference | 13 |
-| Prairie Athletic Union | 12 |
-| Southern Sun Conference | 9 |
-| Yankee Fourteen | 11 |
-
-The engine reads conferences from team files via `engine/geography.py:get_geographic_conference_defaults()`. Geographic clustering is only used as a fallback if team files lack conference assignments.
+- **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games and in-game boosts.
+- **DraftyQueenz System**: An integrated fantasy/prediction mini-game for betting, fantasy football, and dynasty boosts.
+- **Injury-Aware Auto Depth Chart**: Adjusts depth chart for injured players, showing status and sorting by health.
+- **Injury Recovery Variance**: Probabilistic recovery system with early return chances, setbacks, and detailed recovery notes.
 
 ## External Dependencies
 - **Python 3.11**: Core programming language.
