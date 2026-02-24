@@ -2317,7 +2317,7 @@ def roll_dc_gameplan(
 #
 # Formula:  effective_stat = base_stat * (1 + aura * games_played / season_length)
 #
-# With a max aura of ~0.08 and 13-game season the peak boost is ~8%.
+# With a max aura of ~0.08 and 12-game season the peak boost is ~8%.
 # This makes high-development coaching staffs meaningfully overperform
 # their roster ratings, exactly as described.
 

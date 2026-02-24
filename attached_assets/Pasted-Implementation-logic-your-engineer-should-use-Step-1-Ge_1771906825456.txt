@@ -1,0 +1,75 @@
+Implementation logic your engineer should use:
+
+Step 1 — Generate full odd round robin
+Add a ghost team to make N+1 even.
+Run the circle method for N rounds.
+That produces N rounds, each team plays N−1 games and has 1 bye.
+
+Step 2 — You now have too many games
+Full round robin gives each team N−1 opponents.
+You only want 8.
+
+So you need to drop (N−1 − 8) opponents per team.
+
+For each size:
+
+9 teams → N−1 = 8 → perfect. Use full round robin. Done.
+11 teams → N−1 = 10 → drop 2 opponents per team.
+13 teams → N−1 = 12 → drop 4 opponents per team.
+15 teams → N−1 = 14 → drop 6 opponents per team.
+
+Important: You must remove opponents symmetrically. That means removing entire rounds (perfect matchings), not individual games.
+
+Why? Because each round is a disjoint pairing set. Removing one full round subtracts exactly one opponent from every team and preserves structural balance.
+
+Therefore:
+
+11 teams
+Generate 11 rounds.
+Keep 8 rounds.
+Drop 3 full rounds.
+
+13 teams
+Generate 13 rounds.
+Keep 8 rounds.
+Drop 5 rounds.
+
+15 teams
+Generate 15 rounds.
+Keep 8 rounds.
+Drop 7 rounds.
+
+9 teams
+Generate 9 rounds.
+Keep all 9 rounds.
+
+This guarantees:
+
+– 8 unique opponents
+– 1 bye per team
+– Balanced participation
+– No duplicates
+
+Home/away balancing:
+
+When generating the full schedule, alternate home polarity in the circle algorithm.
+Before dropping rounds, calculate home counts per team.
+When choosing which rounds to drop, run a simple optimization pass:
+
+Minimize variance of:
+– total home games
+– protected rivalry removals
+– travel distance (if relevant)
+
+A simple integer linear program can choose which rounds to keep under those constraints. For 15 teams you’re only choosing 8 of 15 rounds, which is computationally trivial.
+
+Summary per league size:
+
+9 teams → full round robin, 9 weeks, 8 games + 1 bye.
+11 teams → 9-week season, drop 3 rounds from full RR.
+13 teams → 9-week season, drop 5 rounds.
+15 teams → 9-week season, drop 7 rounds.
+
+One unified algorithm works for all four cases.
+
+If you want, I can also outline how to layer divisional protection or rivalry locks on top of this without breaking symmetry.

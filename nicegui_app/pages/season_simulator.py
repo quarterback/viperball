@@ -246,7 +246,7 @@ def render_season_simulator(state: UserState, shared: dict):
 
     # ── Schedule configuration ──
     total_teams = len(all_team_names)
-    REGULAR_SEASON_GAMES = 13
+    REGULAR_SEASON_GAMES = 12
 
     ui.separator().classes("my-4")
     with ui.row().classes("w-full gap-8"):

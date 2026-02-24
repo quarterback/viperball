@@ -582,60 +582,137 @@ class Season:
         self._mark_rivalry_games()
 
     @staticmethod
+    def _round_robin_rounds(team_list: List[str]) -> List[List[Tuple[str, str]]]:
+        """Generate complete round-robin rounds using the circle method.
+
+        Returns a list of rounds, where each round is a list of (team_a, team_b)
+        pairs.  Every team plays exactly once per round (with a bye round for
+        odd-sized conferences).
+        """
+        teams = list(team_list)
+        n = len(teams)
+        if n < 2:
+            return []
+        use_bye = n % 2 == 1
+        if use_bye:
+            teams.append("__BYE__")
+            n += 1
+
+        fixed = teams[0]
+        rotating = teams[1:]
+        rounds = []
+        for r in range(n - 1):
+            round_pairs = []
+            current = [fixed] + rotating
+            for i in range(n // 2):
+                t1, t2 = current[i], current[n - 1 - i]
+                if t1 != "__BYE__" and t2 != "__BYE__":
+                    round_pairs.append(tuple(sorted([t1, t2])))
+            rounds.append(round_pairs)
+            rotating = [rotating[-1]] + rotating[:-1]
+        return rounds
+
+    @staticmethod
     def _balanced_conference_pairs(
         team_list: List[str],
         target_per_team: int,
         already_scheduled: set,
         existing_conf_counts: dict,
     ) -> List[Tuple[str, str]]:
-        """Build a balanced set of conference pairs via subtraction from full round-robin.
+        """Build a balanced set of conference pairs guaranteeing exact counts.
 
-        Start with all possible pairs, then remove excess pairs so each team
-        ends up with exactly `target_per_team` conference games (accounting for
-        games already scheduled via rivalries).
+        For even-sized conferences, selects K rounds from a round-robin which
+        gives every team exactly K games.  For odd-sized conferences, uses a
+        round-robin with a dummy team (bye), selects rounds, then patches any
+        shortfalls from the remaining opponent pool.  Retries with different
+        shuffles if the first attempt doesn't fill perfectly.
         """
-        all_pairs = []
-        for i in range(len(team_list)):
-            for j in range(i + 1, len(team_list)):
-                pair = tuple(sorted([team_list[i], team_list[j]]))
-                if pair not in already_scheduled:
-                    all_pairs.append(pair)
-
-        degree = {t: 0 for t in team_list}
-        for h, a in all_pairs:
-            degree[h] += 1
-            degree[a] += 1
-
         needed = {}
         for t in team_list:
             already = existing_conf_counts.get(t, 0)
             needed[t] = max(0, target_per_team - already)
 
-        excess = {t: degree[t] - needed[t] for t in team_list}
+        if max(needed.values(), default=0) == 0:
+            return []
 
-        pairs_set = set(all_pairs)
-        pair_list = list(all_pairs)
-        random.shuffle(pair_list)
+        n = len(team_list)
+        if n - 1 <= target_per_team:
+            result = []
+            for i in range(n):
+                for j in range(i + 1, n):
+                    pair = tuple(sorted([team_list[i], team_list[j]]))
+                    if pair not in already_scheduled:
+                        result.append(pair)
+            return result
 
-        changed = True
-        while changed:
-            changed = False
-            pair_list = [p for p in pair_list if p in pairs_set]
-            pair_list.sort(
-                key=lambda p: excess[p[0]] + excess[p[1]],
-                reverse=True,
-            )
-            for pair in pair_list:
-                h, a = pair
-                if excess[h] > 0 and excess[a] > 0:
-                    pairs_set.discard(pair)
-                    excess[h] -= 1
-                    excess[a] -= 1
-                    degree[h] -= 1
-                    degree[a] -= 1
-                    changed = True
+        best_selected: List[Tuple[str, str]] = []
+        best_deficit = n * target_per_team
 
-        return list(pairs_set)
+        for _attempt in range(20):
+            rounds = Season._round_robin_rounds(team_list)
+            random.shuffle(rounds)
+
+            selected_set: set = set()
+            selected: List[Tuple[str, str]] = []
+            counts = {t: 0 for t in team_list}
+
+            for rnd in rounds:
+                eligible = []
+                for pair in rnd:
+                    if pair in already_scheduled or pair in selected_set:
+                        continue
+                    h, a = pair
+                    if counts[h] < needed[h] and counts[a] < needed[a]:
+                        eligible.append(pair)
+                for pair in eligible:
+                    h, a = pair
+                    if counts[h] < needed[h] and counts[a] < needed[a]:
+                        selected.append(pair)
+                        selected_set.add(pair)
+                        counts[h] += 1
+                        counts[a] += 1
+
+            deficit = sum(max(0, needed[t] - counts[t]) for t in team_list)
+
+            if deficit == 0:
+                return selected
+
+            remaining = []
+            for i in range(n):
+                for j in range(i + 1, n):
+                    pair = tuple(sorted([team_list[i], team_list[j]]))
+                    if pair not in already_scheduled and pair not in selected_set:
+                        remaining.append(pair)
+
+            for _fill in range(20):
+                if all(counts[t] >= needed[t] for t in team_list):
+                    break
+                random.shuffle(remaining)
+                remaining.sort(
+                    key=lambda p: (needed[p[0]] - counts[p[0]]) + (needed[p[1]] - counts[p[1]]),
+                    reverse=True,
+                )
+                added = False
+                for pair in remaining:
+                    h, a = pair
+                    if counts[h] < needed[h] and counts[a] < needed[a]:
+                        selected.append(pair)
+                        selected_set.add(pair)
+                        counts[h] += 1
+                        counts[a] += 1
+                        added = True
+                if not added:
+                    break
+                remaining = [p for p in remaining if p not in selected_set]
+
+            deficit = sum(max(0, needed[t] - counts[t]) for t in team_list)
+            if deficit == 0:
+                return selected
+            if deficit < best_deficit:
+                best_deficit = deficit
+                best_selected = list(selected)
+
+        return best_selected
 
     def _mark_rivalry_games(self):
         """Mark games involving rivalry pairs with is_rivalry_game flag."""
