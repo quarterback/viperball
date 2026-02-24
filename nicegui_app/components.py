@@ -16,11 +16,11 @@ from nicegui import ui
 
 def metric_card(label: str, value, delta: str = ""):
     """Render a KPI metric card (replaces st.metric)."""
-    with ui.card().classes("p-3 min-w-[120px]").style(
+    with ui.card().classes("p-3 min-w-[100px] flex-1").style(
         "background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;"
     ):
         ui.label(label).classes("text-xs font-semibold uppercase tracking-wide").style("color: #64748b;")
-        ui.label(str(value)).classes("text-2xl font-bold").style("color: #0f172a;")
+        ui.label(str(value)).classes("text-xl sm:text-2xl font-bold").style("color: #0f172a;")
         if delta:
             ui.label(delta).classes("text-sm").style("color: #64748b;")
 
@@ -58,7 +58,8 @@ def stat_table(rows: list[dict], columns: Optional[list[str]] = None):
     for row in rows:
         clean_rows.append({k: str(v) if v is not None else "" for k, v in row.items()})
 
-    ui.table(columns=col_defs, rows=clean_rows).classes("w-full").props("dense flat")
+    with ui.element("div").classes("w-full overflow-x-auto"):
+        ui.table(columns=col_defs, rows=clean_rows).classes("w-full").props("dense flat")
 
 
 def download_button(label: str, data, filename: str, mime: str = "text/csv"):

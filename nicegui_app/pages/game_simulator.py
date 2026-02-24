@@ -48,9 +48,9 @@ def render_game_simulator(state: UserState, shared: dict):
     ui.label("Game Simulator").classes("text-2xl font-bold text-slate-800 mb-4")
 
     # ── Team Selection ──
-    with ui.row().classes("w-full gap-8"):
+    with ui.row().classes("w-full gap-8 flex-wrap"):
         # Home team
-        with ui.column().classes("flex-1"):
+        with ui.column().classes("flex-1 min-w-[280px]"):
             ui.label("Home Team").classes("font-bold text-slate-700")
             home_select = ui.select(
                 team_options, value=team_key_list[0] if team_key_list else None,
@@ -78,7 +78,7 @@ def render_game_simulator(state: UserState, shared: dict):
             _update_home_tip()
 
         # Away team
-        with ui.column().classes("flex-1"):
+        with ui.column().classes("flex-1 min-w-[280px]"):
             ui.label("Away Team").classes("font-bold text-slate-700")
             away_select = ui.select(
                 team_options,
@@ -171,7 +171,7 @@ def render_game_simulator(state: UserState, shared: dict):
             metric_card("Touchdowns", hs.get("touchdowns", 0) + as_.get("touchdowns", 0))
 
         # Tabbed results
-        with ui.tabs().classes("w-full") as result_tabs:
+        with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as result_tabs:
             box_tab = ui.tab("Box Score")
             drives_tab = ui.tab("Drives")
             plays_tab = ui.tab("Play-by-Play")

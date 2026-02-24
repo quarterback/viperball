@@ -342,7 +342,7 @@ async def render_export_section(state, shared):
     if is_dynasty:
         tab_names.append("Dynasty Data")
 
-    with ui.tabs().classes("w-full") as tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as tabs:
         season_tab = ui.tab("Season Data")
         if is_dynasty:
             dynasty_tab = ui.tab("Dynasty Data")

@@ -134,13 +134,30 @@ async def render_league_section(state, shared):
             f"{best['wins']}-{best['losses']}" if best else "",
         )
 
+    history = []
+    dynasty_awards = {}
+    if mode == "dynasty":
+        try:
+            dynasty_awards = await run.io_bound(api_client.get_dynasty_awards, session_id)
+            dynasty_awards = dynasty_awards.get("awards_history", {})
+        except Exception:
+            pass
+    else:
+        try:
+            history = await run.io_bound(api_client.get_season_history, session_id)
+        except Exception:
+            pass
+    has_history = bool(history) or bool(dynasty_awards)
+
     # -- Tabs --
     tab_names = ["Standings", "Power Rankings"]
     if has_conferences:
         tab_names.append("Conferences")
     tab_names.extend(["Player Stats", "Team Browser", "Postseason", "Schedule", "Awards & Stats", "Injury Report"])
+    if has_history:
+        tab_names.append("History")
 
-    with ui.tabs().classes("w-full") as tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as tabs:
         tab_objects = {}
         for name in tab_names:
             tab_objects[name] = ui.tab(name)
@@ -174,6 +191,13 @@ async def render_league_section(state, shared):
 
         with ui.tab_panel(tab_objects["Injury Report"]):
             await _render_injury_report(session_id, standings)
+
+        if has_history and "History" in tab_objects:
+            with ui.tab_panel(tab_objects["History"]):
+                if dynasty_awards:
+                    _render_dynasty_league_history(dynasty_awards)
+                elif history:
+                    _render_league_history(history)
 
 
 # ---------------------------------------------------------------------------
@@ -352,7 +376,7 @@ async def _render_conferences(session_id, conferences, user_team):
         champions = {}
 
     sorted_confs = sorted(conferences.keys())
-    with ui.tabs().classes("w-full") as conf_tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as conf_tabs:
         conf_tab_objs = {}
         for cn in sorted_confs:
             conf_tab_objs[cn] = ui.tab(cn)
@@ -692,7 +716,7 @@ async def _render_player_stats(session_id, standings, conferences, has_conferenc
 
             ui.label(f"Showing {len(players)} players").classes("text-sm text-gray-500")
 
-            with ui.tabs().classes("w-full") as stat_tabs:
+            with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as stat_tabs:
                 rush_tab = ui.tab("Rushing & Scoring")
                 recv_tab = ui.tab("Receiving")
                 lat_tab = ui.tab("Lateral Game")
@@ -1520,3 +1544,106 @@ async def _render_injury_report(session_id, standings):
                     "Weeks Out": inj.get("weeks_out", ""),
                 })
             stat_table(log_rows)
+
+
+# ---------------------------------------------------------------------------
+# League History (pre-generated seasons)
+# ---------------------------------------------------------------------------
+
+def _render_league_history(history: list):
+    if not history:
+        ui.label("No league history available.").classes("text-sm text-gray-400 italic")
+        return
+
+    ui.label("League History").classes("text-xl font-bold text-slate-800 mb-2")
+    ui.label(
+        f"{len(history)} seasons of pre-existing league history"
+    ).classes("text-sm text-gray-500 mb-4")
+
+    champ_counts: dict[str, int] = {}
+    for entry in history:
+        champ = entry.get("champion", "")
+        if champ:
+            champ_counts[champ] = champ_counts.get(champ, 0) + 1
+
+    if champ_counts:
+        top_dynasties = sorted(champ_counts.items(), key=lambda x: -x[1])[:10]
+        with ui.row().classes("w-full flex-wrap gap-3 mb-4"):
+            metric_card("Total Seasons", len(history))
+            metric_card("Unique Champions", len(champ_counts))
+            if top_dynasties:
+                metric_card("Top Dynasty", f"{top_dynasties[0][0]} ({top_dynasties[0][1]})")
+
+    rows = []
+    for entry in reversed(history):
+        year = entry.get("year", "?")
+        champion = entry.get("champion", "Unknown")
+        top5 = entry.get("top_5", [])
+        runner_up = top5[1] if len(top5) > 1 else ""
+        rows.append({
+            "Year": str(year),
+            "Champion": champion,
+            "Runner-Up": runner_up,
+            "Top 5": ", ".join(top5[:5]) if top5 else "",
+        })
+    stat_table(rows)
+
+    if champ_counts and len(champ_counts) > 1:
+        with ui.expansion("Championship Counts").classes("w-full mt-3"):
+            dynasty_rows = [
+                {"Team": team, "Titles": str(count)}
+                for team, count in sorted(champ_counts.items(), key=lambda x: -x[1])
+            ]
+            stat_table(dynasty_rows)
+
+
+def _render_dynasty_league_history(awards: dict):
+    if not awards:
+        ui.label("No dynasty history available yet.").classes("text-sm text-gray-400 italic")
+        return
+
+    ui.label("Dynasty History").classes("text-xl font-bold text-slate-800 mb-2")
+    ui.label(
+        f"{len(awards)} seasons of dynasty history"
+    ).classes("text-sm text-gray-500 mb-4")
+
+    champ_counts: dict[str, int] = {}
+    for year_key, award in awards.items():
+        champ = award.get("champion", "")
+        if champ:
+            champ_counts[champ] = champ_counts.get(champ, 0) + 1
+
+    if champ_counts:
+        top_dynasties = sorted(champ_counts.items(), key=lambda x: -x[1])[:10]
+        with ui.row().classes("w-full flex-wrap gap-3 mb-4"):
+            metric_card("Total Seasons", len(awards))
+            metric_card("Unique Champions", len(champ_counts))
+            if top_dynasties:
+                metric_card("Top Dynasty", f"{top_dynasties[0][0]} ({top_dynasties[0][1]})")
+
+    rows = []
+    def _year_sort(k):
+        try:
+            return int(k)
+        except (ValueError, TypeError):
+            return 0
+
+    for year_key in sorted(awards.keys(), key=_year_sort, reverse=True):
+        award = awards[year_key]
+        rows.append({
+            "Year": str(award.get("year", year_key)),
+            "Champion": award.get("champion", ""),
+            "Best Record": award.get("best_record", ""),
+            "Highest Scoring": award.get("highest_scoring", ""),
+            "Best Defense": award.get("best_defense", ""),
+            "Coach of Year": award.get("coach_of_year", ""),
+        })
+    stat_table(rows)
+
+    if champ_counts and len(champ_counts) > 1:
+        with ui.expansion("Championship Counts").classes("w-full mt-3"):
+            dynasty_rows = [
+                {"Team": team, "Titles": str(count)}
+                for team, count in sorted(champ_counts.items(), key=lambda x: -x[1])
+            ]
+            stat_table(dynasty_rows)

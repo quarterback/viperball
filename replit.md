@@ -15,7 +15,7 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## System Architecture
 
 ### UI/UX Decisions
-The user interface is built with Streamlit using a 4-tab navigation system plus sidebar settings: Play, League, My Team, and Export. The sidebar contains Debug Tools and Play Inspector, and handles session management. The system supports up to 4 human-coached teams out of 187 across 16 conferences, with the rest AI-controlled. Dynasty mode includes pre-dynasty history simulation (1-100 years).
+The user interface is built with NiceGUI using a 6-section top navigation bar: Play, League, My Team, Export, Debug, and Inspector. On mobile (<768px), the nav bar collapses to a hamburger dropdown menu, tab bars show scroll arrows, tables scroll horizontally, and metric cards flex-wrap to fit narrow screens. The system supports up to 4 human-coached teams out of 188 across 16 conferences, with the rest AI-controlled. Dynasty mode includes pre-dynasty history simulation (1-100 years). League History tab (in League section) displays pre-generated history for both season mode (champions, top 5 per year) and dynasty mode (awards history with champions, best record, coach of year).
 
 ### API-First Architecture
 The project utilizes a FastAPI backend as the single source of truth for all simulation logic, with the Streamlit UI acting as a thin display layer that interacts with API endpoints. Game objects are managed in-memory on the FastAPI server, keyed by session IDs. `main.py` launches both FastAPI (port 8000) and Streamlit (port 5000) as dual processes. A comprehensive set of API endpoints (45+) manages session lifecycle, season and dynasty operations, roster management, injury tracking, and data retrieval.

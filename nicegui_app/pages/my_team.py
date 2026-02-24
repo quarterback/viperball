@@ -1293,7 +1293,7 @@ async def render_my_team_section(state, shared):
     async def _render_content(team_name: str):
         content_container.clear()
         with content_container:
-            with ui.tabs().classes("w-full") as tabs:
+            with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as tabs:
                 dashboard_tab = ui.tab("Dashboard")
                 roster_tab = ui.tab("Roster")
                 schedule_tab = ui.tab("Schedule")

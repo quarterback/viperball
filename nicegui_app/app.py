@@ -37,6 +37,17 @@ APP_CSS = """
     .drive-fumble { color: #dc2626; font-weight: 700; }
     .drive-downs { color: #d97706; font-weight: 700; }
     .drive-punt { color: #94a3b8; }
+
+    @media (max-width: 768px) {
+        .desktop-nav { display: none !important; }
+        .mobile-menu-btn { display: flex !important; }
+        .q-tab { min-width: 0 !important; padding: 0 8px !important; font-size: 0.75rem !important; }
+        .q-table td, .q-table th { padding: 4px 6px !important; font-size: 0.75rem !important; }
+    }
+    @media (min-width: 769px) {
+        .mobile-menu-btn { display: none !important; }
+    }
+    .q-tabs--scrollable .q-tabs__content { flex-wrap: nowrap !important; }
 </style>
 """
 
@@ -139,14 +150,23 @@ def index():
             ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1 mr-6")
 
             nav_buttons = {}
-            for name, icon_name in NAV_SECTIONS:
-                btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
-                btn.props("flat dense no-caps size=sm")
-                if name == "Play":
-                    btn.classes("text-indigo-600 font-semibold")
-                else:
-                    btn.classes("text-slate-500")
-                nav_buttons[name] = btn
+
+            with ui.row().classes("desktop-nav items-center gap-1"):
+                for name, icon_name in NAV_SECTIONS:
+                    btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
+                    btn.props("flat dense no-caps size=sm")
+                    if name == "Play":
+                        btn.classes("text-indigo-600 font-semibold")
+                    else:
+                        btn.classes("text-slate-500")
+                    nav_buttons[name] = btn
+
+            with ui.button(icon="menu").props("flat dense").classes("mobile-menu-btn text-slate-600"):
+                with ui.menu().classes("bg-white shadow-lg"):
+                    for name, icon_name in NAV_SECTIONS:
+                        mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
+                        mi.classes("text-slate-700")
+                        nav_buttons.setdefault(name, mi)
 
             ui.space()
 
@@ -157,7 +177,7 @@ def index():
                     "flat dense size=sm color=red no-caps"
                 )
 
-    content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4")
+    content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 
     with content_container:
         from nicegui_app.pages.play import render_play_section_sync
