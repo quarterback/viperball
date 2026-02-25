@@ -2695,9 +2695,10 @@ def dq_start_week(session_id: str, week: int):
 
     if week in mgr.weekly_contests:
         contest = mgr.weekly_contests[week]
+        odds_resp = dq_get_odds(session_id, week)
         return {
             "week": week,
-            "odds": [o.to_dict() for o in contest.odds],
+            "odds": odds_resp.get("odds", [o.to_dict() for o in contest.odds]),
             "pool_size": len(contest.player_pool),
             "already_started": True,
         }
@@ -2711,9 +2712,10 @@ def dq_start_week(session_id: str, week: int):
 
     contest = mgr.start_week(week, week_games, season.teams, prestige_map, standings_map)
 
+    odds_resp = dq_get_odds(session_id, week)
     return {
         "week": week,
-        "odds": [o.to_dict() for o in contest.odds],
+        "odds": odds_resp.get("odds", [o.to_dict() for o in contest.odds]),
         "pool_size": len(contest.player_pool),
         "bankroll": mgr.bankroll.balance,
         "already_started": False,
@@ -2742,16 +2744,33 @@ def dq_get_odds(session_id: str, week: int):
     prestige_map = _get_prestige_map(session)
     standings_map = {r.team_name: r for r in season.get_standings_sorted()} if season.standings else {}
 
+    try:
+        power_ranked = season.get_all_power_rankings() if season.standings else []
+        rank_map: dict[str, int] = {name: idx for idx, (name, _pi, _qw) in enumerate(power_ranked, 1)}
+    except Exception:
+        rank_map = {}
+
     def _team_context(team_name: str) -> dict:
-        """Build context dict for a team: record, prestige, star player."""
+        """Build context dict for a team: record, prestige, star player, rank."""
         ctx: dict = {"name": team_name}
         rec = standings_map.get(team_name)
         if rec:
             ctx["record"] = f"{rec.wins}-{rec.losses}"
+            ctx["wins"] = rec.wins
+            ctx["losses"] = rec.losses
+            ctx["conf"] = getattr(rec, "conference", "") or ""
+            ctx["conf_record"] = f"{getattr(rec, 'conf_wins', 0)}-{getattr(rec, 'conf_losses', 0)}"
+            ctx["avg_opi"] = round(getattr(rec, "avg_opi", 0), 1)
         else:
             ctx["record"] = "0-0"
+            ctx["wins"] = 0
+            ctx["losses"] = 0
+            ctx["conf"] = ""
+            ctx["conf_record"] = ""
+            ctx["avg_opi"] = 0
+        rk = rank_map.get(team_name, 0)
+        ctx["rank"] = rk if rk <= 25 else 0
         ctx["prestige"] = prestige_map.get(team_name, 50)
-        # Find the top player (highest overall) on this team
         team_obj = season.teams.get(team_name)
         if team_obj and team_obj.players:
             best = max(team_obj.players, key=lambda p: getattr(p, "overall", 0))

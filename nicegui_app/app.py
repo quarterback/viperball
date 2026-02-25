@@ -144,7 +144,7 @@ def index():
         ui.notify("Session ended", type="info")
         ui.navigate.to("/")
 
-    with ui.header().classes("bg-white shadow-sm px-4 py-2 items-center"):
+    with ui.header().classes("bg-white shadow-sm px-4 py-2 items-center").style("z-index: 2000;"):
         with ui.row().classes("w-full items-center gap-1"):
             ui.label("Viperball").classes("text-lg font-extrabold text-indigo-600")
             ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1 mr-6")

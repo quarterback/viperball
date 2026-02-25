@@ -36,7 +36,7 @@ def _betting_card(label: str, value, color: str = ACCENT):
 
 
 def render_dq_setup(state: UserState, shared: dict):
-    with ui.column().classes("w-full items-center").style(f"background: {DARK_BG}; min-height: 100vh; padding: 2rem;"):
+    with ui.column().classes("w-full items-center rounded-lg").style(f"background: {DARK_BG}; min-height: 70vh; padding: 2rem;"):
         ui.label("DRAFTYQUEENZ").classes("text-3xl font-black tracking-widest").style(f"color: {GOLD};")
         ui.label("Sports Betting & Fantasy").classes("text-sm tracking-wide mt-1").style(f"color: {TEXT_SECONDARY};")
 
@@ -134,7 +134,7 @@ async def render_dq_play(state: UserState, shared: dict):
     roi = dq_status.get("roi", 0)
     peak = dq_status.get("peak_bankroll", bal)
 
-    with ui.column().classes("w-full").style(f"background: {DARK_BG}; min-height: 100vh; padding: 1rem 1.5rem;"):
+    with ui.column().classes("w-full rounded-lg").style(f"background: {DARK_BG}; min-height: 70vh; padding: 1rem 1.5rem;"):
         with ui.row().classes("w-full items-center justify-between mb-2"):
             ui.label("DRAFTYQUEENZ").classes("text-2xl font-black tracking-widest").style(f"color: {GOLD};")
             with ui.row().classes("gap-2"):
@@ -225,7 +225,7 @@ async def render_dq_play(state: UserState, shared: dict):
 
             odds_list = odds_resp.get("odds", [])
 
-            with ui.tabs().classes("w-full").style(
+            with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows").style(
                 f"background: {CARD_BG}; border-bottom: 2px solid {GOLD};"
             ) as dq_tabs:
                 pred_tab = ui.tab("Sportsbook").props("no-caps")
@@ -384,30 +384,71 @@ async def _render_sportsbook(state, session_id: str, week: int, odds_list: list,
 
     ui.label(f"{len(odds_list)} Games").classes("text-sm mb-2").style(f"color: {TEXT_SECONDARY};")
 
-    with ui.card().classes("w-full p-3 mb-3").style(
-        f"background: {CARD_BG}; border: 1px solid {BORDER}; border-radius: 8px; max-height: 300px; overflow-y: auto;"
-    ):
-        ui.label("Lines").classes("font-bold text-sm mb-1").style(f"color: {TEXT_PRIMARY};")
+    with ui.column().classes("w-full gap-2 mb-3").style("max-height: 420px; overflow-y: auto;"):
         for i, o in enumerate(odds_list):
             spread_str = f"{o['spread']:+.1f}"
             ou_str = f"{o['over_under']:.1f}"
             away_ctx = o.get("away_ctx", {}) or {}
             home_ctx = o.get("home_ctx", {}) or {}
-            away_rec = away_ctx.get("record", "")
-            home_rec = home_ctx.get("record", "")
-            with ui.row().classes("w-full items-center py-1").style(
-                f"border-bottom: 1px solid {BORDER};"
+            away_rec = away_ctx.get("record", "0-0")
+            home_rec = home_ctx.get("record", "0-0")
+            away_rank = away_ctx.get("rank", 0)
+            home_rank = home_ctx.get("rank", 0)
+            away_conf = away_ctx.get("conf", "")
+            home_conf = home_ctx.get("conf", "")
+            away_opi = away_ctx.get("avg_opi", 0)
+            home_opi = home_ctx.get("avg_opi", 0)
+            away_star = away_ctx.get("star", "")
+            home_star = home_ctx.get("star", "")
+            away_star_pos = away_ctx.get("star_pos", "")
+            home_star_pos = home_ctx.get("star_pos", "")
+
+            def _rank_tag(rank):
+                if rank and rank > 0:
+                    return f"#{rank} "
+                return ""
+
+            with ui.card().classes("w-full p-3").style(
+                f"background: {CARD_BG}; border: 1px solid {BORDER}; border-radius: 8px;"
             ):
-                ui.label(f"#{i+1}").classes("text-xs w-8").style(f"color: {TEXT_SECONDARY};")
-                ui.label(
-                    f"{o['away_team']} ({away_rec}) @ {o['home_team']} ({home_rec})"
-                ).classes("text-sm flex-1").style(f"color: {TEXT_PRIMARY};")
-                ui.label(f"Sprd {spread_str}").classes("text-xs px-2").style(
-                    f"color: {GOLD}; background: rgba(255,214,0,0.1); border-radius: 4px; padding: 2px 6px;"
-                )
-                ui.label(f"O/U {ou_str}").classes("text-xs px-2").style(
-                    f"color: {ACCENT}; background: rgba(0,200,83,0.1); border-radius: 4px; padding: 2px 6px;"
-                )
+                with ui.row().classes("w-full items-center justify-between mb-1"):
+                    ui.label(f"Game {i+1}").classes("text-xs font-semibold").style(f"color: {TEXT_SECONDARY};")
+                    with ui.row().classes("gap-2"):
+                        ui.label(f"Sprd {spread_str}").classes("text-xs").style(
+                            f"color: {GOLD}; background: rgba(255,214,0,0.1); border-radius: 4px; padding: 2px 6px;"
+                        )
+                        ui.label(f"O/U {ou_str}").classes("text-xs").style(
+                            f"color: {ACCENT}; background: rgba(0,200,83,0.1); border-radius: 4px; padding: 2px 6px;"
+                        )
+
+                with ui.row().classes("w-full items-start gap-4 flex-wrap"):
+                    with ui.column().classes("flex-1 min-w-[140px]"):
+                        away_name = f"{_rank_tag(away_rank)}{o['away_team']}"
+                        ui.label(away_name).classes("text-sm font-bold").style(
+                            f"color: {GOLD if away_rank else TEXT_PRIMARY};"
+                        )
+                        ui.label(f"{away_rec}").classes("text-xs font-semibold").style(f"color: {TEXT_SECONDARY};")
+                        if away_conf:
+                            ui.label(away_conf).classes("text-xs").style(f"color: {TEXT_SECONDARY};")
+                        if away_opi:
+                            ui.label(f"OPI: {away_opi}").classes("text-xs").style(f"color: {TEXT_SECONDARY};")
+                        if away_star:
+                            ui.label(f"{away_star} ({away_star_pos})").classes("text-xs italic").style(f"color: {TEXT_SECONDARY};")
+
+                    ui.label("@").classes("text-lg font-bold self-center").style(f"color: {TEXT_SECONDARY};")
+
+                    with ui.column().classes("flex-1 min-w-[140px] items-end"):
+                        home_name = f"{_rank_tag(home_rank)}{o['home_team']}"
+                        ui.label(home_name).classes("text-sm font-bold text-right").style(
+                            f"color: {GOLD if home_rank else TEXT_PRIMARY};"
+                        )
+                        ui.label(f"{home_rec}").classes("text-xs font-semibold text-right").style(f"color: {TEXT_SECONDARY};")
+                        if home_conf:
+                            ui.label(home_conf).classes("text-xs text-right").style(f"color: {TEXT_SECONDARY};")
+                        if home_opi:
+                            ui.label(f"OPI: {home_opi}").classes("text-xs text-right").style(f"color: {TEXT_SECONDARY};")
+                        if home_star:
+                            ui.label(f"{home_star} ({home_star_pos})").classes("text-xs italic text-right").style(f"color: {TEXT_SECONDARY};")
 
     if balance < 250:
         ui.label("Insufficient balance ($250 minimum).").classes("text-sm").style(f"color: {ACCENT_RED};")
@@ -418,7 +459,18 @@ async def _render_sportsbook(state, session_id: str, week: int, odds_list: list,
     ):
         ui.label("Place a Bet").classes("font-bold text-sm mb-2").style(f"color: {GOLD};")
 
-        game_labels = {i: f"#{i+1} {o['away_team']} @ {o['home_team']}" for i, o in enumerate(odds_list)}
+        def _game_label(i, o):
+            ac = o.get("away_ctx", {}) or {}
+            hc = o.get("home_ctx", {}) or {}
+            ar = ac.get("rank", 0)
+            hr = hc.get("rank", 0)
+            a_tag = f"#{ar} " if ar else ""
+            h_tag = f"#{hr} " if hr else ""
+            arec = ac.get("record", "")
+            hrec = hc.get("record", "")
+            return f"#{i+1} {a_tag}{o['away_team']} ({arec}) @ {h_tag}{o['home_team']} ({hrec})"
+
+        game_labels = {i: _game_label(i, o) for i, o in enumerate(odds_list)}
         bet_types = {
             "winner": "Moneyline",
             "spread": "Spread",

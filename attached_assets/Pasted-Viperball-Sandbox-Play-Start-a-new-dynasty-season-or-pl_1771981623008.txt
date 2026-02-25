@@ -1,0 +1,171 @@
+Viperball
+Sandbox
+Play
+Start a new dynasty, season, or play a quick exhibition game
+Game Simulator
+Home Team
+Agnes Scott College
+Agnes Scott College
+Select Home Team
+Ground & Pound
+Ground & Pound
+Offense
+Swarm Defense
+Swarm Defense
+Defense
+Grind 20 yards, punch it in. Heavy dive/power runs using all 6 downs. Old-school power football.
+Away Team
+United States Air Force Academy
+United States Air Force Academy
+Select Away Team
+Ground & Pound
+Ground & Pound
+Offense
+Swarm Defense
+Swarm Defense
+Defense
+Grind 20 yards, punch it in. Heavy dive/power runs using all 6 downs. Old-school power football.
+Clear
+Clear
+Weather
+0
+Seed (0 = random)
+Agnes Scott College
+45
+vs
+United States Air Force Academy
+61
+Seed: 448125
+Total Plays
+91
+Total Yards
+837
+Turnovers
+2
+Snap Kicks
+3
+Touchdowns
+10
+Agnes Scott College
+Ground & Pound | Tempo: Slow
+United States Air Force Academy
+Ground & Pound | Tempo: Slow
+Agnes Scott College	9	18	0	19	45
+United States Air Force Academy	9	18	14	19	61
+Scoring
+TDs (9pts)	5 (45pts)	5 (45pts)
+Snap Kicks (5pts)	0/0	3/3
+FGs (3pts)	0/0	0/0
+Safeties (2pts)	0	0
+Pindowns (1pt)	0	0
+Strikes (½pt)	2 (1pts)	0 (0pts)
+Rushing
+Carries	33	15
+Yards	155	275
+YPC	4.7	18.3
+Rush TDs	2	2
+Kick Passing
+Att	20	7
+Comp	11	4
+Comp %	55.0%	57.1%
+Yards	210	174
+TDs	3	3
+INTs	0	0
+Lateral Game
+Chains	2	2
+Successful	2	0
+Efficiency	100.0%	0.0%
+Yards	8	0
+Lat INTs	0	0
+Kicking
+Snap Kicks (DK)	0/0	3/3
+Field Goals (PK)	0/0	0/0
+Punts	2	3
+Trick Plays
+Attempts	1	1
+Team Totals
+Total Yards	373	464
+Yds/Play	6.32	14.5
+Total Plays	59	32
+Fumbles Lost	0	2
+Bonus Poss.	0	0
+Penalties	5 for 45 yds	0 for 0 yds
+Player Performance
+Agnes Scott College
+Rushing
+ZB23 Elizabeth Murray	2	12	0	0	0
+HB71 Elena Garcia	11	55	0	1	0
+SB60 Laura Bennett ^	7	46	0	1	2
+HB46 Hayden Cooper	5	7	0	0	0
+WB41 Maeve Howard *	3	12	0	0	0
+HB85 Stella Jensen	1	1	0	2	0
+WB82 Harper Singh	1	4	0	0	0
+SB18 Nicole Shah	1	5	7	0	0
+SB70 Natasha Spencer	1	8	8	0	0
+HB20 Iris Howard	1	2	0	0	0
+HB52 Lana Mason	1	4	0	0	0
+Receiving
+HB71 Elena Garcia	1	18	0
+WB41 Maeve Howard	2	50	0
+HB85 Stella Jensen	3	41	2
+WB82 Harper Singh	2	31	0
+WB83 Bailey Wu	2	63	1
+SB48 Ruby Lewis	1	16	0
+Kick Passing
+ZB23 Elizabeth Murray	20	11	219	3	0
+Defense
+KP39 Rebecca Ali	4	0	0	0	0
+KP49 Aurora Lopez	4	0	0	0	0
+DL95 Kira Washington	4	0	0	0	0
+DL6 Catherine Fox	3	0	0	0	0
+DL19 Ivy Morris	1	1	0	0	0
+DL22 Jade Hernandez	2	0	0	0	0
+DL54 Gianna Nguyen	2	0	0	2	0
+DL42 Helena James	1	0	0	0	0
+DL53 Sofia Olsen	1	0	0	0	0
+DL56 Emma Adams	1	0	0	0	0
+DL63 Valeria Dixon	1	0	0	0	0
+Blocking
+OL24 Lena Patel	6	0
+OL58 Ava King	6	1
+OL64 Monica Li	6	1
+OL4 Zuri Clark	5	0
+OL86 Violet Burns	5	0
+OL14 Jasmine Wood	4	1
+OL50 Aniya Martinez	4	0
+OL2 Bridget Baker	3	0
+OL47 Beatrice Lopez	3	0
+OL76 Briana Larson	3	0
+United States Air Force Academy
+Rushing
+ZB81 Samantha Campbell *	4	90	0	1	0
+WB50 Catalina McNamara ^	2	75	0	1	0
+HB53 Eden Brown	2	9	0	0	0
+WB74 Victoria Ramirez	1	71	0	1	0
+SB94 Hayley Taylor	2	13	0	0	1
+WB13 Paloma Moon	1	13	0	0	0
+SB2 Lorena Smith	1	-3	0	0	0
+SB15 Charlotte Johnson	1	3	0	0	0
+Receiving
+WB50 Catalina McNamara	1	23	0
+WB74 Victoria Ramirez	1	20	1
+ZB56 Skylar Bautista	1	51	1
+WB98 Andrea Baker	1	80	1
+Kick Passing
+ZB81 Samantha Campbell	7	4	174	3	0
+Kicking
+ZB82 Chloé Martel	3	3	100%
+Defense
+KP61 Caroline Martin	15	2	0	1	0
+KP8 Natalie Robinson	13	2	0	0	0
+KP54 Victoria Mitchell	6	0	1	0	0
+KP5 Zoe Hwang	8	0	0	0	0
+KP67 Olivia David	5	0	0	0	0
+KP45 Alondra Sanchez	4	0	0	0	0
+KP80 Melissa Harrison	4	0	0	0	0
+Blocking
+OL37 Joanna Lee	7	0
+OL84 Zawadi Kamau	6	1
+OL7 Chloe Alvarez	5	0
+OL83 Nyambura Dlamini	5	2
+OL26 Remy Murphy	4	2
