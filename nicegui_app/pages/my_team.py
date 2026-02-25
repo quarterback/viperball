@@ -20,6 +20,7 @@ from nicegui_app.helpers import (
     format_time,
     safe_filename,
     generate_box_score_markdown,
+    generate_forum_box_score,
     generate_play_log_csv,
     generate_drives_csv,
     compute_quarter_scores,
@@ -32,6 +33,12 @@ from nicegui_app.components import (
     notify_info,
     notify_warning,
     download_button,
+    copy_button,
+)
+from engine.viperball_metrics import (
+    calculate_viperball_metrics,
+    calculate_zbr,
+    calculate_vpr,
 )
 
 
@@ -320,6 +327,14 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
                     stat_table(st_data)
                 ui.separator()
 
+    # Analytics
+    with ui.expansion("Analytics").classes("w-full"):
+        _render_game_analytics(result, home_name, away_name, hs, as_)
+
+    # Export & Copy
+    with ui.expansion("Export & Copy").classes("w-full"):
+        _render_game_export(result, home_name, away_name)
+
     # In-game injuries
     in_game_inj = result.get("in_game_injuries", [])
     if in_game_inj:
@@ -379,6 +394,143 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
                 "Result": p["result"],
             })
         stat_table(play_rows)
+
+
+def _render_game_analytics(result, home_name, away_name, hs, as_):
+    """Render analytics metrics for a game detail view."""
+    try:
+        home_metrics = calculate_viperball_metrics(result, "home")
+        away_metrics = calculate_viperball_metrics(result, "away")
+    except Exception:
+        ui.label("Analytics unavailable for this game.").classes("text-sm text-gray-400 italic")
+        return
+
+    # ── WPA ──
+    ui.label("WPA - Win Probability Added").classes("font-bold text-slate-700")
+    h_vpa = hs.get("epa", {})
+    a_vpa = as_.get("epa", {})
+    with ui.row().classes("w-full gap-3 flex-wrap"):
+        metric_card(f"{home_name} WPA", round(h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)), 1))
+        metric_card(f"{away_name} WPA", round(a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)), 1))
+        metric_card(f"{home_name} WPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+        metric_card(f"{away_name} WPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+
+    # ── Team Rating + core metrics ──
+    ui.label("Team Metrics").classes("font-bold text-slate-700 mt-4")
+    h_tr = home_metrics.get("team_rating", 0)
+    a_tr = away_metrics.get("team_rating", 0)
+    with ui.row().classes("w-full gap-3 flex-wrap"):
+        metric_card(f"{home_name} Rating", f"{h_tr:.1f}")
+        metric_card(f"{away_name} Rating", f"{a_tr:.1f}")
+        metric_card(f"{home_name} PPD", f"{home_metrics.get('ppd', 0):.1f}")
+        metric_card(f"{away_name} PPD", f"{away_metrics.get('ppd', 0):.1f}")
+
+    metrics_rows = [
+        {"Stat": "Team Rating", home_name: f"{h_tr:.1f}", away_name: f"{a_tr:.1f}"},
+        {"Stat": "PPD", home_name: f"{home_metrics.get('ppd', 0):.1f}", away_name: f"{away_metrics.get('ppd', 0):.1f}"},
+        {"Stat": "Conversion %", home_name: f"{home_metrics.get('conversion_pct', 0):.1f}%", away_name: f"{away_metrics.get('conversion_pct', 0):.1f}%"},
+        {"Stat": "Lateral %", home_name: f"{home_metrics.get('lateral_pct', 0):.1f}%", away_name: f"{away_metrics.get('lateral_pct', 0):.1f}%"},
+        {"Stat": "Explosive Plays", home_name: str(home_metrics.get("explosive_plays", 0)), away_name: str(away_metrics.get("explosive_plays", 0))},
+        {"Stat": "TO+/-", home_name: f"{home_metrics.get('to_margin', 0):+d}", away_name: f"{away_metrics.get('to_margin', 0):+d}"},
+        {"Stat": "Avg Start", home_name: f"{home_metrics.get('avg_start', 0):.0f} yd", away_name: f"{away_metrics.get('avg_start', 0):.0f} yd"},
+    ]
+    stat_table(metrics_rows)
+
+    # ── ZBR / VPR for key players ──
+    player_stats = result.get("player_stats", {})
+    player_rating_rows = []
+    for side, team_name in [("home", home_name), ("away", away_name)]:
+        pstats = player_stats.get(side, [])
+        for p in pstats:
+            pos = p.get("position", "")
+            tag = p.get("tag", "")
+            is_zb = pos.lower().startswith("zero") or tag.startswith("ZB")
+            is_vp = pos.lower().startswith("viper") or tag.startswith("VP")
+            if is_zb and p.get("touches", 0) >= 2:
+                zbr = calculate_zbr(p)
+                player_rating_rows.append({
+                    "Player": f"{tag} {p.get('name', '?')}",
+                    "Team": team_name,
+                    "Pos": "ZB",
+                    "Rating": f"{zbr:.1f} ZBR",
+                    "Touches": p.get("touches", 0),
+                    "Yards": p.get("yards", 0),
+                    "TDs": p.get("tds", 0),
+                })
+            elif is_vp and p.get("touches", 0) >= 2:
+                vpr_val = calculate_vpr(p)
+                player_rating_rows.append({
+                    "Player": f"{tag} {p.get('name', '?')}",
+                    "Team": team_name,
+                    "Pos": "VP",
+                    "Rating": f"{vpr_val:.1f} VPR",
+                    "Touches": p.get("touches", 0),
+                    "Yards": p.get("yards", 0),
+                    "TDs": p.get("tds", 0),
+                })
+    if player_rating_rows:
+        ui.label("Player Ratings").classes("font-bold text-slate-700 mt-4")
+        stat_table(player_rating_rows)
+
+    # ── Scoring Profile ──
+    h_sp = home_metrics.get("scoring_profile", {})
+    a_sp = away_metrics.get("scoring_profile", {})
+    if h_sp or a_sp:
+        ui.label("Scoring Profile").classes("font-bold text-slate-700 mt-4")
+        sp_rows = [
+            {"Source": "Rush", home_name: f"{h_sp.get('rush_pct', 0):.0f}%", away_name: f"{a_sp.get('rush_pct', 0):.0f}%"},
+            {"Source": "Lateral", home_name: f"{h_sp.get('lateral_pct', 0):.0f}%", away_name: f"{a_sp.get('lateral_pct', 0):.0f}%"},
+            {"Source": "Kick-Pass", home_name: f"{h_sp.get('kp_pct', 0):.0f}%", away_name: f"{a_sp.get('kp_pct', 0):.0f}%"},
+            {"Source": "Snapkick", home_name: f"{h_sp.get('snapkick_pct', 0):.0f}%", away_name: f"{a_sp.get('snapkick_pct', 0):.0f}%"},
+            {"Source": "Return", home_name: f"{h_sp.get('return_pct', 0):.0f}%", away_name: f"{a_sp.get('return_pct', 0):.0f}%"},
+            {"Source": "Defense", home_name: f"{h_sp.get('bonus_pct', 0):.0f}%", away_name: f"{a_sp.get('bonus_pct', 0):.0f}%"},
+        ]
+        stat_table(sp_rows)
+
+    # ── Defensive Impact ──
+    h_di = home_metrics.get("defensive_impact", {})
+    a_di = away_metrics.get("defensive_impact", {})
+    if h_di or a_di:
+        ui.label("Defensive Impact").classes("font-bold text-slate-700 mt-4")
+        with ui.row().classes("w-full gap-3 flex-wrap"):
+            metric_card(f"{home_name} Bonus Poss",
+                        f"{h_di.get('bonus_possessions', 0)} ({h_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{away_name} Bonus Poss",
+                        f"{a_di.get('bonus_possessions', 0)} ({a_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{home_name} Stop Rate", f"{h_di.get('stop_rate', 0):.0f}%")
+            metric_card(f"{away_name} Stop Rate", f"{a_di.get('stop_rate', 0):.0f}%")
+
+        di_rows = [
+            {"Stat": "Turnovers Forced", home_name: str(h_di.get('turnovers_forced', 0)), away_name: str(a_di.get('turnovers_forced', 0))},
+            {"Stat": "Defensive Stops", home_name: str(h_di.get('defensive_stops', 0)), away_name: str(a_di.get('defensive_stops', 0))},
+            {"Stat": "Stop Rate", home_name: f"{h_di.get('stop_rate', 0):.0f}%", away_name: f"{a_di.get('stop_rate', 0):.0f}%"},
+            {"Stat": "Bonus Scores", home_name: str(h_di.get('bonus_scores', 0)), away_name: str(a_di.get('bonus_scores', 0))},
+            {"Stat": "Bonus Pts", home_name: str(h_di.get('bonus_pts', 0)), away_name: str(a_di.get('bonus_pts', 0))},
+        ]
+        stat_table(di_rows)
+
+
+def _render_game_export(result, home_name, away_name):
+    """Render export and copy options for a game detail view."""
+    home_safe = safe_filename(home_name)
+    away_safe = safe_filename(away_name)
+    seed = result.get("seed", 0)
+    tag = f"{home_safe}_vs_{away_safe}_s{seed}"
+
+    md_content = generate_box_score_markdown(result)
+    forum_content = generate_forum_box_score(result)
+
+    ui.label("Download").classes("text-sm font-semibold text-slate-600")
+    with ui.row().classes("w-full gap-4 flex-wrap"):
+        download_button("Box Score (.md)", md_content, f"{tag}_box_score.md", "text/markdown")
+        download_button("Play Log (.csv)", generate_play_log_csv(result), f"{tag}_plays.csv")
+        download_button("Drives (.csv)", generate_drives_csv(result), f"{tag}_drives.csv")
+
+    ui.separator()
+    ui.label("Copy to Clipboard").classes("text-sm font-semibold text-slate-600")
+    with ui.row().classes("w-full gap-4 flex-wrap"):
+        copy_button("Copy Box Score (Markdown)", md_content, notify_msg="Box score copied!")
+        copy_button("Copy Box Score (Forum)", forum_content, notify_msg="Forum box score copied!")
 
 
 # ---------------------------------------------------------------------------

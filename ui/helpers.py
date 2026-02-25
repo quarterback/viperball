@@ -17,7 +17,7 @@ from engine import ViperballEngine, load_team_from_json, get_available_teams, ge
 from engine.game_engine import WEATHER_CONDITIONS, POSITION_ARCHETYPES, get_archetype_info
 from engine.season import load_teams_from_directory, create_season
 from engine.dynasty import create_dynasty, Dynasty
-from engine.viperball_metrics import calculate_viperball_metrics
+from engine.viperball_metrics import calculate_viperball_metrics, calculate_zbr, calculate_vpr
 from engine.conference_names import generate_conference_names
 from engine.geography import get_geographic_conference_defaults
 from engine.injuries import InjuryTracker
@@ -758,6 +758,94 @@ def render_game_detail(result, key_prefix="gd"):
             })
         st.dataframe(pd.DataFrame(play_rows), hide_index=True, use_container_width=True, height=400)
 
+    with st.expander("Analytics", expanded=False):
+        try:
+            home_metrics = calculate_viperball_metrics(result, "home")
+            away_metrics = calculate_viperball_metrics(result, "away")
+        except Exception:
+            st.caption("Analytics unavailable for this game.")
+            home_metrics, away_metrics = {}, {}
+
+        if home_metrics or away_metrics:
+            # WPA
+            h_vpa = hs.get("epa", {})
+            a_vpa = as_.get("epa", {})
+            st.markdown("**WPA - Win Probability Added**")
+            wpa_c1, wpa_c2, wpa_c3, wpa_c4 = st.columns(4)
+            wpa_c1.metric(f"{home_name} WPA", round(h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)), 1))
+            wpa_c2.metric(f"{away_name} WPA", round(a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)), 1))
+            wpa_c3.metric(f"{home_name} WPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+            wpa_c4.metric(f"{away_name} WPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+
+            # Team metrics table
+            st.markdown("**Team Metrics**")
+            h_tr = home_metrics.get("team_rating", 0)
+            a_tr = away_metrics.get("team_rating", 0)
+            metrics_rows = [
+                {"Stat": "Team Rating", home_name: f"{h_tr:.1f}", away_name: f"{a_tr:.1f}"},
+                {"Stat": "PPD", home_name: f"{home_metrics.get('ppd', 0):.1f}", away_name: f"{away_metrics.get('ppd', 0):.1f}"},
+                {"Stat": "Conversion %", home_name: f"{home_metrics.get('conversion_pct', 0):.1f}%", away_name: f"{away_metrics.get('conversion_pct', 0):.1f}%"},
+                {"Stat": "Lateral %", home_name: f"{home_metrics.get('lateral_pct', 0):.1f}%", away_name: f"{away_metrics.get('lateral_pct', 0):.1f}%"},
+                {"Stat": "Explosive Plays", home_name: str(home_metrics.get("explosive_plays", 0)), away_name: str(away_metrics.get("explosive_plays", 0))},
+                {"Stat": "TO+/-", home_name: "{:+d}".format(home_metrics.get("to_margin", 0)), away_name: "{:+d}".format(away_metrics.get("to_margin", 0))},
+                {"Stat": "Avg Start", home_name: "{:.0f} yd".format(home_metrics.get("avg_start", 0)), away_name: "{:.0f} yd".format(away_metrics.get("avg_start", 0))},
+            ]
+            st.dataframe(pd.DataFrame(metrics_rows), hide_index=True, use_container_width=True)
+
+            # ZBR / VPR
+            player_stats_data = result.get("player_stats", {})
+            player_rating_rows = []
+            for side, t_name in [("home", home_name), ("away", away_name)]:
+                pstats = player_stats_data.get(side, [])
+                for p in pstats:
+                    pos = p.get("position", "")
+                    tag = p.get("tag", "")
+                    is_zb = pos.lower().startswith("zero") or tag.startswith("ZB")
+                    is_vp = pos.lower().startswith("viper") or tag.startswith("VP")
+                    if is_zb and p.get("touches", 0) >= 2:
+                        zbr = calculate_zbr(p)
+                        player_rating_rows.append({"Player": "{} {}".format(tag, p.get("name", "?")), "Team": t_name, "Pos": "ZB", "Rating": "{:.1f} ZBR".format(zbr), "Touches": p.get("touches", 0), "Yards": p.get("yards", 0), "TDs": p.get("tds", 0)})
+                    elif is_vp and p.get("touches", 0) >= 2:
+                        vpr_val = calculate_vpr(p)
+                        player_rating_rows.append({"Player": "{} {}".format(tag, p.get("name", "?")), "Team": t_name, "Pos": "VP", "Rating": "{:.1f} VPR".format(vpr_val), "Touches": p.get("touches", 0), "Yards": p.get("yards", 0), "TDs": p.get("tds", 0)})
+            if player_rating_rows:
+                st.markdown("**Player Ratings**")
+                st.dataframe(pd.DataFrame(player_rating_rows), hide_index=True, use_container_width=True)
+
+            # Scoring Profile
+            h_sp = home_metrics.get("scoring_profile", {})
+            a_sp = away_metrics.get("scoring_profile", {})
+            if h_sp or a_sp:
+                st.markdown("**Scoring Profile**")
+                sp_rows = [
+                    {"Source": "Rush", home_name: "{:.0f}%".format(h_sp.get("rush_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("rush_pct", 0))},
+                    {"Source": "Lateral", home_name: "{:.0f}%".format(h_sp.get("lateral_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("lateral_pct", 0))},
+                    {"Source": "Kick-Pass", home_name: "{:.0f}%".format(h_sp.get("kp_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("kp_pct", 0))},
+                    {"Source": "Snapkick", home_name: "{:.0f}%".format(h_sp.get("snapkick_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("snapkick_pct", 0))},
+                    {"Source": "Return", home_name: "{:.0f}%".format(h_sp.get("return_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("return_pct", 0))},
+                    {"Source": "Defense", home_name: "{:.0f}%".format(h_sp.get("bonus_pct", 0)), away_name: "{:.0f}%".format(a_sp.get("bonus_pct", 0))},
+                ]
+                st.dataframe(pd.DataFrame(sp_rows), hide_index=True, use_container_width=True)
+
+            # Defensive Impact
+            h_di = home_metrics.get("defensive_impact", {})
+            a_di = away_metrics.get("defensive_impact", {})
+            if h_di or a_di:
+                st.markdown("**Defensive Impact**")
+                di_c1, di_c2, di_c3, di_c4 = st.columns(4)
+                di_c1.metric("{} Bonus Poss".format(home_name), h_di.get("bonus_possessions", 0))
+                di_c2.metric("{} Bonus Poss".format(away_name), a_di.get("bonus_possessions", 0))
+                di_c3.metric("{} Stop Rate".format(home_name), "{:.0f}%".format(h_di.get("stop_rate", 0)))
+                di_c4.metric("{} Stop Rate".format(away_name), "{:.0f}%".format(a_di.get("stop_rate", 0)))
+
+                di_rows = [
+                    {"Stat": "Turnovers Forced", home_name: str(h_di.get("turnovers_forced", 0)), away_name: str(a_di.get("turnovers_forced", 0))},
+                    {"Stat": "Defensive Stops", home_name: str(h_di.get("defensive_stops", 0)), away_name: str(a_di.get("defensive_stops", 0))},
+                    {"Stat": "Bonus Scores", home_name: str(h_di.get("bonus_scores", 0)), away_name: str(a_di.get("bonus_scores", 0))},
+                    {"Stat": "Bonus Pts", home_name: str(h_di.get("bonus_pts", 0)), away_name: str(a_di.get("bonus_pts", 0))},
+                ]
+                st.dataframe(pd.DataFrame(di_rows), hide_index=True, use_container_width=True)
+
     with st.expander("Export Game Data", expanded=False):
         dl1, dl2 = st.columns(2)
         with dl1:
@@ -774,9 +862,19 @@ def render_game_detail(result, key_prefix="gd"):
         st.caption("Copy the text below and paste it into any forum or message board.")
         forum_text = generate_forum_box_score(result)
         st.text_area("Box Score (select all, copy)", forum_text, height=400, key=f"{key_prefix}_forum_box")
-        st.download_button("Download Box Score (.txt)", forum_text,
-                           file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_boxscore.txt",
-                           mime="text/plain", key=f"{key_prefix}_dl_forum")
+
+        md_text = generate_box_score_markdown(result)
+        st.text_area("Box Score (Markdown)", md_text, height=400, key=f"{key_prefix}_md_box")
+
+        dl3, dl4 = st.columns(2)
+        with dl3:
+            st.download_button("Download Box Score (.txt)", forum_text,
+                               file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_boxscore.txt",
+                               mime="text/plain", key=f"{key_prefix}_dl_forum")
+        with dl4:
+            st.download_button("Download Box Score (.md)", md_text,
+                               file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_boxscore.md",
+                               mime="text/markdown", key=f"{key_prefix}_dl_md")
 
 
 @st.cache_resource

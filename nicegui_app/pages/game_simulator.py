@@ -21,11 +21,12 @@ from engine.viperball_metrics import calculate_viperball_metrics
 from nicegui_app.state import UserState
 from nicegui_app.helpers import (
     load_team, format_time, fmt_vb_score,
-    generate_box_score_markdown, generate_play_log_csv,
+    generate_box_score_markdown, generate_forum_box_score,
+    generate_play_log_csv,
     generate_drives_csv, safe_filename, drive_result_label,
     drive_result_color, compute_quarter_scores,
 )
-from nicegui_app.components import metric_card, stat_table, download_button
+from nicegui_app.components import metric_card, stat_table, download_button, copy_button
 
 
 def render_game_simulator(state: UserState, shared: dict):
@@ -903,13 +904,15 @@ def _render_player_impact(result, home_name, away_name):
 
 
 def _render_export(result, home_name, away_name, actual_seed):
-    ui.label("Download game data").classes("text-sm text-gray-500 mb-2")
     home_safe = safe_filename(home_name)
     away_safe = safe_filename(away_name)
     tag = f"{home_safe}_vs_{away_safe}_s{actual_seed}"
 
+    md_content = generate_box_score_markdown(result)
+    forum_content = generate_forum_box_score(result)
+
+    ui.label("Download").classes("text-sm font-semibold text-slate-600 mb-2")
     with ui.row().classes("w-full gap-4 flex-wrap"):
-        md_content = generate_box_score_markdown(result)
         download_button("Box Score (.md)", md_content, f"{tag}_box_score.md", "text/markdown")
 
         csv_plays = generate_play_log_csv(result)
@@ -920,3 +923,9 @@ def _render_export(result, home_name, away_name, actual_seed):
 
         json_str = json.dumps(result, indent=2, default=str)
         download_button("Full JSON", json_str, f"{tag}_full.json", "application/json")
+
+    ui.separator()
+    ui.label("Copy to Clipboard").classes("text-sm font-semibold text-slate-600 mb-2")
+    with ui.row().classes("w-full gap-4 flex-wrap"):
+        copy_button("Copy Box Score (Markdown)", md_content, notify_msg="Box score copied!")
+        copy_button("Copy Box Score (Forum)", forum_content, notify_msg="Forum box score copied!")

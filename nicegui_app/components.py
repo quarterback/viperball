@@ -73,6 +73,21 @@ def download_button(label: str, data, filename: str, mime: str = "text/csv"):
     ui.button(label, on_click=_download, icon="download").classes("w-full")
 
 
+def copy_button(label: str, text: str, *, notify_msg: str = "Copied to clipboard!"):
+    """Render a button that copies text to the user's clipboard via JS."""
+    escaped = json.dumps(text)
+
+    async def _copy():
+        await ui.run_javascript(
+            f"navigator.clipboard.writeText({escaped})"
+            f".then(() => {{ }})"
+            f".catch(() => {{ }})"
+        )
+        _safe_notify(notify_msg, type="positive", position="top")
+
+    ui.button(label, on_click=_copy, icon="content_copy").classes("w-full")
+
+
 def _safe_notify(msg: str, **kwargs):
     try:
         ui.notify(msg, **kwargs)
