@@ -1,15 +1,14 @@
 {
   "team_info": {
-    "school_id": "meredith",
-    "school_name": "Meredith College",
-    "abbreviation": "MERD",
-    "mascot": "Avenging Angels",
+    "school_id": "penn_state",
+    "school_name": "Penn State University",
+    "abbreviation": "PSU",
+    "mascot": "Nittany Lions",
     "conference": "National Collegiate League",
-    "city": "Raleigh",
-    "state": "NC",
+    "city": "University Park",
+    "state": "PA",
     "colors": [
-      "Maroon",
-      "Black",
+      "Blue",
       "White"
     ]
   },

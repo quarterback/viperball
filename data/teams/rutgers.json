@@ -1,14 +1,14 @@
 {
   "team_info": {
-    "school_id": "union_ny",
-    "school_name": "Union College",
-    "abbreviation": "UNON",
-    "mascot": "Dutchmen",
+    "school_id": "rutgers",
+    "school_name": "Rutgers University",
+    "abbreviation": "RUTG",
+    "mascot": "Scarlet Knights",
     "conference": "Yankee Fourteen",
-    "city": "Schenectady",
-    "state": "NY",
+    "city": "New Brunswick",
+    "state": "NJ",
     "colors": [
-      "Garnet",
+      "Scarlet",
       "White"
     ]
   },

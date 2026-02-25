@@ -428,7 +428,7 @@ NEW_SCHOOLS = [
     {"id": "smith", "name": "Smith College", "abbrev": "SMTH", "mascot": "Pioneers", "city": "Northampton", "state": "MA", "colors": ["Blue", "Yellow"], "conference": "Founders League", "tier": 72},
     {"id": "wellesley", "name": "Wellesley College", "abbrev": "WELL", "mascot": "Blue", "city": "Wellesley", "state": "MA", "colors": ["Blue", "White"], "conference": "Founders League", "tier": 73},
     {"id": "bryn_mawr", "name": "Bryn Mawr College", "abbrev": "BRYN", "mascot": "Owls", "city": "Bryn Mawr", "state": "PA", "colors": ["Yellow", "White"], "conference": "Centennial Conference", "tier": 71},
-    {"id": "meredith", "name": "Meredith College", "abbrev": "MERD", "mascot": "Avenging Angels", "city": "Raleigh", "state": "NC", "colors": ["Maroon", "Black", "White"], "conference": "Liberty Athletic", "tier": 67},
+    {"id": "penn_state", "name": "Penn State University", "abbrev": "PSU", "mascot": "Nittany Lions", "city": "University Park", "state": "PA", "colors": ["Blue", "White"], "conference": "Liberty Athletic", "tier": 67},
     {"id": "mount_holyoke", "name": "Mount Holyoke College", "abbrev": "MHC", "mascot": "Lyons", "city": "South Hadley", "state": "MA", "colors": ["Blue", "White"], "conference": "Founders League", "tier": 71},
     {"id": "academy_of_art", "name": "Academy of Art University", "abbrev": "AAU", "mascot": "Urban Knights", "city": "San Francisco", "state": "CA", "colors": ["Red", "Black"], "conference": "Pioneer League", "tier": 66},
     {"id": "point_loma", "name": "Point Loma Nazarene University", "abbrev": "PLNU", "mascot": "Sea Lions", "city": "San Diego", "state": "CA", "colors": ["Green", "Gold"], "conference": "Pioneer League", "tier": 69},
@@ -508,7 +508,7 @@ NEW_SCHOOLS = [
     # ── Hockey/ECAC schools → Yankee Eleven ──
     {"id": "cornell", "name": "Cornell University", "abbrev": "COR", "mascot": "Big Red", "city": "Ithaca", "state": "NY", "colors": ["Carnelian", "White"], "conference": "Yankee Eleven", "tier": 78},
     {"id": "colgate", "name": "Colgate University", "abbrev": "COLG", "mascot": "Raiders", "city": "Hamilton", "state": "NY", "colors": ["Maroon", "White"], "conference": "Yankee Eleven", "tier": 74},
-    {"id": "union_ny", "name": "Union College", "abbrev": "UNON", "mascot": "Dutchmen", "city": "Schenectady", "state": "NY", "colors": ["Garnet", "White"], "conference": "Yankee Eleven", "tier": 72},
+    {"id": "rutgers", "name": "Rutgers University", "abbrev": "RUTG", "mascot": "Scarlet Knights", "city": "New Brunswick", "state": "NJ", "colors": ["Scarlet", "White"], "conference": "Yankee Eleven", "tier": 72},
     {"id": "rpi", "name": "Rensselaer Polytechnic Institute", "abbrev": "RPI", "mascot": "Engineers", "city": "Troy", "state": "NY", "colors": ["Cherry", "White"], "conference": "Yankee Eleven", "tier": 73},
     {"id": "niagara", "name": "Niagara University", "abbrev": "NIAG", "mascot": "Purple Eagles", "city": "Lewiston", "state": "NY", "colors": ["Purple", "White"], "conference": "Yankee Eleven", "tier": 70},
     {"id": "canisius", "name": "Canisius University", "abbrev": "CANI", "mascot": "Golden Griffins", "city": "Buffalo", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Yankee Eleven", "tier": 69},

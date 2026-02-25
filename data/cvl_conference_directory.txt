@@ -138,7 +138,7 @@ NATIONAL COLLEGIATE LEAGUE (8 teams)
    2. Davidson College (DAV) — Wildcats — Davidson, NC
    3. Emory University (EMRY) — Eagles — Atlanta, GA
    4. High Point University (HPU) — Panthers — High Point, NC
-   5. Meredith College (MERD) — Avenging Angels — Raleigh, NC
+   5. Penn State University (PSU) — Nittany Lions — University Park, PA
    6. Mississippi University for Women (MUW) — Owls — Columbus, MS
    7. University of North Carolina at Asheville (UNCA) — Bulldogs — Asheville, NC
    8. University of North Carolina at Greensboro (UNCG) — Spartans — Greensboro, NC
@@ -248,7 +248,7 @@ YANKEE FOURTEEN (11 teams)
    4. Ithaca College (ITHA) — Bombers — Ithaca, NY
    5. New Jersey Institute of Technology (NJIT) — Highlanders — Newark, NJ
    6. Rensselaer Polytechnic Institute (RPI) — Engineers — Troy, NY
-   7. Union College (UNON) — Dutchmen — Schenectady, NY
+   7. Rutgers University (RUTG) — Scarlet Knights — New Brunswick, NJ
    8. University of Maryland, Baltimore County (UMBC) — Retrievers — Baltimore, MD
    9. University of New Hampshire (UNH) — Wildcats — Durham, NH
   10. University of Rochester (ROCH) — Yellowjackets — Rochester, NY
