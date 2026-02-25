@@ -94,3 +94,70 @@ def notify_warning(msg: str):
 
 def notify_info(msg: str):
     _safe_notify(msg, type="info", position="top")
+
+
+_ROLE_DISPLAY = {
+    "head_coach": "HC",
+    "oc": "OC",
+    "dc": "DC",
+    "stc": "STC",
+}
+
+
+def coaching_snapshot_card(snapshot: dict, team_name: str, bg_class: str = "bg-slate-50"):
+    """Render a compact coaching staff snapshot card.
+
+    ``snapshot`` is the dict produced by ViperballEngine._coaching_snapshot(),
+    containing per-role dicts with name, classification, composure, etc.
+    """
+    if not snapshot:
+        return
+
+    hc = snapshot.get("head_coach", {})
+    hc_name = hc.get("name", "Unknown")
+    hc_class = hc.get("classification", "")
+    hc_stars = hc.get("star_rating", 0)
+    hc_comp = hc.get("composure", "")
+    hc_aff = hc.get("hc_affinity", "")
+    star_str = "\u2605" * hc_stars + "\u2606" * (5 - hc_stars) if hc_stars else ""
+
+    with ui.card().classes(f"w-full p-2 {bg_class} rounded"):
+        # HC headline
+        with ui.row().classes("items-center gap-2"):
+            ui.label(team_name).classes("font-bold text-sm text-slate-700")
+            if star_str:
+                ui.label(star_str).classes("text-sm text-amber-500")
+        with ui.row().classes("items-center gap-2"):
+            ui.label(f"HC {hc_name}").classes("text-xs text-slate-600")
+            if hc_class:
+                ui.badge(hc_class).props("outline").classes("text-xs")
+            if hc_comp:
+                ui.badge(hc_comp).props("outline color=grey").classes("text-xs")
+            if hc_aff and hc_aff != "Balanced":
+                ui.badge(hc_aff).props("outline color=blue-grey").classes("text-xs")
+
+        # Coordinator row
+        coord_parts = []
+        for role_key in ("oc", "dc", "stc"):
+            card = snapshot.get(role_key, {})
+            if card:
+                role_label = _ROLE_DISPLAY.get(role_key, role_key.upper())
+                name = card.get("name", "")
+                cls = card.get("classification", "")
+                tag = f"{role_label}: {name}"
+                if cls:
+                    tag += f" ({cls})"
+                coord_parts.append(tag)
+        if coord_parts:
+            ui.label(" | ".join(coord_parts)).classes("text-xs text-gray-500")
+
+        # Key attributes row
+        attrs = []
+        if hc.get("leadership"):
+            attrs.append(f"LDR {hc['leadership']}")
+        if hc.get("rotations"):
+            attrs.append(f"ROT {hc['rotations']}")
+        if hc.get("overall"):
+            attrs.append(f"OVR {hc['overall']}")
+        if attrs:
+            ui.label(" | ".join(attrs)).classes("text-xs text-gray-400")

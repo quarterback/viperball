@@ -32,6 +32,7 @@ from nicegui_app.components import (
     notify_info,
     notify_warning,
     download_button,
+    coaching_snapshot_card,
 )
 
 
@@ -168,6 +169,16 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
     weather = result.get("weather", "clear")
     seed = result.get("seed", "N/A")
     ui.label(f"Weather: {weather.title()} | Seed: {seed}").classes("text-sm text-gray-500")
+
+    # Coaching snapshot
+    home_snap = result.get("home_coaching_snapshot", {})
+    away_snap = result.get("away_coaching_snapshot", {})
+    if home_snap or away_snap:
+        with ui.row().classes("w-full gap-4 mb-2 mt-2"):
+            with ui.column().classes("flex-1"):
+                coaching_snapshot_card(home_snap, home_name, bg_class="bg-blue-50")
+            with ui.column().classes("flex-1"):
+                coaching_snapshot_card(away_snap, away_name, bg_class="bg-red-50")
 
     # Quarter scoring
     home_q, away_q = compute_quarter_scores(plays)

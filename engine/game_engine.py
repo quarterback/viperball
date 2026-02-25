@@ -9461,6 +9461,8 @@ class ViperballEngine:
             "away_defense_style": DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style),
             "home_st_scheme": self.home_team.st_scheme,
             "away_st_scheme": self.away_team.st_scheme,
+            "home_coaching_snapshot": self._coaching_snapshot("home"),
+            "away_coaching_snapshot": self._coaching_snapshot("away"),
             "delta_yards": {
                 "home": self.state.home_delta_yards,
                 "away": self.state.away_delta_yards,
@@ -9616,6 +9618,41 @@ class ViperballEngine:
                 "stack_label": stack_label,
             }
         return result
+
+    def _coaching_snapshot(self, side: str) -> Dict:
+        """Build a compact coaching staff snapshot for the game summary.
+
+        Returns a dict with head coach name, classification, composure label,
+        visible attributes, and coordinator info — everything a viewer needs
+        to understand the coaching matchup without accessing the full staff.
+        """
+        staff = self._home_coaching_staff if side == "home" else self._away_coaching_staff
+        if not staff:
+            return {}
+
+        def _card_summary(card) -> Dict:
+            if card is None:
+                return {}
+            return {
+                "name": card.full_name if hasattr(card, "full_name") else str(card),
+                "classification": getattr(card, "classification_label", ""),
+                "sub_archetype": getattr(card, "sub_archetype_label", ""),
+                "composure": getattr(card, "composure_label", ""),
+                "leadership": getattr(card, "leadership", 0),
+                "rotations": getattr(card, "rotations", 0),
+                "development": getattr(card, "development", 0),
+                "recruiting": getattr(card, "recruiting", 0),
+                "overall": getattr(card, "visible_score", 0),
+                "star_rating": getattr(card, "star_rating", 0),
+                "hc_affinity": getattr(card, "hc_affinity_label", ""),
+            }
+
+        snapshot = {}
+        for role_key in ("head_coach", "oc", "dc", "stc"):
+            card = staff.get(role_key)
+            if card:
+                snapshot[role_key] = _card_summary(card)
+        return snapshot
 
     def calculate_team_stats(self, plays: List[Play]) -> Dict:
         scrimmage_plays = [p for p in plays if p.play_type not in ("punt", "drop_kick", "place_kick", "kneel", "penalty")]
