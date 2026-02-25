@@ -25,7 +25,7 @@ from nicegui_app.helpers import (
     generate_drives_csv, safe_filename, drive_result_label,
     drive_result_color, compute_quarter_scores,
 )
-from nicegui_app.components import metric_card, stat_table, download_button
+from nicegui_app.components import metric_card, stat_table, download_button, coaching_snapshot_card
 
 
 def render_game_simulator(state: UserState, shared: dict):
@@ -271,6 +271,16 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
         with ui.card().classes("flex-1 p-2 bg-red-50"):
             ui.label(away_name).classes("font-bold text-sm text-slate-700")
             ui.label(_style_tag(result, "away")).classes("text-xs text-red-600")
+
+    # Coaching snapshot
+    home_snap = result.get("home_coaching_snapshot", {})
+    away_snap = result.get("away_coaching_snapshot", {})
+    if home_snap or away_snap:
+        with ui.row().classes("w-full gap-4 mb-2"):
+            with ui.column().classes("flex-1"):
+                coaching_snapshot_card(home_snap, home_name, bg_class="bg-blue-50")
+            with ui.column().classes("flex-1"):
+                coaching_snapshot_card(away_snap, away_name, bg_class="bg-red-50")
 
     # Quarter scoring table
     qtr_rows = [
