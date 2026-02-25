@@ -205,6 +205,13 @@ class KickPassSubFamily(Enum):
     KICK_LATERAL = "kick_lateral"
 
 
+class FormationShell(Enum):
+    TIGHT = "tight"
+    SPLIT = "split"
+    SPREAD = "spread"
+    HEAVY = "heavy"
+
+
 class PlayResult(Enum):
     GAIN = "gain"
     FIRST_DOWN = "first_down"
@@ -266,6 +273,92 @@ PLAY_FAMILY_TO_DC_TYPE = {
 
 DEFAULT_KICK_PASS_WEIGHTS = {
     "quick_kick": 0.35, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.15,
+}
+
+# ── Formation Shell Modifiers ──
+# Each shell adjusts run yardage, kick pass completion, lateral yards, and sack rate.
+# Values are at 50% strength (calibration starting point — scale up after batch validation).
+FORMATION_MODIFIERS = {
+    "tight": {
+        # Run bonuses — extra blockers at the point of attack
+        "dive_option_yards":      +0.4,
+        "power_yards":            +0.5,
+        "counter_yards":          +0.25,
+        # Edge runs suffer — no one deployed wide
+        "sweep_option_yards":     -0.25,
+        "speed_option_yards":     -0.4,
+        "viper_jet_yards":         0.0,
+        # Kick pass — play-action helps short, kills deep
+        "quick_kick_completion":  +0.015,
+        "territory_completion":   -0.02,
+        "bomb_completion":        -0.04,
+        # Lateral chains — bunched alignment
+        "lateral_yards":          -0.2,
+        # Protection — extra blockers
+        "sack_modifier":          -0.015,
+        # DC read — moderate tell
+        "dc_read_penalty":         0.0,
+    },
+    "split": {
+        # Baseline formation — all modifiers neutral
+        "dive_option_yards":       0.0,
+        "power_yards":             0.0,
+        "counter_yards":           0.0,
+        "sweep_option_yards":      0.0,
+        "speed_option_yards":      0.0,
+        "viper_jet_yards":         0.0,
+        "quick_kick_completion":   0.0,
+        "territory_completion":    0.0,
+        "bomb_completion":         0.0,
+        "lateral_yards":           0.0,
+        "sack_modifier":           0.0,
+        # Hardest to read — DC penalty
+        "dc_read_penalty":        -0.015,
+    },
+    "spread": {
+        # Inside runs suffer — no lead blocker
+        "dive_option_yards":      -0.5,
+        "power_yards":            -0.4,
+        "counter_yards":           0.0,
+        # Edge runs thrive — defensive spacing
+        "sweep_option_yards":     +0.4,
+        "speed_option_yards":     +0.5,
+        "viper_jet_yards":        +0.25,
+        # Kick pass — 4 targets in space
+        "quick_kick_completion":  +0.01,
+        "territory_completion":   +0.025,
+        "bomb_completion":        +0.03,
+        # Lateral chains — horizontal spacing
+        "lateral_yards":          +0.3,
+        # ZB exposed — SB is split out
+        "sack_modifier":          +0.025,
+        # Easier to read (clearly pass/outside)
+        "dc_read_penalty":        +0.01,
+    },
+    "heavy": {
+        # Maximum run blocking
+        "dive_option_yards":      +0.6,
+        "power_yards":            +0.75,
+        "counter_yards":          +0.5,
+        # Perimeter dead
+        "sweep_option_yards":     -0.5,
+        "speed_option_yards":     -0.6,
+        "viper_jet_yards":        -0.25,
+        # Kick pass terrible — everyone bunched
+        "quick_kick_completion":  -0.01,
+        "territory_completion":   -0.03,
+        "bomb_completion":        -0.05,
+        # Laterals impossible
+        "lateral_yards":          -0.4,
+        # Maximum protection
+        "sack_modifier":          -0.025,
+        # Easiest to read — obviously a run
+        "dc_read_penalty":        +0.02,
+    },
+}
+
+DEFAULT_FORMATION_WEIGHTS = {
+    "tight": 0.20, "split": 0.35, "spread": 0.25, "heavy": 0.20,
 }
 
 RUN_PLAY_CONFIG = {
@@ -1397,6 +1490,7 @@ class Play:
     penalty: Optional[Penalty] = None
     play_signature: str = ""
     kick_pass_subfamily: str = ""
+    formation: str = ""
 
 
 OFFENSE_STYLES = {
@@ -1436,6 +1530,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.80, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.05,
         },
+        "formation_weights": {"tight": 0.30, "split": 0.25, "spread": 0.05, "heavy": 0.40},
     },
     "lateral_spread": {
         "label": "Lateral Spread",
@@ -1476,6 +1571,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.15, "territory": 0.30, "bomb": 0.10, "kick_lateral": 0.45,
         },
+        "formation_weights": {"tight": 0.05, "split": 0.20, "spread": 0.65, "heavy": 0.10},
     },
     "boot_raid": {
         "label": "Boot Raid",
@@ -1524,6 +1620,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights_attack": {
             "quick_kick": 0.50, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.25,
         },
+        "formation_weights": {"tight": 0.15, "split": 0.35, "spread": 0.40, "heavy": 0.10},
     },
     "ball_control": {
         "label": "Ball Control",
@@ -1562,6 +1659,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.70, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.05,
         },
+        "formation_weights": {"tight": 0.25, "split": 0.35, "spread": 0.10, "heavy": 0.30},
     },
     "ghost": {
         "label": "Ghost Formation",
@@ -1600,6 +1698,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.25, "territory": 0.25, "bomb": 0.35, "kick_lateral": 0.15,
         },
+        "formation_weights": {"tight": 0.20, "split": 0.30, "spread": 0.30, "heavy": 0.20},
     },
     "stampede": {
         "label": "Stampede",
@@ -1638,6 +1737,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.50, "territory": 0.25, "bomb": 0.05, "kick_lateral": 0.20,
         },
+        "formation_weights": {"tight": 0.10, "split": 0.30, "spread": 0.50, "heavy": 0.10},
     },
     "chain_gang": {
         "label": "Chain Gang",
@@ -1677,6 +1777,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.10, "territory": 0.15, "bomb": 0.15, "kick_lateral": 0.60,
         },
+        "formation_weights": {"tight": 0.05, "split": 0.15, "spread": 0.70, "heavy": 0.10},
     },
     "slick_n_slide": {
         "label": "Slick 'n Slide",
@@ -1717,6 +1818,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.40, "territory": 0.35, "bomb": 0.05, "kick_lateral": 0.20,
         },
+        "formation_weights": {"tight": 0.15, "split": 0.40, "spread": 0.30, "heavy": 0.15},
     },
     "balanced": {
         "label": "Balanced",
@@ -1752,6 +1854,7 @@ OFFENSE_STYLES = {
         "kick_pass_weights": {
             "quick_kick": 0.30, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.20,
         },
+        "formation_weights": {"tight": 0.20, "split": 0.35, "spread": 0.25, "heavy": 0.20},
     },
     "east_coast": {
         "label": "East Coast",
@@ -1822,6 +1925,7 @@ OFFENSE_STYLES = {
             "quick_kick": 0.25, "territory": 0.40, "bomb": 0.20, "kick_lateral": 0.15,
         },
         "chase_tempo_override": 0.80,
+        "formation_weights": {"tight": 0.10, "split": 0.40, "spread": 0.40, "heavy": 0.10},
     },
     "shock_and_awe": {
         "label": "Shock & Awe",
@@ -1893,6 +1997,7 @@ OFFENSE_STYLES = {
             "quick_kick": 0.10, "territory": 0.20, "bomb": 0.55, "kick_lateral": 0.15,
         },
         "chase_tempo_override": 0.90,
+        "formation_weights": {"tight": 0.05, "split": 0.15, "spread": 0.70, "heavy": 0.10},
     },
 }
 
@@ -2022,6 +2127,48 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("shock_and_awe", "drift"): 0.88,
     ("shock_and_awe", "chaos"): 0.95,
     ("shock_and_awe", "lockdown"): 0.78,    # HARD COUNTER
+}
+
+# ── Formation × Defense Matchup Matrix ──
+# Multiplicative layer that stacks with OFFENSE_VS_DEFENSE_MATCHUP.
+# > 1.0 = formation has advantage, < 1.0 = defense has advantage.
+FORMATION_VS_DEFENSE = {
+    # --- Tight: power interior, weak to pressure/blitz ---
+    ("tight", "swarm"):       1.00,
+    ("tight", "blitz_pack"):  0.92,  # Pressure into condensed space
+    ("tight", "shadow"):      1.02,  # Shadow plays edges, Tight works inside
+    ("tight", "fortress"):    0.94,  # Fortress built for exactly this
+    ("tight", "predator"):    0.96,  # Predator gambles, Tight is sturdy
+    ("tight", "drift"):       1.05,  # Drift bends, Tight pushes
+    ("tight", "chaos"):       0.98,  # Chaos causes confusion in tight spaces
+    ("tight", "lockdown"):    1.10,  # Coverage is wasted — nobody is running routes
+    # --- Split: neutral baseline ---
+    ("split", "swarm"):       1.00,
+    ("split", "blitz_pack"):  1.00,
+    ("split", "shadow"):      1.00,
+    ("split", "fortress"):    1.02,  # Split can go either way
+    ("split", "predator"):    1.00,
+    ("split", "drift"):       1.00,
+    ("split", "chaos"):       0.98,  # Slight chaos disadvantage
+    ("split", "lockdown"):    0.98,  # Slight coverage advantage
+    # --- Spread: aerial advantage, sack vulnerability ---
+    ("spread", "swarm"):      1.03,  # Swarm can't cover everything
+    ("spread", "blitz_pack"): 1.08,  # Pressure leaves receivers open (but sacks go up)
+    ("spread", "shadow"):     0.95,  # Shadow tracks man-to-man in space
+    ("spread", "fortress"):   1.12,  # Fortress defending ghosts in Spread
+    ("spread", "predator"):   1.05,  # Predator gambles, Spread punishes
+    ("spread", "drift"):      0.92,  # Drift sits in zones, reads the Spread
+    ("spread", "chaos"):      1.02,  # Chaos struggles with 4-wide
+    ("spread", "lockdown"):   0.85,  # Coverage blankets all 4 receivers
+    # --- Heavy: smashmouth, terrible at passing ---
+    ("heavy", "swarm"):       1.02,  # Physical mismatch
+    ("heavy", "blitz_pack"):  0.95,  # Pressure gets blown up by extra blockers
+    ("heavy", "shadow"):      1.05,  # Shadow can't handle the interior push
+    ("heavy", "fortress"):    0.92,  # Fortress is ready for this
+    ("heavy", "predator"):    1.08,  # Predator out-physicaled
+    ("heavy", "drift"):       1.05,  # Drift bends to the power
+    ("heavy", "chaos"):       1.00,  # Even matchup
+    ("heavy", "lockdown"):    1.12,  # Coverage is useless — no one to cover
 }
 
 # ========================================
@@ -2676,6 +2823,7 @@ class ViperballEngine:
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
         self._drive_consecutive_completions = 0  # Consecutive kick pass completions (for rhythm_escalation)
+        self._current_formation = "split"  # Current snap formation shell
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -3830,6 +3978,16 @@ class ViperballEngine:
                         else:
                             self._away_family_freq_drive[kp_sf] = self._away_family_freq_drive.get(kp_sf, 0) + 1
                             self._away_family_freq_half[kp_sf] = self._away_family_freq_half.get(kp_sf, 0) + 1
+            # V3: Track formation-play pairs for DC Solved Puzzle
+            if _pf_dc_type and hasattr(play, 'formation') and play.formation:
+                fp_key = f"{play.formation}:{_pf_dc_type}"
+                if drive_team == "home":
+                    self._home_family_freq_drive[fp_key] = self._home_family_freq_drive.get(fp_key, 0) + 1
+                    self._home_family_freq_half[fp_key] = self._home_family_freq_half.get(fp_key, 0) + 1
+                else:
+                    self._away_family_freq_drive[fp_key] = self._away_family_freq_drive.get(fp_key, 0) + 1
+                    self._away_family_freq_half[fp_key] = self._away_family_freq_half.get(fp_key, 0) + 1
+
             # V2.4: Decay solved families when offense breaks tendency
             if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False):
                 self._decay_solved_families(drive_team, _pf_dc_type)
@@ -4805,11 +4963,18 @@ class ViperballEngine:
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
 
-        # ── Normal play family selection — direct dispatch ──
-        play_family = self.select_play_family()
+        # ── Formation-First: select formation, then play family ──
+        self._current_formation = self.select_formation()
+        play_family = self.select_play_family(formation=self._current_formation)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
         play = self._dispatch_play(play_type, play_family)
+        # Stamp formation on the play object and prepend to description
+        formation = self._current_formation
+        play.formation = formation
+        if formation != "split":
+            formation_label = formation.upper()
+            play.description = f"{formation_label} — {play.description}"
         return self._apply_post_play_penalties(play)
 
     def _dispatch_play(self, play_type: PlayType, play_family: PlayFamily) -> Play:
@@ -4843,7 +5008,75 @@ class ViperballEngine:
                 play = self._apply_post_play_penalty(post_pen, play)
         return play
 
-    def select_play_family(self) -> PlayFamily:
+    def select_formation(self) -> str:
+        """Select formation shell based on style tendency + game state + weather.
+
+        Returns one of: "tight", "split", "spread", "heavy".
+        """
+        style = self._current_style()
+        base = dict(style.get("formation_weights", DEFAULT_FORMATION_WEIGHTS))
+
+        fp = self.state.field_position
+        ytg = self.state.yards_to_go
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+
+        # ── Short yardage (1-3 to go): shift toward Heavy/Tight ──
+        if ytg <= 3:
+            base["heavy"] += 0.20
+            base["tight"] += 0.10
+            base["spread"] -= 0.20
+            base["split"] -= 0.10
+
+        # ── Long yardage (15+ to go): shift toward Spread ──
+        if ytg >= 15:
+            base["spread"] += 0.20
+            base["heavy"] -= 0.15
+            base["tight"] -= 0.05
+
+        # ── Red zone (inside opponent 20): shift toward Heavy/Tight ──
+        if fp >= 80:
+            base["heavy"] += 0.15
+            base["tight"] += 0.10
+            base["spread"] -= 0.15
+            base["split"] -= 0.10
+
+        # ── Trailing 10+ in Q4: shift toward Spread ──
+        if score_diff <= -10 and quarter >= 4:
+            base["spread"] += 0.25
+            base["heavy"] -= 0.15
+            base["tight"] -= 0.10
+
+        # ── Siege (own 1-10): shift toward Tight ──
+        if fp <= 10:
+            base["tight"] += 0.15
+            base["spread"] -= 0.15
+
+        # ── Weather adjustments ──
+        weather = self.weather
+        if weather in ("rain", "snow"):
+            base["heavy"] += 0.10
+            base["tight"] += 0.05
+            base["spread"] -= 0.10
+            base["split"] -= 0.05
+        elif weather == "sleet":
+            base["heavy"] += 0.15
+            base["tight"] += 0.10
+            base["spread"] -= 0.20
+            base["split"] -= 0.05
+        elif weather == "heavy_wind":
+            base["spread"] -= 0.05
+            base["split"] += 0.05
+
+        # ── Normalize (floor at 0.01 to avoid zero weights) ──
+        total = sum(max(0.01, v) for v in base.values())
+        norm = {k: max(0.01, v) / total for k, v in base.items()}
+
+        shells = list(norm.keys())
+        weights = [norm[s] for s in shells]
+        return random.choices(shells, weights=weights, k=1)[0]
+
+    def select_play_family(self, formation: str = "split") -> PlayFamily:
         style = self._current_style()
 
         # ── Situational weight mode override ──
@@ -4863,6 +5096,31 @@ class ViperballEngine:
 
         # ── V2.1: Deprecated territory_kick zeroed out ──
         weights["territory_kick"] = 0.0
+
+        # ── Formation-First coherence adjustments ──
+        # The formation selected pre-snap adjusts play family weights to
+        # maintain schematic coherence (e.g. Heavy suppresses kick_pass).
+        if formation == "heavy":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.4
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.3
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 1.5
+            weights["power"] = weights.get("power", 0.1) * 1.5
+            weights["counter"] = weights.get("counter", 0.05) * 1.3
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 0.5
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 0.5
+        elif formation == "spread":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.6
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.4
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
+            weights["power"] = weights.get("power", 0.1) * 0.5
+        elif formation == "tight":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.7
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
+            weights["power"] = weights.get("power", 0.1) * 1.3
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.6
+        # Split: no adjustments (baseline)
 
         # ── V2.1: Range-gating for kick families ──
         # Compute kicker range to determine if kicks are viable
@@ -5187,6 +5445,83 @@ class ViperballEngine:
             return "attack"
 
         return "base"
+
+    def _formation_yard_modifier(self, play_family_value: str) -> float:
+        """Return the formation-based yardage adjustment for a play family.
+
+        Reads the current snap formation and returns a +/- yard modifier.
+        """
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+
+        key_map = {
+            "dive_option": "dive_option_yards",
+            "power": "power_yards",
+            "counter": "counter_yards",
+            "sweep_option": "sweep_option_yards",
+            "speed_option": "speed_option_yards",
+            "viper_jet": "viper_jet_yards",
+            "lateral_spread": "lateral_yards",
+        }
+        mod_key = key_map.get(play_family_value)
+        if mod_key:
+            return mods.get(mod_key, 0.0)
+        return 0.0
+
+    def _formation_kick_pass_modifier(self, subfamily: "KickPassSubFamily") -> float:
+        """Return formation-based completion probability adjustment for a kick pass sub-family."""
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+
+        key_map = {
+            KickPassSubFamily.QUICK_KICK: "quick_kick_completion",
+            KickPassSubFamily.TERRITORY: "territory_completion",
+            KickPassSubFamily.BOMB: "bomb_completion",
+            KickPassSubFamily.KICK_LATERAL: "quick_kick_completion",  # Uses QK rates
+        }
+        return mods.get(key_map.get(subfamily, ""), 0.0)
+
+    def _formation_sack_modifier(self) -> float:
+        """Return formation-based sack rate adjustment."""
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+        return mods.get("sack_modifier", 0.0)
+
+    def _formation_defense_multiplier(self) -> float:
+        """Return the formation × defense style yard multiplier.
+
+        Stacks multiplicatively with OFFENSE_VS_DEFENSE_MATCHUP.
+        The DC can partially negate this with a correct formation read.
+        """
+        formation = getattr(self, '_current_formation', 'split')
+        defense_style = self._current_defense().get("label", "").lower().replace(" ", "_")
+        # Try the current 8-scheme names
+        if self.state.possession == "home":
+            def_style_name = self.away_team.defense_style
+        else:
+            def_style_name = self.home_team.defense_style
+
+        base_mult = FORMATION_VS_DEFENSE.get((formation, def_style_name), 1.0)
+
+        # ── DC formation read — instincts-based partial correction ──
+        dc_gp = self._def_dc_gameplan()
+        instincts_factor = dc_gp.get("instincts_factor", 0.5)
+        read_chance = 0.40 + instincts_factor * 0.35  # 40% to 75%
+
+        # Ghost special case: harder to read
+        style_name = self._current_style_name()
+        if style_name == "ghost":
+            read_chance -= 0.10
+
+        read_chance = max(0.20, min(0.80, read_chance))
+
+        if random.random() < read_chance:
+            # DC reads formation correctly — partially negate formation advantage
+            adjustment = 1.0 + (1.0 - base_mult) * 0.5  # 50% correction
+            return adjustment
+        else:
+            # DC doesn't read it — full formation advantage
+            return base_mult
 
     def _select_kick_pass_subfamily(self, kicker) -> "KickPassSubFamily":
         """Select kick pass sub-family based on style philosophy + game state.
@@ -6194,6 +6529,13 @@ class ViperballEngine:
 
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
+
+        # ── Formation shell modifier ──
+        if play_family is not None:
+            formation_yard_adj = self._formation_yard_modifier(play_family.value)
+            center += formation_yard_adj
+            # Formation × Defense matchup multiplier
+            center *= self._formation_defense_multiplier()
 
         # ── V2.3: DC gameplan suppression (stacks multiplicatively with weather) ──
         # The opposing DC's film prep creates per-play-type suppression.
@@ -7371,6 +7713,8 @@ class ViperballEngine:
             base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
+        # ── Formation lateral modifier ──
+        yards_gained += int(self._formation_yard_modifier("lateral_spread"))
         yards_gained = max(-5, min(25, yards_gained))
 
         lat_def_team = self.get_defensive_team()
@@ -7544,6 +7888,10 @@ class ViperballEngine:
             distance_penalty = max(0.0, (kick_distance - 8) * 0.02)
         completion_prob = max(0.08, min(0.92, contest_prob - distance_penalty))
 
+        # ── Formation shell modifier on completion ──
+        formation_kp_adj = self._formation_kick_pass_modifier(subfamily)
+        completion_prob = max(0.08, min(0.92, completion_prob + formation_kp_adj))
+
         # ── East Coast: rhythm_escalation — 3+ consecutive completions → +5% accuracy ──
         style_name = self._current_style_name()
         if style_name == "east_coast" and style.get("rhythm_escalation", False):
@@ -7610,6 +7958,8 @@ class ViperballEngine:
         if style_name == "shock_and_awe":
             sack_vuln = style.get("sack_vulnerability", 0.0)
             sack_base_rate += sack_vuln
+        # ── Formation shell sack modifier ──
+        sack_base_rate += self._formation_sack_modifier()
         sack_base_rate = max(0.02, min(0.22, sack_base_rate))
 
         if random.random() < sack_base_rate:

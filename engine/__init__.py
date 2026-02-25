@@ -15,6 +15,7 @@ from .game_engine import (
     ST_SCHEMES,
     # V2/V3 exports
     KickPassSubFamily,
+    FormationShell,
     V2_ENGINE_CONFIG,
     VarianceArchetype,
     FatigueTier,
@@ -77,6 +78,7 @@ __all__ = [
     "calculate_defensive_impact",
     "generate_headline",
     "KickPassSubFamily",
+    "FormationShell",
     "V2_ENGINE_CONFIG",
     "VarianceArchetype",
     "FatigueTier",
