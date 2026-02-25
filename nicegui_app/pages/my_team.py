@@ -51,11 +51,11 @@ def _build_dashboard_text(team_name: str, record: dict, rank, mode: str) -> str:
     lines.append(f"Point Differential: {fmt_vb_score(record.get('point_differential', 0))}")
     lines.append("")
     lines.append("Viperball Metrics:")
-    lines.append(f"  OPI: {record.get('avg_opi', 0):.1f}")
-    lines.append(f"  Territory: {record.get('avg_territory', 0):.1f}")
-    lines.append(f"  Pressure: {record.get('avg_pressure', 0):.1f}")
-    lines.append(f"  Chaos: {record.get('avg_chaos', 0):.1f}")
-    lines.append(f"  Kicking: {record.get('avg_kicking', 0):.1f}")
+    lines.append(f"  Team Rating: {record.get('avg_opi', 0):.1f}")
+    lines.append(f"  Avg Start: {record.get('avg_territory', 0):.1f}")
+    lines.append(f"  Conv %: {record.get('avg_pressure', 0):.1f}")
+    lines.append(f"  Lateral %: {record.get('avg_chaos', 0):.1f}")
+    lines.append(f"  Kick Rating: {record.get('avg_kicking', 0):.1f}")
     if record.get("offense_style"):
         lines.append(f"\nOffense: {record.get('offense_style', '')}")
     if record.get("defense_style"):
@@ -436,25 +436,25 @@ async def _render_dashboard(session_id: str, mode: str, team_name: str, standing
     # Row 3: viperball metrics
     with ui.row().classes("w-full flex-wrap gap-4"):
         with ui.column():
-            metric_card("OPI", f"{record.get('avg_opi', 0):.1f}")
+            metric_card("Team Rating", f"{record.get('avg_opi', 0):.1f}")
         with ui.column():
-            metric_card("Territory", f"{record.get('avg_territory', 0):.1f}")
+            metric_card("Avg Start", f"{record.get('avg_territory', 0):.1f}")
         with ui.column():
-            metric_card("Pressure", f"{record.get('avg_pressure', 0):.1f}")
+            metric_card("Conv %", f"{record.get('avg_pressure', 0):.1f}")
         with ui.column():
-            metric_card("Chaos", f"{record.get('avg_chaos', 0):.1f}")
+            metric_card("Lateral %", f"{record.get('avg_chaos', 0):.1f}")
         with ui.column():
-            metric_card("Kicking", f"{record.get('avg_kicking', 0):.1f}")
+            metric_card("Kick Rating", f"{record.get('avg_kicking', 0):.1f}")
 
     # Radar chart
     if standings:
         n = len(standings)
         avgs = {
-            "OPI": sum(r.get("avg_opi", 0) for r in standings) / n,
-            "Territory": sum(r.get("avg_territory", 0) for r in standings) / n,
-            "Pressure": sum(r.get("avg_pressure", 0) for r in standings) / n,
-            "Chaos": sum(r.get("avg_chaos", 0) for r in standings) / n,
-            "Kicking": sum(r.get("avg_kicking", 0) for r in standings) / n,
+            "Team Rating": sum(r.get("avg_opi", 0) for r in standings) / n,
+            "Avg Start": sum(r.get("avg_territory", 0) for r in standings) / n,
+            "Conv %": sum(r.get("avg_pressure", 0) for r in standings) / n,
+            "Lateral %": sum(r.get("avg_chaos", 0) for r in standings) / n,
+            "Kick Rating": sum(r.get("avg_kicking", 0) for r in standings) / n,
         }
         categories = list(avgs.keys())
         team_values = [
@@ -1172,13 +1172,13 @@ async def _render_history(session_id: str):
     highest_opi = rb.get("highest_opi_season", {})
     if highest_opi.get("team"):
         ss_records.append({
-            "Record": "Highest OPI", "Team": highest_opi["team"],
+            "Record": "Highest Team Rating", "Team": highest_opi["team"],
             "Value": f"{highest_opi.get('opi', 0):.1f}", "Year": str(highest_opi.get("year", "")),
         })
     most_chaos = rb.get("most_chaos_season", {})
     if most_chaos.get("team"):
         ss_records.append({
-            "Record": "Most Chaos", "Team": most_chaos["team"],
+            "Record": "Best Lateral %", "Team": most_chaos["team"],
             "Value": f"{most_chaos.get('chaos', 0):.1f}", "Year": str(most_chaos.get("year", "")),
         })
     if ss_records:

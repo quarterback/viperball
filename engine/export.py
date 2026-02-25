@@ -59,8 +59,8 @@ def export_season_standings_csv(season: "Season", filepath: str) -> str:
     Columns: team, conference, wins, losses, games_played, win_pct,
              points_for, points_against, point_differential,
              conf_wins, conf_losses, conf_win_pct,
-             avg_opi, avg_territory, avg_pressure, avg_chaos,
-             avg_kicking, avg_drive_quality, avg_turnover_impact,
+             team_rating, ppd, conversion_pct, lateral_pct,
+             kick_rating, to_margin, avg_start,
              offense_style, defense_style
     """
     _ensure_dir(filepath)
@@ -68,8 +68,8 @@ def export_season_standings_csv(season: "Season", filepath: str) -> str:
         "team", "conference", "wins", "losses", "games_played", "win_pct",
         "points_for", "points_against", "point_differential",
         "conf_wins", "conf_losses", "conf_win_pct",
-        "avg_opi", "avg_territory", "avg_pressure", "avg_chaos",
-        "avg_kicking", "avg_drive_quality", "avg_turnover_impact",
+        "team_rating", "ppd", "conversion_pct", "lateral_pct",
+        "kick_rating", "to_margin", "avg_start",
         "offense_style", "defense_style",
     ]
 
@@ -88,13 +88,13 @@ def export_season_standings_csv(season: "Season", filepath: str) -> str:
             "conf_wins": record.conf_wins,
             "conf_losses": record.conf_losses,
             "conf_win_pct": round(record.conf_win_percentage, 4),
-            "avg_opi": round(record.avg_opi, 2),
-            "avg_territory": round(record.avg_territory, 2),
-            "avg_pressure": round(record.avg_pressure, 2),
-            "avg_chaos": round(record.avg_chaos, 2),
-            "avg_kicking": round(record.avg_kicking, 2),
-            "avg_drive_quality": round(record.avg_drive_quality, 2),
-            "avg_turnover_impact": round(record.avg_turnover_impact, 2),
+            "team_rating": round(record.avg_team_rating, 2),
+            "ppd": round(record.avg_ppd, 2),
+            "conversion_pct": round(record.avg_conversion_pct, 2),
+            "lateral_pct": round(record.avg_lateral_pct, 2),
+            "kick_rating": round(record.avg_kicking, 2),
+            "to_margin": round(record.avg_to_margin, 2),
+            "avg_start": round(record.avg_start_position, 2),
             "offense_style": record.offense_style,
             "defense_style": record.defense_style,
         })
@@ -115,16 +115,18 @@ def export_season_game_log_csv(season: "Season", filepath: str) -> str:
     Export every completed game in the season to CSV.
 
     Columns: week, home_team, away_team, home_score, away_score, winner,
-             is_conference_game, home_opi, home_chaos, home_territory,
-             away_opi, away_chaos, away_territory
+             is_conference_game, home_team_rating, home_lateral_pct,
+             home_conv_pct, home_kick_rating,
+             away_team_rating, away_lateral_pct,
+             away_conv_pct, away_kick_rating
     """
     _ensure_dir(filepath)
     fieldnames = [
         "week", "home_team", "away_team",
         "home_score", "away_score", "winner", "margin",
         "is_conference_game",
-        "home_opi", "home_chaos", "home_territory", "home_pressure", "home_kicking",
-        "away_opi", "away_chaos", "away_territory", "away_pressure", "away_kicking",
+        "home_team_rating", "home_lateral_pct", "home_avg_start", "home_conv_pct", "home_kick_rating",
+        "away_team_rating", "away_lateral_pct", "away_avg_start", "away_conv_pct", "away_kick_rating",
     ]
 
     rows = []
@@ -145,16 +147,16 @@ def export_season_game_log_csv(season: "Season", filepath: str) -> str:
             "winner": winner,
             "margin": round(abs(hs - as_), 1),
             "is_conference_game": int(game.is_conference_game),
-            "home_opi": round(hm.get("opi", 0), 2),
-            "home_chaos": round(hm.get("chaos_factor", 0), 2),
-            "home_territory": round(hm.get("territory_rating", 0), 2),
-            "home_pressure": round(hm.get("pressure_index", 0), 2),
-            "home_kicking": round(hm.get("kicking_efficiency", 0), 2),
-            "away_opi": round(am.get("opi", 0), 2),
-            "away_chaos": round(am.get("chaos_factor", 0), 2),
-            "away_territory": round(am.get("territory_rating", 0), 2),
-            "away_pressure": round(am.get("pressure_index", 0), 2),
-            "away_kicking": round(am.get("kicking_efficiency", 0), 2),
+            "home_team_rating": round(hm.get("team_rating", hm.get("opi", 0)), 2),
+            "home_lateral_pct": round(hm.get("lateral_pct", hm.get("chaos_factor", 0)), 2),
+            "home_avg_start": round(hm.get("avg_start", hm.get("territory_rating", 0)), 2),
+            "home_conv_pct": round(hm.get("conversion_pct", hm.get("pressure_index", 0)), 2),
+            "home_kick_rating": round(hm.get("kicking_efficiency", 0), 2),
+            "away_team_rating": round(am.get("team_rating", am.get("opi", 0)), 2),
+            "away_lateral_pct": round(am.get("lateral_pct", am.get("chaos_factor", 0)), 2),
+            "away_avg_start": round(am.get("avg_start", am.get("territory_rating", 0)), 2),
+            "away_conv_pct": round(am.get("conversion_pct", am.get("pressure_index", 0)), 2),
+            "away_kick_rating": round(am.get("kicking_efficiency", 0), 2),
         })
 
     rows.sort(key=lambda r: r["week"])
@@ -176,14 +178,14 @@ def export_dynasty_standings_csv(dynasty: "Dynasty", filepath: str) -> str:
     Export full dynasty season-by-season standings to CSV.
 
     Columns: year, team, conference, wins, losses, win_pct,
-             points_for, points_against, avg_opi,
+             points_for, points_against, team_rating,
              champion, playoff
     """
     _ensure_dir(filepath)
     fieldnames = [
         "year", "team", "conference",
         "wins", "losses", "win_pct",
-        "points_for", "points_against", "avg_opi",
+        "points_for", "points_against", "team_rating",
         "champion", "playoff",
     ]
 
@@ -202,7 +204,7 @@ def export_dynasty_standings_csv(dynasty: "Dynasty", filepath: str) -> str:
                 "win_pct": round(record.win_percentage, 4),
                 "points_for": round(record.points_for, 1),
                 "points_against": round(record.points_against, 1),
-                "avg_opi": round(record.avg_opi, 2),
+                "team_rating": round(record.avg_team_rating, 2),
                 "champion": int(yr_record.get("champion", False)),
                 "playoff": int(yr_record.get("playoff", False)),
             })
@@ -239,7 +241,7 @@ def export_dynasty_awards_csv(dynasty: "Dynasty", filepath: str) -> str:
             ("team", "Best Record",     awards.best_record,     awards.best_record),
             ("team", "Highest Scoring", awards.highest_scoring, awards.highest_scoring),
             ("team", "Best Defense",    awards.best_defense,    awards.best_defense),
-            ("team", "Highest OPI",     awards.highest_opi,     awards.highest_opi),
+            ("team", "Top Team Rating", awards.highest_opi,     awards.highest_opi),
             ("team", "Best Kicking",    awards.best_kicking,    awards.best_kicking),
         ]
         for award_type, award_name, winner, team in team_awards:

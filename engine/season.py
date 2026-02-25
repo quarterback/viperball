@@ -182,6 +182,17 @@ class TeamRecord:
     points_against: float = 0.0
     conference: str = ""
 
+    # Fan-friendly analytics accumulators
+    total_team_rating: float = 0.0   # Team Rating (0-100, like SP+/Madden)
+    total_ppd: float = 0.0           # Points Per Drive
+    total_conversion_pct: float = 0.0  # 3rd+ down conversion %
+    total_lateral_pct: float = 0.0   # Lateral chain completion %
+    total_explosive: float = 0.0     # Explosive plays (15+ yards)
+    total_to_margin: float = 0.0     # Turnover margin
+    total_avg_start: float = 0.0     # Avg starting field position
+    games_played: int = 0
+
+    # Legacy accumulators (kept for backward compat with saved data)
     total_opi: float = 0.0
     total_territory: float = 0.0
     total_pressure: float = 0.0
@@ -189,7 +200,6 @@ class TeamRecord:
     total_kicking: float = 0.0
     total_drive_quality: float = 0.0
     total_turnover_impact: float = 0.0
-    games_played: int = 0
 
     conf_wins: int = 0
     conf_losses: int = 0
@@ -250,7 +260,17 @@ class TeamRecord:
         self.points_for += points_for
         self.points_against += points_against
 
-        self.total_opi += metrics.get('opi', 0.0)
+        # Accumulate fan-friendly metrics
+        self.total_team_rating += metrics.get('team_rating', metrics.get('opi', 0.0))
+        self.total_ppd += metrics.get('ppd', metrics.get('drive_quality', 0.0))
+        self.total_conversion_pct += metrics.get('conversion_pct', metrics.get('pressure_index', 0.0))
+        self.total_lateral_pct += metrics.get('lateral_pct', 0.0)
+        self.total_explosive += metrics.get('explosive_plays', 0.0)
+        self.total_to_margin += metrics.get('to_margin', 0.0)
+        self.total_avg_start += metrics.get('avg_start', 25.0)
+
+        # Legacy accumulators (for backward compat)
+        self.total_opi += metrics.get('team_rating', metrics.get('opi', 0.0))
         self.total_territory += metrics.get('territory_rating', 0.0)
         self.total_pressure += metrics.get('pressure_index', 0.0)
         self.total_chaos += metrics.get('chaos_factor', 0.0)
@@ -302,9 +322,41 @@ class TeamRecord:
         if opponent_bonus_data:
             self.opponent_bonus_poss_scores += opponent_bonus_data.get("scores", 0)
 
+    # ── Fan-friendly metric averages ──
+
+    @property
+    def avg_team_rating(self) -> float:
+        return self.total_team_rating / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_ppd(self) -> float:
+        return self.total_ppd / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_conversion_pct(self) -> float:
+        return self.total_conversion_pct / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_lateral_pct(self) -> float:
+        return self.total_lateral_pct / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_explosive(self) -> float:
+        return self.total_explosive / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_to_margin(self) -> float:
+        return self.total_to_margin / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_start_position(self) -> float:
+        return self.total_avg_start / self.games_played if self.games_played > 0 else 25.0
+
+    # ── Legacy property aliases (backward compat) ──
+
     @property
     def avg_opi(self) -> float:
-        return self.total_opi / self.games_played if self.games_played > 0 else 0.0
+        return self.avg_team_rating
 
     @property
     def avg_territory(self) -> float:

@@ -588,21 +588,21 @@ def _render_play_by_play(plays, home_name, away_name):
 
 
 def _render_analytics(result, plays, home_name, away_name, hs, as_):
-    ui.label("VPA - Viperball Points Added").classes("font-bold text-slate-700")
+    ui.label("WPA - Win Probability Added").classes("font-bold text-slate-700")
     ui.label("Play efficiency vs league-average expectation.").classes("text-sm text-gray-500")
 
     h_vpa = hs.get("epa", {})
     a_vpa = as_.get("epa", {})
 
     with ui.row().classes("w-full gap-3 flex-wrap"):
-        metric_card(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
-        metric_card(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
-        metric_card(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
-        metric_card(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+        metric_card(f"{home_name} Total WPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
+        metric_card(f"{away_name} Total WPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
+        metric_card(f"{home_name} WPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+        metric_card(f"{away_name} WPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
         metric_card(f"{home_name} Success %", f"{h_vpa.get('success_rate', 0)}%")
         metric_card(f"{away_name} Success %", f"{a_vpa.get('success_rate', 0)}%")
 
-    # Cumulative VPA chart
+    # Cumulative WPA chart
     vpa_plays = [p for p in plays if "epa" in p]
     if vpa_plays:
         home_vpa_plays = [p for p in vpa_plays if p["possession"] == "home"]
@@ -625,8 +625,8 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
                 cum.append(round(running, 2))
             fig.add_trace(go.Scatter(y=cum, mode="lines", name=away_name,
                                      line=dict(color="#dc2626", width=2)))
-        fig.update_layout(title="Cumulative VPA Over Game", xaxis_title="Play #",
-                          yaxis_title="Cumulative VPA", height=350, template="plotly_white")
+        fig.update_layout(title="Cumulative WPA Over Game", xaxis_title="Play #",
+                          yaxis_title="Cumulative WPA", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
 
     # Delta Yards Efficiency (DYE)
@@ -707,9 +707,9 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
 
 
 def _render_player_impact(result, home_name, away_name):
-    """Render the Player Impact Report — per-player VPA attribution."""
+    """Render the Player Impact Report — per-player WPA attribution."""
     ui.label("Player Impact Report").classes("font-bold text-slate-700")
-    ui.label("VPA (Viperball Points Added) attributed to individual players.").classes("text-sm text-gray-500")
+    ui.label("WPA (Win Probability Added) attributed to individual players.").classes("text-sm text-gray-500")
 
     player_stats = result.get("player_stats", {})
 
@@ -718,7 +718,7 @@ def _render_player_impact(result, home_name, away_name):
         if not pstats:
             continue
 
-        # Filter to players with involvement and sort by VPA
+        # Filter to players with involvement and sort by WPA
         involved = [p for p in pstats if p.get("plays_involved", 0) > 0]
         if not involved:
             continue
@@ -727,15 +727,15 @@ def _render_player_impact(result, home_name, away_name):
 
         ui.label(team_name).classes("text-lg font-bold text-slate-700 mt-4")
 
-        # Team VPA summary
+        # Team WPA summary
         team_epa = result["stats"][side].get("epa", {})
         total_team_vpa = team_epa.get("total_vpa", team_epa.get("total_epa", 0))
         total_player_vpa = sum(p.get("vpa", 0) for p in involved_by_vpa)
 
         with ui.row().classes("w-full gap-3 flex-wrap"):
-            metric_card("Team VPA", round(total_team_vpa, 1))
-            metric_card("Top Player VPA", round(involved_by_vpa[0]["vpa"], 1) if involved_by_vpa else 0)
-            metric_card("Top VPA/Play",
+            metric_card("Team WPA", round(total_team_vpa, 1))
+            metric_card("Top Player WPA", round(involved_by_vpa[0]["vpa"], 1) if involved_by_vpa else 0)
+            metric_card("Top WPA/Play",
                         round(max((p.get("vpa_per_play", 0) for p in involved_by_vpa if p.get("plays_involved", 0) >= 3), default=0), 3))
             mvp = involved_by_vpa[0]
             metric_card("Game MVP", f"{mvp['tag']} {mvp['name']}")
@@ -748,15 +748,15 @@ def _render_player_impact(result, home_name, away_name):
             vpa_pp = p.get("vpa_per_play", 0)
             touches = p.get("touches", 0)
             vpa_per_touch = round(vpa / max(1, touches), 2) if touches > 0 else "--"
-            # VPA share: what % of team VPA did this player contribute
+            # WPA share: what % of team WPA did this player contribute
             vpa_share = round(vpa / max(0.01, total_player_vpa) * 100, 1) if total_player_vpa != 0 else 0
 
             impact_rows.append({
                 "Player": f"{p['tag']} {p['name']}",
-                "VPA": round(vpa, 2),
-                "VPA/Play": round(vpa_pp, 3),
-                "VPA/Touch": vpa_per_touch,
-                "VPA Share": f"{vpa_share}%",
+                "WPA": round(vpa, 2),
+                "WPA/Play": round(vpa_pp, 3),
+                "WPA/Touch": vpa_per_touch,
+                "WPA Share": f"{vpa_share}%",
                 "Plays": plays_inv,
                 "Touches": touches,
                 "Yards": p.get("yards", 0),
@@ -765,7 +765,7 @@ def _render_player_impact(result, home_name, away_name):
             })
         stat_table(impact_rows)
 
-        # VPA bar chart
+        # WPA bar chart
         chart_players = involved_by_vpa[:10]
         if chart_players:
             names = [f"{p['tag']} {p['name']}" for p in chart_players]
@@ -778,8 +778,8 @@ def _render_player_impact(result, home_name, away_name):
                 textposition="outside",
             ))
             fig.update_layout(
-                title=f"{team_name} — Player VPA",
-                xaxis_title="VPA", yaxis=dict(autorange="reversed"),
+                title=f"{team_name} — Player WPA",
+                xaxis_title="WPA", yaxis=dict(autorange="reversed"),
                 height=max(250, len(chart_players) * 35 + 80),
                 template="plotly_white", margin=dict(l=200),
             )
@@ -801,8 +801,8 @@ def _render_player_impact(result, home_name, away_name):
                 "#": rank,
                 "Player": f"{p['tag']} {p['name']}",
                 "Team": p["_team"],
-                "VPA": round(p.get("vpa", 0), 2),
-                "VPA/Play": round(p.get("vpa_per_play", 0), 3),
+                "WPA": round(p.get("vpa", 0), 2),
+                "WPA/Play": round(p.get("vpa_per_play", 0), 3),
                 "Plays": p.get("plays_involved", 0),
                 "Touches": p.get("touches", 0),
                 "Yards": p.get("yards", 0),

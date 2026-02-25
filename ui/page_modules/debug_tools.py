@@ -201,16 +201,16 @@ def render_debug_tools(shared):
             label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down Conv %"
             dc_cols[idx].metric(label, f"{avg_rate}%")
 
-        st.markdown("**Avg VPA (Viperball Points Added)**")
-        vpa_cols = st.columns(4)
-        home_total_vpa = [r["stats"]["home"].get("epa", {}).get("total_vpa", r["stats"]["home"].get("epa", {}).get("total_epa", 0)) for r in results]
-        away_total_vpa = [r["stats"]["away"].get("epa", {}).get("total_vpa", r["stats"]["away"].get("epa", {}).get("total_epa", 0)) for r in results]
-        home_vpa_pp = [r["stats"]["home"].get("epa", {}).get("vpa_per_play", r["stats"]["home"].get("epa", {}).get("epa_per_play", 0)) for r in results]
-        away_vpa_pp = [r["stats"]["away"].get("epa", {}).get("vpa_per_play", r["stats"]["away"].get("epa", {}).get("epa_per_play", 0)) for r in results]
-        vpa_cols[0].metric(f"Avg {home_name} VPA", round(sum(home_total_vpa) / n, 2))
-        vpa_cols[1].metric(f"Avg {away_name} VPA", round(sum(away_total_vpa) / n, 2))
-        vpa_cols[2].metric(f"Avg {home_name} VPA/Play", round(sum(home_vpa_pp) / n, 3))
-        vpa_cols[3].metric(f"Avg {away_name} VPA/Play", round(sum(away_vpa_pp) / n, 3))
+        st.markdown("**Avg WPA (Win Probability Added)**")
+        wpa_cols = st.columns(4)
+        home_total_wpa = [r["stats"]["home"].get("epa", {}).get("total_vpa", r["stats"]["home"].get("epa", {}).get("total_epa", 0)) for r in results]
+        away_total_wpa = [r["stats"]["away"].get("epa", {}).get("total_vpa", r["stats"]["away"].get("epa", {}).get("total_epa", 0)) for r in results]
+        home_wpa_pp = [r["stats"]["home"].get("epa", {}).get("vpa_per_play", r["stats"]["home"].get("epa", {}).get("epa_per_play", 0)) for r in results]
+        away_wpa_pp = [r["stats"]["away"].get("epa", {}).get("vpa_per_play", r["stats"]["away"].get("epa", {}).get("epa_per_play", 0)) for r in results]
+        wpa_cols[0].metric(f"Avg {home_name} WPA", round(sum(home_total_wpa) / n, 2))
+        wpa_cols[1].metric(f"Avg {away_name} WPA", round(sum(away_total_wpa) / n, 2))
+        wpa_cols[2].metric(f"Avg {home_name} WPA/Play", round(sum(home_wpa_pp) / n, 3))
+        wpa_cols[3].metric(f"Avg {away_name} WPA/Play", round(sum(away_wpa_pp) / n, 3))
 
         home_sr = [r["stats"]["home"].get("epa", {}).get("success_rate", 0) for r in results]
         away_sr = [r["stats"]["away"].get("epa", {}).get("success_rate", 0) for r in results]

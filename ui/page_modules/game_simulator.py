@@ -659,26 +659,26 @@ def _render_play_by_play(plays, home_name, away_name):
 
 
 def _render_analytics(result, plays, home_name, away_name, hs, as_):
-    st.markdown("**VPA — Viperball Points Added**")
+    st.markdown("**WPA — Win Probability Added**")
     st.caption("Play efficiency vs league-average expectation from same field position & down.")
     h_vpa = hs.get("epa", {})
     a_vpa = as_.get("epa", {})
 
     v1, v2 = st.columns(2)
-    v1.metric(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
-    v2.metric(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
+    v1.metric(f"{home_name} Total WPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
+    v2.metric(f"{away_name} Total WPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
 
     v3, v4, v5, v6 = st.columns(4)
-    v3.metric(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
-    v4.metric(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+    v3.metric(f"{home_name} WPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+    v4.metric(f"{away_name} WPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
     v5.metric(f"{home_name} Success Rate", f"{h_vpa.get('success_rate', 0)}%")
     v6.metric(f"{away_name} Success Rate", f"{a_vpa.get('success_rate', 0)}%")
 
     v7, v8, v9, v10 = st.columns(4)
     v7.metric(f"{home_name} Explosiveness", h_vpa.get("explosiveness", 0))
     v8.metric(f"{away_name} Explosiveness", a_vpa.get("explosiveness", 0))
-    v9.metric(f"{home_name} Off VPA", h_vpa.get("offense_vpa", h_vpa.get("offense_epa", 0)))
-    v10.metric(f"{away_name} Off VPA", a_vpa.get("offense_vpa", a_vpa.get("offense_epa", 0)))
+    v9.metric(f"{home_name} Off WPA", h_vpa.get("offense_vpa", h_vpa.get("offense_epa", 0)))
+    v10.metric(f"{away_name} Off WPA", a_vpa.get("offense_vpa", a_vpa.get("offense_epa", 0)))
 
     vpa_plays = [p for p in plays if "epa" in p]
     if vpa_plays:
@@ -707,8 +707,8 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
                 line=dict(color="#dc2626", width=2)
             ))
         fig_vpa.update_layout(
-            title="Cumulative VPA Over Game",
-            xaxis_title="Play #", yaxis_title="Cumulative VPA",
+            title="Cumulative WPA Over Game",
+            xaxis_title="Play #", yaxis_title="Cumulative WPA",
             height=350, template="plotly_white"
         )
         st.plotly_chart(fig_vpa, use_container_width=True)
@@ -866,19 +866,19 @@ def _render_debug(result, plays, home_name, away_name, hs, as_):
     else:
         st.caption("No special teams chaos this game.")
 
-    st.markdown("**Viperball Metrics (0-100)**")
+    st.markdown("**Viperball Metrics**")
     try:
         home_metrics = calculate_viperball_metrics(result, "home")
         away_metrics = calculate_viperball_metrics(result, "away")
         mc1, mc2 = st.columns(2)
         metric_labels = {
-            "opi": "OPI (Overall)",
-            "territory_rating": "Territory Rating",
-            "pressure_index": "Pressure Index",
-            "chaos_factor": "Chaos Factor",
-            "kicking_efficiency": "Kicking Efficiency",
-            "drive_quality": "Drive Quality",
-            "turnover_impact": "Turnover Impact",
+            "opi": "Team Rating",
+            "territory_rating": "Avg Start",
+            "pressure_index": "Conv %",
+            "chaos_factor": "Lateral %",
+            "kicking_efficiency": "Kick Rating",
+            "drive_quality": "PPD",
+            "turnover_impact": "TO+/-",
         }
         with mc1:
             st.markdown(f"*{home_name}*")
