@@ -400,19 +400,43 @@ def calculate_team_yar(player_stats_list: list) -> float:
 
 
 # ── ZBR (Zeroback Rating) ──
-# Like QBR for quarterbacks. Composite rating for the Zeroback.
+# Like NFL passer rating for quarterbacks, adapted for the Zeroback.
+# Uses the classic 0-158.3 scale fans instantly recognize.
+
+# ZBR uses four components, each clamped 0.000 to 2.375, just like
+# NFL passer rating. The four components are tuned for Viperball:
+#   a) Yards Per Touch      (like yards/attempt in passer rating)
+#   b) Touchdown Rate       (like TD% in passer rating)
+#   c) Fumble Rate inverted (like INT% inverted in passer rating)
+#   d) Lateral Accuracy     (like completion% in passer rating)
+#
+# ZBR = (a + b + c + d) / 6 * 100
+# Perfect = (2.375 * 4) / 6 * 100 = 158.3
+
+_ZBR_COMPONENT_MIN = 0.0
+_ZBR_COMPONENT_MAX = 2.375
+
+
+def _clamp_zbr(val: float) -> float:
+    return max(_ZBR_COMPONENT_MIN, min(_ZBR_COMPONENT_MAX, val))
+
 
 def calculate_zbr(player_stats: Dict) -> float:
-    """Zeroback Rating (ZBR) — like QBR for the Zeroback.
+    """Zeroback Rating (ZBR) — passer-rating-style scale for the Zeroback.
 
-    A fan says: "Their Zeroback had a 78.2 ZBR today."
-    Composite 0-100 rating based on:
-      - Yards per touch (efficiency)
-      - Touchdown rate (scoring)
-      - Fumble rate (ball security, inverted — fewer = better)
-      - Lateral accuracy (successful laterals / attempts)
+    Uses the 0-158.3 scale every football fan recognizes:
+      158.3 = perfect game
+      ~100  = great game
+      ~85   = good/above average
+      ~65   = average
+      ~40   = below average / struggling
+      <20   = terrible
 
-    Scale: 90+ elite | 70-90 good | 50-70 average | <50 poor
+    Four components (each 0-2.375, mirroring NFL passer rating):
+      - Yards Per Touch (efficiency, like yards/attempt)
+      - TD Rate (scoring, like TD%)
+      - Fumble Rate inverted (ball security, like INT% inverted)
+      - Lateral Accuracy (Viperball's completion%, unique to the sport)
     """
     touches = player_stats.get("touches", 0)
     if touches < 2:
@@ -424,53 +448,53 @@ def calculate_zbr(player_stats: Dict) -> float:
     laterals_thrown = player_stats.get("laterals_thrown", 0)
     lateral_assists = player_stats.get("lateral_assists", 0)
 
-    # Yards per touch: 5.0 ypt = ~60 rating, 8.0+ = ~90
     ypt = yards / touches
-    ypt_score = min(100, max(0, (ypt - 1.0) * 12.5))
 
-    # TD rate: 1 TD per 10 touches = ~70, per 5 touches = ~90
+    # Component a: Yards Per Touch
+    # 3.0 YPT = 0, 10.0 YPT = 2.375 (maps similar to yards/att in passer rating)
+    a = _clamp_zbr((ypt - 3.0) * 0.3393)
+
+    # Component b: Touchdown Rate
+    # 0 TDs = 0, 1 TD per 5 touches (20%) = 2.375
     td_rate = tds / touches
-    td_score = min(100, max(0, td_rate * 500))
+    b = _clamp_zbr(td_rate * 11.875)
 
-    # Fumble rate: 0 fumbles = 100, 1 per 10 touches = ~50
+    # Component c: Fumble Rate (inverted — fewer fumbles = higher)
+    # 0 fumbles = 2.375, 1 fumble per 5 touches (20%) = 0
     fumble_rate = fumbles / touches
-    fumble_score = max(0, 100 - fumble_rate * 500)
+    c = _clamp_zbr(2.375 - fumble_rate * 11.875)
 
-    # Lateral accuracy: successful laterals / total thrown
+    # Component d: Lateral Accuracy
+    # 0% success = 0, 100% success = 2.375
+    # If no laterals thrown, treat as neutral (1.1875 = midpoint)
     if laterals_thrown > 0:
-        lat_success = lateral_assists / laterals_thrown
-        lat_score = lat_success * 100
+        lat_pct = lateral_assists / laterals_thrown
+        d = _clamp_zbr(lat_pct * 2.375)
     else:
-        lat_score = 50.0  # neutral if no laterals
+        d = 1.1875  # neutral — no data, don't penalize or reward
 
-    # Weighted composite
-    zbr = (
-        ypt_score * 0.35 +
-        td_score * 0.25 +
-        fumble_score * 0.20 +
-        lat_score * 0.20
-    )
+    # Composite: same formula as NFL passer rating
+    zbr = (a + b + c + d) / 6.0 * 100.0
 
     return round(zbr, 1)
 
 
 # ── VPR (Viper Rating) ──
 # Position-specific composite for the Viper wild-card role.
+# Same 0-158.3 passer-rating scale as ZBR for consistency.
 
 def calculate_vpr(player_stats: Dict) -> float:
-    """Viper Rating (VPR) — position-specific rating for the Viper.
+    """Viper Rating (VPR) — passer-rating-style scale for the Viper.
 
-    A fan says: "Their Viper had a 82.5 VPR — absolute game-wrecker."
-    The Viper is the wild card, so VPR emphasizes explosiveness
-    and big-play ability over volume.
+    Same 0-158.3 scale as ZBR so position ratings are directly
+    comparable. The Viper is the wild card, so VPR emphasizes
+    explosiveness and big-play ability.
 
-    Based on:
-      - Yards per touch (higher weight — Vipers should be explosive)
-      - Big play rate (plays of 15+ yards)
-      - Touchdown rate
-      - All-purpose yards (rushing + returns + lateral yards)
-
-    Scale: 90+ elite | 70-90 good | 50-70 average | <50 poor
+    Four components (each 0-2.375):
+      - Yards Per Touch (explosiveness — Vipers should be electric)
+      - Touchdown Rate (scoring punch)
+      - Fumble Rate inverted (ball security under chaos)
+      - All-Purpose Efficiency (total yards per touch, all phases)
     """
     touches = player_stats.get("touches", 0)
     if touches < 2:
@@ -478,29 +502,33 @@ def calculate_vpr(player_stats: Dict) -> float:
 
     yards = player_stats.get("yards", 0)
     tds = player_stats.get("tds", 0)
+    fumbles = player_stats.get("fumbles", 0)
     all_purpose = player_stats.get("all_purpose_yards", yards)
 
-    # Yards per touch: Vipers should average 5+ yds/touch
     ypt = yards / touches
-    ypt_score = min(100, max(0, (ypt - 1.0) * 14))
+    apy_per_touch = all_purpose / touches
 
-    # All-purpose yards: 100+ = elite game
-    apy_score = min(100, max(0, all_purpose * 0.8))
+    # Component a: Yards Per Touch (explosiveness)
+    # Vipers should be more explosive than ZBs, so shift the curve:
+    # 2.0 YPT = 0, 10.0 YPT = 2.375
+    a = _clamp_zbr((ypt - 2.0) * 0.2969)
 
-    # TD rate
+    # Component b: Touchdown Rate
+    # Same scale as ZBR — 0 TDs = 0, 20% TD rate = 2.375
     td_rate = tds / touches
-    td_score = min(100, max(0, td_rate * 500))
+    b = _clamp_zbr(td_rate * 11.875)
 
-    # Volume bonus: reward getting the ball
-    volume_score = min(100, max(0, touches * 6))
+    # Component c: Fumble Rate inverted
+    # Same as ZBR — clean play rewarded
+    fumble_rate = fumbles / touches
+    c = _clamp_zbr(2.375 - fumble_rate * 11.875)
 
-    # Weighted composite — explosiveness matters most for Vipers
-    vpr = (
-        ypt_score * 0.40 +
-        td_score * 0.25 +
-        apy_score * 0.20 +
-        volume_score * 0.15
-    )
+    # Component d: All-Purpose Efficiency
+    # Vipers contribute in every phase — reward total production per touch
+    # 3.0 APY/touch = 0, 12.0 APY/touch = 2.375
+    d = _clamp_zbr((apy_per_touch - 3.0) * 0.2639)
+
+    vpr = (a + b + c + d) / 6.0 * 100.0
 
     return round(vpr, 1)
 
