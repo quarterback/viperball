@@ -1406,6 +1406,71 @@ async def _render_awards_stats(session_id, standings, user_team):
             })
         stat_table(leader_rows)
 
+    # DYE Season Analysis
+    dye_teams = [r for r in standings if r.get("dye")]
+    if dye_teams:
+        ui.markdown("**DYE — Delta Yards Efficiency (Season)**")
+        ui.label("How much did the delta kickoff system help or hurt each team over the full season?").classes("text-sm text-gray-500 mb-2")
+
+        dye_rows = []
+        for r in dye_teams:
+            dye = r["dye"]
+            pen = dye.get("penalized", {})
+            bst = dye.get("boosted", {})
+            neu = dye.get("neutral", {})
+            bonus = dye.get("bonus_poss", {})
+            dye_rows.append({
+                "Team": _team_label(r["team_name"], user_team),
+                "W-L": f"{r['wins']}-{r['losses']}",
+                "Δ Pen Drives": pen.get("drives", 0),
+                "Pen YPD": pen.get("ypd", 0),
+                "Pen Score%": f"{pen.get('score_rate', 0)}%",
+                "Δ Boost Drives": bst.get("drives", 0),
+                "Boost YPD": bst.get("ypd", 0),
+                "Boost Score%": f"{bst.get('score_rate', 0)}%",
+                "Net Yard Impact": int(dye.get("net_yard_impact", 0)),
+                "Opp Boost Scores": dye.get("opponent_boosted_scores", 0),
+                "Wins Despite Δ": dye.get("wins_despite_penalty", 0),
+            })
+        dye_rows.sort(key=lambda x: x["Net Yard Impact"])
+        stat_table(dye_rows)
+
+        import pandas as pd
+        chart_data = []
+        for r in dye_teams:
+            dye = r["dye"]
+            for bucket_key, label in [("penalized", "Leading"), ("boosted", "Trailing"), ("neutral", "Tied")]:
+                b = dye.get(bucket_key, {})
+                if b.get("drives", 0) > 0:
+                    chart_data.append({"Team": r["team_name"], "Situation": label,
+                                       "Yds/Drive": b["ypd"], "Score %": b["score_rate"]})
+
+        if chart_data:
+            sorted_by_impact = sorted(dye_teams, key=lambda r: r["dye"].get("net_yard_impact", 0))
+            top_hurt = sorted_by_impact[:5]
+            top_helped = sorted_by_impact[-5:][::-1]
+            impact_chart = []
+            for r in top_hurt + top_helped:
+                impact_chart.append({"Team": r["team_name"], "Net Yard Impact": int(r["dye"].get("net_yard_impact", 0))})
+            if impact_chart:
+                df = pd.DataFrame(impact_chart)
+                colors = ["#dc2626" if v < 0 else "#16a34a" for v in df["Net Yard Impact"]]
+                import plotly.graph_objects as go
+                fig = go.Figure(go.Bar(
+                    x=df["Net Yard Impact"], y=df["Team"], orientation="h",
+                    marker_color=colors,
+                    text=[f"{v:+d}" for v in df["Net Yard Impact"]],
+                    textposition="outside",
+                ))
+                fig.update_layout(
+                    title="DYE Net Yard Impact — Most Hurt vs Most Helped",
+                    xaxis_title="Net Yards (vs Neutral Baseline)",
+                    yaxis=dict(autorange="reversed"),
+                    height=max(300, len(impact_chart) * 30 + 80),
+                    template="plotly_white", margin=dict(l=200),
+                )
+                ui.plotly(fig).classes("w-full")
+
     # Score Distribution
     with ui.expansion("Score Distribution").classes("w-full"):
         score_data = []

@@ -211,11 +211,33 @@ class TeamRecord:
     turnovers_forced_history: list = field(default_factory=list)
     turnover_machine: bool = False
 
+    # DYE (Delta Yards Efficiency) season accumulators
+    dye_penalized_drives: int = 0
+    dye_penalized_yards: int = 0
+    dye_penalized_scores: int = 0
+    dye_boosted_drives: int = 0
+    dye_boosted_yards: int = 0
+    dye_boosted_scores: int = 0
+    dye_neutral_drives: int = 0
+    dye_neutral_yards: int = 0
+    dye_neutral_scores: int = 0
+    dye_total_delta_yards: int = 0
+    dye_opponent_boosted_scores: int = 0
+    dye_wins_despite_penalty: int = 0
+    bonus_poss_total: int = 0
+    bonus_poss_scores: int = 0
+    bonus_poss_yards: int = 0
+    opponent_bonus_poss_scores: int = 0
+
     def add_game_result(self, won: bool, points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
                         defensive_ints: int = 0,
                         rushing_yards_allowed: int = 0,
-                        turnovers_forced: int = 0):
+                        turnovers_forced: int = 0,
+                        dye_data: Optional[Dict] = None,
+                        opponent_dye_data: Optional[Dict] = None,
+                        bonus_data: Optional[Dict] = None,
+                        opponent_bonus_data: Optional[Dict] = None):
         if won:
             self.wins += 1
             if is_conference_game:
@@ -248,6 +270,38 @@ class TeamRecord:
         self.turnovers_forced_history.append(turnovers_forced)
         self._check_turnover_machine()
 
+        if dye_data:
+            pen = dye_data.get("penalized", {})
+            bst = dye_data.get("boosted", {})
+            neu = dye_data.get("neutral", {})
+            self.dye_penalized_drives += pen.get("count", 0)
+            self.dye_penalized_yards += pen.get("total_yards", 0)
+            self.dye_penalized_scores += pen.get("scores", 0)
+            self.dye_boosted_drives += bst.get("count", 0)
+            self.dye_boosted_yards += bst.get("total_yards", 0)
+            self.dye_boosted_scores += bst.get("scores", 0)
+            self.dye_neutral_drives += neu.get("count", 0)
+            self.dye_neutral_yards += neu.get("total_yards", 0)
+            self.dye_neutral_scores += neu.get("scores", 0)
+
+        if opponent_dye_data:
+            opp_bst = opponent_dye_data.get("boosted", {})
+            self.dye_opponent_boosted_scores += opp_bst.get("scores", 0)
+
+        if dye_data and won:
+            pen = dye_data.get("penalized", {})
+            if pen.get("count", 0) > 0:
+                self.dye_wins_despite_penalty += 1
+
+        self.dye_total_delta_yards += metrics.get("delta_yards_raw", 0)
+
+        if bonus_data:
+            self.bonus_poss_total += bonus_data.get("count", 0)
+            self.bonus_poss_scores += bonus_data.get("scores", 0)
+            self.bonus_poss_yards += bonus_data.get("yards", 0)
+        if opponent_bonus_data:
+            self.opponent_bonus_poss_scores += opponent_bonus_data.get("scores", 0)
+
     @property
     def avg_opi(self) -> float:
         return self.total_opi / self.games_played if self.games_played > 0 else 0.0
@@ -275,6 +329,42 @@ class TeamRecord:
     @property
     def avg_turnover_impact(self) -> float:
         return self.total_turnover_impact / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def dye_season_summary(self) -> Dict:
+        pen_ypd = round(self.dye_penalized_yards / max(1, self.dye_penalized_drives), 1) if self.dye_penalized_drives else 0.0
+        bst_ypd = round(self.dye_boosted_yards / max(1, self.dye_boosted_drives), 1) if self.dye_boosted_drives else 0.0
+        neu_ypd = round(self.dye_neutral_yards / max(1, self.dye_neutral_drives), 1) if self.dye_neutral_drives else 0.0
+        pen_score_rate = round(self.dye_penalized_scores / max(1, self.dye_penalized_drives) * 100, 1) if self.dye_penalized_drives else 0.0
+        bst_score_rate = round(self.dye_boosted_scores / max(1, self.dye_boosted_drives) * 100, 1) if self.dye_boosted_drives else 0.0
+        neu_score_rate = round(self.dye_neutral_scores / max(1, self.dye_neutral_drives) * 100, 1) if self.dye_neutral_drives else 0.0
+
+        baseline = neu_ypd if neu_ypd > 0 else pen_ypd
+        dye_pen = round(pen_ypd / baseline, 2) if baseline > 0 and self.dye_penalized_drives > 0 else None
+        dye_bst = round(bst_ypd / baseline, 2) if baseline > 0 and self.dye_boosted_drives > 0 else None
+
+        net_impact = 0
+        if neu_ypd > 0:
+            net_impact += (pen_ypd - neu_ypd) * self.dye_penalized_drives
+            net_impact += (bst_ypd - neu_ypd) * self.dye_boosted_drives
+        net_impact = round(net_impact, 0)
+
+        return {
+            "penalized": {"drives": self.dye_penalized_drives, "yards": self.dye_penalized_yards,
+                          "scores": self.dye_penalized_scores, "ypd": pen_ypd, "score_rate": pen_score_rate},
+            "boosted": {"drives": self.dye_boosted_drives, "yards": self.dye_boosted_yards,
+                        "scores": self.dye_boosted_scores, "ypd": bst_ypd, "score_rate": bst_score_rate},
+            "neutral": {"drives": self.dye_neutral_drives, "yards": self.dye_neutral_yards,
+                        "scores": self.dye_neutral_scores, "ypd": neu_ypd, "score_rate": neu_score_rate},
+            "dye_when_penalized": dye_pen,
+            "dye_when_boosted": dye_bst,
+            "net_yard_impact": net_impact,
+            "total_delta_yards": self.dye_total_delta_yards,
+            "opponent_boosted_scores": self.dye_opponent_boosted_scores,
+            "wins_despite_penalty": self.dye_wins_despite_penalty,
+            "bonus_poss": {"total": self.bonus_poss_total, "scores": self.bonus_poss_scores, "yards": self.bonus_poss_yards},
+            "opponent_bonus_scores": self.opponent_bonus_poss_scores,
+        }
 
     @property
     def win_percentage(self) -> float:
@@ -1338,6 +1428,21 @@ class Season:
                               + home_stats.get("fumbles_lost", 0)
                               + home_stats.get("turnovers_on_downs", 0))
 
+        game_stats = result.get("stats", {})
+        home_game_stats = game_stats.get("home", {})
+        away_game_stats = game_stats.get("away", {})
+        home_dye = home_game_stats.get("dye")
+        away_dye = away_game_stats.get("dye")
+        home_bonus = {"count": home_game_stats.get("bonus_possessions", 0),
+                      "scores": home_game_stats.get("bonus_possession_scores", 0),
+                      "yards": home_game_stats.get("bonus_possession_yards", 0)}
+        away_bonus = {"count": away_game_stats.get("bonus_possessions", 0),
+                      "scores": away_game_stats.get("bonus_possession_scores", 0),
+                      "yards": away_game_stats.get("bonus_possession_yards", 0)}
+
+        home_metrics["delta_yards_raw"] = home_game_stats.get("delta_yards", 0)
+        away_metrics["delta_yards_raw"] = away_game_stats.get("delta_yards", 0)
+
         if fcs_side != "home" and game.home_team in self.standings:
             self.standings[game.home_team].add_game_result(
                 won=home_won,
@@ -1348,6 +1453,10 @@ class Season:
                 defensive_ints=home_def_ints,
                 rushing_yards_allowed=home_def_rush_allowed,
                 turnovers_forced=home_def_turnovers,
+                dye_data=home_dye,
+                opponent_dye_data=away_dye,
+                bonus_data=home_bonus,
+                opponent_bonus_data=away_bonus,
             )
 
         if fcs_side != "away" and game.away_team in self.standings:
@@ -1360,6 +1469,10 @@ class Season:
                 defensive_ints=away_def_ints,
                 rushing_yards_allowed=away_def_rush_allowed,
                 turnovers_forced=away_def_turnovers,
+                dye_data=away_dye,
+                opponent_dye_data=home_dye,
+                bonus_data=away_bonus,
+                opponent_bonus_data=home_bonus,
             )
 
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,

@@ -249,6 +249,7 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "avg_turnover_impact": round(getattr(rec, 'avg_turnover_impact', 0), 2),
         "offense_style": getattr(rec, 'offense_style', ''),
         "defense_style": getattr(rec, 'defense_style', ''),
+        "dye": rec.dye_season_summary if hasattr(rec, 'dye_season_summary') else None,
     }
 
 
