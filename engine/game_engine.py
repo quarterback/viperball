@@ -198,6 +198,20 @@ class PlayFamily(Enum):
     KNEEL = "kneel"
 
 
+class KickPassSubFamily(Enum):
+    QUICK_KICK = "quick_kick"
+    TERRITORY = "territory"
+    BOMB = "bomb"
+    KICK_LATERAL = "kick_lateral"
+
+
+class FormationShell(Enum):
+    TIGHT = "tight"
+    SPLIT = "split"
+    SPREAD = "spread"
+    HEAVY = "heavy"
+
+
 class PlayResult(Enum):
     GAIN = "gain"
     FIRST_DOWN = "first_down"
@@ -255,6 +269,96 @@ PLAY_FAMILY_TO_DC_TYPE = {
     PlayFamily.LATERAL_SPREAD: "lateral",
     PlayFamily.KICK_PASS:      "kick_pass",
     PlayFamily.TRICK_PLAY:     "trick",
+}
+
+DEFAULT_KICK_PASS_WEIGHTS = {
+    "quick_kick": 0.35, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.15,
+}
+
+# ── Formation Shell Modifiers ──
+# Each shell adjusts run yardage, kick pass completion, lateral yards, and sack rate.
+# Values are at 50% strength (calibration starting point — scale up after batch validation).
+FORMATION_MODIFIERS = {
+    "tight": {
+        # Run bonuses — extra blockers at the point of attack
+        "dive_option_yards":      +0.4,
+        "power_yards":            +0.5,
+        "counter_yards":          +0.25,
+        # Edge runs suffer — no one deployed wide
+        "sweep_option_yards":     -0.25,
+        "speed_option_yards":     -0.4,
+        "viper_jet_yards":         0.0,
+        # Kick pass — play-action helps short, kills deep
+        "quick_kick_completion":  +0.015,
+        "territory_completion":   -0.02,
+        "bomb_completion":        -0.04,
+        # Lateral chains — bunched alignment
+        "lateral_yards":          -0.2,
+        # Protection — extra blockers
+        "sack_modifier":          -0.015,
+        # DC read — moderate tell
+        "dc_read_penalty":         0.0,
+    },
+    "split": {
+        # Baseline formation — all modifiers neutral
+        "dive_option_yards":       0.0,
+        "power_yards":             0.0,
+        "counter_yards":           0.0,
+        "sweep_option_yards":      0.0,
+        "speed_option_yards":      0.0,
+        "viper_jet_yards":         0.0,
+        "quick_kick_completion":   0.0,
+        "territory_completion":    0.0,
+        "bomb_completion":         0.0,
+        "lateral_yards":           0.0,
+        "sack_modifier":           0.0,
+        # Hardest to read — DC penalty
+        "dc_read_penalty":        -0.015,
+    },
+    "spread": {
+        # Inside runs suffer — no lead blocker
+        "dive_option_yards":      -0.5,
+        "power_yards":            -0.4,
+        "counter_yards":           0.0,
+        # Edge runs thrive — defensive spacing
+        "sweep_option_yards":     +0.4,
+        "speed_option_yards":     +0.5,
+        "viper_jet_yards":        +0.25,
+        # Kick pass — 4 targets in space
+        "quick_kick_completion":  +0.01,
+        "territory_completion":   +0.025,
+        "bomb_completion":        +0.03,
+        # Lateral chains — horizontal spacing
+        "lateral_yards":          +0.3,
+        # ZB exposed — SB is split out
+        "sack_modifier":          +0.025,
+        # Easier to read (clearly pass/outside)
+        "dc_read_penalty":        +0.01,
+    },
+    "heavy": {
+        # Maximum run blocking
+        "dive_option_yards":      +0.6,
+        "power_yards":            +0.75,
+        "counter_yards":          +0.5,
+        # Perimeter dead
+        "sweep_option_yards":     -0.5,
+        "speed_option_yards":     -0.6,
+        "viper_jet_yards":        -0.25,
+        # Kick pass terrible — everyone bunched
+        "quick_kick_completion":  -0.01,
+        "territory_completion":   -0.03,
+        "bomb_completion":        -0.05,
+        # Laterals impossible
+        "lateral_yards":          -0.4,
+        # Maximum protection
+        "sack_modifier":          -0.025,
+        # Easiest to read — obviously a run
+        "dc_read_penalty":        +0.02,
+    },
+}
+
+DEFAULT_FORMATION_WEIGHTS = {
+    "tight": 0.20, "split": 0.35, "spread": 0.25, "heavy": 0.20,
 }
 
 RUN_PLAY_CONFIG = {
@@ -1184,6 +1288,15 @@ class Player:
     game_kick_pass_tds: int = 0
     game_kick_pass_receptions: int = 0
     game_kick_pass_interceptions: int = 0
+    # Per-sub-family kick pass stats
+    game_quick_kicks_thrown: int = 0
+    game_quick_kicks_completed: int = 0
+    game_territory_kicks_thrown: int = 0
+    game_territory_kicks_completed: int = 0
+    game_bombs_thrown: int = 0
+    game_bombs_completed: int = 0
+    game_kick_laterals_thrown: int = 0
+    game_kick_laterals_completed: int = 0
     game_lateral_interceptions: int = 0
     game_kick_returns: int = 0
     game_kick_return_yards: int = 0
@@ -1376,6 +1489,8 @@ class Play:
     fumble: bool = False
     penalty: Optional[Penalty] = None
     play_signature: str = ""
+    kick_pass_subfamily: str = ""
+    formation: str = ""
 
 
 OFFENSE_STYLES = {
@@ -1412,6 +1527,10 @@ OFFENSE_STYLES = {
         "early_down_aggression": 0.70,
         "red_zone_run_pct": 0.85,
         "kick_mode_aggression": 0.25,
+        "kick_pass_weights": {
+            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.05,
+        },
+        "formation_weights": {"tight": 0.30, "split": 0.25, "spread": 0.05, "heavy": 0.40},
     },
     "lateral_spread": {
         "label": "Lateral Spread",
@@ -1449,6 +1568,10 @@ OFFENSE_STYLES = {
         "red_zone_run_pct": 0.55,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.35,
+        "kick_pass_weights": {
+            "quick_kick": 0.15, "territory": 0.30, "bomb": 0.10, "kick_lateral": 0.45,
+        },
+        "formation_weights": {"tight": 0.05, "split": 0.20, "spread": 0.65, "heavy": 0.10},
     },
     "boot_raid": {
         "label": "Boot Raid",
@@ -1491,6 +1614,13 @@ OFFENSE_STYLES = {
         "launch_pad_threshold": 55,
         "kick_pass_bonus": 0.12,
         "kick_mode_aggression": 0.80,
+        "kick_pass_weights": {
+            "quick_kick": 0.35, "territory": 0.40, "bomb": 0.10, "kick_lateral": 0.15,
+        },
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.50, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.25,
+        },
+        "formation_weights": {"tight": 0.15, "split": 0.35, "spread": 0.40, "heavy": 0.10},
     },
     "ball_control": {
         "label": "Ball Control",
@@ -1526,6 +1656,10 @@ OFFENSE_STYLES = {
         "early_down_aggression": 0.50,
         "clock_burn_multiplier": 1.3,
         "kick_mode_aggression": 0.60,
+        "kick_pass_weights": {
+            "quick_kick": 0.70, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.05,
+        },
+        "formation_weights": {"tight": 0.25, "split": 0.35, "spread": 0.10, "heavy": 0.30},
     },
     "ghost": {
         "label": "Ghost Formation",
@@ -1561,6 +1695,10 @@ OFFENSE_STYLES = {
         "misdirection_bonus": 1.3,
         "kick_pass_bonus": 0.08,
         "kick_mode_aggression": 0.40,
+        "kick_pass_weights": {
+            "quick_kick": 0.25, "territory": 0.25, "bomb": 0.35, "kick_lateral": 0.15,
+        },
+        "formation_weights": {"tight": 0.20, "split": 0.30, "spread": 0.30, "heavy": 0.20},
     },
     "stampede": {
         "label": "Stampede",
@@ -1596,6 +1734,10 @@ OFFENSE_STYLES = {
         "red_zone_run_pct": 0.80,
         "fatigue_exploit_bonus": 0.10,
         "kick_mode_aggression": 0.25,
+        "kick_pass_weights": {
+            "quick_kick": 0.50, "territory": 0.25, "bomb": 0.05, "kick_lateral": 0.20,
+        },
+        "formation_weights": {"tight": 0.10, "split": 0.30, "spread": 0.50, "heavy": 0.10},
     },
     "chain_gang": {
         "label": "Chain Gang",
@@ -1632,6 +1774,10 @@ OFFENSE_STYLES = {
         "risk_tolerance": 0.90,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.30,
+        "kick_pass_weights": {
+            "quick_kick": 0.10, "territory": 0.15, "bomb": 0.15, "kick_lateral": 0.60,
+        },
+        "formation_weights": {"tight": 0.05, "split": 0.15, "spread": 0.70, "heavy": 0.10},
     },
     "slick_n_slide": {
         "label": "Slick 'n Slide",
@@ -1669,6 +1815,10 @@ OFFENSE_STYLES = {
         "lead_back_bonus": 0.15,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.35,
+        "kick_pass_weights": {
+            "quick_kick": 0.40, "territory": 0.35, "bomb": 0.05, "kick_lateral": 0.20,
+        },
+        "formation_weights": {"tight": 0.15, "split": 0.40, "spread": 0.30, "heavy": 0.15},
     },
     "balanced": {
         "label": "Balanced",
@@ -1701,6 +1851,153 @@ OFFENSE_STYLES = {
         "pindown_bonus": 0.05,
         "snap_kick_aggression": 1.1,
         "kick_mode_aggression": 0.50,
+        "kick_pass_weights": {
+            "quick_kick": 0.30, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.20,
+        },
+        "formation_weights": {"tight": 0.20, "split": 0.35, "spread": 0.25, "heavy": 0.20},
+    },
+    "east_coast": {
+        "label": "East Coast",
+        "description": "Short kick passes, chain-moving possession offense. Death by a thousand completions.",
+        "weights": {
+            "dive_option": 0.12,
+            "power": 0.08,
+            "sweep_option": 0.06,
+            "speed_option": 0.04,
+            "counter": 0.03,
+            "draw": 0.05,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.42,
+            "trick_play": 0.02,
+            "snap_kick": 0.04,
+            "field_goal": 0.03,
+            "punt": 0.02,
+        },
+        "tempo": 0.65,
+        "lateral_risk": 0.70,
+        "kick_rate": 0.20,
+        "option_rate": 0.35,
+        "run_bonus": 0.02,
+        "fatigue_resistance": 0.04,
+        "kick_accuracy_bonus": 0.03,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.04,
+        "broken_play_bonus": 0.02,
+        "pindown_bonus": 0.02,
+        "run_vs_lateral": 0.55,
+        "early_down_aggression": 0.70,
+        "red_zone_run_pct": 0.55,
+        "kick_mode_aggression": 0.55,
+        "kick_pass_weights": {
+            "quick_kick": 0.55, "territory": 0.30, "bomb": 0.05, "kick_lateral": 0.10,
+        },
+        "possession_drive_bonus": 0.08,
+        "yac_bonus": 0.06,
+        "rhythm_escalation": True,
+        "clock_burn_multiplier": 1.15,
+        "weights_attack": {
+            "dive_option": 0.22, "power": 0.18, "sweep_option": 0.05,
+            "speed_option": 0.03, "counter": 0.02, "draw": 0.05,
+            "viper_jet": 0.02, "lateral_spread": 0.03, "kick_pass": 0.28,
+            "trick_play": 0.02, "snap_kick": 0.04, "field_goal": 0.04, "punt": 0.01,
+        },
+        "weights_attack_threshold": 80,
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.75, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.10,
+        },
+        "weights_siege": {
+            "dive_option": 0.20, "power": 0.15, "sweep_option": 0.08,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.08,
+            "viper_jet": 0.0, "lateral_spread": 0.02, "kick_pass": 0.32,
+            "trick_play": 0.01, "snap_kick": 0.0, "field_goal": 0.0, "punt": 0.06,
+        },
+        "kick_pass_weights_siege": {
+            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.05, "kick_lateral": 0.0,
+        },
+        "weights_chase": {
+            "dive_option": 0.05, "power": 0.03, "sweep_option": 0.05,
+            "speed_option": 0.05, "counter": 0.03, "draw": 0.04,
+            "viper_jet": 0.03, "lateral_spread": 0.10, "kick_pass": 0.45,
+            "trick_play": 0.04, "snap_kick": 0.06, "field_goal": 0.03, "punt": 0.02,
+        },
+        "kick_pass_weights_chase": {
+            "quick_kick": 0.25, "territory": 0.40, "bomb": 0.20, "kick_lateral": 0.15,
+        },
+        "chase_tempo_override": 0.80,
+        "formation_weights": {"tight": 0.10, "split": 0.40, "spread": 0.40, "heavy": 0.10},
+    },
+    "shock_and_awe": {
+        "label": "Shock & Awe",
+        "description": "Vertical kick pass bombs at maximum tempo. Feast or famine, no middle ground.",
+        "weights": {
+            "dive_option": 0.06,
+            "power": 0.04,
+            "sweep_option": 0.05,
+            "speed_option": 0.06,
+            "counter": 0.02,
+            "draw": 0.08,
+            "viper_jet": 0.03,
+            "lateral_spread": 0.08,
+            "kick_pass": 0.38,
+            "trick_play": 0.05,
+            "snap_kick": 0.06,
+            "field_goal": 0.04,
+            "punt": 0.03,
+        },
+        "tempo": 0.85,
+        "lateral_risk": 1.10,
+        "kick_rate": 0.30,
+        "option_rate": 0.30,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.06,
+        "explosive_lateral_bonus": 0.12,
+        "option_read_bonus": 0.02,
+        "broken_play_bonus": 0.10,
+        "pindown_bonus": 0.0,
+        "run_vs_lateral": 0.35,
+        "early_down_aggression": 0.85,
+        "red_zone_run_pct": 0.60,
+        "kick_mode_aggression": 0.70,
+        "kick_pass_weights": {
+            "quick_kick": 0.15, "territory": 0.25, "bomb": 0.45, "kick_lateral": 0.15,
+        },
+        "deep_shot_bonus": 0.08,
+        "volume_shooting": True,
+        "sack_vulnerability": 0.06,
+        "tempo_fatigue_export": 0.08,
+        "garbage_time_amplifier": 1.2,
+        "weights_attack": {
+            "dive_option": 0.08, "power": 0.05, "sweep_option": 0.06,
+            "speed_option": 0.06, "counter": 0.03, "draw": 0.06,
+            "viper_jet": 0.04, "lateral_spread": 0.10, "kick_pass": 0.28,
+            "trick_play": 0.04, "snap_kick": 0.10, "field_goal": 0.06, "punt": 0.02,
+        },
+        "weights_attack_threshold": 65,
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.30, "territory": 0.40, "bomb": 0.10, "kick_lateral": 0.20,
+        },
+        "weights_siege": {
+            "dive_option": 0.08, "power": 0.05, "sweep_option": 0.05,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.10,
+            "viper_jet": 0.02, "lateral_spread": 0.03, "kick_pass": 0.40,
+            "trick_play": 0.05, "snap_kick": 0.0, "field_goal": 0.0, "punt": 0.13,
+        },
+        "kick_pass_weights_siege": {
+            "quick_kick": 0.15, "territory": 0.20, "bomb": 0.55, "kick_lateral": 0.10,
+        },
+        "weights_chase": {
+            "dive_option": 0.03, "power": 0.02, "sweep_option": 0.04,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.06,
+            "viper_jet": 0.03, "lateral_spread": 0.10, "kick_pass": 0.42,
+            "trick_play": 0.06, "snap_kick": 0.08, "field_goal": 0.03, "punt": 0.03,
+        },
+        "kick_pass_weights_chase": {
+            "quick_kick": 0.10, "territory": 0.20, "bomb": 0.55, "kick_lateral": 0.15,
+        },
+        "chase_tempo_override": 0.90,
+        "formation_weights": {"tight": 0.05, "split": 0.15, "spread": 0.70, "heavy": 0.10},
     },
 }
 
@@ -1732,86 +2029,151 @@ DEFENSE_STYLE_MIGRATION = {
 # This creates rock/paper/scissors dynamics — no single defense is best,
 # and a smart DC can exploit an opponent's offensive tendencies.
 OFFENSE_VS_DEFENSE_MATCHUP = {
+    # ── CALIBRATION: flat multipliers reduced to 50% of original deviation ──
+    # Personnel weights now carry the style-specific differentiation at full
+    # strength, so these matchup multipliers are halved toward 1.0:
+    #   new_value = 1.0 + (old_value - 1.0) * 0.5
+    #
     # Swarm crushes lateral-heavy offenses but kick pass carves its zones
-    ("ground_pound", "swarm"): 0.95,
-    ("lateral_spread", "swarm"): 0.82,
-    ("boot_raid", "swarm"): 1.12,
-    ("ball_control", "swarm"): 0.98,
-    ("ghost", "swarm"): 0.90,
-    ("stampede", "swarm"): 0.88,
-    ("chain_gang", "swarm"): 0.78,
-    ("slick_n_slide", "swarm"): 0.95,
-    ("balanced", "swarm"): 0.95,
+    ("ground_pound", "swarm"): 0.975,
+    ("lateral_spread", "swarm"): 0.91,
+    ("boot_raid", "swarm"): 1.06,
+    ("ball_control", "swarm"): 0.99,
+    ("ghost", "swarm"): 0.95,
+    ("stampede", "swarm"): 0.94,
+    ("chain_gang", "swarm"): 0.89,
+    ("slick_n_slide", "swarm"): 0.975,
+    ("balanced", "swarm"): 0.975,
     # Blitz Pack pressures everything but counters/draws exploit vacated gaps
-    ("ground_pound", "blitz_pack"): 0.88,
-    ("lateral_spread", "blitz_pack"): 1.08,
-    ("boot_raid", "blitz_pack"): 0.90,
-    ("ball_control", "blitz_pack"): 0.85,
-    ("ghost", "blitz_pack"): 1.15,
-    ("stampede", "blitz_pack"): 1.05,
-    ("chain_gang", "blitz_pack"): 1.10,
-    ("slick_n_slide", "blitz_pack"): 1.10,
+    ("ground_pound", "blitz_pack"): 0.94,
+    ("lateral_spread", "blitz_pack"): 1.04,
+    ("boot_raid", "blitz_pack"): 0.95,
+    ("ball_control", "blitz_pack"): 0.925,
+    ("ghost", "blitz_pack"): 1.075,
+    ("stampede", "blitz_pack"): 1.025,
+    ("chain_gang", "blitz_pack"): 1.05,
+    ("slick_n_slide", "blitz_pack"): 1.05,
     ("balanced", "blitz_pack"): 1.00,
     # Shadow shuts down viper-based schemes but power run eats it alive
-    ("ground_pound", "shadow"): 1.12,
-    ("lateral_spread", "shadow"): 0.90,
-    ("boot_raid", "shadow"): 0.95,
-    ("ball_control", "shadow"): 1.08,
-    ("ghost", "shadow"): 0.80,
-    ("stampede", "shadow"): 1.10,
-    ("chain_gang", "shadow"): 0.88,
-    ("slick_n_slide", "shadow"): 0.92,
-    ("balanced", "shadow"): 0.98,
+    ("ground_pound", "shadow"): 1.06,
+    ("lateral_spread", "shadow"): 0.95,
+    ("boot_raid", "shadow"): 0.975,
+    ("ball_control", "shadow"): 1.04,
+    ("ghost", "shadow"): 0.90,
+    ("stampede", "shadow"): 1.05,
+    ("chain_gang", "shadow"): 0.94,
+    ("slick_n_slide", "shadow"): 0.96,
+    ("balanced", "shadow"): 0.99,
     # Fortress walls off the run game but lateral/kick pass go around
-    ("ground_pound", "fortress"): 0.78,
-    ("lateral_spread", "fortress"): 1.15,
-    ("boot_raid", "fortress"): 1.18,
-    ("ball_control", "fortress"): 0.82,
-    ("ghost", "fortress"): 1.05,
-    ("stampede", "fortress"): 0.85,
-    ("chain_gang", "fortress"): 1.20,
+    ("ground_pound", "fortress"): 0.89,
+    ("lateral_spread", "fortress"): 1.075,
+    ("boot_raid", "fortress"): 1.09,
+    ("ball_control", "fortress"): 0.91,
+    ("ghost", "fortress"): 1.025,
+    ("stampede", "fortress"): 0.925,
+    ("chain_gang", "fortress"): 1.10,
     ("slick_n_slide", "fortress"): 1.00,
-    ("balanced", "fortress"): 1.02,
+    ("balanced", "fortress"): 1.01,
     # Predator gambles — great vs predictable offenses, burned by chaos
-    ("ground_pound", "predator"): 0.90,
-    ("lateral_spread", "predator"): 0.95,
-    ("boot_raid", "predator"): 0.88,
-    ("ball_control", "predator"): 0.85,
-    ("ghost", "predator"): 1.10,
-    ("stampede", "predator"): 1.08,
-    ("chain_gang", "predator"): 1.05,
-    ("slick_n_slide", "predator"): 1.05,
-    ("balanced", "predator"): 0.95,
+    ("ground_pound", "predator"): 0.95,
+    ("lateral_spread", "predator"): 0.975,
+    ("boot_raid", "predator"): 0.94,
+    ("ball_control", "predator"): 0.925,
+    ("ghost", "predator"): 1.05,
+    ("stampede", "predator"): 1.04,
+    ("chain_gang", "predator"): 1.025,
+    ("slick_n_slide", "predator"): 1.025,
+    ("balanced", "predator"): 0.975,
     # Drift bends but doesn't break — dies to patient ball control
-    ("ground_pound", "drift"): 1.05,
-    ("lateral_spread", "drift"): 0.92,
-    ("boot_raid", "drift"): 0.88,
-    ("ball_control", "drift"): 1.15,
-    ("ghost", "drift"): 0.95,
-    ("stampede", "drift"): 1.10,
-    ("chain_gang", "drift"): 0.90,
-    ("slick_n_slide", "drift"): 0.95,
-    ("balanced", "drift"): 0.98,
+    ("ground_pound", "drift"): 1.025,
+    ("lateral_spread", "drift"): 0.96,
+    ("boot_raid", "drift"): 0.94,
+    ("ball_control", "drift"): 1.075,
+    ("ghost", "drift"): 0.975,
+    ("stampede", "drift"): 1.05,
+    ("chain_gang", "drift"): 0.95,
+    ("slick_n_slide", "drift"): 0.975,
+    ("balanced", "drift"): 0.99,
     # Chaos wrecks predictable teams, but experienced/balanced offenses adapt
-    ("ground_pound", "chaos"): 0.88,
-    ("lateral_spread", "chaos"): 0.95,
-    ("boot_raid", "chaos"): 0.90,
-    ("ball_control", "chaos"): 0.92,
-    ("ghost", "chaos"): 1.05,
-    ("stampede", "chaos"): 0.92,
-    ("chain_gang", "chaos"): 0.98,
-    ("slick_n_slide", "chaos"): 1.02,
-    ("balanced", "chaos"): 1.08,
+    ("ground_pound", "chaos"): 0.94,
+    ("lateral_spread", "chaos"): 0.975,
+    ("boot_raid", "chaos"): 0.95,
+    ("ball_control", "chaos"): 0.96,
+    ("ghost", "chaos"): 1.025,
+    ("stampede", "chaos"): 0.96,
+    ("chain_gang", "chaos"): 0.99,
+    ("slick_n_slide", "chaos"): 1.01,
+    ("balanced", "chaos"): 1.04,
     # Lockdown denies kick pass but ground game bulldozes the light box
-    ("ground_pound", "lockdown"): 1.15,
-    ("lateral_spread", "lockdown"): 0.92,
-    ("boot_raid", "lockdown"): 0.80,
-    ("ball_control", "lockdown"): 1.10,
-    ("ghost", "lockdown"): 0.95,
-    ("stampede", "lockdown"): 1.12,
-    ("chain_gang", "lockdown"): 0.90,
-    ("slick_n_slide", "lockdown"): 0.90,
-    ("balanced", "lockdown"): 0.95,
+    ("ground_pound", "lockdown"): 1.075,
+    ("lateral_spread", "lockdown"): 0.96,
+    ("boot_raid", "lockdown"): 0.90,
+    ("ball_control", "lockdown"): 1.05,
+    ("ghost", "lockdown"): 0.975,
+    ("stampede", "lockdown"): 1.06,
+    ("chain_gang", "lockdown"): 0.95,
+    ("slick_n_slide", "lockdown"): 0.95,
+    ("balanced", "lockdown"): 0.975,
+    # East Coast — rhythm passing eats zone but blitz pressure kills it
+    ("east_coast", "swarm"): 1.04,
+    ("east_coast", "blitz_pack"): 0.91,    # HARD COUNTER (was 0.82)
+    ("east_coast", "shadow"): 1.025,
+    ("east_coast", "fortress"): 1.075,
+    ("east_coast", "predator"): 0.925,
+    ("east_coast", "drift"): 1.05,
+    ("east_coast", "chaos"): 0.96,
+    ("east_coast", "lockdown"): 0.95,
+    # Shock & Awe — volume bombing shreds soft coverage, lockdown smothers it
+    ("shock_and_awe", "swarm"): 1.025,
+    ("shock_and_awe", "blitz_pack"): 1.06,
+    ("shock_and_awe", "shadow"): 0.925,
+    ("shock_and_awe", "fortress"): 1.09,
+    ("shock_and_awe", "predator"): 1.025,
+    ("shock_and_awe", "drift"): 0.94,
+    ("shock_and_awe", "chaos"): 0.975,
+    ("shock_and_awe", "lockdown"): 0.89,    # HARD COUNTER (was 0.78)
+}
+
+# ── Formation × Defense Matchup Matrix ──
+# Multiplicative layer that stacks with OFFENSE_VS_DEFENSE_MATCHUP.
+# > 1.0 = formation has advantage, < 1.0 = defense has advantage.
+FORMATION_VS_DEFENSE = {
+    # --- Tight: power interior, weak to pressure/blitz ---
+    ("tight", "swarm"):       1.00,
+    ("tight", "blitz_pack"):  0.92,  # Pressure into condensed space
+    ("tight", "shadow"):      1.02,  # Shadow plays edges, Tight works inside
+    ("tight", "fortress"):    0.94,  # Fortress built for exactly this
+    ("tight", "predator"):    0.96,  # Predator gambles, Tight is sturdy
+    ("tight", "drift"):       1.05,  # Drift bends, Tight pushes
+    ("tight", "chaos"):       0.98,  # Chaos causes confusion in tight spaces
+    ("tight", "lockdown"):    1.10,  # Coverage is wasted — nobody is running routes
+    # --- Split: neutral baseline ---
+    ("split", "swarm"):       1.00,
+    ("split", "blitz_pack"):  1.00,
+    ("split", "shadow"):      1.00,
+    ("split", "fortress"):    1.02,  # Split can go either way
+    ("split", "predator"):    1.00,
+    ("split", "drift"):       1.00,
+    ("split", "chaos"):       0.98,  # Slight chaos disadvantage
+    ("split", "lockdown"):    0.98,  # Slight coverage advantage
+    # --- Spread: aerial advantage, sack vulnerability ---
+    ("spread", "swarm"):      1.03,  # Swarm can't cover everything
+    ("spread", "blitz_pack"): 1.08,  # Pressure leaves receivers open (but sacks go up)
+    ("spread", "shadow"):     0.95,  # Shadow tracks man-to-man in space
+    ("spread", "fortress"):   1.12,  # Fortress defending ghosts in Spread
+    ("spread", "predator"):   1.05,  # Predator gambles, Spread punishes
+    ("spread", "drift"):      0.92,  # Drift sits in zones, reads the Spread
+    ("spread", "chaos"):      1.02,  # Chaos struggles with 4-wide
+    ("spread", "lockdown"):   0.85,  # Coverage blankets all 4 receivers
+    # --- Heavy: smashmouth, terrible at passing ---
+    ("heavy", "swarm"):       1.02,  # Physical mismatch
+    ("heavy", "blitz_pack"):  0.95,  # Pressure gets blown up by extra blockers
+    ("heavy", "shadow"):      1.05,  # Shadow can't handle the interior push
+    ("heavy", "fortress"):    0.92,  # Fortress is ready for this
+    ("heavy", "predator"):    1.08,  # Predator out-physicaled
+    ("heavy", "drift"):       1.05,  # Drift bends to the power
+    ("heavy", "chaos"):       1.00,  # Even matchup
+    ("heavy", "lockdown"):    1.12,  # Coverage is useless — no one to cover
 }
 
 # ========================================
@@ -2272,6 +2634,89 @@ DEFENSE_STYLES = {
     },
 }
 
+# ── Defensive Style → Personnel Category Mapping ──────────────────
+# Maps the 8 engine defense schemes to the 5 personnel categories
+# used by DEFENSE_PERSONNEL_WEIGHTS for per-surface defender selection.
+DEFENSE_SCHEME_TO_CATEGORY = {
+    "swarm":      "base",
+    "blitz_pack": "pressure",
+    "shadow":     "contain",
+    "fortress":   "run_stop",
+    "predator":   "coverage",
+    "drift":      "coverage",
+    "chaos":      "pressure",
+    "lockdown":   "contain",
+}
+
+# ── Per-Surface Defensive Personnel Weights ───────────────────────
+# Each category defines per-surface attribute weights for defender
+# selection and skill computation.  These weights are at FULL STRENGTH
+# per calibration note (flat multipliers reduced to 50% to compensate).
+#
+# 4 contest surfaces:
+#   run_tackler    — who meets the ball carrier at the point of attack
+#   kick_pass_cov  — who covers the receiver on kick passes
+#   sack_rush      — pass rush skill composition
+#   lateral_pursuit — who closes on lateral chain ball carriers
+#
+# Each surface maps attribute names → weight.  Weights must sum to 1.0.
+DEFENSE_PERSONNEL_WEIGHTS = {
+    "base": {
+        "run_tackler":     {"tackling": 0.35, "speed": 0.25, "awareness": 0.25, "power": 0.15},
+        "kick_pass_cov":   {"awareness": 0.30, "speed": 0.30, "hands": 0.20, "agility": 0.20},
+        "sack_rush":       {"power": 0.30, "speed": 0.30, "tackling": 0.25, "agility": 0.15},
+        "lateral_pursuit": {"speed": 0.35, "tackling": 0.25, "awareness": 0.25, "agility": 0.15},
+    },
+    "pressure": {
+        "run_tackler":     {"tackling": 0.30, "power": 0.30, "speed": 0.25, "awareness": 0.15},
+        "kick_pass_cov":   {"speed": 0.30, "awareness": 0.25, "agility": 0.25, "hands": 0.20},
+        "sack_rush":       {"power": 0.35, "speed": 0.35, "tackling": 0.20, "agility": 0.10},
+        "lateral_pursuit": {"speed": 0.30, "tackling": 0.30, "power": 0.25, "awareness": 0.15},
+    },
+    "contain": {
+        "run_tackler":     {"awareness": 0.30, "tackling": 0.30, "speed": 0.25, "agility": 0.15},
+        "kick_pass_cov":   {"awareness": 0.35, "speed": 0.30, "hands": 0.20, "agility": 0.15},
+        "sack_rush":       {"awareness": 0.30, "speed": 0.25, "power": 0.25, "tackling": 0.20},
+        "lateral_pursuit": {"awareness": 0.30, "speed": 0.30, "tackling": 0.25, "agility": 0.15},
+    },
+    "run_stop": {
+        "run_tackler":     {"tackling": 0.35, "power": 0.35, "awareness": 0.20, "speed": 0.10},
+        "kick_pass_cov":   {"awareness": 0.30, "tackling": 0.25, "speed": 0.25, "hands": 0.20},
+        "sack_rush":       {"power": 0.40, "tackling": 0.25, "speed": 0.20, "awareness": 0.15},
+        "lateral_pursuit": {"tackling": 0.30, "power": 0.30, "speed": 0.25, "awareness": 0.15},
+    },
+    "coverage": {
+        "run_tackler":     {"awareness": 0.30, "speed": 0.25, "tackling": 0.25, "hands": 0.20},
+        "kick_pass_cov":   {"awareness": 0.35, "speed": 0.25, "hands": 0.25, "agility": 0.15},
+        "sack_rush":       {"speed": 0.30, "awareness": 0.30, "power": 0.20, "tackling": 0.20},
+        "lateral_pursuit": {"awareness": 0.35, "speed": 0.30, "agility": 0.20, "tackling": 0.15},
+    },
+}
+
+# ── Formation → Sack Protection Values ───────────────────────────
+# Used by compute_sack_probability to model formation-specific protection.
+# Higher = better protection (more blockers, tighter pocket).
+FORMATION_PROTECTION = {
+    "tight":  0.85,   # Extra blockers in close = excellent protection
+    "split":  1.00,   # Baseline
+    "spread": 1.15,   # Split-out receivers leave kicker exposed
+    "heavy":  0.80,   # Maximum protection — extra linemen
+}
+
+# ── Style → Blitz Chance (rush_count boost) ───────────────────────
+# Some defense styles send extra rushers on a probabilistic basis.
+# This stacks with the sack probability model.
+STYLE_BLITZ_CHANCE = {
+    "swarm":      0.10,
+    "blitz_pack": 0.45,
+    "shadow":     0.08,
+    "fortress":   0.15,
+    "predator":   0.25,
+    "drift":      0.05,
+    "chaos":      0.30,
+    "lockdown":   0.10,
+}
+
 # ========================================
 # SPECIAL TEAMS CHAOS PROBABILITIES
 # ========================================
@@ -2294,6 +2739,8 @@ OFFENSE_BLOCK_MODIFIERS = {
     "ghost": 1.15,
     "lateral_spread": 1.2,
     "chain_gang": 1.2,
+    "east_coast": 0.90,       # Pro-style protection — decent blocking
+    "shock_and_awe": 1.15,    # Quick releases mean less protection
 }
 
 # Defensive style modifiers for blocks/muffs (higher = better special teams pressure)
@@ -2463,6 +2910,8 @@ class ViperballEngine:
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
+        self._drive_consecutive_completions = 0  # Consecutive kick pass completions (for rhythm_escalation)
+        self._current_formation = "split"  # Current snap formation shell
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -2808,6 +3257,10 @@ class ViperballEngine:
                 "lateral": "the lateral chains",
                 "kick_pass": "the kick pass attack",
                 "trick": "the trick plays",
+                "quick_kick": "the quick kick game",
+                "territory": "the territory kick passes",
+                "bomb": "the deep bomb kicks",
+                "kick_lateral": "the kick-lateral chains",
             }
             family_label = dc_type_labels.get(dc_type, dc_type)
             self._adaptation_log.append(
@@ -3539,9 +3992,15 @@ class ViperballEngine:
     def simulate_drive(self, is_bonus_drive: bool = False):
         style = self._current_style()
         tempo = style["tempo"]
+        # Chase mode tempo override — faster pace when trailing big
+        if self._resolve_weight_mode() == "chase":
+            chase_tempo = style.get("chase_tempo_override")
+            if chase_tempo is not None:
+                tempo = max(tempo, chase_tempo)
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
+        self._drive_consecutive_completions = 0
         self.state.kick_mode = False
 
         if self.state.possession == "home" and self._home_momentum_plays > 0:
@@ -3598,6 +4057,25 @@ class ViperballEngine:
                     else:
                         self._away_family_freq_drive[_pf_dc_type] = self._away_family_freq_drive.get(_pf_dc_type, 0) + 1
                         self._away_family_freq_half[_pf_dc_type] = self._away_family_freq_half.get(_pf_dc_type, 0) + 1
+                    # V3: Track kick pass sub-families at granular level for DC adaptation
+                    kp_sf = getattr(play, 'kick_pass_subfamily', '')
+                    if kp_sf:
+                        if drive_team == "home":
+                            self._home_family_freq_drive[kp_sf] = self._home_family_freq_drive.get(kp_sf, 0) + 1
+                            self._home_family_freq_half[kp_sf] = self._home_family_freq_half.get(kp_sf, 0) + 1
+                        else:
+                            self._away_family_freq_drive[kp_sf] = self._away_family_freq_drive.get(kp_sf, 0) + 1
+                            self._away_family_freq_half[kp_sf] = self._away_family_freq_half.get(kp_sf, 0) + 1
+            # V3: Track formation-play pairs for DC Solved Puzzle
+            if _pf_dc_type and hasattr(play, 'formation') and play.formation:
+                fp_key = f"{play.formation}:{_pf_dc_type}"
+                if drive_team == "home":
+                    self._home_family_freq_drive[fp_key] = self._home_family_freq_drive.get(fp_key, 0) + 1
+                    self._home_family_freq_half[fp_key] = self._home_family_freq_half.get(fp_key, 0) + 1
+                else:
+                    self._away_family_freq_drive[fp_key] = self._away_family_freq_drive.get(fp_key, 0) + 1
+                    self._away_family_freq_half[fp_key] = self._away_family_freq_half.get(fp_key, 0) + 1
+
             # V2.4: Decay solved families when offense breaks tendency
             if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False):
                 self._decay_solved_families(drive_team, _pf_dc_type)
@@ -3607,6 +4085,16 @@ class ViperballEngine:
                 self._drive_chain_positive += 1
             else:
                 self._drive_chain_positive = 0
+
+            # ── Shock & Awe: tempo_fatigue_export — drain opponent stamina ──
+            tfe = style.get("tempo_fatigue_export", 0.0)
+            if tfe > 0:
+                weather_drain = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+                export_drain = tfe * weather_drain
+                if self.state.possession == "home":
+                    self.state.away_stamina = max(40, self.state.away_stamina - export_drain)
+                else:
+                    self.state.home_stamina = max(40, self.state.home_stamina - export_drain)
 
             # Kneel plays manage their own clock — skip normal time deduction
             if play.play_type == "kneel":
@@ -4563,11 +5051,18 @@ class ViperballEngine:
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
 
-        # ── Normal play family selection — direct dispatch ──
-        play_family = self.select_play_family()
+        # ── Formation-First: select formation, then play family ──
+        self._current_formation = self.select_formation()
+        play_family = self.select_play_family(formation=self._current_formation)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
         play = self._dispatch_play(play_type, play_family)
+        # Stamp formation on the play object and prepend to description
+        formation = self._current_formation
+        play.formation = formation
+        if formation != "split":
+            formation_label = formation.upper()
+            play.description = f"{formation_label} — {play.description}"
         return self._apply_post_play_penalties(play)
 
     def _dispatch_play(self, play_type: PlayType, play_family: PlayFamily) -> Play:
@@ -4601,9 +5096,87 @@ class ViperballEngine:
                 play = self._apply_post_play_penalty(post_pen, play)
         return play
 
-    def select_play_family(self) -> PlayFamily:
+    def select_formation(self) -> str:
+        """Select formation shell based on style tendency + game state + weather.
+
+        Returns one of: "tight", "split", "spread", "heavy".
+        """
         style = self._current_style()
-        weights = dict(style["weights"])
+        base = dict(style.get("formation_weights", DEFAULT_FORMATION_WEIGHTS))
+
+        fp = self.state.field_position
+        ytg = self.state.yards_to_go
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+
+        # ── Short yardage (1-3 to go): shift toward Heavy/Tight ──
+        if ytg <= 3:
+            base["heavy"] += 0.20
+            base["tight"] += 0.10
+            base["spread"] -= 0.20
+            base["split"] -= 0.10
+
+        # ── Long yardage (15+ to go): shift toward Spread ──
+        if ytg >= 15:
+            base["spread"] += 0.20
+            base["heavy"] -= 0.15
+            base["tight"] -= 0.05
+
+        # ── Red zone (inside opponent 20): shift toward Heavy/Tight ──
+        if fp >= 80:
+            base["heavy"] += 0.15
+            base["tight"] += 0.10
+            base["spread"] -= 0.15
+            base["split"] -= 0.10
+
+        # ── Trailing 10+ in Q4: shift toward Spread ──
+        if score_diff <= -10 and quarter >= 4:
+            base["spread"] += 0.25
+            base["heavy"] -= 0.15
+            base["tight"] -= 0.10
+
+        # ── Siege (own 1-10): shift toward Tight ──
+        if fp <= 10:
+            base["tight"] += 0.15
+            base["spread"] -= 0.15
+
+        # ── Weather adjustments ──
+        weather = self.weather
+        if weather in ("rain", "snow"):
+            base["heavy"] += 0.10
+            base["tight"] += 0.05
+            base["spread"] -= 0.10
+            base["split"] -= 0.05
+        elif weather == "sleet":
+            base["heavy"] += 0.15
+            base["tight"] += 0.10
+            base["spread"] -= 0.20
+            base["split"] -= 0.05
+        elif weather == "heavy_wind":
+            base["spread"] -= 0.05
+            base["split"] += 0.05
+
+        # ── Normalize (floor at 0.01 to avoid zero weights) ──
+        total = sum(max(0.01, v) for v in base.values())
+        norm = {k: max(0.01, v) / total for k, v in base.items()}
+
+        shells = list(norm.keys())
+        weights = [norm[s] for s in shells]
+        return random.choices(shells, weights=weights, k=1)[0]
+
+    def select_play_family(self, formation: str = "split") -> PlayFamily:
+        style = self._current_style()
+
+        # ── Situational weight mode override ──
+        weight_mode = self._resolve_weight_mode()
+        if weight_mode == "siege":
+            weights = dict(style.get("weights_siege", style["weights"]))
+        elif weight_mode == "chase":
+            weights = dict(style.get("weights_chase", style["weights"]))
+        elif weight_mode == "attack":
+            weights = dict(style.get("weights_attack", style["weights"]))
+        else:
+            weights = dict(style["weights"])
 
         down = self.state.down
         ytg = self.state.yards_to_go
@@ -4611,6 +5184,31 @@ class ViperballEngine:
 
         # ── V2.1: Deprecated territory_kick zeroed out ──
         weights["territory_kick"] = 0.0
+
+        # ── Formation-First coherence adjustments ──
+        # The formation selected pre-snap adjusts play family weights to
+        # maintain schematic coherence (e.g. Heavy suppresses kick_pass).
+        if formation == "heavy":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.4
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.3
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 1.5
+            weights["power"] = weights.get("power", 0.1) * 1.5
+            weights["counter"] = weights.get("counter", 0.05) * 1.3
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 0.5
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 0.5
+        elif formation == "spread":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 1.6
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 1.4
+            weights["speed_option"] = weights.get("speed_option", 0.1) * 1.3
+            weights["sweep_option"] = weights.get("sweep_option", 0.1) * 1.2
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
+            weights["power"] = weights.get("power", 0.1) * 0.5
+        elif formation == "tight":
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.7
+            weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
+            weights["power"] = weights.get("power", 0.1) * 1.3
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.6
+        # Split: no adjustments (baseline)
 
         # ── V2.1: Range-gating for kick families ──
         # Compute kicker range to determine if kicks are viable
@@ -4910,6 +5508,216 @@ class ViperballEngine:
             return self.away_defense
         return self.home_defense
 
+    def _resolve_weight_mode(self) -> str:
+        """Determine the active situational weight mode.
+
+        Priority order: siege > chase > attack > base.
+        Returns the mode name as a string: "siege", "chase", "attack", or "base".
+        """
+        style = self._current_style()
+        fp = self.state.field_position
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+
+        # Siege: pinned inside own 10 — survival mode
+        if fp <= 10 and "weights_siege" in style:
+            return "siege"
+
+        # Chase: trailing 10+ in Q3/Q4 — desperation catch-up
+        if quarter >= 3 and score_diff <= -10 and "weights_chase" in style:
+            return "chase"
+
+        # Attack: past field position threshold — scoring mode
+        attack_threshold = style.get("weights_attack_threshold", 999)
+        if fp >= attack_threshold and "weights_attack" in style:
+            return "attack"
+
+        return "base"
+
+    def _formation_yard_modifier(self, play_family_value: str) -> float:
+        """Return the formation-based yardage adjustment for a play family.
+
+        Reads the current snap formation and returns a +/- yard modifier.
+        """
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+
+        key_map = {
+            "dive_option": "dive_option_yards",
+            "power": "power_yards",
+            "counter": "counter_yards",
+            "sweep_option": "sweep_option_yards",
+            "speed_option": "speed_option_yards",
+            "viper_jet": "viper_jet_yards",
+            "lateral_spread": "lateral_yards",
+        }
+        mod_key = key_map.get(play_family_value)
+        if mod_key:
+            return mods.get(mod_key, 0.0)
+        return 0.0
+
+    def _formation_kick_pass_modifier(self, subfamily: "KickPassSubFamily") -> float:
+        """Return formation-based completion probability adjustment for a kick pass sub-family."""
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+
+        key_map = {
+            KickPassSubFamily.QUICK_KICK: "quick_kick_completion",
+            KickPassSubFamily.TERRITORY: "territory_completion",
+            KickPassSubFamily.BOMB: "bomb_completion",
+            KickPassSubFamily.KICK_LATERAL: "quick_kick_completion",  # Uses QK rates
+        }
+        return mods.get(key_map.get(subfamily, ""), 0.0)
+
+    def _formation_sack_modifier(self) -> float:
+        """Return formation-based sack rate adjustment."""
+        formation = getattr(self, '_current_formation', 'split')
+        mods = FORMATION_MODIFIERS.get(formation, FORMATION_MODIFIERS["split"])
+        return mods.get("sack_modifier", 0.0)
+
+    def _formation_defense_multiplier(self) -> float:
+        """Return the formation × defense style yard multiplier.
+
+        Stacks multiplicatively with OFFENSE_VS_DEFENSE_MATCHUP.
+        The DC can partially negate this with a correct formation read.
+        """
+        formation = getattr(self, '_current_formation', 'split')
+        defense_style = self._current_defense().get("label", "").lower().replace(" ", "_")
+        # Try the current 8-scheme names
+        if self.state.possession == "home":
+            def_style_name = self.away_team.defense_style
+        else:
+            def_style_name = self.home_team.defense_style
+
+        base_mult = FORMATION_VS_DEFENSE.get((formation, def_style_name), 1.0)
+
+        # ── DC formation read — instincts-based partial correction ──
+        dc_gp = self._def_dc_gameplan()
+        instincts_factor = dc_gp.get("instincts_factor", 0.5)
+        read_chance = 0.40 + instincts_factor * 0.35  # 40% to 75%
+
+        # Ghost special case: harder to read
+        style_name = self._current_style_name()
+        if style_name == "ghost":
+            read_chance -= 0.10
+
+        read_chance = max(0.20, min(0.80, read_chance))
+
+        if random.random() < read_chance:
+            # DC reads formation correctly — partially negate formation advantage
+            adjustment = 1.0 + (1.0 - base_mult) * 0.5  # 50% correction
+            return adjustment
+        else:
+            # DC doesn't read it — full formation advantage
+            return base_mult
+
+    def _select_kick_pass_subfamily(self, kicker) -> "KickPassSubFamily":
+        """Select kick pass sub-family based on style philosophy + game state.
+
+        The style provides base tendency weights.  Game state (field position,
+        down/YTG, score differential) and the kicker's physical limits shift
+        the weights so the sub-family selection is both schematic and adaptive.
+        """
+        style = self._current_style()
+
+        # ── Situational kick_pass_weights override ──
+        weight_mode = self._resolve_weight_mode()
+        if weight_mode == "siege":
+            base = dict(style.get("kick_pass_weights_siege", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        elif weight_mode == "chase":
+            base = dict(style.get("kick_pass_weights_chase", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        elif weight_mode == "attack":
+            base = dict(style.get("kick_pass_weights_attack", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        else:
+            base = dict(style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS))
+        fp = self.state.field_position
+        down = self.state.down
+        ytg = self.state.yards_to_go
+
+        # ── Field position gates ──
+        # Deep in own territory: suppress Bombs (not enough room to develop)
+        if fp <= 30:
+            base["bomb"] *= 0.30
+            base["quick_kick"] *= 1.20
+        # Midfield: prime Bomb territory
+        elif 40 <= fp <= 65:
+            base["bomb"] *= 1.40
+        # Red zone: short, high-percentage kicks
+        if fp >= 80:
+            base["quick_kick"] *= 1.50
+            base["bomb"] *= 0.10
+            base["territory"] *= 0.60
+
+        # ── Down / yards-to-go ──
+        if down >= 4:
+            if ytg >= 15:
+                # Need chunk yards — Territory or Bomb
+                base["territory"] *= 1.30
+                base["bomb"] *= 1.50
+                base["quick_kick"] *= 0.50
+            elif ytg <= 5:
+                # Short conversion — Quick Kick is ideal
+                base["quick_kick"] *= 1.40
+                base["bomb"] *= 0.40
+
+        # ── Score differential ──
+        score_diff = self._get_score_diff()
+        if score_diff <= -14:
+            # Trailing big — need explosives
+            base["bomb"] *= 1.60
+            base["quick_kick"] *= 0.70
+        elif score_diff >= 14:
+            # Leading big — protect the ball
+            base["bomb"] *= 0.30
+            base["quick_kick"] *= 1.30
+
+        # ── Kicker physical gate ──
+        # Weak-legged kickers can't throw Bombs effectively.
+        kick_power = getattr(kicker, 'kick_power', 70)
+        if kick_power < 70:
+            power_gate = (kick_power / 70.0) ** 2
+            base["bomb"] *= power_gate
+
+        # ── Style-specific sub-family overrides ──
+        style_name = self._current_style_name()
+        if style_name == "ground_pound":
+            # Play-action quick kick off heavy run looks
+            base["quick_kick"] *= 1.80
+            base["bomb"] *= 0.20
+            base["kick_lateral"] *= 0.10
+        elif style_name == "boot_raid":
+            # In Launch Pad range, lean Territory; outside, Quick Kick
+            if 55 <= fp <= 75:
+                base["territory"] *= 1.60
+            else:
+                base["quick_kick"] *= 1.30
+        elif style_name == "chain_gang":
+            # Force Kick-Lateral as dominant sub-family
+            base["kick_lateral"] *= 2.50
+        elif style_name == "ghost":
+            # Early downs: misdirection Bomb; late downs: safe Quick Kick
+            if down <= 3:
+                base["bomb"] *= 1.50
+            else:
+                base["quick_kick"] *= 1.40
+
+        # ── DC adaptation suppression ──
+        dc_gp = self._def_dc_gameplan()
+        for sf_key in ("quick_kick", "territory", "bomb", "kick_lateral"):
+            dc_supp = dc_gp.get(sf_key, 1.0)
+            if dc_supp < 1.0:
+                base[sf_key] *= dc_supp
+
+        # Normalize and select
+        subfamilies = [
+            KickPassSubFamily.QUICK_KICK,
+            KickPassSubFamily.TERRITORY,
+            KickPassSubFamily.BOMB,
+            KickPassSubFamily.KICK_LATERAL,
+        ]
+        weights = [max(0.01, base[sf.value]) for sf in subfamilies]
+        return random.choices(subfamilies, weights=weights, k=1)[0]
+
     def _apply_style_situational(self, weights: Dict, style_name: str, down: int, ytg: int, fp: int, score_diff: int, quarter: int, time_left: int):
         if style_name == "ground_pound":
             if down <= 3:
@@ -4997,6 +5805,38 @@ class ViperballEngine:
                 weights["speed_option"] = weights.get("speed_option", 0.08) * 1.3
                 weights["sweep_option"] = weights.get("sweep_option", 0.08) * 1.3
                 weights["kick_pass"] = weights.get("kick_pass", 0.24) * 1.2
+
+        elif style_name == "east_coast":
+            # Rhythm passing: boost kick_pass on maintained drives
+            possession_bonus = self._current_style().get("possession_drive_bonus", 0.08)
+            if self.drive_play_count >= 6:
+                # Long drive — possession bonus kicks in
+                weights["kick_pass"] = weights.get("kick_pass", 0.28) * (1.0 + possession_bonus)
+                weights["dive_option"] = weights.get("dive_option", 0.20) * 1.2
+            # Short-yardage: East Coast runs behind the OL
+            if ytg <= 3:
+                weights["dive_option"] = weights.get("dive_option", 0.20) * 1.5
+                weights["power"] = weights.get("power", 0.15) * 1.4
+            # Clock management: leading in Q4 → burn clock with runs
+            clock_burn = self._current_style().get("clock_burn_multiplier", 1.15)
+            if quarter == 4 and score_diff > 0 and time_left <= 600:
+                weights["dive_option"] = weights.get("dive_option", 0.20) * clock_burn
+                weights["power"] = weights.get("power", 0.15) * clock_burn
+                weights["kick_pass"] = weights.get("kick_pass", 0.28) * 0.7
+
+        elif style_name == "shock_and_awe":
+            # Garbage time amplifier: trailing 21+ → crank up bombs and tricks
+            garbage_amp = self._current_style().get("garbage_time_amplifier", 1.2)
+            if score_diff <= -21:
+                weights["kick_pass"] = weights.get("kick_pass", 0.38) * garbage_amp
+                weights["trick_play"] = weights.get("trick_play", 0.05) * garbage_amp
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.08) * garbage_amp
+            # S&A never suppresses kick_pass when leading (volume_shooting)
+            # — override the INT-caution block from base select_play_family
+            if self._current_style().get("volume_shooting", False):
+                if quarter >= 3 and score_diff > 0:
+                    # Restore kick_pass weight that INT-caution suppressed
+                    weights["kick_pass"] = weights.get("kick_pass", 0.38) * 1.5
 
     def calculate_block_probability(self, kick_type: str = "punt") -> float:
         """
@@ -5457,6 +6297,280 @@ class ViperballEngine:
         weights = self._spread_the_love_defense(pool, weights)
         return random.choices(pool, weights=weights, k=1)[0]
 
+    # ── Defensive Personnel System ────────────────────────────────
+    # Per-surface defender selection driven by defensive style category.
+    # Replaces hardcoded attribute weights with style-specific weights
+    # from DEFENSE_PERSONNEL_WEIGHTS.
+
+    def _get_defense_personnel_category(self) -> str:
+        """Return the personnel category for the team currently on defense."""
+        def_name = self._current_defense_name()
+        return DEFENSE_SCHEME_TO_CATEGORY.get(def_name, "base")
+
+    def _get_personnel_surface_weights(self, surface: str) -> Dict[str, float]:
+        """Return the attribute weights for a given contest surface.
+
+        surface: one of "run_tackler", "kick_pass_cov", "sack_rush", "lateral_pursuit"
+        """
+        category = self._get_defense_personnel_category()
+        cat_weights = DEFENSE_PERSONNEL_WEIGHTS.get(category, DEFENSE_PERSONNEL_WEIGHTS["base"])
+        return cat_weights.get(surface, cat_weights["run_tackler"])
+
+    def _personnel_weighted_score(self, player, surface_weights: Dict[str, float]) -> float:
+        """Compute a player's weighted skill score for a given surface."""
+        score = 0.0
+        for attr, weight in surface_weights.items():
+            score += getattr(player, attr, 75) * weight
+        # Fatigue scaling
+        stamina_pct = getattr(player, 'current_stamina', 100.0) / 100.0
+        score *= max(0.5, stamina_pct)
+        return max(1.0, score)
+
+    def _get_defenders_by_group(self, def_team) -> Dict[str, list]:
+        """Sort defensive players into position groups for personnel selection.
+
+        Returns dict with keys: 'dl' (Defensive Line), 'keeper' (Keepers),
+        'all' (combined eligible pool).
+        """
+        injured = self._injured_in_game(def_team)
+        dl = [p for p in def_team.players
+              if p.position == "Defensive Line" and p.name not in injured]
+        kp = [p for p in def_team.players
+              if p.position == "Keeper" and p.name not in injured]
+        all_eligible = dl + kp
+        if not all_eligible:
+            all_eligible = [p for p in def_team.players if p.name not in injured][:6]
+        if not all_eligible:
+            all_eligible = def_team.players[:5]
+        return {"dl": dl, "keeper": kp, "all": all_eligible}
+
+    def select_run_tackler(self, def_team, play_family=None):
+        """Style-aware run tackler selection.
+
+        Replaces generic _pick_def_tackler for run contests with personnel
+        weights driven by the defensive style category.  Play-family modifiers
+        shift the pool composition (DL-heavy for inside runs, Keeper-heavy
+        for outside/perimeter runs).
+
+        Returns (tackler, pool_label) where pool_label is a string tag
+        for play-by-play descriptions.
+        """
+        groups = self._get_defenders_by_group(def_team)
+        dl, kp = groups["dl"], groups["keeper"]
+        surface_weights = self._get_personnel_surface_weights("run_tackler")
+
+        # Play-family pool composition
+        pf_val = play_family.value if play_family is not None else ""
+        if pf_val in ("dive_option", "power"):
+            # Inside runs: DL-heavy pool
+            pool = dl * 4 + kp if dl else groups["all"]
+            pool_label = "box"
+        elif pf_val in ("sweep_option", "speed_option", "viper_jet"):
+            # Outside/perimeter runs: Keeper-heavy pool
+            pool = dl + kp * 3 if kp else groups["all"]
+            pool_label = "edge"
+        elif pf_val == "counter":
+            # Counter — balanced, awareness helps read the misdirection
+            pool = dl * 2 + kp * 2 if (dl and kp) else groups["all"]
+            pool_label = "read"
+        elif pf_val == "draw":
+            # Draw — pass rush posture then tackle; DL in good position
+            pool = dl * 3 + kp * 2 if dl else groups["all"]
+            pool_label = "rush"
+        else:
+            pool = groups["all"]
+            pool_label = "base"
+
+        if not pool:
+            pool = groups["all"]
+
+        # Personnel-weighted scoring
+        weights = [self._personnel_weighted_score(p, surface_weights) for p in pool]
+
+        # ── Instincts-driven pool tightening ──
+        # Elite DCs (instincts > 0.7) narrow the pool to top performers
+        dc_mods = self._def_coaching_mods()
+        dc_instincts = dc_mods.get("instincts_factor", 0.0)
+        if dc_instincts > 0.7 and len(pool) >= 4:
+            # Top 60% of pool gets 2x weight, bottom 40% gets 0.3x
+            threshold_idx = int(len(weights) * 0.6)
+            sorted_w = sorted(weights, reverse=True)
+            cutoff = sorted_w[min(threshold_idx, len(sorted_w) - 1)]
+            weights = [w * 2.0 if w >= cutoff else w * 0.3 for w in weights]
+
+        weights = self._spread_the_love_defense(pool, weights)
+        tackler = random.choices(pool, weights=weights, k=1)[0]
+        return tackler, pool_label
+
+    def select_kick_pass_defender_styled(self, def_team, subfamily):
+        """Style-aware kick pass coverage defender selection.
+
+        Layers defensive style personnel weights UNDER the sub-family
+        attribute weights.  The sub-family determines WHICH attributes
+        matter most (speed for Bombs, awareness for Territory, etc.),
+        and the style determines HOW MUCH each attribute contributes
+        within those constraints.
+
+        Returns (defender, pool_label).
+        """
+        groups = self._get_defenders_by_group(def_team)
+        eligible = groups["all"]
+
+        style_weights = self._get_personnel_surface_weights("kick_pass_cov")
+
+        # Sub-family attribute emphasis (these override the style pool partially)
+        # Blend: 60% sub-family surface, 40% style personnel
+        if subfamily == KickPassSubFamily.BOMB:
+            sf_weights = {"speed": 0.70, "agility": 0.30}
+            pool_label = "deep"
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            sf_weights = {"awareness": 0.60, "speed": 0.40}
+            pool_label = "zone"
+        else:
+            # Quick Kick / Kick-Lateral — fast closer
+            sf_weights = {"speed": 0.50, "awareness": 0.30, "tackling": 0.20}
+            pool_label = "flat"
+
+        # Blend sub-family and style weights
+        blended = {}
+        all_attrs = set(list(sf_weights.keys()) + list(style_weights.keys()))
+        for attr in all_attrs:
+            sf_val = sf_weights.get(attr, 0.0)
+            style_val = style_weights.get(attr, 0.0)
+            blended[attr] = sf_val * 0.60 + style_val * 0.40
+
+        # Normalize to 1.0
+        total = sum(blended.values())
+        if total > 0:
+            blended = {k: v / total for k, v in blended.items()}
+
+        weights = [self._personnel_weighted_score(p, blended) for p in eligible]
+
+        # ── Instincts-driven tightening for coverage ──
+        dc_mods = self._def_coaching_mods()
+        dc_instincts = dc_mods.get("instincts_factor", 0.0)
+        if dc_instincts > 0.7 and len(eligible) >= 4:
+            threshold_idx = int(len(weights) * 0.6)
+            sorted_w = sorted(weights, reverse=True)
+            cutoff = sorted_w[min(threshold_idx, len(sorted_w) - 1)]
+            weights = [w * 2.0 if w >= cutoff else w * 0.3 for w in weights]
+
+        weights = self._spread_the_love_defense(eligible, weights)
+        defender = random.choices(eligible, weights=weights, k=1)[0]
+        return defender, pool_label
+
+    def compute_sack_probability(self, team, def_team, subfamily, formation=None):
+        """Style-aware sack probability model.
+
+        Replaces the simple rush_skill/block_skill ratio with a model
+        that accounts for: rush count (style blitz chance), protection
+        quality (OL + formation), release time (sub-family), and
+        defensive style category.
+
+        Returns (sack_prob, rusher, blocker) where rusher/blocker are
+        the matched players.
+        """
+        # ── Get rusher pool with style weights ──
+        groups = self._get_defenders_by_group(def_team)
+        rush_surface = self._get_personnel_surface_weights("sack_rush")
+
+        dl_players = groups["dl"]
+        if dl_players:
+            # Score each DL player and pick the best
+            dl_scores = [(p, self._personnel_weighted_score(p, rush_surface))
+                         for p in dl_players]
+            rusher = max(dl_scores, key=lambda x: x[1])[0]
+            rush_skill = dl_scores[dl_scores.index((rusher, max(s for _, s in dl_scores)))][1]
+        else:
+            rusher = def_team.players[0] if def_team.players else None
+            rush_skill = 60.0
+
+        # ── Get blocker ──
+        ol_players = [p for p in team.players if p.position == "Offensive Line"
+                      and p.name not in self._injured_names(team)]
+        if ol_players:
+            blocker = max(ol_players,
+                          key=lambda p: p.power * 0.50 + getattr(p, 'awareness', 70) * 0.30
+                          + getattr(p, 'agility', 75) * 0.20)
+            block_skill = (blocker.power * 0.50
+                           + getattr(blocker, 'awareness', 70) * 0.30
+                           + getattr(blocker, 'agility', 75) * 0.20)
+        else:
+            blocker = None
+            block_skill = 55.0
+
+        # ── Base sack rate from rush/protection contest ──
+        sack_base = max(0.03, min(0.20, 0.12 * (rush_skill / max(30.0, block_skill))))
+
+        # ── Rush count: style-driven blitz chance adds extra pressure ──
+        def_name = self._current_defense_name()
+        blitz_chance = STYLE_BLITZ_CHANCE.get(def_name, 0.10)
+        if random.random() < blitz_chance:
+            # Extra rusher — boost sack probability
+            sack_base *= 1.25
+            # But Keepers also rush, adding to pool
+            if groups["keeper"]:
+                blitz_rusher = max(groups["keeper"],
+                                   key=lambda p: p.speed * 0.5 + p.tackling * 0.3 + getattr(p, 'power', 75) * 0.2)
+                # If blitz rusher is better, swap
+                blitz_skill = self._personnel_weighted_score(blitz_rusher, rush_surface)
+                if blitz_skill > rush_skill:
+                    rusher = blitz_rusher
+
+        # ── Sub-family release time modifier ──
+        sf_sack_mod = {
+            KickPassSubFamily.QUICK_KICK: 0.60,
+            KickPassSubFamily.TERRITORY: 1.00,
+            KickPassSubFamily.BOMB: 1.40,
+            KickPassSubFamily.KICK_LATERAL: 0.70,
+        }
+        sack_base *= sf_sack_mod.get(subfamily, 1.0)
+
+        # ── Formation protection modifier ──
+        if formation is None:
+            formation = getattr(self, '_current_formation', 'split')
+        formation_prot = FORMATION_PROTECTION.get(formation, 1.0)
+        sack_base *= formation_prot
+
+        # ── Instincts boost: elite DCs time the rush better ──
+        dc_mods = self._def_coaching_mods()
+        dc_instincts = dc_mods.get("instincts_factor", 0.0)
+        if dc_instincts > 0.7:
+            sack_base *= 1.0 + (dc_instincts - 0.7) * 0.15  # Up to +4.5% at max instincts
+
+        sack_base = max(0.02, min(0.25, sack_base))
+        return sack_base, rusher, blocker
+
+    def compute_lateral_pursuit_quality(self, def_team) -> float:
+        """Style-aware lateral pursuit quality modifier.
+
+        Returns a multiplier on lateral chain INT/fumble rates and
+        yardage suppression.  Higher = better pursuit (more turnovers,
+        fewer yards).
+
+        Base = 1.0, range [0.85, 1.20].
+        """
+        surface_weights = self._get_personnel_surface_weights("lateral_pursuit")
+        groups = self._get_defenders_by_group(def_team)
+        eligible = groups["all"][:8]  # Top 8 defenders for pursuit
+
+        if not eligible:
+            return 1.0
+
+        scores = [self._personnel_weighted_score(p, surface_weights) for p in eligible]
+        avg_score = sum(scores) / len(scores)
+
+        # Normalize: 75 = baseline (1.0), each 10 points = ±0.10
+        pursuit_mod = 1.0 + (avg_score - 75) / 100.0
+
+        # Instincts boost for pursuit coordination
+        dc_mods = self._def_coaching_mods()
+        dc_instincts = dc_mods.get("instincts_factor", 0.0)
+        if dc_instincts > 0.5:
+            pursuit_mod += (dc_instincts - 0.5) * 0.06  # Up to +3% at max instincts
+
+        return max(0.85, min(1.20, pursuit_mod))
+
     def _resolve_fumble_recovery(self, fumble_spot, fumbling_player=None):
         off_team = self.get_offensive_team()
         def_team = self.get_defensive_team()
@@ -5778,6 +6892,13 @@ class ViperballEngine:
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2
 
+        # ── Formation shell modifier ──
+        if play_family is not None:
+            formation_yard_adj = self._formation_yard_modifier(play_family.value)
+            center += formation_yard_adj
+            # Formation × Defense matchup multiplier
+            center *= self._formation_defense_multiplier()
+
         # ── V2.3: DC gameplan suppression (stacks multiplicatively with weather) ──
         # The opposing DC's film prep creates per-play-type suppression.
         # A cold defensive game in the rain compounds: 0.85 DC * 0.95 weather effect.
@@ -5861,100 +6982,171 @@ class ViperballEngine:
 
         return max(-2.0, round(yards, 1))
 
-    def _contest_kick_pass_prob(self, kicker, receiver, def_team) -> float:
-        """Contest-based completion probability for kick passes.
+    def _pick_kick_pass_defender(self, def_team, subfamily: "KickPassSubFamily"):
+        """Pick an individual defender for the kick pass H2H contest.
 
-        V2: Supports halo mode (team-level resolution for non-stars)
-        and power ratio contest model.
+        Each sub-family surfaces different defensive attributes.  Quick Kicks
+        need a fast closer, Territory kicks need a read-and-react cover man,
+        Bombs need a deep-speed safety.  The defender selection itself is part
+        of the contest — a defense stacked with awareness but lacking speed
+        will struggle to field a Bomb defender.
         """
+        injured = self._injured_in_game(def_team)
+        eligible = [p for p in def_team.players
+                    if p.position in ("Keeper", "Defensive Line")
+                    and p.name not in injured]
+        if not eligible:
+            eligible = [p for p in def_team.players if p.name not in injured][:6]
+        if not eligible:
+            eligible = def_team.players[:5]
+
+        if subfamily == KickPassSubFamily.BOMB:
+            # Deep safety — speed is everything
+            weights = [p.speed * 0.70 + getattr(p, 'agility', 75) * 0.30
+                       for p in eligible]
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            # Coverage man — awareness to read the route, speed to recover
+            weights = [getattr(p, 'awareness', 70) * 0.60 + p.speed * 0.40
+                       for p in eligible]
+        else:
+            # Quick Kick / Kick-Lateral — fast closer
+            weights = [p.speed * 0.50 + getattr(p, 'awareness', 70) * 0.30
+                       + p.tackling * 0.20
+                       for p in eligible]
+
+        weights = [max(1.0, w) for w in weights]
+        weights = self._spread_the_love_defense(eligible, weights)
+        return random.choices(eligible, weights=weights, k=1)[0]
+
+    def _contest_kick_pass_prob(self, kicker, receiver, def_team,
+                                subfamily: "KickPassSubFamily" = None) -> tuple:
+        """H2H contest-based completion probability for kick passes.
+
+        Each sub-family creates a different contest surface where different
+        player attributes dominate.  Returns (probability, defender) so the
+        caller can use the matched defender for INT/tackle resolution.
+
+        V3: Individual defender H2H replaces team-average awareness.
+        Halo mode preserved for non-stars (team-level fallback).
+        """
+        if subfamily is None:
+            subfamily = KickPassSubFamily.TERRITORY
+
         use_halo = self._should_use_halo(kicker)
 
+        # ── Pick the matched defender (V4: style-aware personnel selection) ──
+        defender, _kp_pool_label = self.select_kick_pass_defender_styled(def_team, subfamily)
+
+        # ── Offensive skill (sub-family-specific attribute weights) ──
         if use_halo:
             off_skill = self.get_offensive_team().halo_offense
-            off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+        elif subfamily == KickPassSubFamily.QUICK_KICK:
+            off_skill = (kicker.kick_accuracy * 0.70
+                         + getattr(receiver, 'hands', 70) * 0.30)
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            off_skill = (kicker.kick_accuracy * 0.45
+                         + getattr(kicker, 'kick_power', 70) * 0.25
+                         + getattr(receiver, 'hands', 70) * 0.30)
+        elif subfamily == KickPassSubFamily.BOMB:
+            off_skill = (getattr(kicker, 'kick_power', 70) * 0.55
+                         + kicker.kick_accuracy * 0.20
+                         + receiver.speed * 0.25)
         else:
-            off_skill = kicker.kick_accuracy * 0.6 + receiver.hands * 0.4
-            off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+            # KICK_LATERAL — uses Quick Kick surface for the kick phase
+            off_skill = (kicker.kick_accuracy * 0.70
+                         + getattr(receiver, 'hands', 70) * 0.30)
 
-        # Average defensive coverage quality
+        off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
+
+        # ── Defensive skill (sub-family-specific) ──
         if use_halo:
-            def_coverage = def_team.halo_defense
+            def_skill = def_team.halo_defense
+        elif subfamily == KickPassSubFamily.QUICK_KICK:
+            def_skill = (defender.speed * 0.50
+                         + getattr(defender, 'awareness', 70) * 0.30
+                         + defender.tackling * 0.20)
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            def_skill = (getattr(defender, 'awareness', 70) * 0.45
+                         + defender.speed * 0.30
+                         + defender.tackling * 0.25)
+        elif subfamily == KickPassSubFamily.BOMB:
+            def_skill = (defender.speed * 0.60
+                         + getattr(defender, 'awareness', 70) * 0.25
+                         + getattr(defender, 'agility', 75) * 0.15)
         else:
-            def_players = [p for p in def_team.players
-                           if p.position in ("Keeper", "Defensive Line")]
-            if not def_players:
-                def_players = def_team.players[:5]
-            def_coverage = sum(getattr(p, 'awareness', 70) for p in def_players[:5]) / max(1, min(5, len(def_players)))
-        # Pick a representative defender for fatigue check
-        def_players_list = [p for p in def_team.players if p.position in ("Keeper", "Defensive Line")]
-        if not def_players_list:
-            def_players_list = def_team.players[:5]
-        rep_def = def_players_list[0] if def_players_list else None
-        if rep_def:
-            def_coverage *= self.player_fatigue_modifier(rep_def) * 0.5 + 0.5
+            def_skill = (defender.speed * 0.50
+                         + getattr(defender, 'awareness', 70) * 0.30
+                         + defender.tackling * 0.20)
 
-        # Game rhythm — coaching rhythm effects apply to passing too
+        def_skill *= self.player_fatigue_modifier(defender) * 0.5 + 0.5
+
+        # ── Game rhythm ──
         rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
         off_skill *= rhythm
 
-        contest_model = V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid")
+        # ── Sub-family base probability centers ──
+        # Quick Kick: high floor (screen/checkdown), Bomb: low floor (deep shot)
+        base_centers = {
+            KickPassSubFamily.QUICK_KICK: 0.60,
+            KickPassSubFamily.TERRITORY: 0.50,
+            KickPassSubFamily.BOMB: 0.35,
+            KickPassSubFamily.KICK_LATERAL: 0.60,
+        }
+        center = base_centers[subfamily]
 
-        if contest_model == "v2_power_ratio":
-            # Power ratio for completion probability
-            off_eff = max(30.0, off_skill)
-            def_eff = max(30.0, def_coverage)
-            ratio = off_eff / def_eff
-            # Map ratio to probability: ratio 1.0 → ~55%, ratio 1.3 → ~72%
-            base_prob = min(0.92, max(0.08, 0.55 * ratio))
-        else:
-            delta = off_skill - def_coverage
-            base_prob = 1.0 / (1.0 + math.exp(-(delta + 5) / 15.0))
+        # ── Power ratio contest ──
+        off_eff = max(30.0, off_skill)
+        def_eff = max(30.0, def_skill)
+        ratio = off_eff / def_eff
+        # The ratio shifts the base center.  At parity (ratio=1.0) we stay at center.
+        # Dominant offense (ratio=1.3) pushes ~+15%, weak offense (ratio=0.7) pulls ~-15%.
+        base_prob = min(0.92, max(0.08, center * ratio))
 
         # ── Late-down conversion urgency ──
-        # Target ceteris paribus: 4th ~80%, 5th ~73%, 6th ~66%
-        # In viperball's 6-down system, offenses focus harder on
-        # critical downs.  The urgency boost represents sharper
-        # route-running, more decisive kicking, and receiver
-        # commitment.  This is the primary lever for hit-rate targets.
         if self.state.down >= 4:
             off_talent = max(0.0, (off_skill - 50) / 49.0)
-            # Aggressive urgency: boost completion to target conversion rates
-            # 4th: ~85%, 5th: ~73%, 6th: ~66%
             urgency = {4: 0.40, 5: 0.28, 6: 0.18}.get(self.state.down, 0.18)
             base_prob = min(0.94, base_prob + urgency * (0.6 + off_talent * 0.4))
 
-        # ── V2: Composure modifier ──
+        # ── Composure modifier ──
         if V2_ENGINE_CONFIG.get("composure_enabled", False):
             composure = self._get_current_composure()
             if composure < COMPOSURE_TILT_THRESHOLD:
-                base_prob *= 0.85  # Tilted: less accurate
+                base_prob *= 0.85
             elif composure > 120:
                 base_prob = min(0.92, base_prob * 1.05)
 
-        # ── V2.3: DC gameplan suppression on kick pass completion ──
-        # A DC who studied film on kick passes suppresses the probability.
+        # ── DC gameplan suppression ──
         dc_gp = self._def_dc_gameplan()
-        dc_kp_supp = dc_gp.get("kick_pass", 1.0)
-        base_prob *= dc_kp_supp
+        # Sub-family-level suppression (e.g. "quick_kick": 0.85 if solved)
+        dc_sf_supp = dc_gp.get(subfamily.value, 1.0)
+        # Fall back to generic kick_pass suppression if no sub-family key
+        if dc_sf_supp >= 1.0:
+            dc_sf_supp = dc_gp.get("kick_pass", 1.0)
+        base_prob *= dc_sf_supp
 
-        # ── V2.4: No-Fly Zone — defensive prestige "Rattled" modifier ──
-        # If the defending team has earned No-Fly Zone status (2+ INTs in 3
-        # consecutive games), opposing ZBs get rattled on deep kick passes.
-        # -5% accuracy on all kick pass attempts against this defense.
+        # ── No-Fly Zone ──
         def_has_nfz = (
             (self.state.possession == "home" and self.away_no_fly_zone)
             or (self.state.possession == "away" and self.home_no_fly_zone)
         )
         if def_has_nfz:
-            base_prob *= 0.95  # "Rattled" — 5% accuracy penalty
+            # NFZ hits Bombs hardest, Territory medium, Quick Kicks least
+            nfz_penalty = {
+                KickPassSubFamily.QUICK_KICK: 0.98,
+                KickPassSubFamily.TERRITORY: 0.95,
+                KickPassSubFamily.BOMB: 0.90,
+                KickPassSubFamily.KICK_LATERAL: 0.97,
+            }
+            base_prob *= nfz_penalty[subfamily]
 
-        # Hot streak
+        # ── Hot streak ──
         streak_bonus, streak_var = self._hot_streak_modifier(kicker)
         base_prob = min(0.92, base_prob + streak_bonus * 0.05)
         noise_spread = 0.10 * streak_var
 
         prob = random.gauss(base_prob, noise_spread)
-        return max(0.08, min(0.92, prob))
+        return max(0.08, min(0.92, prob)), defender
 
     def _player_skill_roll(self, player, play_type: str = "run") -> float:
         """Skill-weighted dice roll — used for kick pass distance and
@@ -6148,8 +7340,9 @@ class ViperballEngine:
 
         # ── Contest-based stochastic resolution ──
         # Carrier vs Tackler — their attributes COMPETE, dice decide
+        # V4: Style-aware personnel selection replaces generic tackler pick
         def_team_for_tackle = self.get_defensive_team()
-        tackler = self._pick_def_tackler(def_team_for_tackle, 3)  # pick before knowing yards
+        tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
         tackler.game_tackles += 1
 
         # Assist tackle: ~30% of run plays involve a second defender
@@ -6277,6 +7470,8 @@ class ViperballEngine:
             desc_parts.append(f"VP {viper_align} pulls D")
         if def_align != "balanced":
             desc_parts.append(f"vs {def_align} D")
+        if run_pool_label != "base":
+            desc_parts.append(f"{run_pool_label} pursuit")
         if sig_detail:
             desc_parts.append(sig_detail)
         if keeper_detail:
@@ -6678,6 +7873,9 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         avg_def_awareness = sum(getattr(p, 'awareness', 70) for p in def_team.players[:6]) / 6
 
+        # V4: Style-aware lateral pursuit quality modifier
+        _lat_pursuit_mod = self.compute_lateral_pursuit_quality(def_team)
+
         # V2.3: Gameday manager INT reduction — better situational coaching
         # reduces turnover rate on risky plays
         _off_mods_lat = self._coaching_mods()
@@ -6688,6 +7886,8 @@ class ViperballEngine:
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
             int_chance = 0.03 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
             int_chance *= _gm_int_red
+            # V4: Pursuit quality scales INT/fumble chance
+            int_chance *= _lat_pursuit_mod
             int_chance = max(0.015, min(0.06, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
@@ -6883,6 +8083,11 @@ class ViperballEngine:
             base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
+        # ── Formation lateral modifier ──
+        yards_gained += int(self._formation_yard_modifier("lateral_spread"))
+        # V4: Pursuit quality suppresses lateral yardage
+        if yards_gained > 0 and _lat_pursuit_mod > 1.0:
+            yards_gained = max(0, int(yards_gained / _lat_pursuit_mod))
         yards_gained = max(-5, min(25, yards_gained))
 
         lat_def_team = self.get_defensive_team()
@@ -7012,68 +8217,102 @@ class ViperballEngine:
         kicker_lbl = player_label(kicker)
         receiver_lbl = player_label(receiver)
 
-        # Kick distance: base 5-14 + kicker skill roll
-        # Kick passes are the engine of drive progression — short, medium,
-        # and long-range completions all create opportunities.
-        #
-        # On late downs (4-6), kickers target what the team needs.
-        # The distance biases toward yards_to_go so completions convert.
+        # ── Sub-family selection ──
+        subfamily = self._select_kick_pass_subfamily(kicker)
+        sf_label = subfamily.value.replace("_", " ")
+
+        # ── Player-driven kick distance (per sub-family) ──
+        kp_power = getattr(kicker, 'kick_power', 70)
+        kp_accuracy = kicker.kick_accuracy
+
+        if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
+            base_dist = random.randint(5, 8)
+            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 3
+            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 2
+            kick_distance = max(3, int(base_dist + power_bonus + acc_bonus))
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            base_dist = random.randint(10, 16)
+            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 5
+            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 3
+            kick_distance = max(7, int(base_dist + power_bonus + acc_bonus))
+        else:  # BOMB
+            base_dist = random.randint(22, 30)
+            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 12
+            kick_distance = max(18, int(base_dist + power_bonus))
+
+        # Late-down targeting: bias distance toward yards_to_go
         if self.state.down >= 4:
             ytg = self.state.yards_to_go
-            # Target distance is ~ytg (receiver will add YAC on top)
-            target = max(5, min(14, ytg))  # aim for ytg directly, YAC adds on top
-            kick_distance = random.randint(max(5, target - 1), min(14, target + 3))
-        else:
-            kick_distance = random.randint(5, 14)
-        kick_skill_bonus = self._player_skill_roll(kicker, play_type="kick_pass")
-        kick_distance = max(1, int(kick_distance + kick_skill_bonus))
+            target = max(5, min(kick_distance + 5, ytg))
+            kick_distance = int(kick_distance * 0.5 + target * 0.5)
+            kick_distance = max(3, kick_distance)
 
-        # ── Contest-based completion probability ──
-        # Kicker accuracy + receiver hands vs defensive coverage.
-        # Distance penalises longer kicks (harder to place accurately).
+        # ── H2H contest-based completion probability ──
         def_team = self.get_defensive_team()
-        contest_prob = self._contest_kick_pass_prob(kicker, receiver, def_team)
+        contest_prob, matched_defender = self._contest_kick_pass_prob(
+            kicker, receiver, def_team, subfamily=subfamily)
         # Distance penalty: longer kicks are harder to complete
-        distance_penalty = max(0.0, (kick_distance - 8) * 0.02)
+        # Sub-family aware: Bombs already have low base prob, less extra penalty
+        if subfamily == KickPassSubFamily.BOMB:
+            distance_penalty = max(0.0, (kick_distance - 28) * 0.01)
+        elif subfamily == KickPassSubFamily.TERRITORY:
+            distance_penalty = max(0.0, (kick_distance - 14) * 0.015)
+        else:
+            distance_penalty = max(0.0, (kick_distance - 8) * 0.02)
         completion_prob = max(0.08, min(0.92, contest_prob - distance_penalty))
+
+        # ── Formation shell modifier on completion ──
+        formation_kp_adj = self._formation_kick_pass_modifier(subfamily)
+        completion_prob = max(0.08, min(0.92, completion_prob + formation_kp_adj))
+
+        # ── East Coast: rhythm_escalation — 3+ consecutive completions → +5% accuracy ──
+        style_name = self._current_style_name()
+        if style_name == "east_coast" and style.get("rhythm_escalation", False):
+            if self._drive_consecutive_completions >= 3:
+                completion_prob = min(0.92, completion_prob + 0.05)
+
+        # ── East Coast: possession_drive_bonus — drives 6+ plays → +8% conversion ──
+        if style_name == "east_coast":
+            poss_bonus = style.get("possession_drive_bonus", 0.0)
+            if poss_bonus > 0 and self.drive_play_count >= 6:
+                completion_prob = min(0.92, completion_prob + poss_bonus)
+
+        # ── Shock & Awe: deep_shot_bonus — +8% completion on Bombs ──
+        if style_name == "shock_and_awe":
+            deep_bonus = style.get("deep_shot_bonus", 0.0)
+            if deep_bonus > 0 and subfamily == KickPassSubFamily.BOMB:
+                completion_prob = min(0.92, completion_prob + deep_bonus)
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
+        # Per-sub-family thrown stat
+        _sf_thrown_attr = {
+            KickPassSubFamily.QUICK_KICK: "game_quick_kicks_thrown",
+            KickPassSubFamily.TERRITORY: "game_territory_kicks_thrown",
+            KickPassSubFamily.BOMB: "game_bombs_thrown",
+            KickPassSubFamily.KICK_LATERAL: "game_kick_laterals_thrown",
+        }
+        _sf_attr = _sf_thrown_attr.get(subfamily)
+        if _sf_attr:
+            setattr(kicker, _sf_attr, getattr(kicker, _sf_attr, 0) + 1)
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
-        # ── Pass Rush / Sack Check ──
-        # Before the kick pass is thrown, the defensive line can break
-        # through and sack the kicker. ~8-12% of kick passes get sacked.
-        # DL with high tackling + power are most likely to get through.
-        # OL block quality reduces sack probability.
-        sack_base_rate = 0.10
-        ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
-        if ol_players:
-            avg_ol_power = sum(p.power for p in ol_players) / len(ol_players)
-            ol_protection = min(0.04, (avg_ol_power - 70) * 0.002)
-            sack_base_rate -= ol_protection
+        # ── Pass Rush / Sack Check (V4: style-aware sack probability model) ──
+        sack_def_team = self.get_defensive_team()
+        sack_base_rate, rusher, _sack_blocker = self.compute_sack_probability(
+            team, sack_def_team, subfamily,
+            formation=getattr(self, '_current_formation', 'split'))
+        # ── Shock & Awe: sack_vulnerability — +6% sack rate (long drops) ──
+        if style_name == "shock_and_awe":
+            sack_vuln = style.get("sack_vulnerability", 0.0)
+            sack_base_rate += sack_vuln
+        sack_base_rate = max(0.02, min(0.25, sack_base_rate))
 
         if random.random() < sack_base_rate:
             sack_yards = random.randint(3, 8)
-            sack_def_team = self.get_defensive_team()
-            sack_eligible = [p for p in sack_def_team.players
-                             if p.position in ("Defensive Line", "Keeper")
-                             and p.name not in self._injured_names(sack_def_team)]
-            if not sack_eligible:
-                sack_eligible = [p for p in sack_def_team.players
-                                 if p.position in ("Defensive Line", "Keeper")][:3]
-            if sack_eligible:
-                sack_weights = []
-                for sp in sack_eligible:
-                    w = sp.tackling * 0.5 + sp.power * 0.3 + sp.speed * 0.2
-                    if sp.position == "Defensive Line":
-                        w *= 2.5
-                    sack_weights.append(w)
-                sacker = random.choices(sack_eligible, weights=sack_weights, k=1)[0]
-            else:
-                sacker = random.choice(sack_def_team.players[:5])
+            # The rusher we already matched in the H2H gets the sack credit
+            sacker = rusher if rusher else sack_def_team.players[0]
             sacker.game_sacks += 1
             sacker.game_tackles += 1
             sacker.game_plays_involved += 1
@@ -7091,7 +8330,7 @@ class ViperballEngine:
                     play_number=self.state.play_number, quarter=self.state.quarter,
                     time=self.state.time_remaining, possession=self.state.possession,
                     field_position=self.state.field_position, down=1, yards_to_go=20,
-                    play_type="kick_pass", play_family=family.value,
+                    play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
                     players_involved=[kicker_lbl], yards_gained=-sack_yards,
                     result=PlayResult.SAFETY.value,
                     description=f"{kicker_tag} SACKED by {player_tag(sacker)} for -{sack_yards} — SAFETY!",
@@ -7117,7 +8356,7 @@ class ViperballEngine:
                 time=self.state.time_remaining, possession=self.state.possession,
                 field_position=self.state.field_position,
                 down=self.state.down, yards_to_go=self.state.yards_to_go,
-                play_type="kick_pass", play_family=family.value,
+                play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
                 players_involved=[kicker_lbl], yards_gained=-sack_yards,
                 result=sack_result.value,
                 description=sack_desc,
@@ -7126,6 +8365,8 @@ class ViperballEngine:
 
         # ── OL Protection Credits on KP ──
         # Even on non-sack plays, OL earns block credits for protection
+        ol_players = [p for p in team.players if p.position == "Offensive Line"
+                      and p.name not in self._injured_names(team)]
         if ol_players and random.random() < 0.35:
             self._credit_ol_blocks(team, 3)
 
@@ -7133,28 +8374,232 @@ class ViperballEngine:
         if roll < completion_prob:
             # Hot streak: kicker completed → streak continues
             self._update_player_streak(kicker, True)
+            self._drive_consecutive_completions += 1
             kicker.game_kick_passes_completed += 1
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
+            # Per-sub-family completion stat
+            _sf_comp_attr = {
+                KickPassSubFamily.QUICK_KICK: "game_quick_kicks_completed",
+                KickPassSubFamily.TERRITORY: "game_territory_kicks_completed",
+                KickPassSubFamily.BOMB: "game_bombs_completed",
+                KickPassSubFamily.KICK_LATERAL: "game_kick_laterals_completed",
+            }
+            _sf_c_attr = _sf_comp_attr.get(subfamily)
+            if _sf_c_attr:
+                setattr(kicker, _sf_c_attr, getattr(kicker, _sf_c_attr, 0) + 1)
 
-            # Yards after catch — inversely proportional to air distance
-            # Short kicks = lots of space to run (like screen passes)
-            # Medium kicks = balanced catch-and-run potential
-            # Long kicks = receiver still has momentum, open-field running
-            # Deep balls are signature big-play territory in viperball
-            receiver_skill = max(0.0, (receiver.speed + getattr(receiver, 'agility', 75)) / 2 - 60) / 40  # 0.0–1.0
-            # V2.5: Film Study Escalation boosts receiver skill component
+            # ── KICK_LATERAL: chain resolution replaces normal YAC ──
+            if subfamily == KickPassSubFamily.KICK_LATERAL:
+                catch_spot = min(99, self.state.field_position + kick_distance)
+                # Lateral chain entry quality: receiver's lateral_skill gates it
+                recv_lat_skill = getattr(receiver, 'lateral_skill', 70)
+                if recv_lat_skill >= 80:
+                    chain_fumble_bonus = 0.0
+                elif recv_lat_skill >= 60:
+                    chain_fumble_bonus = 0.02
+                else:
+                    chain_fumble_bonus = 0.05
+
+                # Build the chain: 2-4 laterals after the catch
+                skill_pool = self._offense_skill(team)
+                chain_players = [p for p in skill_pool if p != receiver]
+                if not chain_players:
+                    chain_players = list(skill_pool)
+                chain_length = random.randint(2, 4)
+                chain_length = min(chain_length, len(chain_players))
+
+                chain_tags = [player_tag(receiver)]
+                chain_yards = 0
+                chain_fumbled = False
+                chain_intercepted = False
+                lat_def_team = self.get_defensive_team()
+                avg_def_aware = sum(getattr(p, 'awareness', 70) for p in lat_def_team.players[:6]) / 6
+                # V4: Pursuit quality for kick-lateral chains
+                _kl_pursuit_mod = self.compute_lateral_pursuit_quality(lat_def_team)
+
+                _lat_pool = list(chain_players)
+                for lat_i in range(chain_length):
+                    if not _lat_pool:
+                        break
+                    _lat_w = [max(1.0, (p.speed + getattr(p, 'lateral_skill', 70)) / 2.0 - 40) for p in _lat_pool]
+                    lat_player = random.choices(_lat_pool, weights=_lat_w, k=1)[0]
+                    _lat_pool.remove(lat_player)
+                    chain_tags.append(player_tag(lat_player))
+                    lat_player.game_touches += 1
+
+                    # Lateral fumble check
+                    lat_fum_rate = 0.03 + (chain_fumble_bonus if lat_i == 0 else 0.0)
+                    thrower = receiver if lat_i == 0 else lat_player
+                    thrower_skill = getattr(thrower, 'lateral_skill', 70)
+                    lat_fum_rate *= (1 - (thrower_skill - 70) / 200)
+                    lat_fum_rate = max(0.015, min(0.08, lat_fum_rate))
+
+                    if random.random() < lat_fum_rate:
+                        chain_fumbled = True
+                        lat_player.game_fumbles += 1
+                        fumble_spot = min(99, catch_spot + chain_yards)
+                        throwing_team_fum = self.state.possession
+                        recovered_by, _ = self._resolve_fumble_recovery(fumble_spot, lat_player)
+                        if recovered_by == 'defense':
+                            self.change_possession()
+                            self.state.field_position = max(1, 100 - fumble_spot)
+                            self.state.down = 1
+                            self.state.yards_to_go = 20
+                            self.add_score(0.5)
+                            self.apply_stamina_drain(4)
+                            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                            return Play(
+                                play_number=self.state.play_number, quarter=self.state.quarter,
+                                time=self.state.time_remaining, possession=throwing_team_fum,
+                                field_position=self.state.field_position, down=1, yards_to_go=20,
+                                play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
+                                players_involved=[kicker_lbl, receiver_lbl],
+                                yards_gained=kick_distance + chain_yards,
+                                result=PlayResult.FUMBLE.value,
+                                description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} → FUMBLE! Defense recovers — BELL (+½)",
+                                fatigue=round(stamina, 1), fumble=True,
+                            )
+                        else:
+                            # Offense recovers fumble, play dead
+                            break
+
+                    # Lateral INT check
+                    int_rate = 0.03 * (1 + (avg_def_aware - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+                    # V4: Pursuit quality scales INT chance
+                    int_rate *= _kl_pursuit_mod
+                    int_rate = max(0.015, min(0.06, int_rate))
+                    if random.random() < int_rate:
+                        chain_intercepted = True
+                        int_spot = min(99, catch_spot + chain_yards)
+                        throwing_team_int = self.state.possession
+                        self.change_possession()
+                        raw_fp = max(1, 100 - int_spot)
+                        int_return = max(0, int(random.gauss(35, 18)))
+                        new_fp = min(100, raw_fp + int_return)
+                        kicker.game_kick_pass_interceptions += 1
+
+                        if new_fp >= 100:
+                            self.state.field_position = 25
+                            self.state.down = 1
+                            self.state.yards_to_go = 20
+                            self.add_score(9)
+                            self.apply_stamina_drain(4)
+                            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                            return Play(
+                                play_number=self.state.play_number, quarter=self.state.quarter,
+                                time=self.state.time_remaining, possession=throwing_team_int,
+                                field_position=self.state.field_position, down=1, yards_to_go=20,
+                                play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
+                                players_involved=[kicker_lbl, receiver_lbl],
+                                yards_gained=0, result=PlayResult.INT_RETURN_TD.value,
+                                description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} — LATERAL INTERCEPTED! Returned for TOUCHDOWN!",
+                                fatigue=round(stamina, 1),
+                            )
+                        else:
+                            self.state.field_position = new_fp
+                            self.state.down = 1
+                            self.state.yards_to_go = 20
+                            self.apply_stamina_drain(4)
+                            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                            return Play(
+                                play_number=self.state.play_number, quarter=self.state.quarter,
+                                time=self.state.time_remaining, possession=throwing_team_int,
+                                field_position=self.state.field_position, down=1, yards_to_go=20,
+                                play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
+                                players_involved=[kicker_lbl, receiver_lbl],
+                                yards_gained=0, result=PlayResult.LATERAL_INTERCEPTED.value,
+                                description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} — LATERAL INTERCEPTED! Returned {int_return} yards",
+                                fatigue=round(stamina, 1),
+                            )
+
+                    # Yards gained on this lateral
+                    lat_yards = random.randint(2, 8) + int(max(0, (lat_player.speed - 60) / 40.0) * random.randint(1, 6))
+                    # V4: Pursuit quality suppresses lateral yards
+                    if _kl_pursuit_mod > 1.0 and lat_yards > 0:
+                        lat_yards = max(1, int(lat_yards / _kl_pursuit_mod))
+                    chain_yards += lat_yards
+
+                # Chain completed without turnover — resolve as a completion
+                total_yards = kick_distance + chain_yards
+                new_position = min(100, self.state.field_position + total_yards)
+                chain_desc = f"{kicker_tag} kick lateral: {' → '.join(chain_tags)}"
+
+                is_td = new_position >= 100 or self._red_zone_td_check(new_position, total_yards, team)
+                if is_td:
+                    result = PlayResult.TOUCHDOWN
+                    total_yards = 100 - self.state.field_position
+                    self.add_score(9)
+                    receiver.game_tds += 1
+                    kicker.game_kick_pass_tds += 1
+                    description = f"{chain_desc} → {total_yards} — TOUCHDOWN!"
+                elif total_yards >= self.state.yards_to_go:
+                    result = PlayResult.FIRST_DOWN
+                    self.state.field_position = new_position
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
+                    description = f"{chain_desc} → {total_yards} — FIRST DOWN"
+                else:
+                    result = PlayResult.GAIN
+                    self.state.field_position = new_position
+                    self.state.down += 1
+                    self.state.yards_to_go -= total_yards
+                    description = f"{chain_desc} → {total_yards}"
+                    if self.state.down > 6:
+                        result = PlayResult.TURNOVER_ON_DOWNS
+                        self.change_possession()
+                        self.state.field_position = 100 - self.state.field_position
+                        description += " — TURNOVER ON DOWNS"
+
+                kicker.game_kick_pass_yards += total_yards
+                receiver.game_kick_pass_yards += kick_distance
+                receiver.game_yards += kick_distance
+
+                self.apply_stamina_drain(5)
+                stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                return Play(
+                    play_number=self.state.play_number, quarter=self.state.quarter,
+                    time=self.state.time_remaining, possession=self.state.possession,
+                    field_position=self.state.field_position,
+                    down=self.state.down, yards_to_go=self.state.yards_to_go,
+                    play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
+                    players_involved=[kicker_lbl, receiver_lbl],
+                    yards_gained=total_yards, result=result.value,
+                    description=description, fatigue=round(stamina, 1),
+                )
+
+            # ── Sub-family YAC model ──
+            # Each sub-family uses different receiver attributes for YAC.
             _kp_esc = self._home_escalation if self.state.possession == "home" else self._away_escalation
-            receiver_skill *= _kp_esc
-            if kick_distance <= 8:
-                yac = random.randint(3, 8) + int(receiver_skill * random.randint(2, 7))
-            elif kick_distance <= 15:
-                yac = random.randint(2, 6) + int(receiver_skill * random.randint(1, 5))
-            elif kick_distance <= 25:
-                yac = random.randint(1, 5) + int(receiver_skill * random.randint(1, 4))
-            else:
-                # Deep balls: receiver has beaten coverage, open field ahead
-                yac = random.randint(2, 6) + int(receiver_skill * random.randint(2, 6))
+            _recv_agility = getattr(receiver, 'agility', 75)
+
+            if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
+                # Quick Kick: high YAC, elusive receivers shine
+                recv_yac_skill = max(0.0, (receiver.speed * 0.50 + _recv_agility * 0.50 - 60)) / 40.0
+                recv_yac_skill *= _kp_esc
+                yac = random.randint(3, 8) + int(recv_yac_skill * random.randint(3, 8))
+            elif subfamily == KickPassSubFamily.TERRITORY:
+                # Territory: moderate YAC, balanced attributes
+                recv_yac_skill = max(0.0, (receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill *= _kp_esc
+                yac = random.randint(2, 5) + int(recv_yac_skill * random.randint(1, 5))
+            else:  # BOMB
+                # Bomb: binary — either caught at the spot or house call
+                recv_yac_skill = max(0.0, (receiver.speed * 0.70 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill *= _kp_esc
+                if random.random() < 0.35:
+                    # Caught in stride — open field
+                    yac = random.randint(10, 20) + int(recv_yac_skill * random.randint(5, 15))
+                else:
+                    # Caught at the spot, minimal YAC
+                    yac = random.randint(0, 4) + int(recv_yac_skill * random.randint(0, 3))
+
+            # ── East Coast: yac_bonus — +6% YAC on Quick Kicks ──
+            if style_name == "east_coast" and (subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL):
+                ec_yac_bonus = style.get("yac_bonus", 0.0)
+                if ec_yac_bonus > 0:
+                    yac = int(yac * (1.0 + ec_yac_bonus))
 
             fumble_on_catch = 0.008
             fumble_on_catch -= (receiver.hands / 100) * 0.004
@@ -7187,11 +8632,11 @@ class ViperballEngine:
                         down=1,
                         yards_to_go=20,
                         play_type="kick_pass",
-                        play_family=family.value,
+                        play_family=family.value, kick_pass_subfamily=subfamily.value,
                         players_involved=[kicker_lbl, receiver_lbl],
                         yards_gained=kick_distance,
                         result=PlayResult.FUMBLE.value,
-                        description=f"{kicker_tag} kick pass to {receiver_tag} for {kick_distance} → FUMBLE on catch! Defense recovers — BELL (+½)",
+                        description=f"{kicker_tag} {sf_label} to {receiver_tag} for {kick_distance} → FUMBLE on catch! Defense recovers — BELL (+½)",
                         fatigue=round(stamina, 1),
                         fumble=True,
                     )
@@ -7218,11 +8663,11 @@ class ViperballEngine:
                             field_position=self.state.field_position,
                             down=1, yards_to_go=20,
                             play_type="kick_pass",
-                            play_family=family.value,
+                            play_family=family.value, kick_pass_subfamily=subfamily.value,
                             players_involved=[kicker_lbl, receiver_lbl],
                             yards_gained=kick_distance,
                             result=PlayResult.TURNOVER_ON_DOWNS.value,
-                            description=f"{kicker_tag} kick pass to {receiver_tag} → FUMBLE recovered by offense but TURNOVER ON DOWNS",
+                            description=f"{kicker_tag} {sf_label} to {receiver_tag} → FUMBLE recovered by offense but TURNOVER ON DOWNS",
                             fatigue=round(stamina, 1),
                             fumble=True,
                         )
@@ -7239,11 +8684,11 @@ class ViperballEngine:
                         down=self.state.down,
                         yards_to_go=self.state.yards_to_go,
                         play_type="kick_pass",
-                        play_family=family.value,
+                        play_family=family.value, kick_pass_subfamily=subfamily.value,
                         players_involved=[kicker_lbl, receiver_lbl],
                         yards_gained=kick_distance,
                         result=PlayResult.GAIN.value,
-                        description=f"{kicker_tag} kick pass to {receiver_tag} for {kick_distance} → FUMBLE recovered by offense",
+                        description=f"{kicker_tag} {sf_label} to {receiver_tag} for {kick_distance} → FUMBLE recovered by offense",
                         fatigue=round(stamina, 1),
                         fumble=True,
                     )
@@ -7279,20 +8724,20 @@ class ViperballEngine:
                 receiver.game_tds += 1
                 receiver.game_kick_pass_tds = getattr(receiver, 'game_kick_pass_tds', 0) + 1
                 kicker.game_kick_pass_tds += 1
-                description = f"{kicker_tag} kick pass to {receiver_tag} → {yards_gained} — TOUCHDOWN!"
+                description = f"{kicker_tag} {sf_label} to {receiver_tag} → {yards_gained} — TOUCHDOWN!"
             elif yards_gained >= self.state.yards_to_go:
                 result = PlayResult.FIRST_DOWN
                 self.state.field_position = new_position
                 self.state.down = 1
                 self.state.yards_to_go = 20
                 self.state.kick_mode = False
-                description = f"{kicker_tag} kick pass to {receiver_tag} → {yards_gained} — FIRST DOWN"
+                description = f"{kicker_tag} {sf_label} to {receiver_tag} → {yards_gained} — FIRST DOWN"
             else:
                 result = PlayResult.GAIN
                 self.state.field_position = new_position
                 self.state.down += 1
                 self.state.yards_to_go -= yards_gained
-                description = f"{kicker_tag} kick pass to {receiver_tag} → {yards_gained}"
+                description = f"{kicker_tag} {sf_label} to {receiver_tag} → {yards_gained}"
 
                 if self.state.down > 6:
                     result = PlayResult.TURNOVER_ON_DOWNS
@@ -7321,7 +8766,7 @@ class ViperballEngine:
                 down=self.state.down,
                 yards_to_go=self.state.yards_to_go,
                 play_type="kick_pass",
-                play_family=family.value,
+                play_family=family.value, kick_pass_subfamily=subfamily.value,
                 players_involved=[kicker_lbl, receiver_lbl],
                 yards_gained=yards_gained,
                 result=result.value,
@@ -7331,6 +8776,8 @@ class ViperballEngine:
 
         # Hot streak: kicker missed → streak broken
         self._update_player_streak(kicker, False)
+        # Reset rhythm_escalation chain on incompletion
+        self._drive_consecutive_completions = 0
 
         # ── Hurry credit ──
         # On incomplete passes, there's a chance a defender pressured
@@ -7352,23 +8799,39 @@ class ViperballEngine:
                 hurrier.game_hurries += 1
                 hurrier.game_plays_involved += 1
 
-        # Interception: checked on incomplete kicks.
-        # Viperball's chaotic kick passes produce ~5% overall INT rate.
-        # With ~40% incomplete rate, this means ~12% of incompletes are
-        # picked off. INTs are explosive — defenders have open field and
-        # high chance of big returns or pick-sixes.
-        # Global rate ≈ P(incomplete) × int_chance ≈ 0.40 × 0.10 ≈ 4-5%.
-        int_chance = 0.10
+        # ── Interception: H2H-driven per sub-family ──
+        # Each sub-family has a different base INT rate driven by the matched
+        # defender's attributes vs the kicker.  Quick Kicks are safe; Bombs are
+        # 50/50 balls in the air.
+        sf_int_bases = {
+            KickPassSubFamily.QUICK_KICK: 0.05,
+            KickPassSubFamily.TERRITORY: 0.10,
+            KickPassSubFamily.BOMB: 0.16,
+            KickPassSubFamily.KICK_LATERAL: 0.05,
+        }
+        int_chance = sf_int_bases[subfamily]
 
-        # V2.3: Gameday manager INT reduction
+        # H2H modifier: matched defender's INT-relevant skills vs kicker's
+        def_int_skill = (getattr(matched_defender, 'awareness', 70) * 0.40
+                         + getattr(matched_defender, 'hands', 70) * 0.30
+                         + matched_defender.speed * 0.30)
+        if subfamily == KickPassSubFamily.BOMB:
+            off_int_resist = getattr(kicker, 'kick_power', 70) * 0.60 + kicker.kick_accuracy * 0.40
+        else:
+            off_int_resist = kicker.kick_accuracy * 0.70 + getattr(kicker, 'kick_power', 70) * 0.30
+        int_ratio = def_int_skill / max(30.0, off_int_resist)
+        int_chance *= int_ratio
+
+        # Coaching/prestige modifiers
         _off_mods_kp = self._coaching_mods()
         _gm_int_red_kp = _off_mods_kp.get("classification_effects", {}).get("int_chance_reduction", 1.0)
         int_chance *= _gm_int_red_kp
 
-        # V2.5: Turnover Machine defensive prestige — +2% INT chance
         if (self.state.possession == "home" and self.away_turnover_machine) or \
            (self.state.possession == "away" and self.home_turnover_machine):
             int_chance += 0.02
+
+        int_chance = max(0.02, min(0.25, int_chance))
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
@@ -7377,14 +8840,8 @@ class ViperballEngine:
             self.change_possession()
             raw_fp = max(1, 100 - int_spot)
 
-            def_team = self.get_defensive_team()
-            _inj_kp = self._injured_in_game(def_team)
-            def_candidates = [p for p in def_team.players[:8] if p.name not in _inj_kp]
-            if not def_candidates:
-                def_candidates = def_team.players[:6]
-            int_weights = [p.awareness + p.hands for p in def_candidates]
-            int_weights = self._spread_the_love_defense(def_candidates, int_weights)
-            interceptor = random.choices(def_candidates, weights=int_weights)[0]
+            # The matched defender gets first crack at the INT
+            interceptor = matched_defender
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
 
@@ -7413,11 +8870,11 @@ class ViperballEngine:
                     down=1,
                     yards_to_go=20,
                     play_type="kick_pass",
-                    play_family=family.value,
+                    play_family=family.value, kick_pass_subfamily=subfamily.value,
                     players_involved=[kicker_lbl, receiver_lbl],
                     yards_gained=0,
                     result=PlayResult.INT_RETURN_TD.value,
-                    description=f"{kicker_tag} kick pass — INTERCEPTED by {int_tag}! Returned {return_yards} yards for a TOUCHDOWN!",
+                    description=f"{kicker_tag} {sf_label} — INTERCEPTED by {int_tag}! Returned {return_yards} yards for a TOUCHDOWN!",
                     fatigue=round(stamina, 1),
                 )
             else:
@@ -7437,18 +8894,18 @@ class ViperballEngine:
                     down=1,
                     yards_to_go=20,
                     play_type="kick_pass",
-                    play_family=family.value,
+                    play_family=family.value, kick_pass_subfamily=subfamily.value,
                     players_involved=[kicker_lbl, receiver_lbl],
                     yards_gained=0,
                     result=PlayResult.KICK_PASS_INTERCEPTED.value,
-                    description=f"{kicker_tag} kick pass — INTERCEPTED by {int_tag}! Returned {return_yards} yards to the {new_fp}",
+                    description=f"{kicker_tag} {sf_label} — INTERCEPTED by {int_tag}! Returned {return_yards} yards to the {new_fp}",
                     fatigue=round(stamina, 1),
                 )
 
         throwing_team_inc = self.state.possession
         self.state.down += 1
 
-        description = f"{kicker_tag} kick pass intended for {receiver_tag} — INCOMPLETE"
+        description = f"{kicker_tag} {sf_label} intended for {receiver_tag} — INCOMPLETE"
 
         if self.state.down > 6:
             result = PlayResult.TURNOVER_ON_DOWNS
@@ -7472,7 +8929,7 @@ class ViperballEngine:
             down=self.state.down,
             yards_to_go=self.state.yards_to_go,
             play_type="kick_pass",
-            play_family=family.value,
+            play_family=family.value, kick_pass_subfamily=subfamily.value,
             players_involved=[kicker_lbl, receiver_lbl],
             yards_gained=0,
             result=result.value,

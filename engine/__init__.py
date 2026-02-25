@@ -13,7 +13,9 @@ from .game_engine import (
     OFFENSE_STYLES,
     DEFENSE_STYLES,
     ST_SCHEMES,
-    # V2 exports
+    # V2/V3 exports
+    KickPassSubFamily,
+    FormationShell,
     V2_ENGINE_CONFIG,
     VarianceArchetype,
     FatigueTier,
@@ -75,6 +77,8 @@ __all__ = [
     "calculate_scoring_profile",
     "calculate_defensive_impact",
     "generate_headline",
+    "KickPassSubFamily",
+    "FormationShell",
     "V2_ENGINE_CONFIG",
     "VarianceArchetype",
     "FatigueTier",
