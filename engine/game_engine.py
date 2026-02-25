@@ -754,15 +754,15 @@ def designate_stars(players: List, max_stars: int = 3) -> List[str]:
 
 
 STARTER_FIRST_LOOK = {
-    "ground_pound":   {"run_starter_pct": 0.78, "recv_starter_pct": 0.60, "starter_ceiling": 30, "rotation_ceiling": 8},
-    "ball_control":   {"run_starter_pct": 0.72, "recv_starter_pct": 0.58, "starter_ceiling": 28, "rotation_ceiling": 8},
-    "balanced":       {"run_starter_pct": 0.65, "recv_starter_pct": 0.55, "starter_ceiling": 24, "rotation_ceiling": 9},
-    "slick_n_slide":  {"run_starter_pct": 0.65, "recv_starter_pct": 0.60, "starter_ceiling": 24, "rotation_ceiling": 9},
-    "ghost":          {"run_starter_pct": 0.55, "recv_starter_pct": 0.52, "starter_ceiling": 22, "rotation_ceiling": 10},
-    "lateral_spread": {"run_starter_pct": 0.52, "recv_starter_pct": 0.50, "starter_ceiling": 20, "rotation_ceiling": 10},
-    "chain_gang":     {"run_starter_pct": 0.48, "recv_starter_pct": 0.48, "starter_ceiling": 18, "rotation_ceiling": 11},
-    "boot_raid":      {"run_starter_pct": 0.62, "recv_starter_pct": 0.65, "starter_ceiling": 22, "rotation_ceiling": 9},
-    "stampede":       {"run_starter_pct": 0.68, "recv_starter_pct": 0.55, "starter_ceiling": 26, "rotation_ceiling": 9},
+    "ground_pound":   {"run_starter_pct": 0.82, "recv_starter_pct": 0.64, "starter_ceiling": 38, "rotation_ceiling": 7},
+    "ball_control":   {"run_starter_pct": 0.76, "recv_starter_pct": 0.62, "starter_ceiling": 35, "rotation_ceiling": 7},
+    "balanced":       {"run_starter_pct": 0.70, "recv_starter_pct": 0.60, "starter_ceiling": 30, "rotation_ceiling": 8},
+    "slick_n_slide":  {"run_starter_pct": 0.70, "recv_starter_pct": 0.64, "starter_ceiling": 30, "rotation_ceiling": 8},
+    "ghost":          {"run_starter_pct": 0.60, "recv_starter_pct": 0.56, "starter_ceiling": 28, "rotation_ceiling": 9},
+    "lateral_spread": {"run_starter_pct": 0.56, "recv_starter_pct": 0.54, "starter_ceiling": 26, "rotation_ceiling": 9},
+    "chain_gang":     {"run_starter_pct": 0.52, "recv_starter_pct": 0.52, "starter_ceiling": 24, "rotation_ceiling": 10},
+    "boot_raid":      {"run_starter_pct": 0.66, "recv_starter_pct": 0.68, "starter_ceiling": 28, "rotation_ceiling": 8},
+    "stampede":       {"run_starter_pct": 0.74, "recv_starter_pct": 0.60, "starter_ceiling": 34, "rotation_ceiling": 8},
 }
 
 
@@ -906,8 +906,11 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
 
     receivers_ranked = sorted(skill, key=recv_score, reverse=True)
     starter_recv_count = min(5, max(2, len(skill) // 3))
-    for p in receivers_ranked[:starter_recv_count]:
+    for rank_idx, p in enumerate(receivers_ranked[:starter_recv_count]):
         p.game_role_recv = "STARTER"
+        p.game_recv_rank = rank_idx + 1
+    for p in receivers_ranked[starter_recv_count:]:
+        p.game_recv_rank = 0
 
     # ── DEFENSE ──────────────────────────────────────────────────────
     def tackle_score(p):
@@ -1145,6 +1148,7 @@ class Player:
     game_role: str = "ROTATION"       # "STARTER" | "ROTATION" (offense rushing)
     game_role_recv: str = "ROTATION"  # receiving role (can differ from rushing role)
     game_rush_rank: str = ""          # "LEAD" | "COMPLEMENT" | "" — feature back designation
+    game_recv_rank: int = 0           # ordinal receiver preference (1=primary, 2=secondary, 0=unranked)
     game_zb_style: str = ""           # "kick_dominant" | "run_dominant" | "dual_threat" | "distributor" (ZBs only)
     game_def_role: str = "ROTATION"   # "STARTER" | "ROTATION" (defense)
     game_st_role: str = "ROTATION"    # "STARTER" | "ROTATION" (special teams)
@@ -3078,21 +3082,18 @@ class ViperballEngine:
         return diff >= 20
 
     def _spread_the_love_offense(self, eligible, weights, for_receiving=False, play_family=None):
-        """Starter-first-look touch distribution.
+        """Rating-driven touch distribution.
 
-        Two-phase selection:
-        1. Roll starter-first-look check (style-dependent probability).
-           If it hits, zero out all ROTATION weights — only starters
-           compete for this touch.
-        2. If the roll misses, everyone competes but starters still get
-           a mild edge from their base position weights.
+        Philosophy: a player's ratings dictate their volume. Stars eat.
+        LEAD/COMPLEMENT backs and top-ranked receivers are EXEMPT from
+        ceiling/decay — they get the ball until they're gassed. Spread-
+        the-love only manages rotation players to prevent random depth
+        guys from hogging touches that should go to your best players.
 
-        Ceiling management prevents any single player from monopolizing
-        touches. When a starter hits their ceiling, the system naturally
-        flows to rotation players (backup breakout games).
-
-        Kick-dominant ZBs are suppressed in the run context since they're
-        passers, not carriers.
+        Rushing: LEAD ~50-55% of carries, COMPLEMENT ~20-25%, rest split.
+        Receiving: Ordinal recv_rank (1-5) sets target share weighted by
+        the player's recv_score rating. A star on a bad team still
+        dominates because the rating gap drives volume.
         """
         if not eligible:
             return weights
@@ -3100,13 +3101,6 @@ class ViperballEngine:
         team = self.get_offensive_team()
         style = getattr(team, 'offense_style', 'balanced')
         profile = STARTER_FIRST_LOOK.get(style, STARTER_FIRST_LOOK["balanced"])
-
-        if for_receiving:
-            starter_pct = profile["recv_starter_pct"]
-        else:
-            starter_pct = profile["run_starter_pct"]
-
-        starter_ceiling = profile["starter_ceiling"]
         rotation_ceiling = profile["rotation_ceiling"]
 
         def _relevant_touches(p):
@@ -3117,72 +3111,46 @@ class ViperballEngine:
                 kp_thrown = getattr(p, "game_kick_passes_thrown", 0)
                 return max(0, total - kp_thrown)
 
-        starter_indices = []
+        designated_indices = set()
         rotation_indices = []
-        for i, p in enumerate(eligible):
-            if for_receiving:
-                role = getattr(p, "game_role_recv", "ROTATION")
-            else:
-                role = getattr(p, "game_role", "ROTATION")
 
+        for i, p in enumerate(eligible):
             if not for_receiving:
                 zb_style = getattr(p, "game_zb_style", "")
                 if zb_style == "kick_dominant":
                     weights[i] *= 0.05
                     rotation_indices.append(i)
                     continue
-
-            if role == "STARTER":
-                starter_indices.append(i)
+                rush_rank = getattr(p, "game_rush_rank", "")
+                if rush_rank in ("LEAD", "COMPLEMENT"):
+                    designated_indices.add(i)
+                    continue
             else:
-                rotation_indices.append(i)
+                recv_rank = getattr(p, "game_recv_rank", 0)
+                if recv_rank >= 1:
+                    designated_indices.add(i)
+                    continue
 
-        any_starter_available = False
-        for si in starter_indices:
-            touches = _relevant_touches(eligible[si])
-            if touches < starter_ceiling:
-                any_starter_available = True
-                break
+            rotation_indices.append(i)
 
-        is_starter_look = any_starter_available and random.random() < starter_pct
-
-        for i, p in enumerate(eligible):
-            touches = _relevant_touches(p)
-            is_starter = i in starter_indices
-
-            if is_starter:
-                ceiling = starter_ceiling
-            else:
-                ceiling = rotation_ceiling
-
-            if touches >= ceiling:
-                overage = touches - ceiling
-                decay = 0.75 ** (overage + 1)
+        for i in rotation_indices:
+            touches = _relevant_touches(eligible[i])
+            if touches >= rotation_ceiling:
+                overage = touches - rotation_ceiling
+                decay = 0.82 ** (overage + 1)
                 weights[i] *= max(0.04, decay)
-            elif touches >= ceiling * 0.75:
-                approach_pct = (touches - ceiling * 0.75) / (ceiling * 0.25)
-                soft_decay = 1.0 - (approach_pct * 0.35)
-                weights[i] *= max(0.3, soft_decay)
+            elif touches >= rotation_ceiling * 0.85:
+                approach_pct = (touches - rotation_ceiling * 0.85) / (rotation_ceiling * 0.15)
+                soft_decay = 1.0 - (approach_pct * 0.25)
+                weights[i] *= max(0.4, soft_decay)
 
-            if is_starter_look and not is_starter:
-                weights[i] *= 0.03
-
-        # ── Forced Carry Percentage ──
-        # Instead of weight multipliers, assign guaranteed carry shares to
-        # LEAD/COMPLEMENT/COP. Pre-roll a die: if it lands in a ranked
-        # player's forced range, that player IS the carrier (weights are
-        # zeroed for everyone else). If the roll misses all forced ranges,
-        # fall through to normal weight-based selection.
-        #
-        # Forced %s are style-dependent — ground_pound leans hardest on LEAD.
-        # COP only gets forced carries on speed-family plays.
         if not for_receiving:
-            lead_forced = {"ground_pound": 0.45, "stampede": 0.42, "ball_control": 0.40,
-                           "slick_n_slide": 0.38, "balanced": 0.35, "ghost": 0.25,
-                           "boot_raid": 0.22, "lateral_spread": 0.20, "chain_gang": 0.18}
-            comp_forced = {"ground_pound": 0.18, "stampede": 0.16, "ball_control": 0.15,
-                           "slick_n_slide": 0.15, "balanced": 0.14, "ghost": 0.12,
-                           "boot_raid": 0.10, "lateral_spread": 0.10, "chain_gang": 0.10}
+            lead_forced = {"ground_pound": 0.62, "stampede": 0.58, "ball_control": 0.56,
+                           "slick_n_slide": 0.54, "balanced": 0.54, "ghost": 0.44,
+                           "boot_raid": 0.40, "lateral_spread": 0.38, "chain_gang": 0.36}
+            comp_forced = {"ground_pound": 0.22, "stampede": 0.22, "ball_control": 0.20,
+                           "slick_n_slide": 0.20, "balanced": 0.20, "ghost": 0.18,
+                           "boot_raid": 0.16, "lateral_spread": 0.16, "chain_gang": 0.14}
             cop_forced_speed = 0.40
             cop_forced_normal = 0.04
 
@@ -3207,34 +3175,53 @@ class ViperballEngine:
 
             if lead_player or comp_player or cop_player:
                 roll = random.random()
-                lead_pct = lead_forced.get(style, 0.30) if lead_player else 0.0
-                comp_pct = comp_forced.get(style, 0.12) if comp_player else 0.0
+                lead_pct = lead_forced.get(style, 0.40) if lead_player else 0.0
+                comp_pct = comp_forced.get(style, 0.18) if comp_player else 0.0
                 if is_speed_play:
                     lead_pct *= 0.5
                     cop_pct = cop_forced_speed if cop_player else 0.0
                 else:
                     cop_pct = cop_forced_normal if cop_player else 0.0
 
-                if roll < lead_pct and lead_player:
-                    touches = _relevant_touches(lead_player[1])
-                    if touches < starter_ceiling:
-                        for j in range(len(weights)):
-                            weights[j] = 0.01
-                        weights[lead_player[0]] = 100.0
-                elif roll < lead_pct + comp_pct and comp_player:
-                    touches = _relevant_touches(comp_player[1])
-                    if touches < starter_ceiling:
-                        for j in range(len(weights)):
-                            weights[j] = 0.01
-                        weights[comp_player[0]] = 100.0
-                elif roll < lead_pct + comp_pct + cop_pct and cop_player:
+                def _force_player(idx):
                     for j in range(len(weights)):
                         weights[j] = 0.01
-                    weights[cop_player[0]] = 100.0
+                    weights[idx] = 100.0
+
+                if roll < lead_pct and lead_player:
+                    _force_player(lead_player[0])
+                elif roll < lead_pct + comp_pct and comp_player:
+                    _force_player(comp_player[0])
+                elif roll < lead_pct + comp_pct + cop_pct and cop_player:
+                    _force_player(cop_player[0])
+
+        else:
+            recv_rank_map = {}
+            recv_rating_map = {}
+            for i, p in enumerate(eligible):
+                rr = getattr(p, "game_recv_rank", 0)
+                if rr >= 1:
+                    recv_rank_map[i] = rr
+                    hands = getattr(p, 'hands', 70)
+                    spd = p.speed
+                    lat = p.lateral_skill
+                    recv_rating_map[i] = hands * 1.3 + spd * 1.0 + lat * 0.8
+
+            if recv_rank_map:
+                total_rating = sum(recv_rating_map.values())
+                if total_rating > 0:
+                    for i in recv_rank_map:
+                        rating_share = recv_rating_map[i] / total_rating
+                        rank_bonus = max(0.5, 1.6 - (recv_rank_map[i] - 1) * 0.20)
+                        weights[i] *= rating_share * rank_bonus * len(recv_rank_map) * 3.0
+
+                    for i in rotation_indices:
+                        if i not in recv_rank_map:
+                            weights[i] *= 0.08
 
         if self._is_blowout():
             max_w = max(weights) if weights else 1.0
-            for i in starter_indices:
+            for i in designated_indices:
                 weights[i] *= 0.5
             for i in rotation_indices:
                 floor = max_w * 0.30
@@ -3242,7 +3229,7 @@ class ViperballEngine:
                     weights[i] = floor
 
         for i in range(len(weights)):
-            weights[i] = max(0.03, weights[i])
+            weights[i] = max(0.02, weights[i])
 
         return weights
 
@@ -6029,33 +6016,60 @@ class ViperballEngine:
         skill_pool = self._offense_skill(team)
         eligible = []
         weights = []
+        eligible_set = set()
+
+        def _fatigue_mult(p):
+            energy_pct = p.game_energy / 100.0
+            if energy_pct < 0.2:
+                return 0.10
+            elif energy_pct < 0.3:
+                return 0.25
+            elif energy_pct < 0.4:
+                return 0.40
+            elif energy_pct < 0.5:
+                return 0.60
+            elif energy_pct < 0.7:
+                return 0.80
+            return 1.0
+
         for i, pos in enumerate(primary_positions):
             pos_weight = carrier_weights[i] if i < len(carrier_weights) else 0.3
             for p in skill_pool:
                 ptag_check = player_tag(p)
-                if pos in ptag_check:
+                if pos in ptag_check and id(p) not in eligible_set:
                     w = pos_weight
                     if p.archetype in archetype_bonus:
                         w *= archetype_bonus[p.archetype]
-                    # Per-player fatigue: prefer fresh players
-                    # Below 40% is the fatigue cliff — AI avoids using them
-                    energy_pct = p.game_energy / 100.0
-                    if energy_pct < 0.2:
-                        w *= 0.10  # Emergency zone — almost never used
-                    elif energy_pct < 0.3:
-                        w *= 0.25  # Deep cliff — strongly avoid
-                    elif energy_pct < 0.4:
-                        w *= 0.40  # Cliff zone — significant penalty
-                    elif energy_pct < 0.5:
-                        w *= 0.60
-                    elif energy_pct < 0.7:
-                        w *= 0.80
-                    if p not in eligible:
-                        eligible.append(p)
-                        weights.append(max(0.05, w))
+                    w *= _fatigue_mult(p)
+                    eligible.append(p)
+                    eligible_set.add(id(p))
+                    weights.append(max(0.05, w))
+
+        for p in skill_pool:
+            if id(p) in eligible_set:
+                continue
+            rush_rank = getattr(p, "game_rush_rank", "")
+            if rush_rank in ("LEAD", "COMPLEMENT"):
+                zb_style = getattr(p, "game_zb_style", "")
+                if zb_style == "kick_dominant":
+                    continue
+                w = 0.50 * _fatigue_mult(p)
+                eligible.append(p)
+                eligible_set.add(id(p))
+                weights.append(max(0.05, w))
+
         if not eligible:
             eligible = skill_pool[:5]
             weights = [1.0] * len(eligible)
+
+        for i, p in enumerate(eligible):
+            rush_rank = getattr(p, "game_rush_rank", "")
+            rs = p.speed * 1.2 + getattr(p, 'power', 75) * 1.0 + getattr(p, 'agility', 75) * 1.1
+            rating_mult = rs / 250.0
+            if rush_rank == "LEAD":
+                weights[i] = max(weights[i], 0.50) * 5.0 * rating_mult
+            elif rush_rank == "COMPLEMENT":
+                weights[i] = max(weights[i], 0.40) * 3.0 * rating_mult
 
         # ── V2: Hero Ball force-feed (tuned v2.6) ──
         # Boost star's weight but cap it so one player can't absorb
@@ -9308,6 +9322,7 @@ class ViperballEngine:
                         "role": combined_role,
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "rush_rank": p.game_rush_rank,
+                        "recv_rank": p.game_recv_rank,
                         "touches": p.game_touches,
                         "rush_carries": p.game_rush_carries,
                         "yards": p.game_yards,
