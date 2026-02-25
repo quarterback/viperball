@@ -196,7 +196,8 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
     kick_pass_yards = max(0, int(total_yards * kp_pct * rng.uniform(0.80, 1.20)))
     lateral_yards = max(0, int(total_yards * lat_pct * rng.uniform(0.75, 1.25)))
 
-    total_yards = rushing_yards + kick_pass_yards + lateral_yards
+    rushing_yards += lateral_yards
+    total_yards = rushing_yards + kick_pass_yards
 
     rushing_carries = max(15, int(rushing_yards / max(1, rng.gauss(4.5, 0.8))))
 

@@ -6920,6 +6920,7 @@ class ViperballEngine:
             ball_carrier.game_lateral_tds += 1
             ball_carrier.game_yards += yards_gained
             ball_carrier.game_lateral_yards += yards_gained
+            ball_carrier.game_rushing_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained} — TOUCHDOWN!"
         elif yards_gained >= self.state.yards_to_go:
             result = PlayResult.FIRST_DOWN
@@ -6929,6 +6930,7 @@ class ViperballEngine:
             self.state.kick_mode = False
             ball_carrier.game_yards += yards_gained
             ball_carrier.game_lateral_yards += yards_gained
+            ball_carrier.game_rushing_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained} — FIRST DOWN"
         else:
             result = PlayResult.GAIN
@@ -6937,6 +6939,7 @@ class ViperballEngine:
             self.state.yards_to_go -= yards_gained
             ball_carrier.game_yards += yards_gained
             ball_carrier.game_lateral_yards += yards_gained
+            ball_carrier.game_rushing_yards += yards_gained
             description = f"{chain_tags} lateral → {yards_gained}"
 
             if self.state.down > 6:
@@ -9134,7 +9137,7 @@ class ViperballEngine:
             stats["rushing_yards"] = rush
             stats["kick_pass_yards"] = kp
             stats["lateral_yards"] = lat
-            stats["total_yards"] = rush + kp + lat
+            stats["total_yards"] = rush + kp
             stats["yards_per_play"] = round(stats["total_yards"] / max(1, stats["total_plays"]), 2)
             stats["rushing_carries"] = sum(p.game_rush_carries for p in team.players)
 
@@ -9330,7 +9333,7 @@ class ViperballEngine:
                         "rushing_tds": p.game_rushing_tds,
                         "lateral_yards": p.game_lateral_yards,
                         "tds": p.game_tds,
-                        "all_purpose_yards": p.game_rushing_yards + p.game_lateral_yards + p.game_kick_return_yards + p.game_punt_return_yards + p.game_kick_pass_yards,
+                        "all_purpose_yards": p.game_rushing_yards + p.game_kick_return_yards + p.game_punt_return_yards + p.game_kick_pass_yards,
                         "fumbles": p.game_fumbles,
                         "laterals_thrown": p.game_laterals_thrown,
                         "lateral_receptions": p.game_lateral_receptions,
