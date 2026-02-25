@@ -34,7 +34,7 @@ The project maintains a clear separation of concerns:
 - **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions with auto-assignment and stat tracking. ZB Style System classifies Zerobacks (kick_dominant, run_dominant, dual_threat, distributor).
 - **Starter-First-Look System**: Replaces a complex role system and is applied to offense, defense, and special teams to determine player involvement and stat distribution.
 - **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays, Viper and Defensive Alignment systems, and a detailed Run Fumble System.
-- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats.
+- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats. All box score yardage (rushing, kick passing, laterals, total) derives from player stat objects as single source of truth via reconciliation in `generate_game_summary()`. Trick plays and fake punts credit rushing yards on the carrier.
 - **Dynamic Roster System**: Generates 36-player rosters, with balanced class years and geographic name pipelines. Dynasty mode includes automatic roster maintenance.
 - **Dynasty Mode Enhancements**: Integrated injury tracking, player development, awards system, roster maintenance, and extensive data export.
 - **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings.

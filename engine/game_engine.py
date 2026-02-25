@@ -6243,7 +6243,7 @@ class ViperballEngine:
                     down=self.state.down, yards_to_go=self.state.yards_to_go,
                     play_type="run", play_family=family.value,
                     players_involved=[plabel],
-                    yards_gained=max(0, fumble_yards),
+                    yards_gained=fumble_yards,
                     result=PlayResult.GAIN.value,
                     description=f"{ptag} {action} → FUMBLE recovered by offense at {self.state.field_position}{mech_tag}",
                     fatigue=round(stamina, 1),
@@ -6451,6 +6451,8 @@ class ViperballEngine:
             fumble_yards = random.randint(-3, max(1, yards_gained))
             fumble_spot = max(1, fp + fumble_yards)
             carrier.game_fumbles += 1
+            carrier.game_yards += fumble_yards
+            carrier.game_rushing_yards += fumble_yards
             recovered_by, is_bell = self._resolve_fumble_recovery(fumble_spot, carrier)
 
             if recovered_by == 'defense':
@@ -6511,7 +6513,7 @@ class ViperballEngine:
                     down=self.state.down, yards_to_go=self.state.yards_to_go,
                     play_type="trick_play", play_family=family.value,
                     players_involved=[plabel, player_label(secondary)],
-                    yards_gained=max(0, fumble_yards),
+                    yards_gained=fumble_yards,
                     result=PlayResult.GAIN.value,
                     description=f"{ptag} {variant['action']} via {sec_tag} → FUMBLE recovered by offense at {self.state.field_position}",
                     fatigue=round(stamina, 1),
@@ -6528,8 +6530,17 @@ class ViperballEngine:
             desc_parts.append("EXPLOSIVE")
         mech_tag = f" [{', '.join(desc_parts)}]" if desc_parts else ""
 
-        # Safety check
+        def_team = self.get_defensive_team()
+        tackler = self._pick_def_tackler(def_team, yards_gained)
+        tackler.game_tackles += 1
+
+        trick_tackle_red = self._tackle_reduction(tackler, yards_gained)
+        yards_gained = max(-5, int(yards_gained - trick_tackle_red))
+        new_position = min(100, fp + yards_gained)
+
         if new_position <= 0:
+            carrier.game_yards += yards_gained
+            carrier.game_rushing_yards += yards_gained
             self.change_possession()
             self.add_score(2)
             self.change_possession()
@@ -6553,7 +6564,9 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        # Touchdown / first down / gain resolution
+        if yards_gained <= 0:
+            tackler.game_tfl += 1
+
         if new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team):
             result = PlayResult.TOUCHDOWN
             yards_gained = 100 - fp
@@ -6585,18 +6598,6 @@ class ViperballEngine:
                 self.change_possession()
                 self.state.field_position = 100 - self.state.field_position
                 description += " — TURNOVER ON DOWNS"
-
-        # Tackling and injury
-        def_team = self.get_defensive_team()
-        tackler = self._pick_def_tackler(def_team, yards_gained)
-        tackler.game_tackles += 1
-
-        # Tackling reduces trick play yards
-        trick_tackle_red = self._tackle_reduction(tackler, yards_gained)
-        yards_gained = max(-5, int(yards_gained - trick_tackle_red))
-
-        if yards_gained <= 0:
-            tackler.game_tfl += 1
 
         injury_note = ""
         carrier_inj = self.check_in_game_injury(carrier, play_type="run")
@@ -7484,10 +7485,12 @@ class ViperballEngine:
                 self.state.field_position = min(99, self.state.field_position + fake_gain)
                 playmaker.game_touches += 1
                 playmaker.game_yards += fake_gain
-                # Check for TD
+                playmaker.game_rushing_yards += fake_gain
+                playmaker.game_rush_carries += 1
                 if self.state.field_position >= 100:
                     self.state.field_position = 100
                     playmaker.game_tds += 1
+                    playmaker.game_rushing_tds += 1
                     self.add_score(9)
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                     return Play(
@@ -7516,8 +7519,11 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
             else:
-                # Fake fails — turnover on downs
                 fake_loss = random.randint(-3, 2)
+                playmaker.game_touches += 1
+                playmaker.game_yards += fake_loss
+                playmaker.game_rushing_yards += fake_loss
+                playmaker.game_rush_carries += 1
                 self.state.field_position = max(1, self.state.field_position + fake_loss)
                 self.change_possession()
                 self.state.field_position = 100 - self.state.field_position
@@ -9107,6 +9113,20 @@ class ViperballEngine:
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
 
+        def _reconcile_yards(stats, team):
+            rush = sum(p.game_rushing_yards for p in team.players)
+            kp = sum(p.game_kick_pass_yards for p in team.players if p.game_kick_pass_receptions > 0)
+            lat = sum(p.game_lateral_yards for p in team.players)
+            stats["rushing_yards"] = rush
+            stats["kick_pass_yards"] = kp
+            stats["lateral_yards"] = lat
+            stats["total_yards"] = rush + kp + lat
+            stats["yards_per_play"] = round(stats["total_yards"] / max(1, stats["total_plays"]), 2)
+            stats["rushing_carries"] = sum(p.game_rush_carries for p in team.players)
+
+        _reconcile_yards(home_stats, self.home_team)
+        _reconcile_yards(away_stats, self.away_team)
+
         away_turnovers = len([p for p in away_plays if p.fumble and p.result == "fumble"])
         home_turnovers = len([p for p in home_plays if p.fumble and p.result == "fumble"])
         home_stats["fumble_recoveries"] = away_turnovers
@@ -9519,7 +9539,8 @@ class ViperballEngine:
         return result
 
     def calculate_team_stats(self, plays: List[Play]) -> Dict:
-        total_yards = sum(p.yards_gained for p in plays if p.yards_gained > 0)
+        scrimmage_plays = [p for p in plays if p.play_type not in ("punt", "drop_kick", "place_kick", "kneel", "penalty")]
+        total_yards = sum(p.yards_gained for p in scrimmage_plays)
         total_plays = len(plays)
 
         laterals = [p for p in plays if p.laterals > 0]
@@ -9541,7 +9562,7 @@ class ViperballEngine:
         kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
         kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
         kick_pass_ints = [p for p in kick_passes if p.result in ("kick_pass_intercepted", "int_return_td")]
-        kick_pass_yards = sum(max(0, p.yards_gained) for p in kick_pass_completions)
+        kick_pass_yards = sum(p.yards_gained for p in kick_pass_completions)
         lateral_ints = [p for p in laterals if p.result == "lateral_intercepted"]
 
         kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
@@ -9573,12 +9594,12 @@ class ViperballEngine:
         penalties_declined = [p for p in penalty_plays if p.penalty.declined]
         penalty_yards = sum(p.penalty.yards for p in penalties_accepted)
 
-        run_plays = [p for p in plays if p.play_type in ("run", "trick_play")]
+        run_plays = [p for p in plays if p.play_type in ("run", "trick_play", "fake_punt")]
         rushing_carries = len(run_plays)
         rushing_yards = sum(p.yards_gained for p in run_plays)
         rushing_tds = len([p for p in run_plays if p.result == "touchdown"])
-        lateral_chain_plays = [p for p in plays if p.play_type == "lateral_chain" and not p.fumble]
-        lateral_yards = sum(max(0, p.yards_gained) for p in lateral_chain_plays)
+        lateral_chain_plays = [p for p in plays if p.play_type == "lateral_chain"]
+        lateral_yards = sum(p.yards_gained for p in lateral_chain_plays)
 
         return {
             "total_yards": total_yards,
