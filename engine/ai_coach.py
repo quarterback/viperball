@@ -22,10 +22,12 @@ from typing import Dict, Optional, Tuple
 
 
 PHILOSOPHY_TO_OFFENSE = {
-    "kick_heavy": ["boot_raid", "ball_control", "stampede"],
+    "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe"],
     "lateral_heavy": ["lateral_spread", "chain_gang", "ghost"],
     "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide"],
-    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound"],
+    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast"],
+    "air_raid": ["shock_and_awe", "boot_raid", "east_coast"],
+    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide"],
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
@@ -81,6 +83,14 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
         offense_candidates.append("ghost")
     if speed >= 83 and "slick_n_slide" not in offense_candidates:
         offense_candidates.append("slick_n_slide")
+    # East Coast: requires reliable kicker accuracy + balanced roster
+    kick_acc = team_stats.get("kick_accuracy", kicking)
+    if kick_acc >= 78 and "east_coast" not in offense_candidates:
+        offense_candidates.append("east_coast")
+    # Shock & Awe: requires elite kick power + speed receivers
+    kick_pow = team_stats.get("kick_power", kicking)
+    if kick_pow >= 82 and speed >= 85 and "shock_and_awe" not in offense_candidates:
+        offense_candidates.append("shock_and_awe")
 
     weights = []
     for c in offense_candidates:
@@ -101,6 +111,10 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
             w += (defense - 75) * 0.1
         elif c == "ball_control":
             w += 0.2
+        elif c == "east_coast" and kick_acc >= 78:
+            w += (kick_acc - 72) * 0.12
+        elif c == "shock_and_awe" and kick_pow >= 82 and speed >= 85:
+            w += (kick_pow - 75) * 0.10 + (speed - 83) * 0.08
         elif c == "balanced":
             w += 0.3
         weights.append(max(0.1, w))
@@ -183,6 +197,8 @@ def get_scheme_label(offense: str, defense: str) -> str:
         "chain_gang": "Chain Gang",
         "slick_n_slide": "Slick 'n Slide",
         "balanced": "Balanced",
+        "east_coast": "East Coast",
+        "shock_and_awe": "Shock & Awe",
     }
     defense_labels = {
         "swarm": "Swarm",

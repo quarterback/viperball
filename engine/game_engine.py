@@ -264,7 +264,7 @@ PLAY_FAMILY_TO_DC_TYPE = {
     PlayFamily.TRICK_PLAY:     "trick",
 }
 
-DEFAULT_KICK_PASS_PHILOSOPHY = {
+DEFAULT_KICK_PASS_WEIGHTS = {
     "quick_kick": 0.35, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.15,
 }
 
@@ -1433,8 +1433,8 @@ OFFENSE_STYLES = {
         "early_down_aggression": 0.70,
         "red_zone_run_pct": 0.85,
         "kick_mode_aggression": 0.25,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.05, "kick_lateral": 0.00,
+        "kick_pass_weights": {
+            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.05,
         },
     },
     "lateral_spread": {
@@ -1473,8 +1473,8 @@ OFFENSE_STYLES = {
         "red_zone_run_pct": 0.55,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.35,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.30, "territory": 0.30, "bomb": 0.15, "kick_lateral": 0.25,
+        "kick_pass_weights": {
+            "quick_kick": 0.15, "territory": 0.30, "bomb": 0.10, "kick_lateral": 0.45,
         },
     },
     "boot_raid": {
@@ -1518,8 +1518,11 @@ OFFENSE_STYLES = {
         "launch_pad_threshold": 55,
         "kick_pass_bonus": 0.12,
         "kick_mode_aggression": 0.80,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.25, "territory": 0.50, "bomb": 0.15, "kick_lateral": 0.10,
+        "kick_pass_weights": {
+            "quick_kick": 0.35, "territory": 0.40, "bomb": 0.10, "kick_lateral": 0.15,
+        },
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.50, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.25,
         },
     },
     "ball_control": {
@@ -1556,8 +1559,8 @@ OFFENSE_STYLES = {
         "early_down_aggression": 0.50,
         "clock_burn_multiplier": 1.3,
         "kick_mode_aggression": 0.60,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.75, "territory": 0.20, "bomb": 0.00, "kick_lateral": 0.05,
+        "kick_pass_weights": {
+            "quick_kick": 0.70, "territory": 0.25, "bomb": 0.0, "kick_lateral": 0.05,
         },
     },
     "ghost": {
@@ -1594,8 +1597,8 @@ OFFENSE_STYLES = {
         "misdirection_bonus": 1.3,
         "kick_pass_bonus": 0.08,
         "kick_mode_aggression": 0.40,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.35, "territory": 0.30, "bomb": 0.20, "kick_lateral": 0.15,
+        "kick_pass_weights": {
+            "quick_kick": 0.25, "territory": 0.25, "bomb": 0.35, "kick_lateral": 0.15,
         },
     },
     "stampede": {
@@ -1632,8 +1635,8 @@ OFFENSE_STYLES = {
         "red_zone_run_pct": 0.80,
         "fatigue_exploit_bonus": 0.10,
         "kick_mode_aggression": 0.25,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.50, "territory": 0.30, "bomb": 0.15, "kick_lateral": 0.05,
+        "kick_pass_weights": {
+            "quick_kick": 0.50, "territory": 0.25, "bomb": 0.05, "kick_lateral": 0.20,
         },
     },
     "chain_gang": {
@@ -1671,8 +1674,8 @@ OFFENSE_STYLES = {
         "risk_tolerance": 0.90,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.30,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.20, "territory": 0.10, "bomb": 0.10, "kick_lateral": 0.60,
+        "kick_pass_weights": {
+            "quick_kick": 0.10, "territory": 0.15, "bomb": 0.15, "kick_lateral": 0.60,
         },
     },
     "slick_n_slide": {
@@ -1711,8 +1714,8 @@ OFFENSE_STYLES = {
         "lead_back_bonus": 0.15,
         "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.35,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.45, "territory": 0.35, "bomb": 0.10, "kick_lateral": 0.10,
+        "kick_pass_weights": {
+            "quick_kick": 0.40, "territory": 0.35, "bomb": 0.05, "kick_lateral": 0.20,
         },
     },
     "balanced": {
@@ -1746,9 +1749,150 @@ OFFENSE_STYLES = {
         "pindown_bonus": 0.05,
         "snap_kick_aggression": 1.1,
         "kick_mode_aggression": 0.50,
-        "kick_pass_philosophy": {
-            "quick_kick": 0.35, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.15,
+        "kick_pass_weights": {
+            "quick_kick": 0.30, "territory": 0.35, "bomb": 0.15, "kick_lateral": 0.20,
         },
+    },
+    "east_coast": {
+        "label": "East Coast",
+        "description": "Short kick passes, chain-moving possession offense. Death by a thousand completions.",
+        "weights": {
+            "dive_option": 0.12,
+            "power": 0.08,
+            "sweep_option": 0.06,
+            "speed_option": 0.04,
+            "counter": 0.03,
+            "draw": 0.05,
+            "viper_jet": 0.02,
+            "lateral_spread": 0.06,
+            "kick_pass": 0.42,
+            "trick_play": 0.02,
+            "snap_kick": 0.04,
+            "field_goal": 0.03,
+            "punt": 0.02,
+        },
+        "tempo": 0.65,
+        "lateral_risk": 0.70,
+        "kick_rate": 0.20,
+        "option_rate": 0.35,
+        "run_bonus": 0.02,
+        "fatigue_resistance": 0.04,
+        "kick_accuracy_bonus": 0.03,
+        "explosive_lateral_bonus": 0.0,
+        "option_read_bonus": 0.04,
+        "broken_play_bonus": 0.02,
+        "pindown_bonus": 0.02,
+        "run_vs_lateral": 0.55,
+        "early_down_aggression": 0.70,
+        "red_zone_run_pct": 0.55,
+        "kick_mode_aggression": 0.55,
+        "kick_pass_weights": {
+            "quick_kick": 0.55, "territory": 0.30, "bomb": 0.05, "kick_lateral": 0.10,
+        },
+        "possession_drive_bonus": 0.08,
+        "yac_bonus": 0.06,
+        "rhythm_escalation": True,
+        "clock_burn_multiplier": 1.15,
+        "weights_attack": {
+            "dive_option": 0.22, "power": 0.18, "sweep_option": 0.05,
+            "speed_option": 0.03, "counter": 0.02, "draw": 0.05,
+            "viper_jet": 0.02, "lateral_spread": 0.03, "kick_pass": 0.28,
+            "trick_play": 0.02, "snap_kick": 0.04, "field_goal": 0.04, "punt": 0.01,
+        },
+        "weights_attack_threshold": 80,
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.75, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.10,
+        },
+        "weights_siege": {
+            "dive_option": 0.20, "power": 0.15, "sweep_option": 0.08,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.08,
+            "viper_jet": 0.0, "lateral_spread": 0.02, "kick_pass": 0.32,
+            "trick_play": 0.01, "snap_kick": 0.0, "field_goal": 0.0, "punt": 0.06,
+        },
+        "kick_pass_weights_siege": {
+            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.05, "kick_lateral": 0.0,
+        },
+        "weights_chase": {
+            "dive_option": 0.05, "power": 0.03, "sweep_option": 0.05,
+            "speed_option": 0.05, "counter": 0.03, "draw": 0.04,
+            "viper_jet": 0.03, "lateral_spread": 0.10, "kick_pass": 0.45,
+            "trick_play": 0.04, "snap_kick": 0.06, "field_goal": 0.03, "punt": 0.02,
+        },
+        "kick_pass_weights_chase": {
+            "quick_kick": 0.25, "territory": 0.40, "bomb": 0.20, "kick_lateral": 0.15,
+        },
+        "chase_tempo_override": 0.80,
+    },
+    "shock_and_awe": {
+        "label": "Shock & Awe",
+        "description": "Vertical kick pass bombs at maximum tempo. Feast or famine, no middle ground.",
+        "weights": {
+            "dive_option": 0.06,
+            "power": 0.04,
+            "sweep_option": 0.05,
+            "speed_option": 0.06,
+            "counter": 0.02,
+            "draw": 0.08,
+            "viper_jet": 0.03,
+            "lateral_spread": 0.08,
+            "kick_pass": 0.38,
+            "trick_play": 0.05,
+            "snap_kick": 0.06,
+            "field_goal": 0.04,
+            "punt": 0.03,
+        },
+        "tempo": 0.85,
+        "lateral_risk": 1.10,
+        "kick_rate": 0.30,
+        "option_rate": 0.30,
+        "run_bonus": 0.0,
+        "fatigue_resistance": 0.0,
+        "kick_accuracy_bonus": 0.06,
+        "explosive_lateral_bonus": 0.12,
+        "option_read_bonus": 0.02,
+        "broken_play_bonus": 0.10,
+        "pindown_bonus": 0.0,
+        "run_vs_lateral": 0.35,
+        "early_down_aggression": 0.85,
+        "red_zone_run_pct": 0.60,
+        "kick_mode_aggression": 0.70,
+        "kick_pass_weights": {
+            "quick_kick": 0.15, "territory": 0.25, "bomb": 0.45, "kick_lateral": 0.15,
+        },
+        "deep_shot_bonus": 0.08,
+        "volume_shooting": True,
+        "sack_vulnerability": 0.06,
+        "tempo_fatigue_export": 0.08,
+        "garbage_time_amplifier": 1.2,
+        "weights_attack": {
+            "dive_option": 0.08, "power": 0.05, "sweep_option": 0.06,
+            "speed_option": 0.06, "counter": 0.03, "draw": 0.06,
+            "viper_jet": 0.04, "lateral_spread": 0.10, "kick_pass": 0.28,
+            "trick_play": 0.04, "snap_kick": 0.10, "field_goal": 0.06, "punt": 0.02,
+        },
+        "weights_attack_threshold": 65,
+        "kick_pass_weights_attack": {
+            "quick_kick": 0.30, "territory": 0.40, "bomb": 0.10, "kick_lateral": 0.20,
+        },
+        "weights_siege": {
+            "dive_option": 0.08, "power": 0.05, "sweep_option": 0.05,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.10,
+            "viper_jet": 0.02, "lateral_spread": 0.03, "kick_pass": 0.40,
+            "trick_play": 0.05, "snap_kick": 0.0, "field_goal": 0.0, "punt": 0.13,
+        },
+        "kick_pass_weights_siege": {
+            "quick_kick": 0.15, "territory": 0.20, "bomb": 0.55, "kick_lateral": 0.10,
+        },
+        "weights_chase": {
+            "dive_option": 0.03, "power": 0.02, "sweep_option": 0.04,
+            "speed_option": 0.05, "counter": 0.02, "draw": 0.06,
+            "viper_jet": 0.03, "lateral_spread": 0.10, "kick_pass": 0.42,
+            "trick_play": 0.06, "snap_kick": 0.08, "field_goal": 0.03, "punt": 0.03,
+        },
+        "kick_pass_weights_chase": {
+            "quick_kick": 0.10, "territory": 0.20, "bomb": 0.55, "kick_lateral": 0.15,
+        },
+        "chase_tempo_override": 0.90,
     },
 }
 
@@ -1860,6 +2004,24 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("chain_gang", "lockdown"): 0.90,
     ("slick_n_slide", "lockdown"): 0.90,
     ("balanced", "lockdown"): 0.95,
+    # East Coast — rhythm passing eats zone but blitz pressure kills it
+    ("east_coast", "swarm"): 1.08,
+    ("east_coast", "blitz_pack"): 0.82,    # HARD COUNTER
+    ("east_coast", "shadow"): 1.05,
+    ("east_coast", "fortress"): 1.15,
+    ("east_coast", "predator"): 0.85,
+    ("east_coast", "drift"): 1.10,
+    ("east_coast", "chaos"): 0.92,
+    ("east_coast", "lockdown"): 0.90,
+    # Shock & Awe — volume bombing shreds soft coverage, lockdown smothers it
+    ("shock_and_awe", "swarm"): 1.05,
+    ("shock_and_awe", "blitz_pack"): 1.12,
+    ("shock_and_awe", "shadow"): 0.85,
+    ("shock_and_awe", "fortress"): 1.18,
+    ("shock_and_awe", "predator"): 1.05,
+    ("shock_and_awe", "drift"): 0.88,
+    ("shock_and_awe", "chaos"): 0.95,
+    ("shock_and_awe", "lockdown"): 0.78,    # HARD COUNTER
 }
 
 # ========================================
@@ -2342,6 +2504,8 @@ OFFENSE_BLOCK_MODIFIERS = {
     "ghost": 1.15,
     "lateral_spread": 1.2,
     "chain_gang": 1.2,
+    "east_coast": 0.90,       # Pro-style protection — decent blocking
+    "shock_and_awe": 1.15,    # Quick releases mean less protection
 }
 
 # Defensive style modifiers for blocks/muffs (higher = better special teams pressure)
@@ -2511,6 +2675,7 @@ class ViperballEngine:
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
+        self._drive_consecutive_completions = 0  # Consecutive kick pass completions (for rhythm_escalation)
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -3591,9 +3756,15 @@ class ViperballEngine:
     def simulate_drive(self, is_bonus_drive: bool = False):
         style = self._current_style()
         tempo = style["tempo"]
+        # Chase mode tempo override — faster pace when trailing big
+        if self._resolve_weight_mode() == "chase":
+            chase_tempo = style.get("chase_tempo_override")
+            if chase_tempo is not None:
+                tempo = max(tempo, chase_tempo)
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
+        self._drive_consecutive_completions = 0
         self.state.kick_mode = False
 
         if self.state.possession == "home" and self._home_momentum_plays > 0:
@@ -3668,6 +3839,16 @@ class ViperballEngine:
                 self._drive_chain_positive += 1
             else:
                 self._drive_chain_positive = 0
+
+            # ── Shock & Awe: tempo_fatigue_export — drain opponent stamina ──
+            tfe = style.get("tempo_fatigue_export", 0.0)
+            if tfe > 0:
+                weather_drain = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+                export_drain = tfe * weather_drain
+                if self.state.possession == "home":
+                    self.state.away_stamina = max(40, self.state.away_stamina - export_drain)
+                else:
+                    self.state.home_stamina = max(40, self.state.home_stamina - export_drain)
 
             # Kneel plays manage their own clock — skip normal time deduction
             if play.play_type == "kneel":
@@ -4664,7 +4845,17 @@ class ViperballEngine:
 
     def select_play_family(self) -> PlayFamily:
         style = self._current_style()
-        weights = dict(style["weights"])
+
+        # ── Situational weight mode override ──
+        weight_mode = self._resolve_weight_mode()
+        if weight_mode == "siege":
+            weights = dict(style.get("weights_siege", style["weights"]))
+        elif weight_mode == "chase":
+            weights = dict(style.get("weights_chase", style["weights"]))
+        elif weight_mode == "attack":
+            weights = dict(style.get("weights_attack", style["weights"]))
+        else:
+            weights = dict(style["weights"])
 
         down = self.state.down
         ytg = self.state.yards_to_go
@@ -4971,6 +5162,32 @@ class ViperballEngine:
             return self.away_defense
         return self.home_defense
 
+    def _resolve_weight_mode(self) -> str:
+        """Determine the active situational weight mode.
+
+        Priority order: siege > chase > attack > base.
+        Returns the mode name as a string: "siege", "chase", "attack", or "base".
+        """
+        style = self._current_style()
+        fp = self.state.field_position
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+
+        # Siege: pinned inside own 10 — survival mode
+        if fp <= 10 and "weights_siege" in style:
+            return "siege"
+
+        # Chase: trailing 10+ in Q3/Q4 — desperation catch-up
+        if quarter >= 3 and score_diff <= -10 and "weights_chase" in style:
+            return "chase"
+
+        # Attack: past field position threshold — scoring mode
+        attack_threshold = style.get("weights_attack_threshold", 999)
+        if fp >= attack_threshold and "weights_attack" in style:
+            return "attack"
+
+        return "base"
+
     def _select_kick_pass_subfamily(self, kicker) -> "KickPassSubFamily":
         """Select kick pass sub-family based on style philosophy + game state.
 
@@ -4979,7 +5196,17 @@ class ViperballEngine:
         the weights so the sub-family selection is both schematic and adaptive.
         """
         style = self._current_style()
-        base = dict(style.get("kick_pass_philosophy", DEFAULT_KICK_PASS_PHILOSOPHY))
+
+        # ── Situational kick_pass_weights override ──
+        weight_mode = self._resolve_weight_mode()
+        if weight_mode == "siege":
+            base = dict(style.get("kick_pass_weights_siege", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        elif weight_mode == "chase":
+            base = dict(style.get("kick_pass_weights_chase", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        elif weight_mode == "attack":
+            base = dict(style.get("kick_pass_weights_attack", style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS)))
+        else:
+            base = dict(style.get("kick_pass_weights", DEFAULT_KICK_PASS_WEIGHTS))
         fp = self.state.field_position
         down = self.state.down
         ytg = self.state.yards_to_go
@@ -5155,6 +5382,38 @@ class ViperballEngine:
                 weights["speed_option"] = weights.get("speed_option", 0.08) * 1.3
                 weights["sweep_option"] = weights.get("sweep_option", 0.08) * 1.3
                 weights["kick_pass"] = weights.get("kick_pass", 0.24) * 1.2
+
+        elif style_name == "east_coast":
+            # Rhythm passing: boost kick_pass on maintained drives
+            possession_bonus = self._current_style().get("possession_drive_bonus", 0.08)
+            if self.drive_play_count >= 6:
+                # Long drive — possession bonus kicks in
+                weights["kick_pass"] = weights.get("kick_pass", 0.28) * (1.0 + possession_bonus)
+                weights["dive_option"] = weights.get("dive_option", 0.20) * 1.2
+            # Short-yardage: East Coast runs behind the OL
+            if ytg <= 3:
+                weights["dive_option"] = weights.get("dive_option", 0.20) * 1.5
+                weights["power"] = weights.get("power", 0.15) * 1.4
+            # Clock management: leading in Q4 → burn clock with runs
+            clock_burn = self._current_style().get("clock_burn_multiplier", 1.15)
+            if quarter == 4 and score_diff > 0 and time_left <= 600:
+                weights["dive_option"] = weights.get("dive_option", 0.20) * clock_burn
+                weights["power"] = weights.get("power", 0.15) * clock_burn
+                weights["kick_pass"] = weights.get("kick_pass", 0.28) * 0.7
+
+        elif style_name == "shock_and_awe":
+            # Garbage time amplifier: trailing 21+ → crank up bombs and tricks
+            garbage_amp = self._current_style().get("garbage_time_amplifier", 1.2)
+            if score_diff <= -21:
+                weights["kick_pass"] = weights.get("kick_pass", 0.38) * garbage_amp
+                weights["trick_play"] = weights.get("trick_play", 0.05) * garbage_amp
+                weights["lateral_spread"] = weights.get("lateral_spread", 0.08) * garbage_amp
+            # S&A never suppresses kick_pass when leading (volume_shooting)
+            # — override the INT-caution block from base select_play_family
+            if self._current_style().get("volume_shooting", False):
+                if quarter >= 3 and score_diff > 0:
+                    # Restore kick_pass weight that INT-caution suppressed
+                    weights["kick_pass"] = weights.get("kick_pass", 0.38) * 1.5
 
     def calculate_block_probability(self, kick_type: str = "punt") -> float:
         """
@@ -7285,6 +7544,24 @@ class ViperballEngine:
             distance_penalty = max(0.0, (kick_distance - 8) * 0.02)
         completion_prob = max(0.08, min(0.92, contest_prob - distance_penalty))
 
+        # ── East Coast: rhythm_escalation — 3+ consecutive completions → +5% accuracy ──
+        style_name = self._current_style_name()
+        if style_name == "east_coast" and style.get("rhythm_escalation", False):
+            if self._drive_consecutive_completions >= 3:
+                completion_prob = min(0.92, completion_prob + 0.05)
+
+        # ── East Coast: possession_drive_bonus — drives 6+ plays → +8% conversion ──
+        if style_name == "east_coast":
+            poss_bonus = style.get("possession_drive_bonus", 0.0)
+            if poss_bonus > 0 and self.drive_play_count >= 6:
+                completion_prob = min(0.92, completion_prob + poss_bonus)
+
+        # ── Shock & Awe: deep_shot_bonus — +8% completion on Bombs ──
+        if style_name == "shock_and_awe":
+            deep_bonus = style.get("deep_shot_bonus", 0.0)
+            if deep_bonus > 0 and subfamily == KickPassSubFamily.BOMB:
+                completion_prob = min(0.92, completion_prob + deep_bonus)
+
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
         # Per-sub-family thrown stat
@@ -7329,6 +7606,10 @@ class ViperballEngine:
             KickPassSubFamily.KICK_LATERAL: 0.70,
         }
         sack_base_rate *= sf_sack_mod[subfamily]
+        # ── Shock & Awe: sack_vulnerability — +6% sack rate (long drops) ──
+        if style_name == "shock_and_awe":
+            sack_vuln = style.get("sack_vulnerability", 0.0)
+            sack_base_rate += sack_vuln
         sack_base_rate = max(0.02, min(0.22, sack_base_rate))
 
         if random.random() < sack_base_rate:
@@ -7394,6 +7675,7 @@ class ViperballEngine:
         if roll < completion_prob:
             # Hot streak: kicker completed → streak continues
             self._update_player_streak(kicker, True)
+            self._drive_consecutive_completions += 1
             kicker.game_kick_passes_completed += 1
             receiver.game_kick_pass_receptions += 1
             receiver.game_touches += 1
@@ -7607,6 +7889,12 @@ class ViperballEngine:
                     # Caught at the spot, minimal YAC
                     yac = random.randint(0, 4) + int(recv_yac_skill * random.randint(0, 3))
 
+            # ── East Coast: yac_bonus — +6% YAC on Quick Kicks ──
+            if style_name == "east_coast" and (subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL):
+                ec_yac_bonus = style.get("yac_bonus", 0.0)
+                if ec_yac_bonus > 0:
+                    yac = int(yac * (1.0 + ec_yac_bonus))
+
             fumble_on_catch = 0.008
             fumble_on_catch -= (receiver.hands / 100) * 0.004
             fumble_on_catch = max(0.002, fumble_on_catch)
@@ -7782,6 +8070,8 @@ class ViperballEngine:
 
         # Hot streak: kicker missed → streak broken
         self._update_player_streak(kicker, False)
+        # Reset rhythm_escalation chain on incompletion
+        self._drive_consecutive_completions = 0
 
         # ── Hurry credit ──
         # On incomplete passes, there's a chance a defender pressured
