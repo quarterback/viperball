@@ -9337,8 +9337,8 @@ class ViperballEngine:
                     assist_player.game_plays_involved += 1
 
         # VIPERBALL ANALYTICS (fan-friendly metrics)
-        home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home")
-        away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away")
+        home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home", home_stats)
+        away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away", away_stats)
         home_team_rating = calculate_overall_performance_index(home_metrics)
         away_team_rating = calculate_overall_performance_index(away_metrics)
 

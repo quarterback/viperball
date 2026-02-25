@@ -705,6 +705,97 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
         fig.update_layout(yaxis_ticksuffix="%", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
 
+    # ── Scoring Profile & Defensive Impact ──
+    try:
+        home_metrics = calculate_viperball_metrics(result, "home")
+        away_metrics = calculate_viperball_metrics(result, "away")
+    except Exception:
+        home_metrics = {}
+        away_metrics = {}
+
+    if home_metrics or away_metrics:
+        # ── Scoring Profile ──
+        ui.label("Scoring Profile").classes("font-bold text-slate-700 mt-6")
+        ui.label("How each team generates its points.").classes("text-sm text-gray-500")
+
+        h_sp = home_metrics.get("scoring_profile", {})
+        a_sp = away_metrics.get("scoring_profile", {})
+
+        # Summary percentage breakdown
+        sp_summary_rows = [
+            {"Source": "Rush", home_name: f"{h_sp.get('rush_pct', 0):.0f}%", away_name: f"{a_sp.get('rush_pct', 0):.0f}%"},
+            {"Source": "Lateral", home_name: f"{h_sp.get('lateral_pct', 0):.0f}%", away_name: f"{a_sp.get('lateral_pct', 0):.0f}%"},
+            {"Source": "Kick-Pass", home_name: f"{h_sp.get('kp_pct', 0):.0f}%", away_name: f"{a_sp.get('kp_pct', 0):.0f}%"},
+            {"Source": "Snapkick", home_name: f"{h_sp.get('snapkick_pct', 0):.0f}%", away_name: f"{a_sp.get('snapkick_pct', 0):.0f}%"},
+            {"Source": "Return", home_name: f"{h_sp.get('return_pct', 0):.0f}%", away_name: f"{a_sp.get('return_pct', 0):.0f}%"},
+            {"Source": "Defense", home_name: f"{h_sp.get('bonus_pct', 0):.0f}%", away_name: f"{a_sp.get('bonus_pct', 0):.0f}%"},
+        ]
+        stat_table(sp_summary_rows)
+
+        # Detailed scoring profile
+        with ui.expansion("Scoring Detail", icon="analytics").classes("w-full mt-2"):
+            sp_rows = [
+                {"Stat": "Rush TDs", home_name: f"{h_sp.get('rush_tds', 0)} ({h_sp.get('rush_td_pts', 0)}pts)", away_name: f"{a_sp.get('rush_tds', 0)} ({a_sp.get('rush_td_pts', 0)}pts)"},
+                {"Stat": "Lateral TDs", home_name: f"{h_sp.get('lateral_tds', 0)} ({h_sp.get('lateral_td_pts', 0)}pts)", away_name: f"{a_sp.get('lateral_tds', 0)} ({a_sp.get('lateral_td_pts', 0)}pts)"},
+                {"Stat": "Kick-Pass TDs", home_name: f"{h_sp.get('kp_tds', 0)} ({h_sp.get('kp_td_pts', 0)}pts)", away_name: f"{a_sp.get('kp_tds', 0)} ({a_sp.get('kp_td_pts', 0)}pts)"},
+                {"Stat": "Drop Kicks", home_name: f"{h_sp.get('dk_made', 0)} ({h_sp.get('dk_pts', 0)}pts)", away_name: f"{a_sp.get('dk_made', 0)} ({a_sp.get('dk_pts', 0)}pts)"},
+                {"Stat": "Place Kicks", home_name: f"{h_sp.get('pk_made', 0)} ({h_sp.get('pk_pts', 0)}pts)", away_name: f"{a_sp.get('pk_made', 0)} ({a_sp.get('pk_pts', 0)}pts)"},
+                {"Stat": "Return TDs", home_name: f"{h_sp.get('return_tds', 0)} ({h_sp.get('return_td_pts', 0)}pts)", away_name: f"{a_sp.get('return_tds', 0)} ({a_sp.get('return_td_pts', 0)}pts)"},
+                {"Stat": "Bonus Scores", home_name: f"{h_sp.get('bonus_scores', 0)} ({h_sp.get('bonus_pts', 0)}pts)", away_name: f"{a_sp.get('bonus_scores', 0)} ({a_sp.get('bonus_pts', 0)}pts)"},
+                {"Stat": "Total Pts", home_name: str(h_sp.get('total_pts', 0)), away_name: str(a_sp.get('total_pts', 0))},
+            ]
+            stat_table(sp_rows)
+
+        # Scoring profile stacked bar chart
+        sp_categories = ["Rush", "Lateral", "Kick-Pass", "Snapkick", "Return", "Defense"]
+        sp_keys = ["rush_pct", "lateral_pct", "kp_pct", "snapkick_pct", "return_pct", "bonus_pct"]
+        sp_chart_data = []
+        for cat, key in zip(sp_categories, sp_keys):
+            sp_chart_data.append({"Source": cat, "Team": home_name, "Pct": h_sp.get(key, 0)})
+            sp_chart_data.append({"Source": cat, "Team": away_name, "Pct": a_sp.get(key, 0)})
+        if sp_chart_data:
+            fig_sp = px.bar(pd.DataFrame(sp_chart_data), x="Source", y="Pct", color="Team",
+                            barmode="group", title="Scoring Breakdown (%)",
+                            color_discrete_sequence=["#2563eb", "#dc2626"])
+            fig_sp.update_layout(yaxis_ticksuffix="%", height=320, template="plotly_white",
+                                 yaxis_title="% of Points")
+            ui.plotly(fig_sp).classes("w-full")
+
+        # ── Defensive Impact ──
+        ui.label("Defensive Impact").classes("font-bold text-slate-700 mt-6")
+        ui.label("Turnovers, stops, and bonus possession conversions.").classes("text-sm text-gray-500")
+
+        h_di = home_metrics.get("defensive_impact", {})
+        a_di = away_metrics.get("defensive_impact", {})
+
+        # Key metrics as cards
+        with ui.row().classes("w-full gap-3 flex-wrap"):
+            metric_card(f"{home_name} Bonus Poss",
+                        f"{h_di.get('bonus_possessions', 0)} ({h_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{away_name} Bonus Poss",
+                        f"{a_di.get('bonus_possessions', 0)} ({a_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{home_name} TO Forced", h_di.get('turnovers_forced', 0))
+            metric_card(f"{away_name} TO Forced", a_di.get('turnovers_forced', 0))
+            metric_card(f"{home_name} Stop Rate", f"{h_di.get('stop_rate', 0):.0f}%")
+            metric_card(f"{away_name} Stop Rate", f"{a_di.get('stop_rate', 0):.0f}%")
+
+        # Detailed table
+        di_rows = [
+            {"Stat": "Bonus Possessions", home_name: str(h_di.get('bonus_possessions', 0)), away_name: str(a_di.get('bonus_possessions', 0))},
+            {"Stat": "Bonus Scores", home_name: str(h_di.get('bonus_scores', 0)), away_name: str(a_di.get('bonus_scores', 0))},
+            {"Stat": "Bonus Conv Rate", home_name: f"{h_di.get('bonus_conv_rate', 0):.0f}%", away_name: f"{a_di.get('bonus_conv_rate', 0):.0f}%"},
+            {"Stat": "Bonus Yards", home_name: str(h_di.get('bonus_yards', 0)), away_name: str(a_di.get('bonus_yards', 0))},
+            {"Stat": "Bonus Pts", home_name: str(h_di.get('bonus_pts', 0)), away_name: str(a_di.get('bonus_pts', 0))},
+            {"Stat": "Turnovers Forced", home_name: str(h_di.get('turnovers_forced', 0)), away_name: str(a_di.get('turnovers_forced', 0))},
+            {"Stat": "Fumbles Forced", home_name: str(h_di.get('fumbles_forced', 0)), away_name: str(a_di.get('fumbles_forced', 0))},
+            {"Stat": "TOD Forced", home_name: str(h_di.get('tod_forced', 0)), away_name: str(a_di.get('tod_forced', 0))},
+            {"Stat": "INTs Forced", home_name: str(h_di.get('ints_forced', 0)), away_name: str(a_di.get('ints_forced', 0))},
+            {"Stat": "Defensive Stops", home_name: str(h_di.get('defensive_stops', 0)), away_name: str(a_di.get('defensive_stops', 0))},
+            {"Stat": "Stop Rate", home_name: f"{h_di.get('stop_rate', 0):.0f}%", away_name: f"{a_di.get('stop_rate', 0):.0f}%"},
+            {"Stat": "Opponent Drives", home_name: str(h_di.get('opponent_drives', 0)), away_name: str(a_di.get('opponent_drives', 0))},
+        ]
+        stat_table(di_rows)
+
 
 def _render_player_impact(result, home_name, away_name):
     """Render the Player Impact Report — per-player WPA attribution."""

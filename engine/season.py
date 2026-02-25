@@ -192,6 +192,13 @@ class TeamRecord:
     total_avg_start: float = 0.0     # Avg starting field position
     games_played: int = 0
 
+    # Defensive impact season accumulators
+    total_bonus_possessions: int = 0
+    total_bonus_scores: int = 0
+    total_turnovers_forced_all: int = 0  # all TOs (fumbles + TOD + INTs)
+    total_defensive_stops: int = 0
+    total_opponent_drives: int = 0
+
     # Legacy accumulators (kept for backward compat with saved data)
     total_opi: float = 0.0
     total_territory: float = 0.0
@@ -268,6 +275,14 @@ class TeamRecord:
         self.total_explosive += metrics.get('explosive_plays', 0.0)
         self.total_to_margin += metrics.get('to_margin', 0.0)
         self.total_avg_start += metrics.get('avg_start', 25.0)
+
+        # Defensive impact accumulators
+        def_impact = metrics.get('defensive_impact', {})
+        self.total_bonus_possessions += def_impact.get('bonus_possessions', 0)
+        self.total_bonus_scores += def_impact.get('bonus_scores', 0)
+        self.total_turnovers_forced_all += def_impact.get('turnovers_forced', 0)
+        self.total_defensive_stops += def_impact.get('defensive_stops', 0)
+        self.total_opponent_drives += def_impact.get('opponent_drives', 0)
 
         # Legacy accumulators (for backward compat)
         self.total_opi += metrics.get('team_rating', metrics.get('opi', 0.0))
@@ -351,6 +366,24 @@ class TeamRecord:
     @property
     def avg_start_position(self) -> float:
         return self.total_avg_start / self.games_played if self.games_played > 0 else 25.0
+
+    # ── Defensive impact season averages ──
+
+    @property
+    def avg_bonus_possessions(self) -> float:
+        return self.total_bonus_possessions / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def bonus_conv_rate(self) -> float:
+        return round(self.total_bonus_scores / max(1, self.total_bonus_possessions) * 100, 1) if self.total_bonus_possessions else 0.0
+
+    @property
+    def avg_turnovers_forced(self) -> float:
+        return self.total_turnovers_forced_all / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def stop_rate(self) -> float:
+        return round(self.total_defensive_stops / max(1, self.total_opponent_drives) * 100, 1) if self.total_opponent_drives else 0.0
 
     # ── Legacy property aliases (backward compat) ──
 

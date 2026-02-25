@@ -20,7 +20,7 @@ Metrics fans already know, adapted for Viperball:
 
 import math
 import random
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -249,10 +249,182 @@ def calculate_team_rating(metrics: Dict) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════
+# SCORING PROFILE — How is this team scoring their points?
+# ═══════════════════════════════════════════════════════════════
+
+def calculate_scoring_profile(plays: List[Dict], drives: List[Dict],
+                              team: str, game_stats: Optional[Dict] = None) -> Dict:
+    """Scoring Profile — breakdown of HOW a team scores.
+
+    A fan says: "They're a snapkick team — 60% of their points come
+    from the boot." Or: "Their defense wins games — they got 14 points
+    off bonus possessions."
+
+    Returns point totals and percentages for each scoring method:
+      - Rush TDs (touchdowns from rushing plays)
+      - Lateral TDs (touchdowns involving lateral chains)
+      - Kick-Pass TDs (touchdowns from kick-pass completions)
+      - Drop Kicks (5 pts each — the bold/risky option)
+      - Place Kicks (3 pts each — the safe option)
+      - Return TDs (punt/kick return touchdowns)
+      - Defensive Points (points scored on bonus possessions —
+        Viperball's unique "defense wins you extra offense" mechanic)
+    """
+    team_plays = [p for p in plays if p.get("possession") == team]
+
+    # Count scoring plays by type
+    rush_tds = sum(1 for p in team_plays
+                   if p.get("result") == "touchdown"
+                   and (p.get("laterals") or 0) == 0
+                   and p.get("play_type") not in ("kick_pass", "drop_kick", "place_kick"))
+    lateral_tds = sum(1 for p in team_plays
+                      if p.get("result") == "touchdown"
+                      and (p.get("laterals") or 0) > 0)
+    kp_tds = sum(1 for p in team_plays
+                 if p.get("result") == "touchdown"
+                 and p.get("play_type") == "kick_pass")
+    dk_made = sum(1 for p in team_plays
+                  if p.get("play_type") == "drop_kick"
+                  and p.get("result") == "successful_kick")
+    pk_made = sum(1 for p in team_plays
+                  if p.get("play_type") == "place_kick"
+                  and p.get("result") == "successful_kick")
+    return_tds = sum(1 for p in team_plays
+                     if p.get("result") in ("punt_return_td", "kick_return_td",
+                                            "missed_dk_return_td", "int_return_td"))
+
+    # Points
+    rush_td_pts = rush_tds * 9
+    lateral_td_pts = lateral_tds * 9
+    kp_td_pts = kp_tds * 9
+    dk_pts = dk_made * 5
+    pk_pts = pk_made * 3
+    return_td_pts = return_tds * 9
+    total_pts = rush_td_pts + lateral_td_pts + kp_td_pts + dk_pts + pk_pts + return_td_pts
+
+    # Bonus possession scoring (defense-generated offense)
+    bonus_drives = [d for d in drives
+                    if d.get("team") == team and d.get("bonus_drive")]
+    bonus_scores = sum(1 for d in bonus_drives
+                       if d.get("result") in ("touchdown", "successful_kick"))
+    # Estimate bonus points (rough: 7 avg per scoring bonus drive)
+    bonus_pts = 0
+    if game_stats:
+        bonus_pts = game_stats.get("bonus_possession_scores", 0) * 7
+    elif bonus_scores > 0:
+        bonus_pts = bonus_scores * 7
+
+    total_with_bonus = total_pts + bonus_pts
+
+    def pct(pts):
+        return round(pts / max(1, total_with_bonus) * 100, 1)
+
+    return {
+        "rush_td_pts": rush_td_pts,
+        "lateral_td_pts": lateral_td_pts,
+        "kp_td_pts": kp_td_pts,
+        "dk_pts": dk_pts,
+        "pk_pts": pk_pts,
+        "return_td_pts": return_td_pts,
+        "bonus_pts": bonus_pts,
+        "total_pts": total_with_bonus,
+        # Percentages — how the team scores
+        "rush_pct": pct(rush_td_pts),
+        "lateral_pct": pct(lateral_td_pts),
+        "kp_pct": pct(kp_td_pts),
+        "snapkick_pct": pct(dk_pts + pk_pts),
+        "dk_pct": pct(dk_pts),
+        "pk_pct": pct(pk_pts),
+        "return_pct": pct(return_td_pts),
+        "bonus_pct": pct(bonus_pts),
+        # Counts for display
+        "rush_tds": rush_tds,
+        "lateral_tds": lateral_tds,
+        "kp_tds": kp_tds,
+        "dk_made": dk_made,
+        "pk_made": pk_made,
+        "return_tds": return_tds,
+        "bonus_scores": bonus_scores,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# DEFENSIVE IMPACT — The defense winning you extra offense
+# ═══════════════════════════════════════════════════════════════
+
+def calculate_defensive_impact(plays: List[Dict], drives: List[Dict],
+                               team: str, game_stats: Optional[Dict] = None) -> Dict:
+    """Defensive Impact — how much the defense generates for the offense.
+
+    Viperball is the first sport where the defense can win you extra
+    offense. An interception gives you a BONUS POSSESSION on top of
+    the normal change of possession. This stat measures that impact.
+
+    A fan says: "Their defense created 3 bonus possessions and they
+    converted 2 of them — that's 14 points from the defense."
+
+    Returns:
+      - Bonus possessions earned (interceptions that triggered bonus)
+      - Bonus conversion rate (% of bonus possessions that scored)
+      - Bonus points (points scored on bonus drives)
+      - Turnovers forced (total: fumbles + TOD + INTs)
+      - Defensive stops (drives held without scoring)
+    """
+    # Bonus possession data from drives
+    bonus_drives = [d for d in drives
+                    if d.get("team") == team and d.get("bonus_drive")]
+    bonus_count = len(bonus_drives)
+    bonus_scores = sum(1 for d in bonus_drives
+                       if d.get("result") in ("touchdown", "successful_kick"))
+    bonus_yards = sum(d.get("yards", 0) for d in bonus_drives)
+    bonus_conv_rate = round(bonus_scores / max(1, bonus_count) * 100, 1) if bonus_count else 0.0
+
+    # Override with game_stats if available (more accurate)
+    if game_stats:
+        bonus_count = game_stats.get("bonus_possessions", bonus_count)
+        bonus_scores = game_stats.get("bonus_possession_scores", bonus_scores)
+        bonus_yards = game_stats.get("bonus_possession_yards", bonus_yards)
+        bonus_conv_rate = round(bonus_scores / max(1, bonus_count) * 100, 1) if bonus_count else 0.0
+
+    bonus_pts = bonus_scores * 7  # rough estimate
+
+    # Turnovers forced (opponent plays that resulted in turnovers)
+    opponent_plays = [p for p in plays if p.get("possession") != team]
+    fumbles_forced = sum(1 for p in opponent_plays if p.get("result") == "fumble")
+    tod_forced = sum(1 for p in opponent_plays if p.get("result") == "turnover_on_downs")
+    ints_forced = sum(1 for p in opponent_plays
+                      if p.get("result") in ("kick_pass_intercepted", "lateral_intercepted"))
+    total_turnovers_forced = fumbles_forced + tod_forced + ints_forced
+
+    # Defensive stops: opponent drives that did NOT score
+    opponent_drives = [d for d in drives if d.get("team") != team]
+    opponent_scoring_drives = sum(1 for d in opponent_drives
+                                  if d.get("result") in ("touchdown", "successful_kick"))
+    defensive_stops = len(opponent_drives) - opponent_scoring_drives
+    stop_rate = round(defensive_stops / max(1, len(opponent_drives)) * 100, 1)
+
+    return {
+        "bonus_possessions": bonus_count,
+        "bonus_scores": bonus_scores,
+        "bonus_yards": bonus_yards,
+        "bonus_pts": bonus_pts,
+        "bonus_conv_rate": bonus_conv_rate,
+        "turnovers_forced": total_turnovers_forced,
+        "fumbles_forced": fumbles_forced,
+        "tod_forced": tod_forced,
+        "ints_forced": ints_forced,
+        "defensive_stops": defensive_stops,
+        "stop_rate": stop_rate,
+        "opponent_drives": len(opponent_drives),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
 # COMPREHENSIVE GAME METRICS — replaces calculate_comprehensive_rating
 # ═══════════════════════════════════════════════════════════════
 
-def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: str) -> Dict:
+def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: str,
+                                   game_stats: Optional[Dict] = None) -> Dict:
     """Calculate all fan-friendly metrics for one team in a game.
 
     Returns a dict with the new metric names. Also includes legacy
@@ -265,6 +437,8 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
     to_margin = calculate_to_margin(plays, team)
     avg_start = calculate_avg_start(plays, team)
     kick = calculate_kick_stats(plays, team)
+    scoring = calculate_scoring_profile(plays, drives, team, game_stats)
+    defense = calculate_defensive_impact(plays, drives, team, game_stats)
 
     metrics = {
         # New fan-friendly metrics
@@ -275,6 +449,10 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
         "to_margin": to_margin,
         "avg_start": avg_start,
         "kick_stats": kick,
+        # Scoring profile — how this team scores
+        "scoring_profile": scoring,
+        # Defensive impact — defense winning extra offense
+        "defensive_impact": defense,
         # Legacy aliases for backward compat during migration
         "territory_rating": avg_start * 2.0,  # rough 0-100 proxy
         "pressure_index": conv_pct,            # same concept
@@ -310,7 +488,11 @@ def calculate_viperball_metrics(game_result: Dict, team: str) -> Dict:
     if not drives:
         drives = game_result.get('drive_summary', [])
 
-    metrics = calculate_comprehensive_rating(plays, drives, team)
+    # Pass game_stats so scoring profile and defensive impact
+    # can access bonus possession data
+    game_stats = game_result.get('stats', {}).get(team, {})
+
+    metrics = calculate_comprehensive_rating(plays, drives, team, game_stats)
     team_rating = calculate_team_rating(metrics)
     metrics['team_rating'] = team_rating
     metrics['opi'] = team_rating  # legacy alias

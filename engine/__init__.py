@@ -30,7 +30,8 @@ from .dynasty import Dynasty, Coach, create_dynasty
 from .viperball_metrics import (
     calculate_viperball_metrics, calculate_yar, calculate_team_yar,
     calculate_war, calculate_zbr, calculate_vpr,
-    calculate_team_rating, generate_headline,
+    calculate_team_rating, calculate_scoring_profile,
+    calculate_defensive_impact, generate_headline,
 )
 from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label, load_team_identity
 from .weather import generate_game_weather, generate_bowl_weather, get_weather_description, describe_conditions, get_climate_zone, WEATHER_DETAILS
@@ -71,6 +72,8 @@ __all__ = [
     "calculate_zbr",
     "calculate_vpr",
     "calculate_team_rating",
+    "calculate_scoring_profile",
+    "calculate_defensive_impact",
     "generate_headline",
     "V2_ENGINE_CONFIG",
     "VarianceArchetype",

@@ -1122,6 +1122,8 @@ def _render_awards_stats(session_id, standings, user_team):
             ("Lateral % Leader", lambda r: r.get("avg_chaos", 0), "Lateral %"),
             ("Kick Rating Leader", lambda r: r.get("avg_kicking", 0), "Kick Rating"),
             ("Best TO+/-", lambda r: r.get("avg_turnover_impact", 0), "TO+/-"),
+            ("Best Stop Rate", lambda r: getattr(r, 'stop_rate', 0) if hasattr(r, 'stop_rate') else 0, "Stop %"),
+            ("Most Bonus Poss", lambda r: getattr(r, 'total_bonus_possessions', 0) if hasattr(r, 'total_bonus_possessions') else 0, "Bonus"),
         ]
         leader_rows = []
         for cat_name, key_func, stat_label in leader_categories:

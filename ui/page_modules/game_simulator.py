@@ -892,5 +892,111 @@ def _render_debug(result, plays, home_name, away_name, hs, as_):
                 v = away_metrics.get(k, 0)
                 display = f"{v:.1f}" if k != "drive_quality" else f"{v:.2f}/10"
                 st.text(f"  {label}: {display}")
+
+        # ── Scoring Profile ──
+        st.markdown("**Scoring Profile**")
+        h_sp = home_metrics.get("scoring_profile", {})
+        a_sp = away_metrics.get("scoring_profile", {})
+
+        sp_labels = [
+            "Rush TDs",
+            "Lateral TDs",
+            "Kick-Pass TDs",
+            "Drop Kicks",
+            "Place Kicks",
+            "Return TDs",
+            "Bonus Scores",
+            "Total Pts",
+        ]
+        sp_home = [
+            f"{h_sp.get('rush_tds', 0)} ({h_sp.get('rush_td_pts', 0)}pts, {h_sp.get('rush_pct', 0):.0f}%)",
+            f"{h_sp.get('lateral_tds', 0)} ({h_sp.get('lateral_td_pts', 0)}pts, {h_sp.get('lateral_pct', 0):.0f}%)",
+            f"{h_sp.get('kp_tds', 0)} ({h_sp.get('kp_td_pts', 0)}pts, {h_sp.get('kp_pct', 0):.0f}%)",
+            f"{h_sp.get('dk_made', 0)} ({h_sp.get('dk_pts', 0)}pts, {h_sp.get('dk_pct', 0):.0f}%)",
+            f"{h_sp.get('pk_made', 0)} ({h_sp.get('pk_pts', 0)}pts, {h_sp.get('pk_pct', 0):.0f}%)",
+            f"{h_sp.get('return_tds', 0)} ({h_sp.get('return_td_pts', 0)}pts, {h_sp.get('return_pct', 0):.0f}%)",
+            f"{h_sp.get('bonus_scores', 0)} ({h_sp.get('bonus_pts', 0)}pts, {h_sp.get('bonus_pct', 0):.0f}%)",
+            str(h_sp.get('total_pts', 0)),
+        ]
+        sp_away = [
+            f"{a_sp.get('rush_tds', 0)} ({a_sp.get('rush_td_pts', 0)}pts, {a_sp.get('rush_pct', 0):.0f}%)",
+            f"{a_sp.get('lateral_tds', 0)} ({a_sp.get('lateral_td_pts', 0)}pts, {a_sp.get('lateral_pct', 0):.0f}%)",
+            f"{a_sp.get('kp_tds', 0)} ({a_sp.get('kp_td_pts', 0)}pts, {a_sp.get('kp_pct', 0):.0f}%)",
+            f"{a_sp.get('dk_made', 0)} ({a_sp.get('dk_pts', 0)}pts, {a_sp.get('dk_pct', 0):.0f}%)",
+            f"{a_sp.get('pk_made', 0)} ({a_sp.get('pk_pts', 0)}pts, {a_sp.get('pk_pct', 0):.0f}%)",
+            f"{a_sp.get('return_tds', 0)} ({a_sp.get('return_td_pts', 0)}pts, {a_sp.get('return_pct', 0):.0f}%)",
+            f"{a_sp.get('bonus_scores', 0)} ({a_sp.get('bonus_pts', 0)}pts, {a_sp.get('bonus_pct', 0):.0f}%)",
+            str(a_sp.get('total_pts', 0)),
+        ]
+        sp_df = pd.DataFrame({"Stat": sp_labels, home_name: sp_home, away_name: sp_away})
+        st.dataframe(sp_df, hide_index=True, use_container_width=True,
+                     column_config={"Stat": st.column_config.TextColumn(width="medium")})
+
+        # Scoring profile summary bar
+        sp_summary_labels = ["Rush", "Lateral", "Kick-Pass", "Snapkick", "Return", "Defense"]
+        sp_summary_home = [
+            f"{h_sp.get('rush_pct', 0):.0f}%", f"{h_sp.get('lateral_pct', 0):.0f}%",
+            f"{h_sp.get('kp_pct', 0):.0f}%", f"{h_sp.get('snapkick_pct', 0):.0f}%",
+            f"{h_sp.get('return_pct', 0):.0f}%", f"{h_sp.get('bonus_pct', 0):.0f}%",
+        ]
+        sp_summary_away = [
+            f"{a_sp.get('rush_pct', 0):.0f}%", f"{a_sp.get('lateral_pct', 0):.0f}%",
+            f"{a_sp.get('kp_pct', 0):.0f}%", f"{a_sp.get('snapkick_pct', 0):.0f}%",
+            f"{a_sp.get('return_pct', 0):.0f}%", f"{a_sp.get('bonus_pct', 0):.0f}%",
+        ]
+        sp_sum_df = pd.DataFrame({"Source": sp_summary_labels, home_name: sp_summary_home, away_name: sp_summary_away})
+        st.dataframe(sp_sum_df, hide_index=True, use_container_width=True,
+                     column_config={"Source": st.column_config.TextColumn(width="small")})
+
+        # ── Defensive Impact ──
+        st.markdown("**Defensive Impact**")
+        h_di = home_metrics.get("defensive_impact", {})
+        a_di = away_metrics.get("defensive_impact", {})
+
+        di_labels = [
+            "Bonus Possessions",
+            "Bonus Scores",
+            "Bonus Conv Rate",
+            "Bonus Yards",
+            "Bonus Pts",
+            "Turnovers Forced",
+            "Fumbles Forced",
+            "TOD Forced",
+            "INTs Forced",
+            "Defensive Stops",
+            "Stop Rate",
+            "Opponent Drives",
+        ]
+        di_home = [
+            str(h_di.get('bonus_possessions', 0)),
+            str(h_di.get('bonus_scores', 0)),
+            f"{h_di.get('bonus_conv_rate', 0):.0f}%",
+            str(h_di.get('bonus_yards', 0)),
+            str(h_di.get('bonus_pts', 0)),
+            str(h_di.get('turnovers_forced', 0)),
+            str(h_di.get('fumbles_forced', 0)),
+            str(h_di.get('tod_forced', 0)),
+            str(h_di.get('ints_forced', 0)),
+            str(h_di.get('defensive_stops', 0)),
+            f"{h_di.get('stop_rate', 0):.0f}%",
+            str(h_di.get('opponent_drives', 0)),
+        ]
+        di_away = [
+            str(a_di.get('bonus_possessions', 0)),
+            str(a_di.get('bonus_scores', 0)),
+            f"{a_di.get('bonus_conv_rate', 0):.0f}%",
+            str(a_di.get('bonus_yards', 0)),
+            str(a_di.get('bonus_pts', 0)),
+            str(a_di.get('turnovers_forced', 0)),
+            str(a_di.get('fumbles_forced', 0)),
+            str(a_di.get('tod_forced', 0)),
+            str(a_di.get('ints_forced', 0)),
+            str(a_di.get('defensive_stops', 0)),
+            f"{a_di.get('stop_rate', 0):.0f}%",
+            str(a_di.get('opponent_drives', 0)),
+        ]
+        di_df = pd.DataFrame({"Stat": di_labels, home_name: di_home, away_name: di_away})
+        st.dataframe(di_df, hide_index=True, use_container_width=True,
+                     column_config={"Stat": st.column_config.TextColumn(width="medium")})
     except Exception:
         st.caption("Metrics unavailable for this game result")
