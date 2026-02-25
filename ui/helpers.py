@@ -164,18 +164,18 @@ def generate_box_score_markdown(result):
     lines.append(f"| Kick Pass INTs | {hs.get('kick_pass_interceptions',0)} | {as_.get('kick_pass_interceptions',0)} |")
     lines.append(f"| Kick % | {hs.get('kick_percentage',0)}% | {as_.get('kick_percentage',0)}% |")
     lines.append(f"| Total Yards | {hs['total_yards']} | {as_['total_yards']} |")
-    h_sac = hs.get('sacrifice_yards', 0)
-    a_sac = as_.get('sacrifice_yards', 0)
-    if h_sac or a_sac:
-        lines.append(f"| Sacrifice Yards | {h_sac} | {a_sac} |")
+    h_delta = hs.get('delta_yards', 0)
+    a_delta = as_.get('delta_yards', 0)
+    if h_delta or a_delta:
+        lines.append(f"| Delta Yards | {h_delta} | {a_delta} |")
         lines.append(f"| Adjusted Yards | {hs.get('adjusted_yards', hs['total_yards'])} | {as_.get('adjusted_yards', as_['total_yards'])} |")
-    h_sac_dr = hs.get('sacrifice_drives', 0)
-    a_sac_dr = as_.get('sacrifice_drives', 0)
-    if h_sac_dr or a_sac_dr:
+    h_delta_dr = hs.get('delta_drives', 0)
+    a_delta_dr = as_.get('delta_drives', 0)
+    if h_delta_dr or a_delta_dr:
         h_ce = hs.get('compelled_efficiency')
         a_ce = as_.get('compelled_efficiency')
-        lines.append(f"| Sacrifice Drives | {h_sac_dr} | {a_sac_dr} |")
-        lines.append(f"| Sacrifice Scores | {hs.get('sacrifice_scores',0)} | {as_.get('sacrifice_scores',0)} |")
+        lines.append(f"| Delta Drives | {h_delta_dr} | {a_delta_dr} |")
+        lines.append(f"| Delta Scores | {hs.get('delta_scores',0)} | {as_.get('delta_scores',0)} |")
         if h_ce is not None or a_ce is not None:
             h_ce_str = f"{h_ce}%" if h_ce is not None else "—"
             a_ce_str = f"{a_ce}%" if a_ce is not None else "—"
@@ -606,14 +606,14 @@ def render_game_detail(result, key_prefix="gd"):
         {"Stat": "Fumbles Lost", home_name: str(hs['fumbles_lost']), away_name: str(as_['fumbles_lost'])},
         {"Stat": "Penalties", home_name: f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)} yds", away_name: f"{as_.get('penalties',0)} for {as_.get('penalty_yards',0)} yds"},
     ]
-    h_sac_dr = hs.get('sacrifice_drives', 0)
-    a_sac_dr = as_.get('sacrifice_drives', 0)
-    if h_sac_dr or a_sac_dr:
+    h_delta_dr = hs.get('delta_drives', 0)
+    a_delta_dr = as_.get('delta_drives', 0)
+    if h_delta_dr or a_delta_dr:
         stat_rows.extend([
-            {"Stat": "Sacrifice Yards", home_name: str(hs.get('sacrifice_yards', 0)), away_name: str(as_.get('sacrifice_yards', 0))},
+            {"Stat": "Delta Yards", home_name: str(hs.get('delta_yards', 0)), away_name: str(as_.get('delta_yards', 0))},
             {"Stat": "Adjusted Yards", home_name: str(hs.get('adjusted_yards', hs['total_yards'])), away_name: str(as_.get('adjusted_yards', as_['total_yards']))},
-            {"Stat": "Sacrifice Drives", home_name: str(h_sac_dr), away_name: str(a_sac_dr)},
-            {"Stat": "Sacrifice Scores", home_name: str(hs.get('sacrifice_scores', 0)), away_name: str(as_.get('sacrifice_scores', 0))},
+            {"Stat": "Delta Drives", home_name: str(h_delta_dr), away_name: str(a_delta_dr)},
+            {"Stat": "Delta Scores", home_name: str(hs.get('delta_scores', 0)), away_name: str(as_.get('delta_scores', 0))},
         ])
         h_ce = hs.get('compelled_efficiency')
         a_ce = as_.get('compelled_efficiency')
@@ -724,8 +724,8 @@ def render_game_detail(result, key_prefix="gd"):
             for i, d in enumerate(drives):
                 team_label = home_name if d['team'] == 'home' else away_name
                 result_lbl = drive_result_label(d['result'])
-                if d.get('sacrifice_drive'):
-                    result_lbl += " *"
+                if d.get('delta_drive'):
+                    result_lbl += " Δ"
                 drive_rows.append({
                     "#": i + 1,
                     "Team": team_label,

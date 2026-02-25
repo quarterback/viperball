@@ -256,35 +256,35 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     st.dataframe(scoring_df, hide_index=True, use_container_width=True,
                  column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
-    h_sac_yds = hs.get("sacrifice_yards", 0)
-    a_sac_yds = as_.get("sacrifice_yards", 0)
-    h_sac_dr = hs.get("sacrifice_drives", 0)
-    a_sac_dr = as_.get("sacrifice_drives", 0)
-    h_sac_sc = hs.get("sacrifice_scores", 0)
-    a_sac_sc = as_.get("sacrifice_scores", 0)
+    h_delta_yds = hs.get("delta_yards", 0)
+    a_delta_yds = as_.get("delta_yards", 0)
+    h_delta_dr = hs.get("delta_drives", 0)
+    a_delta_dr = as_.get("delta_drives", 0)
+    h_delta_sc = hs.get("delta_scores", 0)
+    a_delta_sc = as_.get("delta_scores", 0)
     h_ce = hs.get("compelled_efficiency")
     a_ce = as_.get("compelled_efficiency")
-    if h_sac_dr > 0 or a_sac_dr > 0:
-        st.markdown("**Sacrifice & Compelled Efficiency**")
-        sac_labels = [
-            "Sacrifice Yards", "Adjusted Yards",
-            "Sacrifice Drives", "Sacrifice Scores",
+    if h_delta_dr > 0 or a_delta_dr > 0:
+        st.markdown("**Delta Yards & Compelled Efficiency**")
+        delta_labels = [
+            "Delta Yards", "Adjusted Yards",
+            "Delta Drives", "Delta Scores",
             "Compelled Eff %",
         ]
-        sac_home = [
-            str(h_sac_yds),
+        delta_home = [
+            str(h_delta_yds),
             str(hs.get("adjusted_yards", hs["total_yards"])),
-            str(h_sac_dr), str(h_sac_sc),
+            str(h_delta_dr), str(h_delta_sc),
             f"{h_ce}%" if h_ce is not None else "—",
         ]
-        sac_away = [
-            str(a_sac_yds),
+        delta_away = [
+            str(a_delta_yds),
             str(as_.get("adjusted_yards", as_["total_yards"])),
-            str(a_sac_dr), str(a_sac_sc),
+            str(a_delta_dr), str(a_delta_sc),
             f"{a_ce}%" if a_ce is not None else "—",
         ]
-        sac_df = pd.DataFrame({"Stat": sac_labels, home_name: sac_home, away_name: sac_away})
-        st.dataframe(sac_df, hide_index=True, use_container_width=True,
+        delta_df = pd.DataFrame({"Stat": delta_labels, home_name: delta_home, away_name: delta_away})
+        st.dataframe(delta_df, hide_index=True, use_container_width=True,
                      column_config={"Stat": st.column_config.TextColumn(width="medium")})
 
     st.markdown("**Offensive Stats**")
@@ -600,8 +600,8 @@ def _render_drives(result, home_name, away_name):
         for i, d in enumerate(drives):
             team_label = home_name if d["team"] == "home" else away_name
             result_lbl = drive_result_label(d["result"])
-            if d.get("sacrifice_drive"):
-                result_lbl += " *"
+            if d.get("delta_drive"):
+                result_lbl += " Δ"
             drive_rows.append({
                 "#": i + 1,
                 "Team": team_label,

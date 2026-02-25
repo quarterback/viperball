@@ -1049,12 +1049,12 @@ class GameState:
     play_number: int = 0
     home_stamina: float = 100.0
     away_stamina: float = 100.0
-    home_sacrifice_yards: int = 0
-    away_sacrifice_yards: int = 0
-    home_sacrifice_drives: int = 0
-    away_sacrifice_drives: int = 0
-    home_sacrifice_scores: int = 0
-    away_sacrifice_scores: int = 0
+    home_delta_yards: int = 0
+    away_delta_yards: int = 0
+    home_delta_drives: int = 0
+    away_delta_drives: int = 0
+    home_delta_scores: int = 0
+    away_delta_scores: int = 0
     # Timeout tracking: 3 per half per team
     home_timeouts: int = 3
     away_timeouts: int = 3
@@ -2462,7 +2462,8 @@ class ViperballEngine:
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
-        self._current_drive_sacrifice = False
+        self._current_drive_delta = False
+        self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
         self._bonus_drives_remaining = -1  # Countdown: -1 = inactive, 0 = trigger next, 1 = one drive left
 
@@ -3514,20 +3515,21 @@ class ViperballEngine:
         point_differential = their_score - opp_score  # positive = leading
         start_position = max(1, int(baseline - point_differential))
 
-        # Track sacrifice yards — the penalty for leading
-        # Sacrifice = how many yards behind the baseline you start (positive when leading)
-        sacrifice = baseline - start_position  # positive = gave up yards, negative = got bonus yards
+        # Track delta yards — field position cost of the score-differential kickoff system
+        # Leading teams start drives further back; delta yards = yards lost to this mechanic
+        delta_cost = baseline - start_position  # positive = gave up yards, negative = got bonus yards
         if receiving_team == "home":
-            self.state.home_sacrifice_yards += sacrifice
-            if sacrifice > 0:
-                self.state.home_sacrifice_drives += 1
+            self.state.home_delta_yards += delta_cost
+            if delta_cost > 0:
+                self.state.home_delta_drives += 1
         else:
-            self.state.away_sacrifice_yards += sacrifice
-            if sacrifice > 0:
-                self.state.away_sacrifice_drives += 1
+            self.state.away_delta_yards += delta_cost
+            if delta_cost > 0:
+                self.state.away_delta_drives += 1
 
-        # Flag for the upcoming drive — did it start under sacrifice?
-        self._current_drive_sacrifice = sacrifice > 0
+        # Flag for the upcoming drive — did it start under delta penalty?
+        self._current_drive_delta = delta_cost > 0
+        self._current_drive_delta_cost = delta_cost
 
         self.state.field_position = start_position
         self.state.down = 1
@@ -3551,8 +3553,10 @@ class ViperballEngine:
         drive_team = self.state.possession
         drive_start = self.state.field_position
         drive_quarter = self.state.quarter
-        drive_sacrifice = self._current_drive_sacrifice
-        self._current_drive_sacrifice = False  # Reset for next drive
+        drive_delta = self._current_drive_delta
+        drive_delta_cost = self._current_drive_delta_cost
+        self._current_drive_delta = False  # Reset for next drive
+        self._current_drive_delta_cost = 0
         drive_plays = 0
         drive_yards = 0
         drive_result = "stall"
@@ -3838,13 +3842,13 @@ class ViperballEngine:
                     self.state.down = 1
                     self.state.yards_to_go = 20
 
-        # Track compelled efficiency: did a sacrifice drive end in a score?
+        # Track compelled efficiency: did a delta-penalized drive end in a score?
         is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td")
-        if drive_sacrifice and is_score:
+        if drive_delta and is_score:
             if drive_team == "home":
-                self.state.home_sacrifice_scores += 1
+                self.state.home_delta_scores += 1
             else:
-                self.state.away_sacrifice_scores += 1
+                self.state.away_delta_scores += 1
 
         self.drive_log.append({
             "team": drive_team,
@@ -3853,7 +3857,8 @@ class ViperballEngine:
             "plays": drive_plays,
             "yards": drive_yards,
             "result": drive_result,
-            "sacrifice_drive": drive_sacrifice,
+            "delta_drive": drive_delta,
+            "delta_cost": drive_delta_cost,
             "bonus_drive": is_bonus_drive,
         })
 
@@ -9153,11 +9158,11 @@ class ViperballEngine:
         home_stats["bells"] = away_turnovers
         away_stats["bells"] = home_turnovers
 
-        # Sacrifice yards and adjusted yardage (AdjY)
-        home_stats["sacrifice_yards"] = self.state.home_sacrifice_yards
-        away_stats["sacrifice_yards"] = self.state.away_sacrifice_yards
-        home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_sacrifice_yards
-        away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_sacrifice_yards
+        # Delta yards and adjusted yardage (AdjY)
+        home_stats["delta_yards"] = self.state.home_delta_yards
+        away_stats["delta_yards"] = self.state.away_delta_yards
+        home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_delta_yards
+        away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_delta_yards
 
         # Fake punt stats
         home_fake_punts = [p for p in home_plays if p.play_type == "fake_punt"]
@@ -9167,17 +9172,65 @@ class ViperballEngine:
         away_stats["fake_punts_attempted"] = len(away_fake_punts)
         away_stats["fake_punts_converted"] = len([p for p in away_fake_punts if p.result in ("first_down", "touchdown")])
 
-        # Compelled Efficiency — scoring rate when starting under sacrifice
-        home_stats["sacrifice_drives"] = self.state.home_sacrifice_drives
-        home_stats["sacrifice_scores"] = self.state.home_sacrifice_scores
+        # Compelled Efficiency — scoring rate when starting under delta penalty
+        home_stats["delta_drives"] = self.state.home_delta_drives
+        home_stats["delta_scores"] = self.state.home_delta_scores
         home_stats["compelled_efficiency"] = round(
-            self.state.home_sacrifice_scores / max(1, self.state.home_sacrifice_drives) * 100, 1
-        ) if self.state.home_sacrifice_drives > 0 else None
-        away_stats["sacrifice_drives"] = self.state.away_sacrifice_drives
-        away_stats["sacrifice_scores"] = self.state.away_sacrifice_scores
+            self.state.home_delta_scores / max(1, self.state.home_delta_drives) * 100, 1
+        ) if self.state.home_delta_drives > 0 else None
+        away_stats["delta_drives"] = self.state.away_delta_drives
+        away_stats["delta_scores"] = self.state.away_delta_scores
         away_stats["compelled_efficiency"] = round(
-            self.state.away_sacrifice_scores / max(1, self.state.away_sacrifice_drives) * 100, 1
-        ) if self.state.away_sacrifice_drives > 0 else None
+            self.state.away_delta_scores / max(1, self.state.away_delta_drives) * 100, 1
+        ) if self.state.away_delta_drives > 0 else None
+
+        # ── Delta Yards Efficiency (DYE) ──
+        # Post-game analytic: how much did the delta system help/hurt each team?
+        # Splits drives into penalized (leading, delta_cost > 0), boosted (trailing, delta_cost < 0), neutral (tied, delta_cost == 0)
+        # Compares yards/drive and scoring rate across buckets.
+        score_results = {"touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td"}
+        for side, stats in [("home", home_stats), ("away", away_stats)]:
+            side_drives = [d for d in self.drive_log if d.get("team") == side]
+            penalized = [d for d in side_drives if d.get("delta_cost", 0) > 0]
+            boosted = [d for d in side_drives if d.get("delta_cost", 0) < 0]
+            neutral = [d for d in side_drives if d.get("delta_cost", 0) == 0]
+
+            def _bucket_stats(drives):
+                if not drives:
+                    return {"count": 0, "yards_per_drive": 0.0, "score_rate": 0.0, "total_yards": 0, "scores": 0, "avg_delta": 0.0}
+                total_yds = sum(d.get("yards", 0) for d in drives)
+                scores = sum(1 for d in drives if d.get("result") in score_results)
+                avg_delta = sum(abs(d.get("delta_cost", 0)) for d in drives) / len(drives)
+                return {
+                    "count": len(drives),
+                    "yards_per_drive": round(total_yds / len(drives), 1),
+                    "score_rate": round(scores / len(drives) * 100, 1),
+                    "total_yards": total_yds,
+                    "scores": scores,
+                    "avg_delta": round(avg_delta, 1),
+                }
+
+            pen_stats = _bucket_stats(penalized)
+            boost_stats = _bucket_stats(boosted)
+            neut_stats = _bucket_stats(neutral)
+
+            neut_ypd = neut_stats["yards_per_drive"] if neut_stats["count"] > 0 else pen_stats["yards_per_drive"]
+            if neut_ypd > 0 and pen_stats["count"] > 0:
+                dye_penalized = round(pen_stats["yards_per_drive"] / neut_ypd, 2)
+            else:
+                dye_penalized = None
+            if neut_ypd > 0 and boost_stats["count"] > 0:
+                dye_boosted = round(boost_stats["yards_per_drive"] / neut_ypd, 2)
+            else:
+                dye_boosted = None
+
+            stats["dye"] = {
+                "penalized": pen_stats,
+                "boosted": boost_stats,
+                "neutral": neut_stats,
+                "dye_when_penalized": dye_penalized,
+                "dye_when_boosted": dye_boosted,
+            }
 
         # ── Bonus Possession stats (pesäpallo-inspired) ──
         # Count bonus drives from the drive_log and tally yards/scores.
@@ -9400,9 +9453,9 @@ class ViperballEngine:
             "away_defense_style": DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style),
             "home_st_scheme": self.home_team.st_scheme,
             "away_st_scheme": self.away_team.st_scheme,
-            "sacrifice_yards": {
-                "home": self.state.home_sacrifice_yards,
-                "away": self.state.away_sacrifice_yards,
+            "delta_yards": {
+                "home": self.state.home_delta_yards,
+                "away": self.state.away_delta_yards,
             },
             "weather": self.weather,
             "weather_label": self.weather_info["label"],
