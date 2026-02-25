@@ -292,8 +292,8 @@ def _render_results(container, results):
                 label = f"{'4th' if d == 4 else '5th' if d == 5 else '6th'} Down Conv %"
                 metric_card(label, f"{avg_rate}%")
 
-        # -- VPA (Viperball Points Added) -------------------------------------
-        ui.label("Avg VPA (Viperball Points Added)").classes("text-base font-bold mt-4")
+        # -- WPA (Win Probability Added) -------------------------------------
+        ui.label("Avg WPA (Win Probability Added)").classes("text-base font-bold mt-4")
 
         home_total_vpa = [
             r["stats"]["home"].get("epa", {}).get(
@@ -317,10 +317,10 @@ def _render_results(container, results):
         ]
 
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            metric_card(f"Avg {home_name} VPA", round(sum(home_total_vpa) / n, 2))
-            metric_card(f"Avg {away_name} VPA", round(sum(away_total_vpa) / n, 2))
-            metric_card(f"Avg {home_name} VPA/Play", round(sum(home_vpa_pp) / n, 3))
-            metric_card(f"Avg {away_name} VPA/Play", round(sum(away_vpa_pp) / n, 3))
+            metric_card(f"Avg {home_name} WPA", round(sum(home_total_vpa) / n, 2))
+            metric_card(f"Avg {away_name} WPA", round(sum(away_total_vpa) / n, 2))
+            metric_card(f"Avg {home_name} WPA/Play", round(sum(home_vpa_pp) / n, 3))
+            metric_card(f"Avg {away_name} WPA/Play", round(sum(away_vpa_pp) / n, 3))
 
         home_sr = [r["stats"]["home"].get("epa", {}).get("success_rate", 0) for r in results]
         away_sr = [r["stats"]["away"].get("epa", {}).get("success_rate", 0) for r in results]
@@ -886,12 +886,12 @@ def _render_offensive_stats(results, n, home_name, away_name):
 
 
 def _render_batch_player_impact(results, n, home_name, away_name):
-    """Aggregate per-player VPA across all batch simulations."""
+    """Aggregate per-player WPA across all batch simulations."""
     from collections import defaultdict
 
     ui.label("Player Impact Report").classes("text-xl font-semibold mt-6")
     ui.label(
-        f"Average per-player VPA across {n} simulations. "
+        f"Average per-player WPA across {n} simulations. "
         "Shows which players consistently produce value."
     ).classes("text-sm text-gray-500")
 
@@ -921,7 +921,7 @@ def _render_batch_player_impact(results, n, home_name, away_name):
         if not accum:
             continue
 
-        # Sort by avg VPA descending
+        # Sort by avg WPA descending
         sorted_players = sorted(
             accum.items(),
             key=lambda kv: kv[1]["vpa_sum"] / max(1, kv[1]["games"]),
@@ -936,11 +936,11 @@ def _render_batch_player_impact(results, n, home_name, away_name):
             top_avg_vpa = round(top_rec["vpa_sum"] / max(1, top_rec["games"]), 2)
             from nicegui_app.components import metric_card
             with ui.row().classes("w-full gap-3 flex-wrap"):
-                metric_card("Avg Team VPA",
+                metric_card("Avg Team WPA",
                             round(sum(v["vpa_sum"] for v in accum.values()) / n, 1))
                 metric_card("Most Impactful", f"{top_rec['tag']} {top_name}")
-                metric_card("Best Avg VPA", top_avg_vpa)
-                # Find highest VPA/play among regulars (>= 50% of games)
+                metric_card("Best Avg WPA", top_avg_vpa)
+                # Find highest WPA/play among regulars (>= 50% of games)
                 regulars = [(nm, rc) for nm, rc in sorted_players if rc["games"] >= n * 0.5]
                 if regulars:
                     best_eff = max(regulars, key=lambda x: x[1]["vpa_sum"] / max(1, x[1]["plays_sum"]))
@@ -962,8 +962,8 @@ def _render_batch_player_impact(results, n, home_name, away_name):
             impact_rows.append({
                 "Player": f"{rec['tag']} {name}",
                 "GP": games,
-                "Avg VPA": avg_vpa,
-                "Avg VPA/Play": avg_vpa_pp,
+                "Avg WPA": avg_vpa,
+                "Avg WPA/Play": avg_vpa_pp,
                 "Avg Plays": avg_plays,
                 "Avg Touches": avg_touches,
                 "Avg Yards": avg_yards,
@@ -974,7 +974,7 @@ def _render_batch_player_impact(results, n, home_name, away_name):
             from nicegui_app.components import stat_table
             stat_table(impact_rows)
 
-        # VPA distribution bar chart
+        # WPA distribution bar chart
         chart_data = sorted_players[:10]
         if chart_data:
             names = [f"{rec['tag']} {nm}" for nm, rec in chart_data]
@@ -987,8 +987,8 @@ def _render_batch_player_impact(results, n, home_name, away_name):
                 textposition="outside",
             ))
             fig.update_layout(
-                title=f"{team_name} — Avg Player VPA ({n} games)",
-                xaxis_title="Avg VPA/Game",
+                title=f"{team_name} — Avg Player WPA ({n} games)",
+                xaxis_title="Avg WPA/Game",
                 yaxis=dict(autorange="reversed"),
                 height=max(250, len(chart_data) * 35 + 80),
                 template="plotly_white",

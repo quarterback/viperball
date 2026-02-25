@@ -257,7 +257,7 @@ def _render_predictions_tab(state, session_id: str, week: int, kp: str):
         "winner": "Winner",
         "spread": "Spread",
         "over_under": "Over / Under",
-        "chaos": "Chaos Factor",
+        "chaos": "Lateral % O/U",
         "kick_pass": "Kick Pass O/U",
     }
 
@@ -433,7 +433,7 @@ def _render_odds_board(odds_list: list):
             f'<div class="lines" style="display:flex;gap:16px;padding-top:4px;border-top:1px solid #e2e8f0;">'
             f'<span>Spread <b>{spread_str}</b></span>'
             f'<span>O/U <b>{ou_str}</b></span>'
-            f'<span>Chaos O/U <b>{o.get("chaos_ou", 40):.1f}</b></span>'
+            f'<span>Lateral O/U <b>{o.get("chaos_ou", 40):.1f}</b></span>'
             f'<span>KP O/U <b>{kp_ou}</b></span>'
             f'</div>'
             f'</div>'

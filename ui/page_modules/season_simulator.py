@@ -234,8 +234,8 @@ def render_season_simulator(shared):
             if has_conferences:
                 sm4.metric("Conferences", len(season.conferences))
             else:
-                avg_opi = sum(r.avg_opi for r in standings) / len(standings) if standings else 0
-                sm4.metric("Avg OPI", f"{avg_opi:.1f}")
+                avg_team_rating = sum(r.avg_team_rating for r in standings) / len(standings) if standings else 0
+                sm4.metric("Avg Team Rtg", f"{avg_team_rating:.1f}")
             best = standings[0] if standings else None
             sm5.metric("Top Team", f"{best.team_name}" if best else "—", f"{best.wins}-{best.losses}" if best else "")
 
@@ -268,7 +268,7 @@ def render_season_simulator(shared):
                         "PF": fmt_vb_score(record.points_for),
                         "PA": fmt_vb_score(record.points_against),
                         "Diff": fmt_vb_score(record.point_differential),
-                        "OPI": f"{record.avg_opi:.1f}",
+                        "Team Rtg": f"{record.avg_team_rating:.1f}",
                     })
                     standings_data.append(row)
                 st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=600)
@@ -309,13 +309,13 @@ def render_season_simulator(shared):
                                                   default=[standings[0].team_name, standings[-1].team_name] if len(standings) > 1 else [standings[0].team_name],
                                                   key="radar_teams")
                     if radar_teams:
-                        categories = ["OPI", "Territory", "Pressure", "Chaos", "Kicking", "Drive Quality", "Turnover Impact"]
+                        categories = ["Team Rating", "Avg Start", "Conv %", "Lateral %", "Kick Rating", "PPD", "TO+/-"]
                         fig = go.Figure()
                         for tname in radar_teams:
                             record = season.standings[tname]
-                            values = [record.avg_opi, record.avg_territory, record.avg_pressure,
-                                      record.avg_chaos, record.avg_kicking, record.avg_drive_quality * 10,
-                                      record.avg_turnover_impact]
+                            values = [record.avg_team_rating, record.avg_start_position, record.avg_conversion_pct,
+                                      record.avg_lateral_pct, record.avg_kicking, record.avg_ppd * 10,
+                                      record.avg_to_margin]
                             fig.add_trace(go.Scatterpolar(r=values + [values[0]], theta=categories + [categories[0]],
                                                            fill='toself', name=tname))
                         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
@@ -346,7 +346,7 @@ def render_season_simulator(shared):
                                         "PI": f"{pi:.1f}",
                                         "PF": fmt_vb_score(record.points_for),
                                         "PA": fmt_vb_score(record.points_against),
-                                        "OPI": f"{record.avg_opi:.1f}",
+                                        "Team Rtg": f"{record.avg_team_rating:.1f}",
                                     })
                                 st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
 
@@ -458,12 +458,12 @@ def render_season_simulator(shared):
                 leader_categories = [
                     ("Highest Scoring", lambda r: r.points_for / max(1, r.games_played), "PPG"),
                     ("Best Defense", lambda r: -(r.points_against / max(1, r.games_played)), "PA/G"),
-                    ("Top OPI", lambda r: r.avg_opi, "OPI"),
-                    ("Territory King", lambda r: r.avg_territory, "Territory"),
-                    ("Pressure Leader", lambda r: r.avg_pressure, "Pressure"),
-                    ("Chaos Master", lambda r: r.avg_chaos, "Chaos"),
-                    ("Kicking Leader", lambda r: r.avg_kicking, "Kicking"),
-                    ("Best Turnover Impact", lambda r: r.avg_turnover_impact, "TO Impact"),
+                    ("Top Team Rating", lambda r: r.avg_team_rating, "Team Rating"),
+                    ("Best Avg Start", lambda r: r.avg_start_position, "Avg Start"),
+                    ("Conv % Leader", lambda r: r.avg_conversion_pct, "Conv %"),
+                    ("Lateral % Leader", lambda r: r.avg_lateral_pct, "Lateral %"),
+                    ("Kick Rating Leader", lambda r: r.avg_kicking, "Kick Rating"),
+                    ("Best TO+/-", lambda r: r.avg_to_margin, "TO+/-"),
                 ]
                 leader_rows = []
                 for cat_name, key_func, stat_label in leader_categories:
@@ -587,11 +587,11 @@ def render_season_simulator(shared):
                 with exp_col1:
                     standings_csv = io.StringIO()
                     writer = csv.writer(standings_csv)
-                    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "OPI"])
+                    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "Team Rating"])
                     for i, r in enumerate(standings, 1):
                         writer.writerow([i, r.team_name, r.wins, r.losses, f"{r.win_percentage:.3f}",
                                          fmt_vb_score(r.points_for), fmt_vb_score(r.points_against),
-                                         fmt_vb_score(r.point_differential), f"{r.avg_opi:.1f}"])
+                                         fmt_vb_score(r.point_differential), f"{r.avg_team_rating:.1f}"])
                     st.download_button("Download Standings (CSV)", standings_csv.getvalue(),
                                        file_name="season_standings.csv", mime="text/csv",
                                        use_container_width=True)
@@ -640,13 +640,13 @@ def render_season_simulator(shared):
                             "offense_style": r.offense_style,
                             "defense_style": r.defense_style,
                             "metrics": {
-                                "opi": round(r.avg_opi, 2),
-                                "territory": round(r.avg_territory, 2),
-                                "pressure": round(r.avg_pressure, 2),
-                                "chaos": round(r.avg_chaos, 2),
-                                "kicking": round(r.avg_kicking, 2),
-                                "drive_quality": round(r.avg_drive_quality, 2),
-                                "turnover_impact": round(r.avg_turnover_impact, 2),
+                                "team_rating": round(r.avg_team_rating, 2),
+                                "avg_start": round(r.avg_start_position, 2),
+                                "conversion_pct": round(r.avg_conversion_pct, 2),
+                                "lateral_pct": round(r.avg_lateral_pct, 2),
+                                "kick_rating": round(r.avg_kicking, 2),
+                                "ppd": round(r.avg_ppd, 2),
+                                "to_margin": round(r.avg_to_margin, 2),
                             },
                         })
 
@@ -748,15 +748,15 @@ def render_season_simulator(shared):
                     if standings_list:
                         top_scoring = max(standings_list, key=lambda r: r.points_for / max(1, r.games_played))
                         best_def = min(standings_list, key=lambda r: r.points_against / max(1, r.games_played))
-                        top_opi = max(standings_list, key=lambda r: r.avg_opi)
-                        top_chaos = max(standings_list, key=lambda r: r.avg_chaos)
+                        top_team_rating = max(standings_list, key=lambda r: r.avg_team_rating)
+                        top_lateral = max(standings_list, key=lambda r: r.avg_lateral_pct)
                         top_kicking = max(standings_list, key=lambda r: r.avg_kicking)
                         export["statistical_leaders"] = {
                             "highest_scoring": {"team": top_scoring.team_name, "ppg": round(top_scoring.points_for / max(1, top_scoring.games_played), 1)},
                             "best_defense": {"team": best_def.team_name, "ppg_allowed": round(best_def.points_against / max(1, best_def.games_played), 1)},
-                            "highest_opi": {"team": top_opi.team_name, "opi": round(top_opi.avg_opi, 1)},
-                            "most_chaotic": {"team": top_chaos.team_name, "chaos": round(top_chaos.avg_chaos, 1)},
-                            "best_kicking": {"team": top_kicking.team_name, "kicking": round(top_kicking.avg_kicking, 1)},
+                            "highest_team_rating": {"team": top_team_rating.team_name, "team_rating": round(top_team_rating.avg_team_rating, 1)},
+                            "best_lateral_pct": {"team": top_lateral.team_name, "lateral_pct": round(top_lateral.avg_lateral_pct, 1)},
+                            "best_kick_rating": {"team": top_kicking.team_name, "kick_rating": round(top_kicking.avg_kicking, 1)},
                         }
 
                     try:

@@ -237,6 +237,15 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "games_played": rec.games_played,
         "win_percentage": round(rec.win_percentage, 4),
         "point_differential": round(rec.point_differential, 2),
+        # Fan-friendly analytics
+        "avg_team_rating": round(rec.avg_team_rating, 2),
+        "avg_ppd": round(rec.avg_ppd, 2),
+        "avg_conversion_pct": round(rec.avg_conversion_pct, 2),
+        "avg_lateral_pct": round(rec.avg_lateral_pct, 2),
+        "avg_explosive": round(rec.avg_explosive, 2),
+        "avg_to_margin": round(rec.avg_to_margin, 2),
+        "avg_start_position": round(rec.avg_start_position, 2),
+        # Legacy aliases
         "avg_opi": round(rec.avg_opi, 2),
         "avg_territory": round(rec.avg_territory, 2),
         "avg_pressure": round(rec.avg_pressure, 2),

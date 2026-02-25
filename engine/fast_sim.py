@@ -335,6 +335,7 @@ def _generate_synthetic_metrics(stats: Dict, scoring: Dict,
         metrics["turnover_impact"] * weights["turnover_impact"]
     )
     metrics["opi"] = round(opi, 2)
+    metrics["team_rating"] = round(opi, 2)  # fan-friendly alias
 
     return metrics
 

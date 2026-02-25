@@ -21,7 +21,7 @@ def _get_mode():
 def _build_standings_csv(standings):
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "OPI"])
+    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "Team Rating"])
     for i, r in enumerate(standings, 1):
         writer.writerow([
             i,

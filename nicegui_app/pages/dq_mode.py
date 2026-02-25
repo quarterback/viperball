@@ -431,7 +431,7 @@ async def _render_sportsbook(state, session_id: str, week: int, odds_list: list,
                         if away_conf:
                             ui.label(away_conf).classes("text-xs").style(f"color: {TEXT_SECONDARY};")
                         if away_opi:
-                            ui.label(f"OPI: {away_opi}").classes("text-xs").style(f"color: {TEXT_SECONDARY};")
+                            ui.label(f"Rating: {away_opi}").classes("text-xs").style(f"color: {TEXT_SECONDARY};")
                         if away_star:
                             ui.label(f"{away_star} ({away_star_pos})").classes("text-xs italic").style(f"color: {TEXT_SECONDARY};")
 
@@ -446,7 +446,7 @@ async def _render_sportsbook(state, session_id: str, week: int, odds_list: list,
                         if home_conf:
                             ui.label(home_conf).classes("text-xs text-right").style(f"color: {TEXT_SECONDARY};")
                         if home_opi:
-                            ui.label(f"OPI: {home_opi}").classes("text-xs text-right").style(f"color: {TEXT_SECONDARY};")
+                            ui.label(f"Rating: {home_opi}").classes("text-xs text-right").style(f"color: {TEXT_SECONDARY};")
                         if home_star:
                             ui.label(f"{home_star} ({home_star_pos})").classes("text-xs italic text-right").style(f"color: {TEXT_SECONDARY};")
 
@@ -475,7 +475,7 @@ async def _render_sportsbook(state, session_id: str, week: int, odds_list: list,
             "winner": "Moneyline",
             "spread": "Spread",
             "over_under": "Over/Under",
-            "chaos": "Chaos Factor",
+            "chaos": "Lateral % O/U",
             "kick_pass": "Kick Pass O/U",
         }
 

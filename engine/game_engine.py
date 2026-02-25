@@ -1200,8 +1200,9 @@ class Player:
     game_blocks: int = 0
     game_pancakes: int = 0
     game_kick_pass_ints: int = 0
-    # VPA (Viperball Points Added) attribution
-    game_vpa: float = 0.0             # total VPA attributed to this player
+    # WPA (Win Probability Added) attribution — formerly VPA
+    game_wpa: float = 0.0             # total WPA attributed to this player
+    game_vpa: float = 0.0             # legacy alias (kept for compat)
     game_plays_involved: int = 0      # number of plays this player was involved in
     # Per-player in-game fatigue: starts at 100, drains with usage
     game_energy: float = 100.0
@@ -9301,7 +9302,7 @@ class ViperballEngine:
         home_stats["epa"] = home_epa
         away_stats["epa"] = away_epa
 
-        # -- Per-player VPA attribution ----------------------------------------
+        # -- Per-player WPA attribution ----------------------------------------
         # Build lookup from player label -> Player object for both teams.
         _player_lookup: Dict[str, "Player"] = {}
         for _p in self.home_team.players:
@@ -9310,39 +9311,43 @@ class ViperballEngine:
             _player_lookup[player_label(_p)] = _p
 
         for pd in play_dicts:
-            epa_val = pd.get("epa", 0)
+            wpa_val = pd.get("epa", 0)
             involved = pd.get("players", [])
             if not involved:
                 continue
             # Last player in the list is the ball carrier / primary actor
-            # Split VPA: primary gets 60%, others split 40% evenly
+            # Split WPA: primary gets 60%, others split 40% evenly
             primary_label = involved[-1]
             assist_labels = involved[:-1]
 
-            primary_share = epa_val if len(involved) == 1 else epa_val * 0.6
-            assist_share = (epa_val * 0.4 / len(assist_labels)) if assist_labels else 0
+            primary_share = wpa_val if len(involved) == 1 else wpa_val * 0.6
+            assist_share = (wpa_val * 0.4 / len(assist_labels)) if assist_labels else 0
 
             primary_player = _player_lookup.get(primary_label)
             if primary_player:
-                primary_player.game_vpa += primary_share
+                primary_player.game_wpa += primary_share
+                primary_player.game_vpa += primary_share  # legacy alias
                 primary_player.game_plays_involved += 1
 
             for al in assist_labels:
                 assist_player = _player_lookup.get(al)
                 if assist_player:
-                    assist_player.game_vpa += assist_share
+                    assist_player.game_wpa += assist_share
+                    assist_player.game_vpa += assist_share  # legacy alias
                     assist_player.game_plays_involved += 1
 
-        # VIPERBALL SABERMETRICS (Positive metrics, no negative numbers)
-        home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home")
-        away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away")
-        home_opi = calculate_overall_performance_index(home_metrics)
-        away_opi = calculate_overall_performance_index(away_metrics)
+        # VIPERBALL ANALYTICS (fan-friendly metrics)
+        home_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "home", home_stats)
+        away_metrics = calculate_comprehensive_rating(play_dicts, self.drive_log, "away", away_stats)
+        home_team_rating = calculate_overall_performance_index(home_metrics)
+        away_team_rating = calculate_overall_performance_index(away_metrics)
 
         home_stats["viperball_metrics"] = home_metrics
-        home_stats["viperball_metrics"]["overall_performance_index"] = home_opi
+        home_stats["viperball_metrics"]["team_rating"] = home_team_rating
+        home_stats["viperball_metrics"]["overall_performance_index"] = home_team_rating  # legacy
         away_stats["viperball_metrics"] = away_metrics
-        away_stats["viperball_metrics"]["overall_performance_index"] = away_opi
+        away_stats["viperball_metrics"]["team_rating"] = away_team_rating
+        away_stats["viperball_metrics"]["overall_performance_index"] = away_team_rating  # legacy
 
         def collect_player_stats(team):
             stats = []
@@ -9424,9 +9429,12 @@ class ViperballEngine:
                         "blocks": p.game_blocks,
                         "pancakes": p.game_pancakes,
                         "kick_pass_ints": p.game_kick_pass_ints,
-                        "vpa": round(p.game_vpa, 2),
+                        "wpa": round(p.game_wpa, 2),
                         "plays_involved": p.game_plays_involved,
-                        "vpa_per_play": round(p.game_vpa / max(1, p.game_plays_involved), 3),
+                        "wpa_per_play": round(p.game_wpa / max(1, p.game_plays_involved), 3),
+                        "vpa": round(p.game_vpa, 2),  # legacy alias
+                        "vpa_per_play": round(p.game_vpa / max(1, p.game_plays_involved), 3),  # legacy
+                        "position": p.position,
                         "def_role": getattr(p, 'game_def_role', 'ROTATION'),
                         "st_role": getattr(p, 'game_st_role', 'ROTATION'),
                     }

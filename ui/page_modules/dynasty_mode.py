@@ -364,7 +364,7 @@ def render_dynasty_mode(shared):
                         "PI": f"{pi:.1f}",
                         "PF": fmt_vb_score(record.points_for),
                         "PA": fmt_vb_score(record.points_against),
-                        "OPI": f"{record.avg_opi:.1f}",
+                        "Team Rtg": f"{record.avg_team_rating:.1f}",
                     })
                 st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=400)
 
@@ -492,7 +492,7 @@ def render_dynasty_mode(shared):
                                         "PI": f"{pi:.1f}",
                                         "PF": fmt_vb_score(record.points_for),
                                         "PA": fmt_vb_score(record.points_against),
-                                        "OPI": f"{record.avg_opi:.1f}",
+                                        "Team Rtg": f"{record.avg_team_rating:.1f}",
                                     })
                                 st.dataframe(pd.DataFrame(conf_data), hide_index=True, use_container_width=True)
                     else:
@@ -617,7 +617,7 @@ def render_dynasty_mode(shared):
                             "W-L": f"{rec['wins']}-{rec['losses']}",
                             "PF": fmt_vb_score(rec['points_for']),
                             "PA": fmt_vb_score(rec['points_against']),
-                            "OPI": f"{rec.get('avg_opi', 0):.1f}",
+                            "Team Rtg": f"{rec.get('avg_opi', 0):.1f}",
                             "Champion": "Yes" if rec.get("champion") else "No",
                         })
                     st.dataframe(pd.DataFrame(hist_data), hide_index=True, use_container_width=True)
@@ -638,10 +638,10 @@ def render_dynasty_mode(shared):
                 rec_data.append({"Record": "Best Defense (PPG)", "Team": rb.best_defense_season["team"],
                                  "Value": f"{rb.best_defense_season['ppg_allowed']:.1f}", "Year": str(rb.best_defense_season.get("year", ""))})
             if rb.highest_opi_season.get("team"):
-                rec_data.append({"Record": "Highest OPI", "Team": rb.highest_opi_season["team"],
+                rec_data.append({"Record": "Highest Team Rating", "Team": rb.highest_opi_season["team"],
                                  "Value": f"{rb.highest_opi_season['opi']:.1f}", "Year": str(rb.highest_opi_season.get("year", ""))})
             if rb.most_chaos_season.get("team"):
-                rec_data.append({"Record": "Most Chaos", "Team": rb.most_chaos_season["team"],
+                rec_data.append({"Record": "Highest Lateral %", "Team": rb.most_chaos_season["team"],
                                  "Value": f"{rb.most_chaos_season['chaos']:.1f}", "Year": str(rb.most_chaos_season.get("year", ""))})
             if rec_data:
                 st.dataframe(pd.DataFrame(rec_data), hide_index=True, use_container_width=True)
@@ -678,7 +678,7 @@ def render_dynasty_mode(shared):
                         "Best Record": awards.best_record,
                         "Top Scoring": awards.highest_scoring,
                         "Best Defense": awards.best_defense,
-                        "Highest OPI": awards.highest_opi,
+                        "Top Team Rtg": awards.highest_opi,
                     })
                 st.dataframe(pd.DataFrame(awards_data), hide_index=True, use_container_width=True)
 

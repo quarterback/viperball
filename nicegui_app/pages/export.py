@@ -25,7 +25,7 @@ from nicegui_app.components import metric_card, download_button, notify_info, no
 def _build_standings_csv(standings):
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "OPI"])
+    writer.writerow(["Rank", "Team", "W", "L", "Win%", "PF", "PA", "Diff", "Team Rating"])
     for i, r in enumerate(standings, 1):
         writer.writerow([
             i,
@@ -80,13 +80,13 @@ async def _build_season_context_json(session_id, standings, games, conferences):
             "points_for": round(r.get("points_for", 0), 1),
             "points_against": round(r.get("points_against", 0), 1),
             "point_differential": round(r.get("point_differential", 0), 1),
-            "avg_opi": round(r.get("avg_opi", 0), 2),
-            "avg_territory": round(r.get("avg_territory", 0), 2),
-            "avg_pressure": round(r.get("avg_pressure", 0), 2),
-            "avg_chaos": round(r.get("avg_chaos", 0), 2),
-            "avg_kicking": round(r.get("avg_kicking", 0), 2),
-            "avg_drive_quality": round(r.get("avg_drive_quality", 0), 2),
-            "avg_turnover_impact": round(r.get("avg_turnover_impact", 0), 2),
+            "avg_team_rating": round(r.get("avg_opi", 0), 2),
+            "avg_start_position": round(r.get("avg_territory", 0), 2),
+            "avg_conversion_pct": round(r.get("avg_pressure", 0), 2),
+            "avg_lateral_pct": round(r.get("avg_chaos", 0), 2),
+            "avg_kick_rating": round(r.get("avg_kicking", 0), 2),
+            "avg_ppd": round(r.get("avg_drive_quality", 0), 2),
+            "avg_to_margin": round(r.get("avg_turnover_impact", 0), 2),
             "offense_style": r.get("offense_style", ""),
             "defense_style": r.get("defense_style", ""),
             "games_played": r.get("games_played", 0),
@@ -126,18 +126,18 @@ async def _build_season_context_json(session_id, standings, games, conferences):
             "margin": round(abs(hs - aws), 1),
             "conference_game": g.get("is_conference_game", False),
             "home_stats": {
-                "opi": round(hm.get("opi", 0), 2),
-                "chaos": round(hm.get("chaos_factor", 0), 2),
-                "territory": round(hm.get("territory_rating", 0), 2),
-                "pressure": round(hm.get("pressure_index", 0), 2),
-                "kicking": round(hm.get("kicking_efficiency", 0), 2),
+                "team_rating": round(hm.get("opi", 0), 2),
+                "lateral_pct": round(hm.get("chaos_factor", 0), 2),
+                "avg_start": round(hm.get("territory_rating", 0), 2),
+                "conv_pct": round(hm.get("pressure_index", 0), 2),
+                "kick_rating": round(hm.get("kicking_efficiency", 0), 2),
             },
             "away_stats": {
-                "opi": round(am.get("opi", 0), 2),
-                "chaos": round(am.get("chaos_factor", 0), 2),
-                "territory": round(am.get("territory_rating", 0), 2),
-                "pressure": round(am.get("pressure_index", 0), 2),
-                "kicking": round(am.get("kicking_efficiency", 0), 2),
+                "team_rating": round(am.get("opi", 0), 2),
+                "lateral_pct": round(am.get("chaos_factor", 0), 2),
+                "avg_start": round(am.get("territory_rating", 0), 2),
+                "conv_pct": round(am.get("pressure_index", 0), 2),
+                "kick_rating": round(am.get("kicking_efficiency", 0), 2),
             },
         }
         full_result = g.get("full_result")
@@ -237,19 +237,19 @@ async def _build_season_context_json(session_id, standings, games, conferences):
             "papg": round(best_defense.get("points_against", 0) / max(1, best_defense.get("games_played", 1)), 2),
         }
         highest_opi = max(standings, key=lambda r: r.get("avg_opi", 0))
-        stat_leaders["highest_opi"] = {
+        stat_leaders["highest_team_rating"] = {
             "team": highest_opi.get("team_name", ""),
-            "avg_opi": round(highest_opi.get("avg_opi", 0), 2),
+            "avg_team_rating": round(highest_opi.get("avg_opi", 0), 2),
         }
-        most_chaotic = max(standings, key=lambda r: r.get("avg_chaos", 0))
-        stat_leaders["most_chaotic"] = {
-            "team": most_chaotic.get("team_name", ""),
-            "avg_chaos": round(most_chaotic.get("avg_chaos", 0), 2),
+        best_lateral = max(standings, key=lambda r: r.get("avg_chaos", 0))
+        stat_leaders["best_lateral_pct"] = {
+            "team": best_lateral.get("team_name", ""),
+            "avg_lateral_pct": round(best_lateral.get("avg_chaos", 0), 2),
         }
         best_kicking = max(standings, key=lambda r: r.get("avg_kicking", 0))
-        stat_leaders["best_kicking"] = {
+        stat_leaders["best_kick_rating"] = {
             "team": best_kicking.get("team_name", ""),
-            "avg_kicking": round(best_kicking.get("avg_kicking", 0), 2),
+            "avg_kick_rating": round(best_kicking.get("avg_kicking", 0), 2),
         }
 
     awards_list = []

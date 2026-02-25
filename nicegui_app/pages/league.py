@@ -126,7 +126,7 @@ async def render_league_section(state, shared):
             metric_card("Conferences", len(conferences))
         else:
             avg_opi = sum(r.get("avg_opi", 0) for r in standings) / len(standings) if standings else 0
-            metric_card("Avg OPI", f"{avg_opi:.1f}")
+            metric_card("Avg Team Rating", f"{avg_opi:.1f}")
         best = standings[0] if standings else None
         metric_card(
             "Top Team",
@@ -221,7 +221,7 @@ def _render_standings(session_id, standings, has_conferences, user_team):
             "PF": fmt_vb_score(record["points_for"]),
             "PA": fmt_vb_score(record["points_against"]),
             "Diff": fmt_vb_score(record.get("point_differential", 0)),
-            "OPI": f"{record.get('avg_opi', 0):.1f}",
+            "Team Rating": f"{record.get('avg_opi', 0):.1f}",
         })
         standings_data.append(row)
     stat_table(standings_data)
@@ -292,7 +292,7 @@ async def _render_power_rankings(session_id, standings, user_team):
             radar_container.clear()
             with radar_container:
                 if radar_teams:
-                    categories = ["OPI", "Territory", "Pressure", "Chaos", "Kicking", "Drive Quality", "Turnover Impact"]
+                    categories = ["Team Rating", "Avg Start", "Conv %", "Lateral %", "Kick Rating", "PPD", "TO+/-"]
                     fig = go.Figure()
                     for tname in radar_teams:
                         record = next((r for r in standings if r["team_name"] == tname), None)
@@ -399,7 +399,7 @@ async def _render_conferences(session_id, conferences, user_team):
                             "Win%": f"{record.get('win_percentage', 0):.3f}",
                             "PF": fmt_vb_score(record["points_for"]),
                             "PA": fmt_vb_score(record["points_against"]),
-                            "OPI": f"{record.get('avg_opi', 0):.1f}",
+                            "Team Rating": f"{record.get('avg_opi', 0):.1f}",
                         })
                     stat_table(conf_data)
 
@@ -985,7 +985,7 @@ async def _render_team_browser(session_id, standings, conferences, has_conferenc
                         metric_card("Win%", f"{team_record.get('win_percentage', 0):.3f}")
                     metric_card("PF", fmt_vb_score(team_record.get("points_for", 0)))
                     metric_card("PA", fmt_vb_score(team_record.get("points_against", 0)))
-                    metric_card("OPI", f"{team_record.get('avg_opi', 0):.1f}")
+                    metric_card("Team Rating", f"{team_record.get('avg_opi', 0):.1f}")
 
             try:
                 roster_resp = await run.io_bound(api_client.get_roster, session_id, selected)
@@ -1384,12 +1384,14 @@ async def _render_awards_stats(session_id, standings, user_team):
         leader_categories = [
             ("Highest Scoring", lambda r: r.get("points_for", 0) / max(1, r.get("games_played", 1)), "PPG"),
             ("Best Defense", None, "PA/G"),
-            ("Top OPI", lambda r: r.get("avg_opi", 0), "OPI"),
-            ("Territory King", lambda r: r.get("avg_territory", 0), "Territory"),
-            ("Pressure Leader", lambda r: r.get("avg_pressure", 0), "Pressure"),
-            ("Chaos Master", lambda r: r.get("avg_chaos", 0), "Chaos"),
-            ("Kicking Leader", lambda r: r.get("avg_kicking", 0), "Kicking"),
-            ("Best Turnover Impact", lambda r: r.get("avg_turnover_impact", 0), "TO Impact"),
+            ("Top Team Rating", lambda r: r.get("avg_opi", 0), "Team Rating"),
+            ("Avg Start Leader", lambda r: r.get("avg_territory", 0), "Avg Start"),
+            ("Conv % Leader", lambda r: r.get("avg_pressure", 0), "Conv %"),
+            ("Lateral % Leader", lambda r: r.get("avg_chaos", 0), "Lateral %"),
+            ("Kick Rating Leader", lambda r: r.get("avg_kicking", 0), "Kick Rating"),
+            ("Best TO+/-", lambda r: r.get("avg_turnover_impact", 0), "TO+/-"),
+            ("Best Stop Rate", lambda r: getattr(r, 'stop_rate', 0) if hasattr(r, 'stop_rate') else 0, "Stop %"),
+            ("Most Bonus Poss", lambda r: getattr(r, 'total_bonus_possessions', 0) if hasattr(r, 'total_bonus_possessions') else 0, "Bonus"),
         ]
         leader_rows = []
         for cat_name, key_func, stat_label in leader_categories:

@@ -588,21 +588,21 @@ def _render_play_by_play(plays, home_name, away_name):
 
 
 def _render_analytics(result, plays, home_name, away_name, hs, as_):
-    ui.label("VPA - Viperball Points Added").classes("font-bold text-slate-700")
+    ui.label("WPA - Win Probability Added").classes("font-bold text-slate-700")
     ui.label("Play efficiency vs league-average expectation.").classes("text-sm text-gray-500")
 
     h_vpa = hs.get("epa", {})
     a_vpa = as_.get("epa", {})
 
     with ui.row().classes("w-full gap-3 flex-wrap"):
-        metric_card(f"{home_name} Total VPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
-        metric_card(f"{away_name} Total VPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
-        metric_card(f"{home_name} VPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
-        metric_card(f"{away_name} VPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
+        metric_card(f"{home_name} Total WPA", h_vpa.get("total_vpa", h_vpa.get("total_epa", 0)))
+        metric_card(f"{away_name} Total WPA", a_vpa.get("total_vpa", a_vpa.get("total_epa", 0)))
+        metric_card(f"{home_name} WPA/Play", h_vpa.get("vpa_per_play", h_vpa.get("epa_per_play", 0)))
+        metric_card(f"{away_name} WPA/Play", a_vpa.get("vpa_per_play", a_vpa.get("epa_per_play", 0)))
         metric_card(f"{home_name} Success %", f"{h_vpa.get('success_rate', 0)}%")
         metric_card(f"{away_name} Success %", f"{a_vpa.get('success_rate', 0)}%")
 
-    # Cumulative VPA chart
+    # Cumulative WPA chart
     vpa_plays = [p for p in plays if "epa" in p]
     if vpa_plays:
         home_vpa_plays = [p for p in vpa_plays if p["possession"] == "home"]
@@ -625,8 +625,8 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
                 cum.append(round(running, 2))
             fig.add_trace(go.Scatter(y=cum, mode="lines", name=away_name,
                                      line=dict(color="#dc2626", width=2)))
-        fig.update_layout(title="Cumulative VPA Over Game", xaxis_title="Play #",
-                          yaxis_title="Cumulative VPA", height=350, template="plotly_white")
+        fig.update_layout(title="Cumulative WPA Over Game", xaxis_title="Play #",
+                          yaxis_title="Cumulative WPA", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
 
     # Delta Yards Efficiency (DYE)
@@ -705,11 +705,102 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
         fig.update_layout(yaxis_ticksuffix="%", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
 
+    # ── Scoring Profile & Defensive Impact ──
+    try:
+        home_metrics = calculate_viperball_metrics(result, "home")
+        away_metrics = calculate_viperball_metrics(result, "away")
+    except Exception:
+        home_metrics = {}
+        away_metrics = {}
+
+    if home_metrics or away_metrics:
+        # ── Scoring Profile ──
+        ui.label("Scoring Profile").classes("font-bold text-slate-700 mt-6")
+        ui.label("How each team generates its points.").classes("text-sm text-gray-500")
+
+        h_sp = home_metrics.get("scoring_profile", {})
+        a_sp = away_metrics.get("scoring_profile", {})
+
+        # Summary percentage breakdown
+        sp_summary_rows = [
+            {"Source": "Rush", home_name: f"{h_sp.get('rush_pct', 0):.0f}%", away_name: f"{a_sp.get('rush_pct', 0):.0f}%"},
+            {"Source": "Lateral", home_name: f"{h_sp.get('lateral_pct', 0):.0f}%", away_name: f"{a_sp.get('lateral_pct', 0):.0f}%"},
+            {"Source": "Kick-Pass", home_name: f"{h_sp.get('kp_pct', 0):.0f}%", away_name: f"{a_sp.get('kp_pct', 0):.0f}%"},
+            {"Source": "Snapkick", home_name: f"{h_sp.get('snapkick_pct', 0):.0f}%", away_name: f"{a_sp.get('snapkick_pct', 0):.0f}%"},
+            {"Source": "Return", home_name: f"{h_sp.get('return_pct', 0):.0f}%", away_name: f"{a_sp.get('return_pct', 0):.0f}%"},
+            {"Source": "Defense", home_name: f"{h_sp.get('bonus_pct', 0):.0f}%", away_name: f"{a_sp.get('bonus_pct', 0):.0f}%"},
+        ]
+        stat_table(sp_summary_rows)
+
+        # Detailed scoring profile
+        with ui.expansion("Scoring Detail", icon="analytics").classes("w-full mt-2"):
+            sp_rows = [
+                {"Stat": "Rush TDs", home_name: f"{h_sp.get('rush_tds', 0)} ({h_sp.get('rush_td_pts', 0)}pts)", away_name: f"{a_sp.get('rush_tds', 0)} ({a_sp.get('rush_td_pts', 0)}pts)"},
+                {"Stat": "Lateral TDs", home_name: f"{h_sp.get('lateral_tds', 0)} ({h_sp.get('lateral_td_pts', 0)}pts)", away_name: f"{a_sp.get('lateral_tds', 0)} ({a_sp.get('lateral_td_pts', 0)}pts)"},
+                {"Stat": "Kick-Pass TDs", home_name: f"{h_sp.get('kp_tds', 0)} ({h_sp.get('kp_td_pts', 0)}pts)", away_name: f"{a_sp.get('kp_tds', 0)} ({a_sp.get('kp_td_pts', 0)}pts)"},
+                {"Stat": "Drop Kicks", home_name: f"{h_sp.get('dk_made', 0)} ({h_sp.get('dk_pts', 0)}pts)", away_name: f"{a_sp.get('dk_made', 0)} ({a_sp.get('dk_pts', 0)}pts)"},
+                {"Stat": "Place Kicks", home_name: f"{h_sp.get('pk_made', 0)} ({h_sp.get('pk_pts', 0)}pts)", away_name: f"{a_sp.get('pk_made', 0)} ({a_sp.get('pk_pts', 0)}pts)"},
+                {"Stat": "Return TDs", home_name: f"{h_sp.get('return_tds', 0)} ({h_sp.get('return_td_pts', 0)}pts)", away_name: f"{a_sp.get('return_tds', 0)} ({a_sp.get('return_td_pts', 0)}pts)"},
+                {"Stat": "Bonus Scores", home_name: f"{h_sp.get('bonus_scores', 0)} ({h_sp.get('bonus_pts', 0)}pts)", away_name: f"{a_sp.get('bonus_scores', 0)} ({a_sp.get('bonus_pts', 0)}pts)"},
+                {"Stat": "Total Pts", home_name: str(h_sp.get('total_pts', 0)), away_name: str(a_sp.get('total_pts', 0))},
+            ]
+            stat_table(sp_rows)
+
+        # Scoring profile stacked bar chart
+        sp_categories = ["Rush", "Lateral", "Kick-Pass", "Snapkick", "Return", "Defense"]
+        sp_keys = ["rush_pct", "lateral_pct", "kp_pct", "snapkick_pct", "return_pct", "bonus_pct"]
+        sp_chart_data = []
+        for cat, key in zip(sp_categories, sp_keys):
+            sp_chart_data.append({"Source": cat, "Team": home_name, "Pct": h_sp.get(key, 0)})
+            sp_chart_data.append({"Source": cat, "Team": away_name, "Pct": a_sp.get(key, 0)})
+        if sp_chart_data:
+            fig_sp = px.bar(pd.DataFrame(sp_chart_data), x="Source", y="Pct", color="Team",
+                            barmode="group", title="Scoring Breakdown (%)",
+                            color_discrete_sequence=["#2563eb", "#dc2626"])
+            fig_sp.update_layout(yaxis_ticksuffix="%", height=320, template="plotly_white",
+                                 yaxis_title="% of Points")
+            ui.plotly(fig_sp).classes("w-full")
+
+        # ── Defensive Impact ──
+        ui.label("Defensive Impact").classes("font-bold text-slate-700 mt-6")
+        ui.label("Turnovers, stops, and bonus possession conversions.").classes("text-sm text-gray-500")
+
+        h_di = home_metrics.get("defensive_impact", {})
+        a_di = away_metrics.get("defensive_impact", {})
+
+        # Key metrics as cards
+        with ui.row().classes("w-full gap-3 flex-wrap"):
+            metric_card(f"{home_name} Bonus Poss",
+                        f"{h_di.get('bonus_possessions', 0)} ({h_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{away_name} Bonus Poss",
+                        f"{a_di.get('bonus_possessions', 0)} ({a_di.get('bonus_conv_rate', 0):.0f}% conv)")
+            metric_card(f"{home_name} TO Forced", h_di.get('turnovers_forced', 0))
+            metric_card(f"{away_name} TO Forced", a_di.get('turnovers_forced', 0))
+            metric_card(f"{home_name} Stop Rate", f"{h_di.get('stop_rate', 0):.0f}%")
+            metric_card(f"{away_name} Stop Rate", f"{a_di.get('stop_rate', 0):.0f}%")
+
+        # Detailed table
+        di_rows = [
+            {"Stat": "Bonus Possessions", home_name: str(h_di.get('bonus_possessions', 0)), away_name: str(a_di.get('bonus_possessions', 0))},
+            {"Stat": "Bonus Scores", home_name: str(h_di.get('bonus_scores', 0)), away_name: str(a_di.get('bonus_scores', 0))},
+            {"Stat": "Bonus Conv Rate", home_name: f"{h_di.get('bonus_conv_rate', 0):.0f}%", away_name: f"{a_di.get('bonus_conv_rate', 0):.0f}%"},
+            {"Stat": "Bonus Yards", home_name: str(h_di.get('bonus_yards', 0)), away_name: str(a_di.get('bonus_yards', 0))},
+            {"Stat": "Bonus Pts", home_name: str(h_di.get('bonus_pts', 0)), away_name: str(a_di.get('bonus_pts', 0))},
+            {"Stat": "Turnovers Forced", home_name: str(h_di.get('turnovers_forced', 0)), away_name: str(a_di.get('turnovers_forced', 0))},
+            {"Stat": "Fumbles Forced", home_name: str(h_di.get('fumbles_forced', 0)), away_name: str(a_di.get('fumbles_forced', 0))},
+            {"Stat": "TOD Forced", home_name: str(h_di.get('tod_forced', 0)), away_name: str(a_di.get('tod_forced', 0))},
+            {"Stat": "INTs Forced", home_name: str(h_di.get('ints_forced', 0)), away_name: str(a_di.get('ints_forced', 0))},
+            {"Stat": "Defensive Stops", home_name: str(h_di.get('defensive_stops', 0)), away_name: str(a_di.get('defensive_stops', 0))},
+            {"Stat": "Stop Rate", home_name: f"{h_di.get('stop_rate', 0):.0f}%", away_name: f"{a_di.get('stop_rate', 0):.0f}%"},
+            {"Stat": "Opponent Drives", home_name: str(h_di.get('opponent_drives', 0)), away_name: str(a_di.get('opponent_drives', 0))},
+        ]
+        stat_table(di_rows)
+
 
 def _render_player_impact(result, home_name, away_name):
-    """Render the Player Impact Report — per-player VPA attribution."""
+    """Render the Player Impact Report — per-player WPA attribution."""
     ui.label("Player Impact Report").classes("font-bold text-slate-700")
-    ui.label("VPA (Viperball Points Added) attributed to individual players.").classes("text-sm text-gray-500")
+    ui.label("WPA (Win Probability Added) attributed to individual players.").classes("text-sm text-gray-500")
 
     player_stats = result.get("player_stats", {})
 
@@ -718,7 +809,7 @@ def _render_player_impact(result, home_name, away_name):
         if not pstats:
             continue
 
-        # Filter to players with involvement and sort by VPA
+        # Filter to players with involvement and sort by WPA
         involved = [p for p in pstats if p.get("plays_involved", 0) > 0]
         if not involved:
             continue
@@ -727,15 +818,15 @@ def _render_player_impact(result, home_name, away_name):
 
         ui.label(team_name).classes("text-lg font-bold text-slate-700 mt-4")
 
-        # Team VPA summary
+        # Team WPA summary
         team_epa = result["stats"][side].get("epa", {})
         total_team_vpa = team_epa.get("total_vpa", team_epa.get("total_epa", 0))
         total_player_vpa = sum(p.get("vpa", 0) for p in involved_by_vpa)
 
         with ui.row().classes("w-full gap-3 flex-wrap"):
-            metric_card("Team VPA", round(total_team_vpa, 1))
-            metric_card("Top Player VPA", round(involved_by_vpa[0]["vpa"], 1) if involved_by_vpa else 0)
-            metric_card("Top VPA/Play",
+            metric_card("Team WPA", round(total_team_vpa, 1))
+            metric_card("Top Player WPA", round(involved_by_vpa[0]["vpa"], 1) if involved_by_vpa else 0)
+            metric_card("Top WPA/Play",
                         round(max((p.get("vpa_per_play", 0) for p in involved_by_vpa if p.get("plays_involved", 0) >= 3), default=0), 3))
             mvp = involved_by_vpa[0]
             metric_card("Game MVP", f"{mvp['tag']} {mvp['name']}")
@@ -748,15 +839,15 @@ def _render_player_impact(result, home_name, away_name):
             vpa_pp = p.get("vpa_per_play", 0)
             touches = p.get("touches", 0)
             vpa_per_touch = round(vpa / max(1, touches), 2) if touches > 0 else "--"
-            # VPA share: what % of team VPA did this player contribute
+            # WPA share: what % of team WPA did this player contribute
             vpa_share = round(vpa / max(0.01, total_player_vpa) * 100, 1) if total_player_vpa != 0 else 0
 
             impact_rows.append({
                 "Player": f"{p['tag']} {p['name']}",
-                "VPA": round(vpa, 2),
-                "VPA/Play": round(vpa_pp, 3),
-                "VPA/Touch": vpa_per_touch,
-                "VPA Share": f"{vpa_share}%",
+                "WPA": round(vpa, 2),
+                "WPA/Play": round(vpa_pp, 3),
+                "WPA/Touch": vpa_per_touch,
+                "WPA Share": f"{vpa_share}%",
                 "Plays": plays_inv,
                 "Touches": touches,
                 "Yards": p.get("yards", 0),
@@ -765,7 +856,7 @@ def _render_player_impact(result, home_name, away_name):
             })
         stat_table(impact_rows)
 
-        # VPA bar chart
+        # WPA bar chart
         chart_players = involved_by_vpa[:10]
         if chart_players:
             names = [f"{p['tag']} {p['name']}" for p in chart_players]
@@ -778,8 +869,8 @@ def _render_player_impact(result, home_name, away_name):
                 textposition="outside",
             ))
             fig.update_layout(
-                title=f"{team_name} — Player VPA",
-                xaxis_title="VPA", yaxis=dict(autorange="reversed"),
+                title=f"{team_name} — Player WPA",
+                xaxis_title="WPA", yaxis=dict(autorange="reversed"),
                 height=max(250, len(chart_players) * 35 + 80),
                 template="plotly_white", margin=dict(l=200),
             )
@@ -801,8 +892,8 @@ def _render_player_impact(result, home_name, away_name):
                 "#": rank,
                 "Player": f"{p['tag']} {p['name']}",
                 "Team": p["_team"],
-                "VPA": round(p.get("vpa", 0), 2),
-                "VPA/Play": round(p.get("vpa_per_play", 0), 3),
+                "WPA": round(p.get("vpa", 0), 2),
+                "WPA/Play": round(p.get("vpa_per_play", 0), 3),
                 "Plays": p.get("plays_involved", 0),
                 "Touches": p.get("touches", 0),
                 "Yards": p.get("yards", 0),
