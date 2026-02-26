@@ -146,6 +146,152 @@ ALL_LEAGUE_CONFIGS = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════
+# CHAMPIONS LEAGUE — completed-season archive & factory
+# ═══════════════════════════════════════════════════════════════
+
+_completed_league_snapshots: Dict[str, dict] = {}
+
+
+def archive_season(season: 'ProLeagueSeason') -> dict:
+    """Archive a completed league season for Champions League qualification.
+
+    Stores the champion + the best-record non-champion team. The champion
+    always qualifies regardless of regular-season record (they won the
+    playoff tournament). The second qualifier is the best record team
+    that isn't the champion.
+    """
+    if not season.champion:
+        return {}
+
+    league_id = season.config.league_id
+    standings = season.get_standings()
+
+    # Flatten all teams sorted by record
+    all_teams = []
+    for div_teams in standings["divisions"].values():
+        all_teams.extend(div_teams)
+    all_teams.sort(key=lambda t: (-t["wins"], t["losses"]))
+
+    champ_key = season.champion
+    top_teams = []
+    seen = set()
+
+    # Champion always qualifies first
+    for t in all_teams:
+        if t["team_key"] == champ_key:
+            top_teams.append({
+                "team_key": t["team_key"],
+                "team_name": t["team_name"],
+                "wins": t["wins"],
+                "losses": t["losses"],
+                "is_champion": True,
+            })
+            seen.add(t["team_key"])
+            break
+
+    # Best record non-champion qualifies second
+    for t in all_teams:
+        if t["team_key"] not in seen:
+            top_teams.append({
+                "team_key": t["team_key"],
+                "team_name": t["team_name"],
+                "wins": t["wins"],
+                "losses": t["losses"],
+                "is_champion": False,
+            })
+            seen.add(t["team_key"])
+            break
+
+    snapshot = {
+        "league_id": league_id,
+        "league_name": season.config.league_name,
+        "champion": season.champion,
+        "champion_name": season.teams[season.champion].name if season.champion in season.teams else season.champion,
+        "teams_dir": season.config.teams_dir,
+        "top_teams": top_teams,
+    }
+    _completed_league_snapshots[league_id] = snapshot
+    return snapshot
+
+
+def get_completed_leagues() -> Dict[str, dict]:
+    """Return the archive of completed league seasons."""
+    return dict(_completed_league_snapshots)
+
+
+def create_champions_league() -> 'ProLeagueSeason':
+    """Create a Champions League season from all archived league snapshots.
+
+    Loads top 2 teams from each completed league, prefixes their keys to
+    avoid collisions, and builds a round-robin + playoff tournament.
+    """
+    archives = get_completed_leagues()
+    if len(archives) < 2:
+        raise ValueError(f"Need at least 2 completed leagues, have {len(archives)}")
+
+    # Load qualifying teams from their original JSON files
+    cl_teams: Dict[str, Team] = {}
+    cl_keys: List[str] = []
+    for league_id, snap in archives.items():
+        teams_dir = snap["teams_dir"]
+        for t in snap["top_teams"]:
+            orig_key = t["team_key"]
+            cl_key = f"{league_id}_{orig_key}"
+            filepath = DATA_DIR.parent / teams_dir / f"{orig_key}.json"
+            if filepath.exists():
+                team = load_team_from_json(str(filepath))
+                cl_teams[cl_key] = team
+                cl_keys.append(cl_key)
+
+    n = len(cl_keys)
+    if n < 4:
+        raise ValueError(f"Need at least 4 qualifying teams, have {n}")
+
+    # Scale playoff structure to field size
+    if n <= 4:
+        playoff_teams, bye_count = 4, 0
+    elif n <= 6:
+        playoff_teams, bye_count = 4, 0
+    elif n <= 8:
+        playoff_teams, bye_count = 8, 2
+    else:
+        playoff_teams, bye_count = 8, 2
+
+    config = ProLeagueConfig(
+        league_id="cl",
+        league_name="Champions League",
+        teams_dir="",
+        divisions={"Champions League": cl_keys},
+        games_per_season=n - 1,  # round-robin: each team plays every other once
+        playoff_teams=playoff_teams,
+        bye_count=bye_count,
+        calendar_start="November",
+        calendar_end="December",
+        attribute_range=(55, 95),
+        franchise_rating_range=(45, 95),
+    )
+
+    # Build the season without calling __init__ (we inject teams directly)
+    season = ProLeagueSeason.__new__(ProLeagueSeason)
+    season.config = config
+    season.teams = cl_teams
+    season.standings = {}
+    season.schedule = []
+    season.results = {}
+    season.player_season_stats = {}
+    season.current_week = 0
+    season.total_weeks = 0
+    season.phase = "regular_season"
+    season.playoff_bracket = []
+    season.playoff_round = 0
+    season.champion = None
+
+    season._init_standings()
+    season._generate_schedule()
+    return season
+
+
 @dataclass
 class ProTeamRecord:
     team_key: str
@@ -519,14 +665,23 @@ class ProLeagueSeason:
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
-            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", 0))
+            # rushing_yards: fast_sim="rushing_yards", full engine="game_rushing_yards"/"yards"
+            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
+            # carries: fast_sim="rush_carries", full engine="carries"/"game_carries"
             acc["rushing_carries"] += ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
+            # touchdowns: fast_sim="tds", full engine="touchdowns"/"game_touchdowns"
             acc["touchdowns"] += ps.get("tds", ps.get("touchdowns", ps.get("game_touchdowns", 0)))
+            # kick pass yards: both use "kick_pass_yards"
             acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", 0))
-            acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("kick_comp", 0)))
+            # kick pass completions: fast_sim="kick_passes_completed", full engine="kick_pass_completions"
+            acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", 0)))
+            # kick pass attempts: fast_sim="kick_passes_thrown", full engine="kick_pass_attempts"
             acc["kick_pass_attempts"] += ps.get("kick_passes_thrown", ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0)))
+            # lateral yards: both use "lateral_yards"
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
-            acc["laterals"] += ps.get("laterals_thrown", ps.get("laterals", ps.get("lateral_chains", 0)))
+            # laterals: fast_sim uses "laterals_thrown"+"lateral_receptions", full engine uses "laterals"/"lateral_chains"
+            fast_lat = ps.get("laterals_thrown", 0) + ps.get("lateral_receptions", 0)
+            acc["laterals"] += fast_lat if fast_lat else ps.get("laterals", ps.get("lateral_chains", 0))
             acc["fumbles"] += ps.get("fumbles", ps.get("game_fumbles", 0))
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
