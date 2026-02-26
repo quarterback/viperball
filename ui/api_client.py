@@ -679,3 +679,52 @@ def dq_create_season(session_id: str, name: str = "DQ Fantasy Season",
 
 def dq_advance_week(session_id: str) -> dict:
     return _post(f"/sessions/{session_id}/dq/advance-week")
+
+
+def pro_league_new(league: str) -> dict:
+    return _post(f"/api/pro/{league}/new")
+
+
+def pro_league_standings(league: str, session_id: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/standings")
+
+
+def pro_league_schedule(league: str, session_id: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/schedule")
+
+
+def pro_league_sim_week(league: str, session_id: str) -> dict:
+    return _post(f"/api/pro/{league}/{session_id}/sim-week")
+
+
+def pro_league_sim_all(league: str, session_id: str) -> dict:
+    return _post(f"/api/pro/{league}/{session_id}/sim-all")
+
+
+def pro_league_box_score(league: str, session_id: str, week: int, matchup: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/game/{week}/{matchup}")
+
+
+def pro_league_playoffs(league: str, session_id: str) -> dict:
+    return _post(f"/api/pro/{league}/{session_id}/playoffs")
+
+
+def pro_league_playoff_bracket(league: str, session_id: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/playoffs/bracket")
+
+
+def pro_league_stats(league: str, session_id: str, category: str = "all") -> dict:
+    params = {"category": category} if category != "all" else None
+    return _get(f"/api/pro/{league}/{session_id}/stats", params=params)
+
+
+def pro_league_team_detail(league: str, session_id: str, team_key: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/team/{team_key}")
+
+
+def pro_league_active() -> dict:
+    return _get("/api/pro/active")
+
+
+def pro_league_status(league: str, session_id: str) -> dict:
+    return _get(f"/api/pro/{league}/{session_id}/status")

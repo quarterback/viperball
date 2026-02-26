@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "van",
+    "school_name": "Vancouver Vanguards",
+    "abbreviation": "VAN",
+    "mascot": "Vanguards",
+    "conference": "NVL North",
+    "city": "Vancouver",
+    "state": "BC",
+    "country": "Canada",
+    "colors": [
+      "Teal",
+      "Silver"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "variable",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "bend_no_break",
+    "st_scheme": "aces"
+  },
+  "prestige": 80,
+  "franchise_rating": 80,
+  "recruiting_pipeline": {
+    "northeast": 0.18,
+    "mid_atlantic": 0.12,
+    "south": 0.18,
+    "midwest": 0.16,
+    "west_coast": 0.16,
+    "texas_southwest": 0.14,
+    "canadian_english": 0.03,
+    "canadian_french": 0.03
+  },
+  "team_stats": {
+    "avg_speed": 67,
+    "avg_stamina": 64,
+    "kicking_strength": 67,
+    "lateral_proficiency": 70,
+    "defensive_strength": 70
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Spencer Crane",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 176,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Albuquerque",
+          "state": "NM",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Albuquerque High School",
+        "nationality": "American",
+        "archetype": "hybrid_viper",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 55,
+          "kicking": 67,
+          "lateral_skill": 82,
+          "tackling": 76,
+          "agility": 75,
+          "power": 56,
+          "awareness": 70,
+          "hands": 59,
+          "kick_power": 67,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 2,
+        "name": "Zach Phan",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 207,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Toledo",
+          "state": "OH",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Toledo North High School",
+        "nationality": "American",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 83,
+          "kicking": 81,
+          "lateral_skill": 77,
+          "tackling": 76,
+          "agility": 74,
+          "power": 55,
+          "awareness": 68,
+          "hands": 64,
+          "kick_power": 73,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 3,
+        "name": "Dallas Myers",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 213,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Augusta",
+          "state": "GA",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Augusta Central High School",
+        "nationality": "American",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 63,
+          "kicking": 77,
+          "lateral_skill": 76,
+          "tackling": 58,
+          "agility": 69,
+          "power": 72,
+          "awareness": 67,
+          "hands": 55,
+          "kick_power": 79,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 4,
+        "name": "Patrick Martinho",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 228,
+        "year": "Veteran",
+        "hometown": {
+          "city": "New York",
+          "state": "NY",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Trinity School",
+        "nationality": "American",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 55,
+          "kicking": 63,
+          "lateral_skill": 68,
+          "tackling": 68,
+          "agility": 68,
+          "power": 65,
+          "awareness": 78,
+          "hands": 70,
+          "kick_power": 77,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 5,
+        "name": "Dalton Herrmann",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 227,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Green Bay",
+          "state": "WI",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "Green Bay South High School",
+        "nationality": "American",
+        "archetype": "dual_threat_zb",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 70,
+          "kicking": 62,
+          "lateral_skill": 67,
+          "tackling": 79,
+          "agility": 55,
+          "power": 74,
+          "awareness": 60,
+          "hands": 68,
+          "kick_power": 59,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 6,
+        "name": "Gabriel Desrosiers",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 189,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "London",
+          "state": "ON",
+          "country": "Canada",
+          "region": "canadian_french"
+        },
+        "high_school": "London Secondary School",
+        "nationality": "Canadian",
+        "archetype": "distributor_zb",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 73,
+          "kicking": 69,
+          "lateral_skill": 99,
+          "tackling": 91,
+          "agility": 59,
+          "power": 62,
+          "awareness": 75,
+          "hands": 55,
+          "kick_power": 77,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 7,
+        "name": "Victor Leonard",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Fresno",
+          "state": "CA",
+          "country": "USA",
+          "region": "west_coast"
+        },
+        "high_school": "Fresno East High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 57,
+          "kicking": 61,
+          "lateral_skill": 80,
+          "tackling": 71,
+          "agility": 67,
+          "power": 69,
+          "awareness": 76,
+          "hands": 57,
+          "kick_power": 71,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 8,
+        "name": "Robert Loukas",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 219,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Arlington",
+          "state": "TX",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Arlington North High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 67,
+          "kicking": 62,
+          "lateral_skill": 61,
+          "tackling": 65,
+          "agility": 65,
+          "power": 76,
+          "awareness": 60,
+          "hands": 73,
+          "kick_power": 68,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 9,
+        "name": "Marcus Rivas",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 224,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Charlotte",
+          "state": "NC",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Charlotte East High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 69,
+          "kicking": 74,
+          "lateral_skill": 68,
+          "tackling": 90,
+          "agility": 80,
+          "power": 80,
+          "awareness": 74,
+          "hands": 89,
+          "kick_power": 91,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 10,
+        "name": "Austin Bryant",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 211,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Fredericton",
+          "state": "NB",
+          "country": "Canada",
+          "region": "canadian_english"
+        },
+        "high_school": "Fredericton Secondary School",
+        "nationality": "Canadian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 72,
+          "kicking": 78,
+          "lateral_skill": 60,
+          "tackling": 72,
+          "agility": 68,
+          "power": 63,
+          "awareness": 56,
+          "hands": 79,
+          "kick_power": 58,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 11,
+        "name": "Javon Johns",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 191,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Jacksonville",
+          "state": "FL",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Jacksonville Central High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 61,
+          "kicking": 66,
+          "lateral_skill": 79,
+          "tackling": 89,
+          "agility": 62,
+          "power": 61,
+          "awareness": 68,
+          "hands": 59,
+          "kick_power": 80,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 12,
+        "name": "Isaac Callahan",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 223,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Providence",
+          "state": "RI",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Providence High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 68,
+          "kicking": 68,
+          "lateral_skill": 70,
+          "tackling": 75,
+          "agility": 71,
+          "power": 69,
+          "awareness": 69,
+          "hands": 70,
+          "kick_power": 88,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 13,
+        "name": "Colton Hoang",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 232,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Asheville",
+          "state": "NC",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Asheville East High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 65,
+          "kicking": 69,
+          "lateral_skill": 69,
+          "tackling": 64,
+          "agility": 55,
+          "power": 59,
+          "awareness": 56,
+          "hands": 55,
+          "kick_power": 62,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 14,
+        "name": "Jordan Schulz",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 199,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Santa Fe",
+          "state": "NM",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Santa Fe High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 61,
+          "kicking": 72,
+          "lateral_skill": 63,
+          "tackling": 83,
+          "agility": 60,
+          "power": 64,
+          "awareness": 62,
+          "hands": 61,
+          "kick_power": 59,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 15,
+        "name": "Spencer Martino",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 240,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Phoenix",
+          "state": "AZ",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Phoenix North High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 71,
+          "kicking": 69,
+          "lateral_skill": 71,
+          "tackling": 69,
+          "agility": 81,
+          "power": 70,
+          "awareness": 68,
+          "hands": 94,
+          "kick_power": 72,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 16,
+        "name": "Shane Gonzales",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 216,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Tacoma",
+          "state": "WA",
+          "country": "USA",
+          "region": "west_coast"
+        },
+        "high_school": "Tacoma Central High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 62,
+          "kicking": 57,
+          "lateral_skill": 60,
+          "tackling": 74,
+          "agility": 55,
+          "power": 84,
+          "awareness": 70,
+          "hands": 59,
+          "kick_power": 66,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 17,
+        "name": "Etienne Desrosiers",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 210,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Hamilton",
+          "state": "ON",
+          "country": "Canada",
+          "region": "canadian_french"
+        },
+        "high_school": "Hamilton Secondary School",
+        "nationality": "Canadian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 57,
+          "kicking": 69,
+          "lateral_skill": 66,
+          "tackling": 57,
+          "agility": 70,
+          "power": 73,
+          "awareness": 60,
+          "hands": 66,
+          "kick_power": 66,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 18,
+        "name": "Dante Kelly",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Roanoke",
+          "state": "VA",
+          "country": "USA",
+          "region": "mid_atlantic"
+        },
+        "high_school": "Roanoke High School",
+        "nationality": "American",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 71,
+          "kicking": 70,
+          "lateral_skill": 63,
+          "tackling": 68,
+          "agility": 66,
+          "power": 70,
+          "awareness": 67,
+          "hands": 69,
+          "kick_power": 79,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 19,
+        "name": "Wesley Hobbs",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 216,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Bakersfield",
+          "state": "CA",
+          "country": "USA",
+          "region": "west_coast"
+        },
+        "high_school": "Bakersfield North High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 75,
+          "kicking": 72,
+          "lateral_skill": 64,
+          "tackling": 60,
+          "agility": 79,
+          "power": 72,
+          "awareness": 73,
+          "hands": 61,
+          "kick_power": 83,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 20,
+        "name": "Niklas S\u00e6vik",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 181,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Sandefjord",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Sandefjord videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 66,
+          "kicking": 68,
+          "lateral_skill": 74,
+          "tackling": 65,
+          "agility": 74,
+          "power": 74,
+          "awareness": 67,
+          "hands": 73,
+          "kick_power": 64,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 21,
+        "name": "Dylan Bruce",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 210,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Annapolis",
+          "state": "MD",
+          "country": "USA",
+          "region": "mid_atlantic"
+        },
+        "high_school": "Annapolis South High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 68,
+          "kicking": 68,
+          "lateral_skill": 63,
+          "tackling": 67,
+          "agility": 74,
+          "power": 75,
+          "awareness": 56,
+          "hands": 62,
+          "kick_power": 64,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 22,
+        "name": "Eli Watson",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 267,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Albuquerque",
+          "state": "NM",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Albuquerque West High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 65,
+          "kicking": 71,
+          "lateral_skill": 81,
+          "tackling": 71,
+          "agility": 62,
+          "power": 81,
+          "awareness": 67,
+          "hands": 56,
+          "kick_power": 76,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 23,
+        "name": "Sam Avila",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 252,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Plano",
+          "state": "TX",
+          "country": "USA",
+          "region": "texas_southwest"
+        },
+        "high_school": "Plano Central High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 57,
+          "kicking": 74,
+          "lateral_skill": 80,
+          "tackling": 71,
+          "agility": 63,
+          "power": 73,
+          "awareness": 73,
+          "hands": 74,
+          "kick_power": 65,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 24,
+        "name": "Marcus Hughes",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 233,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Copenhagen",
+          "state": "DEN",
+          "country": "Denmark",
+          "region": "uk_european"
+        },
+        "high_school": "Copenhagen Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 57,
+          "kicking": 64,
+          "lateral_skill": 77,
+          "tackling": 75,
+          "agility": 59,
+          "power": 74,
+          "awareness": 63,
+          "hands": 72,
+          "kick_power": 70,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 25,
+        "name": "Quinn Robbins",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 284,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Burlington",
+          "state": "VT",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Burlington East High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 73,
+          "kicking": 64,
+          "lateral_skill": 83,
+          "tackling": 69,
+          "agility": 56,
+          "power": 55,
+          "awareness": 66,
+          "hands": 66,
+          "kick_power": 62,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 26,
+        "name": "Niklas Paavilainen",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 281,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Lahti",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Lahti lukio",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 81,
+          "kicking": 74,
+          "lateral_skill": 67,
+          "tackling": 64,
+          "agility": 60,
+          "power": 81,
+          "awareness": 64,
+          "hands": 58,
+          "kick_power": 72,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 27,
+        "name": "Aaron Floyd",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 246,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "St. Louis",
+          "state": "MO",
+          "country": "USA",
+          "region": "midwest"
+        },
+        "high_school": "St. Louis East High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 68,
+          "kicking": 65,
+          "lateral_skill": 70,
+          "tackling": 70,
+          "agility": 58,
+          "power": 62,
+          "awareness": 72,
+          "hands": 67,
+          "kick_power": 60,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 28,
+        "name": "Travis Lara",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 247,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Charleston",
+          "state": "SC",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Charleston Central High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 55,
+          "kicking": 55,
+          "lateral_skill": 73,
+          "tackling": 60,
+          "agility": 55,
+          "power": 72,
+          "awareness": 68,
+          "hands": 75,
+          "kick_power": 57,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 29,
+        "name": "Javon Seibert",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 233,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Chattanooga",
+          "state": "TN",
+          "country": "USA",
+          "region": "south"
+        },
+        "high_school": "Chattanooga South High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 55,
+          "kicking": 72,
+          "lateral_skill": 65,
+          "tackling": 68,
+          "agility": 75,
+          "power": 61,
+          "awareness": 65,
+          "hands": 70,
+          "kick_power": 57,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 30,
+        "name": "Lucas Quigley",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 248,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Annapolis",
+          "state": "MD",
+          "country": "USA",
+          "region": "mid_atlantic"
+        },
+        "high_school": "Annapolis High School",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 59,
+          "kicking": 74,
+          "lateral_skill": 70,
+          "tackling": 68,
+          "agility": 55,
+          "power": 55,
+          "awareness": 60,
+          "hands": 65,
+          "kick_power": 57,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 31,
+        "name": "Yannick Vaillancourt",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 229,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Lethbridge",
+          "state": "AB",
+          "country": "Canada",
+          "region": "canadian_french"
+        },
+        "high_school": "Lethbridge Secondary School",
+        "nationality": "Canadian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 55,
+          "kicking": 68,
+          "lateral_skill": 55,
+          "tackling": 66,
+          "agility": 60,
+          "power": 59,
+          "awareness": 68,
+          "hands": 66,
+          "kick_power": 72,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 32,
+        "name": "Linus Jensen",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 225,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Vantaa",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Vantaa lukio",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 67,
+          "kicking": 58,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 78,
+          "power": 72,
+          "awareness": 60,
+          "hands": 67,
+          "kick_power": 73,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 33,
+        "name": "Patrick Davis",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 246,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Cairns",
+          "state": "QLD",
+          "country": "Australia",
+          "region": "australian"
+        },
+        "high_school": "Cairns Girls' High School",
+        "nationality": "Australian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 70,
+          "kicking": 55,
+          "lateral_skill": 57,
+          "tackling": 88,
+          "agility": 58,
+          "power": 79,
+          "awareness": 64,
+          "hands": 55,
+          "kick_power": 60,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 34,
+        "name": "Mikael Lindqvist",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 257,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Stavanger",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Stavanger videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 68,
+          "kicking": 57,
+          "lateral_skill": 66,
+          "tackling": 82,
+          "agility": 69,
+          "power": 62,
+          "awareness": 63,
+          "hands": 70,
+          "kick_power": 73,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 35,
+        "name": "Jordan Pierre-Louis",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 285,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Georgetown",
+          "state": "GUY",
+          "country": "Guyana",
+          "region": "caribbean"
+        },
+        "high_school": "Georgetown High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 64,
+          "kicking": 89,
+          "lateral_skill": 80,
+          "tackling": 55,
+          "agility": 82,
+          "power": 78,
+          "awareness": 78,
+          "hands": 65,
+          "kick_power": 74,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 36,
+        "name": "Reed Curry",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 244,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Boston",
+          "state": "MA",
+          "country": "USA",
+          "region": "northeast"
+        },
+        "high_school": "Lexington High",
+        "nationality": "American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 55,
+          "kicking": 64,
+          "lateral_skill": 74,
+          "tackling": 68,
+          "agility": 63,
+          "power": 64,
+          "awareness": 63,
+          "hands": 60,
+          "kick_power": 73,
+          "kick_accuracy": 59
+        }
+      }
+    ]
+  }
+}

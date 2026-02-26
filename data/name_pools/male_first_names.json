@@ -1,0 +1,204 @@
+{
+  "american_northeast": [
+    "Aaron", "Adam", "Adrian", "Alex", "Andre", "Andrew", "Anthony", "Antonio",
+    "Ben", "Blake", "Brandon", "Brendan", "Brian", "Bryce", "Caleb", "Cameron",
+    "Carlos", "Carter", "Chase", "Chris", "Christian", "Cole", "Colin", "Connor",
+    "Corey", "Damian", "Daniel", "Dante", "Darius", "David", "Derek", "Devon",
+    "Dominic", "Drew", "Dylan", "Elijah", "Eric", "Ethan", "Evan", "Gabriel",
+    "Gavin", "Grant", "Hunter", "Ian", "Isaac", "Jack", "Jacob", "Jaden",
+    "Jake", "James", "Jared", "Jason", "Jayden", "Jeremy", "Jesse", "Jordan",
+    "Josh", "Julian", "Justin", "Keith", "Kevin", "Kyle", "Liam", "Logan",
+    "Lucas", "Luke", "Marcus", "Mark", "Mason", "Matt", "Michael", "Miles",
+    "Nathan", "Nate", "Nick", "Noah", "Oliver", "Owen", "Patrick", "Paul",
+    "Peter", "Quinn", "Ray", "Reed", "Robert", "Ryan", "Sam", "Sean",
+    "Shane", "Spencer", "Stephen", "Thomas", "Tim", "Trent", "Tyler", "Will",
+    "Wyatt", "Zach"
+  ],
+  "american_south": [
+    "Aaron", "Andre", "Andrew", "Anthony", "Austin", "Avery", "Blake", "Bo",
+    "Bradley", "Brandon", "Brantley", "Bryce", "Bryson", "Caleb", "Cameron",
+    "Carson", "Carter", "Chance", "Charles", "Chase", "Clay", "Clayton", "Cody",
+    "Cole", "Colton", "Cooper", "Dallas", "Damon", "Dante", "Darius", "Deandre",
+    "Derek", "Desmond", "Devon", "Devonte", "DJ", "Drew", "Eli", "Elijah",
+    "Emmett", "Garrett", "Grant", "Gunner", "Hunter", "Isaiah", "Jace", "Jackson",
+    "Jalen", "Jamal", "Jamari", "James", "Jaquan", "Jarvis", "Javon", "Jaylen",
+    "JD", "Jeremiah", "Jordan", "Josh", "Josiah", "Justin", "Kadarius", "Kameron",
+    "Keith", "Kendrick", "Khalil", "Kobe", "Lamar", "Lance", "Landon", "Logan",
+    "Luke", "Marcus", "Marquis", "Mason", "Micah", "Miles", "Nolan", "Preston",
+    "Quentin", "Rashad", "Ray", "Reggie", "Robert", "Rodney", "Russell", "Sawyer",
+    "Terrance", "Titus", "Travis", "Tre", "Trey", "Tristan", "Tucker", "Tyrone",
+    "Vance", "Wesley", "Zion"
+  ],
+  "american_midwest": [
+    "Aaron", "Adam", "Alex", "Andrew", "Austin", "Ben", "Blake", "Brady",
+    "Brandon", "Brett", "Brian", "Brody", "Caleb", "Cameron", "Carson", "Carter",
+    "Chase", "Chris", "Cody", "Cole", "Colin", "Connor", "Cooper", "Dalton",
+    "Daniel", "David", "Derek", "Drew", "Dylan", "Eli", "Ethan", "Evan",
+    "Garrett", "Grant", "Griffin", "Hunter", "Isaac", "Jack", "Jackson", "Jacob",
+    "Jake", "James", "Jared", "Jason", "Jesse", "John", "Jordan", "Josh",
+    "Justin", "Keith", "Kevin", "Kyle", "Lance", "Landon", "Liam", "Logan",
+    "Lucas", "Luke", "Mark", "Mason", "Matt", "Max", "Michael", "Mitchell",
+    "Nathan", "Nick", "Noah", "Nolan", "Owen", "Parker", "Patrick", "Paul",
+    "Reed", "Riley", "Robert", "Ryan", "Sam", "Scott", "Sean", "Shane",
+    "Spencer", "Stephen", "Thomas", "Tim", "Travis", "Trent", "Trevor", "Troy",
+    "Tyler", "Wesley", "Will", "Wyatt", "Zach"
+  ],
+  "american_west": [
+    "Aaron", "Alex", "Angel", "Anthony", "Austin", "Blake", "Brandon", "Bryce",
+    "Caleb", "Cameron", "Carlos", "Carter", "Chase", "Chris", "Cole", "Connor",
+    "Cooper", "Daniel", "David", "Derek", "Diego", "Drew", "Dylan", "Eli",
+    "Elijah", "Ethan", "Evan", "Gabriel", "Gavin", "Grant", "Hunter", "Isaac",
+    "Jack", "Jackson", "Jacob", "Jaden", "Jake", "James", "Jayden", "Jeremy",
+    "Jesse", "Jordan", "Josh", "Julian", "Justin", "Kai", "Kevin", "Kyle",
+    "Landon", "Liam", "Logan", "Lucas", "Luke", "Marcus", "Mark", "Mason",
+    "Matt", "Max", "Michael", "Miles", "Nathan", "Nick", "Noah", "Oliver",
+    "Owen", "Parker", "Patrick", "Rafael", "Reed", "Ricardo", "Riley", "Robert",
+    "Ryan", "Sam", "Santiago", "Sean", "Shane", "Spencer", "Thomas", "Travis",
+    "Trent", "Trevor", "Tyler", "Victor", "Wesley", "Will", "Wyatt", "Zach"
+  ],
+  "american_texas_southwest": [
+    "Aaron", "Adrian", "Alex", "Angel", "Anthony", "Austin", "Blake", "Brandon",
+    "Bryce", "Caleb", "Cameron", "Carlos", "Carter", "Cesar", "Chase", "Chris",
+    "Clay", "Cody", "Cole", "Colton", "Connor", "Cooper", "Dallas", "Daniel",
+    "David", "Derek", "Diego", "Drew", "Eli", "Elijah", "Ethan", "Gabriel",
+    "Garrett", "Grant", "Hunter", "Isaac", "Jace", "Jackson", "Jacob", "Jaden",
+    "Jake", "James", "Jayden", "Jeremy", "Jesse", "Jordan", "Josh", "Juan",
+    "Julian", "Justin", "Kai", "Kevin", "Kyle", "Lance", "Landon", "Liam",
+    "Logan", "Lucas", "Luke", "Marco", "Marcus", "Mark", "Mason", "Matt",
+    "Max", "Michael", "Miguel", "Nathan", "Nick", "Noah", "Owen", "Parker",
+    "Patrick", "Rafael", "Reed", "Ricardo", "Riley", "Robert", "Ryan", "Sam",
+    "Santiago", "Sean", "Shane", "Spencer", "Thomas", "Travis", "Trent", "Tyler",
+    "Victor", "Wesley", "Will", "Wyatt", "Zach"
+  ],
+  "black_american": [
+    "Amir", "Andre", "Anthony", "Avery", "Brandon", "Bryson", "Caleb", "Cameron",
+    "Carter", "Chris", "Damon", "Dante", "Darius", "Dashawn", "Davion", "Deandre",
+    "Desmond", "Devon", "Devonte", "DJ", "Donovan", "Elijah", "Emmanuel", "Erick",
+    "Isaiah", "Jabari", "Jace", "Jalen", "Jamal", "Jamari", "James", "Jaquan",
+    "Jarvis", "Javon", "Jaylen", "Jeremiah", "Jordan", "Josh", "Josiah", "Justin",
+    "Kadarius", "Kam", "Kameron", "Keith", "Kendrick", "Khalil", "Kobe", "Lamar",
+    "Lance", "Malik", "Marcus", "Marquis", "Micah", "Michael", "Miles", "Nate",
+    "Quentin", "Rashad", "Ray", "Reggie", "Robert", "Rodney", "Russell", "Terrance",
+    "Titus", "Tre", "Trey", "Tyrone", "Xavier", "Zion"
+  ],
+  "latino_hispanic": [
+    "Adrian", "Alejandro", "Alex", "Andres", "Angel", "Antonio", "Arturo", "Carlos",
+    "Cesar", "Christian", "Daniel", "David", "Diego", "Eduardo", "Emilio", "Enrique",
+    "Esteban", "Fernando", "Francisco", "Gabriel", "Hector", "Hugo", "Isaac", "Ivan",
+    "Javier", "Jesus", "Joaquin", "Jorge", "Jose", "Juan", "Julian", "Leonardo",
+    "Luis", "Manuel", "Marco", "Mario", "Martin", "Mateo", "Miguel", "Nicolas",
+    "Omar", "Oscar", "Pablo", "Pedro", "Rafael", "Ramon", "Raul", "Ricardo",
+    "Roberto", "Rodrigo", "Salvador", "Santiago", "Sebastian", "Sergio", "Victor"
+  ],
+  "asian_american": [
+    "Aaron", "Alex", "Andrew", "Ben", "Brandon", "Brian", "Chris", "Daniel",
+    "David", "Derek", "Dylan", "Eric", "Ethan", "Evan", "Gabriel", "Ian",
+    "Isaac", "Jack", "Jacob", "James", "Jason", "Jeremy", "John", "Jonathan",
+    "Josh", "Justin", "Kevin", "Kyle", "Leo", "Liam", "Lucas", "Mark",
+    "Matt", "Max", "Michael", "Nathan", "Nick", "Noah", "Oliver", "Owen",
+    "Patrick", "Paul", "Peter", "Ryan", "Sam", "Sean", "Thomas", "Tyler",
+    "Will", "Zach"
+  ],
+  "australian": [
+    "Angus", "Archie", "Bailey", "Ben", "Blake", "Brayden", "Brodie", "Cade",
+    "Caleb", "Callum", "Cameron", "Charlie", "Cody", "Connor", "Cooper", "Darcy",
+    "Declan", "Dylan", "Ethan", "Felix", "Finn", "Flynn", "Fraser", "Hamish",
+    "Harrison", "Harry", "Hugo", "Hunter", "Isaac", "Jack", "Jackson", "Jake",
+    "James", "Jarrod", "Jayden", "Jesse", "Josh", "Kai", "Lachlan", "Leo",
+    "Liam", "Logan", "Lucas", "Luke", "Mason", "Max", "Mitchell", "Noah",
+    "Oliver", "Oscar", "Owen", "Patrick", "Riley", "Rory", "Ryan", "Sam",
+    "Sebastian", "Thomas", "Toby", "Tyler", "Will", "Zac"
+  ],
+  "pacific_islander": [
+    "Afa", "Afu", "Aisea", "Aleki", "Alo", "Atu", "Filipo", "Haani",
+    "Iosefa", "Junior", "Kai", "Kalani", "Keanu", "Koa", "Lani", "Leki",
+    "Lotu", "Malakai", "Mana", "Manu", "Maui", "Mosese", "Noa", "Olai",
+    "Peni", "Saia", "Sakiusa", "Sam", "Semisi", "Sione", "Sitiveni", "Tama",
+    "Taniela", "Tau", "Tevita", "Toma", "Tui", "Vili", "Vince", "Zion"
+  ],
+  "irish_european": [
+    "Aidan", "Barry", "Brendan", "Brian", "Callum", "Ciaran", "Colin", "Conor",
+    "Cormac", "Darren", "Declan", "Donal", "Eamon", "Eoin", "Fergal", "Finbar",
+    "Fionn", "Gavin", "Gerard", "Hugh", "Ian", "Jack", "James", "John",
+    "Kevin", "Kieran", "Liam", "Luke", "Mark", "Martin", "Michael", "Niall",
+    "Noel", "Oliver", "Oisin", "Padraig", "Patrick", "Paul", "Peter", "Philip",
+    "Ronan", "Rory", "Ryan", "Sean", "Shane", "Simon", "Stephen", "Thomas",
+    "Tiernan", "Tommy"
+  ],
+  "canadian_english": [
+    "Adam", "Alex", "Andrew", "Austin", "Ben", "Blake", "Brady", "Brandon",
+    "Bryce", "Caleb", "Cameron", "Carter", "Chase", "Chris", "Cole", "Connor",
+    "Cooper", "Daniel", "David", "Derek", "Dylan", "Ethan", "Evan", "Gabriel",
+    "Grant", "Hunter", "Isaac", "Jack", "Jackson", "Jacob", "Jake", "James",
+    "Jared", "Jason", "Jordan", "Josh", "Justin", "Kevin", "Kyle", "Liam",
+    "Logan", "Lucas", "Luke", "Mark", "Mason", "Matt", "Max", "Michael",
+    "Nathan", "Nick", "Noah", "Oliver", "Owen", "Patrick", "Riley", "Ryan",
+    "Sam", "Sean", "Spencer", "Thomas", "Trevor", "Tyler", "Will", "Zach"
+  ],
+  "canadian_french": [
+    "Alexandre", "Alexis", "Antoine", "Benoit", "Charles", "Christophe", "Claude",
+    "Damien", "David", "Denis", "Dominique", "Emile", "Etienne", "Felix",
+    "Francois", "Gabriel", "Guillaume", "Hugo", "Jacques", "Jean", "Jean-Luc",
+    "Jean-Marc", "Jerome", "Joel", "Jonathan", "Julien", "Laurent", "Luc",
+    "Lucas", "Marc", "Mathieu", "Maxime", "Nicolas", "Olivier", "Pascal",
+    "Patrick", "Philippe", "Pierre", "Raphael", "Remi", "Rene", "Samuel",
+    "Sebastien", "Simon", "Stephane", "Thierry", "Thomas", "Vincent", "Xavier",
+    "Yannick"
+  ],
+  "new_zealand": [
+    "Aaron", "Angus", "Bailey", "Ben", "Blake", "Callum", "Cameron", "Connor",
+    "Cooper", "Daniel", "Dylan", "Ethan", "Finn", "Flynn", "Fraser", "George",
+    "Hamish", "Harrison", "Harry", "Hugo", "Hunter", "Isaac", "Jack", "Jackson",
+    "Jake", "James", "Josh", "Kai", "Lachlan", "Leo", "Liam", "Logan",
+    "Lucas", "Luke", "Mason", "Matt", "Max", "Mitchell", "Noah", "Oliver",
+    "Oscar", "Owen", "Riley", "Rory", "Ryan", "Sam", "Thomas", "Tyler",
+    "Will", "Zac"
+  ],
+  "uk_european": [
+    "Adam", "Aidan", "Alex", "Alfie", "Archie", "Ben", "Callum", "Charlie",
+    "Chris", "Connor", "Daniel", "David", "Dylan", "Edward", "Elliot", "Ethan",
+    "Felix", "Finn", "Freddie", "George", "Harry", "Henry", "Hugo", "Isaac",
+    "Jack", "Jacob", "Jake", "James", "Jamie", "Joe", "Josh", "Leo",
+    "Lewis", "Liam", "Logan", "Louis", "Lucas", "Luke", "Marcus", "Mark",
+    "Mason", "Matt", "Max", "Michael", "Nathan", "Noah", "Oliver", "Oscar",
+    "Owen", "Patrick", "Peter", "Rhys", "Riley", "Robert", "Rory", "Ryan",
+    "Sam", "Sean", "Thomas", "Will"
+  ],
+  "latin_american": [
+    "Alejandro", "Andres", "Angel", "Antonio", "Carlos", "Cesar", "Christian",
+    "Daniel", "David", "Diego", "Eduardo", "Emilio", "Enrique", "Esteban",
+    "Felipe", "Fernando", "Francisco", "Gabriel", "Gonzalo", "Gustavo", "Hector",
+    "Hugo", "Isaac", "Ivan", "Javier", "Jesus", "Joaquin", "Jorge", "Jose",
+    "Juan", "Julian", "Leonardo", "Lucas", "Luis", "Manuel", "Marco", "Martin",
+    "Mateo", "Matias", "Miguel", "Nicolas", "Omar", "Oscar", "Pablo", "Pedro",
+    "Rafael", "Ramon", "Ricardo", "Roberto", "Rodrigo", "Santiago", "Sebastian",
+    "Sergio", "Thiago", "Victor"
+  ],
+  "african": [
+    "Abdi", "Abdul", "Adama", "Adekunle", "Adewale", "Ahmed", "Akinola", "Ali",
+    "Amadou", "Amani", "Amos", "Bakari", "Bayo", "Chibueze", "Chidi", "Chukwuma",
+    "David", "Emmanuel", "Emeka", "Femi", "Gideon", "Ibrahim", "Ifeanyi", "Ikechi",
+    "Ismail", "Juma", "Kehinde", "Kofi", "Kwame", "Kwesi", "Mamadou", "Moussa",
+    "Musa", "Nnamdi", "Obinna", "Obi", "Okechukwu", "Oluwaseun", "Omar", "Onyeka",
+    "Ousmane", "Patrick", "Samuel", "Sekou", "Taiwo", "Tunde", "Uche", "Victor",
+    "Yusuf", "Zuberi"
+  ],
+  "caribbean": [
+    "Adrian", "Akeem", "Andre", "Antwon", "Brandon", "Brian", "Carlos", "Chris",
+    "Curtis", "Dale", "Damion", "Dane", "Daniel", "Darnell", "Darius", "David",
+    "Dennis", "Devon", "Dwight", "Emmanuel", "Garfield", "Gavin", "Jason", "Joel",
+    "Jordan", "Junior", "Justin", "Kadeem", "Kemar", "Kevin", "Leon", "Liam",
+    "Marcus", "Mark", "Marlon", "Michael", "Omar", "Patrick", "Raheem", "Rasheed",
+    "Ravi", "Ricardo", "Romario", "Ryan", "Shaquille", "Sheldon", "Tyrell",
+    "Wayne", "Xavier", "Yohan"
+  ],
+  "nordic": [
+    "Aksel", "Anders", "Anton", "Axel", "Bjorn", "Casper", "Christian", "Daniel",
+    "Eero", "Einar", "Elias", "Emil", "Erik", "Filip", "Fredrik", "Gustav",
+    "Haakon", "Henrik", "Hugo", "Ivar", "Jonas", "Karl", "Lars", "Leif",
+    "Leo", "Linus", "Lucas", "Magnus", "Matti", "Mikael", "Mikko", "Niko",
+    "Niklas", "Odin", "Olaf", "Oliver", "Oscar", "Oskar", "Pekka", "Rasmus",
+    "Sebastian", "Sigurd", "Soren", "Sven", "Thor", "Tobias", "Tor", "Ville",
+    "Viktor", "William"
+  ]
+}

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-Viperball Women's Player Name Generator
+Viperball Player Name Generator
 
-Generates realistic women's player names with hometowns, high schools,
+Generates realistic player names with hometowns, high schools,
 and origin tagging to support recruiting pipelines.
+
+Supports both female (CVL) and male (NVL) name generation via the
+`gender` parameter.
 
 Usage:
     from scripts.generate_names import generate_player_name
@@ -13,6 +16,8 @@ Usage:
         region='northeast',
         school_recruiting_pipeline={'northeast': 0.5, 'mid_atlantic': 0.3}
     )
+
+    male_player = generate_player_name(gender='male')
 """
 
 import json
@@ -28,15 +33,24 @@ NAME_POOLS_DIR = DATA_DIR / 'name_pools'
 # Load name pools (cached at module level)
 _name_pools_cache = {}
 
-def load_name_pools():
-    """Load all name pool data files."""
+def load_name_pools(gender: str = 'female'):
+    """Load all name pool data files.
+    
+    Args:
+        gender: 'female' for CVL (women's) names, 'male' for NVL (men's) names.
+    """
     global _name_pools_cache
 
-    if _name_pools_cache:
-        return _name_pools_cache
+    cache_key = gender
+    if cache_key in _name_pools_cache:
+        return _name_pools_cache[cache_key]
 
-    with open(NAME_POOLS_DIR / 'first_names.json') as f:
-        first_names = json.load(f)
+    if gender == 'male':
+        with open(NAME_POOLS_DIR / 'male_first_names.json') as f:
+            first_names = json.load(f)
+    else:
+        with open(NAME_POOLS_DIR / 'first_names.json') as f:
+            first_names = json.load(f)
 
     with open(NAME_POOLS_DIR / 'surnames.json') as f:
         surnames = json.load(f)
@@ -47,14 +61,15 @@ def load_name_pools():
     with open(NAME_POOLS_DIR / 'high_schools.json') as f:
         high_schools = json.load(f)
 
-    _name_pools_cache = {
+    pools = {
         'first_names': first_names,
         'surnames': surnames,
         'cities': cities,
         'high_schools': high_schools
     }
 
-    return _name_pools_cache
+    _name_pools_cache[cache_key] = pools
+    return pools
 
 # Default pipeline: 66% domestic (US), 34% international
 DEFAULT_PIPELINE = {
@@ -533,7 +548,7 @@ def select_high_school(origin: str, hometown: Dict, pools: Dict) -> str:
         return f"{hometown['city']} Secondary School"
 
     elif origin == 'new_zealand':
-        return f"{hometown['city']} Girls' High School"
+        return f"{hometown['city']} High School"
 
     elif origin in ('uk_european', 'irish_european'):
         return f"{hometown['city']} Academy"
@@ -578,10 +593,11 @@ def generate_player_name(
     region: Optional[str] = None,
     school_recruiting_pipeline: Optional[Dict[str, float]] = None,
     recruiting_class: int = 2024,
-    year: str = 'freshman'
+    year: str = 'freshman',
+    gender: str = 'female'
 ) -> Dict:
     """
-    Generate a women's player name with hometown and background.
+    Generate a player name with hometown and background.
 
     Args:
         origin: Specific origin ('american', 'australian', 'canadian_english', etc.)
@@ -589,12 +605,13 @@ def generate_player_name(
         school_recruiting_pipeline: School's recruiting territories (weighted dict)
         recruiting_class: Year the player was recruited
         year: Current class year (freshman/sophomore/junior/senior)
+        gender: 'female' for CVL (women's) names, 'male' for NVL (men's) names
 
     Returns:
         Dictionary with player_id, first_name, last_name, display_name, full_name,
         hometown, high_school, origin_tags, nationality, recruiting_class, year
     """
-    pools = load_name_pools()
+    pools = load_name_pools(gender=gender)
 
     if not origin or not region:
         origin, region = select_origin(school_recruiting_pipeline)
@@ -628,8 +645,9 @@ def generate_player_name(
     }
 
 if __name__ == "__main__":
-    print("Testing Women's Name Generator for Viperball\n")
+    print("Testing Name Generator for Viperball\n")
 
+    print("=== Female (CVL) Names ===")
     print("1. American Northeast player:")
     player1 = generate_player_name(origin='american', region='northeast')
     print(json.dumps(player1, indent=2, ensure_ascii=False))
@@ -638,15 +656,27 @@ if __name__ == "__main__":
     player2 = generate_player_name(origin='australian', region='australian')
     print(json.dumps(player2, indent=2, ensure_ascii=False))
 
-    print("\n3. Canadian French player:")
-    player3 = generate_player_name(origin='canadian_french', region='canadian_french')
+    print("\n=== Male (NVL) Names ===")
+    print("3. American Northeast male player:")
+    player3 = generate_player_name(origin='american', region='northeast', gender='male')
     print(json.dumps(player3, indent=2, ensure_ascii=False))
 
-    print("\n4. African player:")
-    player4 = generate_player_name(origin='african', region='african')
+    print("\n4. Canadian French male player:")
+    player4 = generate_player_name(origin='canadian_french', region='canadian_french', gender='male')
     print(json.dumps(player4, indent=2, ensure_ascii=False))
 
-    print("\n5. Default pipeline (66/34 split):")
+    print("\n5. African male player:")
+    player5 = generate_player_name(origin='african', region='african', gender='male')
+    print(json.dumps(player5, indent=2, ensure_ascii=False))
+
+    print("\n6. Default pipeline male (36 unique names test):")
+    names = set()
+    for _ in range(36):
+        p = generate_player_name(gender='male')
+        names.add(p['full_name'])
+    print(f"  Generated {len(names)} unique names out of 36")
+
+    print("\n7. Default pipeline (66/34 split):")
     counts = {}
     for _ in range(1000):
         _, region = select_origin()

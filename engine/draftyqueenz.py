@@ -1124,8 +1124,11 @@ class WeeklyContest:
             for side in ("home", "away"):
                 team_name = result["final_score"][side]["team"]
                 for ps in result.get("player_stats", {}).get(side, []):
+                    ptag = ps.get("tag", ps.get("name", ""))
+                    if not ptag:
+                        continue
                     score = score_player(ps)
-                    actual_scores[(ps["tag"], team_name)] = score
+                    actual_scores[(ptag, team_name)] = score
 
         all_rosters = list(self.ai_rosters)
         if self.user_roster:

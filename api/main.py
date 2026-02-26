@@ -49,6 +49,7 @@ from engine.transfer_portal import (
     auto_portal_offers, generate_quick_portal,
     estimate_prestige_from_roster,
 )
+from engine.pro_league import ProLeagueSeason, ProLeagueConfig, NVL_CONFIG
 from engine.draftyqueenz import (
     DraftyQueenzManager, DONATION_TYPES, BOOSTER_TIERS,
     STARTING_BANKROLL, SALARY_CAP, FANTASY_ENTRY_FEE,
@@ -63,6 +64,11 @@ app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
 sessions: Dict[str, dict] = {}
+pro_sessions: Dict[str, ProLeagueSeason] = {}
+
+LEAGUE_CONFIGS: Dict[str, ProLeagueConfig] = {
+    "nvl": NVL_CONFIG,
+}
 
 
 @app.get("/api/health")
@@ -3236,3 +3242,121 @@ def dq_advance_week(session_id: str):
         "phase": session["phase"],
         "status": _serialize_season_status(session),
     }
+
+
+def _get_league_config(league: str) -> ProLeagueConfig:
+    config = LEAGUE_CONFIGS.get(league.lower())
+    if not config:
+        raise HTTPException(status_code=404, detail=f"League '{league}' not found. Available: {list(LEAGUE_CONFIGS.keys())}")
+    return config
+
+
+def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
+    key = f"{league.lower()}_{session_id}"
+    if key not in pro_sessions:
+        raise HTTPException(status_code=404, detail=f"Pro league session '{key}' not found")
+    return pro_sessions[key]
+
+
+@app.post("/api/pro/{league}/new")
+def pro_league_new(league: str):
+    config = _get_league_config(league)
+    session_id = str(uuid.uuid4())[:8]
+    key = f"{league.lower()}_{session_id}"
+    season = ProLeagueSeason(config)
+    pro_sessions[key] = season
+    return {
+        "league": league.lower(),
+        "session_id": session_id,
+        "key": key,
+        "status": season.get_status(),
+    }
+
+
+@app.get("/api/pro/{league}/{session_id}/standings")
+def pro_league_standings(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    return season.get_standings()
+
+
+@app.get("/api/pro/{league}/{session_id}/schedule")
+def pro_league_schedule(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    return season.get_schedule()
+
+
+@app.post("/api/pro/{league}/{session_id}/sim-week")
+def pro_league_sim_week(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    result = season.sim_week()
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.post("/api/pro/{league}/{session_id}/sim-all")
+def pro_league_sim_all(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    result = season.sim_all()
+    return result
+
+
+@app.get("/api/pro/{league}/{session_id}/game/{week}/{matchup}")
+def pro_league_box_score(league: str, session_id: str, week: int, matchup: str):
+    season = _get_pro_session(league, session_id)
+    box = season.get_box_score(week, matchup)
+    if not box:
+        raise HTTPException(status_code=404, detail=f"Game not found: week {week}, matchup '{matchup}'")
+    return box
+
+
+@app.post("/api/pro/{league}/{session_id}/playoffs")
+def pro_league_playoffs(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    if season.phase == "regular_season":
+        result = season.start_playoffs()
+    else:
+        result = season.advance_playoffs()
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.get("/api/pro/{league}/{session_id}/playoffs/bracket")
+def pro_league_playoff_bracket(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    return season.get_playoff_bracket()
+
+
+@app.get("/api/pro/{league}/{session_id}/stats")
+def pro_league_stats(league: str, session_id: str, category: str = "all"):
+    season = _get_pro_session(league, session_id)
+    return season.get_stat_leaders(category)
+
+
+@app.get("/api/pro/{league}/{session_id}/team/{team_key}")
+def pro_league_team_detail(league: str, session_id: str, team_key: str):
+    season = _get_pro_session(league, session_id)
+    detail = season.get_team_detail(team_key)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Team '{team_key}' not found")
+    return detail
+
+
+@app.get("/api/pro/active")
+def pro_league_active():
+    active = []
+    for key, season in pro_sessions.items():
+        active.append({
+            "key": key,
+            "league": season.config.league_id,
+            "league_name": season.config.league_name,
+            "status": season.get_status(),
+        })
+    return {"active_sessions": active, "count": len(active)}
+
+
+@app.get("/api/pro/{league}/{session_id}/status")
+def pro_league_status(league: str, session_id: str):
+    season = _get_pro_session(league, session_id)
+    return season.get_status()
