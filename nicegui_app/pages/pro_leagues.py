@@ -21,14 +21,57 @@ from engine.draftyqueenz import (
     MIN_BET, MAX_BET, STARTING_BANKROLL, PARLAY_MULTIPLIERS,
     _prob_to_american,
 )
+from engine.db import (
+    save_pro_league as _db_save_league,
+    load_pro_league as _db_load_league,
+    list_pro_league_saves as _db_list_saves,
+    delete_pro_league_save as _db_delete_save,
+    save_league_archive as _db_save_archive,
+    load_all_league_archives as _db_load_archives,
+)
 
 
 _pro_sessions: dict[str, ProLeagueSeason] = {}
 _pro_dq_managers: dict[str, DraftyQueenzManager] = {}
 
 
+def _try_restore_from_db(league_id: str, sid: str) -> bool:
+    """Attempt to restore a session from the database into memory.
+
+    Returns True if successfully restored.
+    """
+    try:
+        season, dq = _db_load_league(league_id, sid)
+        if season is not None:
+            _pro_sessions[sid] = season
+            _pro_dq_managers[sid] = dq
+            _log.info(f"Restored {league_id} (session={sid}) from database")
+            return True
+    except Exception as e:
+        _log.warning(f"Failed to restore {league_id} from DB: {e}")
+    return False
+
+
+def _auto_save(league_id: str, sid: str):
+    """Save the current league state to the database (fire-and-forget)."""
+    season = _pro_sessions.get(sid)
+    dq = _pro_dq_managers.get(sid)
+    if season is None:
+        return
+    if dq is None:
+        dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
+    try:
+        _db_save_league(league_id, sid, season, dq)
+    except Exception as e:
+        _log.warning(f"Auto-save failed for {league_id}: {e}")
+
+
 def _get_all_user_sessions() -> dict[str, tuple[str, ProLeagueSeason, DraftyQueenzManager]]:
-    """Return {league_id: (session_id, season, dq_mgr)} for all active leagues."""
+    """Return {league_id: (session_id, season, dq_mgr)} for all active leagues.
+
+    Tries in-memory first. If a session is in the cookie map but not in memory
+    (e.g. after server restart), attempts to restore from the database.
+    """
     sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
     result = {}
     stale_keys = []
@@ -39,6 +82,11 @@ def _get_all_user_sessions() -> dict[str, tuple[str, ProLeagueSeason, DraftyQuee
             if dq is None:
                 dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
                 _pro_dq_managers[sid] = dq
+            result[league_id] = (sid, season, dq)
+        elif _try_restore_from_db(league_id, sid):
+            # Successfully restored from database
+            season = _pro_sessions[sid]
+            dq = _pro_dq_managers[sid]
             result[league_id] = (sid, season, dq)
         else:
             stale_keys.append(league_id)
@@ -67,6 +115,8 @@ def _register_session(league_id: str, sid: str, season: ProLeagueSeason, dq: Dra
     sessions_map[league_id] = sid
     app.storage.user["pro_league_sessions"] = sessions_map
     _set_active_league(league_id)
+    # Persist to database
+    _auto_save(league_id, sid)
 
 
 def _unregister_session(league_id: str):
@@ -77,8 +127,14 @@ def _unregister_session(league_id: str):
     if sid:
         if sid in _pro_sessions:
             archive_season(_pro_sessions[sid])
+            # Save archive to DB for cross-session Champions League
+            from engine.pro_league import _completed_league_snapshots
+            if league_id in _completed_league_snapshots:
+                _db_save_archive(league_id, _completed_league_snapshots[league_id])
             del _pro_sessions[sid]
         _pro_dq_managers.pop(sid, None)
+        # Remove from DB
+        _db_delete_save(league_id, sid)
     if _get_active_league_id() == league_id:
         _set_active_league(None)
 
@@ -87,6 +143,7 @@ def _get_session_and_dq():
     """Get the currently active league's season and DQ manager.
 
     Supports both new multi-session storage and legacy single-session storage.
+    Falls back to database restore if in-memory state is missing.
     """
     # New multi-session path
     active_lid = _get_active_league_id()
@@ -662,8 +719,13 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
 
                     with ui.row().classes("gap-2 mt-3"):
                         async def _back_to_hub():
-                            # Archive but keep session alive for viewing
+                            # Archive and save to DB
                             archive_season(season)
+                            from engine.pro_league import _completed_league_snapshots
+                            lid = season.config.league_id
+                            if lid in _completed_league_snapshots:
+                                _db_save_archive(lid, _completed_league_snapshots[lid])
+                            _auto_save(lid, session_id)
                             _set_active_league(None)
                             app.storage.user["pro_league_pending_nav"] = True
                             ui.navigate.to("/")
@@ -737,6 +799,8 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                 refresh_all_tabs()
             except Exception as e:
                 _log.error(f"tab refresh failed: {e}", exc_info=True)
+        # Auto-save to database after every state change
+        _auto_save(season.config.league_id, session_id)
         _log.info("_refresh_everything complete")
 
     _fill_header()

@@ -47,3 +47,8 @@ htmlcov/
 # Dynasty saves (test data)
 dynasty_save.json
 *.dynasty.json
+
+# Database files (user-specific state)
+*.db
+*.db-wal
+*.db-shm

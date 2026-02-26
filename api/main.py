@@ -57,6 +57,10 @@ from engine.draftyqueenz import (
     POSITION_NAMES, SLOT_LABELS,
     format_moneyline,
 )
+from engine.db import (
+    save_pro_league as db_save_pro_league,
+    load_pro_league as db_load_pro_league,
+)
 
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
@@ -3252,8 +3256,25 @@ def _get_league_config(league: str) -> ProLeagueConfig:
 def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
     key = f"{league.lower()}_{session_id}"
     if key not in pro_sessions:
-        raise HTTPException(status_code=404, detail=f"Pro league session '{key}' not found")
+        # Try restoring from database
+        season, _ = db_load_pro_league(league.lower(), session_id)
+        if season is not None:
+            pro_sessions[key] = season
+        else:
+            raise HTTPException(status_code=404, detail=f"Pro league session '{key}' not found")
     return pro_sessions[key]
+
+
+def _auto_save_pro(league: str, session_id: str):
+    """Save pro league state to database after mutations."""
+    key = f"{league.lower()}_{session_id}"
+    season = pro_sessions.get(key)
+    if season:
+        dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
+        try:
+            db_save_pro_league(league.lower(), session_id, season, dq)
+        except Exception:
+            pass  # non-critical, log in production
 
 
 @app.post("/api/pro/{league}/new")
@@ -3263,6 +3284,7 @@ def pro_league_new(league: str):
     key = f"{league.lower()}_{session_id}"
     season = ProLeagueSeason(config)
     pro_sessions[key] = season
+    _auto_save_pro(league, session_id)
     return {
         "league": league.lower(),
         "session_id": session_id,
@@ -3289,6 +3311,7 @@ def pro_league_sim_week(league: str, session_id: str):
     result = season.sim_week()
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
+    _auto_save_pro(league, session_id)
     return result
 
 
@@ -3296,6 +3319,7 @@ def pro_league_sim_week(league: str, session_id: str):
 def pro_league_sim_all(league: str, session_id: str):
     season = _get_pro_session(league, session_id)
     result = season.sim_all()
+    _auto_save_pro(league, session_id)
     return result
 
 
@@ -3317,6 +3341,7 @@ def pro_league_playoffs(league: str, session_id: str):
         result = season.advance_playoffs()
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
+    _auto_save_pro(league, session_id)
     return result
 
 
