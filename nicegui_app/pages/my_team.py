@@ -20,6 +20,7 @@ from nicegui_app.helpers import (
     format_time,
     safe_filename,
     generate_box_score_markdown,
+    generate_forum_box_score,
     generate_play_log_csv,
     generate_drives_csv,
     compute_quarter_scores,
@@ -1000,13 +1001,22 @@ async def _render_schedule(session_id: str, mode: str, team_name: str):
                                 mime="text/csv",
                             )
 
+                    forum_text = generate_forum_box_score(full_result)
                     box_copy_container = ui.column().classes("w-full")
 
-                    def _show_box_copy(md=box_md):
+                    def _show_box_copy(txt=forum_text):
                         box_copy_container.clear()
                         with box_copy_container:
-                            ui.code(md, language="markdown")
-                            ui.label("Select all and copy the text above.").classes("text-sm text-gray-500")
+                            ui.textarea(value=txt).classes("w-full font-mono text-xs").props(
+                                "readonly outlined rows=20"
+                            )
+
+                            async def _do_copy(t=txt):
+                                escaped = t.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+                                await ui.run_javascript(f'navigator.clipboard.writeText(`{escaped}`)')
+                                ui.notify("Box score copied to clipboard!", type="positive", position="top")
+
+                            ui.button("Copy to Clipboard", on_click=_do_copy, icon="content_copy").classes("mt-1")
 
                     ui.button("Show Box Score for Copying", on_click=_show_box_copy, icon="content_copy")
 

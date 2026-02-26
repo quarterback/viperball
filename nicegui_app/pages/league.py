@@ -1646,7 +1646,13 @@ def _render_league_history(history: list):
         year = entry.get("year", "?")
         champion = entry.get("champion", "Unknown")
         top5 = entry.get("top_5", [])
-        runner_up = top5[1] if len(top5) > 1 else ""
+        runner_up = entry.get("runner_up", "")
+        if not runner_up:
+            # Fallback for old data: use top_5[1] but skip if same as champion
+            if len(top5) > 1:
+                runner_up = top5[1] if top5[1] != champion else (top5[2] if len(top5) > 2 else "")
+            else:
+                runner_up = ""
         rows.append({
             "Year": str(year),
             "Champion": champion,

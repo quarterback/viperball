@@ -21,7 +21,8 @@ from engine.viperball_metrics import calculate_viperball_metrics
 from nicegui_app.state import UserState
 from nicegui_app.helpers import (
     load_team, format_time, fmt_vb_score,
-    generate_box_score_markdown, generate_play_log_csv,
+    generate_box_score_markdown, generate_forum_box_score,
+    generate_play_log_csv,
     generate_drives_csv, safe_filename, drive_result_label,
     drive_result_color, compute_quarter_scores,
 )
@@ -930,3 +931,20 @@ def _render_export(result, home_name, away_name, actual_seed):
 
         json_str = json.dumps(result, indent=2, default=str)
         download_button("Full JSON", json_str, f"{tag}_full.json", "application/json")
+
+    # Forum-friendly copy section
+    ui.separator().classes("my-4")
+    ui.label("Copy for Forum").classes("text-sm font-bold text-slate-700 mb-2")
+    ui.label("Plain-text box score you can paste into any forum or chat.").classes("text-sm text-gray-500 mb-2")
+
+    forum_text = generate_forum_box_score(result)
+    forum_area = ui.textarea(value=forum_text).classes("w-full font-mono text-xs").props(
+        "readonly outlined rows=20"
+    )
+
+    async def _copy_forum():
+        escaped = forum_text.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        await ui.run_javascript(f'navigator.clipboard.writeText(`{escaped}`)')
+        ui.notify("Box score copied to clipboard!", type="positive", position="top")
+
+    ui.button("Copy to Clipboard", on_click=_copy_forum, icon="content_copy").classes("mt-2")
