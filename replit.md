@@ -29,7 +29,7 @@ The project maintains a clear separation of concerns:
 - **`nicegui_app/`**: NiceGUI web application.
 - **`data/teams/`**: CVL team configuration in JSON files (188 teams).
 - **`data/nvl_teams/`**: NVL team configuration in JSON files (24 teams, male players).
-- **`data/name_pools/`**: Name pools for player generation (female: `first_names.json`, male: `male_first_names.json`).
+- **`data/name_pools/`**: Name pools for player generation (female: `first_names.json`, male: `male_first_names.json`). Male names sourced from real NCAA athlete rosters via ESPN API (1,500+ first names, 2,800+ surnames from 16 top programs including Alabama, Georgia, LSU, Ohio State, Clemson, Notre Dame, etc.).
 - **`main.py`**: Application entry point.
 
 ### Pro League System (NVL)
@@ -43,6 +43,7 @@ The project maintains a clear separation of concerns:
 - **Season continuity (Phase 2)**: Data model includes `contract` stubs on players and `export_snapshot()` for future season chaining.
 - **API endpoints**: `/api/pro/{league}/new`, `standings`, `schedule`, `sim-week`, `sim-all`, `game/{week}/{matchup}`, `playoffs`, `stats`, `team/{team_key}`, `active`.
 - **UI tabs**: Dashboard (sim controls), Standings (4-division tables), Schedule & Results (week-by-week with box score viewer), Stats Leaders (rushing/kick pass/scoring/total yards), Playoffs (bracket), Teams (roster + season stats + schedule).
+- **Player Cards**: Clickable player names throughout all NVL tables (roster, season stats, stat leaders, box scores) open a Pro Football Reference-style player card dialog. Cards show bio info (position, height, weight, hometown, archetype, play style), attribute ratings (OVR + 11 ratings with color-coded tiles), and season stats in tabular format (rushing, kick passing, laterals, defense, drop kicking). Data sourced from `ProLeagueSeason.get_player_card(team_key, player_name)`. Same pattern reusable for CVL.
 
 ### Feature Specifications
 - **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 58 yards hard cap), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, Penalty System (30+ types), Victory Formation (kneel-down with 35-40s clock burn), and Defensive Timeout Strategy (Q4 trailing defense calls TOs to preserve clock).

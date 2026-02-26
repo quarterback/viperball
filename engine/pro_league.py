@@ -432,18 +432,18 @@ class ProLeagueSeason:
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
-            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", 0))
+            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
             acc["rushing_carries"] += ps.get("carries", ps.get("game_carries", 0))
-            acc["touchdowns"] += ps.get("touchdowns", ps.get("game_touchdowns", 0))
-            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", 0))
-            acc["kick_pass_completions"] += ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", 0))
-            acc["kick_pass_attempts"] += ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0))
+            acc["touchdowns"] += ps.get("touchdowns", ps.get("game_touchdowns", ps.get("tds", 0)))
+            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", ps.get("kick_yards", 0)))
+            acc["kick_pass_completions"] += ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", ps.get("kick_comp", 0)))
+            acc["kick_pass_attempts"] += ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", ps.get("kick_att", 0)))
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
-            acc["laterals"] += ps.get("laterals", ps.get("game_laterals", 0))
+            acc["laterals"] += ps.get("laterals", ps.get("game_laterals", ps.get("lateral_chains", 0)))
             acc["fumbles"] += ps.get("fumbles", ps.get("game_fumbles", 0))
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
-            acc["dk_attempted"] += ps.get("dk_attempted", ps.get("game_dk_attempted", 0))
+            acc["dk_attempted"] += ps.get("dk_attempted", ps.get("game_dk_attempted", ps.get("dk_att", 0)))
             acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"]
 
     def get_stat_leaders(self, category: str = "all") -> dict:
@@ -458,7 +458,8 @@ class ProLeagueSeason:
 
         rushing = sorted(all_players, key=lambda p: -p["rushing_yards"])[:20]
         leaders["rushing"] = [{
-            "name": p["name"], "team": p["team_name"], "position": p["position"],
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
             "yards": p["rushing_yards"], "carries": p["rushing_carries"],
             "ypc": round(p["rushing_yards"] / max(1, p["rushing_carries"]), 1),
             "games": p["games"],
@@ -466,7 +467,8 @@ class ProLeagueSeason:
 
         kick_pass = sorted(all_players, key=lambda p: -p["kick_pass_yards"])[:20]
         leaders["kick_pass"] = [{
-            "name": p["name"], "team": p["team_name"], "position": p["position"],
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
             "yards": p["kick_pass_yards"], "completions": p["kick_pass_completions"],
             "attempts": p["kick_pass_attempts"],
             "pct": round(p["kick_pass_completions"] / max(1, p["kick_pass_attempts"]) * 100, 1),
@@ -475,14 +477,16 @@ class ProLeagueSeason:
 
         scoring = sorted(all_players, key=lambda p: -p["touchdowns"])[:20]
         leaders["scoring"] = [{
-            "name": p["name"], "team": p["team_name"], "position": p["position"],
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
             "touchdowns": p["touchdowns"], "dk_made": p["dk_made"],
             "total_yards": p["total_yards"], "games": p["games"],
         } for p in scoring if p["touchdowns"] > 0]
 
         total = sorted(all_players, key=lambda p: -p["total_yards"])[:20]
         leaders["total_yards"] = [{
-            "name": p["name"], "team": p["team_name"], "position": p["position"],
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
             "total_yards": p["total_yards"], "rushing": p["rushing_yards"],
             "kick_pass": p["kick_pass_yards"], "games": p["games"],
         } for p in total if p["total_yards"] > 0]
@@ -554,6 +558,65 @@ class ProLeagueSeason:
             "roster": roster,
             "season_stats": season_stats,
             "schedule": team_schedule,
+        }
+
+    def get_player_card(self, team_key: str, player_name: str) -> Optional[dict]:
+        if team_key not in self.teams:
+            return None
+        team = self.teams[team_key]
+        player = None
+        for p in team.players:
+            if p.name == player_name:
+                player = p
+                break
+        if not player:
+            return None
+
+        record = self.standings.get(team_key)
+        division = self._get_division_for_key(team_key)
+
+        bio = {
+            "name": player.name,
+            "number": player.number,
+            "position": player.position,
+            "team_key": team_key,
+            "team_name": team.name,
+            "division": division,
+            "team_record": f"{record.wins}-{record.losses}" if record else "0-0",
+            "archetype": player.archetype,
+            "height": player.height,
+            "weight": player.weight,
+            "hometown_city": player.hometown_city,
+            "hometown_state": player.hometown_state,
+            "nationality": player.nationality,
+            "variance_archetype": player.variance_archetype,
+        }
+
+        ratings = {
+            "overall": player.overall,
+            "speed": player.speed,
+            "stamina": player.stamina,
+            "kicking": player.kicking,
+            "lateral_skill": player.lateral_skill,
+            "tackling": player.tackling,
+            "agility": player.agility,
+            "power": player.power,
+            "awareness": player.awareness,
+            "hands": player.hands,
+            "kick_power": player.kick_power,
+            "kick_accuracy": player.kick_accuracy,
+        }
+
+        pid = f"{team_key}_{player_name}"
+        season_stats = {}
+        team_stats = self.player_season_stats.get(team_key, {})
+        if pid in team_stats:
+            season_stats = dict(team_stats[pid])
+
+        return {
+            "bio": bio,
+            "ratings": ratings,
+            "season_stats": season_stats,
         }
 
     def start_playoffs(self) -> dict:
