@@ -172,6 +172,31 @@ def _generate_scoring_events(total_points: float, team, opp_def_str: float,
     }
 
 
+def _generate_dye_data(total_yards: int, total_plays: int,
+                       scoring: Dict, rng: random.Random) -> Dict:
+    """Generate plausible DYE (Delta Yards Efficiency) data for fast sim."""
+    total_drives = max(6, round(rng.gauss(12, 2)))
+    pen_count = max(0, round(total_drives * rng.uniform(0.15, 0.35)))
+    bst_count = max(0, round(total_drives * rng.uniform(0.15, 0.35)))
+    neu_count = max(0, total_drives - pen_count - bst_count)
+
+    ypd_base = total_yards / max(1, total_drives)
+
+    pen_yards = max(0, round(pen_count * ypd_base * rng.uniform(0.6, 0.95)))
+    bst_yards = max(0, round(bst_count * ypd_base * rng.uniform(1.05, 1.45)))
+    neu_yards = max(0, round(neu_count * ypd_base * rng.uniform(0.85, 1.15)))
+
+    pen_scores = sum(1 for _ in range(pen_count) if rng.random() < 0.20)
+    bst_scores = sum(1 for _ in range(bst_count) if rng.random() < 0.35)
+    neu_scores = sum(1 for _ in range(neu_count) if rng.random() < 0.28)
+
+    return {
+        "penalized": {"count": pen_count, "total_yards": pen_yards, "scores": pen_scores},
+        "boosted": {"count": bst_count, "total_yards": bst_yards, "scores": bst_scores},
+        "neutral": {"count": neu_count, "total_yards": neu_yards, "scores": neu_scores},
+    }
+
+
 def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
                          rng: random.Random) -> Dict:
     """Generate realistic team stat lines from scoring events."""
@@ -275,6 +300,12 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "penalties": penalties,
         "penalty_yards": penalty_yards,
         "penalties_declined": max(0, round(rng.gauss(1.0, 0.8))),
+        # DYE: delta kickoff system data
+        "dye": _generate_dye_data(total_yards, total_plays, scoring, rng),
+        "bonus_possessions": max(0, round(rng.gauss(1.2, 0.8))),
+        "bonus_possession_scores": 1 if rng.random() < 0.15 else 0,
+        "bonus_possession_yards": max(0, round(rng.gauss(20, 12))),
+        "delta_yards": round(rng.gauss(0, 8), 1),
     }
 
 
@@ -337,12 +368,121 @@ def _generate_synthetic_metrics(stats: Dict, scoring: Dict,
     metrics["opi"] = round(opi, 2)
     metrics["team_rating"] = round(opi, 2)  # fan-friendly alias
 
+    # Defensive impact data for standings accumulation
+    opp_drives = max(6, round(rng.gauss(12, 2)))
+    def_stops = max(0, round(opp_drives * rng.uniform(0.3, 0.55)))
+    metrics["defensive_impact"] = {
+        "bonus_possessions": max(0, round(rng.gauss(1.0, 0.8))),
+        "bonus_scores": 1 if rng.random() < 0.15 else 0,
+        "turnovers_forced": total_turnovers,
+        "defensive_stops": def_stops,
+        "opponent_drives": opp_drives,
+    }
+
+    # Additional fields used by standings
+    metrics["explosive_plays"] = max(0, round(rng.gauss(4, 2)))
+    to_margin = total_turnovers - max(0, round(rng.gauss(2.5, 1.5)))
+    metrics["to_margin"] = round(to_margin, 1)
+    metrics["avg_start"] = round(25 + strength_factor * 5 + rng.gauss(0, 3), 1)
+
     return metrics
+
+
+_FAST_SIM_POS_TAGS = {
+    "Zeroback": "ZB",
+    "Viper": "VP",
+    "Halfback": "HB",
+    "Wingback": "WB",
+    "Slotback": "SB",
+    "Keeper": "KP",
+    "Offensive Line": "OL",
+    "Defensive Line": "DL",
+    "Linebacker": "LB",
+    "Cornerback": "CB",
+    "Lineman": "LA",
+    "Edge Defender": "ED",
+}
+
+
+def _fast_player_tag(player) -> str:
+    tag = _FAST_SIM_POS_TAGS.get(player.position, player.position[:2].upper())
+    return f"{tag}{player.number}"
+
+
+def _make_player_entry(player, **overrides) -> Dict:
+    """Build a player stat dict matching the full engine's field names."""
+    tag = _fast_player_tag(player)
+    entry = {
+        "tag": tag,
+        "name": player.name,
+        "position": player.position,
+        "overall": player.overall,
+        "archetype": getattr(player, 'archetype', ''),
+        # Rushing
+        "rush_carries": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        # Totals
+        "yards": 0,
+        "tds": 0,
+        "touches": 0,
+        "fumbles": 0,
+        # Kick passing (thrown)
+        "kick_passes_thrown": 0,
+        "kick_passes_completed": 0,
+        "kick_pass_yards": 0,
+        "kick_pass_tds": 0,
+        "kick_pass_interceptions_thrown": 0,
+        # Kick passing (received)
+        "kick_pass_receptions": 0,
+        # Laterals
+        "laterals_thrown": 0,
+        "lateral_receptions": 0,
+        "lateral_assists": 0,
+        "lateral_yards": 0,
+        "lateral_tds": 0,
+        # Kicking
+        "kick_att": 0,
+        "kick_made": 0,
+        "dk_att": 0,
+        "dk_made": 0,
+        "pk_att": 0,
+        "pk_made": 0,
+        "kick_deflections": 0,
+        # Defense
+        "tackles": 0,
+        "tfl": 0,
+        "sacks": 0,
+        "hurries": 0,
+        "kick_pass_ints": 0,
+        # Returns & special teams
+        "kick_returns": 0,
+        "kick_return_yards": 0,
+        "kick_return_tds": 0,
+        "punt_returns": 0,
+        "punt_return_yards": 0,
+        "punt_return_tds": 0,
+        "muffs": 0,
+        "st_tackles": 0,
+        "keeper_bells": 0,
+        "coverage_snaps": 0,
+        "keeper_tackles": 0,
+        # Roles
+        "off_role": "ROTATION",
+        "def_role": "ROTATION",
+        "st_role": "ROTATION",
+    }
+    entry.update(overrides)
+    return entry
 
 
 def _generate_player_stats(team, stats: Dict, scoring: Dict,
                            rng: random.Random) -> List[Dict]:
-    """Generate individual player stat leaders from team totals."""
+    """Generate individual player stat leaders from team totals.
+
+    Output field names match the full game engine so the API aggregator
+    can combine fast-sim and full-engine results seamlessly.
+    """
     players = list(team.players)
     if not players:
         return []
@@ -354,7 +494,8 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
     )[:8]
 
     defenders = sorted(
-        [p for p in players if p.position in ("Linebacker", "Cornerback", "Lineman")],
+        [p for p in players if p.position in ("Defensive Line", "Linebacker", "Cornerback", "Lineman", "Keeper")
+         and p not in skill_players],
         key=lambda p: p.tackling,
         reverse=True,
     )[:6]
@@ -374,6 +515,7 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
     total_kp_comp = stats["kick_passes_completed"]
     total_kp_yards = stats["kick_pass_yards"]
     total_kp_tds = stats["kick_pass_tds"]
+    total_kp_ints = stats.get("kick_pass_interceptions", 0)
 
     carry_weights = [p.overall + p.speed * 0.3 + rng.gauss(0, 10) for p in skill_players]
     total_w = sum(max(1, w) for w in carry_weights)
@@ -385,6 +527,7 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
     remaining_kp_comp = total_kp_comp
     remaining_kp_yards = total_kp_yards
     remaining_kp_tds = total_kp_tds
+    remaining_kp_ints = total_kp_ints
 
     for i, player in enumerate(skill_players):
         is_last = (i == len(skill_players) - 1)
@@ -398,6 +541,7 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             kp_comp = remaining_kp_comp
             kp_yards = remaining_kp_yards
             kp_tds = remaining_kp_tds
+            kp_ints_thrown = remaining_kp_ints
         else:
             carries = max(0, round(total_carries * share * rng.uniform(0.7, 1.3)))
             carries = min(carries, remaining_carries)
@@ -413,6 +557,7 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             kp_yards = max(0, round(total_kp_yards * kp_share * rng.uniform(0.6, 1.4)))
             kp_yards = min(kp_yards, remaining_kp_yards)
             kp_tds = min(remaining_kp_tds, 1 if rng.random() < kp_share else 0)
+            kp_ints_thrown = min(remaining_kp_ints, 1 if kp_att > 0 and rng.random() < 0.15 else 0)
 
         remaining_carries -= carries
         remaining_rush_yards -= rush_yards
@@ -421,97 +566,98 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
         remaining_kp_comp -= kp_comp
         remaining_kp_yards -= kp_yards
         remaining_kp_tds -= kp_tds
+        remaining_kp_ints -= kp_ints_thrown
 
         lateral_chains = max(0, round(rng.gauss(2, 1.5)))
         lat_yards = max(0, round(rng.gauss(8, 5))) if lateral_chains > 0 else 0
+        lat_thrown = max(0, round(lateral_chains * rng.uniform(0.3, 0.7)))
+        lat_recv = max(0, lateral_chains - lat_thrown)
+        lat_assists = max(0, round(lat_thrown * rng.uniform(0.3, 0.8)))
 
         tackles = max(0, round(rng.gauss(1, 1))) if player.position in ("Halfback", "Wingback") else 0
+        fumbles = 1 if rng.random() < 0.08 else 0
 
-        entry = {
-            "name": player.name,
-            "position": player.position,
-            "overall": player.overall,
-            "archetype": getattr(player, 'archetype', ''),
-            "carries": carries,
-            "yards": rush_yards,
-            "tds": rush_tds,
-            "touches": carries + kp_comp + lateral_chains,
-            "kick_att": kp_att,
-            "kick_comp": kp_comp,
-            "kick_yards": kp_yards,
-            "kick_tds": kp_tds,
-            "lateral_chains": lateral_chains,
-            "lateral_yards": lat_yards,
-            "tackles": tackles,
-            "fumbles": 1 if rng.random() < 0.08 else 0,
-            "dk_made": 0,
-            "dk_att": 0,
-            "pk_made": 0,
-            "pk_att": 0,
-            "off_role": "STARTER" if i < 4 else "ROTATION",
-            "def_role": "ROTATION",
-            "st_role": "ROTATION",
-        }
+        # Receiving: distribute completed passes as receptions
+        kp_rec = max(0, round(kp_comp * rng.uniform(0.3, 0.7))) if kp_comp > 0 else 0
+
+        total_yds = rush_yards + lat_yards + kp_yards
+        total_tds = rush_tds + kp_tds
+
+        entry = _make_player_entry(
+            player,
+            rush_carries=carries,
+            rushing_yards=rush_yards,
+            rushing_tds=rush_tds,
+            yards=total_yds,
+            tds=total_tds,
+            touches=carries + kp_comp + lateral_chains,
+            fumbles=fumbles,
+            kick_passes_thrown=kp_att,
+            kick_passes_completed=kp_comp,
+            kick_pass_yards=kp_yards,
+            kick_pass_tds=kp_tds,
+            kick_pass_interceptions_thrown=kp_ints_thrown,
+            kick_pass_receptions=kp_rec,
+            laterals_thrown=lat_thrown,
+            lateral_receptions=lat_recv,
+            lateral_assists=lat_assists,
+            lateral_yards=lat_yards,
+            lateral_tds=1 if lat_yards > 15 and rng.random() < 0.15 else 0,
+            tackles=tackles,
+            off_role="STARTER" if i < 4 else "ROTATION",
+        )
         all_stat_players.append(entry)
 
     for player in defenders:
         tackles = max(1, round(rng.gauss(5, 2.5)))
-        entry = {
-            "name": player.name,
-            "position": player.position,
-            "overall": player.overall,
-            "archetype": getattr(player, 'archetype', ''),
-            "carries": 0,
-            "yards": 0,
-            "tds": 0,
-            "touches": 0,
-            "kick_att": 0,
-            "kick_comp": 0,
-            "kick_yards": 0,
-            "kick_tds": 0,
-            "lateral_chains": 0,
-            "lateral_yards": 0,
-            "tackles": tackles,
-            "fumbles": 0,
-            "dk_made": 0,
-            "dk_att": 0,
-            "pk_made": 0,
-            "pk_att": 0,
-            "off_role": "ROTATION",
-            "def_role": "STARTER" if tackles >= 4 else "ROTATION",
-            "st_role": "ROTATION",
-        }
+        tfl = max(0, round(rng.gauss(0.8, 0.6)))
+        sacks = max(0, round(rng.gauss(0.3, 0.4)))
+        hurries = max(0, round(rng.gauss(0.5, 0.5)))
+        def_kp_ints = 1 if rng.random() < 0.08 else 0
+
+        entry = _make_player_entry(
+            player,
+            tackles=tackles,
+            tfl=tfl,
+            sacks=sacks,
+            hurries=hurries,
+            kick_pass_ints=def_kp_ints,
+            st_tackles=max(0, round(rng.gauss(0.5, 0.5))),
+            def_role="STARTER" if tackles >= 4 else "ROTATION",
+        )
         all_stat_players.append(entry)
 
     if kickers and scoring["dk_made"] + scoring["pk_made"] > 0:
         kicker = kickers[0]
+        dk_m = scoring["dk_made"]
+        dk_a = scoring["dk_attempted"]
+        pk_m = scoring["pk_made"]
+        pk_a = scoring["pk_attempted"]
+        total_kick_att = dk_a + pk_a
+        total_kick_made = dk_m + pk_m
         for entry in all_stat_players:
             if entry["name"] == kicker.name:
-                entry["dk_made"] = scoring["dk_made"]
-                entry["dk_att"] = scoring["dk_attempted"]
-                entry["pk_made"] = scoring["pk_made"]
-                entry["pk_att"] = scoring["pk_attempted"]
-                entry["touches"] += scoring["dk_attempted"] + scoring["pk_attempted"]
+                entry["dk_made"] = dk_m
+                entry["dk_att"] = dk_a
+                entry["pk_made"] = pk_m
+                entry["pk_att"] = pk_a
+                entry["kick_att"] = total_kick_att
+                entry["kick_made"] = total_kick_made
+                entry["touches"] += total_kick_att
                 break
         else:
-            entry = {
-                "name": kicker.name,
-                "position": kicker.position,
-                "overall": kicker.overall,
-                "archetype": getattr(kicker, 'archetype', ''),
-                "carries": 0, "yards": 0, "tds": 0,
-                "touches": scoring["dk_attempted"] + scoring["pk_attempted"],
-                "kick_att": 0, "kick_comp": 0, "kick_yards": 0, "kick_tds": 0,
-                "lateral_chains": 0, "lateral_yards": 0,
-                "tackles": 0, "fumbles": 0,
-                "dk_made": scoring["dk_made"],
-                "dk_att": scoring["dk_attempted"],
-                "pk_made": scoring["pk_made"],
-                "pk_att": scoring["pk_attempted"],
-                "off_role": "STARTER",
-                "def_role": "ROTATION",
-                "st_role": "STARTER",
-            }
+            entry = _make_player_entry(
+                kicker,
+                touches=total_kick_att,
+                dk_made=dk_m,
+                dk_att=dk_a,
+                pk_made=pk_m,
+                pk_att=pk_a,
+                kick_att=total_kick_att,
+                kick_made=total_kick_made,
+                off_role="STARTER",
+                st_role="STARTER",
+            )
             all_stat_players.append(entry)
 
     all_stat_players.sort(
