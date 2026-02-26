@@ -116,15 +116,51 @@ async def render_pro_leagues_section(state, shared):
                 _render_league_start_card(config, meta)
         return
 
-    with ui.row().classes("w-full gap-4 flex-wrap mb-2"):
-        metric_card("DQ$ Balance", f"${dq_mgr.bankroll.balance:,}")
-        picks_made = dq_mgr.total_picks_made
-        picks_won = dq_mgr.total_picks_won
-        pct = (picks_won / picks_made * 100) if picks_made > 0 else 0
-        metric_card("Pick Record", f"{picks_won}/{picks_made} ({pct:.0f}%)")
-        peak = dq_mgr.peak_bankroll
-        roi = ((dq_mgr.bankroll.balance - STARTING_BANKROLL) / STARTING_BANKROLL * 100)
-        metric_card("ROI", f"{roi:+.1f}%")
+    @ui.refreshable
+    def dq_summary():
+        with ui.row().classes("w-full gap-4 flex-wrap mb-2"):
+            metric_card("DQ$ Balance", f"${dq_mgr.bankroll.balance:,}")
+            picks_made = dq_mgr.total_picks_made
+            picks_won = dq_mgr.total_picks_won
+            pct = (picks_won / picks_made * 100) if picks_made > 0 else 0
+            metric_card("Pick Record", f"{picks_won}/{picks_made} ({pct:.0f}%)")
+            roi = ((dq_mgr.bankroll.balance - STARTING_BANKROLL) / STARTING_BANKROLL * 100)
+            metric_card("ROI", f"{roi:+.1f}%")
+
+    dq_summary()
+
+    @ui.refreshable
+    def standings_content():
+        _render_standings(season)
+
+    @ui.refreshable
+    def schedule_content():
+        _render_schedule(season)
+
+    @ui.refreshable
+    def stats_content():
+        _render_stats(season)
+
+    @ui.refreshable
+    def playoffs_content():
+        _render_playoffs(season)
+
+    @ui.refreshable
+    def teams_content():
+        _render_teams(season)
+
+    @ui.refreshable
+    def betting_content():
+        _render_betting(season, dq_mgr)
+
+    def _refresh_all_tabs():
+        dq_summary.refresh()
+        standings_content.refresh()
+        schedule_content.refresh()
+        stats_content.refresh()
+        playoffs_content.refresh()
+        teams_content.refresh()
+        betting_content.refresh()
 
     with ui.tabs().classes("w-full") as tabs:
         tab_dash = ui.tab("Dashboard", icon="dashboard")
@@ -137,34 +173,44 @@ async def render_pro_leagues_section(state, shared):
 
     with ui.tab_panels(tabs, value=tab_dash).classes("w-full"):
         with ui.tab_panel(tab_dash):
-            await _render_dashboard(season, dq_mgr)
+            await _render_dashboard(season, dq_mgr, _refresh_all_tabs)
         with ui.tab_panel(tab_betting):
-            _render_betting(season, dq_mgr)
+            betting_content()
         with ui.tab_panel(tab_stand):
-            _render_standings(season)
+            standings_content()
         with ui.tab_panel(tab_sched):
-            _render_schedule(season)
+            schedule_content()
         with ui.tab_panel(tab_stats):
-            _render_stats(season)
+            stats_content()
         with ui.tab_panel(tab_playoffs):
-            _render_playoffs(season)
+            playoffs_content()
         with ui.tab_panel(tab_teams):
-            _render_teams(season)
+            teams_content()
 
 
-async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager):
-    status = season.get_status()
-
-    league_name = status.get("league", season.config.league_name)
+async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager, refresh_all_tabs=None):
     league_abbr = season.config.league_id.upper()
-    ui.label(f"{league_abbr} — {league_name}").classes("text-2xl font-bold text-slate-800")
+    league_name = season.config.league_name
 
-    with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
-        metric_card("Phase", status["phase"].replace("_", " ").title())
-        metric_card("Week", f"{status['current_week']} / {status['total_weeks']}")
-        metric_card("Teams", status["team_count"])
-        if status["champion"]:
-            metric_card("Champion", status["champion_name"])
+    @ui.refreshable
+    def dash_header():
+        st = season.get_status()
+        ui.label(f"{league_abbr} — {league_name}").classes("text-2xl font-bold text-slate-800")
+        with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
+            metric_card("Phase", st["phase"].replace("_", " ").title())
+            metric_card("Week", f"{st['current_week']} / {st['total_weeks']}")
+            metric_card("Teams", st["team_count"])
+            if st["champion"]:
+                metric_card("Champion", st["champion_name"])
+
+    dash_header()
+
+    def _refresh_everything():
+        dash_header.refresh()
+        sim_controls.refresh()
+        results_display.refresh()
+        if refresh_all_tabs:
+            refresh_all_tabs()
 
     @ui.refreshable
     def sim_controls():
@@ -192,8 +238,7 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                     next_week = season.current_week + 1
                     await run.io_bound(season.sim_week)
                     _resolve_dq_bets(season, dq_mgr, next_week)
-                    sim_controls.refresh()
-                    results_display.refresh()
+                    _refresh_everything()
                 ui.button("Sim Week", icon="skip_next", on_click=_sim_week).props("color=indigo no-caps")
 
                 async def _sim_all():
@@ -201,22 +246,19 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                     await run.io_bound(season.sim_all)
                     for w in range(start_week, season.current_week + 1):
                         _resolve_dq_bets(season, dq_mgr, w)
-                    sim_controls.refresh()
-                    results_display.refresh()
+                    _refresh_everything()
                 ui.button("Sim All", icon="fast_forward", on_click=_sim_all).props("color=blue no-caps")
 
             if st["phase"] == "regular_season" and st["current_week"] >= st["total_weeks"]:
                 async def _start_playoffs():
                     await run.io_bound(season.start_playoffs)
-                    sim_controls.refresh()
-                    results_display.refresh()
+                    _refresh_everything()
                 ui.button("Start Playoffs", icon="emoji_events", on_click=_start_playoffs).props("color=amber no-caps")
 
             if st["phase"] == "playoffs" and not st["champion"]:
                 async def _advance():
                     await run.io_bound(season.advance_playoffs)
-                    sim_controls.refresh()
-                    results_display.refresh()
+                    _refresh_everything()
                 ui.button("Advance Playoffs", icon="skip_next", on_click=_advance).props("color=amber no-caps")
 
     sim_controls()
@@ -298,7 +340,8 @@ def _generate_nvl_odds(season: ProLeagueSeason, week: int) -> list:
 
 
 def _render_betting(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager):
-    ui.label("DraftyQueenz — NVL Betting").classes("text-xl font-bold text-slate-800 mb-2")
+    league_abbr = season.config.league_id.upper()
+    ui.label(f"DraftyQueenz — {league_abbr} Betting").classes("text-xl font-bold text-slate-800 mb-2")
 
     balance = dq_mgr.bankroll.balance
 
@@ -536,8 +579,9 @@ def _render_betting_history(dq_mgr: DraftyQueenzManager):
 
 def _render_standings(season: ProLeagueSeason):
     standings = season.get_standings()
+    league_abbr = season.config.league_id.upper()
 
-    ui.label("Division Standings").classes("text-xl font-bold text-slate-800 mb-2")
+    ui.label(f"{league_abbr} Division Standings").classes("text-xl font-bold text-slate-800 mb-2")
     ui.label(f"Week {standings['week']} of {standings['total_weeks']}").classes("text-sm text-slate-500 mb-4")
 
     for div_name, teams in standings["divisions"].items():
@@ -999,7 +1043,8 @@ def _stat_leader_table(season: ProLeagueSeason, data: list, col_spec: list):
 
 
 def _render_playoffs(season: ProLeagueSeason):
-    ui.label("NVL Playoffs").classes("text-xl font-bold text-slate-800 mb-2")
+    league_abbr = season.config.league_id.upper()
+    ui.label(f"{league_abbr} Playoffs").classes("text-xl font-bold text-slate-800 mb-2")
 
     if season.phase != "playoffs" and not season.champion:
         remaining = season.total_weeks - season.current_week
@@ -1017,7 +1062,7 @@ def _render_playoffs(season: ProLeagueSeason):
 
     if bracket.get("champion_name"):
         with ui.card().classes("p-4 bg-gradient-to-r from-yellow-50 to-amber-50 mb-4"):
-            ui.label(f"NVL Champion: {bracket['champion_name']}").classes(
+            ui.label(f"{league_abbr} Champion: {bracket['champion_name']}").classes(
                 "text-xl font-extrabold text-amber-700"
             )
 
@@ -1046,7 +1091,8 @@ def _render_playoffs(season: ProLeagueSeason):
 
 
 def _render_teams(season: ProLeagueSeason):
-    ui.label("NVL Teams").classes("text-xl font-bold text-slate-800 mb-2")
+    league_abbr = season.config.league_id.upper()
+    ui.label(f"{league_abbr} Teams").classes("text-xl font-bold text-slate-800 mb-2")
 
     team_options = {}
     for div_name, keys in season.config.divisions.items():
