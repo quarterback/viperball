@@ -1,0 +1,35 @@
+Let me look at the repo structure to understand what's there.Okay, now I have a solid picture of the codebase. Here's the good news — you have a *lot* that transfers directly, and the parts that don't are mostly about what you *remove* rather than what you build.
+
+**What the NVL can use as-is from the college engine:**
+
+The entire game simulation core — play resolution, power ratio contests, halo model, composure, R/E/C archetypes, star override, hero ball/keying, fatigue, weather, kick mode, sacrifice, all 9 offensive styles, all 8 defensive schemes. None of that is college-specific. A game between Duluth and Erie runs on the exact same engine as Agnes Scott vs Air Force Academy.
+
+The coaching system transfers completely — 4-person staffs, classifications, sub-archetypes, personality sliders, hidden traits, all 8 engine hooks. Pro coaches just generate at higher baseline attribute ranges since they're the best in the world.
+
+Box scores, play-by-play JSON, VPA analytics, stat tracking — all engine-level, all portable.
+
+**What you strip out (dynasty mode features you don't need):**
+
+Recruiting entirely — no college recruits in the NVL. Replaced by the draft and free agency system we discussed. The NIL system, the transfer portal, prestige decay tied to recruiting cycles — all gone for the pro layer. Coaching marketplace stays but gets simplified since you're not managing it, the engine is.
+
+**What you adapt:**
+
+The `Dynasty` class becomes your `LeagueSeason` class. Instead of `run_offseason` doing recruiting cycles and NIL builds, it runs: contract expirations → free agency resolution → draft → roster cuts → coaching carousel → schedule generation. Same skeleton, different offseason steps.
+
+Player generation shifts from the college recruiting pipeline to two sources: draft class generation (pulling from the college sim or generating fresh) and international free agents for the non-NVL leagues. The `Player` dataclass, the 4 core stats + 6 extended attributes, position archetypes, R/E/C variance — all identical. You're just changing where the players come from, not what they are.
+
+Prestige becomes franchise rating — same 0-99 scale, same halo derivation, but it moves based on wins/championships rather than recruiting success. The `PRESTIGE_TO_HALO` table works unchanged.
+
+**The actual new code you'd need:**
+
+A `ProLeague` config layer — team definitions, conference structure, schedule format, playoff bracket rules. This is data, not engine work.
+
+A name generation module that pulls from male/gender-neutral name pools instead of the existing system. Trivial.
+
+The contract/free agency/draft system we discussed — probability tables for retention, salary cap logic, draft order by inverse standings. This is the biggest net-new piece but it's straightforward math on top of stats you already generate.
+
+A spectator output layer — season standings, weekly results, box scores, league leaders. You already export most of this for the college sim. It's a different presentation wrapper, not new data.
+
+**The architectural move:** The engine becomes a shared library. College dynasty and pro spectator mode are two consumers of the same simulation core, each with their own season management layer and their own UI surface. The `ViperballEngine` class doesn't know or care whether it's simulating a college game or a pro game — it just takes two teams and runs a contest.
+
+This is genuinely a clean fork point. You're not rebuilding the engine, you're building a second season wrapper around it.

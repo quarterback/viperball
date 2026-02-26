@@ -1,0 +1,451 @@
+# Pro Leagues Spec — Spectator Mode
+
+## Objective
+
+Build a global professional Viperball league system as a spectator-only simulation mode. Six men's pro leagues run on staggered calendars, producing year-round games that feed into DraftyQueenz as the primary engagement layer. Users watch seasons unfold, browse standings/stats/box scores/playoffs, and bet on games through DraftyQueenz. No team management. No connection to the women's collegiate game — the pro leagues are a separate fictional universe using the same engine.
+
+This replaces Dynasty mode in the nav.
+
+---
+
+## The Leagues
+
+Six professional leagues, each with its own identity, team count, and calendar window. All use the same engine and simulation core. The NVL is the flagship.
+
+| League | Full Name | Teams | Divisions | Season Window | Calendar Months |
+|--------|-----------|-------|-----------|---------------|-----------------|
+| **NVL** | National Viperball League | 24 | 4 × 6 | September–February | 6 |
+| **EL** | Eurasian League | 10 | 2 × 5 | March–July | 5 |
+| **AL** | AfroLeague | 12 | 2 × 6 | April–August | 5 |
+| **PL** | Pacific League | 8 | 2 × 4 | January–May | 5 |
+| **LA** | LigaAmerica | 10 | 2 × 5 | June–October | 5 |
+| **CL** | Champions League | 8 (qualified) | 2 × 4 | November–December | 2 |
+
+The Champions League is a short postseason invitational featuring top finishers from the other five leagues. It runs during the only gap in the calendar, giving the global system a true "world championship" event.
+
+---
+
+## NVL Teams (24)
+
+### East Division (6)
+| Key | City | Name | State/Province |
+|-----|------|------|----------------|
+| `nj` | New Jersey | Netsnakes | NJ |
+| `bos` | Boston | Beacons | MA |
+| `eri` | Erie | Ironheads | PA |
+| `orl` | Orlando | Orbits | FL |
+| `bal` | Baltimore | Bells | MD |
+| `roc` | Rochester | Rapids | NY |
+
+### North Division (6)
+| Key | City | Name | State/Province |
+|-----|------|------|----------------|
+| `tor` | Toronto | Talons | ON |
+| `qc` | Quebec City | Voyageurs | QC |
+| `van` | Vancouver | Vanguards | BC |
+| `cal` | Calgary | Coldfront | AB |
+| `dul` | Duluth | Drifts | MN |
+| `mtl` | Montreal | Monarchs | QC |
+
+### Central Division (6)
+| Key | City | Name | State/Province |
+|-----|------|------|----------------|
+| `nol` | New Orleans | Nightcreepers | LA |
+| `mem` | Memphis | Mudcats | TN |
+| `chi` | Chicago | Chains | IL |
+| `ark` | Arkansas | Arks | AR |
+| `oma` | Omaha | Outlaws | NE |
+| `bhm` | Birmingham | Blitz | AL |
+
+### West Division (6)
+| Key | City | Name | State/Province |
+|-----|------|------|----------------|
+| `aus` | Austin | Aviators | TX |
+| `boi` | Boise | Burners | ID |
+| `la` | Los Angeles | Linx | CA |
+| `pdx` | Portland | Prowlers | OR |
+| `spk` | Spokane | Spikes | WA |
+| `abq` | Albuquerque | Aftershocks | NM |
+
+---
+
+## International League Teams
+
+Team names, cities, and identities for international leagues are generated at build time. Each league gets a config file defining team count, division structure, city list, and name pool. Specific rosters TBD — the engineer should build the framework so that adding a league is a config file, not new code.
+
+### Eurasian League (10) — Suggested Cities
+Stockholm, Helsinki, Copenhagen, Oslo, Amsterdam, Brussels, Berlin, Prague, Warsaw, Zurich
+
+### AfroLeague (12) — Suggested Cities
+Lagos, Nairobi, Accra, Johannesburg, Cairo, Casablanca, Dar es Salaam, Addis Ababa, Dakar, Kampala, Abidjan, Kigali
+
+### Pacific League (8) — Suggested Cities
+Taipei, Manila, Jakarta, Seoul, Osaka, Bangkok, Ho Chi Minh City, Singapore
+
+### LigaAmerica (10) — Suggested Cities
+Mexico City, São Paulo, Buenos Aires, Bogotá, Lima, San Juan, Santo Domingo, Havana, Montevideo, Santiago
+
+---
+
+## Season Structure
+
+### NVL Regular Season (~22 games)
+- Each team plays divisional opponents 2× (home and away) = 10 games
+- Cross-division games fill the remaining ~12 slots via balanced scheduling
+- Season runs ~22 weeks with 1 bye week per team
+
+### NVL Playoffs
+- Top 3 from each division qualify (12 teams)
+- #1 seeds from each division get first-round byes (4 byes)
+- Single-elimination bracket: Wild Card (8 games) → Divisional (4) → Conference Championship (2) → NVL Championship (1)
+
+### International League Seasons
+- Shorter seasons scaled to team count: 8-team leagues play ~14 games, 10-team ~18, 12-team ~20
+- Divisional round-robin 2× + cross-division fills
+- Playoffs: top 2 per division, single-elimination semifinal → final
+
+### Champions League
+- 8 teams: NVL champion + runner-up, plus champion from each of the 4 international leagues, plus 2 wild cards (best remaining records across all leagues)
+- 2 groups of 4, round-robin within group (3 games each)
+- Top 2 from each group advance to single-elimination semifinal → final
+- Short and intense: ~5 games per team max
+
+---
+
+## Player System
+
+### Generation
+- Pro rosters: 36 players each, same position distribution as CVL
+- Attribute range: 65–95 (vs college 40–80) reflecting pro talent level
+- Same 4 core stats + 6 extended attributes as CVL players
+- Same position archetypes (kicking_zb, speed_flanker, power_viper, etc.)
+- Same R/E/C variance archetypes (Reliable/Explosive/Clutch)
+- Same star designation system (3 per team per game)
+- **Male names only** — use a male name generation pool, no connection to CVL roster pipeline
+- International leagues use culturally appropriate name pools per region
+
+### Franchise Rating (replaces Prestige)
+- 0–99 scale, same as CVL prestige
+- Drives halo model identically: `PRESTIGE_TO_HALO` table unchanged
+- NVL teams range 60–95 (pro talent floor is higher)
+- International leagues range 45–80 (talent gap is real)
+- Franchise rating adjusts between seasons based on win%, playoff performance, championship
+
+### Talent Tiers by League
+| League | Attribute Range | Franchise Rating Range | Relative Talent |
+|--------|----------------|----------------------|-----------------|
+| NVL | 65–95 | 60–95 | Highest |
+| Eurasian | 58–85 | 50–80 | Strong |
+| AfroLeague | 55–82 | 45–78 | Competitive |
+| Pacific | 55–80 | 45–75 | Developing |
+| LigaAmerica | 55–82 | 45–78 | Competitive |
+
+---
+
+## Season Continuity (Phase 2 — Design Now, Build Later)
+
+MVP seasons are ephemeral — start a season, sim it, done. But the data model should support optional continuity from day one.
+
+### Season Snapshot (JSON export at season end)
+```json
+{
+  "league": "nvl",
+  "season_number": 1,
+  "champion": "eri",
+  "final_standings": { ... },
+  "stat_leaders": { ... },
+  "all_pro_team": [ ... ],
+  "rosters": {
+    "eri": {
+      "players": [ { "name": "...", "position": "...", "stats": {...}, "attributes": {...}, "contract": {...} } ]
+    }
+  }
+}
+```
+
+### Season Chaining (when ready)
+- `ProLeagueSeason.__init__` accepts optional `previous_season_path`
+- If provided, loads snapshot and runs offseason: retention rolls, free agency, draft/rookie generation, franchise rating adjustment
+- If not provided, generates fresh rosters (current MVP behavior)
+- Each season writes its snapshot on completion
+- History is a chain of JSON files: `nvl_season_001.json` → `nvl_season_002.json` → ...
+
+### Offseason Logic (for continuity mode)
+- **Retention roll per player**: 75–80% of roster stays. Weighted by performance tier, age, years with team.
+- **Franchise player protection**: Each team has 1–2 protected slots (high retention probability). These become the "faces of franchises."
+- **Free agency**: Departed players assigned to new teams weighted by inverse standings (parity mechanism). No negotiation sim, just destination rolls.
+- **Retirement**: Age curve + performance decline triggers. Veterans fade out naturally.
+- **Rookie generation**: New players enter to fill roster gaps. Lower-rated teams get higher-rated rookies (draft order approximation).
+- **Contract stub**: Each player gets contract_years and salary at signing. Engine decrements years each season. Expired contracts trigger retention roll. Salary cap per team — over-cap teams auto-release lowest performers.
+
+This is all deferred. The important thing now is that the `Player` dict includes a `contract` field (even if it's just `{"years": 1, "salary": 0}` for MVP) so the data shape is ready.
+
+---
+
+## Coaching
+
+Pro teams get coaching staffs generated the same way as CVL teams but at higher attribute ranges (base_lo/base_hi shifted up to reflect pro-level coaching). Same 4-person structure (HC, OC, DC, STC), same classifications, same personality sliders, same engine hooks.
+
+For MVP: coaching staffs are generated once per season, static for the season. No coaching carousel, no hiring/firing. Same backwards-compatible approach — `ViperballEngine` receives `home_coaching` / `away_coaching` if available, falls back to no coaching effects if not.
+
+---
+
+## Engine Integration
+
+### What Changes
+- Nothing in `game_engine.py`. The engine simulates games between two Team objects. It does not know or care whether they're college or pro.
+- `fast_sim_game()` works identically for pro games.
+
+### New Code: `engine/pro_league.py`
+
+#### `ProLeagueConfig` (dataclass)
+```python
+@dataclass
+class ProLeagueConfig:
+    league_id: str              # "nvl", "el", "al", "pl", "la", "cl"
+    league_name: str            # "National Viperball League"
+    teams_dir: str              # "data/nvl_teams/"
+    divisions: Dict[str, List[str]]  # {"East": ["nj", "bos", ...], ...}
+    games_per_season: int       # 22
+    playoff_teams: int          # 12
+    bye_count: int              # 4
+    calendar_start: str         # "September"
+    calendar_end: str           # "February"
+    attribute_range: Tuple[int, int]  # (65, 95)
+    franchise_rating_range: Tuple[int, int]  # (60, 95)
+    name_pool: str              # "male_english", "male_european", "male_african", etc.
+```
+
+#### `ProLeagueSeason` (class)
+```python
+class ProLeagueSeason:
+    def __init__(self, config: ProLeagueConfig, previous_season_path: Optional[str] = None):
+        # Loads teams from config.teams_dir
+        # Generates schedule
+        # If previous_season_path: run offseason logic (Phase 2)
+        # Else: use rosters as-is
+    
+    def sim_week(self) -> Dict:
+        # Simulate next week's games using fast_sim_game()
+        # Return week results with box scores
+    
+    def sim_all(self) -> None:
+        # Simulate remaining regular season
+    
+    def get_standings(self) -> Dict:
+        # Division standings: W-L, PF, PA, streak, division record
+    
+    def start_playoffs(self) -> Dict:
+        # Seed teams, generate bracket
+    
+    def advance_playoffs(self) -> Dict:
+        # Sim next playoff round
+    
+    def get_box_score(self, week: int, matchup_key: str) -> Dict:
+        # Return full box score for a specific game
+    
+    def get_stat_leaders(self, category: str = "all") -> Dict:
+        # League-wide stat leaders
+    
+    def get_team_detail(self, team_key: str) -> Dict:
+        # Roster, season stats, schedule/results for one team
+    
+    def export_snapshot(self) -> Dict:
+        # End-of-season JSON snapshot for continuity chaining
+```
+
+The key design constraint: `ProLeagueSeason` is parameterized by `ProLeagueConfig`. Adding a new league is creating a new config and a `data/{league}_teams/` directory. No subclassing, no new code paths.
+
+---
+
+## Schedule Generation
+
+### `generate_schedule(config: ProLeagueConfig) -> List[Week]`
+
+- Divisional opponents play 2× (home/away)
+- Remaining slots filled with cross-division matchups, balanced so each team plays roughly equal home/away
+- 1 bye week per team (staggered across season)
+- Each `Week` is a list of `Matchup(home_key, away_key, week_num)`
+- For international leagues with fewer teams, the algorithm scales: fewer cross-division games, shorter seasons
+
+---
+
+## DraftyQueenz Integration
+
+### Multi-League Betting
+- DraftyQueenz surfaces all active leagues' upcoming games
+- League selector in DQ UI: "NVL | Eurasian | AfroLeague | Pacific | LigaAmerica | Champions League"
+- Only active-calendar leagues show games (others show "Offseason — returns [month]")
+- Bet types: winner, spread, over/under (same as current CVL integration)
+- Odds generated from franchise ratings and season records (same sigmoid approach)
+- DQ$ bankroll is unified across all leagues
+- Champions League games could carry higher payouts (multiplier on winnings) to incentivize engagement with the global event
+
+### Year-Round Flow
+With staggered calendars, there's always at least one league in-season. The DQ experience is: open app → see this week's games across active leagues → place bets → sim → see results → repeat. Twelve months of content.
+
+---
+
+## API Endpoints
+
+Add pro league endpoints to `api/main.py`:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/pro/{league}/new` | Create new season for a league |
+| GET | `/api/pro/{league}/{id}/standings` | Division standings |
+| GET | `/api/pro/{league}/{id}/schedule` | Full schedule with results |
+| POST | `/api/pro/{league}/{id}/sim-week` | Simulate next week |
+| POST | `/api/pro/{league}/{id}/sim-all` | Simulate remaining regular season |
+| GET | `/api/pro/{league}/{id}/game/{week}/{matchup}` | Box score for specific game |
+| POST | `/api/pro/{league}/{id}/playoffs` | Start/advance playoffs |
+| GET | `/api/pro/{league}/{id}/playoffs/bracket` | Playoff bracket and results |
+| GET | `/api/pro/{league}/{id}/stats` | League stat leaders |
+| GET | `/api/pro/{league}/{id}/team/{team_key}` | Team detail (roster, stats) |
+| GET | `/api/pro/{league}/{id}/snapshot` | Export season snapshot JSON |
+| GET | `/api/pro/active` | List all currently active league seasons |
+
+Pro league seasons stored in-memory dict keyed by `{league}_{id}`. Same pattern as CVL sessions.
+
+---
+
+## UI: Spectator Dashboard
+
+### Navigation Change
+- Replace Dynasty in nav with "Pro Leagues" (icon: `stadium` or `trophy`)
+- Pro Leagues page has a league selector at the top: NVL | EL | AL | PL | LA | CL
+
+### Tab Structure (per league)
+| Tab | Content |
+|-----|---------|
+| **Dashboard** | Season overview, current week, sim controls (Sim Week / Sim All / Start Playoffs) |
+| **Standings** | Division standings tables (W-L, PF, PA, streak, division record) |
+| **Schedule** | Week-by-week schedule, click completed game → box score |
+| **Box Score** | Full game stats (reuse existing box score rendering) |
+| **Stats** | League-wide stat leaders (rushing, kick pass, scoring, VPA, etc.) |
+| **Playoffs** | Bracket visualization when postseason starts |
+| **Teams** | Select any team → roster, season stats, schedule |
+
+No management controls anywhere. Clean read-only spectator experience.
+
+### Multi-League Dashboard
+A top-level "Global" view showing:
+- Active leagues and their current week
+- Recent results across all leagues
+- Upcoming marquee matchups
+- Quick link to DraftyQueenz for betting
+
+---
+
+## Task Breakdown
+
+### T001: Pro League Framework
+**Blocked By:** []
+
+Create the core `ProLeagueConfig` and `ProLeagueSeason` classes in `engine/pro_league.py`. Implement schedule generation, week-by-week simulation (using `fast_sim_game()`), standings, stat tracking, and playoff bracket logic. Design for parameterization — league differences are config, not code.
+
+**Files:** `engine/pro_league.py`
+**Acceptance:** Can create a `ProLeagueSeason` from any valid config, generate a schedule, sim week-by-week, get standings, run playoffs, crown a champion.
+
+### T002: NVL Team Data
+**Blocked By:** []
+
+Create `data/nvl_teams/` with 24 team JSON files. Same structure as CVL team files but with: franchise names (not college), male name pool for all players, higher attribute ranges (65–95), franchise_rating field (60–95), varied offensive styles and philosophies per team, proper city/state/province for each franchise (5 Canadian teams). Include a `contract` stub on each player: `{"years": 1, "salary": 0}`.
+
+**Files:** `data/nvl_teams/*.json` (24 files), `data/nvl_config.json`
+**Acceptance:** All 24 files load, each has valid 36-player roster with male names, all pass through `ProLeagueSeason` initialization.
+
+### T003: Male Name Generation
+**Blocked By:** []
+
+Create a name generation module or config that produces male names for pro league rosters. Support multiple cultural pools: `male_english` (NVL), `male_european` (Eurasian), `male_african` (AfroLeague), `male_asian` (Pacific), `male_latin` (LigaAmerica). Names should feel realistic and culturally appropriate for each region.
+
+**Files:** `engine/name_gen.py` or `data/name_pools/*.json`
+**Acceptance:** Can generate 36 unique male names per team per region, no duplicates within a team.
+
+### T004: International League Configs + Team Data
+**Blocked By:** [T001, T003]
+
+Create config files and team data directories for the 4 international leagues (EL, AL, PL, LA). Each league gets: a `ProLeagueConfig`, a `data/{league}_teams/` directory with team JSONs, appropriate name pools and attribute ranges per the talent tier table.
+
+**Files:** `data/el_teams/`, `data/al_teams/`, `data/pl_teams/`, `data/la_teams/`, config JSONs
+**Acceptance:** All 4 international leagues can initialize, generate schedules, and sim seasons through `ProLeagueSeason`.
+
+### T005: Champions League
+**Blocked By:** [T001]
+
+Implement Champions League as a special `ProLeagueSeason` variant. Accepts qualified teams from completed league seasons (champion + runner-up from NVL, champions from 4 international leagues, 2 wild cards). Runs group stage (2 groups of 4, round-robin) then single-elimination bracket. Short format: max 5 games per team.
+
+**Files:** `engine/pro_league.py` (extend or subclass)
+**Acceptance:** Can create CL from completed league data, sim group stage, advance to knockouts, crown world champion.
+
+### T006: Pro League API Endpoints
+**Blocked By:** [T001, T002]
+
+Add all pro league endpoints to `api/main.py` per the API table above. Add typed client methods to `ui/api_client.py`. Support multi-league session management (multiple leagues can be active simultaneously).
+
+**Files:** `api/main.py`, `ui/api_client.py`
+**Acceptance:** All endpoints return correct data. Can sim a full NVL season via API. Can have NVL + EL active simultaneously.
+
+### T007: Spectator Dashboard UI
+**Blocked By:** [T006]
+
+Create `nicegui_app/pages/pro_leagues.py` with league selector and tab structure. Replace Dynasty in nav. Implement all tabs: Dashboard, Standings, Schedule, Box Score viewer, Stats Leaders, Playoffs bracket, Team Browser. Clean spectator-only feel — no management controls.
+
+**Files:** `nicegui_app/pages/pro_leagues.py`, `nicegui_app/app.py` (nav update)
+**Acceptance:** Can start any league season from UI, sim weeks, browse all data, run playoffs, view everything.
+
+### T008: DraftyQueenz Multi-League Integration
+**Blocked By:** [T006, T007]
+
+Extend DraftyQueenz to surface games from all active pro leagues. Add league selector/toggle in DQ UI. Show which leagues are in-season vs offseason. Generate odds from franchise ratings + season records. Unified DQ$ bankroll across all leagues. Champions League games get a payout multiplier.
+
+**Files:** `engine/draftyqueenz.py`, `nicegui_app/pages/draftyqueenz.py`
+**Acceptance:** Can place bets on any active league's games, bets resolve correctly, DQ$ unified, CL multiplier works.
+
+### T009: Remove Dynasty Mode References
+**Blocked By:** [T007]
+
+Remove Dynasty from Play tab options (keep Season mode and Quick Game). Remove Dynasty nav/UI entry points. Keep dynasty engine files in codebase (don't delete, just disconnect from UI). Clean up any "New Dynasty" buttons or references.
+
+**Files:** `nicegui_app/pages/play.py`, `nicegui_app/app.py`
+**Acceptance:** No dynasty creation flow accessible from UI. Pro Leagues is the replacement.
+
+### T010: Season Snapshot Export
+**Blocked By:** [T001]
+
+Implement `export_snapshot()` on `ProLeagueSeason` that writes end-of-season JSON with all rosters, stats, standings, and awards. This is the foundation for season chaining (Phase 2). Include the `contract` stub data so it's ready when continuity mode is built.
+
+**Files:** `engine/pro_league.py`
+**Acceptance:** Completed season produces valid snapshot JSON. Snapshot contains all data needed to seed a subsequent season.
+
+### T011: Documentation
+**Blocked By:** [T007, T008, T009]
+
+Update replit.md with pro league architecture. Restart app and verify full flow: start NVL season → sim weeks → browse standings → view box scores → bet on games in DQ → start playoffs → crown champion. Verify at least one international league works end-to-end.
+
+**Files:** `replit.md`
+**Acceptance:** App runs clean, full pro league lifecycle works, DQ betting works across leagues.
+
+---
+
+## Build Priority
+
+**Phase 1 (Core):** T001 → T002 → T003 → T006 → T007 → T009
+Get the NVL running as a spectator league with a dashboard. This is the MVP.
+
+**Phase 2 (Global):** T004 → T005 → T008
+Add international leagues, Champions League, and multi-league DraftyQueenz. This is the year-round content engine.
+
+**Phase 3 (Continuity):** T010 → season chaining implementation
+Enable season-over-season play with roster evolution. This is the long-term engagement layer.
+
+---
+
+## What This Does NOT Include
+
+- No connection to the CVL/college game. Pro leagues are a separate universe with male players.
+- No team management, roster moves, coaching hires, or any interactive decisions beyond DraftyQueenz betting.
+- No database. All state is in-memory during a session, with JSON snapshots for persistence.
+- No player movement between leagues (Phase 2+ consideration for international transfers).
+- No salary cap enforcement during a season (deferred to continuity mode offseason logic).
