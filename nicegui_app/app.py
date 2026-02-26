@@ -143,6 +143,8 @@ def index():
                     from nicegui_app.pages.play_inspector import render_play_inspector
                     render_play_inspector(state, shared)
             except Exception as exc:
+                import logging
+                logging.getLogger("viperball").error(f"Error loading {name}: {exc}", exc_info=True)
                 ui.label(f"Error loading {name}: {exc}").classes("text-red-500")
                 traceback.print_exc()
 
@@ -199,6 +201,8 @@ def index():
                     from nicegui_app.pages.pro_leagues import render_pro_leagues_section
                     await render_pro_leagues_section(state, shared)
                 except Exception as exc:
+                    import logging
+                    logging.getLogger("viperball").error(f"Pro Leagues render error: {exc}", exc_info=True)
                     ui.label(f"Error loading Pro Leagues: {exc}").classes("text-red-500")
                     traceback.print_exc()
         ui.timer(0.1, _init_pro, once=True)

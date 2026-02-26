@@ -6,6 +6,9 @@ No team management. Users watch seasons unfold and bet via DraftyQueenz.
 
 from __future__ import annotations
 
+import logging
+_log = logging.getLogger("viperball.pro_leagues")
+
 from nicegui import ui, run, app
 from nicegui_app.components import metric_card, stat_table
 
@@ -116,9 +119,11 @@ async def render_pro_leagues_section(state, shared):
                 _render_league_start_card(config, meta)
         return
 
-    @ui.refreshable
-    def dq_summary():
-        with ui.row().classes("w-full gap-4 flex-wrap mb-2"):
+    dq_box = ui.row().classes("w-full gap-4 flex-wrap mb-2")
+
+    def _fill_dq_summary():
+        dq_box.clear()
+        with dq_box:
             metric_card("DQ$ Balance", f"${dq_mgr.bankroll.balance:,}")
             picks_made = dq_mgr.total_picks_made
             picks_won = dq_mgr.total_picks_won
@@ -127,40 +132,32 @@ async def render_pro_leagues_section(state, shared):
             roi = ((dq_mgr.bankroll.balance - STARTING_BANKROLL) / STARTING_BANKROLL * 100)
             metric_card("ROI", f"{roi:+.1f}%")
 
-    dq_summary()
+    _fill_dq_summary()
 
-    @ui.refreshable
-    def standings_content():
-        _render_standings(season)
+    containers = {}
 
-    @ui.refreshable
-    def schedule_content():
-        _render_schedule(season)
-
-    @ui.refreshable
-    def stats_content():
-        _render_stats(season)
-
-    @ui.refreshable
-    def playoffs_content():
-        _render_playoffs(season)
-
-    @ui.refreshable
-    def teams_content():
-        _render_teams(season)
-
-    @ui.refreshable
-    def betting_content():
-        _render_betting(season, dq_mgr)
+    def _refresh_container(name, render_fn, *args):
+        c = containers.get(name)
+        if c is None:
+            return
+        c.clear()
+        with c:
+            try:
+                render_fn(*args)
+            except Exception as e:
+                _log.error(f"Error rendering {name}: {e}", exc_info=True)
+                ui.label(f"Error: {e}").classes("text-red-500 text-sm")
 
     def _refresh_all_tabs():
-        dq_summary.refresh()
-        standings_content.refresh()
-        schedule_content.refresh()
-        stats_content.refresh()
-        playoffs_content.refresh()
-        teams_content.refresh()
-        betting_content.refresh()
+        _log.info(f"_refresh_all_tabs: week={season.current_week}")
+        _fill_dq_summary()
+        _refresh_container("standings", _render_standings, season)
+        _refresh_container("schedule", _render_schedule, season)
+        _refresh_container("stats", _render_stats, season)
+        _refresh_container("playoffs", _render_playoffs, season)
+        _refresh_container("teams", _render_teams, season)
+        _refresh_container("betting", _render_betting, season, dq_mgr)
+        _log.info("_refresh_all_tabs complete")
 
     with ui.tabs().classes("w-full") as tabs:
         tab_dash = ui.tab("Dashboard", icon="dashboard")
@@ -175,137 +172,174 @@ async def render_pro_leagues_section(state, shared):
         with ui.tab_panel(tab_dash):
             await _render_dashboard(season, dq_mgr, _refresh_all_tabs)
         with ui.tab_panel(tab_betting):
-            betting_content()
+            containers["betting"] = ui.column().classes("w-full")
+            with containers["betting"]:
+                _render_betting(season, dq_mgr)
         with ui.tab_panel(tab_stand):
-            standings_content()
+            containers["standings"] = ui.column().classes("w-full")
+            with containers["standings"]:
+                _render_standings(season)
         with ui.tab_panel(tab_sched):
-            schedule_content()
+            containers["schedule"] = ui.column().classes("w-full")
+            with containers["schedule"]:
+                _render_schedule(season)
         with ui.tab_panel(tab_stats):
-            stats_content()
+            containers["stats"] = ui.column().classes("w-full")
+            with containers["stats"]:
+                _render_stats(season)
         with ui.tab_panel(tab_playoffs):
-            playoffs_content()
+            containers["playoffs"] = ui.column().classes("w-full")
+            with containers["playoffs"]:
+                _render_playoffs(season)
         with ui.tab_panel(tab_teams):
-            teams_content()
+            containers["teams"] = ui.column().classes("w-full")
+            with containers["teams"]:
+                _render_teams(season)
 
 
 async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager, refresh_all_tabs=None):
     league_abbr = season.config.league_id.upper()
     league_name = season.config.league_name
 
-    @ui.refreshable
-    def dash_header():
-        st = season.get_status()
-        ui.label(f"{league_abbr} — {league_name}").classes("text-2xl font-bold text-slate-800")
-        with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
-            metric_card("Phase", st["phase"].replace("_", " ").title())
-            metric_card("Week", f"{st['current_week']} / {st['total_weeks']}")
-            metric_card("Teams", st["team_count"])
-            if st["champion"]:
-                metric_card("Champion", st["champion_name"])
+    header_box = ui.column().classes("w-full")
+    controls_box = ui.column().classes("w-full")
+    results_box = ui.column().classes("w-full")
 
-    dash_header()
+    def _fill_header():
+        header_box.clear()
+        with header_box:
+            st = season.get_status()
+            ui.label(f"{league_abbr} — {league_name}").classes("text-2xl font-bold text-slate-800")
+            with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
+                metric_card("Phase", st["phase"].replace("_", " ").title())
+                metric_card("Week", f"{st['current_week']} / {st['total_weeks']}")
+                metric_card("Teams", st["team_count"])
+                if st["champion"]:
+                    metric_card("Champion", st["champion_name"])
+
+    def _fill_results():
+        results_box.clear()
+        with results_box:
+            if season.current_week > 0:
+                last_week = season.current_week
+                week_results = season.results.get(last_week, {})
+                if week_results:
+                    ui.label(f"Week {last_week} Results").classes("text-lg font-semibold mt-4 mb-2")
+                    with ui.row().classes("w-full gap-3 flex-wrap"):
+                        for mk, game in week_results.items():
+                            with ui.card().classes("p-3 min-w-[220px]").style(
+                                "border: 1px solid #e2e8f0; border-radius: 8px;"
+                            ):
+                                h_score = int(game["home_score"])
+                                a_score = int(game["away_score"])
+                                h_bold = "font-bold" if h_score > a_score else ""
+                                a_bold = "font-bold" if a_score > h_score else ""
+                                ui.label(f"{game['away_name']}").classes(f"text-sm {a_bold}")
+                                ui.label(f"@ {game['home_name']}").classes(f"text-sm {h_bold}")
+                                ui.label(f"{a_score} - {h_score}").classes("text-lg font-bold text-indigo-600 mt-1")
+
+            if season.phase == "playoffs":
+                bracket = season.get_playoff_bracket()
+                if bracket.get("rounds"):
+                    ui.label("Playoff Bracket").classes("text-lg font-semibold mt-4 mb-2")
+                    for rd in bracket["rounds"]:
+                        ui.label(rd["round_name"]).classes("text-sm font-bold text-indigo-600 mt-2")
+                        if rd.get("bye_teams"):
+                            bye_names = ", ".join(t["team_name"] for t in rd["bye_teams"])
+                            ui.label(f"Byes: {bye_names}").classes("text-xs text-slate-500 italic")
+                        for m in rd["matchups"]:
+                            if m.get("winner"):
+                                h = m["home"]["team_name"]
+                                a = m["away"]["team_name"] if m.get("away") else "BYE"
+                                hs = int(m.get("home_score", 0))
+                                asc = int(m.get("away_score", 0))
+                                winner = m.get("winner_name", "")
+                                ui.label(f"  {a} {asc} @ {h} {hs} — {winner} wins").classes("text-xs text-slate-700")
+                            else:
+                                h = m["home"]["team_name"]
+                                a = m["away"]["team_name"] if m.get("away") else "BYE"
+                                ui.label(f"  {a} @ {h}").classes("text-xs text-slate-500")
+
+    def _fill_controls():
+        controls_box.clear()
+        with controls_box:
+            st = season.get_status()
+
+            if st["champion"]:
+                with ui.card().classes("p-4 bg-green-50 w-full"):
+                    ui.label(f"Season Complete — {st['champion_name']} are {league_abbr} Champions!").classes(
+                        "text-lg font-bold text-green-700"
+                    )
+                    async def _new():
+                        sid = app.storage.user.get("pro_league_session_id")
+                        if sid and sid in _pro_sessions:
+                            del _pro_sessions[sid]
+                        if sid and sid in _pro_dq_managers:
+                            del _pro_dq_managers[sid]
+                        app.storage.user["pro_league_session_id"] = None
+                        ui.navigate.to("/")
+                    ui.button("Start New Season", icon="replay", on_click=_new).props("color=green no-caps").classes("mt-2")
+                return
+
+            with ui.row().classes("gap-3"):
+                if st["phase"] == "regular_season" and st["current_week"] < st["total_weeks"]:
+                    async def _sim_week():
+                        next_week = season.current_week + 1
+                        _log.info(f"_sim_week starting week {next_week}")
+                        await run.io_bound(season.sim_week)
+                        _log.info(f"_sim_week done, now week {season.current_week}")
+                        _resolve_dq_bets(season, dq_mgr, next_week)
+                        _refresh_everything()
+
+                    ui.button("Sim Week", icon="skip_next", on_click=_sim_week).props("color=indigo no-caps")
+
+                    async def _sim_all():
+                        start_week = season.current_week + 1
+                        await run.io_bound(season.sim_all)
+                        for w in range(start_week, season.current_week + 1):
+                            _resolve_dq_bets(season, dq_mgr, w)
+                        _refresh_everything()
+
+                    ui.button("Sim All", icon="fast_forward", on_click=_sim_all).props("color=blue no-caps")
+
+                if st["phase"] == "regular_season" and st["current_week"] >= st["total_weeks"]:
+                    async def _start_playoffs():
+                        await run.io_bound(season.start_playoffs)
+                        _refresh_everything()
+
+                    ui.button("Start Playoffs", icon="emoji_events", on_click=_start_playoffs).props("color=amber no-caps")
+
+                if st["phase"] == "playoffs" and not st["champion"]:
+                    async def _advance():
+                        await run.io_bound(season.advance_playoffs)
+                        _refresh_everything()
+
+                    ui.button("Advance Playoffs", icon="skip_next", on_click=_advance).props("color=amber no-caps")
 
     def _refresh_everything():
-        dash_header.refresh()
-        sim_controls.refresh()
-        results_display.refresh()
+        _log.info(f"_refresh_everything: week={season.current_week}, phase={season.phase}")
+        try:
+            _fill_header()
+        except Exception as e:
+            _log.error(f"header refresh failed: {e}", exc_info=True)
+        try:
+            _fill_controls()
+        except Exception as e:
+            _log.error(f"controls refresh failed: {e}", exc_info=True)
+        try:
+            _fill_results()
+        except Exception as e:
+            _log.error(f"results refresh failed: {e}", exc_info=True)
         if refresh_all_tabs:
-            refresh_all_tabs()
+            try:
+                refresh_all_tabs()
+            except Exception as e:
+                _log.error(f"tab refresh failed: {e}", exc_info=True)
+        _log.info("_refresh_everything complete")
 
-    @ui.refreshable
-    def sim_controls():
-        st = season.get_status()
-
-        if st["champion"]:
-            with ui.card().classes("p-4 bg-green-50 w-full"):
-                ui.label(f"Season Complete — {st['champion_name']} are {league_abbr} Champions!").classes(
-                    "text-lg font-bold text-green-700"
-                )
-                async def _new():
-                    sid = app.storage.user.get("pro_league_session_id")
-                    if sid and sid in _pro_sessions:
-                        del _pro_sessions[sid]
-                    if sid and sid in _pro_dq_managers:
-                        del _pro_dq_managers[sid]
-                    app.storage.user["pro_league_session_id"] = None
-                    ui.navigate.to("/")
-                ui.button("Start New Season", icon="replay", on_click=_new).props("color=green no-caps").classes("mt-2")
-            return
-
-        with ui.row().classes("gap-3"):
-            if st["phase"] == "regular_season" and st["current_week"] < st["total_weeks"]:
-                async def _sim_week():
-                    next_week = season.current_week + 1
-                    await run.io_bound(season.sim_week)
-                    _resolve_dq_bets(season, dq_mgr, next_week)
-                    _refresh_everything()
-                ui.button("Sim Week", icon="skip_next", on_click=_sim_week).props("color=indigo no-caps")
-
-                async def _sim_all():
-                    start_week = season.current_week + 1
-                    await run.io_bound(season.sim_all)
-                    for w in range(start_week, season.current_week + 1):
-                        _resolve_dq_bets(season, dq_mgr, w)
-                    _refresh_everything()
-                ui.button("Sim All", icon="fast_forward", on_click=_sim_all).props("color=blue no-caps")
-
-            if st["phase"] == "regular_season" and st["current_week"] >= st["total_weeks"]:
-                async def _start_playoffs():
-                    await run.io_bound(season.start_playoffs)
-                    _refresh_everything()
-                ui.button("Start Playoffs", icon="emoji_events", on_click=_start_playoffs).props("color=amber no-caps")
-
-            if st["phase"] == "playoffs" and not st["champion"]:
-                async def _advance():
-                    await run.io_bound(season.advance_playoffs)
-                    _refresh_everything()
-                ui.button("Advance Playoffs", icon="skip_next", on_click=_advance).props("color=amber no-caps")
-
-    sim_controls()
-
-    @ui.refreshable
-    def results_display():
-        if season.current_week > 0:
-            last_week = season.current_week
-            week_results = season.results.get(last_week, {})
-            if week_results:
-                ui.label(f"Week {last_week} Results").classes("text-lg font-semibold mt-4 mb-2")
-                with ui.row().classes("w-full gap-3 flex-wrap"):
-                    for mk, game in week_results.items():
-                        with ui.card().classes("p-3 min-w-[220px]").style(
-                            "border: 1px solid #e2e8f0; border-radius: 8px;"
-                        ):
-                            h_score = int(game["home_score"])
-                            a_score = int(game["away_score"])
-                            h_bold = "font-bold" if h_score > a_score else ""
-                            a_bold = "font-bold" if a_score > h_score else ""
-                            ui.label(f"{game['away_name']}").classes(f"text-sm {a_bold}")
-                            ui.label(f"@ {game['home_name']}").classes(f"text-sm {h_bold}")
-                            ui.label(f"{a_score} - {h_score}").classes("text-lg font-bold text-indigo-600 mt-1")
-
-        if season.phase == "playoffs":
-            bracket = season.get_playoff_bracket()
-            if bracket.get("rounds"):
-                ui.label("Playoff Bracket").classes("text-lg font-semibold mt-4 mb-2")
-                for rd in bracket["rounds"]:
-                    ui.label(rd["round_name"]).classes("text-sm font-bold text-indigo-600 mt-2")
-                    if rd.get("bye_teams"):
-                        bye_names = ", ".join(t["team_name"] for t in rd["bye_teams"])
-                        ui.label(f"Byes: {bye_names}").classes("text-xs text-slate-500 italic")
-                    for m in rd["matchups"]:
-                        if m.get("winner"):
-                            h = m["home"]["team_name"]
-                            a = m["away"]["team_name"] if m.get("away") else "BYE"
-                            hs = int(m.get("home_score", 0))
-                            asc = int(m.get("away_score", 0))
-                            winner = m.get("winner_name", "")
-                            ui.label(f"  {a} {asc} @ {h} {hs} — {winner} wins").classes("text-xs text-slate-700")
-                        else:
-                            h = m["home"]["team_name"]
-                            a = m["away"]["team_name"] if m.get("away") else "BYE"
-                            ui.label(f"  {a} @ {h}").classes("text-xs text-slate-500")
-
-    results_display()
+    _fill_header()
+    _fill_controls()
+    _fill_results()
 
 
 def _resolve_dq_bets(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager, week: int):
@@ -580,6 +614,10 @@ def _render_betting_history(dq_mgr: DraftyQueenzManager):
 def _render_standings(season: ProLeagueSeason):
     standings = season.get_standings()
     league_abbr = season.config.league_id.upper()
+    _log.info(f"_render_standings called: week={standings['week']}, divisions={list(standings['divisions'].keys())}")
+    for div_name, teams in standings['divisions'].items():
+        if teams:
+            _log.info(f"  {div_name}: {teams[0]['team_name']} {teams[0]['wins']}-{teams[0]['losses']}")
 
     ui.label(f"{league_abbr} Division Standings").classes("text-xl font-bold text-slate-800 mb-2")
     ui.label(f"Week {standings['week']} of {standings['total_weeks']}").classes("text-sm text-slate-500 mb-4")
@@ -629,52 +667,55 @@ def _render_schedule(season: ProLeagueSeason):
 
     week_options = {w["week"]: f"Week {w['week']}" for w in schedule["weeks"]}
 
-    @ui.refreshable
-    def week_display():
-        wk = selected_week["val"]
-        week_data = None
-        for w in schedule["weeks"]:
-            if w["week"] == wk:
-                week_data = w
-                break
-        if not week_data:
-            ui.label("No games this week").classes("text-sm text-slate-500")
-            return
+    week_box = ui.column().classes("w-full")
 
-        ui.label(f"Week {wk}").classes("text-lg font-semibold text-indigo-600 mb-2")
+    def _fill_week():
+        week_box.clear()
+        with week_box:
+            wk = selected_week["val"]
+            week_data = None
+            for w in schedule["weeks"]:
+                if w["week"] == wk:
+                    week_data = w
+                    break
+            if not week_data:
+                ui.label("No games this week").classes("text-sm text-slate-500")
+                return
 
-        for game in week_data["games"]:
-            with ui.card().classes("p-3 mb-2 w-full max-w-xl").style("border: 1px solid #e2e8f0;"):
-                if game["completed"]:
-                    h_score = int(game.get("home_score", 0))
-                    a_score = int(game.get("away_score", 0))
-                    h_bold = "font-bold" if h_score > a_score else ""
-                    a_bold = "font-bold" if a_score > h_score else ""
-                    with ui.row().classes("items-center gap-4"):
-                        ui.label(f"{game['away_name']}").classes(f"text-sm {a_bold} min-w-[180px]")
-                        ui.label(f"{a_score}").classes(f"text-lg {a_bold}")
-                        ui.label("@").classes("text-xs text-slate-400")
-                        ui.label(f"{h_score}").classes(f"text-lg {h_bold}")
-                        ui.label(f"{game['home_name']}").classes(f"text-sm {h_bold}")
+            ui.label(f"Week {wk}").classes("text-lg font-semibold text-indigo-600 mb-2")
 
-                    async def _show_box(mk=game["matchup_key"], w=wk):
-                        box = season.get_box_score(w, mk)
-                        if box:
-                            _show_box_score_dialog(box, season)
+            for game in week_data["games"]:
+                with ui.card().classes("p-3 mb-2 w-full max-w-xl").style("border: 1px solid #e2e8f0;"):
+                    if game["completed"]:
+                        h_score = int(game.get("home_score", 0))
+                        a_score = int(game.get("away_score", 0))
+                        h_bold = "font-bold" if h_score > a_score else ""
+                        a_bold = "font-bold" if a_score > h_score else ""
+                        with ui.row().classes("items-center gap-4"):
+                            ui.label(f"{game['away_name']}").classes(f"text-sm {a_bold} min-w-[180px]")
+                            ui.label(f"{a_score}").classes(f"text-lg {a_bold}")
+                            ui.label("@").classes("text-xs text-slate-400")
+                            ui.label(f"{h_score}").classes(f"text-lg {h_bold}")
+                            ui.label(f"{game['home_name']}").classes(f"text-sm {h_bold}")
 
-                    ui.button("Box Score", icon="assessment", on_click=_show_box).props(
-                        "flat dense no-caps size=sm color=indigo"
-                    )
-                else:
-                    with ui.row().classes("items-center gap-4"):
-                        ui.label(f"{game['away_name']}").classes("text-sm min-w-[180px]")
-                        ui.label("@").classes("text-xs text-slate-400")
-                        ui.label(f"{game['home_name']}").classes("text-sm")
-                        ui.label("Upcoming").classes("text-xs text-slate-400 italic")
+                        async def _show_box(mk=game["matchup_key"], w=wk):
+                            box = season.get_box_score(w, mk)
+                            if box:
+                                _show_box_score_dialog(box, season)
+
+                        ui.button("Box Score", icon="assessment", on_click=_show_box).props(
+                            "flat dense no-caps size=sm color=indigo"
+                        )
+                    else:
+                        with ui.row().classes("items-center gap-4"):
+                            ui.label(f"{game['away_name']}").classes("text-sm min-w-[180px]")
+                            ui.label("@").classes("text-xs text-slate-400")
+                            ui.label(f"{game['home_name']}").classes("text-sm")
+                            ui.label("Upcoming").classes("text-xs text-slate-400 italic")
 
     def _on_week_change(e):
         selected_week["val"] = e.value
-        week_display.refresh()
+        _fill_week()
 
     ui.select(
         options=week_options,
@@ -683,7 +724,7 @@ def _render_schedule(season: ProLeagueSeason):
         on_change=_on_week_change,
     ).classes("w-48 mb-4")
 
-    week_display()
+    _fill_week()
 
 
 def _show_player_card(season: ProLeagueSeason, team_key: str, player_name: str):
@@ -1102,70 +1143,48 @@ def _render_teams(season: ProLeagueSeason):
 
     selected = {"key": None}
 
-    @ui.refreshable
-    def team_detail():
-        if not selected["key"]:
-            ui.label("Select a team to view details.").classes("text-sm text-slate-500")
-            return
+    team_box = ui.column().classes("w-full")
 
-        detail = season.get_team_detail(selected["key"])
-        if not detail:
-            ui.label("Team not found.").classes("text-sm text-red-500")
-            return
+    def _fill_team_detail():
+        team_box.clear()
+        with team_box:
+            if not selected["key"]:
+                ui.label("Select a team to view details.").classes("text-sm text-slate-500")
+                return
 
-        ui.label(f"{detail['team_name']}").classes("text-xl font-bold text-indigo-600")
-        ui.label(f"{detail['division']} Division | {detail['record']} | "
-                 f"Style: {detail['offense_style']} / {detail['defense_style']}").classes("text-sm text-slate-500 mb-3")
+            detail = season.get_team_detail(selected["key"])
+            if not detail:
+                ui.label("Team not found.").classes("text-sm text-red-500")
+                return
 
-        with ui.tabs().classes("w-full") as team_tabs:
-            tab_roster = ui.tab("Roster")
-            tab_tstats = ui.tab("Season Stats")
-            tab_tsched = ui.tab("Schedule")
+            ui.label(f"{detail['team_name']}").classes("text-xl font-bold text-indigo-600")
+            ui.label(f"{detail['division']} Division | {detail['record']} | "
+                     f"Style: {detail['offense_style']} / {detail['defense_style']}").classes("text-sm text-slate-500 mb-3")
 
-        current_team_key = selected["key"]
+            with ui.tabs().classes("w-full") as team_tabs:
+                tab_roster = ui.tab("Roster")
+                tab_tstats = ui.tab("Season Stats")
+                tab_tsched = ui.tab("Schedule")
 
-        with ui.tab_panels(team_tabs, value=tab_roster).classes("w-full"):
-            with ui.tab_panel(tab_roster):
-                columns = [
-                    {"name": "num", "label": "#", "field": "number", "align": "center"},
-                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
-                    {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
-                    {"name": "spd", "label": "SPD", "field": "speed", "align": "center"},
-                    {"name": "kick", "label": "KICK", "field": "kicking", "align": "center"},
-                    {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
-                    {"name": "ovr", "label": "OVR", "field": "overall", "align": "center"},
-                    {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
-                ]
-                rows = [{k: str(v) for k, v in p.items() if k in [c["field"] for c in columns]}
-                        for p in detail["roster"]]
-                tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
-                tk = current_team_key
-                tbl.add_slot("body-cell-name", f'''
-                    <q-td :props="props">
-                        <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
-                           @click="$parent.$emit('player_click', props.row)">
-                            {{{{ props.row.name }}}}
-                        </a>
-                    </q-td>
-                ''')
-                tbl.on("player_click", lambda e, _tk=tk: _show_player_card(season, _tk, e.args.get("name", "")))
+            current_team_key = selected["key"]
 
-            with ui.tab_panel(tab_tstats):
-                if detail["season_stats"]:
+            with ui.tab_panels(team_tabs, value=tab_roster).classes("w-full"):
+                with ui.tab_panel(tab_roster):
                     columns = [
-                        {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                        {"name": "num", "label": "#", "field": "number", "align": "center"},
+                        {"name": "name", "label": "Name", "field": "name", "align": "left"},
                         {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
-                        {"name": "gp", "label": "GP", "field": "games", "align": "center"},
-                        {"name": "rush", "label": "Rush Yds", "field": "rushing_yards", "align": "center", "sortable": True},
-                        {"name": "td", "label": "TD", "field": "touchdowns", "align": "center", "sortable": True},
-                        {"name": "kp", "label": "KP Yds", "field": "kick_pass_yards", "align": "center", "sortable": True},
-                        {"name": "total", "label": "Total", "field": "total_yards", "align": "center", "sortable": True},
+                        {"name": "spd", "label": "SPD", "field": "speed", "align": "center"},
+                        {"name": "kick", "label": "KICK", "field": "kicking", "align": "center"},
+                        {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
+                        {"name": "ovr", "label": "OVR", "field": "overall", "align": "center"},
+                        {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
                     ]
                     rows = [{k: str(v) for k, v in p.items() if k in [c["field"] for c in columns]}
-                            for p in sorted(detail["season_stats"], key=lambda x: -x.get("total_yards", 0))]
-                    tbl2 = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
-                    tk2 = current_team_key
-                    tbl2.add_slot("body-cell-name", f'''
+                            for p in detail["roster"]]
+                    tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
+                    tk = current_team_key
+                    tbl.add_slot("body-cell-name", f'''
                         <q-td :props="props">
                             <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
                                @click="$parent.$emit('player_click', props.row)">
@@ -1173,30 +1192,55 @@ def _render_teams(season: ProLeagueSeason):
                             </a>
                         </q-td>
                     ''')
-                    tbl2.on("player_click", lambda e, _tk=tk2: _show_player_card(season, _tk, e.args.get("name", "")))
-                else:
-                    ui.label("No stats yet — sim some weeks first.").classes("text-sm text-slate-400")
+                    tbl.on("player_click", lambda e, _tk=tk: _show_player_card(season, _tk, e.args.get("name", "")))
 
-            with ui.tab_panel(tab_tsched):
-                if detail["schedule"]:
-                    for game in detail["schedule"]:
-                        prefix = "vs" if game["home"] else "@"
-                        status = ""
-                        if game["completed"]:
-                            result = "W" if game.get("won") else "L"
-                            score = game.get("score", "")
-                            status = f"  {result} {score}"
-                        else:
-                            status = "  —"
-                        ui.label(f"Wk {game['week']}: {prefix} {game['opponent_name']}{status}").classes(
-                            "text-xs text-slate-700"
-                        )
-                else:
-                    ui.label("No schedule data.").classes("text-sm text-slate-400")
+                with ui.tab_panel(tab_tstats):
+                    if detail["season_stats"]:
+                        columns = [
+                            {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                            {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+                            {"name": "gp", "label": "GP", "field": "games", "align": "center"},
+                            {"name": "rush", "label": "Rush Yds", "field": "rushing_yards", "align": "center", "sortable": True},
+                            {"name": "td", "label": "TD", "field": "touchdowns", "align": "center", "sortable": True},
+                            {"name": "kp", "label": "KP Yds", "field": "kick_pass_yards", "align": "center", "sortable": True},
+                            {"name": "total", "label": "Total", "field": "total_yards", "align": "center", "sortable": True},
+                        ]
+                        rows = [{k: str(v) for k, v in p.items() if k in [c["field"] for c in columns]}
+                                for p in sorted(detail["season_stats"], key=lambda x: -x.get("total_yards", 0))]
+                        tbl2 = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
+                        tk2 = current_team_key
+                        tbl2.add_slot("body-cell-name", f'''
+                            <q-td :props="props">
+                                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                   @click="$parent.$emit('player_click', props.row)">
+                                    {{{{ props.row.name }}}}
+                                </a>
+                            </q-td>
+                        ''')
+                        tbl2.on("player_click", lambda e, _tk=tk2: _show_player_card(season, _tk, e.args.get("name", "")))
+                    else:
+                        ui.label("No stats yet — sim some weeks first.").classes("text-sm text-slate-400")
+
+                with ui.tab_panel(tab_tsched):
+                    if detail["schedule"]:
+                        for game in detail["schedule"]:
+                            prefix = "vs" if game["home"] else "@"
+                            status = ""
+                            if game["completed"]:
+                                result = "W" if game.get("won") else "L"
+                                score = game.get("score", "")
+                                status = f"  {result} {score}"
+                            else:
+                                status = "  —"
+                            ui.label(f"Wk {game['week']}: {prefix} {game['opponent_name']}{status}").classes(
+                                "text-xs text-slate-700"
+                            )
+                    else:
+                        ui.label("No schedule data.").classes("text-sm text-slate-400")
 
     def _on_team_select(e):
         selected["key"] = e.value
-        team_detail.refresh()
+        _fill_team_detail()
 
     ui.select(
         options=team_options,
@@ -1204,4 +1248,4 @@ def _render_teams(season: ProLeagueSeason):
         on_change=_on_team_select,
     ).classes("w-72 mb-4")
 
-    team_detail()
+    _fill_team_detail()
