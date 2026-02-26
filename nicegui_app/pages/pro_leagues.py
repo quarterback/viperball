@@ -9,7 +9,10 @@ from __future__ import annotations
 from nicegui import ui, run, app
 from nicegui_app.components import metric_card, stat_table
 
-from engine.pro_league import ProLeagueSeason, ALL_LEAGUE_CONFIGS
+from engine.pro_league import (
+    ProLeagueSeason, ALL_LEAGUE_CONFIGS,
+    archive_season, get_completed_leagues, create_champions_league,
+)
 from engine.draftyqueenz import (
     DraftyQueenzManager, generate_game_odds, GameOdds,
     MIN_BET, MAX_BET, STARTING_BANKROLL, PARLAY_MULTIPLIERS,
@@ -51,6 +54,7 @@ _LEAGUE_META = {
     "al": {"color": "amber", "icon": "public", "desc": "African pro Viperball. 12 teams, 2 divisions."},
     "pl": {"color": "teal", "icon": "public", "desc": "Asia-Pacific pro Viperball. 8 teams, 2 divisions."},
     "la_league": {"color": "red", "icon": "public", "desc": "Latin American pro Viperball. 10 teams, 2 divisions."},
+    "cl": {"color": "amber", "icon": "emoji_events", "desc": "Cross-league tournament. Top 2 from each completed league."},
 }
 
 
@@ -103,6 +107,59 @@ def _render_league_start_card(config, meta):
         ).props(f"color={meta['color']} no-caps").classes("mt-2 w-full")
 
 
+def _render_champions_league_card(completed: dict):
+    """Render the Champions League start card when ≥2 leagues have completed."""
+    meta = _LEAGUE_META["cl"]
+    num_teams = len(completed) * 2
+    league_names = [snap["league_name"] for snap in completed.values()]
+
+    with ui.card().classes("p-5 w-full max-w-2xl").style(
+        "border: 2px solid #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);"
+    ):
+        with ui.row().classes("items-center gap-2 mb-2"):
+            ui.icon(meta["icon"]).classes("text-amber-600 text-2xl")
+            ui.label("Champions League").classes("text-xl font-bold text-amber-700")
+        ui.label(meta["desc"]).classes("text-xs text-slate-500 mb-3")
+
+        ui.label(f"{num_teams} teams from {len(completed)} leagues").classes("text-sm font-semibold text-slate-700 mb-2")
+
+        for league_id, snap in completed.items():
+            abbr = league_id.upper().replace("_LEAGUE", "")
+            champ_marker = ""
+            qualifiers = []
+            for t in snap["top_teams"]:
+                marker = " (Champion)" if t.get("is_champion") else ""
+                qualifiers.append(f"{t['team_name']} {t['wins']}-{t['losses']}{marker}")
+            ui.label(f"{abbr}: {', '.join(qualifiers)}").classes("text-xs text-slate-600")
+
+        async def _start_cl():
+            try:
+                ui.notify("Creating Champions League...", type="info")
+                sid, cl_season = await run.io_bound(
+                    lambda: _create_cl_sync()
+                )
+                _pro_sessions[sid] = cl_season
+                _pro_dq_managers[sid] = DraftyQueenzManager(manager_name="Champions League Bettor")
+                app.storage.user["pro_league_session_id"] = sid
+                app.storage.user["pro_league_pending_nav"] = True
+                ui.navigate.to("/")
+            except Exception as e:
+                ui.notify(f"Failed to create Champions League: {e}", type="negative")
+
+        ui.button(
+            "Start Champions League",
+            icon="emoji_events", on_click=_start_cl,
+        ).props("color=amber no-caps").classes("mt-3 w-full")
+
+
+def _create_cl_sync():
+    """CPU-bound CL creation. No NiceGUI context."""
+    import uuid
+    sid = str(uuid.uuid4())[:8]
+    season = create_champions_league()
+    return sid, season
+
+
 async def render_pro_leagues_section(state, shared):
     season, dq_mgr, session_id = _get_session_and_dq()
 
@@ -114,6 +171,13 @@ async def render_pro_leagues_section(state, shared):
             for lid, config in ALL_LEAGUE_CONFIGS.items():
                 meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
                 _render_league_start_card(config, meta)
+
+        # Champions League card — appears when ≥2 leagues are completed
+        completed = get_completed_leagues()
+        if len(completed) >= 2:
+            ui.separator().classes("my-4")
+            _render_champions_league_card(completed)
+
         return
 
     with ui.row().classes("w-full gap-4 flex-wrap mb-2"):
@@ -178,6 +242,8 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                 async def _new():
                     sid = app.storage.user.get("pro_league_session_id")
                     if sid and sid in _pro_sessions:
+                        # Archive for Champions League before cleanup
+                        archive_season(_pro_sessions[sid])
                         del _pro_sessions[sid]
                     if sid and sid in _pro_dq_managers:
                         del _pro_dq_managers[sid]
@@ -535,31 +601,54 @@ def _render_betting_history(dq_mgr: DraftyQueenzManager):
     ui.table(columns=columns, rows=rows, row_key="week").classes("w-full max-w-2xl").props("dense flat bordered")
 
 
+def _source_league_abbr(team_key: str) -> str:
+    """Extract source league abbreviation from a CL prefixed team key."""
+    # CL keys are like "nvl_nj", "el_sto", "la_league_mex"
+    for lid in ALL_LEAGUE_CONFIGS:
+        if team_key.startswith(lid + "_"):
+            return lid.upper().replace("_LEAGUE", "")
+    return ""
+
+
 def _render_standings(season: ProLeagueSeason):
     standings = season.get_standings()
+    is_cl = season.config.league_id == "cl"
 
-    ui.label("Division Standings").classes("text-xl font-bold text-slate-800 mb-2")
+    if is_cl:
+        ui.label("Champions League Standings").classes("text-xl font-bold text-amber-700 mb-2")
+    else:
+        ui.label("Division Standings").classes("text-xl font-bold text-slate-800 mb-2")
     ui.label(f"Week {standings['week']} of {standings['total_weeks']}").classes("text-sm text-slate-500 mb-4")
 
     for div_name, teams in standings["divisions"].items():
-        ui.label(f"{div_name} Division").classes("text-lg font-semibold text-indigo-600 mt-4 mb-1")
+        if not is_cl:
+            ui.label(f"{div_name} Division").classes("text-lg font-semibold text-indigo-600 mt-4 mb-1")
 
         columns = [
             {"name": "rank", "label": "#", "field": "rank", "align": "center", "sortable": False},
             {"name": "team", "label": "Team", "field": "team_name", "align": "left", "sortable": True},
+        ]
+        if is_cl:
+            columns.append({"name": "league", "label": "League", "field": "league", "align": "center"})
+        columns.extend([
             {"name": "record", "label": "W-L", "field": "record", "align": "center", "sortable": True},
             {"name": "pct", "label": "PCT", "field": "pct", "align": "center", "sortable": True},
             {"name": "pf", "label": "PF", "field": "pf", "align": "center", "sortable": True},
             {"name": "pa", "label": "PA", "field": "pa", "align": "center", "sortable": True},
             {"name": "diff", "label": "DIFF", "field": "diff", "align": "center", "sortable": True},
-            {"name": "div", "label": "DIV", "field": "div_record", "align": "center"},
+        ])
+        if not is_cl:
+            columns.extend([
+                {"name": "div", "label": "DIV", "field": "div_record", "align": "center"},
+            ])
+        columns.extend([
             {"name": "streak", "label": "STR", "field": "streak", "align": "center"},
             {"name": "l5", "label": "L5", "field": "last_5", "align": "center"},
-        ]
+        ])
 
         rows = []
         for i, t in enumerate(teams):
-            rows.append({
+            row = {
                 "rank": i + 1,
                 "team_name": t["team_name"],
                 "record": f"{t['wins']}-{t['losses']}",
@@ -567,10 +656,14 @@ def _render_standings(season: ProLeagueSeason):
                 "pf": t["pf"],
                 "pa": t["pa"],
                 "diff": f"{t['diff']:+d}",
-                "div_record": t["div_record"],
                 "streak": t["streak"],
                 "last_5": t["last_5"],
-            })
+            }
+            if is_cl:
+                row["league"] = _source_league_abbr(t["team_key"])
+            else:
+                row["div_record"] = t["div_record"]
+            rows.append(row)
 
         ui.table(columns=columns, rows=rows, row_key="rank").classes(
             "w-full"
@@ -1049,6 +1142,7 @@ def _render_playoffs(season: ProLeagueSeason):
 
 
 def _render_teams(season: ProLeagueSeason):
+    is_cl = season.config.league_id == "cl"
     league_abbr = season.config.league_id.upper().replace("_LEAGUE", "")
     ui.label(f"{league_abbr} Teams").classes("text-xl font-bold text-slate-800 mb-2")
 
@@ -1056,7 +1150,11 @@ def _render_teams(season: ProLeagueSeason):
     for div_name, keys in season.config.divisions.items():
         for key in keys:
             if key in season.teams:
-                team_options.append({"label": f"{season.teams[key].name} ({div_name})", "value": key})
+                if is_cl:
+                    src = _source_league_abbr(key)
+                    team_options.append({"label": f"{season.teams[key].name} ({src})", "value": key})
+                else:
+                    team_options.append({"label": f"{season.teams[key].name} ({div_name})", "value": key})
 
     selected = {"key": None}
 
