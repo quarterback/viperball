@@ -27,7 +27,76 @@ _pro_sessions: dict[str, ProLeagueSeason] = {}
 _pro_dq_managers: dict[str, DraftyQueenzManager] = {}
 
 
+def _get_all_user_sessions() -> dict[str, tuple[str, ProLeagueSeason, DraftyQueenzManager]]:
+    """Return {league_id: (session_id, season, dq_mgr)} for all active leagues."""
+    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
+    result = {}
+    stale_keys = []
+    for league_id, sid in sessions_map.items():
+        if sid in _pro_sessions:
+            season = _pro_sessions[sid]
+            dq = _pro_dq_managers.get(sid)
+            if dq is None:
+                dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
+                _pro_dq_managers[sid] = dq
+            result[league_id] = (sid, season, dq)
+        else:
+            stale_keys.append(league_id)
+    if stale_keys:
+        for k in stale_keys:
+            sessions_map.pop(k, None)
+        app.storage.user["pro_league_sessions"] = sessions_map
+    return result
+
+
+def _get_active_league_id() -> str | None:
+    """Return the league_id the user is currently viewing."""
+    return app.storage.user.get("pro_league_active")
+
+
+def _set_active_league(league_id: str | None):
+    """Set which league the user is currently viewing."""
+    app.storage.user["pro_league_active"] = league_id
+
+
+def _register_session(league_id: str, sid: str, season: ProLeagueSeason, dq: DraftyQueenzManager):
+    """Register a new league session in both the global store and the user's session map."""
+    _pro_sessions[sid] = season
+    _pro_dq_managers[sid] = dq
+    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
+    sessions_map[league_id] = sid
+    app.storage.user["pro_league_sessions"] = sessions_map
+    _set_active_league(league_id)
+
+
+def _unregister_session(league_id: str):
+    """Remove a league session from the user's map and global store."""
+    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
+    sid = sessions_map.pop(league_id, None)
+    app.storage.user["pro_league_sessions"] = sessions_map
+    if sid:
+        if sid in _pro_sessions:
+            archive_season(_pro_sessions[sid])
+            del _pro_sessions[sid]
+        _pro_dq_managers.pop(sid, None)
+    if _get_active_league_id() == league_id:
+        _set_active_league(None)
+
+
 def _get_session_and_dq():
+    """Get the currently active league's season and DQ manager.
+
+    Supports both new multi-session storage and legacy single-session storage.
+    """
+    # New multi-session path
+    active_lid = _get_active_league_id()
+    if active_lid:
+        all_sessions = _get_all_user_sessions()
+        if active_lid in all_sessions:
+            sid, season, dq = all_sessions[active_lid]
+            return season, dq, sid
+
+    # Legacy single-session fallback
     sid = app.storage.user.get("pro_league_session_id")
     if sid and sid in _pro_sessions:
         season = _pro_sessions[sid]
@@ -36,6 +105,12 @@ def _get_session_and_dq():
             league_name = season.config.league_name
             dq = DraftyQueenzManager(manager_name=f"{league_name} Bettor")
             _pro_dq_managers[sid] = dq
+        # Migrate to new multi-session storage
+        league_id = season.config.league_id
+        sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
+        sessions_map[league_id] = sid
+        app.storage.user["pro_league_sessions"] = sessions_map
+        _set_active_league(league_id)
         return season, dq, sid
     if sid and sid not in _pro_sessions:
         app.storage.user["pro_league_session_id"] = None
@@ -96,9 +171,8 @@ def _render_league_start_card(config, meta):
             try:
                 ui.notify(f"Creating {cfg.league_name} season...", type="info")
                 sid, new_season = await run.io_bound(_create_season_sync, cfg)
-                _pro_sessions[sid] = new_season
-                _pro_dq_managers[sid] = DraftyQueenzManager(manager_name=f"{cfg.league_name} Bettor")
-                app.storage.user["pro_league_session_id"] = sid
+                dq = DraftyQueenzManager(manager_name=f"{cfg.league_name} Bettor")
+                _register_session(lid, sid, new_season, dq)
                 app.storage.user["pro_league_pending_nav"] = True
                 ui.navigate.to("/")
             except Exception as e:
@@ -141,9 +215,8 @@ def _render_champions_league_card(completed: dict):
                 sid, cl_season = await run.io_bound(
                     lambda: _create_cl_sync()
                 )
-                _pro_sessions[sid] = cl_season
-                _pro_dq_managers[sid] = DraftyQueenzManager(manager_name="Champions League Bettor")
-                app.storage.user["pro_league_session_id"] = sid
+                dq = DraftyQueenzManager(manager_name="Champions League Bettor")
+                _register_session("cl", sid, cl_season, dq)
                 app.storage.user["pro_league_pending_nav"] = True
                 ui.navigate.to("/")
             except Exception as e:
@@ -163,25 +236,253 @@ def _create_cl_sync():
     return sid, season
 
 
-async def render_pro_leagues_section(state, shared):
-    season, dq_mgr, session_id = _get_session_and_dq()
+# ═══════════════════════════════════════════════════════════════════════
+# CALENDAR MONTHS — used for the World Calendar timeline
+# ═══════════════════════════════════════════════════════════════════════
 
-    if not season:
-        ui.label("Pro Leagues").classes("text-2xl font-bold text-slate-800")
-        ui.label("Men's professional Viperball — spectator mode. Pick a league and start a season.").classes("text-sm text-slate-500 mb-4")
+_MONTH_ORDER = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+]
+_MONTH_ABBR = {m: m[:3] for m in _MONTH_ORDER}
+_MONTH_IDX = {m: i for i, m in enumerate(_MONTH_ORDER)}
 
+
+def _months_in_range(start: str, end: str) -> list[int]:
+    """Return list of month indices (0-11) for a calendar range, wrapping around year end."""
+    s = _MONTH_IDX.get(start, 0)
+    e = _MONTH_IDX.get(end, 11)
+    if s <= e:
+        return list(range(s, e + 1))
+    return list(range(s, 12)) + list(range(0, e + 1))
+
+
+def _league_phase_label(season: ProLeagueSeason) -> str:
+    """Return a human-readable phase label for a league season."""
+    if season.champion:
+        return "Complete"
+    if season.phase == "playoffs":
+        return "Playoffs"
+    pct = season.current_week / max(1, season.total_weeks)
+    if pct == 0:
+        return "Not Started"
+    if pct < 0.5:
+        return f"Week {season.current_week}/{season.total_weeks}"
+    return f"Week {season.current_week}/{season.total_weeks}"
+
+
+def _render_league_hub(all_sessions: dict):
+    """Render the League Hub — 'World of Viperball' dashboard.
+
+    Shows all leagues with their calendar windows, current status,
+    and allows starting new leagues or jumping into active ones.
+    """
+    ui.label("World of Viperball").classes("text-2xl font-bold text-slate-800")
+    ui.label(
+        "Global professional Viperball — all leagues run concurrently across the calendar year. "
+        "Start multiple leagues and switch between them freely."
+    ).classes("text-sm text-slate-500 mb-4")
+
+    # ── World Calendar Timeline ──────────────────────────────────
+    completed = get_completed_leagues()
+
+    with ui.card().classes("w-full p-4 mb-4").style(
+        "border: 1px solid #e2e8f0; background: #f8fafc;"
+    ):
+        ui.label("Viperball World Calendar").classes("text-sm font-bold text-slate-700 mb-3")
+
+        # Month header row
+        with ui.row().classes("w-full gap-0 mb-1"):
+            ui.element("div").classes("min-w-[100px]")  # label column spacer
+            for m in _MONTH_ORDER:
+                with ui.element("div").classes("flex-1 text-center"):
+                    ui.label(_MONTH_ABBR[m]).classes("text-[10px] font-bold text-slate-400")
+
+        # League rows
+        for lid, config in ALL_LEAGUE_CONFIGS.items():
+            meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
+            active_months = set(_months_in_range(config.calendar_start, config.calendar_end))
+            has_session = lid in all_sessions
+
+            with ui.row().classes("w-full gap-0 items-center"):
+                with ui.element("div").classes("min-w-[100px]"):
+                    label_classes = f"text-xs font-semibold text-{meta['color']}-700"
+                    if has_session:
+                        label_classes += " underline"
+                    ui.label(config.league_name.split()[-1] if len(config.league_name.split()) > 1 else config.league_name).classes(label_classes)
+
+                for i in range(12):
+                    with ui.element("div").classes("flex-1 h-5"):
+                        if i in active_months:
+                            if has_session:
+                                _, season, _ = all_sessions[lid]
+                                if season.champion:
+                                    bg = f"bg-{meta['color']}-200"
+                                elif season.phase == "playoffs":
+                                    bg = f"bg-{meta['color']}-500"
+                                else:
+                                    bg = f"bg-{meta['color']}-400"
+                            elif lid in completed:
+                                bg = f"bg-{meta['color']}-200"
+                            else:
+                                bg = f"bg-{meta['color']}-100"
+                            ui.element("div").classes(f"w-full h-full {bg} rounded-sm").style(
+                                "min-height: 16px;"
+                            )
+
+        # Legend
+        with ui.row().classes("mt-2 gap-4"):
+            with ui.row().classes("items-center gap-1"):
+                ui.element("div").classes("w-3 h-3 bg-indigo-100 rounded-sm")
+                ui.label("Not started").classes("text-[10px] text-slate-400")
+            with ui.row().classes("items-center gap-1"):
+                ui.element("div").classes("w-3 h-3 bg-indigo-400 rounded-sm")
+                ui.label("In season").classes("text-[10px] text-slate-400")
+            with ui.row().classes("items-center gap-1"):
+                ui.element("div").classes("w-3 h-3 bg-indigo-500 rounded-sm")
+                ui.label("Playoffs").classes("text-[10px] text-slate-400")
+            with ui.row().classes("items-center gap-1"):
+                ui.element("div").classes("w-3 h-3 bg-indigo-200 rounded-sm")
+                ui.label("Complete").classes("text-[10px] text-slate-400")
+
+    # ── Active Leagues Section ───────────────────────────────────
+    if all_sessions:
+        ui.label("Active Leagues").classes("text-lg font-bold text-slate-700 mb-2")
+        with ui.row().classes("gap-3 flex-wrap mb-4"):
+            for lid, (sid, season, dq) in all_sessions.items():
+                meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
+                config = season.config
+                league_abbr = lid.upper().replace("_LEAGUE", "")
+                st = season.get_status()
+                phase_label = _league_phase_label(season)
+
+                with ui.card().classes("p-4 min-w-[240px] max-w-[300px] cursor-pointer").style(
+                    f"border: 2px solid var(--q-{meta['color']}); border-radius: 10px;"
+                ):
+                    with ui.row().classes("items-center gap-2 mb-1"):
+                        ui.icon(meta["icon"]).classes(f"text-{meta['color']}-600")
+                        ui.label(config.league_name).classes(f"text-sm font-bold text-{meta['color']}-700")
+                    ui.label(f"{config.calendar_start}–{config.calendar_end}").classes("text-[10px] text-slate-400")
+
+                    with ui.row().classes("gap-3 mt-2"):
+                        metric_card("Week", f"{st['current_week']}/{st['total_weeks']}")
+                        metric_card("Phase", phase_label)
+
+                    if st["champion_name"]:
+                        ui.label(f"Champion: {st['champion_name']}").classes(
+                            "text-xs font-bold text-green-600 mt-1"
+                        )
+
+                    with ui.row().classes("gap-2 mt-2"):
+                        async def _enter(l=lid):
+                            _set_active_league(l)
+                            app.storage.user["pro_league_pending_nav"] = True
+                            ui.navigate.to("/")
+
+                        if st["champion"]:
+                            ui.button("View Results", icon="visibility", on_click=_enter).props(
+                                f"color={meta['color']} outline no-caps size=sm"
+                            ).classes("flex-1")
+                        else:
+                            ui.button("Enter League", icon="play_arrow", on_click=_enter).props(
+                                f"color={meta['color']} no-caps size=sm"
+                            ).classes("flex-1")
+
+        ui.separator().classes("my-3")
+
+    # ── Start New Leagues ────────────────────────────────────────
+    started_ids = set(all_sessions.keys()) | set(completed.keys())
+    available = {lid: cfg for lid, cfg in ALL_LEAGUE_CONFIGS.items() if lid not in all_sessions}
+
+    if available:
+        ui.label("Start a New League").classes("text-lg font-bold text-slate-700 mb-2")
         with ui.row().classes("gap-4 flex-wrap"):
-            for lid, config in ALL_LEAGUE_CONFIGS.items():
+            for lid, config in available.items():
                 meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
                 _render_league_start_card(config, meta)
 
-        # Champions League card — appears when ≥2 leagues are completed
-        completed = get_completed_leagues()
-        if len(completed) >= 2:
-            ui.separator().classes("my-4")
-            _render_champions_league_card(completed)
+    # Champions League card — appears when ≥2 leagues are completed
+    cl_completed = get_completed_leagues()
+    if len(cl_completed) >= 2 and "cl" not in all_sessions:
+        ui.separator().classes("my-4")
+        _render_champions_league_card(cl_completed)
 
+
+def _render_league_switcher(all_sessions: dict, active_lid: str):
+    """Render a horizontal bar for switching between active leagues and returning to the hub."""
+    if not all_sessions and not active_lid:
         return
+
+    with ui.element("div").classes("w-full mb-3").style(
+        "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); "
+        "border-radius: 8px; padding: 8px 16px;"
+    ):
+        with ui.row().classes("w-full items-center gap-2 flex-wrap"):
+            # Hub button
+            async def _go_hub():
+                _set_active_league(None)
+                app.storage.user["pro_league_pending_nav"] = True
+                ui.navigate.to("/")
+
+            ui.button("League Hub", icon="public", on_click=_go_hub).props(
+                "flat dense no-caps size=sm text-color=white"
+            ).classes("text-slate-300 hover:text-white")
+
+            ui.label("|").classes("text-slate-500 text-xs mx-1")
+
+            # League buttons
+            for lid, (sid, season, dq) in all_sessions.items():
+                meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
+                config = season.config
+                abbr = lid.upper().replace("_LEAGUE", "")
+                is_active = lid == active_lid
+
+                phase_icon = ""
+                if season.champion:
+                    phase_icon = " (done)"
+                elif season.phase == "playoffs":
+                    phase_icon = " (playoffs)"
+
+                async def _switch(l=lid):
+                    _set_active_league(l)
+                    app.storage.user["pro_league_pending_nav"] = True
+                    ui.navigate.to("/")
+
+                btn = ui.button(
+                    f"{abbr}{phase_icon}", icon=meta["icon"], on_click=_switch
+                ).props(f"{'unelevated' if is_active else 'flat'} dense no-caps size=sm")
+                if is_active:
+                    btn.classes(f"bg-{meta['color']}-600 text-white")
+                else:
+                    btn.classes("text-slate-300 hover:text-white")
+
+
+async def render_pro_leagues_section(state, shared):
+    all_sessions = _get_all_user_sessions()
+    active_lid = _get_active_league_id()
+
+    # If we have an active league selected and it exists, show that league
+    if active_lid and active_lid in all_sessions:
+        season, dq_mgr, session_id = _get_session_and_dq()
+    elif active_lid and active_lid not in all_sessions:
+        # Active league was cleared, fall back
+        _set_active_league(None)
+        active_lid = None
+        season, dq_mgr, session_id = None, None, None
+    else:
+        season, dq_mgr, session_id = _get_session_and_dq()
+
+    if not season:
+        # ═══════════════════════════════════════════════════════════
+        # LEAGUE HUB — "World of Viperball" dashboard
+        # ═══════════════════════════════════════════════════════════
+        _render_league_hub(all_sessions)
+        return
+
+    # ═══════════════════════════════════════════════════════════
+    # ACTIVE LEAGUE VIEW — show league switcher bar + season
+    # ═══════════════════════════════════════════════════════════
+    _render_league_switcher(all_sessions, active_lid or season.config.league_id)
 
     dq_box = ui.row().classes("w-full gap-4 flex-wrap mb-2")
 
@@ -334,17 +635,52 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                     ui.label(f"Season Complete — {st['champion_name']} are {league_abbr} Champions!").classes(
                         "text-lg font-bold text-green-700"
                     )
-                    async def _new():
-                        sid = app.storage.user.get("pro_league_session_id")
-                        if sid and sid in _pro_sessions:
-                            # Archive for Champions League before cleanup
-                            archive_season(_pro_sessions[sid])
-                            del _pro_sessions[sid]
-                        if sid and sid in _pro_dq_managers:
-                            del _pro_dq_managers[sid]
-                        app.storage.user["pro_league_session_id"] = None
-                        ui.navigate.to("/")
-                    ui.button("Start New Season", icon="replay", on_click=_new).props("color=green no-caps").classes("mt-2")
+
+                    # Show other active leagues the user can jump to
+                    other_active = _get_all_user_sessions()
+                    current_lid = season.config.league_id
+                    other_leagues = {k: v for k, v in other_active.items() if k != current_lid}
+                    if other_leagues:
+                        ui.label("Other active leagues:").classes("text-sm text-slate-600 mt-2 mb-1")
+                        with ui.row().classes("gap-2 flex-wrap"):
+                            for olid, (_, oseas, _) in other_leagues.items():
+                                ometa = _LEAGUE_META.get(olid, {"color": "gray", "icon": "public"})
+                                oabbr = olid.upper().replace("_LEAGUE", "")
+                                ost = oseas.get_status()
+                                olabel = f"{oabbr} — Wk {ost['current_week']}/{ost['total_weeks']}"
+                                if ost["champion_name"]:
+                                    olabel = f"{oabbr} (done)"
+
+                                async def _jump(l=olid):
+                                    _set_active_league(l)
+                                    app.storage.user["pro_league_pending_nav"] = True
+                                    ui.navigate.to("/")
+
+                                ui.button(olabel, icon=ometa["icon"], on_click=_jump).props(
+                                    f"outline no-caps size=sm color={ometa['color']}"
+                                )
+
+                    with ui.row().classes("gap-2 mt-3"):
+                        async def _back_to_hub():
+                            # Archive but keep session alive for viewing
+                            archive_season(season)
+                            _set_active_league(None)
+                            app.storage.user["pro_league_pending_nav"] = True
+                            ui.navigate.to("/")
+
+                        ui.button("Back to League Hub", icon="public", on_click=_back_to_hub).props(
+                            "color=indigo no-caps"
+                        )
+
+                        async def _new():
+                            current_lid = season.config.league_id
+                            _unregister_session(current_lid)
+                            app.storage.user["pro_league_pending_nav"] = True
+                            ui.navigate.to("/")
+
+                        ui.button("Restart This League", icon="replay", on_click=_new).props(
+                            "color=green outline no-caps"
+                        )
                 return
 
             with ui.row().classes("gap-3"):
