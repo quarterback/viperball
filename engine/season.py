@@ -2671,10 +2671,11 @@ def fast_sim_season(
         playoff_pool.add(name)
     playoff_list = sorted(playoff_pool, key=lambda n: ranked.index(n))[:playoff_size]
 
-    champion = _fast_sim_bracket(playoff_list, ratings, rng)
+    champion, runner_up = _fast_sim_bracket(playoff_list, ratings, rng)
 
     return {
         "champion": champion,
+        "runner_up": runner_up,
         "top_5": ranked[:5],
         "_records": records,
         "_playoff_teams": set(playoff_list),
@@ -2779,20 +2780,29 @@ def _fast_sim_bracket(
     teams: list,
     ratings: Dict[str, float],
     rng: random.Random,
-) -> str:
-    """Single-elimination bracket simulation."""
+) -> tuple:
+    """Single-elimination bracket simulation.
+
+    Returns (champion, runner_up) tuple.
+    """
     if not teams:
-        return "N/A"
+        return "N/A", "N/A"
     bracket = list(teams)
     while len(bracket) > 1:
         next_round = []
+        losers = []
         for i in range(0, len(bracket) - 1, 2):
             winner, _, _ = _fast_sim_game(bracket[i], bracket[i + 1], ratings, rng)
+            loser = bracket[i + 1] if winner == bracket[i] else bracket[i]
             next_round.append(winner)
+            losers.append(loser)
         if len(bracket) % 2 == 1:
             next_round.append(bracket[-1])
         bracket = next_round
-    return bracket[0]
+        # The last loser when bracket reaches the final is the runner-up
+        if len(bracket) == 1:
+            runner_up = losers[-1] if losers else "N/A"
+    return bracket[0], runner_up
 
 
 def fast_generate_history(
