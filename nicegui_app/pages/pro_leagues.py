@@ -583,7 +583,7 @@ def _render_schedule(season: ProLeagueSeason):
 
     selected_week = {"val": season.current_week if season.current_week > 0 else 1}
 
-    week_options = [{"label": f"Week {w['week']}", "value": w["week"]} for w in schedule["weeks"]]
+    week_options = {w["week"]: f"Week {w['week']}" for w in schedule["weeks"]}
 
     @ui.refreshable
     def week_display():
@@ -901,9 +901,9 @@ def _render_player_stats_table(box: dict, season: ProLeagueSeason = None):
         rows = []
         for p in players:
             rush = p.get("rushing_yards", p.get("game_rushing_yards", 0))
-            carries = p.get("carries", p.get("game_carries", 0))
+            carries = p.get("rush_carries", p.get("carries", p.get("game_carries", 0)))
             kp = p.get("kick_pass_yards", p.get("game_kick_pass_yards", 0))
-            td = p.get("touchdowns", p.get("game_touchdowns", 0))
+            td = p.get("tds", p.get("touchdowns", p.get("game_touchdowns", 0)))
             if rush > 0 or kp > 0 or td > 0:
                 rows.append({
                     "name": p.get("name", "???"),
@@ -1048,11 +1048,11 @@ def _render_playoffs(season: ProLeagueSeason):
 def _render_teams(season: ProLeagueSeason):
     ui.label("NVL Teams").classes("text-xl font-bold text-slate-800 mb-2")
 
-    team_options = []
-    for div_name, keys in NVL_CONFIG.divisions.items():
+    team_options = {}
+    for div_name, keys in season.config.divisions.items():
         for key in keys:
             if key in season.teams:
-                team_options.append({"label": f"{season.teams[key].name} ({div_name})", "value": key})
+                team_options[key] = f"{season.teams[key].name} ({div_name})"
 
     selected = {"key": None}
 

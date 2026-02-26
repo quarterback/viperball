@@ -517,18 +517,18 @@ class ProLeagueSeason:
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
-            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
-            acc["rushing_carries"] += ps.get("carries", ps.get("game_carries", 0))
-            acc["touchdowns"] += ps.get("touchdowns", ps.get("game_touchdowns", ps.get("tds", 0)))
-            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", ps.get("kick_yards", 0)))
-            acc["kick_pass_completions"] += ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", ps.get("kick_comp", 0)))
-            acc["kick_pass_attempts"] += ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", ps.get("kick_att", 0)))
+            acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", 0))
+            acc["rushing_carries"] += ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
+            acc["touchdowns"] += ps.get("tds", ps.get("touchdowns", ps.get("game_touchdowns", 0)))
+            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", 0))
+            acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("kick_comp", 0)))
+            acc["kick_pass_attempts"] += ps.get("kick_passes_thrown", ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0)))
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
-            acc["laterals"] += ps.get("laterals", ps.get("game_laterals", ps.get("lateral_chains", 0)))
+            acc["laterals"] += ps.get("laterals_thrown", ps.get("laterals", ps.get("lateral_chains", 0)))
             acc["fumbles"] += ps.get("fumbles", ps.get("game_fumbles", 0))
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
-            acc["dk_attempted"] += ps.get("dk_attempted", ps.get("game_dk_attempted", ps.get("dk_att", 0)))
+            acc["dk_attempted"] += ps.get("dk_att", ps.get("dk_attempted", ps.get("game_dk_attempted", 0)))
             acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"]
 
     def get_stat_leaders(self, category: str = "all") -> dict:
