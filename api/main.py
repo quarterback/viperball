@@ -49,7 +49,7 @@ from engine.transfer_portal import (
     auto_portal_offers, generate_quick_portal,
     estimate_prestige_from_roster,
 )
-from engine.pro_league import ProLeagueSeason, ProLeagueConfig, NVL_CONFIG
+from engine.pro_league import ProLeagueSeason, ProLeagueConfig, NVL_CONFIG, ALL_LEAGUE_CONFIGS
 from engine.draftyqueenz import (
     DraftyQueenzManager, DONATION_TYPES, BOOSTER_TIERS,
     STARTING_BANKROLL, SALARY_CAP, FANTASY_ENTRY_FEE,
@@ -66,9 +66,7 @@ TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "te
 sessions: Dict[str, dict] = {}
 pro_sessions: Dict[str, ProLeagueSeason] = {}
 
-LEAGUE_CONFIGS: Dict[str, ProLeagueConfig] = {
-    "nvl": NVL_CONFIG,
-}
+LEAGUE_CONFIGS: Dict[str, ProLeagueConfig] = dict(ALL_LEAGUE_CONFIGS)
 
 
 @app.get("/api/health")

@@ -61,6 +61,91 @@ NVL_CONFIG = ProLeagueConfig(
 )
 
 
+EL_CONFIG = ProLeagueConfig(
+    league_id="el",
+    league_name="Eurasian League",
+    teams_dir="data/el_teams",
+    divisions={
+        "Nordic": ["sto", "hel", "cop", "osl", "ams"],
+        "Continental": ["bru", "ber", "pra", "war", "zur"],
+    },
+    games_per_season=18,
+    playoff_teams=4,
+    bye_count=0,
+    calendar_start="March",
+    calendar_end="July",
+    attribute_range=(58, 85),
+    franchise_rating_range=(50, 80),
+    name_pool="male_european",
+)
+
+
+AL_CONFIG = ProLeagueConfig(
+    league_id="al",
+    league_name="AfroLeague",
+    teams_dir="data/al_teams",
+    divisions={
+        "West": ["lag", "acc", "dak", "cas", "abi", "abj"],
+        "East": ["nai", "joh", "cai", "dar", "add", "kam"],
+    },
+    games_per_season=20,
+    playoff_teams=4,
+    bye_count=0,
+    calendar_start="April",
+    calendar_end="August",
+    attribute_range=(55, 82),
+    franchise_rating_range=(45, 78),
+    name_pool="male_african",
+)
+
+
+PL_CONFIG = ProLeagueConfig(
+    league_id="pl",
+    league_name="Pacific League",
+    teams_dir="data/pl_teams",
+    divisions={
+        "North": ["tai", "man", "seo", "osa"],
+        "South": ["jak", "ban", "hcm", "sgp"],
+    },
+    games_per_season=14,
+    playoff_teams=4,
+    bye_count=0,
+    calendar_start="January",
+    calendar_end="May",
+    attribute_range=(55, 80),
+    franchise_rating_range=(45, 75),
+    name_pool="male_asian",
+)
+
+
+LA_CONFIG = ProLeagueConfig(
+    league_id="la_league",
+    league_name="LigaAmerica",
+    teams_dir="data/la_teams",
+    divisions={
+        "Norte": ["mex", "sao", "bue", "bog", "lim"],
+        "Caribe": ["sju", "sdo", "hav", "mvd", "stg"],
+    },
+    games_per_season=18,
+    playoff_teams=4,
+    bye_count=0,
+    calendar_start="June",
+    calendar_end="October",
+    attribute_range=(55, 82),
+    franchise_rating_range=(45, 78),
+    name_pool="male_latin",
+)
+
+
+ALL_LEAGUE_CONFIGS = {
+    "nvl": NVL_CONFIG,
+    "el": EL_CONFIG,
+    "al": AL_CONFIG,
+    "pl": PL_CONFIG,
+    "la_league": LA_CONFIG,
+}
+
+
 @dataclass
 class ProTeamRecord:
     team_key: str
@@ -628,6 +713,9 @@ class ProLeagueSeason:
         self.phase = "playoffs"
         self.playoff_round = 0
 
+        num_divs = len(self.config.divisions)
+        per_div = max(1, self.config.playoff_teams // num_divs)
+
         seeds = []
         for div_name in self.config.divisions:
             div_teams = [
@@ -635,8 +723,8 @@ class ProLeagueSeason:
                 if rec.division == div_name
             ]
             div_teams.sort(key=lambda r: (-r.wins, -r.pct, -r.point_diff))
-            top_3 = div_teams[:3]
-            for i, rec in enumerate(top_3):
+            top_n = div_teams[:per_div]
+            for i, rec in enumerate(top_n):
                 seeds.append({
                     "team_key": rec.team_key,
                     "team_name": rec.team_name,
@@ -651,26 +739,33 @@ class ProLeagueSeason:
         for i, s in enumerate(seeds):
             s["overall_seed"] = i + 1
 
-        top_4 = [s for s in seeds if s["div_seed"] == 1]
+        top_seeds = [s for s in seeds if s["div_seed"] == 1]
         rest = [s for s in seeds if s["div_seed"] != 1]
         rest.sort(key=lambda s: (-s["wins"], s["seed"]))
 
-        round1 = []
-        bye_teams = top_4[:self.config.bye_count]
-
-        wc_teams = rest
+        bye_teams = top_seeds[:self.config.bye_count]
+        # Non-bye teams play in the first round
+        non_bye_seeds = [s for s in top_seeds if s not in bye_teams]
+        wc_teams = non_bye_seeds + rest
         wc_teams.sort(key=lambda s: -s["wins"])
 
+        league_abbr = self.config.league_id.upper()
+        if self.config.playoff_teams <= 4:
+            first_round_name = "Semifinal"
+        else:
+            first_round_name = "Wild Card"
+
+        round1 = []
         for i in range(0, len(wc_teams) - 1, 2):
             round1.append({
                 "home": wc_teams[i],
                 "away": wc_teams[i + 1] if i + 1 < len(wc_teams) else None,
                 "result": None,
-                "round": "Wild Card",
+                "round": first_round_name,
             })
 
         self.playoff_bracket = [{
-            "round_name": "Wild Card",
+            "round_name": first_round_name,
             "matchups": round1,
             "bye_teams": bye_teams,
             "completed": False,
@@ -734,7 +829,11 @@ class ProLeagueSeason:
 
         advancing.sort(key=lambda t: (-t.get("wins", 0), t.get("seed", 99)))
 
-        round_names = ["Wild Card", "Divisional", "Conference Championship", "NVL Championship"]
+        league_abbr = self.config.league_id.upper()
+        if self.config.playoff_teams <= 4:
+            round_names = ["Semifinal", f"{league_abbr} Championship"]
+        else:
+            round_names = ["Wild Card", "Divisional", "Conference Championship", f"{league_abbr} Championship"]
         next_round_idx = len(self.playoff_bracket)
         round_name = round_names[next_round_idx] if next_round_idx < len(round_names) else f"Round {next_round_idx + 1}"
 

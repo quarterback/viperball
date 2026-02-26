@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "dak",
+    "school_name": "Dakar Teranga",
+    "abbreviation": "DAK",
+    "mascot": "Teranga",
+    "conference": "West",
+    "city": "Dakar",
+    "state": "SEN",
+    "country": "Senegal",
+    "colors": [
+      "Green",
+      "Yellow"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "moderate",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "power_spread",
+    "defense_style": "base_defense",
+    "st_scheme": "aces"
+  },
+  "prestige": 70,
+  "franchise_rating": 70,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 66,
+    "avg_stamina": 63,
+    "kicking_strength": 63,
+    "lateral_proficiency": 64,
+    "defensive_strength": 64
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Knijeah Dyer",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 219,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Georgetown",
+          "state": "GUY",
+          "country": "Guyana",
+          "region": "caribbean"
+        },
+        "high_school": "Georgetown High School",
+        "nationality": "Caribbean",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 72,
+          "kicking": 62,
+          "lateral_skill": 69,
+          "tackling": 72,
+          "agility": 57,
+          "power": 70,
+          "awareness": 70,
+          "hands": 67,
+          "kick_power": 67,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 2,
+        "name": "Zachariah Eloissaint",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 215,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Roseau",
+          "state": "DMA",
+          "country": "Dominica",
+          "region": "caribbean"
+        },
+        "high_school": "Roseau High School",
+        "nationality": "Caribbean",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 56,
+          "kicking": 78,
+          "lateral_skill": 60,
+          "tackling": 63,
+          "agility": 61,
+          "power": 67,
+          "awareness": 67,
+          "hands": 50,
+          "kick_power": 75,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 3,
+        "name": "Dane Burke",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 195,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Paramaribo",
+          "state": "SUR",
+          "country": "Suriname",
+          "region": "caribbean"
+        },
+        "high_school": "Paramaribo High School",
+        "nationality": "Caribbean",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 50,
+          "kicking": 50,
+          "lateral_skill": 76,
+          "tackling": 71,
+          "agility": 61,
+          "power": 72,
+          "awareness": 72,
+          "hands": 70,
+          "kick_power": 65,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 4,
+        "name": "Uche Boateng",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Lagos",
+          "state": "NGA",
+          "country": "Nigeria",
+          "region": "african"
+        },
+        "high_school": "Lagos Secondary School",
+        "nationality": "African",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 69,
+          "kicking": 59,
+          "lateral_skill": 63,
+          "tackling": 71,
+          "agility": 57,
+          "power": 57,
+          "awareness": 57,
+          "hands": 67,
+          "kick_power": 57,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 5,
+        "name": "Devon Phillips",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 182,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Roseau",
+          "state": "DMA",
+          "country": "Dominica",
+          "region": "caribbean"
+        },
+        "high_school": "Roseau High School",
+        "nationality": "Caribbean",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 83,
+          "kicking": 65,
+          "lateral_skill": 73,
+          "tackling": 58,
+          "agility": 76,
+          "power": 67,
+          "awareness": 68,
+          "hands": 80,
+          "kick_power": 71,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 6,
+        "name": "Dominick Blackwood",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 228,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Santo Domingo",
+          "state": "DOM",
+          "country": "Dominican Republic",
+          "region": "caribbean"
+        },
+        "high_school": "Santo Domingo High School",
+        "nationality": "Caribbean",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 50,
+          "kicking": 59,
+          "lateral_skill": 77,
+          "tackling": 64,
+          "agility": 82,
+          "power": 71,
+          "awareness": 79,
+          "hands": 78,
+          "kick_power": 56,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 7,
+        "name": "Zander Stewart",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 219,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Nassau",
+          "state": "BAH",
+          "country": "Bahamas",
+          "region": "caribbean"
+        },
+        "high_school": "Nassau High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 50,
+          "kicking": 69,
+          "lateral_skill": 72,
+          "tackling": 74,
+          "agility": 62,
+          "power": 68,
+          "awareness": 73,
+          "hands": 73,
+          "kick_power": 50,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 8,
+        "name": "Rowan Campbell",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 206,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Port-au-Prince",
+          "state": "HAI",
+          "country": "Haiti",
+          "region": "caribbean"
+        },
+        "high_school": "Port-au-Prince High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 59,
+          "kicking": 67,
+          "lateral_skill": 65,
+          "tackling": 59,
+          "agility": 66,
+          "power": 69,
+          "awareness": 55,
+          "hands": 67,
+          "kick_power": 59,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 9,
+        "name": "Rowan Mathurin",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 225,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Roseau",
+          "state": "DMA",
+          "country": "Dominica",
+          "region": "caribbean"
+        },
+        "high_school": "Roseau High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 66,
+          "kicking": 67,
+          "lateral_skill": 65,
+          "tackling": 74,
+          "agility": 54,
+          "power": 81,
+          "awareness": 66,
+          "hands": 73,
+          "kick_power": 66,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 10,
+        "name": "Nathan Buckley",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 210,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Bridgetown",
+          "state": "BRB",
+          "country": "Barbados",
+          "region": "caribbean"
+        },
+        "high_school": "Bridgetown High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 71,
+          "kicking": 71,
+          "lateral_skill": 56,
+          "tackling": 64,
+          "agility": 62,
+          "power": 66,
+          "awareness": 60,
+          "hands": 81,
+          "kick_power": 60,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 11,
+        "name": "Chase Mbaye",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 239,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Johannesburg",
+          "state": "ZAF",
+          "country": "South Africa",
+          "region": "african"
+        },
+        "high_school": "Johannesburg Secondary School",
+        "nationality": "African",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 62,
+          "kicking": 62,
+          "lateral_skill": 71,
+          "tackling": 60,
+          "agility": 73,
+          "power": 57,
+          "awareness": 63,
+          "hands": 68,
+          "kick_power": 77,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 12,
+        "name": "Dorian Pietrus",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 194,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Port-au-Prince",
+          "state": "HAI",
+          "country": "Haiti",
+          "region": "caribbean"
+        },
+        "high_school": "Port-au-Prince High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 58,
+          "kicking": 60,
+          "lateral_skill": 68,
+          "tackling": 72,
+          "agility": 51,
+          "power": 62,
+          "awareness": 66,
+          "hands": 55,
+          "kick_power": 50,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 13,
+        "name": "Damon Owino",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 218,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Dar es Salaam",
+          "state": "TZA",
+          "country": "Tanzania",
+          "region": "african"
+        },
+        "high_school": "Dar es Salaam Secondary School",
+        "nationality": "African",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 50,
+          "kicking": 62,
+          "lateral_skill": 54,
+          "tackling": 64,
+          "agility": 52,
+          "power": 53,
+          "awareness": 61,
+          "hands": 58,
+          "kick_power": 68,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 14,
+        "name": "Amos Sow",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 238,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Johannesburg",
+          "state": "ZAF",
+          "country": "South Africa",
+          "region": "african"
+        },
+        "high_school": "Johannesburg Secondary School",
+        "nationality": "African",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 66,
+          "kicking": 66,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 59,
+          "power": 77,
+          "awareness": 50,
+          "hands": 88,
+          "kick_power": 83,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 15,
+        "name": "Isaac Njoroge",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 180,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Lom\u00e9",
+          "state": "TOG",
+          "country": "Togo",
+          "region": "african"
+        },
+        "high_school": "Lom\u00e9 Secondary School",
+        "nationality": "African",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 60,
+          "kicking": 69,
+          "lateral_skill": 55,
+          "tackling": 79,
+          "agility": 58,
+          "power": 72,
+          "awareness": 76,
+          "hands": 52,
+          "kick_power": 63,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 16,
+        "name": "Brandon Swaby",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 178,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Montego Bay",
+          "state": "JAM",
+          "country": "Jamaica",
+          "region": "caribbean"
+        },
+        "high_school": "Montego Bay High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 68,
+          "kicking": 78,
+          "lateral_skill": 67,
+          "tackling": 69,
+          "agility": 63,
+          "power": 61,
+          "awareness": 60,
+          "hands": 77,
+          "kick_power": 63,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 17,
+        "name": "Zander Alexander",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 215,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Roseau",
+          "state": "DMA",
+          "country": "Dominica",
+          "region": "caribbean"
+        },
+        "high_school": "Roseau High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 75,
+          "kicking": 55,
+          "lateral_skill": 80,
+          "tackling": 64,
+          "agility": 50,
+          "power": 50,
+          "awareness": 64,
+          "hands": 60,
+          "kick_power": 58,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 18,
+        "name": "Kendal Chin",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 184,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Castries",
+          "state": "LCA",
+          "country": "Saint Lucia",
+          "region": "caribbean"
+        },
+        "high_school": "Castries High School",
+        "nationality": "Caribbean",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 75,
+          "kicking": 50,
+          "lateral_skill": 58,
+          "tackling": 50,
+          "agility": 50,
+          "power": 67,
+          "awareness": 72,
+          "hands": 58,
+          "kick_power": 60,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 19,
+        "name": "Raheem Robinson",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Port of Spain",
+          "state": "TTO",
+          "country": "Trinidad and Tobago",
+          "region": "caribbean"
+        },
+        "high_school": "Port of Spain High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 64,
+          "kicking": 67,
+          "lateral_skill": 57,
+          "tackling": 65,
+          "agility": 85,
+          "power": 60,
+          "awareness": 50,
+          "hands": 61,
+          "kick_power": 67,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 20,
+        "name": "Keylen Mthembu",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 194,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Mombasa",
+          "state": "KEN",
+          "country": "Kenya",
+          "region": "african"
+        },
+        "high_school": "Mombasa Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 72,
+          "kicking": 55,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 69,
+          "power": 70,
+          "awareness": 63,
+          "hands": 70,
+          "kick_power": 50,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 21,
+        "name": "Adekunle Asante",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 189,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Mombasa",
+          "state": "KEN",
+          "country": "Kenya",
+          "region": "african"
+        },
+        "high_school": "Mombasa Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 59,
+          "kicking": 70,
+          "lateral_skill": 56,
+          "tackling": 71,
+          "agility": 63,
+          "power": 73,
+          "awareness": 71,
+          "hands": 56,
+          "kick_power": 69,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 22,
+        "name": "Obinna Wanjiku",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 277,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Kano",
+          "state": "NGA",
+          "country": "Nigeria",
+          "region": "african"
+        },
+        "high_school": "Kano Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 71,
+          "kicking": 62,
+          "lateral_skill": 67,
+          "tackling": 59,
+          "agility": 66,
+          "power": 70,
+          "awareness": 78,
+          "hands": 68,
+          "kick_power": 66,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 23,
+        "name": "Dorian Blades",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 227,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bridgetown",
+          "state": "BRB",
+          "country": "Barbados",
+          "region": "caribbean"
+        },
+        "high_school": "Bridgetown High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 75,
+          "kicking": 57,
+          "lateral_skill": 68,
+          "tackling": 67,
+          "agility": 65,
+          "power": 65,
+          "awareness": 50,
+          "hands": 71,
+          "kick_power": 64,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 24,
+        "name": "Dyson James",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 238,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Santo Domingo",
+          "state": "DOM",
+          "country": "Dominican Republic",
+          "region": "caribbean"
+        },
+        "high_school": "Santo Domingo High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 55,
+          "kicking": 64,
+          "lateral_skill": 71,
+          "tackling": 58,
+          "agility": 61,
+          "power": 85,
+          "awareness": 60,
+          "hands": 55,
+          "kick_power": 54,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 25,
+        "name": "Mylan Mensah",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 287,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Abuja",
+          "state": "NGA",
+          "country": "Nigeria",
+          "region": "african"
+        },
+        "high_school": "Abuja Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 66,
+          "kicking": 61,
+          "lateral_skill": 62,
+          "tackling": 58,
+          "agility": 81,
+          "power": 55,
+          "awareness": 68,
+          "hands": 60,
+          "kick_power": 50,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 26,
+        "name": "Brandon Shaw",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 232,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Nassau",
+          "state": "BAH",
+          "country": "Bahamas",
+          "region": "caribbean"
+        },
+        "high_school": "Nassau High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 74,
+          "kicking": 59,
+          "lateral_skill": 68,
+          "tackling": 58,
+          "agility": 63,
+          "power": 80,
+          "awareness": 71,
+          "hands": 53,
+          "kick_power": 61,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 27,
+        "name": "Mamadou Cele",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 275,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Tamale",
+          "state": "GHA",
+          "country": "Ghana",
+          "region": "african"
+        },
+        "high_school": "Tamale Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 72,
+          "kicking": 60,
+          "lateral_skill": 68,
+          "tackling": 67,
+          "agility": 64,
+          "power": 70,
+          "awareness": 58,
+          "hands": 76,
+          "kick_power": 69,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 28,
+        "name": "Ismail Asare",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 248,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Abidjan",
+          "state": "CIV",
+          "country": "C\u00f4te d'Ivoire",
+          "region": "african"
+        },
+        "high_school": "Abidjan Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 72,
+          "kicking": 64,
+          "lateral_skill": 66,
+          "tackling": 68,
+          "agility": 68,
+          "power": 60,
+          "awareness": 73,
+          "hands": 57,
+          "kick_power": 62,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 29,
+        "name": "Rueben Okonkwo",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 264,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Dakar",
+          "state": "SEN",
+          "country": "Senegal",
+          "region": "african"
+        },
+        "high_school": "Dakar Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 60,
+          "kicking": 68,
+          "lateral_skill": 64,
+          "tackling": 53,
+          "agility": 60,
+          "power": 71,
+          "awareness": 81,
+          "hands": 68,
+          "kick_power": 67,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 30,
+        "name": "Antwon Moryl",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 267,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Paramaribo",
+          "state": "SUR",
+          "country": "Suriname",
+          "region": "caribbean"
+        },
+        "high_school": "Paramaribo High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 59,
+          "kicking": 55,
+          "lateral_skill": 63,
+          "tackling": 67,
+          "agility": 72,
+          "power": 69,
+          "awareness": 62,
+          "hands": 68,
+          "kick_power": 69,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 31,
+        "name": "Ravi Robinson",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 250,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Roseau",
+          "state": "DMA",
+          "country": "Dominica",
+          "region": "caribbean"
+        },
+        "high_school": "Roseau High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 50,
+          "kicking": 66,
+          "lateral_skill": 56,
+          "tackling": 63,
+          "agility": 58,
+          "power": 54,
+          "awareness": 64,
+          "hands": 77,
+          "kick_power": 65,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 32,
+        "name": "Houston Ndlovu",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 232,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Kigali",
+          "state": "RWA",
+          "country": "Rwanda",
+          "region": "african"
+        },
+        "high_school": "Kigali Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 56,
+          "kicking": 65,
+          "lateral_skill": 62,
+          "tackling": 71,
+          "agility": 63,
+          "power": 66,
+          "awareness": 61,
+          "hands": 74,
+          "kick_power": 73,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 33,
+        "name": "Dane Mondesir",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 273,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "San Juan",
+          "state": "PRI",
+          "country": "Puerto Rico",
+          "region": "caribbean"
+        },
+        "high_school": "San Juan High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 62,
+          "kicking": 68,
+          "lateral_skill": 64,
+          "tackling": 64,
+          "agility": 80,
+          "power": 72,
+          "awareness": 66,
+          "hands": 68,
+          "kick_power": 57,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 34,
+        "name": "Gordy Emenike",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 231,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Gaborone",
+          "state": "BWA",
+          "country": "Botswana",
+          "region": "african"
+        },
+        "high_school": "Gaborone Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 67,
+          "kicking": 65,
+          "lateral_skill": 75,
+          "tackling": 63,
+          "agility": 63,
+          "power": 65,
+          "awareness": 65,
+          "hands": 77,
+          "kick_power": 75,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 35,
+        "name": "Houston Mthembu",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 225,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Dakar",
+          "state": "SEN",
+          "country": "Senegal",
+          "region": "african"
+        },
+        "high_school": "Dakar Secondary School",
+        "nationality": "African",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 51,
+          "kicking": 78,
+          "lateral_skill": 51,
+          "tackling": 56,
+          "agility": 67,
+          "power": 57,
+          "awareness": 69,
+          "hands": 57,
+          "kick_power": 67,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 36,
+        "name": "Garfield Shaw",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 256,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Chaguanas",
+          "state": "TTO",
+          "country": "Trinidad and Tobago",
+          "region": "caribbean"
+        },
+        "high_school": "Chaguanas High School",
+        "nationality": "Caribbean",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 65,
+          "kicking": 70,
+          "lateral_skill": 51,
+          "tackling": 68,
+          "agility": 63,
+          "power": 57,
+          "awareness": 56,
+          "hands": 67,
+          "kick_power": 65,
+          "kick_accuracy": 56
+        }
+      }
+    ]
+  }
+}

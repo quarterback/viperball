@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "bue",
+    "school_name": "Buenos Aires Gauchos",
+    "abbreviation": "BUE",
+    "mascot": "Gauchos",
+    "conference": "Norte",
+    "city": "Buenos Aires",
+    "state": "ARG",
+    "country": "Argentina",
+    "colors": [
+      "Light Blue",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "aggressive",
+    "philosophy": "aggressive",
+    "tempo": "variable",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "smashmouth",
+    "defense_style": "swarm",
+    "st_scheme": "aces"
+  },
+  "prestige": 74,
+  "franchise_rating": 74,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 65,
+    "avg_stamina": 67,
+    "kicking_strength": 67,
+    "lateral_proficiency": 66,
+    "defensive_strength": 65
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Tavierre Cruz",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 225,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Recife",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Recife",
+        "nationality": "Latin American",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 63,
+          "kicking": 83,
+          "lateral_skill": 67,
+          "tackling": 74,
+          "agility": 63,
+          "power": 53,
+          "awareness": 75,
+          "hands": 62,
+          "kick_power": 64,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 2,
+        "name": "Sadonnie Harrison",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 223,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Lyon",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Lyon Academy",
+        "nationality": "European",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 72,
+          "kicking": 61,
+          "lateral_skill": 85,
+          "tackling": 65,
+          "agility": 58,
+          "power": 60,
+          "awareness": 86,
+          "hands": 76,
+          "kick_power": 75,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 3,
+        "name": "Sterlin Fern\u00e1ndez",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 177,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "uk_european"
+        },
+        "high_school": "Lisbon Academy",
+        "nationality": "European",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 55,
+          "kicking": 72,
+          "lateral_skill": 55,
+          "tackling": 60,
+          "agility": 50,
+          "power": 55,
+          "awareness": 60,
+          "hands": 70,
+          "kick_power": 65,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 4,
+        "name": "Keenan Hughes",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 201,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Stuttgart",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Stuttgart Academy",
+        "nationality": "European",
+        "archetype": "dual_threat_zb",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 60,
+          "kicking": 70,
+          "lateral_skill": 66,
+          "tackling": 69,
+          "agility": 82,
+          "power": 61,
+          "awareness": 60,
+          "hands": 68,
+          "kick_power": 82,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 5,
+        "name": "Nicolas Fern\u00e1ndez",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 175,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Lima",
+          "state": "PER",
+          "country": "Peru",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Lima",
+        "nationality": "Latin American",
+        "archetype": "dual_threat_zb",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 63,
+          "kicking": 69,
+          "lateral_skill": 69,
+          "tackling": 77,
+          "agility": 71,
+          "power": 65,
+          "awareness": 80,
+          "hands": 69,
+          "kick_power": 75,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 6,
+        "name": "Sam Gonz\u00e1lez",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 224,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Lille",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Lille Academy",
+        "nationality": "European",
+        "archetype": "dual_threat_zb",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 70,
+          "kicking": 67,
+          "lateral_skill": 55,
+          "tackling": 68,
+          "agility": 73,
+          "power": 51,
+          "awareness": 64,
+          "hands": 75,
+          "kick_power": 65,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 7,
+        "name": "Aidan Martin",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 185,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bilbao",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Bilbao Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 67,
+          "kicking": 56,
+          "lateral_skill": 71,
+          "tackling": 57,
+          "agility": 67,
+          "power": 68,
+          "awareness": 67,
+          "hands": 50,
+          "kick_power": 66,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 8,
+        "name": "Tylen Marshall",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 240,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Toulouse",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Toulouse Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 51,
+          "kicking": 63,
+          "lateral_skill": 66,
+          "tackling": 63,
+          "agility": 80,
+          "power": 61,
+          "awareness": 64,
+          "hands": 60,
+          "kick_power": 62,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 9,
+        "name": "Patrick Harrison",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 175,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Rome",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "uk_european"
+        },
+        "high_school": "Rome Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 74,
+          "kicking": 61,
+          "lateral_skill": 72,
+          "tackling": 83,
+          "agility": 58,
+          "power": 69,
+          "awareness": 57,
+          "hands": 62,
+          "kick_power": 57,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 10,
+        "name": "Jose Costa",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 207,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "C\u00f3rdoba",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio C\u00f3rdoba",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 79,
+          "kicking": 67,
+          "lateral_skill": 56,
+          "tackling": 82,
+          "agility": 72,
+          "power": 66,
+          "awareness": 81,
+          "hands": 60,
+          "kick_power": 61,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 11,
+        "name": "Melvin Cruz",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 231,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Buenos Aires",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Buenos Aires",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 72,
+          "kicking": 65,
+          "lateral_skill": 73,
+          "tackling": 72,
+          "agility": 70,
+          "power": 69,
+          "awareness": 64,
+          "hands": 70,
+          "kick_power": 56,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 12,
+        "name": "RJ Moreau",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 180,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Liverpool",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Liverpool Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 73,
+          "kicking": 70,
+          "lateral_skill": 63,
+          "tackling": 64,
+          "agility": 70,
+          "power": 58,
+          "awareness": 59,
+          "hands": 68,
+          "kick_power": 66,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 13,
+        "name": "Quaylen \u00c1lvarez",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 185,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Medell\u00edn",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Medell\u00edn",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 63,
+          "kicking": 69,
+          "lateral_skill": 68,
+          "tackling": 58,
+          "agility": 68,
+          "power": 68,
+          "awareness": 65,
+          "hands": 71,
+          "kick_power": 64,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 14,
+        "name": "Hugo van den Berg",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 230,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "uk_european"
+        },
+        "high_school": "Milan Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 70,
+          "kicking": 59,
+          "lateral_skill": 56,
+          "tackling": 52,
+          "agility": 64,
+          "power": 73,
+          "awareness": 65,
+          "hands": 77,
+          "kick_power": 77,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 15,
+        "name": "Neto Silva",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 190,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Santiago",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Santiago",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 62,
+          "kicking": 67,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 74,
+          "power": 50,
+          "awareness": 68,
+          "hands": 78,
+          "kick_power": 60,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 16,
+        "name": "Ben de Jong",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 202,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Lille",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Lille Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 67,
+          "kicking": 84,
+          "lateral_skill": 83,
+          "tackling": 63,
+          "agility": 91,
+          "power": 63,
+          "awareness": 77,
+          "hands": 60,
+          "kick_power": 70,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 17,
+        "name": "Jorge Rodrigues",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "S\u00e3o Paulo",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio S\u00e3o Paulo",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 76,
+          "kicking": 79,
+          "lateral_skill": 61,
+          "tackling": 83,
+          "agility": 64,
+          "power": 67,
+          "awareness": 54,
+          "hands": 59,
+          "kick_power": 51,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 18,
+        "name": "Lamont Silva",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 175,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Rio de Janeiro",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rio de Janeiro",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 67,
+          "kicking": 61,
+          "lateral_skill": 77,
+          "tackling": 69,
+          "agility": 58,
+          "power": 68,
+          "awareness": 73,
+          "hands": 54,
+          "kick_power": 52,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 19,
+        "name": "Jaxson Mart\u00ednez",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 204,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Guayaquil",
+          "state": "ECU",
+          "country": "Ecuador",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Guayaquil",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 62,
+          "kicking": 72,
+          "lateral_skill": 53,
+          "tackling": 54,
+          "agility": 65,
+          "power": 65,
+          "awareness": 72,
+          "hands": 75,
+          "kick_power": 78,
+          "kick_accuracy": 52
+        }
+      },
+      {
+        "number": 20,
+        "name": "Peter Meyer",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 189,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Porto",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "uk_european"
+        },
+        "high_school": "Porto Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 75,
+          "kicking": 79,
+          "lateral_skill": 66,
+          "tackling": 70,
+          "agility": 61,
+          "power": 58,
+          "awareness": 79,
+          "hands": 56,
+          "kick_power": 59,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 21,
+        "name": "Foster Bakker",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 204,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Birmingham",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Birmingham Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 74,
+          "kicking": 66,
+          "lateral_skill": 61,
+          "tackling": 56,
+          "agility": 63,
+          "power": 50,
+          "awareness": 69,
+          "hands": 65,
+          "kick_power": 69,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 22,
+        "name": "Quaylen G\u00f3mez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 290,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Belo Horizonte",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Belo Horizonte",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 80,
+          "kicking": 64,
+          "lateral_skill": 81,
+          "tackling": 61,
+          "agility": 50,
+          "power": 77,
+          "awareness": 70,
+          "hands": 57,
+          "kick_power": 62,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 23,
+        "name": "Kamal Richard",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 233,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Toulouse",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Toulouse Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 69,
+          "kicking": 74,
+          "lateral_skill": 79,
+          "tackling": 61,
+          "agility": 79,
+          "power": 74,
+          "awareness": 73,
+          "hands": 60,
+          "kick_power": 69,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 24,
+        "name": "Grayson Martin",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 233,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Valencia",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Valencia Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 61,
+          "kicking": 53,
+          "lateral_skill": 77,
+          "tackling": 61,
+          "agility": 82,
+          "power": 75,
+          "awareness": 66,
+          "hands": 74,
+          "kick_power": 69,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 25,
+        "name": "Tanner Dupont",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 283,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Ghent",
+          "state": "BEL",
+          "country": "Belgium",
+          "region": "uk_european"
+        },
+        "high_school": "Ghent Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 67,
+          "kicking": 60,
+          "lateral_skill": 61,
+          "tackling": 68,
+          "agility": 73,
+          "power": 75,
+          "awareness": 59,
+          "hands": 69,
+          "kick_power": 71,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 26,
+        "name": "Vernon Hoffmann",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 282,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bordeaux",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Bordeaux Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 74,
+          "kicking": 73,
+          "lateral_skill": 63,
+          "tackling": 68,
+          "agility": 68,
+          "power": 80,
+          "awareness": 66,
+          "hands": 67,
+          "kick_power": 65,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 27,
+        "name": "Luke Wilson",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 226,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Copenhagen",
+          "state": "DEN",
+          "country": "Denmark",
+          "region": "uk_european"
+        },
+        "high_school": "Copenhagen Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 65,
+          "kicking": 73,
+          "lateral_skill": 72,
+          "tackling": 68,
+          "agility": 57,
+          "power": 63,
+          "awareness": 76,
+          "hands": 66,
+          "kick_power": 62,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 28,
+        "name": "Matias Garc\u00eda",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 278,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Quito",
+          "state": "ECU",
+          "country": "Ecuador",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Quito",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 72,
+          "kicking": 72,
+          "lateral_skill": 63,
+          "tackling": 60,
+          "agility": 68,
+          "power": 51,
+          "awareness": 77,
+          "hands": 62,
+          "kick_power": 54,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 29,
+        "name": "Malcolm Bauer",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 275,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Dortmund Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 71,
+          "kicking": 67,
+          "lateral_skill": 74,
+          "tackling": 55,
+          "agility": 53,
+          "power": 73,
+          "awareness": 59,
+          "hands": 61,
+          "kick_power": 77,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 30,
+        "name": "Riley S\u00e1nchez",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 246,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Nantes",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Nantes Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 55,
+          "kicking": 70,
+          "lateral_skill": 62,
+          "tackling": 68,
+          "agility": 85,
+          "power": 69,
+          "awareness": 68,
+          "hands": 57,
+          "kick_power": 60,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 31,
+        "name": "Louis de Jong",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 259,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Stuttgart",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Stuttgart Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 61,
+          "kicking": 79,
+          "lateral_skill": 65,
+          "tackling": 56,
+          "agility": 75,
+          "power": 71,
+          "awareness": 50,
+          "hands": 65,
+          "kick_power": 65,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 32,
+        "name": "Blair Thomas",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 278,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Ghent",
+          "state": "BEL",
+          "country": "Belgium",
+          "region": "uk_european"
+        },
+        "high_school": "Ghent Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 67,
+          "kicking": 84,
+          "lateral_skill": 70,
+          "tackling": 57,
+          "agility": 73,
+          "power": 58,
+          "awareness": 53,
+          "hands": 80,
+          "kick_power": 70,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 33,
+        "name": "Hugo Hughes",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 285,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Nantes",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Nantes Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 63,
+          "kicking": 58,
+          "lateral_skill": 63,
+          "tackling": 78,
+          "agility": 63,
+          "power": 68,
+          "awareness": 53,
+          "hands": 77,
+          "kick_power": 61,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 34,
+        "name": "Martin Costa",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 286,
+        "year": "Rookie",
+        "hometown": {
+          "city": "S\u00e3o Paulo",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio S\u00e3o Paulo",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 78,
+          "kicking": 60,
+          "lateral_skill": 61,
+          "tackling": 65,
+          "agility": 58,
+          "power": 72,
+          "awareness": 55,
+          "hands": 74,
+          "kick_power": 72,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 35,
+        "name": "Canon Pereira",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 259,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Curitiba",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Curitiba",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 62,
+          "kicking": 58,
+          "lateral_skill": 61,
+          "tackling": 63,
+          "agility": 71,
+          "power": 62,
+          "awareness": 71,
+          "hands": 71,
+          "kick_power": 55,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 36,
+        "name": "CJ Silva",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 240,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Rosario",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rosario",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 72,
+          "kicking": 50,
+          "lateral_skill": 60,
+          "tackling": 66,
+          "agility": 50,
+          "power": 61,
+          "awareness": 60,
+          "hands": 61,
+          "kick_power": 77,
+          "kick_accuracy": 59
+        }
+      }
+    ]
+  }
+}

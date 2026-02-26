@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "tai",
+    "school_name": "Taipei Dragons",
+    "abbreviation": "TAI",
+    "mascot": "Dragons",
+    "conference": "North",
+    "city": "Taipei",
+    "state": "TWN",
+    "country": "Taiwan",
+    "colors": [
+      "Red",
+      "Blue"
+    ]
+  },
+  "identity": {
+    "style": "ground_heavy",
+    "philosophy": "ground_heavy",
+    "tempo": "moderate",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "ground_pound",
+    "defense_style": "bend_no_break",
+    "st_scheme": "aces"
+  },
+  "prestige": 73,
+  "franchise_rating": 73,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 67,
+    "avg_stamina": 67,
+    "kicking_strength": 67,
+    "lateral_proficiency": 65,
+    "defensive_strength": 66
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Akira Kang",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 187,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Hamamatsu",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Hamamatsu West High School",
+        "nationality": "East Asian",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 76,
+          "kicking": 80,
+          "lateral_skill": 69,
+          "tackling": 65,
+          "agility": 68,
+          "power": 56,
+          "awareness": 50,
+          "hands": 69,
+          "kick_power": 68,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 2,
+        "name": "Rui Lin",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 209,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Kitakyushu",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kitakyushu High School",
+        "nationality": "East Asian",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 65,
+          "kicking": 63,
+          "lateral_skill": 71,
+          "tackling": 74,
+          "agility": 54,
+          "power": 76,
+          "awareness": 74,
+          "hands": 69,
+          "kick_power": 75,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 3,
+        "name": "Ryo Jeon",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 222,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Taipei",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Taipei Central High School",
+        "nationality": "East Asian",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 65,
+          "kicking": 67,
+          "lateral_skill": 72,
+          "tackling": 80,
+          "agility": 81,
+          "power": 58,
+          "awareness": 59,
+          "hands": 75,
+          "kick_power": 62,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 4,
+        "name": "Minseok Fujita",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 208,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Kumamoto",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kumamoto Central High School",
+        "nationality": "East Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 71,
+          "kicking": 72,
+          "lateral_skill": 61,
+          "tackling": 74,
+          "agility": 61,
+          "power": 71,
+          "awareness": 58,
+          "hands": 67,
+          "kick_power": 77,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 5,
+        "name": "Yuki Nakagawa",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 225,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Taoyuan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Taoyuan West High School",
+        "nationality": "East Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 71,
+          "kicking": 68,
+          "lateral_skill": 66,
+          "tackling": 74,
+          "agility": 70,
+          "power": 81,
+          "awareness": 65,
+          "hands": 73,
+          "kick_power": 72,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 6,
+        "name": "Naoki Han",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 179,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Tokyo",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Tokyo Central High School",
+        "nationality": "East Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 62,
+          "kicking": 62,
+          "lateral_skill": 77,
+          "tackling": 65,
+          "agility": 64,
+          "power": 69,
+          "awareness": 69,
+          "hands": 57,
+          "kick_power": 71,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 7,
+        "name": "Lei Yoo",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 195,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Taichung",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Taichung East High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 63,
+          "kicking": 73,
+          "lateral_skill": 69,
+          "tackling": 58,
+          "agility": 70,
+          "power": 53,
+          "awareness": 70,
+          "hands": 66,
+          "kick_power": 86,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 8,
+        "name": "Zheng Lee",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 224,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Kobe",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kobe North High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 58,
+          "kicking": 63,
+          "lateral_skill": 71,
+          "tackling": 51,
+          "agility": 59,
+          "power": 64,
+          "awareness": 78,
+          "hands": 63,
+          "kick_power": 64,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 9,
+        "name": "Zheng Mori",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 176,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Nagoya",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Nagoya East High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 73,
+          "kicking": 70,
+          "lateral_skill": 74,
+          "tackling": 57,
+          "agility": 80,
+          "power": 81,
+          "awareness": 60,
+          "hands": 66,
+          "kick_power": 83,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 10,
+        "name": "Ryota Cao",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 210,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Kitakyushu",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kitakyushu South High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 67,
+          "kicking": 64,
+          "lateral_skill": 83,
+          "tackling": 58,
+          "agility": 79,
+          "power": 67,
+          "awareness": 60,
+          "hands": 71,
+          "kick_power": 68,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 11,
+        "name": "Daeho Shimizu",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 238,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Niigata",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Niigata High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 72,
+          "kicking": 67,
+          "lateral_skill": 68,
+          "tackling": 65,
+          "agility": 70,
+          "power": 61,
+          "awareness": 74,
+          "hands": 78,
+          "kick_power": 68,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 12,
+        "name": "Bao Fujita",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 206,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Fukuoka",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Fukuoka West High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 64,
+          "kicking": 65,
+          "lateral_skill": 60,
+          "tackling": 59,
+          "agility": 76,
+          "power": 80,
+          "awareness": 61,
+          "hands": 65,
+          "kick_power": 64,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 13,
+        "name": "Hikaru Jung",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 234,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Busan",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Busan South High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 80,
+          "kicking": 64,
+          "lateral_skill": 50,
+          "tackling": 80,
+          "agility": 73,
+          "power": 78,
+          "awareness": 67,
+          "hands": 75,
+          "kick_power": 92,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 14,
+        "name": "Jiro Hasegawa",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 189,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Goyang",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Goyang High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 62,
+          "kicking": 83,
+          "lateral_skill": 59,
+          "tackling": 55,
+          "agility": 71,
+          "power": 63,
+          "awareness": 68,
+          "hands": 74,
+          "kick_power": 62,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 15,
+        "name": "Chen Hashimoto",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 219,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Kumamoto",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kumamoto Central High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 66,
+          "kicking": 64,
+          "lateral_skill": 65,
+          "tackling": 72,
+          "agility": 66,
+          "power": 71,
+          "awareness": 70,
+          "hands": 67,
+          "kick_power": 59,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 16,
+        "name": "Hayato Jeon",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 196,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Suwon",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Suwon East High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 70,
+          "kicking": 69,
+          "lateral_skill": 66,
+          "tackling": 64,
+          "agility": 62,
+          "power": 74,
+          "awareness": 52,
+          "hands": 50,
+          "kick_power": 64,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 17,
+        "name": "Kenta Yang",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 191,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Fukuoka",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Fukuoka High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 53,
+          "kicking": 64,
+          "lateral_skill": 59,
+          "tackling": 58,
+          "agility": 65,
+          "power": 67,
+          "awareness": 62,
+          "hands": 59,
+          "kick_power": 63,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 18,
+        "name": "Jiro Lim",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 197,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Seoul",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Seoul South High School",
+        "nationality": "East Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 50,
+          "kicking": 76,
+          "lateral_skill": 58,
+          "tackling": 68,
+          "agility": 54,
+          "power": 80,
+          "awareness": 57,
+          "hands": 61,
+          "kick_power": 65,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 19,
+        "name": "Woojin Kang",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 209,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Daegu",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Daegu North High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 77,
+          "kicking": 63,
+          "lateral_skill": 62,
+          "tackling": 78,
+          "agility": 71,
+          "power": 65,
+          "awareness": 67,
+          "hands": 70,
+          "kick_power": 50,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 20,
+        "name": "Jeonghoon Nakamura",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 226,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Tainan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Tainan High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 83,
+          "stamina": 72,
+          "kicking": 70,
+          "lateral_skill": 55,
+          "tackling": 52,
+          "agility": 64,
+          "power": 77,
+          "awareness": 55,
+          "hands": 64,
+          "kick_power": 76,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 21,
+        "name": "Jeonghoon Sun",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 205,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Kumamoto",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kumamoto Central High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 79,
+          "kicking": 67,
+          "lateral_skill": 69,
+          "tackling": 63,
+          "agility": 72,
+          "power": 53,
+          "awareness": 50,
+          "hands": 64,
+          "kick_power": 66,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 22,
+        "name": "Long Hayashi",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 261,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Tainan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Tainan South High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 56,
+          "kicking": 61,
+          "lateral_skill": 82,
+          "tackling": 66,
+          "agility": 73,
+          "power": 50,
+          "awareness": 63,
+          "hands": 59,
+          "kick_power": 69,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 23,
+        "name": "Haruto Nakamura",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 270,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Daegu",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Daegu East High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 66,
+          "kicking": 71,
+          "lateral_skill": 55,
+          "tackling": 80,
+          "agility": 77,
+          "power": 81,
+          "awareness": 66,
+          "hands": 59,
+          "kick_power": 57,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 24,
+        "name": "Long Wang",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 226,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Tainan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Tainan West High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 73,
+          "kicking": 67,
+          "lateral_skill": 64,
+          "tackling": 72,
+          "agility": 55,
+          "power": 65,
+          "awareness": 66,
+          "hands": 51,
+          "kick_power": 71,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 25,
+        "name": "Taehyung Ito",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 277,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Tokyo",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Tokyo West High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 68,
+          "kicking": 77,
+          "lateral_skill": 50,
+          "tackling": 70,
+          "agility": 72,
+          "power": 64,
+          "awareness": 67,
+          "hands": 59,
+          "kick_power": 67,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 26,
+        "name": "Yoshi Yang",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 271,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Taoyuan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Taoyuan North High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 79,
+          "kicking": 62,
+          "lateral_skill": 69,
+          "tackling": 74,
+          "agility": 64,
+          "power": 66,
+          "awareness": 63,
+          "hands": 77,
+          "kick_power": 63,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 27,
+        "name": "Takeshi Yamada",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 243,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Sendai",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Sendai High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 82,
+          "kicking": 74,
+          "lateral_skill": 67,
+          "tackling": 78,
+          "agility": 67,
+          "power": 62,
+          "awareness": 71,
+          "hands": 70,
+          "kick_power": 60,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 28,
+        "name": "Jihoon Lee",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 253,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Daejeon",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Daejeon South High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 75,
+          "kicking": 69,
+          "lateral_skill": 80,
+          "tackling": 66,
+          "agility": 75,
+          "power": 73,
+          "awareness": 70,
+          "hands": 67,
+          "kick_power": 68,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 29,
+        "name": "Peng Lim",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 288,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Seongnam",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Seongnam West High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 52,
+          "kicking": 70,
+          "lateral_skill": 66,
+          "tackling": 69,
+          "agility": 60,
+          "power": 71,
+          "awareness": 75,
+          "hands": 74,
+          "kick_power": 83,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 30,
+        "name": "Sungjin Hong",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 237,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Taoyuan",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Taoyuan East High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 50,
+          "kicking": 63,
+          "lateral_skill": 61,
+          "tackling": 69,
+          "agility": 70,
+          "power": 72,
+          "awareness": 83,
+          "hands": 62,
+          "kick_power": 79,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 31,
+        "name": "Wei Morita",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 268,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Daejeon",
+          "state": "KOR",
+          "country": "South Korea",
+          "region": "east_asian"
+        },
+        "high_school": "Daejeon North High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 77,
+          "kicking": 68,
+          "lateral_skill": 61,
+          "tackling": 83,
+          "agility": 54,
+          "power": 57,
+          "awareness": 70,
+          "hands": 57,
+          "kick_power": 60,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 32,
+        "name": "Junhyuk Lu",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 284,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Sendai",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Sendai East High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 64,
+          "kicking": 60,
+          "lateral_skill": 83,
+          "tackling": 59,
+          "agility": 73,
+          "power": 64,
+          "awareness": 76,
+          "hands": 63,
+          "kick_power": 69,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 33,
+        "name": "Taehyung Zheng",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 234,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Yokohama",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Yokohama East High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 64,
+          "kicking": 70,
+          "lateral_skill": 63,
+          "tackling": 67,
+          "agility": 68,
+          "power": 64,
+          "awareness": 58,
+          "hands": 83,
+          "kick_power": 50,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 34,
+        "name": "Makoto Ma",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 270,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Keelung",
+          "state": "TWN",
+          "country": "Taiwan",
+          "region": "east_asian"
+        },
+        "high_school": "Keelung High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 73,
+          "kicking": 68,
+          "lateral_skill": 52,
+          "tackling": 60,
+          "agility": 72,
+          "power": 50,
+          "awareness": 51,
+          "hands": 64,
+          "kick_power": 75,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 35,
+        "name": "Sora Morita",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 239,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Tokyo",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Tokyo High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 59,
+          "kicking": 62,
+          "lateral_skill": 62,
+          "tackling": 58,
+          "agility": 52,
+          "power": 60,
+          "awareness": 60,
+          "hands": 62,
+          "kick_power": 70,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 36,
+        "name": "Hikaru Matsumoto",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 244,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Kumamoto",
+          "state": "JPN",
+          "country": "Japan",
+          "region": "east_asian"
+        },
+        "high_school": "Kumamoto West High School",
+        "nationality": "East Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 69,
+          "kicking": 59,
+          "lateral_skill": 65,
+          "tackling": 63,
+          "agility": 72,
+          "power": 67,
+          "awareness": 64,
+          "hands": 75,
+          "kick_power": 61,
+          "kick_accuracy": 62
+        }
+      }
+    ]
+  }
+}

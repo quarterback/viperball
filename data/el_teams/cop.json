@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "cop",
+    "school_name": "Copenhagen Vikings",
+    "abbreviation": "COP",
+    "mascot": "Vikings",
+    "conference": "Nordic",
+    "city": "Copenhagen",
+    "state": "DEN",
+    "country": "Denmark",
+    "colors": [
+      "Red",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "kick_heavy",
+    "philosophy": "kick_heavy",
+    "tempo": "fast",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "ground_pound",
+    "defense_style": "swarm",
+    "st_scheme": "aces"
+  },
+  "prestige": 75,
+  "franchise_rating": 75,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 70,
+    "avg_stamina": 71,
+    "kicking_strength": 69,
+    "lateral_proficiency": 72,
+    "defensive_strength": 68
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Tory Sj\u00f6gren",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 237,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Porvoo",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Porvoo lukio",
+        "nationality": "Nordic",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 78,
+          "kicking": 75,
+          "lateral_skill": 76,
+          "tackling": 72,
+          "agility": 75,
+          "power": 64,
+          "awareness": 62,
+          "hands": 63,
+          "kick_power": 68,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 2,
+        "name": "Leo Hurtig",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 239,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Ume\u00e5",
+          "state": "SWE",
+          "country": "Sweden",
+          "region": "nordic"
+        },
+        "high_school": "Ume\u00e5 gymnasium",
+        "nationality": "Nordic",
+        "archetype": "hybrid_viper",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 80,
+          "kicking": 68,
+          "lateral_skill": 80,
+          "tackling": 66,
+          "agility": 71,
+          "power": 60,
+          "awareness": 65,
+          "hands": 79,
+          "kick_power": 72,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 3,
+        "name": "Matt Meyer",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 227,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Gothenburg",
+          "state": "SWE",
+          "country": "Sweden",
+          "region": "uk_european"
+        },
+        "high_school": "Gothenburg Academy",
+        "nationality": "European",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 88,
+          "kicking": 57,
+          "lateral_skill": 71,
+          "tackling": 71,
+          "agility": 72,
+          "power": 79,
+          "awareness": 75,
+          "hands": 68,
+          "kick_power": 57,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 4,
+        "name": "Deandre Bjelde",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 195,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Helsinki",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Helsinki lukio",
+        "nationality": "Nordic",
+        "archetype": "dual_threat_zb",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 79,
+          "kicking": 73,
+          "lateral_skill": 77,
+          "tackling": 76,
+          "agility": 79,
+          "power": 68,
+          "awareness": 78,
+          "hands": 72,
+          "kick_power": 75,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 5,
+        "name": "Josh Richard",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 205,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Seville",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Seville Academy",
+        "nationality": "European",
+        "archetype": "distributor_zb",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 59,
+          "kicking": 59,
+          "lateral_skill": 88,
+          "tackling": 60,
+          "agility": 66,
+          "power": 88,
+          "awareness": 70,
+          "hands": 72,
+          "kick_power": 59,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 6,
+        "name": "Rahshawn Petit",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 223,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Liverpool",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Liverpool Academy",
+        "nationality": "European",
+        "archetype": "dual_threat_zb",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 76,
+          "kicking": 72,
+          "lateral_skill": 78,
+          "tackling": 57,
+          "agility": 73,
+          "power": 65,
+          "awareness": 77,
+          "hands": 73,
+          "kick_power": 74,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 7,
+        "name": "Jaylin Naalsund",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 180,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Bod\u00f8",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Bod\u00f8 videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 79,
+          "kicking": 71,
+          "lateral_skill": 87,
+          "tackling": 66,
+          "agility": 65,
+          "power": 71,
+          "awareness": 65,
+          "hands": 62,
+          "kick_power": 86,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 8,
+        "name": "Darrion Seger",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 206,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Haugesund",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Haugesund videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 74,
+          "kicking": 60,
+          "lateral_skill": 66,
+          "tackling": 71,
+          "agility": 79,
+          "power": 55,
+          "awareness": 73,
+          "hands": 70,
+          "kick_power": 76,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 9,
+        "name": "Mikael Ilestedt",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 213,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Skien",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Skien videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 65,
+          "kicking": 70,
+          "lateral_skill": 67,
+          "tackling": 67,
+          "agility": 63,
+          "power": 59,
+          "awareness": 71,
+          "hands": 55,
+          "kick_power": 67,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 10,
+        "name": "Luke Morrison",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Berlin",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Berlin Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 59,
+          "kicking": 74,
+          "lateral_skill": 63,
+          "tackling": 60,
+          "agility": 79,
+          "power": 61,
+          "awareness": 67,
+          "hands": 74,
+          "kick_power": 61,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 11,
+        "name": "Rushawn Kielland",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Turku",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Turku lukio",
+        "nationality": "Nordic",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 78,
+          "kicking": 59,
+          "lateral_skill": 70,
+          "tackling": 67,
+          "agility": 75,
+          "power": 74,
+          "awareness": 57,
+          "hands": 62,
+          "kick_power": 61,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 12,
+        "name": "Rory Lewis",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 237,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Bristol",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Bristol Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 95,
+          "stamina": 63,
+          "kicking": 75,
+          "lateral_skill": 88,
+          "tackling": 61,
+          "agility": 89,
+          "power": 91,
+          "awareness": 86,
+          "hands": 95,
+          "kick_power": 75,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 13,
+        "name": "Alfie Bennett",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 237,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Amsterdam",
+          "state": "NED",
+          "country": "Netherlands",
+          "region": "uk_european"
+        },
+        "high_school": "Amsterdam Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 86,
+          "kicking": 59,
+          "lateral_skill": 88,
+          "tackling": 57,
+          "agility": 71,
+          "power": 68,
+          "awareness": 57,
+          "hands": 80,
+          "kick_power": 82,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 14,
+        "name": "Lucas Leroy",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Nantes",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Nantes Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 82,
+          "kicking": 55,
+          "lateral_skill": 64,
+          "tackling": 81,
+          "agility": 79,
+          "power": 60,
+          "awareness": 86,
+          "hands": 83,
+          "kick_power": 84,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 15,
+        "name": "Henry Harrison",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 230,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Copenhagen",
+          "state": "DEN",
+          "country": "Denmark",
+          "region": "uk_european"
+        },
+        "high_school": "Copenhagen Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 75,
+          "kicking": 71,
+          "lateral_skill": 78,
+          "tackling": 58,
+          "agility": 82,
+          "power": 68,
+          "awareness": 69,
+          "hands": 62,
+          "kick_power": 66,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 16,
+        "name": "Jayden Weber",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 187,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Rome",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "uk_european"
+        },
+        "high_school": "Rome Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 68,
+          "kicking": 64,
+          "lateral_skill": 68,
+          "tackling": 82,
+          "agility": 70,
+          "power": 68,
+          "awareness": 76,
+          "hands": 68,
+          "kick_power": 60,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 17,
+        "name": "Beni Larsson",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 220,
+        "year": "Veteran",
+        "hometown": {
+          "city": "T\u00f8nsberg",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "T\u00f8nsberg videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 66,
+          "kicking": 67,
+          "lateral_skill": 62,
+          "tackling": 80,
+          "agility": 79,
+          "power": 70,
+          "awareness": 66,
+          "hands": 61,
+          "kick_power": 77,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 18,
+        "name": "Louis P\u00e9rez",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 222,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Seville",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Seville Academy",
+        "nationality": "European",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 61,
+          "kicking": 79,
+          "lateral_skill": 71,
+          "tackling": 53,
+          "agility": 71,
+          "power": 53,
+          "awareness": 63,
+          "hands": 80,
+          "kick_power": 69,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 19,
+        "name": "Tanner Cooper",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 187,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Amsterdam",
+          "state": "NED",
+          "country": "Netherlands",
+          "region": "uk_european"
+        },
+        "high_school": "Amsterdam Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 61,
+          "kicking": 87,
+          "lateral_skill": 65,
+          "tackling": 67,
+          "agility": 88,
+          "power": 67,
+          "awareness": 80,
+          "hands": 72,
+          "kick_power": 68,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 20,
+        "name": "Devean Rodr\u00edguez",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 201,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Porto",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "uk_european"
+        },
+        "high_school": "Porto Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 74,
+          "kicking": 70,
+          "lateral_skill": 63,
+          "tackling": 58,
+          "agility": 61,
+          "power": 76,
+          "awareness": 72,
+          "hands": 74,
+          "kick_power": 76,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 21,
+        "name": "Grayson Hoffmann",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 227,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Oslo",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "uk_european"
+        },
+        "high_school": "Oslo Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 84,
+          "kicking": 66,
+          "lateral_skill": 63,
+          "tackling": 77,
+          "agility": 59,
+          "power": 84,
+          "awareness": 77,
+          "hands": 59,
+          "kick_power": 71,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 22,
+        "name": "Connor Mart\u00ednez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 272,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Munich",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Munich Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 61,
+          "kicking": 80,
+          "lateral_skill": 75,
+          "tackling": 86,
+          "agility": 83,
+          "power": 55,
+          "awareness": 81,
+          "hands": 65,
+          "kick_power": 69,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 23,
+        "name": "Levi Fern\u00e1ndez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 259,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Barcelona",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Barcelona Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 53,
+          "kicking": 58,
+          "lateral_skill": 56,
+          "tackling": 79,
+          "agility": 80,
+          "power": 80,
+          "awareness": 62,
+          "hands": 79,
+          "kick_power": 72,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 24,
+        "name": "Louis Marshall",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 237,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Seville",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Seville Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 56,
+          "kicking": 77,
+          "lateral_skill": 68,
+          "tackling": 85,
+          "agility": 70,
+          "power": 65,
+          "awareness": 80,
+          "hands": 70,
+          "kick_power": 66,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 25,
+        "name": "Blair Gonz\u00e1lez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 240,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Cologne",
+          "state": "GER",
+          "country": "Germany",
+          "region": "uk_european"
+        },
+        "high_school": "Cologne Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 72,
+          "kicking": 57,
+          "lateral_skill": 68,
+          "tackling": 63,
+          "agility": 67,
+          "power": 80,
+          "awareness": 67,
+          "hands": 64,
+          "kick_power": 68,
+          "kick_accuracy": 53
+        }
+      },
+      {
+        "number": 26,
+        "name": "Jacob Weber",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 253,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Paris",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Paris Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 78,
+          "kicking": 61,
+          "lateral_skill": 77,
+          "tackling": 75,
+          "agility": 67,
+          "power": 70,
+          "awareness": 63,
+          "hands": 62,
+          "kick_power": 65,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 27,
+        "name": "Ty Savolainen",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 284,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Stavanger",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "nordic"
+        },
+        "high_school": "Stavanger videreg\u00e5ende skole",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 72,
+          "kicking": 69,
+          "lateral_skill": 77,
+          "tackling": 67,
+          "agility": 63,
+          "power": 63,
+          "awareness": 73,
+          "hands": 73,
+          "kick_power": 80,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 28,
+        "name": "Andrew Cooper",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 275,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Rome",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "uk_european"
+        },
+        "high_school": "Rome Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 75,
+          "kicking": 83,
+          "lateral_skill": 64,
+          "tackling": 71,
+          "agility": 83,
+          "power": 72,
+          "awareness": 65,
+          "hands": 81,
+          "kick_power": 69,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 29,
+        "name": "Rhys Harrison",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 249,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Sheffield",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Sheffield Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 77,
+          "kicking": 71,
+          "lateral_skill": 79,
+          "tackling": 72,
+          "agility": 64,
+          "power": 63,
+          "awareness": 68,
+          "hands": 71,
+          "kick_power": 64,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 30,
+        "name": "Alex Hughes",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 289,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Seville",
+          "state": "ESP",
+          "country": "Spain",
+          "region": "uk_european"
+        },
+        "high_school": "Seville Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 84,
+          "kicking": 76,
+          "lateral_skill": 83,
+          "tackling": 65,
+          "agility": 53,
+          "power": 70,
+          "awareness": 60,
+          "hands": 78,
+          "kick_power": 69,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 31,
+        "name": "Gavin Zimmermann",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 243,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "uk_european"
+        },
+        "high_school": "Milan Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 72,
+          "kicking": 78,
+          "lateral_skill": 83,
+          "tackling": 57,
+          "agility": 56,
+          "power": 75,
+          "awareness": 63,
+          "hands": 68,
+          "kick_power": 55,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 32,
+        "name": "Jonas Kielland",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 280,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Helsinki",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Helsinki lukio",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 79,
+          "kicking": 81,
+          "lateral_skill": 68,
+          "tackling": 66,
+          "agility": 54,
+          "power": 78,
+          "awareness": 70,
+          "hands": 53,
+          "kick_power": 64,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 33,
+        "name": "Einar Kosola",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 238,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Vaasa",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "nordic"
+        },
+        "high_school": "Vaasa lukio",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 60,
+          "kicking": 80,
+          "lateral_skill": 59,
+          "tackling": 70,
+          "agility": 72,
+          "power": 77,
+          "awareness": 77,
+          "hands": 53,
+          "kick_power": 68,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 34,
+        "name": "Sadonnie Roberts",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 230,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Sheffield",
+          "state": "ENG",
+          "country": "England",
+          "region": "uk_european"
+        },
+        "high_school": "Sheffield Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 56,
+          "kicking": 70,
+          "lateral_skill": 74,
+          "tackling": 69,
+          "agility": 79,
+          "power": 77,
+          "awareness": 73,
+          "hands": 63,
+          "kick_power": 70,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 35,
+        "name": "Atticus Clarke",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 288,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Nantes",
+          "state": "FRA",
+          "country": "France",
+          "region": "uk_european"
+        },
+        "high_school": "Nantes Academy",
+        "nationality": "European",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 77,
+          "kicking": 65,
+          "lateral_skill": 68,
+          "tackling": 66,
+          "agility": 64,
+          "power": 75,
+          "awareness": 69,
+          "hands": 77,
+          "kick_power": 55,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 36,
+        "name": "Rickey Korpela",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 238,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Uppsala",
+          "state": "SWE",
+          "country": "Sweden",
+          "region": "nordic"
+        },
+        "high_school": "Uppsala gymnasium",
+        "nationality": "Nordic",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 76,
+          "kicking": 69,
+          "lateral_skill": 73,
+          "tackling": 64,
+          "agility": 76,
+          "power": 88,
+          "awareness": 60,
+          "hands": 70,
+          "kick_power": 65,
+          "kick_accuracy": 68
+        }
+      }
+    ]
+  }
+}

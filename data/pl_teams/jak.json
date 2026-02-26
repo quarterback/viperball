@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "jak",
+    "school_name": "Jakarta Komodos",
+    "abbreviation": "JAK",
+    "mascot": "Komodos",
+    "conference": "South",
+    "city": "Jakarta",
+    "state": "IDN",
+    "country": "Indonesia",
+    "colors": [
+      "Red",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "aggressive",
+    "philosophy": "aggressive",
+    "tempo": "fast",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "triple_option",
+    "defense_style": "base_defense",
+    "st_scheme": "aces"
+  },
+  "prestige": 66,
+  "franchise_rating": 66,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 61,
+    "avg_stamina": 63,
+    "kicking_strength": 63,
+    "lateral_proficiency": 61,
+    "defensive_strength": 63
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Andrei Bautista",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 192,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Can Tho",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Can Tho Central High School",
+        "nationality": "Southeast Asian",
+        "archetype": "hybrid_viper",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 65,
+          "kicking": 84,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 69,
+          "power": 61,
+          "awareness": 82,
+          "hands": 79,
+          "kick_power": 50,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 2,
+        "name": "Khanh Dela Cruz",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 190,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Bandung",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Bandung East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "hybrid_viper",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 66,
+          "kicking": 68,
+          "lateral_skill": 66,
+          "tackling": 75,
+          "agility": 50,
+          "power": 64,
+          "awareness": 57,
+          "hands": 56,
+          "kick_power": 62,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 3,
+        "name": "Long Bautista",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 221,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Cebu City",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Cebu City Central High School",
+        "nationality": "Southeast Asian",
+        "archetype": "hybrid_viper",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 68,
+          "kicking": 59,
+          "lateral_skill": 57,
+          "tackling": 83,
+          "agility": 71,
+          "power": 52,
+          "awareness": 66,
+          "hands": 59,
+          "kick_power": 73,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 4,
+        "name": "Long Gutierrez",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 233,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Jakarta",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Jakarta High School",
+        "nationality": "Southeast Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 63,
+          "kicking": 62,
+          "lateral_skill": 62,
+          "tackling": 61,
+          "agility": 62,
+          "power": 61,
+          "awareness": 50,
+          "hands": 58,
+          "kick_power": 69,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 5,
+        "name": "Cuong Hartono",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 215,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Semarang",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Semarang North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 50,
+          "kicking": 52,
+          "lateral_skill": 66,
+          "tackling": 64,
+          "agility": 67,
+          "power": 73,
+          "awareness": 53,
+          "hands": 55,
+          "kick_power": 56,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 6,
+        "name": "Thanakorn Suryadi",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 208,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Hanoi",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Hanoi South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "dual_threat_zb",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 65,
+          "kicking": 64,
+          "lateral_skill": 59,
+          "tackling": 65,
+          "agility": 61,
+          "power": 54,
+          "awareness": 63,
+          "hands": 55,
+          "kick_power": 72,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 7,
+        "name": "Chatchai Widodo",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 215,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Da Nang",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Da Nang North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 52,
+          "kicking": 62,
+          "lateral_skill": 64,
+          "tackling": 60,
+          "agility": 55,
+          "power": 69,
+          "awareness": 69,
+          "hands": 59,
+          "kick_power": 83,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 8,
+        "name": "Gilang Santoso",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 194,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Can Tho",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Can Tho Central High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 74,
+          "kicking": 64,
+          "lateral_skill": 62,
+          "tackling": 59,
+          "agility": 68,
+          "power": 67,
+          "awareness": 67,
+          "hands": 72,
+          "kick_power": 78,
+          "kick_accuracy": 80
+        }
+      },
+      {
+        "number": 9,
+        "name": "Lorenzo Chaiyaporn",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 229,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Ho Chi Minh City",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Ho Chi Minh City North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 50,
+          "kicking": 66,
+          "lateral_skill": 73,
+          "tackling": 54,
+          "agility": 69,
+          "power": 50,
+          "awareness": 65,
+          "hands": 61,
+          "kick_power": 57,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 10,
+        "name": "Cuong Huynh",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 197,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Nakhon Ratchasima",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Nakhon Ratchasima West High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 57,
+          "kicking": 57,
+          "lateral_skill": 59,
+          "tackling": 55,
+          "agility": 75,
+          "power": 57,
+          "awareness": 73,
+          "hands": 51,
+          "kick_power": 64,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 11,
+        "name": "Eko Lopez",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 207,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bangkok",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Bangkok West High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 61,
+          "kicking": 61,
+          "lateral_skill": 58,
+          "tackling": 80,
+          "agility": 57,
+          "power": 70,
+          "awareness": 68,
+          "hands": 65,
+          "kick_power": 55,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 12,
+        "name": "Minh Lim",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 194,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Jakarta",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Jakarta West High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 74,
+          "kicking": 79,
+          "lateral_skill": 57,
+          "tackling": 74,
+          "agility": 82,
+          "power": 60,
+          "awareness": 62,
+          "hands": 66,
+          "kick_power": 59,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 13,
+        "name": "Dat Gunawan",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 190,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Ho Chi Minh City",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Ho Chi Minh City South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 74,
+          "kicking": 62,
+          "lateral_skill": 50,
+          "tackling": 64,
+          "agility": 56,
+          "power": 70,
+          "awareness": 56,
+          "hands": 70,
+          "kick_power": 55,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 14,
+        "name": "Wichit Tran",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 191,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Malacca",
+          "state": "MYS",
+          "country": "Malaysia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Malacca High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 74,
+          "kicking": 57,
+          "lateral_skill": 88,
+          "tackling": 82,
+          "agility": 74,
+          "power": 50,
+          "awareness": 55,
+          "hands": 80,
+          "kick_power": 72,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 15,
+        "name": "Loc Villanueva",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 210,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Phuket",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Phuket East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 66,
+          "kicking": 54,
+          "lateral_skill": 58,
+          "tackling": 60,
+          "agility": 54,
+          "power": 74,
+          "awareness": 56,
+          "hands": 55,
+          "kick_power": 62,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 16,
+        "name": "Dat Truong",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 215,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Semarang",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Semarang North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 72,
+          "kicking": 75,
+          "lateral_skill": 73,
+          "tackling": 71,
+          "agility": 67,
+          "power": 74,
+          "awareness": 60,
+          "hands": 70,
+          "kick_power": 70,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 17,
+        "name": "Thanakorn Rivera",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 205,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Surabaya",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Surabaya South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 60,
+          "kicking": 57,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 68,
+          "power": 72,
+          "awareness": 56,
+          "hands": 72,
+          "kick_power": 57,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 18,
+        "name": "Adi Fernandez",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Cebu City",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Cebu City East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 59,
+          "kicking": 74,
+          "lateral_skill": 66,
+          "tackling": 60,
+          "agility": 66,
+          "power": 50,
+          "awareness": 63,
+          "hands": 52,
+          "kick_power": 50,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 19,
+        "name": "Sompong Truong",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 192,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Pattaya",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Pattaya South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 58,
+          "kicking": 67,
+          "lateral_skill": 60,
+          "tackling": 50,
+          "agility": 69,
+          "power": 64,
+          "awareness": 63,
+          "hands": 58,
+          "kick_power": 63,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 20,
+        "name": "Phakphum Pham",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 231,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Quezon City",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Quezon City East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 50,
+          "kicking": 50,
+          "lateral_skill": 58,
+          "tackling": 62,
+          "agility": 62,
+          "power": 63,
+          "awareness": 67,
+          "hands": 78,
+          "kick_power": 55,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 21,
+        "name": "Tien Jaidee",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 190,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Medan",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Medan South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 76,
+          "kicking": 57,
+          "lateral_skill": 74,
+          "tackling": 59,
+          "agility": 64,
+          "power": 67,
+          "awareness": 50,
+          "hands": 66,
+          "kick_power": 80,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 22,
+        "name": "Son Tran",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 230,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Ho Chi Minh City",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Ho Chi Minh City East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 65,
+          "kicking": 67,
+          "lateral_skill": 50,
+          "tackling": 60,
+          "agility": 64,
+          "power": 58,
+          "awareness": 68,
+          "hands": 67,
+          "kick_power": 73,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 23,
+        "name": "Tien Tan",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 288,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Pattaya",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Pattaya South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 70,
+          "kicking": 57,
+          "lateral_skill": 58,
+          "tackling": 50,
+          "agility": 83,
+          "power": 73,
+          "awareness": 50,
+          "hands": 74,
+          "kick_power": 64,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 24,
+        "name": "Hoang Chaiyo",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 262,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Pattaya",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Pattaya West High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 77,
+          "kicking": 63,
+          "lateral_skill": 71,
+          "tackling": 61,
+          "agility": 60,
+          "power": 53,
+          "awareness": 62,
+          "hands": 68,
+          "kick_power": 68,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 25,
+        "name": "Bayu Mai",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 236,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Surabaya",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Surabaya West High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 60,
+          "kicking": 70,
+          "lateral_skill": 71,
+          "tackling": 57,
+          "agility": 60,
+          "power": 54,
+          "awareness": 55,
+          "hands": 71,
+          "kick_power": 56,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 26,
+        "name": "Diego Lopez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 248,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Iloilo",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Iloilo South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 66,
+          "kicking": 64,
+          "lateral_skill": 51,
+          "tackling": 56,
+          "agility": 68,
+          "power": 74,
+          "awareness": 59,
+          "hands": 55,
+          "kick_power": 72,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 27,
+        "name": "Tien Dang",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 282,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Hanoi",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Hanoi Central High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 72,
+          "kicking": 65,
+          "lateral_skill": 69,
+          "tackling": 57,
+          "agility": 63,
+          "power": 60,
+          "awareness": 50,
+          "hands": 50,
+          "kick_power": 66,
+          "kick_accuracy": 53
+        }
+      },
+      {
+        "number": 28,
+        "name": "Surya Kongkaew",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 265,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Malacca",
+          "state": "MYS",
+          "country": "Malaysia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Malacca South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 51,
+          "kicking": 78,
+          "lateral_skill": 52,
+          "tackling": 67,
+          "agility": 50,
+          "power": 55,
+          "awareness": 68,
+          "hands": 58,
+          "kick_power": 64,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 29,
+        "name": "Budi Garcia",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 285,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Makati",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Makati High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 61,
+          "kicking": 61,
+          "lateral_skill": 59,
+          "tackling": 61,
+          "agility": 53,
+          "power": 59,
+          "awareness": 63,
+          "hands": 61,
+          "kick_power": 59,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 30,
+        "name": "Thanh Kusuma",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 269,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bangkok",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Bangkok High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 56,
+          "kicking": 69,
+          "lateral_skill": 60,
+          "tackling": 62,
+          "agility": 66,
+          "power": 50,
+          "awareness": 68,
+          "hands": 65,
+          "kick_power": 62,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 31,
+        "name": "Andrei Saelim",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 280,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Medan",
+          "state": "IDN",
+          "country": "Indonesia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Medan East High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 61,
+          "kicking": 61,
+          "lateral_skill": 50,
+          "tackling": 53,
+          "agility": 66,
+          "power": 50,
+          "awareness": 54,
+          "hands": 64,
+          "kick_power": 56,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 32,
+        "name": "Loc Saetang",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 242,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Malacca",
+          "state": "MYS",
+          "country": "Malaysia",
+          "region": "southeast_asian"
+        },
+        "high_school": "Malacca South High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 64,
+          "kicking": 62,
+          "lateral_skill": 60,
+          "tackling": 61,
+          "agility": 60,
+          "power": 70,
+          "awareness": 62,
+          "hands": 66,
+          "kick_power": 58,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 33,
+        "name": "Quang Saelim",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 237,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Chiang Mai",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Chiang Mai Central High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 66,
+          "kicking": 54,
+          "lateral_skill": 61,
+          "tackling": 65,
+          "agility": 66,
+          "power": 56,
+          "awareness": 66,
+          "hands": 59,
+          "kick_power": 63,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 34,
+        "name": "Binh Bautista",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 257,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Phuket",
+          "state": "THA",
+          "country": "Thailand",
+          "region": "southeast_asian"
+        },
+        "high_school": "Phuket North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 64,
+          "kicking": 57,
+          "lateral_skill": 71,
+          "tackling": 64,
+          "agility": 55,
+          "power": 58,
+          "awareness": 76,
+          "hands": 66,
+          "kick_power": 59,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 35,
+        "name": "Minh Santoso",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 226,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Iloilo",
+          "state": "PHL",
+          "country": "Philippines",
+          "region": "southeast_asian"
+        },
+        "high_school": "Iloilo High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 61,
+          "kicking": 63,
+          "lateral_skill": 56,
+          "tackling": 70,
+          "agility": 55,
+          "power": 56,
+          "awareness": 56,
+          "hands": 50,
+          "kick_power": 62,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 36,
+        "name": "Quang Hartono",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 250,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Hai Phong",
+          "state": "VNM",
+          "country": "Vietnam",
+          "region": "southeast_asian"
+        },
+        "high_school": "Hai Phong North High School",
+        "nationality": "Southeast Asian",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 63,
+          "kicking": 71,
+          "lateral_skill": 62,
+          "tackling": 71,
+          "agility": 56,
+          "power": 57,
+          "awareness": 71,
+          "hands": 69,
+          "kick_power": 71,
+          "kick_accuracy": 54
+        }
+      }
+    ]
+  }
+}
