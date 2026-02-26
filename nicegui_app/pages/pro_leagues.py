@@ -9,7 +9,7 @@ from __future__ import annotations
 from nicegui import ui, run, app
 from nicegui_app.components import metric_card, stat_table
 
-from engine.pro_league import ProLeagueSeason, NVL_CONFIG, ALL_LEAGUE_CONFIGS
+from engine.pro_league import ProLeagueSeason, ALL_LEAGUE_CONFIGS
 from engine.draftyqueenz import (
     DraftyQueenzManager, generate_game_odds, GameOdds,
     MIN_BET, MAX_BET, STARTING_BANKROLL, PARLAY_MULTIPLIERS,
@@ -298,7 +298,8 @@ def _generate_nvl_odds(season: ProLeagueSeason, week: int) -> list:
 
 
 def _render_betting(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager):
-    ui.label("DraftyQueenz — NVL Betting").classes("text-xl font-bold text-slate-800 mb-2")
+    league_abbr = season.config.league_id.upper().replace("_LEAGUE", "")
+    ui.label(f"DraftyQueenz — {league_abbr} Betting").classes("text-xl font-bold text-slate-800 mb-2")
 
     balance = dq_mgr.bankroll.balance
 
@@ -691,7 +692,7 @@ def _show_player_card(season: ProLeagueSeason, team_key: str, player_name: str):
                             _bio_line("Play Style", var_arch.title())
                         div_name = bio.get("division", "")
                         if div_name:
-                            _bio_line("Division", f"NVL {div_name}")
+                            _bio_line("Division", f"{div_name}")
                         _bio_line("Team Record", bio.get("team_record", "0-0"))
 
                     with ui.column().classes("gap-1 flex-1"):
@@ -999,7 +1000,9 @@ def _stat_leader_table(season: ProLeagueSeason, data: list, col_spec: list):
 
 
 def _render_playoffs(season: ProLeagueSeason):
-    ui.label("NVL Playoffs").classes("text-xl font-bold text-slate-800 mb-2")
+    league_name = season.config.league_name
+    league_abbr = season.config.league_id.upper().replace("_LEAGUE", "")
+    ui.label(f"{league_abbr} Playoffs").classes("text-xl font-bold text-slate-800 mb-2")
 
     if season.phase != "playoffs" and not season.champion:
         remaining = season.total_weeks - season.current_week
@@ -1017,7 +1020,7 @@ def _render_playoffs(season: ProLeagueSeason):
 
     if bracket.get("champion_name"):
         with ui.card().classes("p-4 bg-gradient-to-r from-yellow-50 to-amber-50 mb-4"):
-            ui.label(f"NVL Champion: {bracket['champion_name']}").classes(
+            ui.label(f"{league_abbr} Champion: {bracket['champion_name']}").classes(
                 "text-xl font-extrabold text-amber-700"
             )
 
@@ -1046,10 +1049,11 @@ def _render_playoffs(season: ProLeagueSeason):
 
 
 def _render_teams(season: ProLeagueSeason):
-    ui.label("NVL Teams").classes("text-xl font-bold text-slate-800 mb-2")
+    league_abbr = season.config.league_id.upper().replace("_LEAGUE", "")
+    ui.label(f"{league_abbr} Teams").classes("text-xl font-bold text-slate-800 mb-2")
 
     team_options = []
-    for div_name, keys in NVL_CONFIG.divisions.items():
+    for div_name, keys in season.config.divisions.items():
         for key in keys:
             if key in season.teams:
                 team_options.append({"label": f"{season.teams[key].name} ({div_name})", "value": key})

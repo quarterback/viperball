@@ -517,18 +517,27 @@ class ProLeagueSeason:
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
+            # rushing_yards: fast_sim="rushing_yards", full engine="game_rushing_yards"/"yards"
             acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
-            acc["rushing_carries"] += ps.get("carries", ps.get("game_carries", 0))
-            acc["touchdowns"] += ps.get("touchdowns", ps.get("game_touchdowns", ps.get("tds", 0)))
-            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", ps.get("kick_yards", 0)))
-            acc["kick_pass_completions"] += ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", ps.get("kick_comp", 0)))
-            acc["kick_pass_attempts"] += ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", ps.get("kick_att", 0)))
+            # carries: fast_sim="rush_carries", full engine="carries"/"game_carries"
+            acc["rushing_carries"] += ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
+            # touchdowns: fast_sim="tds", full engine="touchdowns"/"game_touchdowns"
+            acc["touchdowns"] += ps.get("tds", ps.get("touchdowns", ps.get("game_touchdowns", 0)))
+            # kick pass yards: both use "kick_pass_yards"
+            acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", 0))
+            # kick pass completions: fast_sim="kick_passes_completed", full engine="kick_pass_completions"
+            acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", 0)))
+            # kick pass attempts: fast_sim="kick_passes_thrown", full engine="kick_pass_attempts"
+            acc["kick_pass_attempts"] += ps.get("kick_passes_thrown", ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0)))
+            # lateral yards: both use "lateral_yards"
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
-            acc["laterals"] += ps.get("laterals", ps.get("game_laterals", ps.get("lateral_chains", 0)))
+            # laterals: fast_sim uses "laterals_thrown"+"lateral_receptions", full engine uses "laterals"/"lateral_chains"
+            fast_lat = ps.get("laterals_thrown", 0) + ps.get("lateral_receptions", 0)
+            acc["laterals"] += fast_lat if fast_lat else ps.get("laterals", ps.get("lateral_chains", 0))
             acc["fumbles"] += ps.get("fumbles", ps.get("game_fumbles", 0))
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
-            acc["dk_attempted"] += ps.get("dk_attempted", ps.get("game_dk_attempted", ps.get("dk_att", 0)))
+            acc["dk_attempted"] += ps.get("dk_att", ps.get("dk_attempted", ps.get("game_dk_attempted", 0)))
             acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"]
 
     def get_stat_leaders(self, category: str = "all") -> dict:
