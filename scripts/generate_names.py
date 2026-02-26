@@ -130,6 +130,8 @@ REGION_TO_ORIGIN = {
     'african': ('african', 'African'),
     'caribbean': ('caribbean', 'Caribbean'),
     'nordic': ('nordic', 'Nordic'),
+    'east_asian': ('east_asian', 'East Asian'),
+    'southeast_asian': ('southeast_asian', 'Southeast Asian'),
     'other_intl': ('irish_european', 'European'),
 }
 
@@ -290,6 +292,8 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
         'caribbean': 'caribbean',
         'nordic': 'nordic',
         'irish_european': 'irish_european',
+        'east_asian': 'east_asian',
+        'southeast_asian': 'southeast_asian',
     }
 
     if origin == 'american':
@@ -373,6 +377,10 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
         selected_pool = 'nordic' if 'nordic' in surnames else 'scandinavian'
     elif origin == 'irish_european':
         selected_pool = 'irish'
+    elif origin == 'east_asian':
+        selected_pool = 'east_asian'
+    elif origin == 'southeast_asian':
+        selected_pool = 'southeast_asian'
     else:
         selected_pool = 'american_general'
 
@@ -496,6 +504,33 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         }
         country = country_map.get(country_code, 'Caribbean')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'caribbean'}
+
+    elif origin == 'east_asian':
+        ea = cities.get('east_asia', {'major': ['Tokyo JPN'], 'secondary': []})
+        all_cities = ea['major'] + ea.get('secondary', [])
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'JPN'
+        country_map = {
+            'JPN': 'Japan', 'KOR': 'South Korea', 'TWN': 'Taiwan',
+        }
+        country = country_map.get(country_code, 'East Asia')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'east_asian'}
+
+    elif origin == 'southeast_asian':
+        sea = cities.get('southeast_asia', {'major': ['Bangkok THA'], 'secondary': []})
+        all_cities = sea['major'] + sea.get('secondary', [])
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'THA'
+        country_map = {
+            'THA': 'Thailand', 'VNM': 'Vietnam', 'PHL': 'Philippines',
+            'IDN': 'Indonesia', 'SGP': 'Singapore', 'MYS': 'Malaysia',
+        }
+        country = country_map.get(country_code, 'Southeast Asia')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'southeast_asian'}
 
     elif origin == 'irish_european':
         # Treat as UK/European

@@ -97,7 +97,12 @@ def index():
     shared = _load_shared_data()
     state = UserState()
 
-    active_nav = {"current": "Play"}
+    # Check if we should auto-navigate to Pro Leagues (after season creation)
+    pending_pro = app.storage.user.get("pro_league_pending_nav")
+    if pending_pro:
+        app.storage.user["pro_league_pending_nav"] = None
+    initial_section = "Pro Leagues" if pending_pro else "Play"
+    active_nav = {"current": initial_section}
 
     async def _switch_to(name: str):
         if active_nav["current"] == name:
@@ -162,7 +167,7 @@ def index():
                 for name, icon_name in NAV_SECTIONS:
                     btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
                     btn.props("flat dense no-caps size=sm")
-                    if name == "Play":
+                    if name == initial_section:
                         btn.classes("text-indigo-600 font-semibold")
                     else:
                         btn.classes("text-slate-500")
@@ -186,6 +191,18 @@ def index():
 
     content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 
-    with content_container:
-        from nicegui_app.pages.play import render_play_section_sync
-        render_play_section_sync(state, shared)
+    if initial_section == "Pro Leagues":
+        async def _init_pro():
+            content_container.clear()
+            with content_container:
+                try:
+                    from nicegui_app.pages.pro_leagues import render_pro_leagues_section
+                    await render_pro_leagues_section(state, shared)
+                except Exception as exc:
+                    ui.label(f"Error loading Pro Leagues: {exc}").classes("text-red-500")
+                    traceback.print_exc()
+        ui.timer(0.1, _init_pro, once=True)
+    else:
+        with content_container:
+            from nicegui_app.pages.play import render_play_section_sync
+            render_play_section_sync(state, shared)

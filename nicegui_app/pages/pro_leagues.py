@@ -9,7 +9,7 @@ from __future__ import annotations
 from nicegui import ui, run, app
 from nicegui_app.components import metric_card, stat_table
 
-from engine.pro_league import ProLeagueSeason, NVL_CONFIG
+from engine.pro_league import ProLeagueSeason, NVL_CONFIG, ALL_LEAGUE_CONFIGS
 from engine.draftyqueenz import (
     DraftyQueenzManager, generate_game_odds, GameOdds,
     MIN_BET, MAX_BET, STARTING_BANKROLL, PARLAY_MULTIPLIERS,
@@ -27,7 +27,8 @@ def _get_session_and_dq():
         season = _pro_sessions[sid]
         dq = _pro_dq_managers.get(sid)
         if dq is None:
-            dq = DraftyQueenzManager(manager_name="NVL Bettor")
+            league_name = season.config.league_name
+            dq = DraftyQueenzManager(manager_name=f"{league_name} Bettor")
             _pro_dq_managers[sid] = dq
         return season, dq, sid
     if sid and sid not in _pro_sessions:
@@ -35,51 +36,84 @@ def _get_session_and_dq():
     return None, None, None
 
 
-def _create_new_season() -> ProLeagueSeason:
+def _create_season_sync(config) -> tuple[str, 'ProLeagueSeason']:
+    """CPU-bound season creation. No NiceGUI context access here."""
     import uuid
     sid = str(uuid.uuid4())[:8]
-    season = ProLeagueSeason(NVL_CONFIG)
-    _pro_sessions[sid] = season
-    _pro_dq_managers[sid] = DraftyQueenzManager(manager_name="NVL Bettor")
-    app.storage.user["pro_league_session_id"] = sid
-    return season
+    season = ProLeagueSeason(config)
+    return sid, season
+
+
+# League display metadata
+_LEAGUE_META = {
+    "nvl": {"color": "indigo", "icon": "stadium", "desc": "Men's professional Viperball. 24 teams, 4 divisions. The flagship league."},
+    "el": {"color": "blue", "icon": "public", "desc": "European & Nordic pro Viperball. 10 teams, 2 divisions."},
+    "al": {"color": "amber", "icon": "public", "desc": "African pro Viperball. 12 teams, 2 divisions."},
+    "pl": {"color": "teal", "icon": "public", "desc": "Asia-Pacific pro Viperball. 8 teams, 2 divisions."},
+    "la_league": {"color": "red", "icon": "public", "desc": "Latin American pro Viperball. 10 teams, 2 divisions."},
+}
+
+
+def _render_league_start_card(config, meta):
+    """Render a start card for a single league."""
+    from engine.pro_league import DATA_DIR
+    import json
+
+    with ui.card().classes("p-5 max-w-md").style("border: 1px solid #e2e8f0;"):
+        with ui.row().classes("items-center gap-2 mb-2"):
+            ui.icon(meta["icon"]).classes(f"text-{meta['color']}-600 text-xl")
+            ui.label(config.league_name).classes(f"text-lg font-bold text-{meta['color']}-700")
+        ui.label(meta["desc"]).classes("text-xs text-slate-500 mb-2")
+        ui.label(f"{config.calendar_start}–{config.calendar_end}").classes("text-xs text-slate-400 mb-2")
+
+        num_teams = sum(len(v) for v in config.divisions.values())
+        num_divs = len(config.divisions)
+        ui.label(f"{num_teams} teams  |  {num_divs} divisions  |  {config.games_per_season} games").classes("text-xs text-slate-600 mb-2")
+
+        with ui.expansion("Teams", icon="groups").classes("w-full text-xs"):
+            for div_name, team_keys in config.divisions.items():
+                ui.label(f"{div_name} Division").classes("text-xs font-bold text-slate-600 mt-1")
+                for key in team_keys:
+                    fp = DATA_DIR.parent / config.teams_dir / f"{key}.json"
+                    try:
+                        with open(fp) as f:
+                            info = json.load(f)
+                        name = info["team_info"]["school_name"]
+                    except Exception:
+                        name = key
+                    ui.label(f"  {name}").classes("text-xs text-slate-500")
+
+        league_id = config.league_id
+
+        async def _start(lid=league_id, cfg=config):
+            try:
+                ui.notify(f"Creating {cfg.league_name} season...", type="info")
+                sid, new_season = await run.io_bound(_create_season_sync, cfg)
+                _pro_sessions[sid] = new_season
+                _pro_dq_managers[sid] = DraftyQueenzManager(manager_name=f"{cfg.league_name} Bettor")
+                app.storage.user["pro_league_session_id"] = sid
+                app.storage.user["pro_league_pending_nav"] = True
+                ui.navigate.to("/")
+            except Exception as e:
+                ui.notify(f"Failed to create season: {e}", type="negative")
+
+        ui.button(
+            f"Start {config.league_name.split()[-1] if len(config.league_name.split()) > 1 else config.league_name} Season",
+            icon="play_arrow", on_click=_start,
+        ).props(f"color={meta['color']} no-caps").classes("mt-2 w-full")
 
 
 async def render_pro_leagues_section(state, shared):
     season, dq_mgr, session_id = _get_session_and_dq()
 
     if not season:
-        ui.label("NVL — National Viperball League").classes("text-2xl font-bold text-slate-800")
-        ui.label("Men's professional Viperball. 24 teams, 4 divisions. Spectator mode.").classes("text-sm text-slate-500 mb-4")
+        ui.label("Pro Leagues").classes("text-2xl font-bold text-slate-800")
+        ui.label("Men's professional Viperball — spectator mode. Pick a league and start a season.").classes("text-sm text-slate-500 mb-4")
 
-        with ui.card().classes("p-6 bg-gradient-to-r from-indigo-50 to-blue-50 max-w-2xl"):
-            ui.label("Start a New NVL Season").classes("text-lg font-semibold text-indigo-700 mb-2")
-            ui.label("Simulate a full NVL season with 24 franchises across 4 divisions. "
-                     "Watch games unfold, browse standings, view box scores, and follow the playoffs.").classes("text-sm text-slate-600 mb-4")
-
-            with ui.row().classes("gap-3 flex-wrap"):
-                for div, teams in NVL_CONFIG.divisions.items():
-                    with ui.card().classes("p-3 min-w-[180px]").style("border: 1px solid #e2e8f0;"):
-                        ui.label(f"{div} Division").classes("text-sm font-bold text-indigo-600 mb-1")
-                        for key in teams:
-                            from engine.pro_league import DATA_DIR
-                            import json
-                            fp = DATA_DIR.parent / NVL_CONFIG.teams_dir / f"{key}.json"
-                            try:
-                                with open(fp) as f:
-                                    info = json.load(f)
-                                name = info["team_info"]["school_name"]
-                            except Exception:
-                                name = key
-                            ui.label(name).classes("text-xs text-slate-600")
-
-            async def _start():
-                season = await run.io_bound(_create_new_season)
-                ui.navigate.to("/")
-
-            ui.button("Start NVL Season", icon="play_arrow", on_click=_start).props(
-                "color=indigo no-caps"
-            ).classes("mt-4")
+        with ui.row().classes("gap-4 flex-wrap"):
+            for lid, config in ALL_LEAGUE_CONFIGS.items():
+                meta = _LEAGUE_META.get(lid, {"color": "gray", "icon": "public", "desc": ""})
+                _render_league_start_card(config, meta)
         return
 
     with ui.row().classes("w-full gap-4 flex-wrap mb-2"):
@@ -121,7 +155,9 @@ async def render_pro_leagues_section(state, shared):
 async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager):
     status = season.get_status()
 
-    ui.label("NVL — National Viperball League").classes("text-2xl font-bold text-slate-800")
+    league_name = status.get("league", season.config.league_name)
+    league_abbr = season.config.league_id.upper()
+    ui.label(f"{league_abbr} — {league_name}").classes("text-2xl font-bold text-slate-800")
 
     with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
         metric_card("Phase", status["phase"].replace("_", " ").title())
@@ -136,7 +172,7 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
 
         if st["champion"]:
             with ui.card().classes("p-4 bg-green-50 w-full"):
-                ui.label(f"Season Complete — {st['champion_name']} are NVL Champions!").classes(
+                ui.label(f"Season Complete — {st['champion_name']} are {league_abbr} Champions!").classes(
                     "text-lg font-bold text-green-700"
                 )
                 async def _new():

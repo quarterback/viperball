@@ -1,0 +1,1347 @@
+{
+  "team_info": {
+    "school_id": "bog",
+    "school_name": "Bogot\u00e1 C\u00f3ndores",
+    "abbreviation": "BOG",
+    "mascot": "C\u00f3ndores",
+    "conference": "Norte",
+    "city": "Bogot\u00e1",
+    "state": "COL",
+    "country": "Colombia",
+    "colors": [
+      "Yellow",
+      "Blue"
+    ]
+  },
+  "identity": {
+    "style": "kick_heavy",
+    "philosophy": "kick_heavy",
+    "tempo": "variable",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "power_spread",
+    "defense_style": "swarm",
+    "st_scheme": "aces"
+  },
+  "prestige": 70,
+  "franchise_rating": 70,
+  "recruiting_pipeline": {
+    "northeast": 0.05,
+    "mid_atlantic": 0.05,
+    "south": 0.05,
+    "midwest": 0.05,
+    "west_coast": 0.05,
+    "texas_southwest": 0.05,
+    "canadian_english": 0.03,
+    "canadian_french": 0.02
+  },
+  "team_stats": {
+    "avg_speed": 64,
+    "avg_stamina": 65,
+    "kicking_strength": 66,
+    "lateral_proficiency": 64,
+    "defensive_strength": 66
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 1,
+        "name": "Terez Flores",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 177,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Curitiba",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Curitiba",
+        "nationality": "Latin American",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 75,
+          "kicking": 76,
+          "lateral_skill": 60,
+          "tackling": 65,
+          "agility": 67,
+          "power": 76,
+          "awareness": 66,
+          "hands": 69,
+          "kick_power": 58,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 2,
+        "name": "Ricardo Souza",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bogot\u00e1",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Bogot\u00e1",
+        "nationality": "Latin American",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 76,
+          "kicking": 57,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 71,
+          "power": 56,
+          "awareness": 75,
+          "hands": 63,
+          "kick_power": 58,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 3,
+        "name": "Cian Cunha",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 189,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Manaus",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Manaus",
+        "nationality": "Latin American",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 63,
+          "kicking": 55,
+          "lateral_skill": 58,
+          "tackling": 58,
+          "agility": 71,
+          "power": 81,
+          "awareness": 63,
+          "hands": 52,
+          "kick_power": 70,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 4,
+        "name": "Jam Fern\u00e1ndez",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 227,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Porto Alegre",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Porto Alegre",
+        "nationality": "Latin American",
+        "archetype": "dual_threat_zb",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 58,
+          "kicking": 70,
+          "lateral_skill": 66,
+          "tackling": 73,
+          "agility": 72,
+          "power": 69,
+          "awareness": 67,
+          "hands": 62,
+          "kick_power": 59,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 5,
+        "name": "Jose Barbosa",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 225,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Manaus",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Manaus",
+        "nationality": "Latin American",
+        "archetype": "dual_threat_zb",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 60,
+          "kicking": 64,
+          "lateral_skill": 67,
+          "tackling": 77,
+          "agility": 79,
+          "power": 56,
+          "awareness": 66,
+          "hands": 63,
+          "kick_power": 70,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 6,
+        "name": "Lamont Souza",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 234,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bogot\u00e1",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Bogot\u00e1",
+        "nationality": "Latin American",
+        "archetype": "dual_threat_zb",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 62,
+          "kicking": 70,
+          "lateral_skill": 57,
+          "tackling": 70,
+          "agility": 66,
+          "power": 50,
+          "awareness": 59,
+          "hands": 77,
+          "kick_power": 78,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 7,
+        "name": "Miguel Rodrigues",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 222,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Bras\u00edlia",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Bras\u00edlia",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 58,
+          "kicking": 71,
+          "lateral_skill": 66,
+          "tackling": 80,
+          "agility": 66,
+          "power": 61,
+          "awareness": 65,
+          "hands": 68,
+          "kick_power": 61,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 8,
+        "name": "Rafael Ramos",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 179,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Valpara\u00edso",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Valpara\u00edso",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 52,
+          "kicking": 61,
+          "lateral_skill": 73,
+          "tackling": 82,
+          "agility": 56,
+          "power": 53,
+          "awareness": 58,
+          "hands": 61,
+          "kick_power": 72,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 9,
+        "name": "Victor Pereira",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 236,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Valpara\u00edso",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Valpara\u00edso",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 78,
+          "kicking": 74,
+          "lateral_skill": 50,
+          "tackling": 69,
+          "agility": 50,
+          "power": 60,
+          "awareness": 54,
+          "hands": 59,
+          "kick_power": 61,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 10,
+        "name": "Antonio Ramos",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 225,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Santiago",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Santiago",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 62,
+          "kicking": 68,
+          "lateral_skill": 74,
+          "tackling": 58,
+          "agility": 73,
+          "power": 71,
+          "awareness": 63,
+          "hands": 57,
+          "kick_power": 67,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 11,
+        "name": "Matias Torres",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 214,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Bras\u00edlia",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Bras\u00edlia",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 72,
+          "kicking": 66,
+          "lateral_skill": 63,
+          "tackling": 77,
+          "agility": 68,
+          "power": 54,
+          "awareness": 80,
+          "hands": 59,
+          "kick_power": 70,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 12,
+        "name": "Felipe Morales",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 177,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Buenos Aires",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Buenos Aires",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 68,
+          "kicking": 52,
+          "lateral_skill": 70,
+          "tackling": 73,
+          "agility": 65,
+          "power": 62,
+          "awareness": 66,
+          "hands": 64,
+          "kick_power": 76,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 13,
+        "name": "Mark Barbosa",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 221,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Medell\u00edn",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Medell\u00edn",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 66,
+          "kicking": 63,
+          "lateral_skill": 66,
+          "tackling": 73,
+          "agility": 58,
+          "power": 59,
+          "awareness": 62,
+          "hands": 66,
+          "kick_power": 79,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 14,
+        "name": "Knijeah Ramos",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 185,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Rio de Janeiro",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rio de Janeiro",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 63,
+          "kicking": 84,
+          "lateral_skill": 54,
+          "tackling": 69,
+          "agility": 69,
+          "power": 79,
+          "awareness": 60,
+          "hands": 72,
+          "kick_power": 62,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 15,
+        "name": "Isaac Herrera",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 191,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Medell\u00edn",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Medell\u00edn",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 63,
+          "kicking": 66,
+          "lateral_skill": 68,
+          "tackling": 60,
+          "agility": 50,
+          "power": 63,
+          "awareness": 74,
+          "hands": 71,
+          "kick_power": 64,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 16,
+        "name": "Romello Fern\u00e1ndez",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 197,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Salvador",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Salvador",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 61,
+          "kicking": 74,
+          "lateral_skill": 59,
+          "tackling": 68,
+          "agility": 66,
+          "power": 74,
+          "awareness": 71,
+          "hands": 53,
+          "kick_power": 65,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 17,
+        "name": "Gabriel Gonz\u00e1lez",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 208,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Cali",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Cali",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 62,
+          "kicking": 68,
+          "lateral_skill": 67,
+          "tackling": 60,
+          "agility": 83,
+          "power": 71,
+          "awareness": 50,
+          "hands": 69,
+          "kick_power": 76,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 18,
+        "name": "Jose Cunha",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 188,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Rosario",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rosario",
+        "nationality": "Latin American",
+        "archetype": "reliable_flanker",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 81,
+          "kicking": 63,
+          "lateral_skill": 72,
+          "tackling": 66,
+          "agility": 71,
+          "power": 64,
+          "awareness": 74,
+          "hands": 65,
+          "kick_power": 75,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 19,
+        "name": "Sebastian Mart\u00ednez",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 224,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Salvador",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Salvador",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 61,
+          "kicking": 50,
+          "lateral_skill": 61,
+          "tackling": 74,
+          "agility": 53,
+          "power": 65,
+          "awareness": 65,
+          "hands": 68,
+          "kick_power": 50,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 20,
+        "name": "Makai Pereira",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 234,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Porto Alegre",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Porto Alegre",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 63,
+          "kicking": 72,
+          "lateral_skill": 58,
+          "tackling": 57,
+          "agility": 60,
+          "power": 59,
+          "awareness": 71,
+          "hands": 72,
+          "kick_power": 64,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 21,
+        "name": "Tavierre Pereira",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 226,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Quito",
+          "state": "ECU",
+          "country": "Ecuador",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Quito",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 59,
+          "kicking": 90,
+          "lateral_skill": 66,
+          "tackling": 50,
+          "agility": 71,
+          "power": 65,
+          "awareness": 65,
+          "hands": 56,
+          "kick_power": 75,
+          "kick_accuracy": 53
+        }
+      },
+      {
+        "number": 22,
+        "name": "Gabriel Morales",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 248,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Rosario",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rosario",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 76,
+          "kicking": 57,
+          "lateral_skill": 58,
+          "tackling": 64,
+          "agility": 63,
+          "power": 54,
+          "awareness": 53,
+          "hands": 66,
+          "kick_power": 62,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 23,
+        "name": "Jesus Oliveira",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 226,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Porto Alegre",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Porto Alegre",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 66,
+          "kicking": 71,
+          "lateral_skill": 72,
+          "tackling": 69,
+          "agility": 59,
+          "power": 50,
+          "awareness": 63,
+          "hands": 71,
+          "kick_power": 70,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 24,
+        "name": "Daniel Garc\u00eda",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 264,
+        "year": "Veteran",
+        "hometown": {
+          "city": "C\u00f3rdoba",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio C\u00f3rdoba",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 67,
+          "kicking": 65,
+          "lateral_skill": 60,
+          "tackling": 65,
+          "agility": 71,
+          "power": 72,
+          "awareness": 63,
+          "hands": 71,
+          "kick_power": 58,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 25,
+        "name": "Manuel Pereira",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 288,
+        "year": "Veteran",
+        "hometown": {
+          "city": "S\u00e3o Paulo",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio S\u00e3o Paulo",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 53,
+          "kicking": 57,
+          "lateral_skill": 66,
+          "tackling": 50,
+          "agility": 55,
+          "power": 61,
+          "awareness": 58,
+          "hands": 54,
+          "kick_power": 75,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 26,
+        "name": "Christian Mart\u00ednez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 252,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Medell\u00edn",
+          "state": "COL",
+          "country": "Colombia",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Medell\u00edn",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 66,
+          "kicking": 67,
+          "lateral_skill": 68,
+          "tackling": 62,
+          "agility": 73,
+          "power": 64,
+          "awareness": 68,
+          "hands": 67,
+          "kick_power": 67,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 27,
+        "name": "Jorge Morales",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 247,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Santiago",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Santiago",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 62,
+          "kicking": 67,
+          "lateral_skill": 64,
+          "tackling": 65,
+          "agility": 63,
+          "power": 56,
+          "awareness": 67,
+          "hands": 72,
+          "kick_power": 65,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 28,
+        "name": "Terez Fern\u00e1ndez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 228,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Valpara\u00edso",
+          "state": "CHI",
+          "country": "Chile",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Valpara\u00edso",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 64,
+          "kicking": 57,
+          "lateral_skill": 61,
+          "tackling": 82,
+          "agility": 57,
+          "power": 65,
+          "awareness": 63,
+          "hands": 65,
+          "kick_power": 72,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 29,
+        "name": "Diego \u00c1lvarez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 244,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Buenos Aires",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Buenos Aires",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 62,
+          "kicking": 64,
+          "lateral_skill": 54,
+          "tackling": 63,
+          "agility": 52,
+          "power": 55,
+          "awareness": 53,
+          "hands": 76,
+          "kick_power": 57,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 30,
+        "name": "Baker Carvalho",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 225,
+        "year": "Veteran",
+        "hometown": {
+          "city": "C\u00f3rdoba",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio C\u00f3rdoba",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 73,
+          "kicking": 63,
+          "lateral_skill": 70,
+          "tackling": 62,
+          "agility": 67,
+          "power": 66,
+          "awareness": 59,
+          "hands": 70,
+          "kick_power": 56,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 31,
+        "name": "Jorge Oliveira",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 285,
+        "year": "Veteran",
+        "hometown": {
+          "city": "Quito",
+          "state": "ECU",
+          "country": "Ecuador",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Quito",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 66,
+          "kicking": 74,
+          "lateral_skill": 63,
+          "tackling": 62,
+          "agility": 70,
+          "power": 51,
+          "awareness": 61,
+          "hands": 65,
+          "kick_power": 74,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 32,
+        "name": "Andres Pereira",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 290,
+        "year": "3rd Year",
+        "hometown": {
+          "city": "Guayaquil",
+          "state": "ECU",
+          "country": "Ecuador",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Guayaquil",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 62,
+          "kicking": 71,
+          "lateral_skill": 71,
+          "tackling": 77,
+          "agility": 58,
+          "power": 71,
+          "awareness": 59,
+          "hands": 67,
+          "kick_power": 51,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 33,
+        "name": "Benson Rodrigues",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 245,
+        "year": "Rookie",
+        "hometown": {
+          "city": "Fortaleza",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Fortaleza",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 65,
+          "kicking": 60,
+          "lateral_skill": 68,
+          "tackling": 61,
+          "agility": 75,
+          "power": 57,
+          "awareness": 57,
+          "hands": 76,
+          "kick_power": 68,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 34,
+        "name": "Hector G\u00f3mez",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 260,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Rio de Janeiro",
+          "state": "BRA",
+          "country": "Brazil",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Rio de Janeiro",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 85,
+          "kicking": 65,
+          "lateral_skill": 56,
+          "tackling": 70,
+          "agility": 57,
+          "power": 69,
+          "awareness": 50,
+          "hands": 57,
+          "kick_power": 58,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 35,
+        "name": "Antonio Santos",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 262,
+        "year": "Rookie",
+        "hometown": {
+          "city": "C\u00f3rdoba",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio C\u00f3rdoba",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 56,
+          "kicking": 69,
+          "lateral_skill": 71,
+          "tackling": 50,
+          "agility": 51,
+          "power": 58,
+          "awareness": 65,
+          "hands": 63,
+          "kick_power": 52,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 36,
+        "name": "Nicolas \u00c1lvarez",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 269,
+        "year": "2nd Year",
+        "hometown": {
+          "city": "Buenos Aires",
+          "state": "ARG",
+          "country": "Argentina",
+          "region": "latin_american"
+        },
+        "high_school": "Colegio Buenos Aires",
+        "nationality": "Latin American",
+        "archetype": "none",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 0
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 62,
+          "kicking": 58,
+          "lateral_skill": 62,
+          "tackling": 59,
+          "agility": 60,
+          "power": 74,
+          "awareness": 52,
+          "hands": 64,
+          "kick_power": 69,
+          "kick_accuracy": 59
+        }
+      }
+    ]
+  }
+}
