@@ -909,23 +909,215 @@ def _show_player_card(season: ProLeagueSeason, team_key: str, player_name: str):
     dlg.open()
 
 
+def _generate_pro_forum_box_score(box: dict) -> str:
+    hs = box["home_stats"]
+    aws = box["away_stats"]
+    home_name = box["home_name"]
+    away_name = box["away_name"]
+    home_score = int(box["home_score"])
+    away_score = int(box["away_score"])
+    weather = box.get("weather", "Clear")
+
+    winner = home_name if home_score > away_score else away_name
+    w_score = max(home_score, away_score)
+    loser = away_name if winner == home_name else home_name
+    l_score = min(home_score, away_score)
+
+    league_label = box.get("league", "NATIONAL VIPERBALL LEAGUE")
+
+    lines = []
+    lines.append("=" * 62)
+    lines.append(f"{league_label.upper()} — OFFICIAL BOX SCORE")
+    lines.append("=" * 62)
+    lines.append("")
+    lines.append(f"  {winner} {w_score}, {loser} {l_score}")
+    lines.append(f"  Weather: {weather}")
+    lines.append("")
+
+    lines.append("-" * 62)
+    lines.append("FINAL SCORE")
+    lines.append("-" * 62)
+    col_w = max(len(home_name), len(away_name), 6) + 2
+    lines.append(f"  {'Team':<{col_w}}  Final")
+    lines.append(f"  {'-'*col_w}  -----")
+    lines.append(f"  {away_name:<{col_w}}  {away_score:>5}")
+    lines.append(f"  {home_name:<{col_w}}  {home_score:>5}")
+    lines.append("")
+
+    lines.append("-" * 62)
+    lines.append("TEAM STATISTICS")
+    lines.append("-" * 62)
+    stat_w = max(len(home_name), len(away_name), 6) + 2
+
+    def _sl(label, h_val, a_val):
+        return f"  {label:<24} {str(a_val):>{stat_w}}  {str(h_val):>{stat_w}}"
+
+    lines.append(f"  {'':24} {away_name:>{stat_w}}  {home_name:>{stat_w}}")
+    lines.append(_sl("Total Yards", hs.get("total_yards", 0), aws.get("total_yards", 0)))
+
+    h_td = hs.get("touchdowns", 0)
+    a_td = aws.get("touchdowns", 0)
+    lines.append(_sl("Touchdowns (9pts)", f"{h_td} ({h_td*9}pts)", f"{a_td} ({a_td*9}pts)"))
+
+    h_car = hs.get("rushing_carries", 0)
+    a_car = aws.get("rushing_carries", 0)
+    h_ryds = hs.get("rushing_yards", 0)
+    a_ryds = aws.get("rushing_yards", 0)
+    lines.append(_sl("Rushing", f"{h_car} car, {h_ryds} yds", f"{a_car} car, {a_ryds} yds"))
+
+    lines.append(_sl("KP Comp/Att",
+                      f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}",
+                      f"{aws.get('kick_passes_completed',0)}/{aws.get('kick_passes_attempted',0)}"))
+    lines.append(_sl("KP Yards", hs.get("kick_pass_yards", 0), aws.get("kick_pass_yards", 0)))
+    lines.append(_sl("Snap Kicks",
+                      f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}",
+                      f"{aws.get('drop_kicks_made',0)}/{aws.get('drop_kicks_attempted',0)}"))
+    lines.append(_sl("Field Goals",
+                      f"{hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)}",
+                      f"{aws.get('place_kicks_made',0)}/{aws.get('place_kicks_attempted',0)}"))
+    lines.append(_sl("Fumbles Lost", hs.get("fumbles_lost", 0), aws.get("fumbles_lost", 0)))
+    lines.append(_sl("KP Interceptions", hs.get("kick_pass_interceptions", 0), aws.get("kick_pass_interceptions", 0)))
+    lines.append(_sl("Lateral Chains", hs.get("lateral_chains", 0), aws.get("lateral_chains", 0)))
+    lines.append(_sl("Penalties",
+                      f"{hs.get('penalties',0)} for {hs.get('penalty_yards',0)}yds",
+                      f"{aws.get('penalties',0)} for {aws.get('penalty_yards',0)}yds"))
+
+    for side_key, side_name in [("away", away_name), ("home", home_name)]:
+        plist = box.get(f"{side_key}_player_stats", [])
+        if not plist:
+            continue
+        lines.append("")
+        lines.append("-" * 62)
+        lines.append(f"{side_name.upper()}")
+        lines.append("-" * 62)
+
+        rushers = sorted(
+            [p for p in plist if p.get("rush_carries", 0) > 0],
+            key=lambda x: x.get("rushing_yards", 0), reverse=True
+        )
+        if rushers:
+            lines.append("  RUSHING:")
+            for p in rushers[:6]:
+                ypc = round(p.get("rushing_yards", 0) / max(1, p.get("rush_carries", 1)), 1)
+                lines.append(f"    {p.get('name','?'):<22} {p.get('rush_carries',0):>3} car  {p.get('rushing_yards',0):>4} yds  {ypc:>5} avg  {p.get('rushing_tds',0):>2} TD")
+
+        passers = [p for p in plist if p.get("kick_passes_thrown", 0) > 0]
+        if passers:
+            lines.append("  KICK PASSING:")
+            for p in passers[:3]:
+                lines.append(f"    {p.get('name','?'):<22} {p.get('kick_passes_completed',0)}/{p.get('kick_passes_thrown',0)}  {p.get('kick_pass_yards',0):>4} yds  {p.get('kick_pass_tds',0):>2} TD  {p.get('kick_pass_interceptions_thrown',0):>2} INT")
+
+        receivers = sorted(
+            [p for p in plist if p.get("kick_pass_receptions", 0) > 0],
+            key=lambda x: x.get("kick_pass_receptions", 0), reverse=True
+        )
+        if receivers:
+            lines.append("  RECEIVING:")
+            for p in receivers[:5]:
+                lines.append(f"    {p.get('name','?'):<22} {p.get('kick_pass_receptions',0):>3} rec")
+
+        lateralists = sorted(
+            [p for p in plist if p.get("laterals_thrown", 0) + p.get("lateral_receptions", 0) > 0],
+            key=lambda x: x.get("lateral_yards", 0), reverse=True
+        )
+        if lateralists:
+            lines.append("  LATERALS:")
+            for p in lateralists[:4]:
+                lines.append(f"    {p.get('name','?'):<22} {p.get('laterals_thrown',0):>2} thr  {p.get('lateral_receptions',0):>2} rec  {p.get('lateral_yards',0):>3} yds")
+
+        defenders = sorted(
+            [p for p in plist if p.get("tackles", 0) > 0],
+            key=lambda x: x.get("tackles", 0), reverse=True
+        )
+        if defenders:
+            lines.append("  DEFENSE:")
+            for p in defenders[:5]:
+                lines.append(f"    {p.get('name','?'):<22} {p.get('tackles',0):>3} tkl  {p.get('tfl',0):>2} tfl  {p.get('sacks',0):>2} sck  {p.get('hurries',0):>2} hur")
+
+        kickers = [p for p in plist if p.get("dk_att", p.get("drop_kicks_attempted", 0)) + p.get("pk_att", p.get("place_kicks_attempted", 0)) > 0]
+        if kickers:
+            lines.append("  KICKING:")
+            for p in kickers:
+                dk_m = p.get("dk_made", p.get("drop_kicks_made", 0))
+                dk_a = p.get("dk_att", p.get("drop_kicks_attempted", 0))
+                pk_m = p.get("pk_made", p.get("place_kicks_made", 0))
+                pk_a = p.get("pk_att", p.get("place_kicks_attempted", 0))
+                lines.append(f"    {p.get('name','?'):<22} DK {dk_m}/{dk_a}  PK {pk_m}/{pk_a}")
+
+    lines.append("")
+    lines.append("=" * 62)
+    lines.append(f"{league_label} | 6-down, 20-yard Viperball")
+    lines.append("=" * 62)
+    return "\n".join(lines)
+
+
 def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
-    with ui.dialog() as dlg, ui.card().classes("p-4 min-w-[600px] max-w-4xl"):
-        ui.label(f"{box['away_name']} @ {box['home_name']}").classes("text-lg font-bold text-indigo-600")
-        ui.label(f"Final: {int(box['away_score'])} - {int(box['home_score'])}").classes("text-xl font-extrabold mb-2")
-        ui.label(f"Weather: {box['weather']}").classes("text-xs text-slate-500 mb-3")
+    with ui.dialog().props("maximized") as dlg:
+        with ui.card().classes("w-full h-full overflow-auto p-0"):
+            with ui.element("div").classes("w-full").style(
+                "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 24px 32px;"
+            ):
+                with ui.row().classes("w-full items-center justify-between"):
+                    with ui.column().classes("gap-0"):
+                        ui.label(f"{box['away_name']} @ {box['home_name']}").classes(
+                            "text-2xl font-bold text-white"
+                        )
+                        ui.label(f"Weather: {box.get('weather', 'Clear')}").classes(
+                            "text-sm text-slate-300"
+                        )
+                    with ui.row().classes("items-center gap-6"):
+                        with ui.column().classes("items-center gap-0"):
+                            ui.label(box["away_name"].split()[-1]).classes("text-xs text-slate-400 uppercase tracking-wider")
+                            away_s = int(box["away_score"])
+                            away_won = away_s > int(box["home_score"])
+                            ui.label(str(away_s)).classes(
+                                f"text-4xl font-black {'text-white' if away_won else 'text-slate-400'}"
+                            )
+                        ui.label("—").classes("text-2xl text-slate-500 font-light")
+                        with ui.column().classes("items-center gap-0"):
+                            ui.label(box["home_name"].split()[-1]).classes("text-xs text-slate-400 uppercase tracking-wider")
+                            home_s = int(box["home_score"])
+                            home_won = home_s > away_s
+                            ui.label(str(home_s)).classes(
+                                f"text-4xl font-black {'text-white' if home_won else 'text-slate-400'}"
+                            )
+                        ui.label("FINAL").classes("text-xs font-bold text-amber-400 tracking-widest ml-4")
 
-        with ui.tabs().classes("w-full") as bs_tabs:
-            tab_team = ui.tab("Team Stats")
-            tab_players = ui.tab("Players")
+                with ui.row().classes("w-full justify-end gap-2 mt-3"):
+                    async def _copy_forum():
+                        text = _generate_pro_forum_box_score(box)
+                        await ui.run_javascript(
+                            f'navigator.clipboard.writeText({repr(text)}).then(() => {{ }})'
+                        )
+                        ui.notify("Box score copied to clipboard!", type="positive", position="top")
 
-        with ui.tab_panels(bs_tabs, value=tab_team).classes("w-full"):
-            with ui.tab_panel(tab_team):
-                _render_team_stat_comparison(box)
-            with ui.tab_panel(tab_players):
-                _render_player_stats_table(box, season)
+                    ui.button("Copy for Forum", icon="content_copy", on_click=_copy_forum).props(
+                        "flat no-caps size=sm text-color=white"
+                    ).classes("bg-slate-600 hover:bg-slate-500")
+                    ui.button("Close", icon="close", on_click=dlg.close).props(
+                        "flat no-caps size=sm text-color=white"
+                    ).classes("bg-slate-600 hover:bg-slate-500")
 
-        ui.button("Close", on_click=dlg.close).props("flat no-caps")
+            with ui.element("div").classes("w-full px-4 md:px-8 py-6").style("max-width: 1200px; margin: 0 auto;"):
+                with ui.tabs().classes("w-full") as bs_tabs:
+                    tab_team = ui.tab("Team Stats")
+                    tab_offense = ui.tab("Offense")
+                    tab_defense = ui.tab("Defense")
+                    tab_kicking = ui.tab("Kicking")
+                    tab_forum = ui.tab("Forum Export")
+
+                with ui.tab_panels(bs_tabs, value=tab_team).classes("w-full"):
+                    with ui.tab_panel(tab_team):
+                        _render_team_stat_comparison(box)
+                    with ui.tab_panel(tab_offense):
+                        _render_offense_stats(box, season)
+                    with ui.tab_panel(tab_defense):
+                        _render_defense_stats(box, season)
+                    with ui.tab_panel(tab_kicking):
+                        _render_kicking_stats(box, season)
+                    with ui.tab_panel(tab_forum):
+                        _render_forum_export(box)
+
     dlg.open()
 
 
@@ -933,87 +1125,277 @@ def _render_team_stat_comparison(box: dict):
     hs = box["home_stats"]
     aws = box["away_stats"]
 
-    stat_keys = [
-        ("total_yards", "Total Yards"), ("rushing_yards", "Rush Yards"),
-        ("kick_pass_yards", "Kick Pass Yards"), ("turnovers", "Turnovers"),
-        ("penalties", "Penalties"), ("touchdowns", "Touchdowns"),
-        ("dk_made", "Drop Kicks Made"), ("pk_made", "Place Kicks Made"),
+    stat_rows = [
+        ("Total Yards", aws.get("total_yards", 0), hs.get("total_yards", 0)),
+        ("Rushing Yards", aws.get("rushing_yards", 0), hs.get("rushing_yards", 0)),
+        ("Rushing Carries", aws.get("rushing_carries", 0), hs.get("rushing_carries", 0)),
+        ("Kick Pass Yards", aws.get("kick_pass_yards", 0), hs.get("kick_pass_yards", 0)),
+        ("KP Comp/Att",
+         f"{aws.get('kick_passes_completed',0)}/{aws.get('kick_passes_attempted',0)}",
+         f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}"),
+        ("Lateral Yards", aws.get("lateral_yards", 0), hs.get("lateral_yards", 0)),
+        ("Touchdowns", aws.get("touchdowns", 0), hs.get("touchdowns", 0)),
+        ("Snap Kicks (DK)",
+         f"{aws.get('drop_kicks_made',0)}/{aws.get('drop_kicks_attempted',0)}",
+         f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}"),
+        ("Field Goals (PK)",
+         f"{aws.get('place_kicks_made',0)}/{aws.get('place_kicks_attempted',0)}",
+         f"{hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)}"),
+        ("Fumbles Lost", aws.get("fumbles_lost", 0), hs.get("fumbles_lost", 0)),
+        ("KP Interceptions", aws.get("kick_pass_interceptions", 0), hs.get("kick_pass_interceptions", 0)),
+        ("Penalties",
+         f"{aws.get('penalties',0)} / {aws.get('penalty_yards',0)} yds",
+         f"{hs.get('penalties',0)} / {hs.get('penalty_yards',0)} yds"),
+        ("Punts", aws.get("punts", 0), hs.get("punts", 0)),
     ]
 
-    columns = [
-        {"name": "stat", "label": "Stat", "field": "stat", "align": "left"},
-        {"name": "away", "label": box["away_name"], "field": "away", "align": "center"},
-        {"name": "home", "label": box["home_name"], "field": "home", "align": "center"},
-    ]
-
-    rows = []
-    for key, label in stat_keys:
-        rows.append({
-            "stat": label,
-            "away": hs.get(key, aws.get(key, 0)) if key != "away" else 0,
-            "home": hs.get(key, 0),
-        })
-
-    fixed_rows = []
-    for key, label in stat_keys:
-        fixed_rows.append({
-            "stat": label,
-            "away": str(aws.get(key, 0)),
-            "home": str(hs.get(key, 0)),
-        })
-
-    ui.table(columns=columns, rows=fixed_rows, row_key="stat").classes("w-full").props("dense flat bordered")
+    with ui.element("div").classes("w-full overflow-x-auto"):
+        with ui.element("table").classes("w-full").style(
+            "border-collapse: collapse; font-size: 14px;"
+        ):
+            with ui.element("thead"):
+                with ui.element("tr").style("background: #f1f5f9; border-bottom: 2px solid #cbd5e1;"):
+                    ui.element("th").classes("text-left py-2 px-3 font-semibold text-slate-600").style("width:40%")
+                    with ui.element("th").classes("text-center py-2 px-3 font-semibold text-slate-800").style("width:30%"):
+                        ui.label(box["away_name"])
+                    with ui.element("th").classes("text-center py-2 px-3 font-semibold text-slate-800").style("width:30%"):
+                        ui.label(box["home_name"])
+            with ui.element("tbody"):
+                for i, (label, away_val, home_val) in enumerate(stat_rows):
+                    bg = "background: #f8fafc;" if i % 2 == 0 else ""
+                    with ui.element("tr").style(f"{bg} border-bottom: 1px solid #e2e8f0;"):
+                        with ui.element("td").classes("py-2 px-3 font-medium text-slate-700"):
+                            ui.label(label)
+                        with ui.element("td").classes("text-center py-2 px-3 text-slate-800 font-semibold"):
+                            ui.label(str(away_val))
+                        with ui.element("td").classes("text-center py-2 px-3 text-slate-800 font-semibold"):
+                            ui.label(str(home_val))
 
 
-def _render_player_stats_table(box: dict, season: ProLeagueSeason = None):
-    for side, label in [("away", box["away_name"]), ("home", box["home_name"])]:
-        players = box.get(f"{side}_player_stats", [])
+def _make_clickable_player_table(columns, rows, season, team_key):
+    tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props(
+        "dense flat bordered"
+    )
+    if season and team_key:
+        tbl.add_slot("body-cell-name", '''
+            <q-td :props="props">
+                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                   @click="$parent.$emit('player_click', props.row)">
+                    {{ props.row.name }}
+                </a>
+            </q-td>
+        ''')
+        tbl.on("player_click", lambda e, _s=season, _tk=team_key: _show_player_card(
+            _s, _tk, e.args.get("name", "")
+        ))
+    return tbl
+
+
+def _render_offense_stats(box: dict, season: ProLeagueSeason = None):
+    for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
+        players = box.get(f"{side_key}_player_stats", [])
+        team_key = box.get(f"{side_key}_key", "")
         if not players:
             continue
 
-        team_key = box.get(f"{side}_key", "")
-        ui.label(label).classes("text-sm font-bold text-indigo-600 mt-3 mb-1")
+        ui.label(side_name).classes("text-lg font-bold text-indigo-700 mt-4 mb-1")
+        ui.separator().classes("mb-2")
 
-        columns = [
-            {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
-            {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
-            {"name": "rush", "label": "Rush", "field": "rush_yds", "align": "center", "sortable": True},
-            {"name": "car", "label": "Car", "field": "carries", "align": "center"},
-            {"name": "kp", "label": "KP Yds", "field": "kp_yds", "align": "center", "sortable": True},
-            {"name": "td", "label": "TD", "field": "td", "align": "center", "sortable": True},
-        ]
-
-        rows = []
-        for p in players:
-            rush = p.get("rushing_yards", p.get("game_rushing_yards", 0))
-            carries = p.get("rush_carries", p.get("carries", p.get("game_carries", 0)))
-            kp = p.get("kick_pass_yards", p.get("game_kick_pass_yards", 0))
-            td = p.get("tds", p.get("touchdowns", p.get("game_touchdowns", 0)))
-            if rush > 0 or kp > 0 or td > 0:
-                rows.append({
-                    "name": p.get("name", "???"),
-                    "position": p.get("position", ""),
-                    "rush_yds": str(rush),
-                    "carries": str(carries),
-                    "kp_yds": str(kp),
-                    "td": str(td),
-                    "team_key": team_key,
+        rushers = sorted(
+            [p for p in players if p.get("rush_carries", 0) > 0],
+            key=lambda x: x.get("rushing_yards", 0), reverse=True
+        )
+        if rushers:
+            ui.label("Rushing").classes("text-sm font-semibold text-slate-600 mb-1")
+            rush_cols = [
+                {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                {"name": "car", "label": "Car", "field": "car", "align": "center", "sortable": True},
+                {"name": "yds", "label": "Yds", "field": "yds", "align": "center", "sortable": True},
+                {"name": "avg", "label": "Avg", "field": "avg", "align": "center", "sortable": True},
+                {"name": "td", "label": "TD", "field": "td", "align": "center", "sortable": True},
+                {"name": "fum", "label": "Fum", "field": "fum", "align": "center"},
+                {"name": "long", "label": "Lng", "field": "long", "align": "center"},
+            ]
+            rush_rows = []
+            for p in rushers:
+                car = p.get("rush_carries", 0)
+                yds = p.get("rushing_yards", 0)
+                avg = round(yds / max(1, car), 1)
+                rush_rows.append({
+                    "name": p.get("name", "?"), "pos": p.get("position", ""),
+                    "car": str(car), "yds": str(yds), "avg": str(avg),
+                    "td": str(p.get("rushing_tds", 0)),
+                    "fum": str(p.get("fumbles", 0)),
+                    "long": str(p.get("long_rush", "-")),
                 })
+            _make_clickable_player_table(rush_cols, rush_rows, season, team_key)
 
-        if rows:
-            tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
-            if season and team_key:
-                tbl.add_slot("body-cell-name", '''
-                    <q-td :props="props">
-                        <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
-                           @click="$parent.$emit('player_click', props.row)">
-                            {{ props.row.name }}
-                        </a>
-                    </q-td>
-                ''')
-                tbl.on("player_click", lambda e, _s=season: _show_player_card(
-                    _s, e.args.get("team_key", ""), e.args.get("name", "")
-                ))
+        passers = [p for p in players if p.get("kick_passes_thrown", 0) > 0]
+        if passers:
+            ui.label("Kick Passing").classes("text-sm font-semibold text-slate-600 mt-3 mb-1")
+            kp_cols = [
+                {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                {"name": "comp", "label": "Cmp", "field": "comp", "align": "center", "sortable": True},
+                {"name": "att", "label": "Att", "field": "att", "align": "center"},
+                {"name": "yds", "label": "Yds", "field": "yds", "align": "center", "sortable": True},
+                {"name": "td", "label": "TD", "field": "td", "align": "center", "sortable": True},
+                {"name": "int", "label": "INT", "field": "int_thrown", "align": "center"},
+                {"name": "pct", "label": "Pct", "field": "pct", "align": "center"},
+            ]
+            kp_rows = []
+            for p in passers:
+                comp = p.get("kick_passes_completed", 0)
+                att = p.get("kick_passes_thrown", 0)
+                pct = round(100 * comp / max(1, att), 1)
+                kp_rows.append({
+                    "name": p.get("name", "?"), "pos": p.get("position", ""),
+                    "comp": str(comp), "att": str(att),
+                    "yds": str(p.get("kick_pass_yards", 0)),
+                    "td": str(p.get("kick_pass_tds", 0)),
+                    "int_thrown": str(p.get("kick_pass_interceptions_thrown", 0)),
+                    "pct": f"{pct}%",
+                })
+            _make_clickable_player_table(kp_cols, kp_rows, season, team_key)
+
+        receivers = sorted(
+            [p for p in players if p.get("kick_pass_receptions", 0) > 0],
+            key=lambda x: x.get("kick_pass_receptions", 0), reverse=True
+        )
+        if receivers:
+            ui.label("Receiving").classes("text-sm font-semibold text-slate-600 mt-3 mb-1")
+            rec_cols = [
+                {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                {"name": "rec", "label": "Rec", "field": "rec", "align": "center", "sortable": True},
+            ]
+            rec_rows = [{"name": p.get("name", "?"), "pos": p.get("position", ""), "rec": str(p.get("kick_pass_receptions", 0))} for p in receivers]
+            _make_clickable_player_table(rec_cols, rec_rows, season, team_key)
+
+        lateralists = sorted(
+            [p for p in players if p.get("laterals_thrown", 0) + p.get("lateral_receptions", 0) > 0],
+            key=lambda x: x.get("lateral_yards", 0), reverse=True
+        )
+        if lateralists:
+            ui.label("Laterals").classes("text-sm font-semibold text-slate-600 mt-3 mb-1")
+            lat_cols = [
+                {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+                {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+                {"name": "thr", "label": "Thr", "field": "thr", "align": "center"},
+                {"name": "recv", "label": "Rec", "field": "recv", "align": "center"},
+                {"name": "yds", "label": "Yds", "field": "yds", "align": "center", "sortable": True},
+                {"name": "ast", "label": "Ast", "field": "ast", "align": "center"},
+                {"name": "td", "label": "TD", "field": "td", "align": "center"},
+            ]
+            lat_rows = [{
+                "name": p.get("name", "?"), "pos": p.get("position", ""),
+                "thr": str(p.get("laterals_thrown", 0)),
+                "recv": str(p.get("lateral_receptions", 0)),
+                "yds": str(p.get("lateral_yards", 0)),
+                "ast": str(p.get("lateral_assists", 0)),
+                "td": str(p.get("lateral_tds", 0)),
+            } for p in lateralists]
+            _make_clickable_player_table(lat_cols, lat_rows, season, team_key)
+
+
+def _render_defense_stats(box: dict, season: ProLeagueSeason = None):
+    for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
+        players = box.get(f"{side_key}_player_stats", [])
+        team_key = box.get(f"{side_key}_key", "")
+        if not players:
+            continue
+
+        defenders = sorted(
+            [p for p in players if p.get("tackles", 0) > 0],
+            key=lambda x: x.get("tackles", 0), reverse=True
+        )
+        if not defenders:
+            continue
+
+        ui.label(side_name).classes("text-lg font-bold text-indigo-700 mt-4 mb-1")
+        ui.separator().classes("mb-2")
+
+        def_cols = [
+            {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+            {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+            {"name": "tkl", "label": "Tkl", "field": "tkl", "align": "center", "sortable": True},
+            {"name": "tfl", "label": "TFL", "field": "tfl", "align": "center", "sortable": True},
+            {"name": "sck", "label": "Sck", "field": "sck", "align": "center", "sortable": True},
+            {"name": "hur", "label": "Hur", "field": "hur", "align": "center"},
+            {"name": "int", "label": "INT", "field": "ints", "align": "center"},
+            {"name": "st", "label": "ST Tkl", "field": "st", "align": "center"},
+        ]
+        def_rows = [{
+            "name": p.get("name", "?"), "pos": p.get("position", ""),
+            "tkl": str(p.get("tackles", 0)),
+            "tfl": str(p.get("tfl", 0)),
+            "sck": str(p.get("sacks", 0)),
+            "hur": str(p.get("hurries", 0)),
+            "ints": str(p.get("kick_pass_ints", 0)),
+            "st": str(p.get("st_tackles", 0)),
+        } for p in defenders]
+        _make_clickable_player_table(def_cols, def_rows, season, team_key)
+
+
+def _render_kicking_stats(box: dict, season: ProLeagueSeason = None):
+    for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
+        players = box.get(f"{side_key}_player_stats", [])
+        team_key = box.get(f"{side_key}_key", "")
+        if not players:
+            continue
+
+        kickers = [p for p in players if
+                   p.get("dk_att", p.get("drop_kicks_attempted", 0)) +
+                   p.get("pk_att", p.get("place_kicks_attempted", 0)) > 0]
+        if not kickers:
+            continue
+
+        ui.label(side_name).classes("text-lg font-bold text-indigo-700 mt-4 mb-1")
+        ui.separator().classes("mb-2")
+
+        kick_cols = [
+            {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
+            {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+            {"name": "dk", "label": "DK M/A", "field": "dk", "align": "center"},
+            {"name": "dk_pts", "label": "DK Pts", "field": "dk_pts", "align": "center"},
+            {"name": "pk", "label": "PK M/A", "field": "pk", "align": "center"},
+            {"name": "pk_pts", "label": "PK Pts", "field": "pk_pts", "align": "center"},
+            {"name": "total", "label": "Total Pts", "field": "total", "align": "center", "sortable": True},
+        ]
+        kick_rows = []
+        for p in kickers:
+            dk_m = p.get("dk_made", p.get("drop_kicks_made", 0))
+            dk_a = p.get("dk_att", p.get("drop_kicks_attempted", 0))
+            pk_m = p.get("pk_made", p.get("place_kicks_made", 0))
+            pk_a = p.get("pk_att", p.get("place_kicks_attempted", 0))
+            kick_rows.append({
+                "name": p.get("name", "?"), "pos": p.get("position", ""),
+                "dk": f"{dk_m}/{dk_a}", "dk_pts": str(dk_m * 5),
+                "pk": f"{pk_m}/{pk_a}", "pk_pts": str(pk_m * 3),
+                "total": str(dk_m * 5 + pk_m * 3),
+            })
+        _make_clickable_player_table(kick_cols, kick_rows, season, team_key)
+
+
+def _render_forum_export(box: dict):
+    text = _generate_pro_forum_box_score(box)
+    ui.label("Copy this text to share on forums, Discord, etc.").classes("text-sm text-slate-500 mb-2")
+
+    async def _copy():
+        await ui.run_javascript(
+            f'navigator.clipboard.writeText({repr(text)}).then(() => {{ }})'
+        )
+        ui.notify("Copied to clipboard!", type="positive", position="top")
+
+    ui.button("Copy to Clipboard", icon="content_copy", on_click=_copy).props(
+        "no-caps color=indigo size=sm"
+    ).classes("mb-3")
+
+    with ui.element("pre").classes("w-full overflow-x-auto bg-slate-900 text-green-300 p-4 rounded-lg text-xs leading-relaxed").style(
+        "font-family: 'Courier New', monospace; white-space: pre; max-height: 600px; overflow-y: auto;"
+    ):
+        ui.label(text).style("white-space: pre; font-family: inherit; color: inherit;")
 
 
 def _render_stats(season: ProLeagueSeason):

@@ -450,6 +450,8 @@ class ProLeagueSeason:
             return None
         result = game["result"]
         return {
+            "league": self.config.league_name,
+            "week": week,
             "home_key": game["home_key"],
             "away_key": game["away_key"],
             "home_name": game["home_name"],
