@@ -3246,8 +3246,12 @@ def dq_create_season(session_id: str, req: DQCreateRequest):
     }
 
 
+class DQAdvanceWeekRequest(BaseModel):
+    fast_sim: bool = True
+
+
 @app.post("/sessions/{session_id}/dq/advance-week")
-def dq_advance_week(session_id: str):
+def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRequest()):
     """Simulate the next week and return DQ-relevant results."""
     session = _get_session(session_id)
     season = _require_season(session)
@@ -3262,7 +3266,7 @@ def dq_advance_week(session_id: str):
 
     dq_boosts = mgr.get_all_team_boosts()
     games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts,
-                                  use_fast_sim=True)
+                                  use_fast_sim=req.fast_sim)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -3273,6 +3277,7 @@ def dq_advance_week(session_id: str):
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
+        "engine": "fast_sim" if req.fast_sim else "full",
     }
 
 

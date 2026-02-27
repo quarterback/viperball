@@ -133,6 +133,15 @@ class UserState:
     def dq_current_week(self, value: int):
         self._store["dq_current_week"] = value
 
+    @property
+    def full_engine(self) -> bool:
+        """When True, use full game engine instead of fast sim for CPU games."""
+        return self._store.get("full_engine", False)
+
+    @full_engine.setter
+    def full_engine(self, value: bool):
+        self._store["full_engine"] = value
+
     def clear_session(self):
         """Reset all session-related state."""
         self.session_id = None
