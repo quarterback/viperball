@@ -65,9 +65,21 @@ from engine.db import (
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 
-# Mount the stats site (read-only HTML stats browser)
+# Mount the stats site as a sub-application so its Mount entry takes
+# precedence over NiceGUI's catch-all Mount("").  With include_router the
+# individual APIRoutes were checked first but /stats (no trailing slash)
+# fell through to NiceGUI before the redirect-slashes logic could fire.
 from stats_site.router import router as stats_router
-app.include_router(stats_router)
+from fastapi.responses import RedirectResponse
+
+# Redirect /stats → /stats/ (this APIRoute is checked before the Mount below)
+@app.get("/stats", include_in_schema=False)
+def _stats_redirect():
+    return RedirectResponse("/stats/", status_code=301)
+
+_stats_app = FastAPI()
+_stats_app.include_router(stats_router)
+app.mount("/stats", _stats_app)
 
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 

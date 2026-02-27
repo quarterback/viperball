@@ -7,10 +7,10 @@ All data comes from the in-memory sessions/pro_sessions/FIV state — no extra H
 
 import os
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
-router = APIRouter(prefix="/stats")
+router = APIRouter()
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
