@@ -214,8 +214,15 @@
     <td><a href="/stats/college/{{ session_id }}/team/{{ opponent }}">{{ opponent }}</a></td>
     <td>
       {% if g.completed %}
+      {% if g.has_full_result %}
+      <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}" style="text-decoration:none;">
+        <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
+        {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
+      </a>
+      {% else %}
       <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
       {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
+      {% endif %}
       {% else %}
       <span style="color:var(--fg-dim)">&mdash;</span>
       {% endif %}
