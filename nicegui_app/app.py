@@ -82,6 +82,7 @@ def _load_shared_data() -> dict:
 NAV_SECTIONS = [
     ("Play", "sports_football"),
     ("Pro Leagues", "stadium"),
+    ("International", "public"),
     ("League", "leaderboard"),
     ("My Team", "groups"),
     ("Export", "download"),
@@ -127,6 +128,12 @@ def index():
                         await render_pro_leagues_section(state, shared)
                     except ImportError:
                         ui.label("Pro Leagues module not yet available.").classes("text-gray-400 italic")
+                elif name == "International":
+                    try:
+                        from nicegui_app.pages.international import render_international_section
+                        await render_international_section(state, shared)
+                    except ImportError:
+                        ui.label("International module not yet available.").classes("text-gray-400 italic")
                 elif name == "League":
                     from nicegui_app.pages.league import render_league_section
                     await render_league_section(state, shared)

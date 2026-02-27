@@ -3383,3 +3383,404 @@ def pro_league_active():
 def pro_league_status(league: str, session_id: str):
     season = _get_pro_session(league, session_id)
     return season.get_status()
+
+
+# ═══════════════════════════════════════════════════════════════
+# FIV — INTERNATIONAL VIPERBALL
+# ═══════════════════════════════════════════════════════════════
+
+from engine.fiv import (
+    create_fiv_cycle, run_continental_phase, run_playoff_phase,
+    run_world_cup_phase, run_full_cycle,
+    save_fiv_cycle, save_fiv_rankings, load_fiv_rankings,
+    load_fiv_cycle, list_fiv_cycles, find_match_in_cycle,
+    FIVRankings,
+)
+
+# In-memory active FIV cycle
+_fiv_active_cycle = None
+_fiv_active_cycle_data = None
+
+
+class FIVCycleRequest(BaseModel):
+    host_nation: Optional[str] = None
+    seed: Optional[int] = None
+    cvl_session_id: Optional[str] = None
+
+
+@app.post("/api/fiv/cycle/new")
+def fiv_new_cycle(req: FIVCycleRequest):
+    """Start a new FIV cycle (optionally linked to a CVL season)."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    # Load existing rankings if available
+    existing_rankings = load_fiv_rankings()
+
+    # Determine cycle number
+    existing_cycles = list_fiv_cycles()
+    cycle_number = len(existing_cycles) + 1
+
+    # Pull CVL players from a completed college season if one exists
+    cvl_players = None
+    if req.cvl_session_id and req.cvl_session_id in sessions:
+        session = sessions[req.cvl_session_id]
+        season = session.get("season")
+        if season and hasattr(season, "teams"):
+            cvl_players = []
+            for team_name, team in season.teams.items():
+                for p in team.players:
+                    # Tag each player with their college team for cvl_source
+                    p._team_name = team_name
+                    cvl_players.append(p)
+    else:
+        # Auto-detect: scan all sessions for a completed college season
+        for sid, session in sessions.items():
+            season = session.get("season")
+            if season and hasattr(season, "teams") and hasattr(season, "champion"):
+                cvl_players = []
+                for team_name, team in season.teams.items():
+                    for p in team.players:
+                        p._team_name = team_name
+                        cvl_players.append(p)
+                if cvl_players:
+                    break
+
+    cycle = create_fiv_cycle(
+        cycle_number=cycle_number,
+        host_nation=req.host_nation,
+        cvl_players=cvl_players,
+        existing_rankings=existing_rankings,
+        seed=req.seed,
+    )
+
+    _fiv_active_cycle = cycle
+    save_fiv_cycle(cycle)
+    _fiv_active_cycle_data = cycle.to_dict()
+
+    return {
+        "cycle_number": cycle.cycle_number,
+        "host_nation": cycle.host_nation,
+        "phase": cycle.phase,
+        "team_count": len(cycle.national_teams),
+        "confederations": list(cycle.confederations_data.keys()),
+        "cvl_linked": cvl_players is not None,
+        "cvl_player_count": len(cvl_players) if cvl_players else 0,
+    }
+
+
+@app.get("/api/fiv/cycle/active")
+def fiv_active_cycle():
+    """Get the current active FIV cycle state."""
+    global _fiv_active_cycle_data
+    if _fiv_active_cycle_data:
+        return _fiv_active_cycle_data
+
+    data = load_fiv_cycle()
+    if data is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+    _fiv_active_cycle_data = data
+    return data
+
+
+@app.get("/api/fiv/rankings")
+def fiv_rankings():
+    """Get current FIV World Rankings."""
+    rankings = load_fiv_rankings()
+    if rankings is None:
+        raise HTTPException(status_code=404, detail="No rankings available")
+    ranked = rankings.get_ranked_list()
+    return {
+        "rankings": [{"rank": r, "code": c, "rating": round(rt, 1)} for r, c, rt in ranked],
+        "total": len(ranked),
+    }
+
+
+@app.post("/api/fiv/continental/{conf}/sim-all")
+def fiv_sim_continental(conf: str):
+    """Sim remaining games in a continental championship."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    if _fiv_active_cycle is None:
+        data = load_fiv_cycle()
+        if data is None:
+            raise HTTPException(status_code=404, detail="No active FIV cycle")
+        raise HTTPException(status_code=400, detail="Cycle must be loaded in memory. Start a new cycle first.")
+
+    if conf not in _fiv_active_cycle.confederations_data:
+        raise HTTPException(status_code=404, detail=f"Confederation '{conf}' not found")
+
+    from engine.fiv import run_continental_championship
+    cc = _fiv_active_cycle.confederations_data[conf]
+    run_continental_championship(cc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+
+    _fiv_active_cycle.phase = "continental"
+    save_fiv_cycle(_fiv_active_cycle)
+    _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
+
+    return {
+        "confederation": conf,
+        "champion": cc.champion,
+        "qualifiers": cc.qualifiers,
+        "phase": cc.phase,
+        "total_matches": len(cc.all_results),
+    }
+
+
+@app.post("/api/fiv/continental/sim-all")
+def fiv_sim_all_continental():
+    """Sim all 5 continental championships."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+
+    run_continental_phase(_fiv_active_cycle)
+    save_fiv_cycle(_fiv_active_cycle)
+    _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
+
+    results = {}
+    for conf_id, cc in _fiv_active_cycle.confederations_data.items():
+        results[conf_id] = {
+            "champion": cc.champion,
+            "qualifiers": cc.qualifiers,
+            "total_matches": len(cc.all_results),
+        }
+
+    return {"confederations": results, "phase": _fiv_active_cycle.phase}
+
+
+@app.get("/api/fiv/continental/{conf}/standings")
+def fiv_continental_standings(conf: str):
+    """Get group tables and results for a continental championship."""
+    data = _get_fiv_cycle_data()
+    cc = data.get("confederations_data", {}).get(conf)
+    if not cc:
+        raise HTTPException(status_code=404, detail=f"Confederation '{conf}' not found")
+    return cc
+
+
+@app.get("/api/fiv/continental/{conf}/bracket")
+def fiv_continental_bracket(conf: str):
+    """Get knockout bracket for a continental championship."""
+    data = _get_fiv_cycle_data()
+    cc = data.get("confederations_data", {}).get(conf)
+    if not cc:
+        raise HTTPException(status_code=404, detail=f"Confederation '{conf}' not found")
+    return {"knockout_rounds": cc.get("knockout_rounds", []), "champion": cc.get("champion")}
+
+
+@app.get("/api/fiv/continental/{conf}/game/{match_id}")
+def fiv_continental_game(conf: str, match_id: str):
+    """Get full box score for a continental championship match."""
+    data = _get_fiv_cycle_data()
+    result = find_match_in_cycle(data, match_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Match '{match_id}' not found")
+    return result
+
+
+@app.post("/api/fiv/playoff/sim-all")
+def fiv_sim_playoff():
+    """Sim the cross-confederation playoff."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+
+    run_playoff_phase(_fiv_active_cycle)
+    save_fiv_cycle(_fiv_active_cycle)
+    _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
+
+    return {
+        "qualifiers": _fiv_active_cycle.playoff.qualifiers if _fiv_active_cycle.playoff else [],
+        "phase": _fiv_active_cycle.phase,
+    }
+
+
+@app.post("/api/fiv/worldcup/draw")
+def fiv_world_cup_draw():
+    """Generate World Cup group draw."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+
+    from engine.fiv import create_world_cup, draw_world_cup_groups
+
+    continental_qualifiers = {}
+    for conf_id, cc in _fiv_active_cycle.confederations_data.items():
+        continental_qualifiers[conf_id] = cc.qualifiers
+
+    playoff_qualifiers = _fiv_active_cycle.playoff.qualifiers if _fiv_active_cycle.playoff else []
+
+    wc = create_world_cup(
+        continental_qualifiers, playoff_qualifiers,
+        _fiv_active_cycle.host_nation or "USA",
+        _fiv_active_cycle.rankings,
+    )
+    draw_world_cup_groups(wc, _fiv_active_cycle.national_teams)
+    _fiv_active_cycle.world_cup = wc
+
+    save_fiv_cycle(_fiv_active_cycle)
+    _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
+
+    return {
+        "teams": wc.teams,
+        "seed_pots": wc.seed_pots,
+        "groups": [g.to_dict() for g in wc.groups],
+    }
+
+
+@app.post("/api/fiv/worldcup/sim-stage")
+def fiv_sim_world_cup_stage():
+    """Sim the entire current World Cup stage (groups or knockout)."""
+    global _fiv_active_cycle, _fiv_active_cycle_data
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+
+    wc = _fiv_active_cycle.world_cup
+    if wc is None:
+        raise HTTPException(status_code=400, detail="World Cup not yet created. Run draw first.")
+
+    from engine.fiv import run_world_cup_group_stage, run_world_cup_knockout
+
+    if wc.phase in ("draw", "not_started"):
+        run_world_cup_group_stage(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+        _fiv_active_cycle.phase = "wc_groups"
+    elif wc.phase == "groups":
+        run_world_cup_knockout(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+        _fiv_active_cycle.phase = "completed"
+        if _fiv_active_cycle.rankings:
+            _fiv_active_cycle.rankings.history.append({
+                "cycle": _fiv_active_cycle.cycle_number,
+                "snapshot": _fiv_active_cycle.rankings.snapshot(),
+                "champion": wc.champion,
+            })
+            save_fiv_rankings(_fiv_active_cycle.rankings)
+
+    save_fiv_cycle(_fiv_active_cycle)
+    _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
+
+    return {
+        "phase": wc.phase,
+        "champion": wc.champion,
+        "total_matches": len(wc.all_results),
+    }
+
+
+@app.get("/api/fiv/worldcup/groups")
+def fiv_world_cup_groups():
+    """Get World Cup group tables and results."""
+    data = _get_fiv_cycle_data()
+    wc = data.get("world_cup")
+    if not wc:
+        raise HTTPException(status_code=404, detail="No World Cup data")
+    return {"groups": wc.get("groups", []), "phase": wc.get("phase")}
+
+
+@app.get("/api/fiv/worldcup/bracket")
+def fiv_world_cup_bracket():
+    """Get World Cup knockout bracket."""
+    data = _get_fiv_cycle_data()
+    wc = data.get("world_cup")
+    if not wc:
+        raise HTTPException(status_code=404, detail="No World Cup data")
+    return {
+        "knockout_rounds": wc.get("knockout_rounds", []),
+        "champion": wc.get("champion"),
+        "third_place": wc.get("third_place"),
+    }
+
+
+@app.get("/api/fiv/worldcup/game/{match_id}")
+def fiv_world_cup_game(match_id: str):
+    """Get full box score for a World Cup match."""
+    data = _get_fiv_cycle_data()
+    result = find_match_in_cycle(data, match_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Match '{match_id}' not found")
+    return result
+
+
+@app.get("/api/fiv/worldcup/stats")
+def fiv_world_cup_stats():
+    """Get World Cup tournament stat leaders."""
+    global _fiv_active_cycle
+
+    data = _get_fiv_cycle_data()
+    wc = data.get("world_cup")
+    if not wc:
+        raise HTTPException(status_code=404, detail="No World Cup data")
+
+    # Compute full stat leaders from the live cycle object (has MatchResult objs)
+    leaders = None
+    if _fiv_active_cycle and _fiv_active_cycle.world_cup:
+        from engine.fiv import compute_tournament_stat_leaders
+        leaders = compute_tournament_stat_leaders(_fiv_active_cycle.world_cup.all_results)
+
+    return {
+        "golden_boot": wc.get("golden_boot"),
+        "mvp": wc.get("mvp"),
+        "leaders": leaders,
+    }
+
+
+@app.get("/api/fiv/continental/{conf}/stats")
+def fiv_continental_stats(conf: str):
+    """Get tournament stat leaders for a continental championship."""
+    global _fiv_active_cycle
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle in memory")
+
+    cc = _fiv_active_cycle.confederations_data.get(conf)
+    if not cc:
+        raise HTTPException(status_code=404, detail=f"Confederation '{conf}' not found")
+
+    from engine.fiv import compute_tournament_stat_leaders
+    leaders = compute_tournament_stat_leaders(cc.all_results)
+    return {
+        "confederation": conf,
+        "champion": cc.champion,
+        "leaders": leaders,
+    }
+
+
+@app.get("/api/fiv/match/{match_id}")
+def fiv_match_detail(match_id: str):
+    """Get full match detail (box score) for any FIV match by ID."""
+    data = _get_fiv_cycle_data()
+    result = find_match_in_cycle(data, match_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Match '{match_id}' not found")
+    return result
+
+
+@app.get("/api/fiv/team/{nation_code}")
+def fiv_team_detail(nation_code: str):
+    """Get national team roster and stats."""
+    data = _get_fiv_cycle_data()
+    teams = data.get("national_teams", {})
+    if nation_code not in teams:
+        raise HTTPException(status_code=404, detail=f"Nation '{nation_code}' not found")
+    return teams[nation_code]
+
+
+@app.get("/api/fiv/cycles")
+def fiv_list_cycles():
+    """List all completed FIV cycles."""
+    cycles = list_fiv_cycles()
+    return {"cycles": cycles}
+
+
+def _get_fiv_cycle_data() -> dict:
+    """Get active FIV cycle data (from memory or DB)."""
+    global _fiv_active_cycle_data
+    if _fiv_active_cycle_data:
+        return _fiv_active_cycle_data
+    data = load_fiv_cycle()
+    if data is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle")
+    _fiv_active_cycle_data = data
+    return data
