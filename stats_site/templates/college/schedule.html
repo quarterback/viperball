@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Schedule — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Schedule
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>SCHEDULE &amp; RESULTS</h1>
+  <div class="subtitle">{{ season_name }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule" class="active">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+{# Week filter #}
+<div style="margin-bottom: 12px; font-size: 11px;">
+  <strong>Week:</strong>
+  <a href="/stats/college/{{ session_id }}/schedule" {% if selected_week == 0 %}class="active" style="color:var(--accent)"{% endif %}>All</a>
+  {% for w in weeks %}
+  &middot; <a href="/stats/college/{{ session_id }}/schedule?week={{ w }}" {% if selected_week == w %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ w }}</a>
+  {% endfor %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="num">Wk</th>
+      <th>Away</th>
+      <th class="num">Score</th>
+      <th></th>
+      <th class="num">Score</th>
+      <th>Home</th>
+      <th>Tags</th>
+      <th>Box</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for g in games %}
+  <tr>
+    <td class="num">{{ g.week }}</td>
+    <td>
+      <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+    </td>
+    <td class="num {% if g.completed and g.away_score is not none and g.away_score > g.home_score %}score-win{% elif g.completed %}score-loss{% endif %}">
+      {% if g.completed %}{{ g.away_score }}{% else %}&mdash;{% endif %}
+    </td>
+    <td style="color:var(--fg-dim)">@</td>
+    <td class="num {% if g.completed and g.home_score is not none and g.home_score > g.away_score %}score-win{% elif g.completed %}score-loss{% endif %}">
+      {% if g.completed %}{{ g.home_score }}{% else %}&mdash;{% endif %}
+    </td>
+    <td>
+      <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+    </td>
+    <td>
+      {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+      {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+    </td>
+    <td>
+      {% if g.completed and g.has_full_result %}
+      <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}">Box</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

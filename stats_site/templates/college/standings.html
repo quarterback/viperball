@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Standings — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Standings
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>STANDINGS</h1>
+  <div class="subtitle">{{ season_name }} &middot; {{ standings|length }} teams</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings" class="active">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+{# ── Overall Standings ── #}
+<h2>Overall Standings</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>Conference</th>
+      <th>W-L</th><th>Conf</th>
+      <th class="num">PF</th><th class="num">PA</th><th class="num">Diff</th>
+      <th class="num">Rating</th><th class="num">PPD</th>
+      <th class="num">Conv%</th><th class="num">Lat%</th>
+      <th class="num">Expl</th><th class="num">TO+/-</th>
+      <th>Off</th><th>Def</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td>{{ s.conference }}</td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span></td>
+    <td class="num">{{ s.points_for }}</td>
+    <td class="num">{{ s.points_against }}</td>
+    <td class="num {% if s.point_differential > 0 %}stat-good{% elif s.point_differential < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.point_differential) }}</td>
+    <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
+    <td class="num">{{ s.avg_ppd }}</td>
+    <td class="num">{{ s.avg_conversion_pct }}%</td>
+    <td class="num">{{ s.avg_lateral_pct }}%</td>
+    <td class="num">{{ s.avg_explosive }}</td>
+    <td class="num {% if s.avg_to_margin > 0 %}stat-good{% elif s.avg_to_margin < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.avg_to_margin) }}</td>
+    <td>{{ s.offense_style }}</td>
+    <td>{{ s.defense_style }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# ── Conference Standings ── #}
+{% for conf_name, conf_standings in conferences.items()|sort %}
+<h2>{{ conf_name }}</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>Conf</th><th>Overall</th>
+      <th class="num">PF</th><th class="num">PA</th>
+      <th class="num">Rating</th><th class="num">PPD</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in conf_standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td class="record"><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span></td>
+    <td><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td class="num">{{ s.points_for }}</td>
+    <td class="num">{{ s.points_against }}</td>
+    <td class="num">{{ s.avg_team_rating }}</td>
+    <td class="num">{{ s.avg_ppd }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+{% endblock %}

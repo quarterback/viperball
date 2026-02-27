@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Viperball Stats{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>VIPERBALL STATS</h1>
+  <div class="subtitle">Scores, standings, box scores, player stats &mdash; all leagues</div>
+</div>
+
+{% if college_sessions or pro_sessions or fiv_data %}
+
+<div class="grid-3">
+
+  {# ── College ── #}
+  <div>
+    <h2>College (CVL)</h2>
+    {% if college_sessions %}
+    <table>
+      <thead><tr><th>Season</th><th class="num">Teams</th><th class="num">GP</th><th>Champion</th></tr></thead>
+      <tbody>
+      {% for s in college_sessions %}
+      <tr>
+        <td><a href="/stats/college/{{ s.session_id }}/">{% if s.is_dynasty %}{{ s.dynasty_name }} ({{ s.dynasty_year }}){% else %}{{ s.name }}{% endif %}</a></td>
+        <td class="num">{{ s.team_count }}</td>
+        <td class="num">{{ s.games_played }}/{{ s.total_games }}</td>
+        <td>{% if s.champion %}<span class="stat-elite">{{ s.champion }}</span>{% else %}&mdash;{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No active college seasons. Start one from the main app.</p>
+    {% endif %}
+  </div>
+
+  {# ── Pro ── #}
+  <div>
+    <h2>Pro Leagues</h2>
+    {% if pro_sessions %}
+    <table>
+      <thead><tr><th>League</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for s in pro_sessions %}
+      <tr>
+        <td><a href="/stats/pro/{{ s.league_id }}/{{ s.key.split('_')[1] }}/">{{ s.league_name }}</a></td>
+        <td>{{ s.status.get('phase', 'active') | title }} &middot; Wk {{ s.status.get('current_week', '?') }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No active pro leagues.</p>
+    {% endif %}
+  </div>
+
+  {# ── International ── #}
+  <div>
+    <h2>International (FIV)</h2>
+    {% if fiv_data %}
+    <table>
+      <thead><tr><th>Cycle</th><th>Phase</th><th>Host</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><a href="/stats/international/">Cycle {{ fiv_data.get('cycle_number', '?') }}</a></td>
+        <td>{{ fiv_data.get('phase', 'unknown') | replace('_', ' ') | title }}</td>
+        <td>{{ fiv_data.get('host_nation', '?') }}</td>
+      </tr>
+      </tbody>
+    </table>
+    {% if fiv_rankings %}
+    <h3 style="margin-top: 8px;">Top 10 Nations</h3>
+    <table>
+      <thead><tr><th class="num">#</th><th>Nation</th><th class="num">Rating</th></tr></thead>
+      <tbody>
+      {% for r, code, rating in fiv_rankings.get_ranked_list()[:10] %}
+      <tr>
+        <td class="num rank">{{ r }}</td>
+        <td><a href="/stats/international/team/{{ code }}">{{ code }}</a></td>
+        <td class="num">{{ "%.1f"|format(rating) }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p class="empty">No active FIV cycle.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{% else %}
+<div class="empty">
+  <p>No active simulations found.</p>
+  <p style="margin-top: 8px;">Start a season, pro league, or FIV cycle from the main app to see stats here.</p>
+</div>
+{% endif %}
+
+{% endblock %}

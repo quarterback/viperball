@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}International (FIV) — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>International
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>FIV — INTERNATIONAL VIPERBALL</h1>
+  <div class="subtitle">Continental Championships &middot; World Cup &middot; National Team Rankings</div>
+</div>
+
+{% if fiv_data %}
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">Cycle</div>
+    <div class="value accent">{{ fiv_data.get('cycle_number', '?') }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Phase</div>
+    <div class="value" style="font-size:13px">{{ fiv_data.get('phase', '?') | replace('_', ' ') | title }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Host</div>
+    <div class="value" style="font-size:13px">{{ fiv_data.get('host_nation', '?') }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Nations</div>
+    <div class="value">{{ fiv_data.get('national_teams', {}) | length }}</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/international/" class="active">Overview</a>
+  <a href="/stats/international/rankings">Rankings</a>
+  <a href="/stats/international/worldcup">World Cup</a>
+</div>
+
+{# ── Confederations ── #}
+{% set confs = fiv_data.get('confederations_data', {}) %}
+{% if confs %}
+<h2>Continental Championships</h2>
+<table>
+  <thead><tr><th>Confederation</th><th>Champion</th><th>Qualifiers</th><th class="num">Matches</th><th>Phase</th><th></th></tr></thead>
+  <tbody>
+  {% for conf_id, cc in confs.items()|sort %}
+  <tr>
+    <td style="font-weight:bold">{{ conf_id | upper }}</td>
+    <td>
+      {% if cc.get('champion') %}
+      <span class="stat-elite"><a href="/stats/international/team/{{ cc.champion }}">{{ cc.champion }}</a></span>
+      {% else %}&mdash;{% endif %}
+    </td>
+    <td>
+      {% if cc.get('qualifiers') %}
+      {% for q in cc.qualifiers %}<a href="/stats/international/team/{{ q }}">{{ q }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      {% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">{{ cc.get('all_results', []) | length }}</td>
+    <td>{{ cc.get('phase', '?') | replace('_', ' ') | title }}</td>
+    <td><a href="/stats/international/confederation/{{ conf_id }}">Details &rarr;</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Top Rankings ── #}
+{% if rankings %}
+<h2>FIV World Rankings (Top 20)</h2>
+<table>
+  <thead><tr><th class="num">#</th><th>Nation</th><th class="num">Rating</th></tr></thead>
+  <tbody>
+  {% for rank, code, rating in rankings[:20] %}
+  <tr>
+    <td class="num rank">{{ rank }}</td>
+    <td><a href="/stats/international/team/{{ code }}">{{ code }}</a></td>
+    <td class="num {% if rank <= 5 %}stat-elite{% elif rank <= 15 %}stat-good{% endif %}">{{ "%.1f"|format(rating) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div style="margin-top:4px;font-size:11px;"><a href="/stats/international/rankings">Full rankings &rarr;</a></div>
+{% endif %}
+
+{% else %}
+<div class="empty">No active FIV cycle. Start one from the main app.</div>
+{% endif %}
+{% endblock %}

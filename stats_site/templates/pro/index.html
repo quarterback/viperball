@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Pro Leagues — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Pro Leagues
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>PRO LEAGUES</h1>
+  <div class="subtitle">NVL, Eurasian League, AfroLeague, Pacific League, LigaAmerica</div>
+</div>
+
+{% if sessions %}
+<table>
+  <thead>
+    <tr><th>League</th><th>Phase</th><th class="num">Week</th><th class="num">Teams</th><th>Champion</th><th>Links</th></tr>
+  </thead>
+  <tbody>
+  {% for s in sessions %}
+  {% set parts = s.key.split('_') %}
+  {% set league_id = parts[0] %}
+  {% set sess_id = parts[1] if parts|length > 1 else '' %}
+  <tr>
+    <td><a href="/stats/pro/{{ league_id }}/{{ sess_id }}/">{{ s.league_name }}</a></td>
+    <td>{{ s.status.get('phase', '?') | replace('_', ' ') | title }}</td>
+    <td class="num">{{ s.status.get('current_week', '?') }}</td>
+    <td class="num">{{ s.status.get('team_count', '?') }}</td>
+    <td>{% if s.status.get('champion') %}<span class="stat-elite">{{ s.status.champion }}</span>{% else %}&mdash;{% endif %}</td>
+    <td>
+      <a href="/stats/pro/{{ league_id }}/{{ sess_id }}/">Standings</a> &middot;
+      <a href="/stats/pro/{{ league_id }}/{{ sess_id }}/schedule">Schedule</a> &middot;
+      <a href="/stats/pro/{{ league_id }}/{{ sess_id }}/stats">Stats</a>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No active pro leagues. Start one from the main app.</div>
+{% endif %}
+{% endblock %}

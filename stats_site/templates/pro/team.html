@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ team.get('team_name', team_key) }} — {{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/">{{ league_name }}</a><span class="sep">/</span>{{ team.get('team_name', team_key) }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team.get('team_name', team_key) }}</h1>
+  <div class="subtitle">
+    {{ league_name }}
+    {% if team.get('division') %} &middot; {{ team.division }}{% endif %}
+    {% if team.get('record') %} &middot; {{ team.record.get('wins', 0) }}-{{ team.record.get('losses', 0) }}{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Stats</a>
+</div>
+
+{# ── Record / Metrics ── #}
+{% if team.get('record') %}
+{% set rec = team.record %}
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ rec.get('wins',0) }}</span>-<span class="l">{{ rec.get('losses',0) }}</span></div></div>
+  <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for',0) }}</div></div>
+  <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against',0) }}</div></div>
+  <div class="metric"><div class="label">Division</div><div class="value" style="font-size:13px">{{ team.get('division','—') }}</div></div>
+</div>
+{% endif %}
+
+{# ── Roster ── #}
+{% set roster = team.get('roster', team.get('players', [])) %}
+{% if roster %}
+<h2>Roster ({{ roster|length }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
+      <th class="num">AGI</th><th class="num">KCK</th><th class="num">LAT</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in roster|sort(attribute='overall', reverse=true) if p is mapping %}
+  <tr>
+    <td class="num">{{ p.get('number', '') }}</td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ p.get('position', p.get('tag', '?')) }}</span></td>
+    <td class="num {% if p.get('overall', 0) >= 85 %}stat-elite{% elif p.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ p.get('overall', '?') }}</td>
+    <td class="num">{{ p.get('speed', '') }}</td>
+    <td class="num">{{ p.get('power', '') }}</td>
+    <td class="num">{{ p.get('agility', '') }}</td>
+    <td class="num">{{ p.get('kicking', '') }}</td>
+    <td class="num">{{ p.get('lateral_skill', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Schedule ── #}
+{% set games = team.get('schedule', team.get('games', [])) %}
+{% if games %}
+<h2>Schedule</h2>
+<table>
+  <thead><tr><th class="num">Wk</th><th>Opponent</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for g in games %}
+  <tr>
+    <td class="num">{{ g.get('week', '?') }}</td>
+    <td>{{ g.get('opponent', g.get('away_team', '?')) }}</td>
+    <td>
+      {% if g.get('result') %}{{ g.result }}{% elif g.get('score') %}{{ g.score }}{% else %}&mdash;{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endblock %}

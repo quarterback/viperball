@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ game.away_team }} @ {{ game.home_team }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/schedule?week={{ week }}">Week {{ week }}</a><span class="sep">/</span>Box Score
+</div></div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Scoreboard ── #}
+<div class="box-score-header">
+  <div class="box-team">
+    <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.away_team }}">{{ game.away_team }}</a></div>
+    <div class="record">Away</div>
+    <div class="box-score-final {% if game.away_score > game.home_score %}score-win{% else %}score-loss{% endif %}">{{ game.away_score }}</div>
+  </div>
+  <div class="box-score-vs">
+    <div>FINAL</div>
+    <div>Week {{ week }}</div>
+    {% if game.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+    {% if game.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+  </div>
+  <div class="box-team">
+    <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.home_team }}">{{ game.home_team }}</a></div>
+    <div class="record">Home</div>
+    <div class="box-score-final {% if game.home_score > game.away_score %}score-win{% else %}score-loss{% endif %}">{{ game.home_score }}</div>
+  </div>
+</div>
+
+{% if game.full_result %}
+{% set fr = game.full_result %}
+{% set stats = fr.get('stats', {}) %}
+{% set hs = stats.get('home', {}) %}
+{% set as_ = stats.get('away', {}) %}
+
+{# ── Team Stats Comparison ── #}
+<h2>Team Stats</h2>
+<table>
+  <thead>
+    <tr><th>Stat</th><th class="num">{{ game.away_team[:20] }}</th><th class="num">{{ game.home_team[:20] }}</th></tr>
+  </thead>
+  <tbody>
+  {% set stat_rows = [
+    ('Total Yards', 'total_yards'),
+    ('Total Plays', 'total_plays'),
+    ('Yards/Play', 'yards_per_play'),
+    ('Touchdowns', 'touchdowns'),
+    ('Drop Kicks Made', 'drop_kicks_made'),
+    ('Place Kicks Made', 'place_kicks_made'),
+    ('Lateral Chains', 'lateral_chains'),
+    ('Lateral Efficiency', 'lateral_efficiency'),
+    ('Fumbles Lost', 'fumbles_lost'),
+    ('Turnovers on Downs', 'turnovers_on_downs'),
+    ('Viper Efficiency', 'viper_efficiency'),
+  ] %}
+  {% for label, key in stat_rows %}
+  <tr>
+    <td>{{ label }}</td>
+    <td class="num">{% if as_.get(key) is not none %}{{ as_[key] }}{% if 'efficiency' in key or 'pct' in key %}%{% endif %}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if hs.get(key) is not none %}{{ hs[key] }}{% if 'efficiency' in key or 'pct' in key %}%{% endif %}{% else %}&mdash;{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# ── Player Stats ── #}
+{% set ps = fr.get('player_stats', {}) %}
+{% for side, side_label, team_name_display in [('away', 'Away', game.away_team), ('home', 'Home', game.home_team)] %}
+{% set side_players = ps.get(side, []) %}
+{% if side_players %}
+<h2>{{ team_name_display }} — Player Stats</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Tag</th><th>Name</th>
+      <th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th>
+      <th class="num">FUM</th><th class="num">LAT</th>
+      <th class="num">KA</th><th class="num">KM</th>
+      <th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in side_players|sort(attribute='yards', reverse=true) if p.get('touches', 0) > 0 or p.get('tackles', 0) > 0 or p.get('yards', 0) > 0 %}
+  <tr>
+    <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num">{{ p.get('touches', 0) }}</td>
+    <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+    <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+    <td class="num">{{ p.get('laterals_thrown', 0) }}</td>
+    <td class="num">{{ p.get('kick_att', 0) }}</td>
+    <td class="num">{{ p.get('kick_made', 0) }}</td>
+    <td class="num">{{ p.get('tackles', 0) }}</td>
+    <td class="num">{{ p.get('tfl', 0) }}</td>
+    <td class="num">{{ p.get('sacks', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="empty">
+  {% if game.completed %}
+  Detailed box score data not available for this game.
+  {% else %}
+  This game has not been played yet.
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

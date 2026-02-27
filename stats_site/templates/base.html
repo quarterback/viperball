@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Viperball Stats{% endblock %}</title>
+<style>
+:root {
+  --bg: #0a0a0a;
+  --bg-alt: #111;
+  --fg: #c8c8c8;
+  --fg-dim: #666;
+  --fg-bright: #eee;
+  --accent: #ff6600;
+  --accent-dim: #cc5200;
+  --green: #33cc33;
+  --red: #cc3333;
+  --yellow: #cccc33;
+  --blue: #3399ff;
+  --cyan: #33cccc;
+  --border: #222;
+  --row-hover: #1a1a1a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Berkeley Mono", "IBM Plex Mono", "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; color: var(--fg-bright); }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 12px; }
+.wide { max-width: 1600px; }
+
+/* Top bar */
+.topbar {
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar .container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.topbar .brand {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.topbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.topbar nav a {
+  color: var(--fg-dim);
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.topbar nav a:hover { color: var(--fg-bright); background: var(--border); text-decoration: none; }
+.topbar nav a.active { color: var(--accent); background: var(--border); }
+
+/* Breadcrumb */
+.breadcrumb {
+  padding: 8px 0;
+  font-size: 11px;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--border);
+}
+.breadcrumb a { color: var(--fg-dim); }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb .sep { margin: 0 4px; }
+
+/* Page header */
+.page-header {
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.page-header h1 {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--fg-bright);
+  letter-spacing: 0.5px;
+}
+.page-header .subtitle {
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-top: 2px;
+}
+
+/* Section headers */
+h2 {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--fg-bright);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin: 16px 0 8px;
+}
+h3 {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--fg);
+  padding: 4px 0;
+}
+
+/* Tables — the core of the Bloomberg look */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: 16px;
+}
+thead th {
+  text-align: left;
+  padding: 4px 8px;
+  font-weight: bold;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  position: sticky;
+  top: 32px;
+  background: var(--bg);
+}
+thead th.num { text-align: right; }
+tbody td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--row-hover); }
+
+/* Rank column */
+td.rank {
+  color: var(--fg-dim);
+  text-align: right;
+  padding-right: 12px;
+  width: 30px;
+}
+
+/* Win/Loss coloring */
+.w { color: var(--green); }
+.l { color: var(--red); }
+.record { font-weight: bold; }
+
+/* Score display */
+.score-win { color: var(--fg-bright); font-weight: bold; }
+.score-loss { color: var(--fg-dim); }
+
+/* Stat highlights */
+.stat-good { color: var(--green); }
+.stat-bad { color: var(--red); }
+.stat-neutral { color: var(--fg); }
+.stat-elite { color: var(--yellow); font-weight: bold; }
+
+/* Change indicators */
+.change-up { color: var(--green); }
+.change-down { color: var(--red); }
+.change-none { color: var(--fg-dim); }
+
+/* Badges / tags */
+.tag {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--fg-dim);
+}
+.tag-conf { border-color: var(--blue); color: var(--blue); }
+.tag-rivalry { border-color: var(--red); color: var(--red); }
+.tag-playoff { border-color: var(--yellow); color: var(--yellow); }
+.tag-pos { border-color: var(--cyan); color: var(--cyan); }
+
+/* Grid layouts */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+/* Metric box */
+.metric {
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.metric .label {
+  font-size: 10px;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.metric .value {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--fg-bright);
+}
+.metric .value.accent { color: var(--accent); }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tabs a {
+  padding: 6px 12px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid transparent;
+}
+.tabs a:hover { color: var(--fg-bright); text-decoration: none; }
+.tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Box score specific */
+.box-score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+.box-team {
+  text-align: center;
+  flex: 1;
+}
+.box-team .name { font-size: 14px; font-weight: bold; color: var(--fg-bright); }
+.box-team .record { font-size: 11px; color: var(--fg-dim); }
+.box-score-vs {
+  font-size: 11px;
+  color: var(--fg-dim);
+  padding: 0 16px;
+}
+.box-score-final {
+  font-size: 24px;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty state */
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+/* Footer */
+.footer {
+  margin-top: 32px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--fg-dim);
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  table { font-size: 10px; }
+  thead th, tbody td { padding: 2px 4px; }
+  .topbar nav a { font-size: 10px; padding: 2px 4px; }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="container wide">
+    <a class="brand" href="/stats/">VIPERBALL</a>
+    <nav>
+      <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
+      <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
+      <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
+      <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>International</a>
+    </nav>
+  </div>
+</div>
+
+{% block breadcrumb %}{% endblock %}
+
+<div class="container wide">
+{% block content %}{% endblock %}
+</div>
+
+<div class="container">
+  <div class="footer">
+    VIPERBALL STATS &middot; Data refreshes with each simulation
+  </div>
+</div>
+</body>
+</html>

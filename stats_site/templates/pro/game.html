@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Box Score — {{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/">{{ league_name }}</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a><span class="sep">/</span>Week {{ week }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+
+{% set home = box.get('home_team', box.get('home', '?')) %}
+{% set away = box.get('away_team', box.get('away', '?')) %}
+{% set hs = box.get('home_score', box.get('final_score', {}).get('home', {}).get('score', 0)) %}
+{% set as_ = box.get('away_score', box.get('final_score', {}).get('away', {}).get('score', 0)) %}
+
+<div class="box-score-header">
+  <div class="box-team">
+    <div class="name"><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ away }}">{{ away }}</a></div>
+    <div class="record">Away</div>
+    <div class="box-score-final {% if as_ > hs %}score-win{% else %}score-loss{% endif %}">{{ as_ }}</div>
+  </div>
+  <div class="box-score-vs">
+    <div>FINAL</div>
+    <div>{{ league_name }} &middot; Wk {{ week }}</div>
+  </div>
+  <div class="box-team">
+    <div class="name"><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ home }}">{{ home }}</a></div>
+    <div class="record">Home</div>
+    <div class="box-score-final {% if hs > as_ %}score-win{% else %}score-loss{% endif %}">{{ hs }}</div>
+  </div>
+</div>
+
+{# ── Team Stats ── #}
+{% set stats = box.get('stats', {}) %}
+{% set hstats = stats.get('home', {}) %}
+{% set astats = stats.get('away', {}) %}
+{% if hstats or astats %}
+<h2>Team Stats</h2>
+<table>
+  <thead><tr><th>Stat</th><th class="num">{{ away[:20] }}</th><th class="num">{{ home[:20] }}</th></tr></thead>
+  <tbody>
+  {% set rows = [('Total Yards','total_yards'),('Total Plays','total_plays'),('Touchdowns','touchdowns'),('Drop Kicks','drop_kicks_made'),('Place Kicks','place_kicks_made'),('Fumbles Lost','fumbles_lost'),('Lateral Chains','lateral_chains')] %}
+  {% for label, key in rows %}
+  <tr>
+    <td>{{ label }}</td>
+    <td class="num">{{ astats.get(key, '—') }}</td>
+    <td class="num">{{ hstats.get(key, '—') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Player Stats ── #}
+{% set ps = box.get('player_stats', {}) %}
+{% for side, label in [('away', away), ('home', home)] %}
+{% set sp = ps.get(side, []) %}
+{% if sp %}
+<h2>{{ label }} — Player Stats</h2>
+<table>
+  <thead><tr><th>Tag</th><th>Name</th><th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th><th class="num">FUM</th><th class="num">KA</th><th class="num">KM</th><th class="num">TKL</th><th class="num">SCK</th></tr></thead>
+  <tbody>
+  {% for p in sp|sort(attribute='yards', reverse=true) if p.get('touches', 0) > 0 or p.get('tackles', 0) > 0 %}
+  <tr>
+    <td><span class="tag tag-pos">{{ p.get('tag', '?') }}</span></td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num">{{ p.get('touches', 0) }}</td>
+    <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% endif %}">{{ p.get('yards', 0) }}</td>
+    <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+    <td class="num">{{ p.get('kick_att', 0) }}</td>
+    <td class="num">{{ p.get('kick_made', 0) }}</td>
+    <td class="num">{{ p.get('tackles', 0) }}</td>
+    <td class="num">{{ p.get('sacks', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endfor %}
+
+{% if not stats and not ps %}
+<pre style="color:var(--fg-dim);font-size:11px;">{{ box | tojson(indent=2) }}</pre>
+{% endif %}
+
+{% endblock %}

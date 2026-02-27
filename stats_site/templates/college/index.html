@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}College Viperball — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>College
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>COLLEGE VIPERBALL (CVL)</h1>
+  <div class="subtitle">Active college seasons and dynasty modes</div>
+</div>
+
+{% if sessions %}
+<table>
+  <thead>
+    <tr>
+      <th>Season</th>
+      <th>Mode</th>
+      <th class="num">Teams</th>
+      <th class="num">Progress</th>
+      <th>Champion</th>
+      <th>Links</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in sessions %}
+  <tr>
+    <td><a href="/stats/college/{{ s.session_id }}/">{% if s.is_dynasty %}{{ s.dynasty_name }} ({{ s.dynasty_year }}){% else %}{{ s.name }}{% endif %}</a></td>
+    <td>{% if s.is_dynasty %}<span class="tag">DYNASTY</span>{% else %}<span class="tag">SEASON</span>{% endif %}</td>
+    <td class="num">{{ s.team_count }}</td>
+    <td class="num">{{ s.games_played }}/{{ s.total_games }}</td>
+    <td>{% if s.champion %}<span class="stat-elite">{{ s.champion }}</span>{% else %}&mdash;{% endif %}</td>
+    <td>
+      <a href="/stats/college/{{ s.session_id }}/standings">Standings</a> &middot;
+      <a href="/stats/college/{{ s.session_id }}/schedule">Schedule</a> &middot;
+      <a href="/stats/college/{{ s.session_id }}/polls">Polls</a> &middot;
+      <a href="/stats/college/{{ s.session_id }}/players">Players</a>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No active college seasons. Start one from the main app.</div>
+{% endif %}
+{% endblock %}

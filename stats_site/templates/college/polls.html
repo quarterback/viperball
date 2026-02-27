@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Polls — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Polls
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>CVL POLL</h1>
+  <div class="subtitle">{{ season_name }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls" class="active">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+{% if weeks %}
+<div style="margin-bottom: 12px; font-size: 11px;">
+  <strong>Week:</strong>
+  {% for w in weeks %}
+  {% if not loop.first %}&middot;{% endif %}
+  <a href="/stats/college/{{ session_id }}/polls?week={{ w }}" {% if selected_week == w %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ w }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for poll in polls %}
+<h2>Week {{ poll.week }} Rankings</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th>Record</th>
+      <th>Conference</th>
+      <th class="num">Poll Score</th>
+      <th class="num">Power Idx</th>
+      <th class="num">Quality W</th>
+      <th class="num">SOS</th>
+      <th class="num">+/-</th>
+      <th>Bid</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in poll.rankings %}
+  <tr>
+    <td class="num rank">{{ r.rank }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
+    <td class="record">{{ r.record }}</td>
+    <td>{{ r.conference }}</td>
+    <td class="num">{{ "%.1f"|format(r.poll_score) if r.poll_score else '—' }}</td>
+    <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
+    <td class="num">{{ r.quality_wins if r.quality_wins else 0 }}</td>
+    <td class="num">{{ r.sos_rank if r.sos_rank else '—' }}</td>
+    <td class="num {% if r.rank_change and r.rank_change > 0 %}change-up{% elif r.rank_change and r.rank_change < 0 %}change-down{% else %}change-none{% endif %}">
+      {% if r.rank_change and r.rank_change > 0 %}+{{ r.rank_change }}{% elif r.rank_change and r.rank_change < 0 %}{{ r.rank_change }}{% else %}—{% endif %}
+    </td>
+    <td>
+      {% if r.bid_type %}<span class="tag tag-playoff">{{ r.bid_type }}</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+{% if not polls %}
+<div class="empty">No polls generated yet. Play at least one week of games.</div>
+{% endif %}
+
+{% endblock %}

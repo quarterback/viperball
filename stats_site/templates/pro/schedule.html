@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Schedule — {{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/">{{ league_name }}</a><span class="sep">/</span>Schedule
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ league_name }} — SCHEDULE</h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule" class="active">Schedule</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Stats</a>
+</div>
+
+{% if schedule %}
+{% set weeks = schedule.get('weeks', schedule.get('schedule', [])) %}
+{% if weeks is mapping %}
+  {# weeks is a dict keyed by week number #}
+  {% for wk, games in weeks.items()|sort %}
+  <h2>Week {{ wk }}</h2>
+  <table>
+    <thead><tr><th>Away</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Home</th><th>Box</th></tr></thead>
+    <tbody>
+    {% for g in games %}
+    <tr>
+      <td>{{ g.get('away_team', g.get('away', '?')) }}</td>
+      <td class="num {% if g.get('away_score', 0) > g.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">
+        {% if g.get('completed', g.get('away_score') is not none) %}{{ g.get('away_score', 0) }}{% else %}&mdash;{% endif %}
+      </td>
+      <td style="color:var(--fg-dim)">@</td>
+      <td class="num {% if g.get('home_score', 0) > g.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">
+        {% if g.get('completed', g.get('home_score') is not none) %}{{ g.get('home_score', 0) }}{% else %}&mdash;{% endif %}
+      </td>
+      <td>{{ g.get('home_team', g.get('home', '?')) }}</td>
+      <td>
+        {% if g.get('matchup_key') or g.get('matchup') %}
+        <a href="/stats/pro/{{ league }}/{{ session_id }}/game/{{ wk }}/{{ g.get('matchup_key', g.get('matchup', '')) }}">Box</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+{% elif weeks is iterable and weeks is not string %}
+  {# weeks is a list #}
+  <table>
+    <thead><tr><th class="num">Wk</th><th>Away</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Home</th></tr></thead>
+    <tbody>
+    {% for g in weeks %}
+    <tr>
+      <td class="num">{{ g.get('week', '?') }}</td>
+      <td>{{ g.get('away_team', g.get('away', '?')) }}</td>
+      <td class="num">{% if g.get('away_score') is not none %}{{ g.away_score }}{% else %}&mdash;{% endif %}</td>
+      <td style="color:var(--fg-dim)">@</td>
+      <td class="num">{% if g.get('home_score') is not none %}{{ g.home_score }}{% else %}&mdash;{% endif %}</td>
+      <td>{{ g.get('home_team', g.get('home', '?')) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <pre style="color:var(--fg-dim);font-size:11px;">{{ schedule | tojson(indent=2) }}</pre>
+{% endif %}
+{% else %}
+<div class="empty">No schedule data available.</div>
+{% endif %}
+{% endblock %}

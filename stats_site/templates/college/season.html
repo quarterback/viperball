@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ season.name if season else 'Season' }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span>{{ season.name if season else 'Season' }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ season.name if season else 'Season' }}{% if dynasty %} &middot; {{ dynasty.dynasty_name }} ({{ dynasty.current_year }}){% endif %}</h1>
+  <div class="subtitle">
+    {{ standings|length }} teams &middot; {{ games_played }}/{{ total_games }} games played &middot; Week {{ current_week }}/{{ total_weeks }}
+    {% if champion %} &middot; <span class="stat-elite">Champion: {{ champion }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/" class="active">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+<div class="grid-2">
+
+  {# ── Rankings snapshot ── #}
+  <div>
+    {% if latest_poll %}
+    <h2>Latest Poll (Week {{ latest_poll.week }})</h2>
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Team</th><th>Record</th><th>Conf</th><th class="num">PWR</th><th class="num">+/-</th></tr>
+      </thead>
+      <tbody>
+      {% for r in latest_poll.rankings[:25] %}
+      <tr>
+        <td class="num rank">{{ r.rank }}</td>
+        <td><a href="/stats/college/{{ session_id }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
+        <td class="record">{{ r.record }}</td>
+        <td>{{ r.conference[:12] }}</td>
+        <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
+        <td class="num {% if r.rank_change and r.rank_change > 0 %}change-up{% elif r.rank_change and r.rank_change < 0 %}change-down{% else %}change-none{% endif %}">
+          {% if r.rank_change and r.rank_change > 0 %}+{{ r.rank_change }}{% elif r.rank_change and r.rank_change < 0 %}{{ r.rank_change }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/polls">Full poll &rarr;</a></div>
+    {% else %}
+    <h2>Rankings</h2>
+    <p class="empty">No polls generated yet.</p>
+    {% endif %}
+  </div>
+
+  {# ── Top standings ── #}
+  <div>
+    <h2>Standings (Top 25)</h2>
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">PPD</th><th class="num">Rating</th></tr>
+      </thead>
+      <tbody>
+      {% for s in standings[:25] %}
+      <tr>
+        <td class="num rank">{{ loop.index }}</td>
+        <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+        <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+        <td class="num">{{ s.points_for }}</td>
+        <td class="num">{{ s.points_against }}</td>
+        <td class="num">{{ s.avg_ppd }}</td>
+        <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/standings">Full standings &rarr;</a></div>
+  </div>
+
+</div>
+{% endblock %}

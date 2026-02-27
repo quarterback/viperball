@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ nation_code }} — FIV — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">International</a><span class="sep">/</span>{{ nation_code }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team.get('name', team.get('nation', {}).get('name', nation_code)) }}</h1>
+  <div class="subtitle">
+    {{ nation_code }}
+    {% if team.get('nation', {}).get('tier') %} &middot; {{ team.nation.tier | title }}{% endif %}
+    {% if team.get('nation', {}).get('confederation') %} &middot; {{ team.nation.confederation | upper }}{% endif %}
+    {% if team.get('rating') %} &middot; Rating: {{ team.rating }}{% endif %}
+  </div>
+</div>
+
+{# ── Team Info ── #}
+{% set nation = team.get('nation', {}) %}
+{% if nation %}
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">Code</div>
+    <div class="value accent">{{ nation_code }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Tier</div>
+    <div class="value" style="font-size:13px">{{ nation.get('tier', '?') | title }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Confederation</div>
+    <div class="value" style="font-size:13px">
+      {% if nation.get('confederation') %}
+      <a href="/stats/international/confederation/{{ nation.confederation }}" style="color:var(--fg-bright)">{{ nation.confederation | upper }}</a>
+      {% else %}?{% endif %}
+    </div>
+  </div>
+  <div class="metric">
+    <div class="label">Rating</div>
+    <div class="value">{{ team.get('rating', '?') }}</div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Roster ── #}
+{% set roster = team.get('roster', []) %}
+{% if roster %}
+<h2>Roster ({{ roster|length }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
+      <th class="num">AGI</th><th class="num">KCK</th>
+      <th class="num">Caps</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in roster|sort(attribute='overall', reverse=true) if p is mapping %}
+  {% set pl = p.get('player', p) %}
+  <tr>
+    <td class="num">{{ pl.get('number', '') }}</td>
+    <td>{{ pl.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ pl.get('position', '?')[:3] }}</span></td>
+    <td class="num {% if pl.get('overall', 0) >= 85 %}stat-elite{% elif pl.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ pl.get('overall', '?') }}</td>
+    <td class="num">{{ pl.get('speed', '') }}</td>
+    <td class="num">{{ pl.get('power', '') }}</td>
+    <td class="num">{{ pl.get('agility', '') }}</td>
+    <td class="num">{{ pl.get('kicking', '') }}</td>
+    <td class="num">{{ p.get('caps', 0) }}</td>
+    <td style="color:var(--fg-dim)">{{ p.get('cvl_source', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not roster and not nation %}
+<pre style="color:var(--fg-dim);font-size:11px;">{{ team | tojson(indent=2) }}</pre>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro</a><span class="sep">/</span>{{ league_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ league_name }}</h1>
+  <div class="subtitle">
+    {{ status.get('phase', '?') | replace('_', ' ') | title }}
+    &middot; Week {{ status.get('current_week', '?') }}
+    {% if status.get('champion') %} &middot; <span class="stat-elite">Champion: {{ status.champion }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/" class="active">Standings</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Stats</a>
+</div>
+
+{% if standings %}
+{# Group by division if available #}
+{% set divisions = standings.get('divisions', {}) %}
+{% if divisions %}
+  {% for div_name, div_teams in divisions.items() %}
+  <h2>{{ div_name }}</h2>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">Diff</th></tr>
+    </thead>
+    <tbody>
+    {% for t in div_teams %}
+    {% set tkey = t.get('team_key', t.get('team_name', '')) %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
+      <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+      <td class="num">{{ t.get('points_for', 0) }}</td>
+      <td class="num">{{ t.get('points_against', 0) }}</td>
+      <td class="num {% if (t.get('points_for', 0) - t.get('points_against', 0)) > 0 %}stat-good{% elif (t.get('points_for', 0) - t.get('points_against', 0)) < 0 %}stat-bad{% endif %}">
+        {{ "%+.1f"|format(t.get('points_for', 0) - t.get('points_against', 0)) }}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+{% elif standings.get('standings') %}
+  <h2>Overall</h2>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Team</th><th>Division</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th></tr>
+    </thead>
+    <tbody>
+    {% for t in standings.standings %}
+    {% set tkey = t.get('team_key', t.get('team_name', '')) %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
+      <td>{{ t.get('division', '') }}</td>
+      <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+      <td class="num">{{ t.get('points_for', 0) }}</td>
+      <td class="num">{{ t.get('points_against', 0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  {# Raw dict fallback — just dump it as a table #}
+  <h2>Standings</h2>
+  <pre style="color:var(--fg-dim);font-size:11px;">{{ standings | tojson(indent=2) }}</pre>
+{% endif %}
+{% else %}
+<div class="empty">No standings data available.</div>
+{% endif %}
+{% endblock %}

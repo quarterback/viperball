@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}FIV World Rankings — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">International</a><span class="sep">/</span>Rankings
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>FIV WORLD RANKINGS</h1>
+  <div class="subtitle">{{ rankings|length }} ranked nations</div>
+</div>
+
+{% if rankings %}
+<table>
+  <thead>
+    <tr><th class="num">#</th><th>Nation</th><th class="num">Rating</th><th>Tier</th></tr>
+  </thead>
+  <tbody>
+  {% for rank, code, rating in rankings %}
+  <tr>
+    <td class="num rank">{{ rank }}</td>
+    <td><a href="/stats/international/team/{{ code }}">{{ code }}</a></td>
+    <td class="num {% if rank <= 5 %}stat-elite{% elif rank <= 15 %}stat-good{% endif %}">{{ "%.1f"|format(rating) }}</td>
+    <td>
+      {% if rating >= 1600 %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">ELITE</span>
+      {% elif rating >= 1300 %}<span class="tag" style="border-color:var(--green);color:var(--green)">STRONG</span>
+      {% elif rating >= 1000 %}<span class="tag">COMPETITIVE</span>
+      {% else %}<span class="tag" style="border-color:var(--fg-dim)">DEVELOPING</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No rankings data available.</div>
+{% endif %}
+{% endblock %}

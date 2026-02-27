@@ -65,6 +65,10 @@ from engine.db import (
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 
+# Mount the stats site (read-only HTML stats browser)
+from stats_site.router import router as stats_router
+app.include_router(stats_router)
+
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
 sessions: Dict[str, dict] = {}
