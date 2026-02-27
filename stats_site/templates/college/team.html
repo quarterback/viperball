@@ -91,7 +91,7 @@
       <td>Laterals</td>
       <td class="num">{{ team_stats.lateral_yards }} yds</td>
       <td class="num">{{ "%.1f"|format(team_stats.lateral_yards / team_stats.games_played) }} yds</td>
-      <td class="num">{{ team_stats.lateral_chains }} chains</td>
+      <td class="num">{{ team_stats.lateral_chains }} chains &middot; {{ team_stats.lateral_pct }}% success</td>
     </tr>
     <tr>
       <td>Scoring</td>
@@ -153,9 +153,9 @@
   </tbody>
 </table>
 
-{# ── Other ── #}
-<h3 style="margin-bottom:8px; color:var(--accent);">Other</h3>
-<div class="grid-4" style="margin-bottom:24px;">
+{# ── Turnovers ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Turnovers & Discipline</h3>
+<div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Fumbles Lost</div>
     <div class="value">{{ team_stats.fumbles }}</div>
@@ -165,31 +165,54 @@
     <div class="value">{{ team_stats.tod }}</div>
   </div>
   <div class="metric">
+    <div class="label">KP INTs</div>
+    <div class="value">{{ team_stats.kp_ints }}</div>
+  </div>
+  <div class="metric">
     <div class="label">Penalties</div>
     <div class="value">{{ team_stats.penalties }} ({{ team_stats.penalty_yards }} yds)</div>
   </div>
+</div>
+
+{# ── Delta System ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Delta System</h3>
+<div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Delta Yards</div>
-    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards }}</div>
+    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ "%.1f"|format(team_stats.delta_yards) }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Adjusted Yards</div>
+    <div class="value">{{ "%.0f"|format(team_stats.adjusted_yards) }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Delta Drives</div>
+    <div class="value">{{ team_stats.delta_drives }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Compelled Eff.</div>
+    <div class="value">{% if team_stats.compelled_eff is not none %}{{ team_stats.delta_scores }}/{{ team_stats.delta_drives }} ({{ team_stats.compelled_eff }}%){% else %}&mdash;{% endif %}</div>
   </div>
 </div>
 
+{# ── Bonus Possessions ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Bonus Possessions</h3>
 <div class="grid-4" style="margin-bottom:24px;">
   <div class="metric">
     <div class="label">Bonus Possessions</div>
     <div class="value">{{ team_stats.bonus_possessions }}</div>
   </div>
   <div class="metric">
+    <div class="label">Bonus Yards</div>
+    <div class="value">{{ team_stats.bonus_yards }}</div>
+  </div>
+  <div class="metric">
     <div class="label">Bonus Scores</div>
     <div class="value">{{ team_stats.bonus_scores }}</div>
   </div>
   <div class="metric">
-    <div class="label">&nbsp;</div>
-    <div class="value">&nbsp;</div>
-  </div>
-  <div class="metric">
-    <div class="label">&nbsp;</div>
-    <div class="value">&nbsp;</div>
+    <div class="label">Bonus Conv %</div>
+    <div class="value">{% if team_stats.bonus_possessions > 0 %}{{ "%.1f"|format(team_stats.bonus_scores / team_stats.bonus_possessions * 100) }}%{% else %}&mdash;{% endif %}</div>
   </div>
 </div>
 {% endif %}

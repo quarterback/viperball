@@ -29,7 +29,7 @@
   <strong>Conference:</strong>
   <a href="/stats/college/{{ session_id }}/team-stats?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
   {% for c in conferences %}
-  &middot; <a href="/stats/college/{{ session_id }}/team-stats?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:20] }}</a>
+  &middot; <a href="/stats/college/{{ session_id }}/team-stats?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %} title="{{ c }}">{{ conf_abbrev(c) }}</a>
   {% endfor %}
 </div>
 {% endif %}
@@ -82,7 +82,7 @@
   <tr>
     <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ t.team }}">{{ t.team }}</a></td>
-    <td style="font-size:10px;">{{ t.conference[:12] }}</td>
+    <td style="font-size:10px;" title="{{ t.conference }}">{{ conf_abbrev(t.conference) }}</td>
     <td class="record"><span class="w">{{ t.wins }}</span>-<span class="l">{{ t.losses }}</span></td>
     <td class="num">{{ t.games }}</td>
     <td class="num {% if sort == 'total_yards' %}stat-good{% endif %}">{{ t.total_yards }}</td>
