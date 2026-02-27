@@ -7,6 +7,18 @@ from typing import Dict
 from datetime import datetime
 
 
+def _fmt_pts(v):
+    """Format a point value: whole numbers without .0, half-points with \u00bd."""
+    if isinstance(v, (int, float)):
+        whole = int(v)
+        frac = v - whole
+        if abs(frac) < 0.01:
+            return str(whole)
+        elif abs(frac - 0.5) < 0.01:
+            return f"{whole}\u00bd" if whole > 0 else "\u00bd"
+    return str(v)
+
+
 class BoxScoreGenerator:
     """Generate detailed box scores in markdown format"""
 
@@ -39,29 +51,28 @@ class BoxScoreGenerator:
         lines.append("## SCORING SUMMARY")
         lines.append("")
 
-        # Build quarter scores from play-by-play
-        away_q = {1: 0, 2: 0, 3: 0, 4: 0}
-        home_q = {1: 0, 2: 0, 3: 0, 4: 0}
-        for play in self.game_data['play_by_play']:
-            q = play['quarter']
-            if q not in away_q:
-                continue
-            if play['result'] == 'touchdown':
-                if play['possession'] == 'home':
-                    home_q[q] += 6
-                else:
-                    away_q[q] += 6
-            elif play['result'] == 'successful_kick':
-                pts = 5 if play['play_type'] == 'drop_kick' else 3
-                if play['possession'] == 'home':
-                    home_q[q] += pts
-                else:
-                    away_q[q] += pts
+        # Build quarter scores from running score deltas in play-by-play
+        away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+        home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+        plays = self.game_data['play_by_play']
+        if plays and 'home_score' in plays[0]:
+            prev_home = 0.0
+            prev_away = 0.0
+            for play in plays:
+                q = play['quarter']
+                if q not in home_q:
+                    continue
+                cur_home = play.get('home_score', prev_home)
+                cur_away = play.get('away_score', prev_away)
+                home_q[q] += cur_home - prev_home
+                away_q[q] += cur_away - prev_away
+                prev_home = cur_home
+                prev_away = cur_away
 
         lines.append("| Team | Q1 | Q2 | Q3 | Q4 | Final |")
         lines.append("|------|----|----|----|----|-------|")
-        lines.append(f"| {self.away['team']} | {away_q[1]} | {away_q[2]} | {away_q[3]} | {away_q[4]} | **{self.away['score']}** |")
-        lines.append(f"| {self.home['team']} | {home_q[1]} | {home_q[2]} | {home_q[3]} | {home_q[4]} | **{self.home['score']}** |")
+        lines.append(f"| {self.away['team']} | {_fmt_pts(away_q[1])} | {_fmt_pts(away_q[2])} | {_fmt_pts(away_q[3])} | {_fmt_pts(away_q[4])} | **{_fmt_pts(self.away['score'])}** |")
+        lines.append(f"| {self.home['team']} | {_fmt_pts(home_q[1])} | {_fmt_pts(home_q[2])} | {_fmt_pts(home_q[3])} | {_fmt_pts(home_q[4])} | **{_fmt_pts(self.home['score'])}** |")
         lines.append("")
 
         # Determine winner
@@ -77,16 +88,57 @@ class BoxScoreGenerator:
         lines.append("---")
         lines.append("")
 
-        # Scoring Breakdown
+        # Scoring Breakdown — all 6 channels
+        # Count all scoring events directly from play-by-play to avoid
+        # stats-dict ambiguity (possession is already set to scoring team
+        # by the engine for TDs, kicks, pindowns; recovering team for fumbles).
         lines.append("## SCORING BREAKDOWN")
         lines.append("")
-        away_td = self.away_stats.get('touchdowns', 0)
-        home_td = self.home_stats.get('touchdowns', 0)
+        home_all_td = 0
+        away_all_td = 0
+        away_pindowns = 0
+        home_pindowns = 0
+        away_safeties = 0
+        home_safeties = 0
+        away_bells = 0
+        home_bells = 0
+        for play in self.game_data['play_by_play']:
+            r = play['result']
+            pos = play['possession']
+            if r in ('touchdown', 'punt_return_td', 'int_return_td', 'missed_dk_return_td'):
+                if pos == 'home':
+                    home_all_td += 1
+                else:
+                    away_all_td += 1
+            elif r == 'pindown':
+                if pos == 'home':
+                    home_pindowns += 1
+                else:
+                    away_pindowns += 1
+            elif r == 'safety':
+                # possession = offense that committed it; opponent scores
+                if pos == 'home':
+                    away_safeties += 1
+                else:
+                    home_safeties += 1
+            elif r == 'fumble':
+                # possession = recovering team
+                if pos == 'home':
+                    home_bells += 1
+                else:
+                    away_bells += 1
+
         lines.append(f"| Category | {self.away['team']} | {self.home['team']} |")
         lines.append(f"|----------|" + "-" * (len(self.away['team']) + 2) + "|" + "-" * (len(self.home['team']) + 2) + "|")
-        lines.append(f"| Touchdowns (6 pts) | {away_td} ({away_td * 6} pts) | {home_td} ({home_td * 6} pts) |")
-        lines.append(f"| Drop Kicks (5 pts) | {self.away_stats['drop_kicks_made']} ({self.away_stats['drop_kicks_made'] * 5} pts) | {self.home_stats['drop_kicks_made']} ({self.home_stats['drop_kicks_made'] * 5} pts) |")
-        lines.append(f"| Place Kicks (3 pts) | {self.away_stats['place_kicks_made']} ({self.away_stats['place_kicks_made'] * 3} pts) | {self.home_stats['place_kicks_made']} ({self.home_stats['place_kicks_made'] * 3} pts) |")
+        lines.append(f"| Touchdowns (9 pts) | {away_all_td} ({away_all_td * 9} pts) | {home_all_td} ({home_all_td * 9} pts) |")
+        lines.append(f"| Snap Kicks (5 pts) | {self.away_stats['drop_kicks_made']} ({self.away_stats['drop_kicks_made'] * 5} pts) | {self.home_stats['drop_kicks_made']} ({self.home_stats['drop_kicks_made'] * 5} pts) |")
+        lines.append(f"| Field Goals (3 pts) | {self.away_stats['place_kicks_made']} ({self.away_stats['place_kicks_made'] * 3} pts) | {self.home_stats['place_kicks_made']} ({self.home_stats['place_kicks_made'] * 3} pts) |")
+        if away_safeties or home_safeties:
+            lines.append(f"| Safeties (2 pts) | {away_safeties} ({away_safeties * 2} pts) | {home_safeties} ({home_safeties * 2} pts) |")
+        if away_pindowns or home_pindowns:
+            lines.append(f"| Pindowns (1 pt) | {away_pindowns} ({away_pindowns} pts) | {home_pindowns} ({home_pindowns} pts) |")
+        if away_bells or home_bells:
+            lines.append(f"| Bells (\u00bd pt) | {away_bells} ({_fmt_pts(away_bells * 0.5)} pts) | {home_bells} ({_fmt_pts(home_bells * 0.5)} pts) |")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -137,12 +189,14 @@ class BoxScoreGenerator:
         lines.append("")
 
         lines.append("### Micro-Scoring Differential")
-        lines.append("*Formula: (Drop Kicks Made x 5) - (Place Kicks Made x 3)*")
+        lines.append("*Formula: (Snap Kicks Made x 5) - (Field Goals Made x 3)*")
         lines.append("")
+        away_msd = self.away_stats['drop_kicks_made'] * 5 - self.away_stats['place_kicks_made'] * 3
+        home_msd = self.home_stats['drop_kicks_made'] * 5 - self.home_stats['place_kicks_made'] * 3
         lines.append(f"| Team | Micro-Scoring Diff |")
         lines.append(f"|------|-------------------|")
-        lines.append(f"| {self.away['team']} | {self.away_stats['micro_scoring_differential']:+d} |")
-        lines.append(f"| {self.home['team']} | {self.home_stats['micro_scoring_differential']:+d} |")
+        lines.append(f"| {self.away['team']} | {away_msd:+d} |")
+        lines.append(f"| {self.home['team']} | {home_msd:+d} |")
         lines.append("")
 
         lines.append("### Lateral Efficiency")
@@ -179,7 +233,7 @@ class BoxScoreGenerator:
         # Find touchdowns and big plays
         key_plays = []
         for play in self.game_data['play_by_play']:
-            if play['result'] == 'touchdown':
+            if play['result'] in ('touchdown', 'punt_return_td', 'int_return_td', 'missed_dk_return_td'):
                 key_plays.append(play)
             elif play.get('yards', 0) >= 20:
                 key_plays.append(play)
@@ -206,7 +260,7 @@ class BoxScoreGenerator:
         # Game Notes
         lines.append("## GAME NOTES")
         lines.append("")
-        lines.append(f"- **CVL Rules:** 5-for-20 down system, 15-minute quarters")
+        lines.append(f"- **CVL Rules:** 6-for-20 down system, 15-minute quarters")
         if self.tempo == "uptempo":
             lines.append(f"- **Tempo:** Up-tempo offense (both teams)")
         lines.append(f"- **Total Plays:** {self.home_stats['total_plays'] + self.away_stats['total_plays']}")

@@ -138,14 +138,37 @@ def drive_result_color(result: str) -> str:
 # ── Quarter scoring breakdown ──
 
 def compute_quarter_scores(plays: list) -> tuple[dict, dict]:
-    """Compute per-quarter scoring from play-by-play data."""
-    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    """Compute per-quarter scoring from play-by-play data.
+
+    Uses the running score embedded in each play (home_score / away_score)
+    to compute exact per-quarter point totals via score deltas.  Falls back
+    to result-based heuristics for legacy data without running scores.
+    """
+    home_q: dict[int, float] = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q: dict[int, float] = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+
+    # ── Preferred path: running-score deltas ──
+    if plays and "home_score" in plays[0]:
+        prev_home = 0.0
+        prev_away = 0.0
+        for p in plays:
+            q = p.get("quarter", 0)
+            if q not in home_q:
+                continue
+            cur_home = p.get("home_score", prev_home)
+            cur_away = p.get("away_score", prev_away)
+            home_q[q] += cur_home - prev_home
+            away_q[q] += cur_away - prev_away
+            prev_home = cur_home
+            prev_away = cur_away
+        return home_q, away_q
+
+    # ── Fallback: result-based heuristics (legacy data) ──
     for p in plays:
         q = p.get("quarter", 0)
         if q not in home_q:
             continue
-        if p["result"] in ("touchdown", "punt_return_td", "int_return_td"):
+        if p["result"] in ("touchdown", "punt_return_td", "int_return_td", "missed_dk_return_td"):
             if p["possession"] == "home":
                 home_q[q] += 9
             else:
@@ -168,9 +191,9 @@ def compute_quarter_scores(plays: list) -> tuple[dict, dict]:
                 home_q[q] += 2
         elif p["result"] == "fumble":
             if p["possession"] == "home":
-                away_q[q] += 0.5
-            else:
                 home_q[q] += 0.5
+            else:
+                away_q[q] += 0.5
     return home_q, away_q
 
 
