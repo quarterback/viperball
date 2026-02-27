@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Stats — {{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/">{{ league_name }}</a><span class="sep">/</span>Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ league_name }} — STAT LEADERS</h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats" class="active">Stats</a>
+</div>
+
+{% if leaders %}
+{% if leaders is mapping %}
+  {% for cat_name, cat_data in leaders.items() %}
+  <h2>{{ cat_name | replace('_', ' ') | title }}</h2>
+  {% if cat_data is iterable and cat_data is not string and cat_data is not mapping %}
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Name</th><th>Team</th><th class="num">Value</th></tr>
+    </thead>
+    <tbody>
+    {% for p in cat_data[:20] %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td>{{ p.get('name', p.get('player_name', '?')) }}</td>
+      <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ p.get('team_key', p.get('team', '')) }}">{{ p.get('team', p.get('team_key', '?')) }}</a></td>
+      <td class="num {% if loop.index <= 3 %}stat-elite{% endif %}">{{ p.get('value', p.get('stat_value', '?')) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <pre style="color:var(--fg-dim);font-size:11px;">{{ cat_data | tojson(indent=2) }}</pre>
+  {% endif %}
+  {% endfor %}
+{% else %}
+  <pre style="color:var(--fg-dim);font-size:11px;">{{ leaders | tojson(indent=2) }}</pre>
+{% endif %}
+{% else %}
+<div class="empty">No stat leaders available yet. Simulate some games first.</div>
+{% endif %}
+{% endblock %}

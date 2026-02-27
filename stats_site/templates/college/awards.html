@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Awards — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Awards
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>SEASON AWARDS</h1>
+  <div class="subtitle">{{ season_name }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards" class="active">Awards</a>
+</div>
+
+{% if awards %}
+
+{% if awards.get('individual_awards') %}
+<h2>Individual Awards</h2>
+<table>
+  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th>Stats</th></tr></thead>
+  <tbody>
+  {% for a in awards.individual_awards %}
+  <tr>
+    <td style="color:var(--yellow);font-weight:bold">{{ a.get('award', '?') }}</td>
+    <td>{{ a.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team', '') }}">{{ a.get('team', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
+    <td style="color:var(--fg-dim)">{{ a.get('stat_line', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if awards.get('coach_of_year') %}
+<h2>Coach of the Year</h2>
+<div class="metric" style="max-width: 400px;">
+  <div class="label">Coach of the Year</div>
+  <div class="value accent">{{ awards.coach_of_year.get('coach_name', '?') }}</div>
+  <div style="color:var(--fg-dim);font-size:11px;margin-top:2px">
+    {{ awards.coach_of_year.get('team', '') }} &middot; {{ awards.coach_of_year.get('record', '') }}
+  </div>
+</div>
+{% endif %}
+
+{% if awards.get('most_improved') %}
+<h2>Most Improved</h2>
+<div class="metric" style="max-width: 400px;">
+  <div class="label">Most Improved Team</div>
+  <div class="value accent">{{ awards.most_improved.get('team', '?') }}</div>
+</div>
+{% endif %}
+
+{% if awards.get('honors') %}
+<h2>All-Conference / Honorable Mention</h2>
+<table>
+  <thead><tr><th>Honor</th><th>Player</th><th>Team</th><th>Position</th></tr></thead>
+  <tbody>
+  {% for h in awards.honors %}
+  <tr>
+    <td>{{ h.get('honor', '?') }}</td>
+    <td>{{ h.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ h.get('team', '') }}">{{ h.get('team', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ h.get('position', '?') }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% else %}
+<div class="empty">Awards not yet computed. Complete the season first.</div>
+{% endif %}
+
+{% endblock %}

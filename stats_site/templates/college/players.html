@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Player Stats — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Players
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>PLAYER STATS</h1>
+  <div class="subtitle">{{ season_name }} &middot; {{ players|length }} players{% if conference %} &middot; {{ conference }}{% endif %}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players" class="active">Players</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+{# ── Sort + Filter Controls ── #}
+<div style="margin-bottom: 12px; font-size: 11px;">
+  <strong>Sort:</strong>
+  {% set sorts = [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('ypc', 'YPC'), ('tackles', 'Tackles'), ('sacks', 'Sacks'), ('kick_pct', 'Kick%'), ('kick_pass_yards', 'KP Yds'), ('fumbles', 'Fumbles')] %}
+  {% for key, label in sorts %}
+  {% if not loop.first %}&middot;{% endif %}
+  <a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="margin-bottom: 12px; font-size: 11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
+  {% endfor %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Name</th>
+      <th>Team</th>
+      <th>Pos</th>
+      <th class="num">GP</th>
+      <th class="num">TCH</th>
+      <th class="num">YDS</th>
+      <th class="num">Y/T</th>
+      <th class="num">TD</th>
+      <th class="num">FUM</th>
+      <th class="num">LAT</th>
+      <th class="num">KA</th>
+      <th class="num">KM</th>
+      <th class="num">K%</th>
+      <th class="num">TKL</th>
+      <th class="num">TFL</th>
+      <th class="num">SCK</th>
+      <th class="num">RTN</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in players %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ p.team }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team[:20] }}</a></td>
+    <td><span class="tag tag-pos">{{ p.tag }}</span></td>
+    <td class="num">{{ p.games_played }}</td>
+    <td class="num">{{ p.touches }}</td>
+    <td class="num {% if p.yards >= 500 %}stat-elite{% elif p.yards >= 200 %}stat-good{% endif %}">{{ p.yards }}</td>
+    <td class="num">{{ p.yards_per_touch }}</td>
+    <td class="num {% if p.tds >= 5 %}stat-elite{% elif p.tds >= 2 %}stat-good{% endif %}">{{ p.tds }}</td>
+    <td class="num {% if p.fumbles > 3 %}stat-bad{% endif %}">{{ p.fumbles }}</td>
+    <td class="num">{{ p.laterals_thrown }}</td>
+    <td class="num">{{ p.kick_att }}</td>
+    <td class="num">{{ p.kick_made }}</td>
+    <td class="num {% if p.kick_pct >= 80 %}stat-elite{% elif p.kick_pct >= 60 %}stat-good{% elif p.kick_att > 0 and p.kick_pct < 40 %}stat-bad{% endif %}">
+      {% if p.kick_att > 0 %}{{ p.kick_pct }}%{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">{{ p.tackles }}</td>
+    <td class="num">{{ p.tfl }}</td>
+    <td class="num {% if p.sacks >= 5 %}stat-elite{% endif %}">{{ p.sacks }}</td>
+    <td class="num">{{ p.total_return_yards }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if not players %}
+<div class="empty">No player stats available yet. Play some games first.</div>
+{% endif %}
+
+{% endblock %}

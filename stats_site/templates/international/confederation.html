@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ conf | upper }} — FIV — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">International</a><span class="sep">/</span>{{ conf | upper }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ conf | upper }} — CONTINENTAL CHAMPIONSHIP</h1>
+  <div class="subtitle">
+    Phase: {{ data.get('phase', '?') | replace('_', ' ') | title }}
+    {% if data.get('champion') %} &middot; <span class="stat-elite">Champion: {{ data.champion }}</span>{% endif %}
+  </div>
+</div>
+
+{# ── Groups ── #}
+{% set groups = data.get('groups', []) %}
+{% if groups %}
+<h2>Group Stage</h2>
+{% for group in groups %}
+<h3>{{ group.get('group_name', group.get('name', 'Group ' ~ loop.index)) }}</h3>
+<table>
+  <thead><tr><th class="num">#</th><th>Team</th><th class="num">P</th><th class="num">W</th><th class="num">D</th><th class="num">L</th><th class="num">GF</th><th class="num">GA</th><th class="num">GD</th><th class="num">Pts</th></tr></thead>
+  <tbody>
+  {% set standings = group.get('standings', group.get('table', [])) %}
+  {% for t in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/international/team/{{ t.get('team', t.get('code', '?')) }}">{{ t.get('team', t.get('code', '?')) }}</a></td>
+    <td class="num">{{ t.get('played', t.get('p', 0)) }}</td>
+    <td class="num">{{ t.get('wins', t.get('w', 0)) }}</td>
+    <td class="num">{{ t.get('draws', t.get('d', 0)) }}</td>
+    <td class="num">{{ t.get('losses', t.get('l', 0)) }}</td>
+    <td class="num">{{ t.get('goals_for', t.get('gf', t.get('pf', 0))) }}</td>
+    <td class="num">{{ t.get('goals_against', t.get('ga', t.get('pa', 0))) }}</td>
+    <td class="num {% if t.get('goal_diff', t.get('gd', 0)) > 0 %}stat-good{% elif t.get('goal_diff', t.get('gd', 0)) < 0 %}stat-bad{% endif %}">
+      {{ "%+d"|format(t.get('goal_diff', t.get('gd', 0))) }}
+    </td>
+    <td class="num" style="font-weight:bold">{{ t.get('points', t.get('pts', 0)) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% endif %}
+
+{# ── Match Results ── #}
+{% set results = data.get('all_results', []) %}
+{% if results %}
+<h2>Results ({{ results|length }} matches)</h2>
+<table>
+  <thead><tr><th>Home</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Away</th><th>Stage</th></tr></thead>
+  <tbody>
+  {% for m in results %}
+  <tr>
+    <td><a href="/stats/international/team/{{ m.get('home', m.get('home_team', '?')) }}">{{ m.get('home', m.get('home_team', '?')) }}</a></td>
+    <td class="num {% if m.get('home_score', 0) > m.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">{{ m.get('home_score', '?') }}</td>
+    <td style="color:var(--fg-dim)">v</td>
+    <td class="num {% if m.get('away_score', 0) > m.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">{{ m.get('away_score', '?') }}</td>
+    <td><a href="/stats/international/team/{{ m.get('away', m.get('away_team', '?')) }}">{{ m.get('away', m.get('away_team', '?')) }}</a></td>
+    <td style="color:var(--fg-dim)">{{ m.get('stage', m.get('round', '')) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Knockout ── #}
+{% set knockout = data.get('knockout_rounds', []) %}
+{% if knockout %}
+<h2>Knockout Stage</h2>
+{% for round_data in knockout %}
+<h3>{{ round_data.get('round_name', round_data.get('name', 'Round')) }}</h3>
+<table>
+  <thead><tr><th>Home</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Away</th></tr></thead>
+  <tbody>
+  {% for m in round_data.get('matches', round_data.get('games', [])) %}
+  <tr>
+    <td>{{ m.get('home', m.get('home_team', '?')) }}</td>
+    <td class="num">{{ m.get('home_score', '?') }}</td>
+    <td style="color:var(--fg-dim)">v</td>
+    <td class="num">{{ m.get('away_score', '?') }}</td>
+    <td>{{ m.get('away', m.get('away_team', '?')) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% endif %}
+
+{% if not groups and not results and not knockout %}
+<div class="empty">No data available for this confederation yet.</div>
+{% endif %}
+{% endblock %}

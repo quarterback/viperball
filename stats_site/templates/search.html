@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Search{% if query %}: {{ query }}{% endif %} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Search
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>SEARCH</h1>
+  <div class="subtitle">Find teams, players, and nations across all leagues</div>
+</div>
+
+<form method="get" action="/stats/search" style="margin-bottom:16px;">
+  <input type="text" name="q" value="{{ query }}" placeholder="Search teams, players, nations..."
+    style="background:var(--bg-alt);border:1px solid var(--border);color:var(--fg-bright);
+           font-family:inherit;font-size:13px;padding:8px 12px;width:100%;max-width:500px;
+           outline:none;"
+    autofocus>
+  <button type="submit"
+    style="background:var(--accent);color:var(--bg);border:none;padding:8px 16px;
+           font-family:inherit;font-size:12px;font-weight:bold;cursor:pointer;
+           text-transform:uppercase;letter-spacing:0.5px;">
+    Search
+  </button>
+</form>
+
+{% if searched %}
+{% set total = results.college_teams|length + results.college_players|length + results.pro_teams|length + results.nations|length %}
+
+{% if total == 0 %}
+<div class="empty">No results for "{{ query }}"</div>
+{% else %}
+<div style="font-size:11px;color:var(--fg-dim);margin-bottom:16px;">{{ total }} result{{ 's' if total != 1 }} for "{{ query }}"</div>
+{% endif %}
+
+{# ── College Teams ── #}
+{% if results.college_teams %}
+<h2>College Teams ({{ results.college_teams|length }})</h2>
+<table>
+  <thead><tr><th>Team</th><th>Mascot</th><th>Conference</th><th>Record</th><th>Season</th></tr></thead>
+  <tbody>
+  {% for t in results.college_teams %}
+  <tr>
+    <td><a href="/stats/college/{{ t.session_id }}/team/{{ t.team_name }}">{{ t.team_name }}</a></td>
+    <td>{{ t.mascot }}</td>
+    <td>{{ t.conference }}</td>
+    <td class="record">{{ t.record }}</td>
+    <td style="color:var(--fg-dim)">{{ t.session_label }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── College Players ── #}
+{% if results.college_players %}
+<h2>College Players ({{ results.college_players|length }})</h2>
+<table>
+  <thead><tr><th class="num">#</th><th>Name</th><th>Team</th><th>Pos</th><th>Year</th><th class="num">OVR</th><th>Season</th></tr></thead>
+  <tbody>
+  {% for p in results.college_players|sort(attribute='overall', reverse=true) %}
+  <tr>
+    <td class="num">{{ p.number }}</td>
+    <td><a href="/stats/college/{{ p.session_id }}/player/{{ p.team_name }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td><a href="/stats/college/{{ p.session_id }}/team/{{ p.team_name }}">{{ p.team_name[:25] }}</a></td>
+    <td><span class="tag tag-pos">{{ p.position[:10] }}</span></td>
+    <td>{{ p.year }}</td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td style="color:var(--fg-dim)">{{ p.session_label }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Pro Teams ── #}
+{% if results.pro_teams %}
+<h2>Pro Teams ({{ results.pro_teams|length }})</h2>
+<table>
+  <thead><tr><th>Team</th><th>League</th><th>Division</th><th>Record</th></tr></thead>
+  <tbody>
+  {% for t in results.pro_teams %}
+  <tr>
+    <td><a href="/stats/pro/{{ t.league_id }}/{{ t.session_id }}/team/{{ t.team_key }}">{{ t.team_name }}</a></td>
+    <td><a href="/stats/pro/{{ t.league_id }}/{{ t.session_id }}/">{{ t.league_name }}</a></td>
+    <td>{{ t.division }}</td>
+    <td class="record">{{ t.record }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Nations ── #}
+{% if results.nations %}
+<h2>Nations ({{ results.nations|length }})</h2>
+<table>
+  <thead><tr><th>Code</th><th>Name</th><th>Confederation</th><th>Tier</th></tr></thead>
+  <tbody>
+  {% for n in results.nations %}
+  <tr>
+    <td><a href="/stats/international/team/{{ n.code }}">{{ n.code }}</a></td>
+    <td>{{ n.name }}</td>
+    <td>{% if n.confederation %}<a href="/stats/international/confederation/{{ n.confederation }}">{{ n.confederation | upper }}</a>{% else %}&mdash;{% endif %}</td>
+    <td>{{ n.tier | title if n.tier else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endif %}
+{% endblock %}

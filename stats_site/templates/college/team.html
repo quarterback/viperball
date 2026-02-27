@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span>{{ team_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team.name }} {{ team.mascot }}</h1>
+  <div class="subtitle">
+    {{ team.abbreviation }}
+    {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span> ({{ record.conference }}){% endif %}
+    {% if prestige %} &middot; Prestige: {{ prestige }}{% endif %}
+  </div>
+</div>
+
+{% if record %}
+{# ── Team Metrics ── #}
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">Record</div>
+    <div class="value"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></div>
+  </div>
+  <div class="metric">
+    <div class="label">Points Per Drive</div>
+    <div class="value accent">{{ record.avg_ppd }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Team Rating</div>
+    <div class="value">{{ record.avg_team_rating }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">TO Margin</div>
+    <div class="value {% if record.avg_to_margin > 0 %}stat-good{% elif record.avg_to_margin < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(record.avg_to_margin) }}</div>
+  </div>
+</div>
+
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">Points For</div>
+    <div class="value">{{ record.points_for }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Points Against</div>
+    <div class="value">{{ record.points_against }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Conversion %</div>
+    <div class="value">{{ record.avg_conversion_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">Lateral %</div>
+    <div class="value">{{ record.avg_lateral_pct }}%</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid-2">
+
+{# ── Schedule ── #}
+<div>
+<h2>Schedule</h2>
+<table>
+  <thead>
+    <tr><th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th><th>Tags</th></tr>
+  </thead>
+  <tbody>
+  {% for g in games %}
+  {% set is_home = (g.home_team == team_name) %}
+  {% set opponent = g.away_team if is_home else g.home_team %}
+  {% set won = g.completed and ((is_home and g.home_score > g.away_score) or (not is_home and g.away_score > g.home_score)) %}
+  <tr>
+    <td class="num">{{ g.week }}</td>
+    <td style="color:var(--fg-dim)">{{ 'vs' if is_home else '@' }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ opponent }}">{{ opponent }}</a></td>
+    <td>
+      {% if g.completed %}
+      <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
+      {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
+      {% else %}
+      <span style="color:var(--fg-dim)">&mdash;</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+      {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{# ── Roster ── #}
+<div>
+<h2>Roster ({{ players|length }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th><th>Yr</th>
+      <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
+      <th class="num">AGI</th><th class="num">KCK</th><th class="num">LAT</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in players|sort(attribute='overall', reverse=true) %}
+  <tr>
+    <td class="num">{{ p.number }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td><span class="tag tag-pos">{{ p.position }}</span></td>
+    <td>{{ p.year_abbr }}</td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ p.speed }}</td>
+    <td class="num">{{ p.power }}</td>
+    <td class="num">{{ p.agility }}</td>
+    <td class="num">{{ p.kicking }}</td>
+    <td class="num">{{ p.lateral_skill }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+</div>
+{% endblock %}

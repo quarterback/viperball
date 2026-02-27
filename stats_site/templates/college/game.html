@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}{{ game.away_team }} @ {{ game.home_team }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/schedule?week={{ week }}">Week {{ week }}</a><span class="sep">/</span>Box Score
+</div></div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Scoreboard ── #}
+<div class="box-score-header">
+  <div class="box-team">
+    <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.away_team }}">{{ game.away_team }}</a></div>
+    <div class="record">Away</div>
+    <div class="box-score-final {% if game.away_score > game.home_score %}score-win{% else %}score-loss{% endif %}">{{ game.away_score }}</div>
+  </div>
+  <div class="box-score-vs">
+    <div>FINAL</div>
+    <div>Week {{ week }}</div>
+    {% if game.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+    {% if game.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+  </div>
+  <div class="box-team">
+    <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.home_team }}">{{ game.home_team }}</a></div>
+    <div class="record">Home</div>
+    <div class="box-score-final {% if game.home_score > game.away_score %}score-win{% else %}score-loss{% endif %}">{{ game.home_score }}</div>
+  </div>
+</div>
+
+{% if game.full_result %}
+{% set fr = game.full_result %}
+{% set stats = fr.get('stats', {}) %}
+{% set hs = stats.get('home', {}) %}
+{% set as_ = stats.get('away', {}) %}
+
+{# ── Team Stats Comparison ── #}
+<h2>Team Stats</h2>
+<table>
+  <thead>
+    <tr><th>Stat</th><th class="num">{{ game.away_team[:20] }}</th><th class="num">{{ game.home_team[:20] }}</th></tr>
+  </thead>
+  <tbody>
+  {% set stat_rows = [
+    ('Total Yards', 'total_yards'),
+    ('Total Plays', 'total_plays'),
+    ('Yards/Play', 'yards_per_play'),
+    ('Touchdowns', 'touchdowns'),
+    ('Drop Kicks Made', 'drop_kicks_made'),
+    ('Place Kicks Made', 'place_kicks_made'),
+    ('Lateral Chains', 'lateral_chains'),
+    ('Lateral Efficiency', 'lateral_efficiency'),
+    ('Fumbles Lost', 'fumbles_lost'),
+    ('Turnovers on Downs', 'turnovers_on_downs'),
+    ('Viper Efficiency', 'viper_efficiency'),
+  ] %}
+  {% for label, key in stat_rows %}
+  <tr>
+    <td>{{ label }}</td>
+    <td class="num">{% if as_.get(key) is not none %}{{ as_[key] }}{% if 'efficiency' in key or 'pct' in key %}%{% endif %}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if hs.get(key) is not none %}{{ hs[key] }}{% if 'efficiency' in key or 'pct' in key %}%{% endif %}{% else %}&mdash;{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# ── Player Stats ── #}
+{% set ps = fr.get('player_stats', {}) %}
+{% for side, side_label, team_name_display in [('away', 'Away', game.away_team), ('home', 'Home', game.home_team)] %}
+{% set side_players = ps.get(side, []) %}
+{% if side_players %}
+<h2>{{ team_name_display }} — Player Stats</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Tag</th><th>Name</th>
+      <th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th>
+      <th class="num">FUM</th><th class="num">LAT</th>
+      <th class="num">KA</th><th class="num">KM</th>
+      <th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in side_players|sort(attribute='yards', reverse=true) if p.get('touches', 0) > 0 or p.get('tackles', 0) > 0 or p.get('yards', 0) > 0 %}
+  <tr>
+    <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td class="num">{{ p.get('touches', 0) }}</td>
+    <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+    <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+    <td class="num">{{ p.get('laterals_thrown', 0) }}</td>
+    <td class="num">{{ p.get('kick_att', 0) }}</td>
+    <td class="num">{{ p.get('kick_made', 0) }}</td>
+    <td class="num">{{ p.get('tackles', 0) }}</td>
+    <td class="num">{{ p.get('tfl', 0) }}</td>
+    <td class="num">{{ p.get('sacks', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endfor %}
+
+{# ── Drive Summary ── #}
+{% set drives = fr.get('drive_summary', []) %}
+{% if drives %}
+<h2>Drive Summary</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th class="num">Qtr</th><th>Team</th>
+      <th class="num">Start</th><th class="num">Plays</th><th class="num">Yards</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for d in drives %}
+  {% set is_score = d.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td', 'safety') if d.result else false %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td class="num">Q{{ d.quarter }}</td>
+    <td>{% if d.team == 'home' %}{{ game.home_team[:20] }}{% else %}{{ game.away_team[:20] }}{% endif %}</td>
+    <td class="num">{{ d.start_yard_line }}</td>
+    <td class="num">{{ d.plays }}</td>
+    <td class="num {% if d.yards >= 40 %}stat-good{% endif %}">{{ d.yards }}</td>
+    <td>
+      <span class="{% if is_score %}stat-elite{% elif d.result == 'punt' %}{% else %}stat-bad{% endif %}">
+        {{ d.result | replace('_', ' ') | title if d.result else '—' }}
+      </span>
+      {% if d.get('bonus_drive') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">BONUS</span>{% endif %}
+      {% if d.get('delta_drive') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">DELTA</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Play-by-Play ── #}
+{% set pbp = fr.get('play_by_play', []) %}
+{% if pbp %}
+<h2>Play-by-Play ({{ pbp|length }} plays)</h2>
+
+{# Quarter filter tabs #}
+{% set quarters = [] %}
+{% for p in pbp %}
+{% if p.quarter not in quarters %}{% if quarters.append(p.quarter) %}{% endif %}{% endif %}
+{% endfor %}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Quarter:</strong>
+  <a href="#" onclick="document.querySelectorAll('.pbp-row').forEach(r=>r.style.display='');return false;" style="color:var(--accent)">All</a>
+  {% for q in quarters|sort %}
+  &middot; <a href="#" onclick="document.querySelectorAll('.pbp-row').forEach(r=>r.style.display=r.dataset.q=='{{ q }}'?'':'none');return false;">Q{{ q }}</a>
+  {% endfor %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="num">Q</th><th class="num">Time</th><th>Poss</th>
+      <th class="num">FP</th><th>Down</th>
+      <th>Play</th><th class="num">YDS</th><th class="num">EPA</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in pbp %}
+  {% set is_score = p.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td') if p.result else false %}
+  {% set is_turnover = p.result in ('kick_pass_intercepted', 'lateral_intercepted', 'fumble') if p.result else false %}
+  {% set is_penalty = (p.play_type == 'penalty' or p.get('penalty')) %}
+  <tr class="pbp-row" data-q="{{ p.quarter }}" {% if is_score %}style="background:#1a1a00"{% elif is_turnover %}style="background:#1a0000"{% elif is_penalty %}style="background:#1a1a1a"{% endif %}>
+    <td class="num">{{ p.quarter }}</td>
+    <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
+    <td>{% if p.possession == 'home' %}{{ game.home_team[:15] }}{% else %}{{ game.away_team[:15] }}{% endif %}</td>
+    <td class="num">{{ p.field_position if p.field_position is defined else '—' }}</td>
+    <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if is_score %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') | upper }}</span>
+      {% elif is_turnover %}<span class="tag" style="border-color:var(--red);color:var(--red)">{{ p.result | replace('_',' ') | upper }}</span>
+      {% elif is_penalty %}<span class="tag" style="border-color:var(--fg-dim);color:var(--fg-dim)">PENALTY</span>
+      {% else %}<span style="color:var(--fg-dim)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') }}</span>
+      {% endif %}
+    </td>
+    <td class="num {% if p.yards is defined and p.yards >= 20 %}stat-good{% elif p.yards is defined and p.yards < 0 %}stat-bad{% endif %}">{{ p.yards if p.yards is defined else '—' }}</td>
+    <td class="num {% if p.epa is defined and p.epa > 2 %}stat-good{% elif p.epa is defined and p.epa < -2 %}stat-bad{% endif %}">{{ '%.1f'|format(p.epa) if p.epa is defined and p.epa is not none else '—' }}</td>
+    <td style="white-space:normal;max-width:400px;{% if is_score %}color:var(--yellow);font-weight:bold{% elif is_turnover %}color:var(--red){% elif is_penalty %}color:var(--fg-dim){% endif %}">
+      {{ p.description if p.description else '—' }}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% else %}
+<div class="empty">
+  {% if game.completed %}
+  Detailed box score data not available for this game.
+  {% else %}
+  This game has not been played yet.
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

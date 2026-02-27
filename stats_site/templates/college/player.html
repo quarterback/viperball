@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }} — {{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a><span class="sep">/</span>{{ player.name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>#{{ player.number }} {{ player.name }}</h1>
+  <div class="subtitle">
+    <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
+    {% if team.mascot %} {{ team.mascot }}{% endif %}
+    &middot; <span class="tag tag-pos">{{ player.position }}</span> {{ player.position_full }}
+    &middot; {{ player.year_abbr }}
+    {% if player.archetype %}&middot; {{ player.archetype }}{% endif %}
+    {% if record %}&middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+
+{# ── Left column: Bio + Attributes ── #}
+<div>
+
+{# Bio #}
+<h2>Player Info</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:120px">Position</td><td>{{ player.position_full }}{% if player.archetype %} ({{ player.archetype }}){% endif %}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Year</td><td>{{ player.year }}{% if player.redshirt %} <span class="tag">REDSHIRT</span>{% endif %}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ player.height if player.height else '—' }} / {{ player.weight if player.weight else '—' }} lbs</td></tr>
+  <tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ player.hometown_city }}{% if player.hometown_state %}, {{ player.hometown_state }}{% endif %}{% if player.hometown_country and player.hometown_country != 'USA' %} ({{ player.hometown_country }}){% endif %}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ player.nationality }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if player.overall >= 85 %}stat-elite{% elif player.overall >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ player.overall }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Potential</td><td>{% for i in range(player.potential) %}&#9733;{% endfor %}{% for i in range(5 - player.potential) %}&#9734;{% endfor %} ({{ player.development }})</td></tr>
+  {% if prestige %}<tr><td style="color:var(--fg-dim)">Team Prestige</td><td>{{ prestige }}</td></tr>{% endif %}
+  </tbody>
+</table>
+
+{# Attribute Ratings #}
+<h2>Attributes</h2>
+<table>
+  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set attrs = [
+    ('Speed', player.speed), ('Power', player.power), ('Agility', player.agility),
+    ('Hands', player.hands), ('Awareness', player.awareness), ('Stamina', player.stamina),
+    ('Kicking', player.kicking), ('Kick Power', player.kick_power),
+    ('Kick Accuracy', player.kick_accuracy), ('Lateral Skill', player.lateral_skill),
+    ('Tackling', player.tackling),
+  ] %}
+  {% for name, val in attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# Career Awards #}
+{% set awards = player.get('career_awards', []) %}
+{% if awards %}
+<h2>Awards ({{ awards|length }})</h2>
+<table>
+  <thead><tr><th>Award</th><th>Year</th><th>Details</th></tr></thead>
+  <tbody>
+  {% for a in awards %}
+  <tr>
+    <td style="color:var(--yellow);font-weight:bold">{{ a.get('award_name', a.get('award', '?')) }}</td>
+    <td>{{ a.get('year', a.get('season_year', '')) }}</td>
+    <td style="color:var(--fg-dim)">{{ a.get('reason', a.get('stat_line', '')) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+
+{# ── Right column: Season Stats + Game Log ── #}
+<div>
+
+{# Season Summary #}
+<h2>Season Stats</h2>
+{% if season_totals.games > 0 %}
+<div class="grid-4" style="margin-bottom:12px">
+  <div class="metric"><div class="label">Games</div><div class="value">{{ season_totals.games }}</div></div>
+  <div class="metric"><div class="label">Yards</div><div class="value accent">{{ season_totals.yards }}</div></div>
+  <div class="metric"><div class="label">TDs</div><div class="value {% if season_totals.tds >= 5 %}stat-elite{% endif %}">{{ season_totals.tds }}</div></div>
+  <div class="metric"><div class="label">Y/Touch</div><div class="value">{{ season_totals.yards_per_touch }}</div></div>
+</div>
+
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:140px">Touches</td><td class="num">{{ season_totals.touches }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Rushing Yards</td><td class="num">{{ season_totals.rushing_yards }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Lateral Yards</td><td class="num">{{ season_totals.lateral_yards }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Fumbles</td><td class="num {% if season_totals.fumbles > 3 %}stat-bad{% endif %}">{{ season_totals.fumbles }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Laterals Thrown</td><td class="num">{{ season_totals.laterals_thrown }}</td></tr>
+  {% if season_totals.kick_att > 0 %}
+  <tr><td style="color:var(--fg-dim)">Kicks (Made/Att)</td><td class="num">{{ season_totals.kick_made }}/{{ season_totals.kick_att }} ({{ season_totals.kick_pct }}%)</td></tr>
+  <tr><td style="color:var(--fg-dim)">Place Kicks</td><td class="num">{{ season_totals.pk_made }}/{{ season_totals.pk_att }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Drop Kicks</td><td class="num">{{ season_totals.dk_made }}/{{ season_totals.dk_att }}</td></tr>
+  {% endif %}
+  {% if season_totals.kick_passes_thrown > 0 %}
+  <tr><td style="color:var(--fg-dim)">Kick Pass (Comp/Att)</td><td class="num">{{ season_totals.kick_passes_completed }}/{{ season_totals.kick_passes_thrown }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Kick Pass Yards</td><td class="num">{{ season_totals.kick_pass_yards }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Kick Pass TDs</td><td class="num">{{ season_totals.kick_pass_tds }}</td></tr>
+  {% endif %}
+  {% if season_totals.tackles > 0 or season_totals.sacks > 0 %}
+  <tr><td style="color:var(--fg-dim)">Tackles</td><td class="num">{{ season_totals.tackles }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">TFL</td><td class="num">{{ season_totals.tfl }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Sacks</td><td class="num {% if season_totals.sacks >= 5 %}stat-elite{% endif %}">{{ season_totals.sacks }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Hurries</td><td class="num">{{ season_totals.hurries }}</td></tr>
+  {% endif %}
+  {% if season_totals.total_return_yards > 0 %}
+  <tr><td style="color:var(--fg-dim)">Return Yards</td><td class="num">{{ season_totals.total_return_yards }}</td></tr>
+  {% endif %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty" style="padding:16px">No game stats recorded yet.</div>
+{% endif %}
+
+{# Game Log #}
+{% if game_log %}
+<h2>Game Log ({{ game_log|length }} games)</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th>
+      <th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th>
+      <th class="num">FUM</th><th class="num">KM/KA</th>
+      <th class="num">TKL</th><th class="num">SCK</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for g in game_log %}
+  <tr>
+    <td class="num">{{ g.week }}</td>
+    <td style="color:var(--fg-dim)">{{ 'vs' if g.is_home else '@' }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ g.opponent }}">{{ g.opponent[:20] }}</a></td>
+    <td>
+      <span class="{% if g.won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.won else 'L' }}</span>
+      {{ g.team_score }}-{{ g.opp_score }}
+    </td>
+    <td class="num">{{ g.get('touches', 0) }}</td>
+    <td class="num {% if g.get('yards', 0) >= 100 %}stat-elite{% elif g.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('yards', 0) }}</td>
+    <td class="num {% if g.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ g.get('tds', 0) }}</td>
+    <td class="num {% if g.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ g.get('fumbles', 0) }}</td>
+    <td class="num">{% if g.get('kick_att', 0) > 0 %}{{ g.get('kick_made', 0) }}/{{ g.get('kick_att', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{{ g.get('tackles', 0) }}</td>
+    <td class="num">{{ g.get('sacks', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Career Seasons from Dynasty #}
+{% if card and card.get('career_seasons') %}
+<h2>Career History</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Year</th><th>Team</th><th class="num">GP</th>
+      <th class="num">YDS</th><th class="num">TD</th><th class="num">FUM</th>
+      <th class="num">K%</th><th class="num">TKL</th><th class="num">SCK</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in card.career_seasons %}
+  <tr>
+    <td>{{ s.get('season_year', '?') }}</td>
+    <td>{{ s.get('team', '?') }}</td>
+    <td class="num">{{ s.get('games_played', 0) }}</td>
+    <td class="num {% if s.get('total_yards', 0) >= 500 %}stat-elite{% endif %}">{{ s.get('total_yards', 0) }}</td>
+    <td class="num">{{ s.get('touchdowns', 0) }}</td>
+    <td class="num">{{ s.get('fumbles', 0) }}</td>
+    <td class="num">
+      {% if s.get('kick_attempts', 0) > 0 %}
+      {{ "%.0f"|format(s.get('kick_makes', 0) / s.get('kick_attempts', 1) * 100) }}%
+      {% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">{{ s.get('tackles', 0) }}</td>
+    <td class="num">{{ s.get('sacks', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+</div>
+{% endblock %}
