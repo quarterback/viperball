@@ -315,6 +315,110 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     ))
 
 
+@router.get("/college/{session_id}/player/{team_name}/{player_name}", response_class=HTMLResponse)
+def college_player(request: Request, session_id: str, team_name: str, player_name: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    if team_name not in season.teams:
+        raise HTTPException(404, f"Team '{team_name}' not found")
+
+    team = season.teams[team_name]
+    player = None
+    for p in team.players:
+        if p.name == player_name:
+            player = p
+            break
+    if not player:
+        raise HTTPException(404, f"Player '{player_name}' not found on {team_name}")
+
+    # Basic serialized info
+    player_data = api["serialize_player"](player)
+
+    # Build player card if available
+    card = None
+    try:
+        from engine.player_card import player_to_card
+        pc = player_to_card(player, team_name)
+        card = pc.to_dict()
+    except Exception:
+        pass
+
+    # Build game log from completed games this season
+    game_log = []
+    season_totals = {
+        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
+        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
+        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
+        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
+        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+        "kick_return_yards": 0, "punt_return_yards": 0,
+    }
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        if game.home_team != team_name and game.away_team != team_name:
+            continue
+        side = "home" if game.home_team == team_name else "away"
+        opponent = game.away_team if side == "home" else game.home_team
+        is_home = side == "home"
+        fr = game.full_result
+        ps = fr.get("player_stats", {}).get(side, [])
+        for pg in ps:
+            if pg.get("name") == player_name:
+                entry = {
+                    "week": game.week,
+                    "opponent": opponent,
+                    "is_home": is_home,
+                    "won": (game.home_score > game.away_score) == is_home,
+                    "team_score": game.home_score if is_home else game.away_score,
+                    "opp_score": game.away_score if is_home else game.home_score,
+                }
+                entry.update(pg)
+                game_log.append(entry)
+                season_totals["games"] += 1
+                for stat in [
+                    "touches", "yards", "rushing_yards", "lateral_yards",
+                    "tds", "fumbles", "laterals_thrown",
+                    "kick_att", "kick_made", "pk_att", "pk_made",
+                    "dk_att", "dk_made", "tackles", "tfl", "sacks", "hurries",
+                    "kick_pass_yards", "kick_pass_tds",
+                    "kick_passes_thrown", "kick_passes_completed",
+                    "kick_return_yards", "punt_return_yards",
+                ]:
+                    season_totals[stat] += pg.get(stat, 0)
+                break
+
+    # Derived season totals
+    season_totals["yards_per_touch"] = round(
+        season_totals["yards"] / max(1, season_totals["touches"]), 1
+    )
+    season_totals["kick_pct"] = round(
+        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
+    )
+    season_totals["total_return_yards"] = (
+        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+
+    # Team record for context
+    record = season.standings.get(team_name)
+    team_record = api["serialize_team_record"](record) if record else None
+
+    dynasty = sess.get("dynasty")
+    prestige = None
+    if dynasty and hasattr(dynasty, "team_prestige"):
+        prestige = dynasty.team_prestige.get(team_name)
+
+    return templates.TemplateResponse("college/player.html", _ctx(
+        request, section="college", session_id=session_id,
+        player=player_data, card=card, team_name=team_name,
+        team=team, game_log=game_log, season_totals=season_totals,
+        record=team_record, prestige=prestige,
+    ))
+
+
 @router.get("/college/{session_id}/players", response_class=HTMLResponse)
 def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
     api = _get_api()
@@ -571,6 +675,38 @@ def intl_worldcup(request: Request):
 
     return templates.TemplateResponse("international/worldcup.html", _ctx(
         request, section="international", wc=wc, fiv_data=fiv_data,
+    ))
+
+
+@router.get("/international/team/{nation_code}/player/{player_name}", response_class=HTMLResponse)
+def intl_player(request: Request, nation_code: str, player_name: str):
+    fiv_data = _get_fiv_data()
+    if not fiv_data:
+        raise HTTPException(404, "No active FIV cycle")
+
+    teams = fiv_data.get("national_teams", {})
+    team_data = teams.get(nation_code)
+    if not team_data:
+        raise HTTPException(404, f"Nation '{nation_code}' not found")
+
+    # Find the player in the roster
+    roster = team_data.get("roster", []) if isinstance(team_data, dict) else []
+    player = None
+    for p in roster:
+        if isinstance(p, dict):
+            pl = p.get("player", p)
+            if pl.get("name") == player_name:
+                player = p
+                break
+
+    if not player:
+        raise HTTPException(404, f"Player '{player_name}' not found on {nation_code}")
+
+    nation = team_data.get("nation", {}) if isinstance(team_data, dict) else {}
+
+    return templates.TemplateResponse("international/player.html", _ctx(
+        request, section="international", player=player, nation_code=nation_code,
+        nation=nation, team_data=team_data,
     ))
 
 

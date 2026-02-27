@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% set pl = player.get('player', player) if player is mapping else player %}
+{% block title %}{{ pl.get('name', '?') }} — {{ nation_code }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">International</a><span class="sep">/</span><a href="/stats/international/team/{{ nation_code }}">{{ nation_code }}</a><span class="sep">/</span>{{ pl.get('name', '?') }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>#{{ pl.get('number', '') }} {{ pl.get('name', '?') }}</h1>
+  <div class="subtitle">
+    <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
+    &middot; {{ pl.get('position', '?')[:20] }}
+    {% if pl.get('archetype') %}&middot; {{ pl.archetype }}{% endif %}
+    {% if player.get('caps') %}&middot; {{ player.caps }} cap{{ 's' if player.caps != 1 }}{% endif %}
+    {% if player.get('cvl_source') %}&middot; CVL: {{ player.cvl_source }}{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+
+{# ── Left: Bio + Attributes ── #}
+<div>
+<h2>Player Info</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:130px">Nation</td><td>{{ nation.get('name', nation_code) }} ({{ nation_code }})</td></tr>
+  <tr><td style="color:var(--fg-dim)">Position</td><td>{{ pl.get('position', '?') }}{% if pl.get('archetype') %} ({{ pl.archetype }}){% endif %}</td></tr>
+  {% if pl.get('year') %}<tr><td style="color:var(--fg-dim)">Year</td><td>{{ pl.year }}</td></tr>{% endif %}
+  {% if pl.get('height') %}<tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ pl.height }} / {{ pl.get('weight', '?') }} lbs</td></tr>{% endif %}
+  {% if player.get('age') %}<tr><td style="color:var(--fg-dim)">Age</td><td>{{ player.age }}</td></tr>{% endif %}
+  {% if player.get('caps') is not none %}<tr><td style="color:var(--fg-dim)">Caps</td><td style="font-weight:bold">{{ player.caps }}</td></tr>{% endif %}
+  {% if player.get('cvl_source') %}<tr><td style="color:var(--fg-dim)">CVL Source</td><td>{{ player.cvl_source }}</td></tr>{% endif %}
+  {% if player.get('nationalities') %}<tr><td style="color:var(--fg-dim)">Nationalities</td><td>{{ player.nationalities | join(', ') }}</td></tr>{% endif %}
+  {% if player.get('naturalized') %}<tr><td style="color:var(--fg-dim)">Status</td><td><span class="tag">NATURALIZED</span></td></tr>{% endif %}
+  <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if pl.get('overall', 0) >= 85 %}stat-elite{% elif pl.get('overall', 0) >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ pl.get('overall', '?') }}</td></tr>
+  {% if nation.get('confederation') %}
+  <tr><td style="color:var(--fg-dim)">Confederation</td><td><a href="/stats/international/confederation/{{ nation.confederation }}">{{ nation.confederation | upper }}</a></td></tr>
+  {% endif %}
+  </tbody>
+</table>
+
+<h2>Attributes</h2>
+<table>
+  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set attrs = [
+    ('Speed', pl.get('speed', 0)), ('Power', pl.get('power', 0)),
+    ('Agility', pl.get('agility', 0)), ('Hands', pl.get('hands', 0)),
+    ('Awareness', pl.get('awareness', 0)), ('Stamina', pl.get('stamina', 0)),
+    ('Kicking', pl.get('kicking', 0)), ('Kick Power', pl.get('kick_power', 0)),
+    ('Kick Accuracy', pl.get('kick_accuracy', 0)),
+    ('Lateral Skill', pl.get('lateral_skill', 0)),
+    ('Tackling', pl.get('tackling', 0)),
+  ] %}
+  {% for name, val in attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{# ── Right: Tournament Stats ── #}
+<div>
+
+{% set career = player.get('career_international_stats', {}) %}
+{% if career %}
+<h2>International Stats</h2>
+<table>
+  <tbody>
+  {% for k, v in career.items() %}
+  <tr><td style="color:var(--fg-dim)">{{ k | replace('_', ' ') | title }}</td><td class="num">{{ v }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Show homeland info for context #}
+{% if pl.get('hometown_city') %}
+<h2>Background</h2>
+<table>
+  <tbody>
+  {% if pl.get('hometown_city') %}<tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ pl.hometown_city }}{% if pl.get('hometown_state') %}, {{ pl.hometown_state }}{% endif %}</td></tr>{% endif %}
+  {% if pl.get('hometown_country') %}<tr><td style="color:var(--fg-dim)">Country</td><td>{{ pl.hometown_country }}</td></tr>{% endif %}
+  {% if pl.get('nationality') %}<tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ pl.nationality }}</td></tr>{% endif %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+</div>
+{% endblock %}

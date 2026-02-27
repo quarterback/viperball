@@ -64,7 +64,7 @@
   {% set pl = p.get('player', p) %}
   <tr>
     <td class="num">{{ pl.get('number', '') }}</td>
-    <td>{{ pl.get('name', '?') }}</td>
+    <td><a href="/stats/international/team/{{ nation_code }}/player/{{ pl.get('name', '') }}">{{ pl.get('name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ pl.get('position', '?')[:3] }}</span></td>
     <td class="num {% if pl.get('overall', 0) >= 85 %}stat-elite{% elif pl.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ pl.get('overall', '?') }}</td>
     <td class="num">{{ pl.get('speed', '') }}</td>

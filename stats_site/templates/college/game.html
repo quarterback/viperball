@@ -85,7 +85,7 @@
   {% for p in side_players|sort(attribute='yards', reverse=true) if p.get('touches', 0) > 0 or p.get('tackles', 0) > 0 or p.get('yards', 0) > 0 %}
   <tr>
     <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
-    <td>{{ p.get('name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
     <td class="num">{{ p.get('touches', 0) }}</td>
     <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
     <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>

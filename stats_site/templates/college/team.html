@@ -109,7 +109,7 @@
   {% for p in players|sort(attribute='overall', reverse=true) %}
   <tr>
     <td class="num">{{ p.number }}</td>
-    <td>{{ p.name }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
     <td>{{ p.year_abbr }}</td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>

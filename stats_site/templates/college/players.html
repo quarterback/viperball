@@ -66,7 +66,7 @@
   {% for p in players %}
   <tr>
     <td class="num rank">{{ loop.index }}</td>
-    <td>{{ p.name }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ p.team }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team[:20] }}</a></td>
     <td><span class="tag tag-pos">{{ p.tag }}</span></td>
     <td class="num">{{ p.games_played }}</td>
