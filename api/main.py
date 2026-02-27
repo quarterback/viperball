@@ -3706,14 +3706,55 @@ def fiv_world_cup_game(match_id: str):
 @app.get("/api/fiv/worldcup/stats")
 def fiv_world_cup_stats():
     """Get World Cup tournament stat leaders."""
+    global _fiv_active_cycle
+
     data = _get_fiv_cycle_data()
     wc = data.get("world_cup")
     if not wc:
         raise HTTPException(status_code=404, detail="No World Cup data")
+
+    # Compute full stat leaders from the live cycle object (has MatchResult objs)
+    leaders = None
+    if _fiv_active_cycle and _fiv_active_cycle.world_cup:
+        from engine.fiv import compute_tournament_stat_leaders
+        leaders = compute_tournament_stat_leaders(_fiv_active_cycle.world_cup.all_results)
+
     return {
         "golden_boot": wc.get("golden_boot"),
         "mvp": wc.get("mvp"),
+        "leaders": leaders,
     }
+
+
+@app.get("/api/fiv/continental/{conf}/stats")
+def fiv_continental_stats(conf: str):
+    """Get tournament stat leaders for a continental championship."""
+    global _fiv_active_cycle
+
+    if _fiv_active_cycle is None:
+        raise HTTPException(status_code=404, detail="No active FIV cycle in memory")
+
+    cc = _fiv_active_cycle.confederations_data.get(conf)
+    if not cc:
+        raise HTTPException(status_code=404, detail=f"Confederation '{conf}' not found")
+
+    from engine.fiv import compute_tournament_stat_leaders
+    leaders = compute_tournament_stat_leaders(cc.all_results)
+    return {
+        "confederation": conf,
+        "champion": cc.champion,
+        "leaders": leaders,
+    }
+
+
+@app.get("/api/fiv/match/{match_id}")
+def fiv_match_detail(match_id: str):
+    """Get full match detail (box score) for any FIV match by ID."""
+    data = _get_fiv_cycle_data()
+    result = find_match_in_cycle(data, match_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Match '{match_id}' not found")
+    return result
 
 
 @app.get("/api/fiv/team/{nation_code}")

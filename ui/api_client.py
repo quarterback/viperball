@@ -799,6 +799,14 @@ def fiv_world_cup_stats() -> dict:
     return _get("/api/fiv/worldcup/stats")
 
 
+def fiv_continental_stats(conf: str) -> dict:
+    return _get(f"/api/fiv/continental/{conf}/stats")
+
+
+def fiv_match_detail(match_id: str) -> dict:
+    return _get(f"/api/fiv/match/{match_id}")
+
+
 def fiv_team_detail(nation_code: str) -> dict:
     return _get(f"/api/fiv/team/{nation_code}")
 

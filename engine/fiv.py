@@ -96,6 +96,101 @@ POSITION_TEMPLATE = [
 
 VARIANCE_ARCHETYPES = ["reliable", "explosive", "clutch"]
 
+# ── CVL hometown_state → FIV nation code mapping ──
+# The CVL name generator stores country codes in Player.hometown_state
+# for international players.  This maps those codes to FIV nation codes.
+# Some map 1:1 (JPN → JPN), others need translation (ZAF → RSA, PHL → PHI).
+CVL_STATE_TO_FIV_CODE: Dict[str, str] = {
+    # East Asian
+    "JPN": "JPN", "KOR": "KOR", "TWN": "CHN",  # Taiwan → China team
+    # Southeast Asian
+    "THA": "THA", "VNM": "VEN",  # no Vietnam in FIV, skip — handled below
+    "PHL": "PHI", "IDN": "INA", "SGP": "CHN", "MYS": "CHN",
+    # African
+    "NGA": "NGA", "GHA": "GHA", "SEN": "SEN", "CIV": "CIV",
+    "GIN": "SEN", "MLI": "SEN", "TOG": "GHA",  # small → nearest FIV nation
+    "KEN": "KEN", "UGA": "KEN", "TZA": "TAN",
+    "ETH": "KEN", "RWA": "KEN",
+    "ZAF": "RSA", "ZWE": "RSA", "ZMB": "RSA", "BWA": "RSA",
+    # Caribbean
+    "JAM": "JAM", "TTO": "TTO", "BRB": "JAM", "BAH": "JAM",
+    "HAI": "HAI", "DOM": "DOM", "PRI": "USA",  # Puerto Rico → USA
+    "GUY": "TTO", "SUR": "TTO",
+    "LCA": "JAM", "DMA": "JAM", "SKN": "JAM", "GRN": "JAM", "BEL": "BEL",
+    # Latin American
+    "BRA": "BRA", "ARG": "ARG", "COL": "COL", "PER": "PER",
+    "CHI": "CHI", "MEX": "MEX", "VEN": "VEN", "URU": "URU",
+    "PAR": "PAR", "ECU": "ECU", "CRC": "CRC", "GTM": "GUA", "PAN": "PAN",
+    # UK / European
+    "ENG": "GBR", "SCO": "GBR", "WAL": "GBR", "NIR": "GBR",
+    "FRA": "FRA", "GER": "GER", "ESP": "ESP", "NED": "NED",
+    "BEL": "BEL", "POR": "POR", "ITA": "ITA",
+    "SWE": "SWE", "NOR": "NOR", "DEN": "DEN",
+    # Nordic
+    "FIN": "FIN",
+    # Australian / NZ
+    "VIC": "AUS", "NSW": "AUS", "QLD": "AUS", "WA": "AUS", "SA": "AUS", "TAS": "AUS",
+    # Canadian provinces → CAN
+    "ON": "CAN", "BC": "CAN", "AB": "CAN", "QC": "CAN",
+    "MB": "CAN", "SK": "CAN", "NS": "CAN", "NB": "CAN",
+    "PE": "CAN", "NL": "CAN",
+}
+
+# Full country name → FIV code (backup mapping via hometown_country)
+CVL_COUNTRY_TO_FIV_CODE: Dict[str, str] = {
+    "United States": "USA", "USA": "USA", "Canada": "CAN",
+    "Japan": "JPN", "South Korea": "KOR", "China": "CHN",
+    "Thailand": "THA", "Philippines": "PHI", "Indonesia": "INA",
+    "Australia": "AUS", "New Zealand": "NZL",
+    "Nigeria": "NGA", "Ghana": "GHA", "Kenya": "KEN",
+    "South Africa": "RSA", "Tanzania": "TAN", "Senegal": "SEN",
+    "Côte d'Ivoire": "CIV", "Cameroon": "CMR",
+    "Jamaica": "JAM", "Trinidad and Tobago": "TTO",
+    "Haiti": "HAI", "Dominican Republic": "DOM",
+    "Brazil": "BRA", "Argentina": "ARG", "Colombia": "COL",
+    "Peru": "PER", "Chile": "CHI", "Mexico": "MEX",
+    "Venezuela": "VEN", "Uruguay": "URU", "Paraguay": "PAR",
+    "Ecuador": "ECU", "Costa Rica": "CRC", "Guatemala": "GUA", "Panama": "PAN",
+    "England": "GBR", "Scotland": "GBR", "Wales": "GBR",
+    "United Kingdom": "GBR", "Northern Ireland": "GBR",
+    "France": "FRA", "Germany": "GER", "Spain": "ESP",
+    "Netherlands": "NED", "Belgium": "BEL", "Portugal": "POR",
+    "Italy": "ITA", "Ireland": "IRL",
+    "Sweden": "SWE", "Norway": "NOR", "Denmark": "DEN", "Finland": "FIN",
+    "Nordic": "SWE", "Europe": "GER",
+    "Pacific Islands": "FIJ", "Fiji": "FIJ", "Samoa": "SAM",
+    "Cuba": "CUB", "Papua New Guinea": "PNG",
+    "Egypt": "EGY", "Morocco": "MAR", "Saudi Arabia": "KSA",
+    "Iran": "IRN", "Israel": "ISR", "UAE": "UAE",
+    "Russia": "RUS", "Turkey": "TUR", "India": "IND",
+    "Mongolia": "MGL", "Kazakhstan": "KAZ", "Uzbekistan": "UZB",
+    "Poland": "POL", "Czech Republic": "CZE", "Ukraine": "UKR",
+    "Honduras": "HON",
+}
+
+
+def _resolve_fiv_code(player: "Player") -> Optional[str]:
+    """Determine the FIV nation code a CVL player is eligible for.
+
+    Uses hometown_state first (more specific), then hometown_country.
+    Returns None if the player cannot be mapped to any FIV nation.
+    """
+    # Try hometown_state first (e.g. JPN, NGA, JAM, ENG)
+    state = getattr(player, "hometown_state", "") or ""
+    if state:
+        code = CVL_STATE_TO_FIV_CODE.get(state)
+        if code:
+            return code
+
+    # Fallback to hometown_country
+    country = getattr(player, "hometown_country", "") or ""
+    if country:
+        code = CVL_COUNTRY_TO_FIV_CODE.get(country)
+        if code:
+            return code
+
+    return None
+
 
 @dataclass
 class NationInfo:
@@ -248,11 +343,13 @@ class MatchResult:
 
 
 def _slim_result(result: dict) -> dict:
-    """Keep scores, stats, player_stats — drop play-by-play."""
+    """Keep scores, stats, player_stats, drives, and play-by-play."""
     slim: dict = {}
     for key in ("final_score", "stats", "player_stats", "weather",
                 "home_team_name", "away_team_name",
-                "home_team_abbrev", "away_team_abbrev"):
+                "home_team_abbrev", "away_team_abbrev",
+                "drive_summary", "play_by_play",
+                "in_game_injuries"):
         if key in result:
             slim[key] = result[key]
     return slim
@@ -676,8 +773,11 @@ def generate_national_teams(
 ) -> Dict[str, NationalTeam]:
     """Generate all national teams.
 
-    If cvl_players are provided, Team USA and Team Canada pull from that pool.
-    Otherwise all teams get generated rosters at their tier level.
+    CVL pipeline: every CVL player is mapped to a FIV nation via
+    ``_resolve_fiv_code`` (hometown_state → FIV code).  International CVL
+    players (e.g. a Japanese-origin player at Gonzaga) are routed to their
+    home nation's team.  USA/CAN fill entirely from CVL when available;
+    other nations get CVL players mixed with generated depth.
 
     Args:
         cvl_players: Optional list of all CVL players from a completed season
@@ -693,68 +793,71 @@ def generate_national_teams(
     # Track claimed players to prevent dual-selection
     claimed_player_ids: set = set()
 
-    # --- Phase 1: CVL pipeline for USA (and CAN if applicable) ---
+    # --- Phase 1: Route ALL CVL players to their eligible nations ---
+    # Build per-nation buckets of CVL players sorted by overall
+    cvl_by_nation: Dict[str, List[Player]] = {}
     if cvl_players:
-        # Team USA: top 36 by overall from USA-eligible players
-        usa_eligible = sorted(
-            [p for p in cvl_players if p.hometown_country == "USA"],
-            key=lambda p: -p.overall,
+        for p in cvl_players:
+            fiv_code = _resolve_fiv_code(p)
+            if fiv_code and fiv_code in all_nations:
+                cvl_by_nation.setdefault(fiv_code, []).append(p)
+        # Sort each bucket by overall descending
+        for code in cvl_by_nation:
+            cvl_by_nation[code].sort(key=lambda p: -p.overall)
+
+        _log.info(
+            f"CVL pipeline: {len(cvl_players)} total players, "
+            f"{sum(len(v) for v in cvl_by_nation.values())} mapped to "
+            f"{len(cvl_by_nation)} nations"
         )
-        usa_roster: List[NationalTeamPlayer] = []
-        for p in usa_eligible[:ROSTER_SIZE]:
-            ntp = NationalTeamPlayer(
-                player=deepcopy(p),
-                nationalities=["USA"],
-                active_national_team="USA",
-                cvl_source=getattr(p, '_team_name', None),
-                age=_year_to_age(p.year, rng),
-            )
-            usa_roster.append(ntp)
-            claimed_player_ids.add(p.player_id)
 
-        if "USA" in all_nations and usa_roster:
-            nt = NationalTeam(nation=all_nations["USA"], roster=usa_roster)
-            nt.rating = _compute_team_rating(usa_roster)
-            teams["USA"] = nt
-
-        # Team Canada: any Canadian players from CVL
-        can_eligible = sorted(
-            [p for p in cvl_players
-             if p.hometown_country == "CAN" and p.player_id not in claimed_player_ids],
-            key=lambda p: -p.overall,
-        )
-        can_cvl_roster: List[NationalTeamPlayer] = []
-        for p in can_eligible[:ROSTER_SIZE]:
-            ntp = NationalTeamPlayer(
-                player=deepcopy(p),
-                nationalities=["CAN"],
-                active_national_team="CAN",
-                cvl_source=getattr(p, '_team_name', None),
-                age=_year_to_age(p.year, rng),
-            )
-            can_cvl_roster.append(ntp)
-            claimed_player_ids.add(p.player_id)
-
-        # Fill remaining Canada slots with generated players
-        if "CAN" in all_nations:
-            remaining = ROSTER_SIZE - len(can_cvl_roster)
-            if remaining > 0:
-                gen = _generate_full_roster(all_nations["CAN"], rng)
-                can_cvl_roster.extend(gen[:remaining])
-            nt = NationalTeam(nation=all_nations["CAN"], roster=can_cvl_roster[:ROSTER_SIZE])
-            nt.rating = _compute_team_rating(nt.roster)
-            teams["CAN"] = nt
-
-    # --- Phase 2: Generate rosters for all remaining nations ---
+    # --- Phase 1b: Build rosters from CVL players + generated depth ---
     for code, nation_info in all_nations.items():
-        if code in teams:
-            continue
-        roster = _generate_full_roster(nation_info, rng)
+        cvl_pool = cvl_by_nation.get(code, [])
+        cvl_roster: List[NationalTeamPlayer] = []
+
+        for p in cvl_pool:
+            if p.player_id in claimed_player_ids:
+                continue
+            if len(cvl_roster) >= ROSTER_SIZE:
+                break
+            ntp = NationalTeamPlayer(
+                player=deepcopy(p),
+                nationalities=[code],
+                active_national_team=code,
+                cvl_source=getattr(p, '_team_name', None),
+                age=_year_to_age(p.year, rng),
+            )
+            cvl_roster.append(ntp)
+            claimed_player_ids.add(p.player_id)
+
+        # Fill remaining slots with generated players at tier level
+        remaining = ROSTER_SIZE - len(cvl_roster)
+        if remaining > 0:
+            gen = _generate_full_roster(nation_info, rng)
+            cvl_roster.extend(gen[:remaining])
+
+        roster = cvl_roster[:ROSTER_SIZE]
         nt = NationalTeam(nation=nation_info, roster=roster)
-        # Set rating from tier config
-        tier_data = TIER_ATTRIBUTES[nation_info.tier]
-        nt.rating = rng.randint(tier_data["rating_lo"], tier_data["rating_hi"])
+
+        # Rating: if mostly CVL players, compute from roster; otherwise use tier
+        if len(cvl_pool) >= ROSTER_SIZE // 2:
+            nt.rating = _compute_team_rating(roster)
+        else:
+            tier_data = TIER_ATTRIBUTES[nation_info.tier]
+            nt.rating = rng.randint(tier_data["rating_lo"], tier_data["rating_hi"])
+            # Boost slightly if CVL players are present
+            if cvl_pool:
+                cvl_boost = min(5, len(cvl_pool))
+                nt.rating = min(99, nt.rating + cvl_boost)
+
         teams[code] = nt
+
+        if cvl_pool:
+            _log.debug(
+                f"{code}: {len([r for r in roster if r.cvl_source])} CVL, "
+                f"{remaining} generated, rating={nt.rating}"
+            )
 
     # --- Phase 3: Mercenary naturalization ---
     merc_cfg = cfg.get("mercenary_nations", {})
@@ -1537,6 +1640,117 @@ def run_world_cup_knockout(
     wc.phase = "completed"
     _log.info(f"World Cup complete. Champion: {wc.champion}")
     return wc
+
+
+def compute_tournament_stat_leaders(results: List[MatchResult]) -> dict:
+    """Aggregate player stats across tournament matches and compute leaders.
+
+    Returns a dict with categories: rushing, kick_passing, scoring,
+    defensive, and kicking — each a sorted list of player stat dicts.
+    """
+    # Accumulate per-player stats across all matches
+    accum: Dict[str, Dict[str, Any]] = {}
+
+    for r in results:
+        if not r.game_result or "player_stats" not in r.game_result:
+            continue
+        for side in ("home", "away"):
+            ps = r.game_result["player_stats"].get(side, [])
+            nation_code = r.home_code if side == "home" else r.away_code
+            if not isinstance(ps, list):
+                continue
+            for stats in ps:
+                pname = stats.get("name", "Unknown")
+                key = f"{pname}|{nation_code}"
+                if key not in accum:
+                    accum[key] = {
+                        "name": pname,
+                        "nation": nation_code,
+                        "position": stats.get("position", ""),
+                        "games": 0,
+                        # Rushing
+                        "rush_carries": 0, "rushing_yards": 0, "rushing_tds": 0,
+                        "long_rush": 0,
+                        # Kick passing
+                        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+                        "kick_pass_yards": 0, "kick_pass_tds": 0,
+                        "kick_pass_interceptions_thrown": 0,
+                        # Receiving
+                        "kick_pass_receptions": 0,
+                        # Laterals
+                        "laterals_thrown": 0, "lateral_receptions": 0,
+                        "lateral_yards": 0, "lateral_tds": 0, "lateral_assists": 0,
+                        # Defense
+                        "tackles": 0, "tfl": 0, "sacks": 0,
+                        "hurries": 0, "kick_pass_ints": 0, "st_tackles": 0,
+                        # Kicking
+                        "drop_kicks_made": 0, "drop_kicks_attempted": 0,
+                        "place_kicks_made": 0, "place_kicks_attempted": 0,
+                        # Scoring
+                        "total_tds": 0, "fumbles": 0,
+                        # Advanced
+                        "wpa": 0.0,
+                    }
+                a = accum[key]
+                a["games"] += 1
+                for stat_key in (
+                    "rush_carries", "rushing_yards", "rushing_tds",
+                    "kick_passes_thrown", "kick_passes_completed",
+                    "kick_pass_yards", "kick_pass_tds",
+                    "kick_pass_interceptions_thrown",
+                    "kick_pass_receptions",
+                    "laterals_thrown", "lateral_receptions",
+                    "lateral_yards", "lateral_tds", "lateral_assists",
+                    "tackles", "tfl", "sacks", "hurries",
+                    "kick_pass_ints", "st_tackles",
+                    "drop_kicks_made", "drop_kicks_attempted",
+                    "place_kicks_made", "place_kicks_attempted",
+                    "fumbles",
+                ):
+                    a[stat_key] += stats.get(stat_key, 0)
+                a["wpa"] += stats.get("wpa", stats.get("vpa", 0))
+                a["long_rush"] = max(a["long_rush"], stats.get("long_rush", 0))
+                a["total_tds"] = (
+                    a["rushing_tds"] + a["lateral_tds"] + a["kick_pass_tds"]
+                )
+
+    all_players = list(accum.values())
+
+    # Build category leaders
+    rushing = sorted(
+        [p for p in all_players if p["rush_carries"] > 0],
+        key=lambda x: x["rushing_yards"], reverse=True,
+    )[:20]
+
+    kick_passing = sorted(
+        [p for p in all_players if p["kick_passes_thrown"] > 0],
+        key=lambda x: x["kick_pass_yards"], reverse=True,
+    )[:20]
+
+    scoring = sorted(
+        [p for p in all_players if p["total_tds"] > 0],
+        key=lambda x: x["total_tds"], reverse=True,
+    )[:20]
+
+    defensive = sorted(
+        [p for p in all_players if p["tackles"] > 0],
+        key=lambda x: x["tackles"], reverse=True,
+    )[:20]
+
+    kicking = sorted(
+        [p for p in all_players
+         if p["drop_kicks_made"] + p["place_kicks_made"] > 0],
+        key=lambda x: x["drop_kicks_made"] * 5 + x["place_kicks_made"] * 3,
+        reverse=True,
+    )[:20]
+
+    return {
+        "rushing": rushing,
+        "kick_passing": kick_passing,
+        "scoring": scoring,
+        "defensive": defensive,
+        "kicking": kicking,
+    }
 
 
 def _compute_golden_boot(results: List[MatchResult]) -> Optional[dict]:
