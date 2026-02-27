@@ -2610,7 +2610,7 @@ def fast_sim_season(
 ) -> dict:
     """Simulate an entire season using rating-based outcomes (no game engine).
 
-    Returns dict with keys: champion, top_5, standings (list of dicts).
+    Returns dict with keys: champion, runner_up, final_four, standings (list of dicts).
     """
     ratings = {name: _team_avg_overall(t) for name, t in teams.items()}
     team_names = list(teams.keys())
@@ -2671,12 +2671,12 @@ def fast_sim_season(
         playoff_pool.add(name)
     playoff_list = sorted(playoff_pool, key=lambda n: ranked.index(n))[:playoff_size]
 
-    champion, runner_up = _fast_sim_bracket(playoff_list, ratings, rng)
+    champion, runner_up, final_four = _fast_sim_bracket(playoff_list, ratings, rng)
 
     return {
         "champion": champion,
         "runner_up": runner_up,
-        "top_5": ranked[:5],
+        "final_four": final_four,
         "_records": records,
         "_playoff_teams": set(playoff_list),
     }
@@ -2783,14 +2783,22 @@ def _fast_sim_bracket(
 ) -> tuple:
     """Single-elimination bracket simulation.
 
-    Returns (champion, runner_up) tuple.
+    Returns (champion, runner_up, final_four) tuple.
+    final_four is ordered: [champion, runner_up, semi1_loser, semi2_loser].
     """
     if not teams:
-        return "N/A", "N/A"
+        return "N/A", "N/A", []
+    if len(teams) == 1:
+        return teams[0], "N/A", [teams[0]]
     bracket = list(teams)
+    semifinalists = []
+    runner_up = "N/A"
     while len(bracket) > 1:
         next_round = []
         losers = []
+        # Capture the Final Four: the 4 teams entering the semifinal round
+        if len(bracket) == 4:
+            semifinalists = list(bracket)
         for i in range(0, len(bracket) - 1, 2):
             winner, _, _ = _fast_sim_game(bracket[i], bracket[i + 1], ratings, rng)
             loser = bracket[i + 1] if winner == bracket[i] else bracket[i]
@@ -2802,7 +2810,15 @@ def _fast_sim_bracket(
         # The last loser when bracket reaches the final is the runner-up
         if len(bracket) == 1:
             runner_up = losers[-1] if losers else "N/A"
-    return bracket[0], runner_up
+    champion = bracket[0]
+    # Build final_four list ordered: champion, runner_up, then the two semi losers
+    if semifinalists:
+        semi_losers = [t for t in semifinalists if t != champion and t != runner_up]
+        final_four = [champion, runner_up] + semi_losers
+    else:
+        # Bracket had fewer than 4 teams
+        final_four = [champion, runner_up]
+    return champion, runner_up, final_four
 
 
 def fast_generate_history(
@@ -2815,7 +2831,7 @@ def fast_generate_history(
 ) -> list:
     """Generate num_years of fast-simulated history.
 
-    Returns list of dicts: [{year, champion, top_5}, ...]
+    Returns list of dicts: [{year, champion, runner_up, final_four}, ...]
     """
     rng = random.Random(base_seed)
     results = []
