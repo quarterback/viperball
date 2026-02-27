@@ -1296,6 +1296,7 @@ def run_playoff(
                 "home_score": result.home_score,
                 "away_score": result.away_score,
                 "match_id": result.match_id,
+                "result": result.to_dict(),
             })
             next_round.append(result.winner)
         bracket.completed = True
@@ -1323,6 +1324,7 @@ def run_playoff(
                 "home_score": result.home_score,
                 "away_score": result.away_score,
                 "match_id": result.match_id,
+                "result": result.to_dict(),
             })
         bracket.completed = True
         playoff.bracket.append(bracket)
@@ -1545,6 +1547,7 @@ def run_world_cup_knockout(
             "home_score": result.home_score,
             "away_score": result.away_score,
             "match_id": result.match_id,
+            "result": result.to_dict(),
         })
         current_teams.append(result.winner)
     bracket.completed = True
@@ -1578,6 +1581,7 @@ def run_world_cup_knockout(
                 "home_score": result.home_score,
                 "away_score": result.away_score,
                 "match_id": result.match_id,
+                "result": result.to_dict(),
             })
             next_round.append(result.winner)
             loser = away_code if result.winner == home_code else home_code
@@ -1605,6 +1609,7 @@ def run_world_cup_knockout(
             "home_score": result.home_score,
             "away_score": result.away_score,
             "match_id": result.match_id,
+            "result": result.to_dict(),
         })
         bracket.completed = True
         wc.knockout_rounds.append(bracket)
@@ -1628,6 +1633,7 @@ def run_world_cup_knockout(
             "home_score": result.home_score,
             "away_score": result.away_score,
             "match_id": result.match_id,
+            "result": result.to_dict(),
         })
         bracket.completed = True
         wc.knockout_rounds.append(bracket)
@@ -2048,7 +2054,12 @@ def generate_fiv_odds(
 
 
 def find_match_in_cycle(cycle_data: dict, match_id: str) -> Optional[dict]:
-    """Find a specific match result by ID across all competitions in a cycle."""
+    """Find a specific match result by ID across all competitions in a cycle.
+
+    Returns the full MatchResult dict (with game_result) when available.
+    For knockout matchups, returns the embedded ``result`` dict which
+    contains the full game data for box score rendering.
+    """
     # Search continental championships
     for conf_id, cc_data in cycle_data.get("confederations_data", {}).items():
         for group in cc_data.get("groups", []):
@@ -2066,7 +2077,7 @@ def find_match_in_cycle(cycle_data: dict, match_id: str) -> Optional[dict]:
         for kr in playoff.get("bracket", []):
             for m in kr.get("matchups", []):
                 if m.get("match_id") == match_id:
-                    return m
+                    return m.get("result", m)
 
     # Search World Cup
     wc = cycle_data.get("world_cup")
@@ -2078,6 +2089,6 @@ def find_match_in_cycle(cycle_data: dict, match_id: str) -> Optional[dict]:
         for kr in wc.get("knockout_rounds", []):
             for m in kr.get("matchups", []):
                 if m.get("match_id") == match_id:
-                    return m
+                    return m.get("result", m)
 
     return None
