@@ -72,9 +72,10 @@ class AwardWinner:
     year_in_school: str   # Freshman / Sophomore / Junior / Senior / Graduate
     overall_rating: int
     reason: str
+    season_stats: Optional[Dict] = None  # key stats for display
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "award_name": self.award_name,
             "player_name": self.player_name,
             "team_name": self.team_name,
@@ -83,6 +84,9 @@ class AwardWinner:
             "overall_rating": self.overall_rating,
             "reason": self.reason,
         }
+        if self.season_stats:
+            d["season_stats"] = self.season_stats
+        return d
 
 
 @dataclass
@@ -243,7 +247,210 @@ def _pos_group(position: str) -> str:
 
 
 # ──────────────────────────────────────────────
-# SCORING FUNCTIONS
+# SEASON STAT AGGREGATION
+# ──────────────────────────────────────────────
+
+def _aggregate_player_season_stats(season) -> Dict[str, Dict[str, dict]]:
+    """Aggregate individual player stats from completed games.
+
+    Returns: {team_name: {player_name: {stat_dict}}}
+    """
+    agg: Dict[str, Dict[str, dict]] = {}
+
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        fr = game.full_result
+        ps = fr.get("player_stats", {})
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            if team_name not in agg:
+                agg[team_name] = {}
+            for p in ps.get(side, []):
+                name = p.get("name", "")
+                if not name:
+                    continue
+                if name not in agg[team_name]:
+                    agg[team_name][name] = {
+                        "games": 0, "touches": 0, "yards": 0,
+                        "rushing_yards": 0, "rush_carries": 0,
+                        "tds": 0, "rushing_tds": 0, "fumbles": 0,
+                        "lateral_yards": 0, "laterals_thrown": 0,
+                        "kick_att": 0, "kick_made": 0,
+                        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+                        "kick_pass_yards": 0, "kick_pass_tds": 0,
+                        "tackles": 0, "tfl": 0, "sacks": 0,
+                        "tag": p.get("tag", ""),
+                    }
+                a = agg[team_name][name]
+                a["games"] += 1
+                if not a["tag"]:
+                    a["tag"] = p.get("tag", "")
+                for stat in [
+                    "touches", "yards", "rushing_yards", "rush_carries",
+                    "tds", "rushing_tds", "fumbles", "lateral_yards",
+                    "laterals_thrown", "kick_att", "kick_made",
+                    "kick_passes_thrown", "kick_passes_completed",
+                    "kick_pass_yards", "kick_pass_tds",
+                    "tackles", "tfl", "sacks",
+                ]:
+                    a[stat] += p.get(stat, 0)
+
+    # Also check playoff games
+    for game in getattr(season, 'playoff_bracket', []):
+        if not getattr(game, 'completed', False) or not getattr(game, "full_result", None):
+            continue
+        fr = game.full_result
+        ps = fr.get("player_stats", {})
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            if team_name not in agg:
+                agg[team_name] = {}
+            for p in ps.get(side, []):
+                name = p.get("name", "")
+                if not name:
+                    continue
+                if name not in agg[team_name]:
+                    agg[team_name][name] = {
+                        "games": 0, "touches": 0, "yards": 0,
+                        "rushing_yards": 0, "rush_carries": 0,
+                        "tds": 0, "rushing_tds": 0, "fumbles": 0,
+                        "lateral_yards": 0, "laterals_thrown": 0,
+                        "kick_att": 0, "kick_made": 0,
+                        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+                        "kick_pass_yards": 0, "kick_pass_tds": 0,
+                        "tackles": 0, "tfl": 0, "sacks": 0,
+                        "tag": p.get("tag", ""),
+                    }
+                a = agg[team_name][name]
+                a["games"] += 1
+                if not a["tag"]:
+                    a["tag"] = p.get("tag", "")
+                for stat in [
+                    "touches", "yards", "rushing_yards", "rush_carries",
+                    "tds", "rushing_tds", "fumbles", "lateral_yards",
+                    "laterals_thrown", "kick_att", "kick_made",
+                    "kick_passes_thrown", "kick_passes_completed",
+                    "kick_pass_yards", "kick_pass_tds",
+                    "tackles", "tfl", "sacks",
+                ]:
+                    a[stat] += p.get(stat, 0)
+
+    return agg
+
+
+def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) -> float:
+    """Score a player for All-League selection using season statistics.
+
+    Offensive players: weighted by yards, TDs, efficiency.
+    Defensive players: weighted by tackles, sacks, TFLs.
+    """
+    games = max(1, stats.get("games", 1))
+    if group in ("zeroback",):
+        # Zeroback: kick passing + rushing + lateral play
+        kp_yds = stats.get("kick_pass_yards", 0)
+        kp_tds = stats.get("kick_pass_tds", 0)
+        rush_yds = stats.get("rushing_yards", 0)
+        tds = stats.get("tds", 0)
+        lat_yds = stats.get("lateral_yards", 0)
+        raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+               + tds * 15 + kp_tds * 12) / games
+    elif group == "viper":
+        # Viper: yards, laterals, TDs
+        yds = stats.get("yards", 0)
+        lat_yds = stats.get("lateral_yards", 0)
+        tds = stats.get("tds", 0)
+        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games
+    elif group == "back":
+        # Halfback/Wingback: rushing yards, YPC, TDs
+        rush_yds = stats.get("rushing_yards", 0)
+        carries = max(1, stats.get("rush_carries", 1))
+        tds = stats.get("tds", 0)
+        ypc = rush_yds / carries
+        raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games
+    elif group == "lineman":
+        # Defensive lineman: tackles, sacks, TFLs
+        tackles = stats.get("tackles", 0)
+        sacks = stats.get("sacks", 0)
+        tfl = stats.get("tfl", 0)
+        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games
+    elif group == "safety":
+        # Safety/Keeper: tackles, TFLs, sacks
+        tackles = stats.get("tackles", 0)
+        sacks = stats.get("sacks", 0)
+        tfl = stats.get("tfl", 0)
+        raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games
+    else:
+        raw = stats.get("yards", 0) / games
+    return round(raw * team_perf_mult, 2)
+
+
+def _format_stat_line(stats: dict, group: str) -> str:
+    """Build a concise stat line for display."""
+    games = stats.get("games", 0)
+    parts = [f"{games} GP"]
+
+    if group in ("zeroback",):
+        kp_comp = stats.get("kick_passes_completed", 0)
+        kp_att = stats.get("kick_passes_thrown", 0)
+        kp_yds = stats.get("kick_pass_yards", 0)
+        kp_tds = stats.get("kick_pass_tds", 0)
+        rush_yds = stats.get("rushing_yards", 0)
+        tds = stats.get("tds", 0)
+        parts.append(f"{kp_comp}/{kp_att} KP {kp_yds} yds {kp_tds} KP TD")
+        parts.append(f"{rush_yds} rush yds, {tds} TD")
+    elif group == "viper":
+        yds = stats.get("yards", 0)
+        lat_yds = stats.get("lateral_yards", 0)
+        tds = stats.get("tds", 0)
+        parts.append(f"{yds} yds, {lat_yds} lat yds, {tds} TD")
+    elif group == "back":
+        rush_yds = stats.get("rushing_yards", 0)
+        carries = stats.get("rush_carries", 0)
+        tds = stats.get("tds", 0)
+        ypc = round(rush_yds / max(1, carries), 1)
+        parts.append(f"{rush_yds} yds, {carries} car, {ypc} YPC, {tds} TD")
+    elif group in ("lineman", "safety"):
+        tackles = stats.get("tackles", 0)
+        sacks = stats.get("sacks", 0)
+        tfl = stats.get("tfl", 0)
+        parts.append(f"{tackles} TKL, {sacks} sacks, {tfl} TFL")
+    else:
+        yds = stats.get("yards", 0)
+        tds = stats.get("tds", 0)
+        parts.append(f"{yds} yds, {tds} TD")
+
+    return " | ".join(parts)
+
+
+def _build_season_stats_dict(stats: dict, group: str) -> dict:
+    """Build a dict of key stats for JSON serialization."""
+    d = {"games": stats.get("games", 0)}
+    if group in ("zeroback",):
+        d["kick_passes_completed"] = stats.get("kick_passes_completed", 0)
+        d["kick_passes_thrown"] = stats.get("kick_passes_thrown", 0)
+        d["kick_pass_yards"] = stats.get("kick_pass_yards", 0)
+        d["kick_pass_tds"] = stats.get("kick_pass_tds", 0)
+        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["tds"] = stats.get("tds", 0)
+    elif group == "viper":
+        d["yards"] = stats.get("yards", 0)
+        d["lateral_yards"] = stats.get("lateral_yards", 0)
+        d["tds"] = stats.get("tds", 0)
+    elif group == "back":
+        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["rush_carries"] = stats.get("rush_carries", 0)
+        d["tds"] = stats.get("tds", 0)
+    elif group in ("lineman", "safety"):
+        d["tackles"] = stats.get("tackles", 0)
+        d["sacks"] = stats.get("sacks", 0)
+        d["tfl"] = stats.get("tfl", 0)
+    else:
+        d["yards"] = stats.get("yards", 0)
+        d["tds"] = stats.get("tds", 0)
+    return d
+
+
+# ──────────────────────────────────────────────
+# SCORING FUNCTIONS (rating-based fallback)
 # ──────────────────────────────────────────────
 
 def _player_score(player: Player, team_perf_mult: float = 1.0) -> float:
@@ -323,11 +530,14 @@ def _best_in_position(
     score_fn,
     exclude: set,
     freshman_only: bool = False,
+    player_stats_agg: Optional[Dict] = None,
 ) -> Optional[Tuple[Player, str]]:
     best_score = -1.0
     best_pair = None
+    use_stats = bool(player_stats_agg)
     for team_name, team in teams.items():
         mult = _team_perf_mult(team_name, standings)
+        team_stats = player_stats_agg.get(team_name, {}) if use_stats else {}
         for player in team.players:
             uid = f"{team_name}::{player.name}"
             if uid in exclude:
@@ -336,7 +546,13 @@ def _best_in_position(
                 continue
             if freshman_only and getattr(player, "year", "") != "Freshman":
                 continue
-            score = score_fn(player, mult)
+            if use_stats and player.name in team_stats:
+                pstats = team_stats[player.name]
+                if pstats.get("games", 0) == 0:
+                    continue
+                score = _stat_score_for_group(pstats, group_filter, mult)
+            else:
+                score = score_fn(player, mult)
             if score > best_score:
                 best_score = score
                 best_pair = (player, team_name)
@@ -365,14 +581,25 @@ def _select_slots(
     year: int,
     team_level: str,
     freshman_only: bool = False,
+    player_stats_agg: Optional[Dict] = None,
 ) -> List[AwardWinner]:
     winners = []
     for group, label, score_fn in slot_spec:
-        pair = _best_in_position(teams, standings, group, score_fn, exclude, freshman_only)
+        pair = _best_in_position(teams, standings, group, score_fn, exclude, freshman_only,
+                                  player_stats_agg=player_stats_agg)
         if pair:
             player, team_name = pair
             uid = f"{team_name}::{player.name}"
             exclude.add(uid)
+            # Build season stats for display
+            pstats = None
+            stat_line = ""
+            stats_dict = None
+            if player_stats_agg:
+                pstats = player_stats_agg.get(team_name, {}).get(player.name)
+            if pstats and pstats.get("games", 0) > 0:
+                stat_line = _format_stat_line(pstats, group)
+                stats_dict = _build_season_stats_dict(pstats, group)
             winners.append(AwardWinner(
                 award_name=label,
                 player_name=player.name,
@@ -380,7 +607,8 @@ def _select_slots(
                 position=player.position,
                 year_in_school=getattr(player, "year", ""),
                 overall_rating=player.overall,
-                reason=f"{team_level.replace('_', ' ').title()} All-CVL",
+                reason=stat_line if stat_line else f"{team_level.replace('_', ' ').title()} All-CVL",
+                season_stats=stats_dict,
             ))
     return winners
 
@@ -544,13 +772,16 @@ def _select_all_conference_both(
     all_teams: Dict[str, Team],
     standings: dict,
     year: int,
+    player_stats_agg: Optional[Dict] = None,
 ) -> Dict[str, AllConferenceTeam]:
     """Returns {"first": AllConferenceTeam, "second": AllConferenceTeam}."""
     conf_team_objs = {t: all_teams[t] for t in conf_teams if t in all_teams}
     seen: set = set()
 
-    first_slots = _select_slots(conf_team_objs, standings, _AA_SLOTS, seen, year, "first_conference")
-    second_slots = _select_slots(conf_team_objs, standings, _AA_SLOTS, seen, year, "second_conference")
+    first_slots = _select_slots(conf_team_objs, standings, _AA_SLOTS, seen, year, "first_conference",
+                                 player_stats_agg=player_stats_agg)
+    second_slots = _select_slots(conf_team_objs, standings, _AA_SLOTS, seen, year, "second_conference",
+                                  player_stats_agg=player_stats_agg)
 
     return {
         "first": AllConferenceTeam(
@@ -578,6 +809,7 @@ def _select_conference_individual_awards(
     all_teams: Dict[str, Team],
     standings: dict,
     prev_season_wins: Dict[str, int] = None,
+    coaching_staffs: Optional[Dict] = None,
 ) -> List[AwardWinner]:
     """Select conference-level individual awards mirroring national trophies."""
     conf_team_objs = {t: all_teams[t] for t in conf_teams if t in all_teams}
@@ -682,9 +914,10 @@ def _select_conference_individual_awards(
             for t_name, r in conf_standings.items()
         }
         coy_team = max(coy_scores, key=coy_scores.get)
+        coy_display = _get_head_coach_name(coy_team, coaching_staffs)
         awards.append(AwardWinner(
             award_name=f"{conference_name} Coach of the Year",
-            player_name=coy_team,
+            player_name=coy_display,
             team_name=coy_team,
             position="Coach",
             year_in_school="",
@@ -696,14 +929,33 @@ def _select_conference_individual_awards(
 
 
 # ──────────────────────────────────────────────
+# COACHING STAFF HELPERS
+# ──────────────────────────────────────────────
+
+def _get_head_coach_name(team_name: str, coaching_staffs: Optional[Dict] = None) -> str:
+    """Look up the head coach name for a team. Returns 'Coach Name (School)' or just the school name."""
+    if coaching_staffs:
+        staff = coaching_staffs.get(team_name, {})
+        hc = staff.get("head_coach")
+        if hc:
+            first = getattr(hc, "first_name", "") or ""
+            last = getattr(hc, "last_name", "") or ""
+            name = f"{first} {last}".strip()
+            if name:
+                return f"{name} ({team_name})"
+    return team_name
+
+
+# ──────────────────────────────────────────────
 # TEAM-LEVEL AWARDS
 # ──────────────────────────────────────────────
 
 def _select_team_awards(
     standings: dict,
     prev_season_wins: Dict[str, int] = None,
+    coaching_staffs: Optional[Dict] = None,
 ) -> Tuple[str, str]:
-    """Returns (coach_of_year_team, most_improved_team)."""
+    """Returns (coach_of_year_display, most_improved_team)."""
     sorted_std = sorted(standings.values(), key=lambda r: r.win_percentage, reverse=True)
 
     # Coach of Year: best win% with a surprise factor component
@@ -711,7 +963,8 @@ def _select_team_awards(
         r.team_name: r.win_percentage * 0.7 + r.avg_opi * 0.003
         for r in standings.values()
     }
-    coy = max(coy_scores, key=coy_scores.get) if coy_scores else ""
+    coy_team = max(coy_scores, key=coy_scores.get) if coy_scores else ""
+    coy = _get_head_coach_name(coy_team, coaching_staffs) if coy_team else ""
 
     # Most Improved
     most_imp = ""
@@ -755,44 +1008,55 @@ def compute_season_awards(
     teams = season.teams
     honors = SeasonHonors(year=year)
 
+    # ── Aggregate player season stats for stats-based All-League selection ──
+    player_stats_agg = _aggregate_player_season_stats(season)
+
     # ── Named individual trophies ──────────────────────────────────────────
     honors.individual_awards = _select_individual_awards(teams, standings)
 
     # ── All-CVL (1st, 2nd, 3rd, Honorable Mention) ────────────────────────
     aa_seen: set = set()
 
-    first_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "first")
+    first_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "first",
+                                 player_stats_agg=player_stats_agg)
     honors.all_american_first = AllAmericanTeam(team_level="first", year=year, slots=first_slots)
 
-    second_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "second")
+    second_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "second",
+                                  player_stats_agg=player_stats_agg)
     honors.all_american_second = AllAmericanTeam(team_level="second", year=year, slots=second_slots)
 
-    third_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "third")
+    third_slots = _select_slots(teams, standings, _AA_SLOTS, aa_seen, year, "third",
+                                 player_stats_agg=player_stats_agg)
     honors.all_american_third = AllAmericanTeam(team_level="third", year=year, slots=third_slots)
 
     # Honorable Mention: two more players per slot = 18 total
     hm_slots_spec = _AA_SLOTS * 2   # run the same slot list twice
-    hm_slots = _select_slots(teams, standings, hm_slots_spec, aa_seen, year, "honorable_mention")
+    hm_slots = _select_slots(teams, standings, hm_slots_spec, aa_seen, year, "honorable_mention",
+                              player_stats_agg=player_stats_agg)
     honors.honorable_mention = AllAmericanTeam(team_level="honorable_mention", year=year, slots=hm_slots)
 
     # ── All-Freshman Team ─────────────────────────────────────────────────
     fresh_seen: set = set()
     fresh_slots = _select_slots(teams, standings, _AA_SLOTS, fresh_seen, year, "freshman",
-                                freshman_only=True)
+                                freshman_only=True, player_stats_agg=player_stats_agg)
     honors.all_freshman = AllAmericanTeam(team_level="freshman", year=year, slots=fresh_slots)
 
     # ── All-Conference (1st & 2nd per conference) ─────────────────────────
+    coaching_staffs = getattr(season, 'coaching_staffs', None) or {}
     if conferences:
         for conf_name, conf_teams in conferences.items():
             honors.all_conference_teams[conf_name] = _select_all_conference_both(
-                conf_name, conf_teams, teams, standings, year
+                conf_name, conf_teams, teams, standings, year,
+                player_stats_agg=player_stats_agg,
             )
             honors.conference_awards[conf_name] = _select_conference_individual_awards(
-                conf_name, conf_teams, teams, standings, prev_season_wins
+                conf_name, conf_teams, teams, standings, prev_season_wins,
+                coaching_staffs=coaching_staffs,
             )
 
     # ── Team-level awards ─────────────────────────────────────────────────
-    coy, most_imp = _select_team_awards(standings, prev_season_wins)
+    coy, most_imp = _select_team_awards(standings, prev_season_wins,
+                                         coaching_staffs=coaching_staffs)
     honors.coach_of_year = coy
     honors.most_improved = most_imp
 

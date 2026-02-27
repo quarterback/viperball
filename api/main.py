@@ -748,7 +748,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     history_results = []
     history_years = max(0, min(100, req.history_years))
     if history_years > 0:
-        history_results = fast_generate_history(
+        raw_history = fast_generate_history(
             teams=teams,
             conferences=conferences,
             num_years=history_years,
@@ -756,6 +756,11 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
             playoff_size=req.playoff_size,
             base_seed=req.ai_seed if req.ai_seed else 42,
         )
+        # Strip internal fields (not JSON-serializable / not needed by clients)
+        history_results = [
+            {k: v for k, v in entry.items() if not k.startswith("_")}
+            for entry in raw_history
+        ]
 
     session["season"] = season
     session["human_teams"] = req.human_teams or []

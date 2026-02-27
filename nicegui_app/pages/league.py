@@ -46,6 +46,132 @@ _CATEGORY_LABELS = {
 
 
 # ---------------------------------------------------------------------------
+# Clickable Player Card Dialog (CVL)
+# ---------------------------------------------------------------------------
+
+async def _show_cvl_player_card(session_id: str, team_name: str, player_name: str):
+    """Show a player card dialog for CVL, similar to NVL player cards."""
+    try:
+        roster_resp = await run.io_bound(api_client.get_team_roster, session_id, team_name)
+        roster = roster_resp.get("roster", [])
+    except api_client.APIError:
+        ui.notify(f"Could not load roster for {team_name}", type="warning")
+        return
+
+    p = next((pl for pl in roster if pl["name"] == player_name), None)
+    if not p:
+        ui.notify(f"Player '{player_name}' not found on {team_name}", type="warning")
+        return
+
+    with ui.dialog() as dlg, ui.card().classes("p-0 max-w-3xl").style("min-width:640px;"):
+        with ui.column().classes("w-full p-0 gap-0"):
+            # Header
+            with ui.element("div").classes(
+                "w-full px-5 py-4"
+            ).style("background:#1e3a5f; border-bottom:4px solid #c2a84e;"):
+                ui.label(f"#{p.get('number', '')} {p['name']}").classes(
+                    "text-2xl font-extrabold text-white tracking-tight"
+                )
+                ui.label(
+                    f"{p['position']} | {team_name}"
+                ).classes("text-sm font-semibold").style("color:#B0B7BC;")
+
+            with ui.element("div").classes("w-full px-5 py-3"):
+                with ui.row().classes("w-full gap-6 flex-wrap"):
+                    # Bio
+                    with ui.column().classes("gap-1").style("min-width:200px;"):
+                        def _bio_line(label, value):
+                            with ui.row().classes("gap-1 items-baseline"):
+                                ui.label(f"{label}:").classes("text-xs font-bold text-slate-500")
+                                ui.label(str(value)).classes("text-xs text-slate-800")
+
+                        _bio_line("Year", p.get("year_abbr", p.get("year", "")))
+                        arch = p.get("archetype", "none")
+                        if arch and arch != "none" and arch != "—":
+                            _bio_line("Archetype", arch.replace("_", " ").title())
+                        if p.get("height"):
+                            _bio_line("Height", p["height"])
+                        if p.get("weight"):
+                            _bio_line("Weight", f"{p['weight']} lbs")
+                        hometown_parts = []
+                        if p.get("hometown_city"):
+                            hometown_parts.append(p["hometown_city"])
+                        if p.get("hometown_state"):
+                            hometown_parts.append(p["hometown_state"])
+                        if hometown_parts:
+                            _bio_line("Hometown", ", ".join(hometown_parts))
+
+                    # Ratings
+                    with ui.column().classes("gap-1 flex-1"):
+                        ovr = p.get("overall", 0)
+                        ovr_color = "#16a34a" if ovr >= 85 else ("#d97706" if ovr >= 75 else "#64748b")
+                        ui.label("OVR").classes("text-[10px] font-bold text-slate-400 mb-0")
+                        ui.label(str(ovr)).classes("text-4xl font-extrabold mb-2").style(f"color:{ovr_color}; line-height:1;")
+
+                        rating_display = [
+                            ("SPD", "speed"), ("STA", "stamina"), ("KICK", "kicking"),
+                            ("LAT", "lateral_skill"), ("TKL", "tackling"), ("AGI", "agility"),
+                            ("PWR", "power"), ("AWR", "awareness"), ("HND", "hands"),
+                            ("KPW", "kick_power"), ("KAC", "kick_accuracy"),
+                        ]
+                        with ui.element("div").classes("flex flex-wrap gap-1"):
+                            for abbr, key in rating_display:
+                                val = p.get(key, 0)
+                                if val >= 85:
+                                    bg = "#dcfce7"; fg = "#166534"; bd = "#86efac"
+                                elif val >= 75:
+                                    bg = "#dbeafe"; fg = "#1e40af"; bd = "#93c5fd"
+                                elif val >= 65:
+                                    bg = "#fef3c7"; fg = "#92400e"; bd = "#fcd34d"
+                                else:
+                                    bg = "#f1f5f9"; fg = "#475569"; bd = "#cbd5e1"
+                                with ui.element("div").classes(
+                                    "flex flex-col items-center px-1.5 py-0.5 rounded"
+                                ).style(f"background:{bg}; color:{fg}; border:1px solid {bd}; min-width:42px;"):
+                                    ui.label(abbr).classes("text-[9px] font-bold leading-tight")
+                                    ui.label(str(val)).classes("text-xs font-extrabold leading-tight")
+
+            # Season Stats
+            with ui.element("div").classes("w-full px-5 py-3").style("border-top:1px solid #e2e8f0;"):
+                try:
+                    ps_resp = await run.io_bound(api_client.get_player_stats, session_id, team=team_name)
+                    team_players = ps_resp.get("players", [])
+                    player_season = next((tp for tp in team_players if tp["name"] == player_name), None)
+                    if player_season and player_season.get("games_played", 0) > 0:
+                        ui.label("Season Stats").classes("text-sm font-bold text-slate-700 mb-1").style(
+                            "border-bottom:2px solid #1e3a5f;"
+                        )
+                        with ui.row().classes("w-full flex-wrap gap-3"):
+                            metric_card("GP", player_season["games_played"])
+                            metric_card("Yards", player_season["yards"])
+                            metric_card("TDs", player_season["tds"])
+                            if player_season.get("rush_carries", 0) > 0:
+                                ypc = round(player_season["rushing_yards"] / max(1, player_season["rush_carries"]), 1)
+                                metric_card("Rush Yds", player_season["rushing_yards"])
+                                metric_card("YPC", ypc)
+                            if player_season.get("lateral_yards", 0) > 0:
+                                metric_card("Lat Yds", player_season["lateral_yards"])
+                            if player_season.get("kick_att", 0) > 0:
+                                metric_card("Kicks", f"{player_season['kick_made']}/{player_season['kick_att']}")
+                            if player_season.get("tackles", 0) > 0:
+                                metric_card("TKL", player_season["tackles"])
+                            if player_season.get("sacks", 0) > 0:
+                                metric_card("Sacks", player_season["sacks"])
+                    else:
+                        ui.label("No season stats recorded.").classes("text-xs text-gray-400 italic")
+                except api_client.APIError:
+                    ui.label("Stats unavailable.").classes("text-xs text-gray-400 italic")
+
+            # Close button
+            with ui.element("div").classes("w-full px-5 py-3 flex justify-end").style(
+                "border-top:1px solid #e2e8f0;"
+            ):
+                ui.button("Close", on_click=dlg.close).props("flat color=grey-7")
+
+    dlg.open()
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -1287,11 +1413,15 @@ async def _render_awards_stats(session_id, standings, user_team):
         ui.label("National Individual Awards").classes("text-lg font-semibold text-slate-700")
         with ui.row().classes("w-full flex-wrap gap-3"):
             for award in indiv_awards:
-                metric_card(
-                    award.get("award_name", ""),
-                    award.get("player_name", ""),
-                    f"{award.get('team_name', '')} -- {award.get('position', '')}",
-                )
+                a_team = award.get("team_name", "")
+                a_player = award.get("player_name", "")
+                a_pos = award.get("position", "")
+                with ui.card().classes("p-3 cursor-pointer hover:shadow-md transition-shadow").style(
+                    "min-width:180px;"
+                ).on("click", lambda _e, _t=a_team, _p=a_player: _show_cvl_player_card(session_id, _t, _p)):
+                    ui.label(award.get("award_name", "")).classes("text-xs font-bold text-slate-500")
+                    ui.label(a_player).classes("text-lg font-bold text-indigo-700")
+                    ui.label(f"{a_team} -- {a_pos}").classes("text-xs text-gray-400")
         ui.separator()
         ui.markdown("**Team Awards**")
         with ui.row().classes("w-full flex-wrap gap-3"):
@@ -1313,15 +1443,36 @@ async def _render_awards_stats(session_id, standings, user_team):
             with ui.expansion(tier_label).classes("w-full"):
                 rows = []
                 for slot in tier_data["slots"]:
-                    rows.append({
+                    row = {
                         "Position": slot.get("position", ""),
                         "Player": slot.get("player_name", ""),
                         "Team": slot.get("team_name", ""),
                         "Year": slot.get("year_in_school", ""),
-                        "Rating": slot.get("overall_rating", 0),
-                    })
+                    }
+                    # Show season stats if available, otherwise rating
+                    ss = slot.get("season_stats")
+                    if ss:
+                        row["Stats"] = slot.get("reason", "")
+                    else:
+                        row["Rating"] = str(slot.get("overall_rating", 0))
+                    rows.append(row)
                 if rows:
-                    stat_table(rows)
+                    col_defs = [{"name": k, "label": k, "field": k, "align": "left", "sortable": True}
+                                for k in rows[0].keys()]
+                    clean_rows = [{k: str(v) for k, v in r.items()} for r in rows]
+                    with ui.element("div").classes("w-full overflow-x-auto"):
+                        tbl = ui.table(columns=col_defs, rows=clean_rows).classes("w-full").props("dense flat")
+                        tbl.add_slot("body-cell-Player", '''
+                            <q-td :props="props">
+                                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                   @click="$parent.$emit('player_click', props.row)">
+                                    {{ props.row.Player }}
+                                </a>
+                            </q-td>
+                        ''')
+                        tbl.on("player_click", lambda e, _sid=session_id: _show_cvl_player_card(
+                            _sid, e.args.get("Team", ""), e.args.get("Player", "")
+                        ))
 
     # Conference awards
     ac_teams = awards.get("all_conference_teams", {})
@@ -1350,11 +1501,23 @@ async def _render_awards_stats(session_id, standings, user_team):
                         ui.markdown(f"**{selected_conf} Individual Awards**")
                         with ui.row().classes("w-full flex-wrap gap-3"):
                             for ca in c_indiv:
-                                metric_card(
-                                    ca.get("award_name", ""),
-                                    ca.get("player_name", ""),
-                                    f"{ca.get('team_name', '')} -- {ca.get('position', '')}",
-                                )
+                                ca_team = ca.get("team_name", "")
+                                ca_player = ca.get("player_name", "")
+                                ca_pos = ca.get("position", "")
+                                is_coach = ca_pos == "Coach"
+                                if is_coach:
+                                    metric_card(
+                                        ca.get("award_name", ""),
+                                        ca_player,
+                                        f"{ca_team} -- {ca_pos}",
+                                    )
+                                else:
+                                    with ui.card().classes("p-3 cursor-pointer hover:shadow-md transition-shadow").style(
+                                        "min-width:180px;"
+                                    ).on("click", lambda _e, _t=ca_team, _p=ca_player: _show_cvl_player_card(session_id, _t, _p)):
+                                        ui.label(ca.get("award_name", "")).classes("text-xs font-bold text-slate-500")
+                                        ui.label(ca_player).classes("text-lg font-bold text-indigo-700")
+                                        ui.label(f"{ca_team} -- {ca_pos}").classes("text-xs text-gray-400")
                     conf_tiers = ac_teams.get(selected_conf, {})
                     for tier_key in ["first", "second"]:
                         tier = conf_tiers.get(tier_key)
@@ -1363,15 +1526,35 @@ async def _render_awards_stats(session_id, standings, user_team):
                             with ui.expansion(f"All-{selected_conf} {label_text}").classes("w-full"):
                                 rows = []
                                 for slot in tier["slots"]:
-                                    rows.append({
+                                    row = {
                                         "Position": slot.get("position", ""),
                                         "Player": slot.get("player_name", ""),
                                         "Team": slot.get("team_name", ""),
                                         "Year": slot.get("year_in_school", ""),
-                                        "Rating": slot.get("overall_rating", 0),
-                                    })
+                                    }
+                                    ss = slot.get("season_stats")
+                                    if ss:
+                                        row["Stats"] = slot.get("reason", "")
+                                    else:
+                                        row["Rating"] = str(slot.get("overall_rating", 0))
+                                    rows.append(row)
                                 if rows:
-                                    stat_table(rows)
+                                    col_defs = [{"name": k, "label": k, "field": k, "align": "left", "sortable": True}
+                                                for k in rows[0].keys()]
+                                    clean_rows = [{k: str(v) for k, v in r.items()} for r in rows]
+                                    with ui.element("div").classes("w-full overflow-x-auto"):
+                                        ctbl = ui.table(columns=col_defs, rows=clean_rows).classes("w-full").props("dense flat")
+                                        ctbl.add_slot("body-cell-Player", '''
+                                            <q-td :props="props">
+                                                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                                   @click="$parent.$emit('player_click', props.row)">
+                                                    {{ props.row.Player }}
+                                                </a>
+                                            </q-td>
+                                        ''')
+                                        ctbl.on("player_click", lambda e, _sid=session_id: _show_cvl_player_card(
+                                            _sid, e.args.get("Team", ""), e.args.get("Player", "")
+                                        ))
 
             conf_award_select.on("update:model-value", lambda: _render_conf_awards())
             _render_conf_awards()
@@ -1645,19 +1828,23 @@ def _render_league_history(history: list):
     for entry in reversed(history):
         year = entry.get("year", "?")
         champion = entry.get("champion", "Unknown")
-        top5 = entry.get("top_5", [])
         runner_up = entry.get("runner_up", "")
+        final_four = entry.get("final_four", [])
         if not runner_up:
-            # Fallback for old data: use top_5[1] but skip if same as champion
-            if len(top5) > 1:
-                runner_up = top5[1] if top5[1] != champion else (top5[2] if len(top5) > 2 else "")
+            # Fallback for old data
+            if len(final_four) > 1:
+                runner_up = final_four[1]
             else:
-                runner_up = ""
+                top5 = entry.get("top_5", [])
+                if len(top5) > 1:
+                    runner_up = top5[1] if top5[1] != champion else (top5[2] if len(top5) > 2 else "")
+        # Show the other two semifinalists (positions 3 & 4 in final_four)
+        other_semis = [t for t in final_four[2:] if t != champion and t != runner_up]
         rows.append({
             "Year": str(year),
             "Champion": champion,
             "Runner-Up": runner_up,
-            "Top 5": ", ".join(top5[:5]) if top5 else "",
+            "Other Semifinalists": ", ".join(other_semis) if other_semis else "",
         })
     stat_table(rows)
 
