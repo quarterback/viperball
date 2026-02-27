@@ -474,6 +474,7 @@ class ContinentalChampionship:
             "current_group_matchday": self.current_group_matchday,
             "current_knockout_round": self.current_knockout_round,
             "non_qualifiers": self.non_qualifiers,
+            "all_results": [r.to_dict() for r in self.all_results],
         }
 
 
@@ -526,6 +527,7 @@ class WorldCup:
             "phase": self.phase,
             "current_group_matchday": self.current_group_matchday,
             "current_knockout_round": self.current_knockout_round,
+            "all_results": [r.to_dict() for r in self.all_results],
         }
 
 

@@ -20,7 +20,8 @@
 <div class="tabs">
   <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
   <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a>
-  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Stats</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Players</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/team-stats">Team Stats</a>
 </div>
 
 {# ── Record / Metrics ── #}
@@ -69,14 +70,27 @@
 {% if games %}
 <h2>Schedule</h2>
 <table>
-  <thead><tr><th class="num">Wk</th><th>Opponent</th><th>Result</th></tr></thead>
+  <thead><tr><th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th></tr></thead>
   <tbody>
   {% for g in games %}
   <tr>
     <td class="num">{{ g.get('week', '?') }}</td>
-    <td>{{ g.get('opponent', g.get('away_team', '?')) }}</td>
+    <td style="color:var(--fg-dim)">{{ 'vs' if g.get('home') else '@' }}</td>
+    <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ g.get('opponent_key', '') }}">{{ g.get('opponent_name', g.get('opponent', '?')) }}</a></td>
     <td>
-      {% if g.get('result') %}{{ g.result }}{% elif g.get('score') %}{{ g.score }}{% else %}&mdash;{% endif %}
+      {% if g.get('completed') and g.get('score') %}
+        {% if g.get('matchup_key') %}
+        <a href="/stats/pro/{{ league }}/{{ session_id }}/game/{{ g.week }}/{{ g.matchup_key }}" style="text-decoration:none;">
+          <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+          {{ g.score }}
+        </a>
+        {% else %}
+        <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+        {{ g.score }}
+        {% endif %}
+      {% elif g.get('result') %}{{ g.result }}
+      {% else %}<span style="color:var(--fg-dim)">&mdash;</span>
+      {% endif %}
     </td>
   </tr>
   {% endfor %}

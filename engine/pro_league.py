@@ -777,6 +777,7 @@ class ProLeagueSeason:
                 if m.home_key == team_key or m.away_key == team_key:
                     game_info = {
                         "week": week_num,
+                        "matchup_key": m.matchup_key,
                         "opponent_key": m.away_key if m.home_key == team_key else m.home_key,
                         "opponent_name": (self.teams[m.away_key].name if m.home_key == team_key
                                           else self.teams[m.home_key].name)
