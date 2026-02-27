@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Team Stats — FIV — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">International</a><span class="sep">/</span>Team Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>FIV — TEAM STATS</h1>
+  <div class="subtitle">All international matches</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/international/">Overview</a>
+  <a href="/stats/international/rankings">Rankings</a>
+  <a href="/stats/international/team-stats" class="active">Team Stats</a>
+  <a href="/stats/international/worldcup">World Cup</a>
+</div>
+
+{# Sort selector #}
+<div style="margin-bottom:16px; font-size:11px;">
+  <strong>Sort by:</strong>
+  {% for label, key in [
+    ('Total Yards', 'total_yards'), ('Avg Yards', 'avg_yards'),
+    ('TDs', 'touchdowns'), ('Rushing', 'rushing_yards'), ('Kick-Pass', 'kp_yards'),
+    ('Laterals', 'lateral_yards'), ('EPA', 'epa'), ('EPA/G', 'avg_epa'),
+    ('Rating', 'avg_team_rating'), ('Viper Eff', 'avg_viper_eff'),
+    ('Delta Yds', 'delta_yards'), ('Fumbles', 'fumbles'),
+  ] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="/stats/international/team-stats?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if teams %}
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Nation</th>
+      <th>Tier</th>
+      <th>Conf</th>
+      <th class="num">GP</th>
+      <th class="num">YDS</th>
+      <th class="num">Y/G</th>
+      <th class="num">TD</th>
+      <th class="num">RUSH</th>
+      <th class="num">KP</th>
+      <th class="num">LAT</th>
+      <th class="num">EPA</th>
+      <th class="num">E/G</th>
+      <th class="num">RTG</th>
+      <th class="num">VE</th>
+      <th class="num">&Delta;Y</th>
+      <th class="num">FUM</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/international/team/{{ t.code }}">{{ t.name }}</a> <span style="color:var(--fg-dim);font-size:10px">{{ t.code }}</span></td>
+    <td>{% if t.tier %}<span class="tag" style="{% if t.tier == 'elite' %}border-color:var(--yellow);color:var(--yellow){% elif t.tier == 'strong' %}border-color:var(--green);color:var(--green){% endif %}">{{ t.tier | title }}</span>{% endif %}</td>
+    <td style="font-size:10px;">{{ t.confederation[:8] if t.confederation else '—' }}</td>
+    <td class="num">{{ t.games }}</td>
+    <td class="num {% if sort == 'total_yards' %}stat-good{% endif %}">{{ t.total_yards }}</td>
+    <td class="num {% if sort == 'avg_yards' %}stat-good{% endif %}">{{ t.avg_yards }}</td>
+    <td class="num {% if sort == 'touchdowns' %}stat-good{% endif %}">{{ t.touchdowns }}</td>
+    <td class="num {% if sort == 'rushing_yards' %}stat-good{% endif %}">{{ t.rushing_yards }}</td>
+    <td class="num {% if sort == 'kp_yards' %}stat-good{% endif %}">{{ t.kp_yards }}</td>
+    <td class="num {% if sort == 'lateral_yards' %}stat-good{% endif %}">{{ t.lateral_yards }}</td>
+    <td class="num {% if sort == 'epa' %}stat-good{% elif t.epa < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.epa) }}</td>
+    <td class="num {% if sort == 'avg_epa' %}stat-good{% elif t.avg_epa < 0 %}stat-bad{% endif %}">{{ t.avg_epa }}</td>
+    <td class="num {% if sort == 'avg_team_rating' %}stat-good{% elif t.avg_team_rating >= 70 %}stat-elite{% elif t.avg_team_rating >= 55 %}stat-good{% endif %}">{{ t.avg_team_rating }}</td>
+    <td class="num {% if sort == 'avg_viper_eff' %}stat-good{% endif %}">{{ t.avg_viper_eff }}</td>
+    <td class="num {% if sort == 'delta_yards' %}stat-good{% elif t.delta_yards > 0 %}stat-good{% elif t.delta_yards < 0 %}stat-bad{% endif %}">{{ t.delta_yards }}</td>
+    <td class="num {% if sort == 'fumbles' %}stat-good{% elif t.fumbles >= 5 %}stat-bad{% endif %}">{{ t.fumbles }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">No team stats available yet. Complete some FIV matches first.</p>
+{% endif %}
+
+{% endblock %}

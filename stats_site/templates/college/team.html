@@ -58,6 +58,142 @@
 </div>
 {% endif %}
 
+{% if team_stats %}
+{# ── Season Stats ── #}
+<h2 style="margin-top:24px; margin-bottom:12px;">Season Stats <span style="color:var(--fg-dim); font-size:0.7em;">({{ team_stats.games_played }} games)</span></h2>
+
+{# ── Offense ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Offense</h3>
+<table style="margin-bottom:16px;">
+  <thead>
+    <tr><th>Category</th><th class="num">Total</th><th class="num">Per Game</th><th class="num">Detail</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Total Yards</td>
+      <td class="num">{{ team_stats.total_yards }}</td>
+      <td class="num">{{ team_stats.avg_yards }}</td>
+      <td class="num">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Rushing</td>
+      <td class="num">{{ team_stats.rushing_yards }} yds</td>
+      <td class="num">{{ team_stats.avg_rushing }} yds</td>
+      <td class="num">{{ team_stats.rushing_carries }} car &middot; {{ team_stats.rushing_tds }} TD &middot; {{ team_stats.yards_per_carry }} ypc</td>
+    </tr>
+    <tr>
+      <td>Kick-Pass</td>
+      <td class="num">{{ team_stats.kick_pass_yards }} yds</td>
+      <td class="num">{{ "%.1f"|format(team_stats.kick_pass_yards / team_stats.games_played) }} yds</td>
+      <td class="num">{{ team_stats.kp_completions }}/{{ team_stats.kp_attempts }} ({{ team_stats.kp_comp_pct }}%) &middot; {{ team_stats.kp_tds }} TD &middot; {{ team_stats.kp_ints }} INT</td>
+    </tr>
+    <tr>
+      <td>Laterals</td>
+      <td class="num">{{ team_stats.lateral_yards }} yds</td>
+      <td class="num">{{ "%.1f"|format(team_stats.lateral_yards / team_stats.games_played) }} yds</td>
+      <td class="num">{{ team_stats.lateral_chains }} chains</td>
+    </tr>
+    <tr>
+      <td>Scoring</td>
+      <td class="num">{{ team_stats.touchdowns }} TD</td>
+      <td class="num">{{ "%.1f"|format(team_stats.touchdowns / team_stats.games_played) }} TD</td>
+      <td class="num">DK {{ team_stats.dk_made }}/{{ team_stats.dk_att }} &middot; PK {{ team_stats.pk_made }}/{{ team_stats.pk_att }}</td>
+    </tr>
+  </tbody>
+</table>
+
+{# ── Efficiency ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Efficiency</h3>
+<div class="grid-4" style="margin-bottom:16px;">
+  {% if team_stats.avg_viper_eff is not none %}
+  <div class="metric">
+    <div class="label">Viper Efficiency</div>
+    <div class="value accent">{{ team_stats.avg_viper_eff }}</div>
+  </div>
+  {% endif %}
+  <div class="metric">
+    <div class="label">EPA (Total)</div>
+    <div class="value {% if team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">EPA / Game</div>
+    <div class="value {% if team_stats.avg_epa > 0 %}stat-good{% elif team_stats.avg_epa < 0 %}stat-bad{% endif %}">{{ team_stats.avg_epa }}</div>
+  </div>
+  {% if team_stats.avg_team_rating is not none %}
+  <div class="metric">
+    <div class="label">Avg Team Rating</div>
+    <div class="value">{{ team_stats.avg_team_rating }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<table style="margin-bottom:16px;">
+  <thead>
+    <tr><th>Down</th><th class="num">Attempts</th><th class="num">Converted</th><th class="num">Rate</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>4th Down</td>
+      <td class="num">{{ team_stats.down_conv_4.att }}</td>
+      <td class="num">{{ team_stats.down_conv_4.conv }}</td>
+      <td class="num">{{ team_stats.down_conv_4.rate }}%</td>
+    </tr>
+    <tr>
+      <td>5th Down</td>
+      <td class="num">{{ team_stats.down_conv_5.att }}</td>
+      <td class="num">{{ team_stats.down_conv_5.conv }}</td>
+      <td class="num">{{ team_stats.down_conv_5.rate }}%</td>
+    </tr>
+    <tr>
+      <td>6th Down</td>
+      <td class="num">{{ team_stats.down_conv_6.att }}</td>
+      <td class="num">{{ team_stats.down_conv_6.conv }}</td>
+      <td class="num">{{ team_stats.down_conv_6.rate }}%</td>
+    </tr>
+  </tbody>
+</table>
+
+{# ── Other ── #}
+<h3 style="margin-bottom:8px; color:var(--accent);">Other</h3>
+<div class="grid-4" style="margin-bottom:24px;">
+  <div class="metric">
+    <div class="label">Fumbles Lost</div>
+    <div class="value">{{ team_stats.fumbles }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Turnovers on Downs</div>
+    <div class="value">{{ team_stats.tod }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Penalties</div>
+    <div class="value">{{ team_stats.penalties }} ({{ team_stats.penalty_yards }} yds)</div>
+  </div>
+  <div class="metric">
+    <div class="label">Delta Yards</div>
+    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards }}</div>
+  </div>
+</div>
+
+<div class="grid-4" style="margin-bottom:24px;">
+  <div class="metric">
+    <div class="label">Bonus Possessions</div>
+    <div class="value">{{ team_stats.bonus_possessions }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Bonus Scores</div>
+    <div class="value">{{ team_stats.bonus_scores }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">&nbsp;</div>
+    <div class="value">&nbsp;</div>
+  </div>
+  <div class="metric">
+    <div class="label">&nbsp;</div>
+    <div class="value">&nbsp;</div>
+  </div>
+</div>
+{% endif %}
+
 <div class="grid-2">
 
 {# ── Schedule ── #}
@@ -78,8 +214,15 @@
     <td><a href="/stats/college/{{ session_id }}/team/{{ opponent }}">{{ opponent }}</a></td>
     <td>
       {% if g.completed %}
+      {% if g.has_full_result %}
+      <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}" style="text-decoration:none;">
+        <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
+        {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
+      </a>
+      {% else %}
       <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
       {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
+      {% endif %}
       {% else %}
       <span style="color:var(--fg-dim)">&mdash;</span>
       {% endif %}

@@ -16,6 +16,13 @@
   </div>
 </div>
 
+<div class="tabs">
+  <a href="/stats/international/">Overview</a>
+  <a href="/stats/international/rankings">Rankings</a>
+  <a href="/stats/international/team-stats">Team Stats</a>
+  <a href="/stats/international/worldcup">World Cup</a>
+</div>
+
 {# ── Groups ── #}
 {% set groups = data.get('groups', []) %}
 {% if groups %}
@@ -55,12 +62,18 @@
   <thead><tr><th>Home</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Away</th><th>Stage</th></tr></thead>
   <tbody>
   {% for m in results %}
+  {% set home = m.get('home_code', m.get('home', '?')) %}
+  {% set away = m.get('away_code', m.get('away', '?')) %}
   <tr>
-    <td><a href="/stats/international/team/{{ m.get('home', m.get('home_team', '?')) }}">{{ m.get('home', m.get('home_team', '?')) }}</a></td>
-    <td class="num {% if m.get('home_score', 0) > m.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">{{ m.get('home_score', '?') }}</td>
+    <td><a href="/stats/international/team/{{ home }}">{{ home }}</a></td>
+    <td class="num {% if m.get('home_score', 0) > m.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ m.get('home_score', '?') }}</a>{% else %}{{ m.get('home_score', '?') }}{% endif %}
+    </td>
     <td style="color:var(--fg-dim)">v</td>
-    <td class="num {% if m.get('away_score', 0) > m.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">{{ m.get('away_score', '?') }}</td>
-    <td><a href="/stats/international/team/{{ m.get('away', m.get('away_team', '?')) }}">{{ m.get('away', m.get('away_team', '?')) }}</a></td>
+    <td class="num {% if m.get('away_score', 0) > m.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ m.get('away_score', '?') }}</a>{% else %}{{ m.get('away_score', '?') }}{% endif %}
+    </td>
+    <td><a href="/stats/international/team/{{ away }}">{{ away }}</a></td>
     <td style="color:var(--fg-dim)">{{ m.get('stage', m.get('round', '')) }}</td>
   </tr>
   {% endfor %}
@@ -77,13 +90,19 @@
 <table>
   <thead><tr><th>Home</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Away</th></tr></thead>
   <tbody>
-  {% for m in round_data.get('matches', round_data.get('games', [])) %}
+  {% for m in round_data.get('matches', round_data.get('matchups', round_data.get('games', []))) %}
+  {% set ko_home = m.get('home', m.get('home_code', '?')) %}
+  {% set ko_away = m.get('away', m.get('away_code', '?')) %}
   <tr>
-    <td>{{ m.get('home', m.get('home_team', '?')) }}</td>
-    <td class="num">{{ m.get('home_score', '?') }}</td>
+    <td><a href="/stats/international/team/{{ ko_home }}">{{ ko_home }}</a></td>
+    <td class="num {% if m.get('home_score', 0) > m.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ m.get('home_score', '?') }}</a>{% else %}{{ m.get('home_score', '?') }}{% endif %}
+    </td>
     <td style="color:var(--fg-dim)">v</td>
-    <td class="num">{{ m.get('away_score', '?') }}</td>
-    <td>{{ m.get('away', m.get('away_team', '?')) }}</td>
+    <td class="num {% if m.get('away_score', 0) > m.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ m.get('away_score', '?') }}</a>{% else %}{{ m.get('away_score', '?') }}{% endif %}
+    </td>
+    <td><a href="/stats/international/team/{{ ko_away }}">{{ ko_away }}</a></td>
   </tr>
   {% endfor %}
   </tbody>

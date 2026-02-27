@@ -595,7 +595,7 @@ class ProLeagueSeason:
         if not game:
             return None
         result = game["result"]
-        return {
+        box = {
             "league": self.config.league_name,
             "week": week,
             "home_key": game["home_key"],
@@ -605,13 +605,21 @@ class ProLeagueSeason:
             "home_score": game["home_score"],
             "away_score": game["away_score"],
             "weather": game["weather"],
-            "home_stats": result["stats"]["home"],
-            "away_stats": result["stats"]["away"],
-            "home_player_stats": result["player_stats"]["home"],
-            "away_player_stats": result["player_stats"]["away"],
+            "stats": result.get("stats", {}),
+            "player_stats": result.get("player_stats", {}),
+            "drive_summary": result.get("drive_summary", []),
+            "play_by_play": result.get("play_by_play", []),
+            "modifier_stack": result.get("modifier_stack", {}),
             "home_scoring": result["final_score"]["home"].get("stats", {}),
             "away_scoring": result["final_score"]["away"].get("stats", {}),
         }
+        # Include top-level result keys for game context
+        for key in ("weather_label", "weather_description", "home_style",
+                     "away_style", "home_defense_style", "away_defense_style",
+                     "home_st_scheme", "away_st_scheme"):
+            if key in result:
+                box[key] = result[key]
+        return box
 
     def get_schedule(self) -> dict:
         weeks = []
@@ -769,6 +777,7 @@ class ProLeagueSeason:
                 if m.home_key == team_key or m.away_key == team_key:
                     game_info = {
                         "week": week_num,
+                        "matchup_key": m.matchup_key,
                         "opponent_key": m.away_key if m.home_key == team_key else m.home_key,
                         "opponent_name": (self.teams[m.away_key].name if m.home_key == team_key
                                           else self.teams[m.home_key].name)

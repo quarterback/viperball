@@ -269,12 +269,22 @@ td.rank {
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 768px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   table { font-size: 10px; }
   thead th, tbody td { padding: 2px 4px; }
   .topbar nav a { font-size: 10px; padding: 2px 4px; }
+  .box-score-header { flex-direction: column; gap: 8px; }
+  .box-team .name { font-size: 12px; }
+  .box-score-final { font-size: 18px; }
+  .box-score-vs { padding: 4px 0; }
+  .metric .value { font-size: 14px; }
 }
+/* Horizontal scroll wrapper for wide tables on small screens */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 </style>
 </head>
 <body>

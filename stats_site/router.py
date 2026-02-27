@@ -280,19 +280,137 @@ def college_team(request: Request, session_id: str, team_name: str):
     record = season.standings.get(team_name)
     team_record = api["serialize_team_record"](record) if record else None
 
-    # Team schedule
-    team_games = [api["serialize_game"](g) for g in season.schedule
-                  if g.home_team == team_name or g.away_team == team_name]
+    # Team schedule – compute per-week game index for box score links
+    week_counters_all = {}
+    game_idx_map = {}  # map (week, home, away) -> week_game_idx
+    for g in season.schedule:
+        w = g.week
+        idx = week_counters_all.get(w, 0)
+        game_idx_map[(w, g.home_team, g.away_team)] = idx
+        week_counters_all[w] = idx + 1
+
+    team_games = []
+    for g in season.schedule:
+        if g.home_team != team_name and g.away_team != team_name:
+            continue
+        sg = api["serialize_game"](g)
+        sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        team_games.append(sg)
 
     dynasty = sess.get("dynasty")
     prestige = None
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    # ── Aggregate team season stats from completed games ──
+    team_season_stats = None
+    completed_games_with_stats = []
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        if game.home_team != team_name and game.away_team != team_name:
+            continue
+        side = "home" if game.home_team == team_name else "away"
+        stats = game.full_result.get("stats", {}).get(side)
+        if stats:
+            completed_games_with_stats.append(stats)
+
+    if completed_games_with_stats:
+        n = len(completed_games_with_stats)
+
+        # Sum up totals
+        total_yards = sum(s.get("total_yards", 0) for s in completed_games_with_stats)
+        rushing_yards = sum(s.get("rushing_yards", 0) for s in completed_games_with_stats)
+        rushing_carries = sum(s.get("rushing_carries", 0) for s in completed_games_with_stats)
+        rushing_tds = sum(s.get("rushing_touchdowns", 0) for s in completed_games_with_stats)
+        kp_yards = sum(s.get("kick_pass_yards", 0) for s in completed_games_with_stats)
+        kp_att = sum(s.get("kick_passes_attempted", 0) for s in completed_games_with_stats)
+        kp_comp = sum(s.get("kick_passes_completed", 0) for s in completed_games_with_stats)
+        kp_tds = sum(s.get("kick_pass_tds", 0) for s in completed_games_with_stats)
+        kp_ints = sum(s.get("kick_pass_interceptions", 0) for s in completed_games_with_stats)
+        lateral_chains = sum(s.get("lateral_chains", 0) for s in completed_games_with_stats)
+        lateral_yards = sum(s.get("lateral_yards", 0) for s in completed_games_with_stats)
+        touchdowns = sum(s.get("touchdowns", 0) for s in completed_games_with_stats)
+        dk_made = sum(s.get("drop_kicks_made", 0) for s in completed_games_with_stats)
+        dk_att = sum(s.get("drop_kicks_attempted", 0) for s in completed_games_with_stats)
+        pk_made = sum(s.get("place_kicks_made", 0) for s in completed_games_with_stats)
+        pk_att = sum(s.get("place_kicks_attempted", 0) for s in completed_games_with_stats)
+        fumbles = sum(s.get("fumbles_lost", 0) for s in completed_games_with_stats)
+        tod = sum(s.get("turnovers_on_downs", 0) for s in completed_games_with_stats)
+        penalties = sum(s.get("penalties", 0) for s in completed_games_with_stats)
+        penalty_yards = sum(s.get("penalty_yards", 0) for s in completed_games_with_stats)
+        delta_yards = sum(s.get("delta_yards", 0) for s in completed_games_with_stats)
+        bonus_poss = sum(s.get("bonus_possessions", 0) for s in completed_games_with_stats)
+        bonus_scores = sum(s.get("bonus_possession_scores", 0) for s in completed_games_with_stats)
+        total_epa = sum(s.get("epa", 0) for s in completed_games_with_stats)
+
+        # Down conversions (keys are ints 4, 5, 6)
+        down_conv = {}
+        for d in [4, 5, 6]:
+            att_total = 0
+            conv_total = 0
+            for s in completed_games_with_stats:
+                dc = s.get("down_conversions", {})
+                dd = dc.get(d, dc.get(str(d), {}))
+                att_total += dd.get("attempts", 0)
+                conv_total += dd.get("converted", 0)
+            down_conv[d] = {
+                "att": att_total,
+                "conv": conv_total,
+                "rate": round(conv_total / max(1, att_total) * 100, 1),
+            }
+
+        # Averages from viperball_metrics and viper_efficiency
+        viper_eff_vals = [s.get("viper_efficiency", 0) for s in completed_games_with_stats if s.get("viper_efficiency") is not None]
+        team_rating_vals = []
+        for s in completed_games_with_stats:
+            vm = s.get("viperball_metrics", {})
+            if vm and vm.get("team_rating") is not None:
+                team_rating_vals.append(vm["team_rating"])
+
+        team_season_stats = {
+            "games_played": n,
+            "total_yards": total_yards,
+            "avg_yards": round(total_yards / n, 1),
+            "rushing_yards": rushing_yards,
+            "avg_rushing": round(rushing_yards / n, 1),
+            "rushing_carries": rushing_carries,
+            "rushing_tds": rushing_tds,
+            "yards_per_carry": round(rushing_yards / max(1, rushing_carries), 1),
+            "kick_pass_yards": kp_yards,
+            "kp_attempts": kp_att,
+            "kp_completions": kp_comp,
+            "kp_comp_pct": round(kp_comp / max(1, kp_att) * 100, 1),
+            "kp_tds": kp_tds,
+            "kp_ints": kp_ints,
+            "lateral_chains": lateral_chains,
+            "lateral_yards": lateral_yards,
+            "touchdowns": touchdowns,
+            "dk_made": dk_made,
+            "dk_att": dk_att,
+            "pk_made": pk_made,
+            "pk_att": pk_att,
+            "fumbles": fumbles,
+            "tod": tod,
+            "penalties": penalties,
+            "penalty_yards": penalty_yards,
+            "delta_yards": delta_yards,
+            "bonus_possessions": bonus_poss,
+            "bonus_scores": bonus_scores,
+            "total_epa": round(total_epa, 1),
+            "avg_epa": round(total_epa / n, 2),
+            "down_conv_4": down_conv[4],
+            "down_conv_5": down_conv[5],
+            "down_conv_6": down_conv[6],
+            "avg_team_rating": round(sum(team_rating_vals) / max(1, len(team_rating_vals)), 1) if team_rating_vals else None,
+            "avg_viper_eff": round(sum(viper_eff_vals) / max(1, len(viper_eff_vals)), 3) if viper_eff_vals else None,
+        }
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
+        team_stats=team_season_stats,
     ))
 
 
@@ -498,6 +616,119 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     ))
 
 
+@router.get("/college/{session_id}/team-stats", response_class=HTMLResponse)
+def college_team_stats(request: Request, session_id: str, sort: str = "total_yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Aggregate team stats from completed games
+    team_agg = {}
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        fr = game.full_result
+        stats = fr.get("stats", {})
+        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            conf = season.team_conferences.get(t_name, "")
+            if conference and conf != conference:
+                continue
+            s = stats.get(side)
+            if not s:
+                continue
+            if t_name not in team_agg:
+                team_agg[t_name] = {
+                    "team": t_name, "conference": conf, "games": 0,
+                    "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+                    "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+                    "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+                    "lateral_chains": 0, "lateral_yards": 0,
+                    "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+                    "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
+                    "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+                    "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+                    "viper_eff_n": 0, "team_rating_n": 0,
+                }
+            a = team_agg[t_name]
+            a["games"] += 1
+            a["total_yards"] += s.get("total_yards", 0)
+            a["total_plays"] += s.get("total_plays", 0)
+            a["touchdowns"] += s.get("touchdowns", 0)
+            a["rushing_yards"] += s.get("rushing_yards", 0)
+            a["rushing_carries"] += s.get("rushing_carries", 0)
+            a["rushing_tds"] += s.get("rushing_touchdowns", 0)
+            a["kp_yards"] += s.get("kick_pass_yards", 0)
+            a["kp_att"] += s.get("kick_passes_attempted", 0)
+            a["kp_comp"] += s.get("kick_passes_completed", 0)
+            a["kp_tds"] += s.get("kick_pass_tds", 0)
+            a["kp_ints"] += s.get("kick_pass_interceptions", 0)
+            a["lateral_chains"] += s.get("lateral_chains", 0)
+            a["lateral_yards"] += s.get("lateral_yards", 0)
+            a["dk_made"] += s.get("drop_kicks_made", 0)
+            a["dk_att"] += s.get("drop_kicks_attempted", 0)
+            a["pk_made"] += s.get("place_kicks_made", 0)
+            a["pk_att"] += s.get("place_kicks_attempted", 0)
+            a["fumbles"] += s.get("fumbles_lost", 0)
+            a["tod"] += s.get("turnovers_on_downs", 0)
+            a["penalties"] += s.get("penalties", 0)
+            a["penalty_yards"] += s.get("penalty_yards", 0)
+            a["delta_yards"] += s.get("delta_yards", 0)
+            a["bonus_possessions"] += s.get("bonus_possessions", 0)
+            a["bonus_scores"] += s.get("bonus_possession_scores", 0)
+            a["epa"] += s.get("epa", 0)
+            ve = s.get("viper_efficiency")
+            if ve is not None:
+                a["viper_eff_sum"] += ve
+                a["viper_eff_n"] += 1
+            vm = s.get("viperball_metrics", {})
+            tr = vm.get("team_rating") if vm else None
+            if tr is not None:
+                a["team_rating_sum"] += tr
+                a["team_rating_n"] += 1
+
+    teams = list(team_agg.values())
+    for t in teams:
+        n = max(1, t["games"])
+        t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
+        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
+        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["avg_epa"] = round(t["epa"] / n, 2)
+        t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
+        t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+        # Get W-L from standings
+        rec = season.standings.get(t["team"])
+        if rec:
+            t["wins"] = rec.wins
+            t["losses"] = rec.losses
+        else:
+            t["wins"] = 0
+            t["losses"] = 0
+
+    valid_sorts = {
+        "total_yards": "total_yards", "avg_yards": "avg_yards",
+        "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
+        "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
+        "epa": "epa", "avg_epa": "avg_epa",
+        "avg_team_rating": "avg_team_rating", "avg_viper_eff": "avg_viper_eff",
+        "delta_yards": "delta_yards", "fumbles": "fumbles",
+        "penalties": "penalties", "yards_per_play": "yards_per_play",
+        "bonus_possessions": "bonus_possessions",
+    }
+    sort_key = valid_sorts.get(sort, "total_yards")
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    conferences = sorted(season.conferences.keys())
+
+    return templates.TemplateResponse("college/team_stats.html", _ctx(
+        request, section="college", session_id=session_id,
+        teams=teams, sort=sort, conference=conference,
+        conferences=conferences,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/awards", response_class=HTMLResponse)
 def college_awards(request: Request, session_id: str):
     api = _get_api()
@@ -604,6 +835,119 @@ def pro_team(request: Request, league: str, session_id: str, team_key: str):
     ))
 
 
+@router.get("/pro/{league}/{session_id}/team-stats", response_class=HTMLResponse)
+def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "total_yards", division: str = ""):
+    api = _get_api()
+    key = f"{league.lower()}_{session_id}"
+    season = api["pro_sessions"].get(key)
+    if not season:
+        raise HTTPException(404, "Pro league session not found")
+
+    # Aggregate team stats from all completed game results
+    team_agg = {}
+    for week_num, week_games in season.results.items():
+        for matchup_key, game in week_games.items():
+            result = game.get("result", {})
+            stats = result.get("stats", {})
+            for side in ("home", "away"):
+                t_key = game.get(f"{side}_key", "")
+                t_name = game.get(f"{side}_name", t_key)
+                s = stats.get(side)
+                if not s or not t_key:
+                    continue
+                div = season._get_division_for_key(t_key)
+                if division and div != division:
+                    continue
+                if t_key not in team_agg:
+                    team_agg[t_key] = {
+                        "team_key": t_key, "team": t_name, "division": div, "games": 0,
+                        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+                        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+                        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+                        "lateral_chains": 0, "lateral_yards": 0,
+                        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+                        "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
+                        "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+                        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+                        "viper_eff_n": 0, "team_rating_n": 0,
+                    }
+                a = team_agg[t_key]
+                a["games"] += 1
+                a["total_yards"] += s.get("total_yards", 0)
+                a["total_plays"] += s.get("total_plays", 0)
+                a["touchdowns"] += s.get("touchdowns", 0)
+                a["rushing_yards"] += s.get("rushing_yards", 0)
+                a["rushing_carries"] += s.get("rushing_carries", 0)
+                a["rushing_tds"] += s.get("rushing_touchdowns", 0)
+                a["kp_yards"] += s.get("kick_pass_yards", 0)
+                a["kp_att"] += s.get("kick_passes_attempted", 0)
+                a["kp_comp"] += s.get("kick_passes_completed", 0)
+                a["kp_tds"] += s.get("kick_pass_tds", 0)
+                a["kp_ints"] += s.get("kick_pass_interceptions", 0)
+                a["lateral_chains"] += s.get("lateral_chains", 0)
+                a["lateral_yards"] += s.get("lateral_yards", 0)
+                a["dk_made"] += s.get("drop_kicks_made", 0)
+                a["dk_att"] += s.get("drop_kicks_attempted", 0)
+                a["pk_made"] += s.get("place_kicks_made", 0)
+                a["pk_att"] += s.get("place_kicks_attempted", 0)
+                a["fumbles"] += s.get("fumbles_lost", 0)
+                a["tod"] += s.get("turnovers_on_downs", 0)
+                a["penalties"] += s.get("penalties", 0)
+                a["penalty_yards"] += s.get("penalty_yards", 0)
+                a["delta_yards"] += s.get("delta_yards", 0)
+                a["bonus_possessions"] += s.get("bonus_possessions", 0)
+                a["bonus_scores"] += s.get("bonus_possession_scores", 0)
+                a["epa"] += s.get("epa", 0)
+                ve = s.get("viper_efficiency")
+                if ve is not None:
+                    a["viper_eff_sum"] += ve
+                    a["viper_eff_n"] += 1
+                vm = s.get("viperball_metrics", {})
+                tr = vm.get("team_rating") if vm else None
+                if tr is not None:
+                    a["team_rating_sum"] += tr
+                    a["team_rating_n"] += 1
+
+    teams = list(team_agg.values())
+    for t in teams:
+        n = max(1, t["games"])
+        t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["avg_epa"] = round(t["epa"] / n, 2)
+        t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
+        t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        rec = season.standings.get(t["team_key"])
+        if rec:
+            t["wins"] = rec.wins
+            t["losses"] = rec.losses
+        else:
+            t["wins"] = 0
+            t["losses"] = 0
+
+    valid_sorts = {
+        "total_yards": "total_yards", "avg_yards": "avg_yards",
+        "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
+        "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
+        "epa": "epa", "avg_epa": "avg_epa",
+        "avg_team_rating": "avg_team_rating", "avg_viper_eff": "avg_viper_eff",
+        "delta_yards": "delta_yards", "fumbles": "fumbles",
+        "penalties": "penalties", "yards_per_play": "yards_per_play",
+        "bonus_possessions": "bonus_possessions",
+    }
+    sort_key = valid_sorts.get(sort, "total_yards")
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    divisions = sorted(season.config.divisions.keys()) if season.config.divisions else []
+
+    return templates.TemplateResponse("pro/team_stats.html", _ctx(
+        request, section="pro", league=league, session_id=session_id,
+        teams=teams, sort=sort, division=division,
+        divisions=divisions,
+        league_name=season.config.league_name,
+    ))
+
+
 @router.get("/pro/{league}/{session_id}/stats", response_class=HTMLResponse)
 def pro_stats(request: Request, league: str, session_id: str, category: str = "all"):
     api = _get_api()
@@ -675,6 +1019,136 @@ def intl_worldcup(request: Request):
 
     return templates.TemplateResponse("international/worldcup.html", _ctx(
         request, section="international", wc=wc, fiv_data=fiv_data,
+    ))
+
+
+@router.get("/international/game/{match_id}", response_class=HTMLResponse)
+def intl_game(request: Request, match_id: str):
+    fiv_data = _get_fiv_data()
+    if not fiv_data:
+        raise HTTPException(404, "No active FIV cycle")
+
+    from engine.fiv import find_match_in_cycle
+    match = find_match_in_cycle(fiv_data, match_id)
+    if not match:
+        raise HTTPException(404, f"Match '{match_id}' not found")
+
+    game_result = match.get("game_result", {})
+    home_code = match.get("home_code", match.get("home", "?"))
+    away_code = match.get("away_code", match.get("away", "?"))
+
+    teams = fiv_data.get("national_teams", {})
+    home_name = home_code
+    away_name = away_code
+    if isinstance(teams.get(home_code), dict):
+        home_name = teams[home_code].get("nation", {}).get("name", home_code)
+    if isinstance(teams.get(away_code), dict):
+        away_name = teams[away_code].get("nation", {}).get("name", away_code)
+
+    return templates.TemplateResponse("international/game.html", _ctx(
+        request, section="international",
+        match=match, gr=game_result,
+        home_code=home_code, away_code=away_code,
+        home_name=home_name, away_name=away_name,
+    ))
+
+
+@router.get("/international/team-stats", response_class=HTMLResponse)
+def intl_team_stats(request: Request, sort: str = "total_yards"):
+    fiv_data = _get_fiv_data()
+    if not fiv_data:
+        raise HTTPException(404, "No active FIV cycle")
+
+    team_agg = {}
+    all_results = []
+
+    for conf_id, cc_data in fiv_data.get("confederations_data", {}).items():
+        for group in cc_data.get("groups", []):
+            all_results.extend(group.get("results", []))
+        for result in cc_data.get("all_results", []):
+            if result not in all_results:
+                all_results.append(result)
+
+    wc = fiv_data.get("world_cup")
+    if wc:
+        for group in wc.get("groups", []):
+            all_results.extend(group.get("results", []))
+        for kr in wc.get("knockout_rounds", []):
+            for m in kr.get("matchups", []):
+                r = m.get("result")
+                if r:
+                    all_results.append(r)
+
+    teams_data = fiv_data.get("national_teams", {})
+
+    for match in all_results:
+        gr = match.get("game_result", {})
+        if not gr:
+            continue
+        stats = gr.get("stats", {})
+        home_code = match.get("home_code", match.get("home", ""))
+        away_code = match.get("away_code", match.get("away", ""))
+
+        for side, code in [("home", home_code), ("away", away_code)]:
+            s = stats.get(side)
+            if not s or not code:
+                continue
+            if code not in team_agg:
+                td = teams_data.get(code, {})
+                nation = td.get("nation", {}) if isinstance(td, dict) else {}
+                team_agg[code] = {
+                    "code": code, "name": nation.get("name", code),
+                    "tier": nation.get("tier", ""),
+                    "confederation": nation.get("confederation", ""),
+                    "games": 0,
+                    "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+                    "rushing_yards": 0, "kp_yards": 0, "lateral_yards": 0,
+                    "fumbles": 0, "epa": 0, "delta_yards": 0,
+                    "viper_eff_sum": 0, "team_rating_sum": 0,
+                    "viper_eff_n": 0, "team_rating_n": 0,
+                }
+            a = team_agg[code]
+            a["games"] += 1
+            a["total_yards"] += s.get("total_yards", 0)
+            a["total_plays"] += s.get("total_plays", 0)
+            a["touchdowns"] += s.get("touchdowns", 0)
+            a["rushing_yards"] += s.get("rushing_yards", 0)
+            a["kp_yards"] += s.get("kick_pass_yards", 0)
+            a["lateral_yards"] += s.get("lateral_yards", 0)
+            a["fumbles"] += s.get("fumbles_lost", 0)
+            a["epa"] += s.get("epa", 0)
+            a["delta_yards"] += s.get("delta_yards", 0)
+            ve = s.get("viper_efficiency")
+            if ve is not None:
+                a["viper_eff_sum"] += ve
+                a["viper_eff_n"] += 1
+            vm = s.get("viperball_metrics", {})
+            tr = vm.get("team_rating") if vm else None
+            if tr is not None:
+                a["team_rating_sum"] += tr
+                a["team_rating_n"] += 1
+
+    teams = list(team_agg.values())
+    for t in teams:
+        n = max(1, t["games"])
+        t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_epa"] = round(t["epa"] / n, 2)
+        t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
+        t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+
+    valid_sorts = {
+        "total_yards": "total_yards", "avg_yards": "avg_yards",
+        "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
+        "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
+        "epa": "epa", "avg_epa": "avg_epa",
+        "avg_team_rating": "avg_team_rating", "avg_viper_eff": "avg_viper_eff",
+        "delta_yards": "delta_yards", "fumbles": "fumbles",
+    }
+    sort_key = valid_sorts.get(sort, "total_yards")
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    return templates.TemplateResponse("international/team_stats.html", _ctx(
+        request, section="international", teams=teams, sort=sort,
     ))
 
 
