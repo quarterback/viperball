@@ -574,6 +574,104 @@ def intl_worldcup(request: Request):
     ))
 
 
+# ── SEARCH ───────────────────────────────────────────────────────────────
+
+@router.get("/search", response_class=HTMLResponse)
+def search(request: Request, q: str = ""):
+    results = {"college_teams": [], "college_players": [], "pro_teams": [], "nations": []}
+
+    if not q or len(q) < 2:
+        return templates.TemplateResponse("search.html", _ctx(
+            request, section="search", query=q, results=results, searched=False,
+        ))
+
+    query = q.lower().strip()
+    api = _get_api()
+
+    # Search college teams + players
+    for sid, sess in api["sessions"].items():
+        season = sess.get("season")
+        if not season:
+            continue
+        dynasty = sess.get("dynasty")
+        label = dynasty.dynasty_name if dynasty else getattr(season, "name", "Season")
+
+        for team_name, team in season.teams.items():
+            if query in team_name.lower() or query in getattr(team, "mascot", "").lower() or query in getattr(team, "abbreviation", "").lower():
+                record = season.standings.get(team_name)
+                results["college_teams"].append({
+                    "session_id": sid, "session_label": label,
+                    "team_name": team_name,
+                    "mascot": getattr(team, "mascot", ""),
+                    "abbreviation": getattr(team, "abbreviation", ""),
+                    "conference": season.team_conferences.get(team_name, ""),
+                    "record": f"{record.wins}-{record.losses}" if record else "",
+                })
+
+            # Search players on this team
+            for p in team.players:
+                if query in p.name.lower():
+                    results["college_players"].append({
+                        "session_id": sid, "session_label": label,
+                        "name": p.name,
+                        "team_name": team_name,
+                        "position": getattr(p, "position", ""),
+                        "overall": getattr(p, "overall", 0),
+                        "year": getattr(p, "year", ""),
+                        "number": getattr(p, "number", ""),
+                    })
+
+    # Search pro teams
+    for key, season in api["pro_sessions"].items():
+        parts = key.split("_")
+        league_id = parts[0]
+        sess_id = parts[1] if len(parts) > 1 else ""
+        league_name = season.config.league_name
+
+        # Pro teams are stored differently per league — get standings to find team names
+        try:
+            standings = season.get_standings()
+            all_teams = []
+            if isinstance(standings, dict):
+                for div_teams in standings.get("divisions", {}).values():
+                    if isinstance(div_teams, list):
+                        all_teams.extend(div_teams)
+                if standings.get("standings"):
+                    all_teams.extend(standings["standings"])
+            for t in all_teams:
+                tname = t.get("team_name", t.get("name", ""))
+                tkey = t.get("team_key", tname)
+                if query in tname.lower() or query in tkey.lower():
+                    results["pro_teams"].append({
+                        "league_id": league_id, "session_id": sess_id,
+                        "league_name": league_name,
+                        "team_name": tname, "team_key": tkey,
+                        "record": f"{t.get('wins', 0)}-{t.get('losses', 0)}",
+                        "division": t.get("division", ""),
+                    })
+        except Exception:
+            pass
+
+    # Search FIV nations
+    fiv_data = _get_fiv_data()
+    if fiv_data:
+        nations = fiv_data.get("national_teams", {})
+        for code, team in nations.items():
+            nation = team.get("nation", {}) if isinstance(team, dict) else {}
+            name = nation.get("name", "") if isinstance(nation, dict) else ""
+            if query in code.lower() or query in name.lower():
+                results["nations"].append({
+                    "code": code,
+                    "name": name,
+                    "confederation": nation.get("confederation", "") if isinstance(nation, dict) else "",
+                    "tier": nation.get("tier", "") if isinstance(nation, dict) else "",
+                })
+
+    return templates.TemplateResponse("search.html", _ctx(
+        request, section="search", query=q, results=results, searched=True,
+    ))
+
+
 @router.get("/international/team/{nation_code}", response_class=HTMLResponse)
 def intl_team(request: Request, nation_code: str):
     fiv_data = _get_fiv_data()

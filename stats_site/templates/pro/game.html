@@ -80,7 +80,76 @@
 {% endif %}
 {% endfor %}
 
-{% if not stats and not ps %}
+{# ── Drive Summary ── #}
+{% set drives = box.get('drive_summary', []) %}
+{% if drives %}
+<h2>Drive Summary</h2>
+<table>
+  <thead>
+    <tr><th class="num">#</th><th class="num">Qtr</th><th>Team</th><th class="num">Start</th><th class="num">Plays</th><th class="num">Yards</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+  {% for d in drives %}
+  {% set is_score = d.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td', 'safety') if d.result else false %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td class="num">Q{{ d.quarter }}</td>
+    <td>{% if d.team == 'home' %}{{ home[:20] }}{% else %}{{ away[:20] }}{% endif %}</td>
+    <td class="num">{{ d.start_yard_line }}</td>
+    <td class="num">{{ d.plays }}</td>
+    <td class="num {% if d.yards >= 40 %}stat-good{% endif %}">{{ d.yards }}</td>
+    <td><span class="{% if is_score %}stat-elite{% elif d.result == 'punt' %}{% else %}stat-bad{% endif %}">{{ d.result | replace('_', ' ') | title if d.result else '—' }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Play-by-Play ── #}
+{% set pbp = box.get('play_by_play', []) %}
+{% if pbp %}
+<h2>Play-by-Play ({{ pbp|length }} plays)</h2>
+{% set quarters = [] %}
+{% for p in pbp %}
+{% if p.quarter not in quarters %}{% if quarters.append(p.quarter) %}{% endif %}{% endif %}
+{% endfor %}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Quarter:</strong>
+  <a href="#" onclick="document.querySelectorAll('.pbp-row').forEach(r=>r.style.display='');return false;" style="color:var(--accent)">All</a>
+  {% for q in quarters|sort %}
+  &middot; <a href="#" onclick="document.querySelectorAll('.pbp-row').forEach(r=>r.style.display=r.dataset.q=='{{ q }}'?'':'none');return false;">Q{{ q }}</a>
+  {% endfor %}
+</div>
+<table>
+  <thead>
+    <tr><th class="num">Q</th><th class="num">Time</th><th>Poss</th><th class="num">FP</th><th>Down</th><th>Play</th><th class="num">YDS</th><th class="num">EPA</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+  {% for p in pbp %}
+  {% set is_score = p.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td') if p.result else false %}
+  {% set is_turnover = p.result in ('kick_pass_intercepted', 'lateral_intercepted', 'fumble') if p.result else false %}
+  <tr class="pbp-row" data-q="{{ p.quarter }}" {% if is_score %}style="background:#1a1a00"{% elif is_turnover %}style="background:#1a0000"{% endif %}>
+    <td class="num">{{ p.quarter }}</td>
+    <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
+    <td>{% if p.possession == 'home' %}{{ home[:15] }}{% else %}{{ away[:15] }}{% endif %}</td>
+    <td class="num">{{ p.field_position if p.field_position is defined else '—' }}</td>
+    <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if is_score %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') | upper }}</span>
+      {% elif is_turnover %}<span class="tag" style="border-color:var(--red);color:var(--red)">{{ p.result | replace('_',' ') | upper }}</span>
+      {% else %}<span style="color:var(--fg-dim)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') }}</span>
+      {% endif %}
+    </td>
+    <td class="num {% if p.yards is defined and p.yards >= 20 %}stat-good{% elif p.yards is defined and p.yards < 0 %}stat-bad{% endif %}">{{ p.yards if p.yards is defined else '—' }}</td>
+    <td class="num {% if p.epa is defined and p.epa > 2 %}stat-good{% elif p.epa is defined and p.epa < -2 %}stat-bad{% endif %}">{{ '%.1f'|format(p.epa) if p.epa is defined and p.epa is not none else '—' }}</td>
+    <td style="white-space:normal;max-width:400px;{% if is_score %}color:var(--yellow);font-weight:bold{% elif is_turnover %}color:var(--red){% endif %}">{{ p.description if p.description else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not stats and not ps and not pbp and not drives %}
 <pre style="color:var(--fg-dim);font-size:11px;">{{ box | tojson(indent=2) }}</pre>
 {% endif %}
 
