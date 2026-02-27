@@ -3459,6 +3459,9 @@ def fiv_new_cycle(req: FIVCycleRequest):
     )
 
     _fiv_active_cycle = cycle
+    # Persist initial rankings so Rankings tab works immediately
+    if cycle.rankings:
+        save_fiv_rankings(cycle.rankings)
     save_fiv_cycle(cycle)
     _fiv_active_cycle_data = cycle.to_dict()
 
@@ -3540,6 +3543,9 @@ def fiv_sim_all_continental():
         raise HTTPException(status_code=404, detail="No active FIV cycle")
 
     run_continental_phase(_fiv_active_cycle)
+    # Persist rankings after continental phase so Rankings tab works
+    if _fiv_active_cycle.rankings:
+        save_fiv_rankings(_fiv_active_cycle.rankings)
     save_fiv_cycle(_fiv_active_cycle)
     _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
 
@@ -3593,6 +3599,9 @@ def fiv_sim_playoff():
         raise HTTPException(status_code=404, detail="No active FIV cycle")
 
     run_playoff_phase(_fiv_active_cycle)
+    # Persist rankings after playoff phase
+    if _fiv_active_cycle.rankings:
+        save_fiv_rankings(_fiv_active_cycle.rankings)
     save_fiv_cycle(_fiv_active_cycle)
     _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
 
@@ -3625,6 +3634,7 @@ def fiv_world_cup_draw():
     )
     draw_world_cup_groups(wc, _fiv_active_cycle.national_teams)
     _fiv_active_cycle.world_cup = wc
+    _fiv_active_cycle.phase = "wc_draw"
 
     save_fiv_cycle(_fiv_active_cycle)
     _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
@@ -3633,6 +3643,7 @@ def fiv_world_cup_draw():
         "teams": wc.teams,
         "seed_pots": wc.seed_pots,
         "groups": [g.to_dict() for g in wc.groups],
+        "phase": _fiv_active_cycle.phase,
     }
 
 

@@ -74,6 +74,15 @@ async def render_international_section(state, shared):
 
     tab_buttons: dict = {}
 
+    async def _refresh_cycle_data():
+        """Reload cycle data from API and re-render current tab in-place."""
+        try:
+            fresh = await run.io_bound(api_client.fiv_active_cycle)
+            cycle_data["data"] = fresh
+        except Exception:
+            pass
+        await _switch_tab(active_tab["current"])
+
     async def _switch_tab(name: str):
         active_tab["current"] = name
         for btn_name, btn in tab_buttons.items():
@@ -85,7 +94,7 @@ async def render_international_section(state, shared):
         with content_area:
             try:
                 if name == "dashboard":
-                    await _render_dashboard(cycle_data)
+                    await _render_dashboard(cycle_data, _refresh_cycle_data)
                 elif name == "rankings":
                     await _render_rankings()
                 elif name == "continental":
@@ -111,14 +120,14 @@ async def render_international_section(state, shared):
             tab_buttons[tab_id] = btn
 
     with content_area:
-        await _render_dashboard(cycle_data)
+        await _render_dashboard(cycle_data, _refresh_cycle_data)
 
 
 # ═══════════════════════════════════════════════════════════════
 # DASHBOARD
 # ═══════════════════════════════════════════════════════════════
 
-async def _render_dashboard(cycle_data: dict):
+async def _render_dashboard(cycle_data: dict, refresh_fn=None):
     """FIV Dashboard: cycle status, quick actions, rankings summary."""
 
     ui.label("FIV — Fédération Internationale de Viperball").classes(
@@ -152,7 +161,8 @@ async def _render_dashboard(cycle_data: dict):
                             f"{result.get('team_count', 0)} teams generated.",
                             type="positive",
                         )
-                        ui.navigate.to("/")
+                        if refresh_fn:
+                            await refresh_fn()
                     except Exception as exc:
                         ui.notify(f"Error: {exc}", type="negative")
 
@@ -201,7 +211,8 @@ async def _render_dashboard(cycle_data: dict):
                     try:
                         await run.io_bound(api_client.fiv_sim_all_continental)
                         ui.notify("Continental championships complete!", type="positive")
-                        ui.navigate.to("/")
+                        if refresh_fn:
+                            await refresh_fn()
                     except Exception as exc:
                         ui.notify(f"Error: {exc}", type="negative")
                 ui.button("Sim All Continental Championships", icon="fast_forward",
@@ -213,7 +224,8 @@ async def _render_dashboard(cycle_data: dict):
                     try:
                         result = await run.io_bound(api_client.fiv_sim_playoff)
                         ui.notify(f"Playoff complete! Qualifiers: {result.get('qualifiers', [])}", type="positive")
-                        ui.navigate.to("/")
+                        if refresh_fn:
+                            await refresh_fn()
                     except Exception as exc:
                         ui.notify(f"Error: {exc}", type="negative")
                 ui.button("Sim Cross-Confederation Playoff", icon="fast_forward",
@@ -225,7 +237,8 @@ async def _render_dashboard(cycle_data: dict):
                     try:
                         await run.io_bound(api_client.fiv_world_cup_draw)
                         ui.notify("World Cup draw complete!", type="positive")
-                        ui.navigate.to("/")
+                        if refresh_fn:
+                            await refresh_fn()
                     except Exception as exc:
                         ui.notify(f"Error: {exc}", type="negative")
                 ui.button("World Cup Draw", icon="casino",
@@ -241,7 +254,8 @@ async def _render_dashboard(cycle_data: dict):
                             ui.notify(f"World Cup complete! Champion: {champ}", type="positive")
                         else:
                             ui.notify("World Cup stage complete!", type="positive")
-                        ui.navigate.to("/")
+                        if refresh_fn:
+                            await refresh_fn()
                     except Exception as exc:
                         ui.notify(f"Error: {exc}", type="negative")
                 ui.button("Sim World Cup Stage", icon="fast_forward",
@@ -859,9 +873,26 @@ def _show_team_roster_dialog(nation_code: str):
                             "src": p.get("cvl_source") or ("Naturalized" if p.get("naturalized") else "Homegrown"),
                         })
                     rows.sort(key=lambda r: -r["ovr"])
-                    ui.table(columns=columns, rows=rows, row_key="name").props(
+
+                    # Build a lookup from player name → full roster data for card display
+                    roster_lookup = {p.get("name"): p for p in roster}
+
+                    tbl = ui.table(columns=columns, rows=rows, row_key="name").props(
                         "flat dense bordered"
                     ).classes("w-full")
+                    tbl.add_slot("body-cell-name", '''
+                        <q-td :props="props">
+                            <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                               @click="$parent.$emit('player_click', props.row)">
+                                {{ props.row.name }}
+                            </a>
+                        </q-td>
+                    ''')
+                    tbl.on("player_click", lambda e, rl=roster_lookup: (
+                        _show_fiv_player_card(rl[e.args["name"]])
+                        if e.args.get("name") in rl
+                        else None
+                    ))
 
         dlg.open()
 
@@ -870,8 +901,141 @@ def _show_team_roster_dialog(nation_code: str):
 
 
 # ═══════════════════════════════════════════════════════════════
+# FIV PLAYER CARD DIALOG
+# ═══════════════════════════════════════════════════════════════
+
+def _show_fiv_player_card(player_data: dict):
+    """Show an NVL-style player card dialog from a roster player dict."""
+    bio = player_data
+    name = bio.get("name", "?")
+    pos = bio.get("position", "")
+    ovr = bio.get("overall", 0)
+    team = bio.get("active_national_team") or bio.get("nation", "")
+
+    with ui.dialog() as dlg, ui.card().classes("p-0 max-w-3xl").style("min-width:640px;"):
+        with ui.column().classes("w-full p-0 gap-0"):
+            # NVL-style header
+            with ui.element("div").classes(
+                "w-full px-5 py-4"
+            ).style("background:#013369; border-bottom:4px solid #D50A0A;"):
+                ui.label(name).classes("text-2xl font-extrabold text-white tracking-tight")
+                ui.label(f"{pos} | {team}").classes("text-sm font-semibold").style("color:#B0B7BC;")
+
+            with ui.element("div").classes("w-full px-5 py-3"):
+                with ui.row().classes("w-full gap-6 flex-wrap"):
+                    # Bio column
+                    with ui.column().classes("gap-1").style("min-width:200px;"):
+                        def _bio_line(label, value):
+                            with ui.row().classes("gap-1 items-baseline"):
+                                ui.label(f"{label}:").classes("text-xs font-bold text-slate-500")
+                                ui.label(str(value)).classes("text-xs text-slate-800")
+
+                        _bio_line("Position", pos)
+                        if bio.get("height"):
+                            _bio_line("Height", bio["height"])
+                        if bio.get("weight"):
+                            _bio_line("Weight", f"{bio['weight']} lbs")
+                        if bio.get("age"):
+                            _bio_line("Age", bio["age"])
+                        if bio.get("caps", 0) > 0:
+                            _bio_line("Int'l Caps", bio["caps"])
+                        arch = bio.get("archetype", "")
+                        if arch and arch != "none":
+                            _bio_line("Archetype", arch.replace("_", " ").title())
+                        var_arch = bio.get("variance_archetype", "")
+                        if var_arch:
+                            _bio_line("Play Style", var_arch.title())
+                        nats = bio.get("nationalities", [])
+                        if nats:
+                            _bio_line("Nationalities", ", ".join(nats))
+                        if bio.get("cvl_source"):
+                            _bio_line("CVL Team", bio["cvl_source"])
+                        elif bio.get("naturalized"):
+                            _bio_line("Status", "Naturalized")
+                        else:
+                            _bio_line("Status", "Homegrown")
+
+                    # Ratings column
+                    with ui.column().classes("gap-1 flex-1"):
+                        ovr_color = "#16a34a" if ovr >= 85 else ("#d97706" if ovr >= 75 else "#64748b")
+                        ui.label("OVR").classes("text-[10px] font-bold text-slate-400 mb-0")
+                        ui.label(str(ovr)).classes("text-4xl font-extrabold mb-2").style(
+                            f"color:{ovr_color}; line-height:1;"
+                        )
+
+                        rating_display = [
+                            ("SPD", "speed"), ("STA", "stamina"), ("KICK", "kicking"),
+                            ("LAT", "lateral_skill"), ("TKL", "tackling"), ("AGI", "agility"),
+                            ("PWR", "power"), ("AWR", "awareness"), ("HND", "hands"),
+                            ("KPW", "kick_power"), ("KAC", "kick_accuracy"),
+                        ]
+
+                        with ui.element("div").classes("flex flex-wrap gap-1"):
+                            for abbr, key in rating_display:
+                                val = bio.get(key, 0)
+                                if val >= 85:
+                                    bg = "#dcfce7"; fg = "#166534"; bd = "#86efac"
+                                elif val >= 75:
+                                    bg = "#dbeafe"; fg = "#1e40af"; bd = "#93c5fd"
+                                elif val >= 65:
+                                    bg = "#fef3c7"; fg = "#92400e"; bd = "#fcd34d"
+                                else:
+                                    bg = "#f1f5f9"; fg = "#475569"; bd = "#cbd5e1"
+                                with ui.element("div").classes(
+                                    "flex flex-col items-center px-1.5 py-0.5 rounded"
+                                ).style(f"background:{bg}; color:{fg}; border:1px solid {bd}; min-width:42px;"):
+                                    ui.label(abbr).classes("text-[9px] font-bold leading-tight")
+                                    ui.label(str(val)).classes("text-xs font-extrabold leading-tight")
+
+            # Close button
+            with ui.element("div").classes("w-full px-5 py-2 flex justify-end").style(
+                "border-top:1px solid #e2e8f0;"
+            ):
+                ui.button("Close", icon="close", on_click=dlg.close).props("flat no-caps size=sm color=grey")
+
+    dlg.open()
+
+
+def _find_player_in_roster(nation_code: str, player_name: str):
+    """Fetch team roster and find a specific player, then show their card."""
+    async def _do():
+        try:
+            data = await run.io_bound(api_client.fiv_team_detail, nation_code)
+            roster = data.get("roster", [])
+            for p in roster:
+                if p.get("name") == player_name:
+                    _show_fiv_player_card(p)
+                    return
+            # Player not found by exact name — show with minimal data
+            _show_fiv_player_card({"name": player_name, "nation": nation_code, "active_national_team": nation_code})
+        except Exception as exc:
+            ui.notify(f"Could not load player: {exc}", type="negative")
+
+    import asyncio
+    asyncio.ensure_future(_do())
+
+
+# ═══════════════════════════════════════════════════════════════
 # FIV BOX SCORE DIALOG — NVL design + CVL detail
 # ═══════════════════════════════════════════════════════════════
+
+def _fiv_player_table(columns: list, rows: list, nation_code: str = ""):
+    """Create a ui.table with clickable player names that open FIV player cards."""
+    tbl = ui.table(columns=columns, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+    if nation_code:
+        tbl.add_slot("body-cell-name", '''
+            <q-td :props="props">
+                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                   @click="$parent.$emit('player_click', props.row)">
+                    {{ props.row.name }}
+                </a>
+            </q-td>
+        ''')
+        tbl.on("player_click", lambda e, nc=nation_code: _find_player_in_roster(
+            nc, e.args.get("name", "")
+        ))
+    return tbl
+
 
 def _show_fiv_box_score_dialog(match_data: dict):
     """Show a maximized box score dialog for an FIV match.
@@ -1097,7 +1261,7 @@ def _fiv_render_offense_stats(home_name: str, away_name: str, home_ps: list, awa
                     "fum": str(p.get("fumbles", 0)),
                     "long": str(p.get("long_rush", "-")),
                 })
-            ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+            _fiv_player_table(cols, rows, side_name)
 
         # Kick Passing
         passers = [p for p in players if p.get("kick_passes_thrown", 0) > 0]
@@ -1125,7 +1289,7 @@ def _fiv_render_offense_stats(home_name: str, away_name: str, home_ps: list, awa
                     "int_thrown": str(p.get("kick_pass_interceptions_thrown", 0)),
                     "pct": f"{round(100 * comp / max(1, att), 1)}%",
                 })
-            ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+            _fiv_player_table(cols, rows, side_name)
 
         # Receiving
         receivers = sorted(
@@ -1147,7 +1311,7 @@ def _fiv_render_offense_stats(home_name: str, away_name: str, home_ps: list, awa
                 "yds": str(p.get("kick_pass_yards", 0)),
                 "td": str(p.get("kick_pass_tds", 0)),
             } for p in receivers]
-            ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+            _fiv_player_table(cols, rows, side_name)
 
         # Laterals
         lateralists = sorted(
@@ -1173,7 +1337,7 @@ def _fiv_render_offense_stats(home_name: str, away_name: str, home_ps: list, awa
                 "ast": str(p.get("lateral_assists", 0)),
                 "td": str(p.get("lateral_tds", 0)),
             } for p in lateralists]
-            ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+            _fiv_player_table(cols, rows, side_name)
 
         # Special Teams (CVL detail)
         st_players = [p for p in players if (
@@ -1201,7 +1365,7 @@ def _fiv_render_offense_stats(home_name: str, away_name: str, home_ps: list, awa
                 "st_tkl": str(p.get("st_tackles", 0)),
                 "bells": str(p.get("keeper_bells", 0)),
             } for p in st_players]
-            ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+            _fiv_player_table(cols, rows, side_name)
 
 
 # ── Defense Stats ──
@@ -1240,7 +1404,7 @@ def _fiv_render_defense_stats(home_name: str, away_name: str, home_ps: list, awa
             "ints": str(p.get("kick_pass_ints", 0)),
             "st": str(p.get("st_tackles", 0)),
         } for p in defenders]
-        ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+        _fiv_player_table(cols, rows, side_name)
 
 
 # ── Kicking Stats ──
@@ -1280,7 +1444,7 @@ def _fiv_render_kicking_stats(home_name: str, away_name: str, home_ps: list, awa
                 "pk": f"{pk_m}/{pk_a}", "pk_pts": str(pk_m * 3),
                 "total": str(dk_m * 5 + pk_m * 3),
             })
-        ui.table(columns=cols, rows=rows, row_key="name").props("dense flat bordered").classes("w-full")
+        _fiv_player_table(cols, rows, side_name)
 
 
 # ── Drive Summary (CVL feature) ──
