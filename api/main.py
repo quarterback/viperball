@@ -3420,9 +3420,30 @@ def fiv_new_cycle(req: FIVCycleRequest):
     existing_cycles = list_fiv_cycles()
     cycle_number = len(existing_cycles) + 1
 
-    # Optionally pull CVL players
+    # Pull CVL players from a completed college season if one exists
     cvl_players = None
-    # For MVP, CVL integration is optional — just generate all rosters
+    if req.cvl_session_id and req.cvl_session_id in sessions:
+        session = sessions[req.cvl_session_id]
+        season = session.get("season")
+        if season and hasattr(season, "teams"):
+            cvl_players = []
+            for team_name, team in season.teams.items():
+                for p in team.players:
+                    # Tag each player with their college team for cvl_source
+                    p._team_name = team_name
+                    cvl_players.append(p)
+    else:
+        # Auto-detect: scan all sessions for a completed college season
+        for sid, session in sessions.items():
+            season = session.get("season")
+            if season and hasattr(season, "teams") and hasattr(season, "champion"):
+                cvl_players = []
+                for team_name, team in season.teams.items():
+                    for p in team.players:
+                        p._team_name = team_name
+                        cvl_players.append(p)
+                if cvl_players:
+                    break
 
     cycle = create_fiv_cycle(
         cycle_number=cycle_number,
@@ -3442,6 +3463,8 @@ def fiv_new_cycle(req: FIVCycleRequest):
         "phase": cycle.phase,
         "team_count": len(cycle.national_teams),
         "confederations": list(cycle.confederations_data.keys()),
+        "cvl_linked": cvl_players is not None,
+        "cvl_player_count": len(cvl_players) if cvl_players else 0,
     }
 
 
