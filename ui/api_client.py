@@ -728,3 +728,80 @@ def pro_league_active() -> dict:
 
 def pro_league_status(league: str, session_id: str) -> dict:
     return _get(f"/api/pro/{league}/{session_id}/status")
+
+
+# ═══════════════════════════════════════════════════════════════
+# FIV — International Viperball
+# ═══════════════════════════════════════════════════════════════
+
+def fiv_new_cycle(host_nation: str = None, seed: int = None) -> dict:
+    body = {}
+    if host_nation:
+        body["host_nation"] = host_nation
+    if seed:
+        body["seed"] = seed
+    return _post("/api/fiv/cycle/new", json=body)
+
+
+def fiv_active_cycle() -> dict:
+    return _get("/api/fiv/cycle/active")
+
+
+def fiv_rankings() -> dict:
+    return _get("/api/fiv/rankings")
+
+
+def fiv_sim_continental(conf: str) -> dict:
+    return _post(f"/api/fiv/continental/{conf}/sim-all")
+
+
+def fiv_sim_all_continental() -> dict:
+    return _post("/api/fiv/continental/sim-all")
+
+
+def fiv_continental_standings(conf: str) -> dict:
+    return _get(f"/api/fiv/continental/{conf}/standings")
+
+
+def fiv_continental_bracket(conf: str) -> dict:
+    return _get(f"/api/fiv/continental/{conf}/bracket")
+
+
+def fiv_continental_game(conf: str, match_id: str) -> dict:
+    return _get(f"/api/fiv/continental/{conf}/game/{match_id}")
+
+
+def fiv_sim_playoff() -> dict:
+    return _post("/api/fiv/playoff/sim-all")
+
+
+def fiv_world_cup_draw() -> dict:
+    return _post("/api/fiv/worldcup/draw")
+
+
+def fiv_sim_world_cup_stage() -> dict:
+    return _post("/api/fiv/worldcup/sim-stage")
+
+
+def fiv_world_cup_groups() -> dict:
+    return _get("/api/fiv/worldcup/groups")
+
+
+def fiv_world_cup_bracket() -> dict:
+    return _get("/api/fiv/worldcup/bracket")
+
+
+def fiv_world_cup_game(match_id: str) -> dict:
+    return _get(f"/api/fiv/worldcup/game/{match_id}")
+
+
+def fiv_world_cup_stats() -> dict:
+    return _get("/api/fiv/worldcup/stats")
+
+
+def fiv_team_detail(nation_code: str) -> dict:
+    return _get(f"/api/fiv/team/{nation_code}")
+
+
+def fiv_list_cycles() -> dict:
+    return _get("/api/fiv/cycles")
