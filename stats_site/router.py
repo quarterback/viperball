@@ -289,10 +289,115 @@ def college_team(request: Request, session_id: str, team_name: str):
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    # ── Aggregate team season stats from completed games ──
+    team_season_stats = None
+    completed_games_with_stats = []
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        if game.home_team != team_name and game.away_team != team_name:
+            continue
+        side = "home" if game.home_team == team_name else "away"
+        stats = game.full_result.get("stats", {}).get(side)
+        if stats:
+            completed_games_with_stats.append(stats)
+
+    if completed_games_with_stats:
+        n = len(completed_games_with_stats)
+
+        # Sum up totals
+        total_yards = sum(s.get("total_yards", 0) for s in completed_games_with_stats)
+        rushing_yards = sum(s.get("rushing_yards", 0) for s in completed_games_with_stats)
+        rushing_carries = sum(s.get("rushing_carries", 0) for s in completed_games_with_stats)
+        rushing_tds = sum(s.get("rushing_touchdowns", 0) for s in completed_games_with_stats)
+        kp_yards = sum(s.get("kick_pass_yards", 0) for s in completed_games_with_stats)
+        kp_att = sum(s.get("kick_passes_attempted", 0) for s in completed_games_with_stats)
+        kp_comp = sum(s.get("kick_passes_completed", 0) for s in completed_games_with_stats)
+        kp_tds = sum(s.get("kick_pass_tds", 0) for s in completed_games_with_stats)
+        kp_ints = sum(s.get("kick_pass_interceptions", 0) for s in completed_games_with_stats)
+        lateral_chains = sum(s.get("lateral_chains", 0) for s in completed_games_with_stats)
+        lateral_yards = sum(s.get("lateral_yards", 0) for s in completed_games_with_stats)
+        touchdowns = sum(s.get("touchdowns", 0) for s in completed_games_with_stats)
+        dk_made = sum(s.get("drop_kicks_made", 0) for s in completed_games_with_stats)
+        dk_att = sum(s.get("drop_kicks_attempted", 0) for s in completed_games_with_stats)
+        pk_made = sum(s.get("place_kicks_made", 0) for s in completed_games_with_stats)
+        pk_att = sum(s.get("place_kicks_attempted", 0) for s in completed_games_with_stats)
+        fumbles = sum(s.get("fumbles_lost", 0) for s in completed_games_with_stats)
+        tod = sum(s.get("turnovers_on_downs", 0) for s in completed_games_with_stats)
+        penalties = sum(s.get("penalties", 0) for s in completed_games_with_stats)
+        penalty_yards = sum(s.get("penalty_yards", 0) for s in completed_games_with_stats)
+        delta_yards = sum(s.get("delta_yards", 0) for s in completed_games_with_stats)
+        bonus_poss = sum(s.get("bonus_possessions", 0) for s in completed_games_with_stats)
+        bonus_scores = sum(s.get("bonus_possession_scores", 0) for s in completed_games_with_stats)
+        total_epa = sum(s.get("epa", 0) for s in completed_games_with_stats)
+
+        # Down conversions (keys are ints 4, 5, 6)
+        down_conv = {}
+        for d in [4, 5, 6]:
+            att_total = 0
+            conv_total = 0
+            for s in completed_games_with_stats:
+                dc = s.get("down_conversions", {})
+                dd = dc.get(d, dc.get(str(d), {}))
+                att_total += dd.get("attempts", 0)
+                conv_total += dd.get("converted", 0)
+            down_conv[d] = {
+                "att": att_total,
+                "conv": conv_total,
+                "rate": round(conv_total / max(1, att_total) * 100, 1),
+            }
+
+        # Averages from viperball_metrics and viper_efficiency
+        viper_eff_vals = [s.get("viper_efficiency", 0) for s in completed_games_with_stats if s.get("viper_efficiency") is not None]
+        team_rating_vals = []
+        for s in completed_games_with_stats:
+            vm = s.get("viperball_metrics", {})
+            if vm and vm.get("team_rating") is not None:
+                team_rating_vals.append(vm["team_rating"])
+
+        team_season_stats = {
+            "games_played": n,
+            "total_yards": total_yards,
+            "avg_yards": round(total_yards / n, 1),
+            "rushing_yards": rushing_yards,
+            "avg_rushing": round(rushing_yards / n, 1),
+            "rushing_carries": rushing_carries,
+            "rushing_tds": rushing_tds,
+            "yards_per_carry": round(rushing_yards / max(1, rushing_carries), 1),
+            "kick_pass_yards": kp_yards,
+            "kp_attempts": kp_att,
+            "kp_completions": kp_comp,
+            "kp_comp_pct": round(kp_comp / max(1, kp_att) * 100, 1),
+            "kp_tds": kp_tds,
+            "kp_ints": kp_ints,
+            "lateral_chains": lateral_chains,
+            "lateral_yards": lateral_yards,
+            "touchdowns": touchdowns,
+            "dk_made": dk_made,
+            "dk_att": dk_att,
+            "pk_made": pk_made,
+            "pk_att": pk_att,
+            "fumbles": fumbles,
+            "tod": tod,
+            "penalties": penalties,
+            "penalty_yards": penalty_yards,
+            "delta_yards": delta_yards,
+            "bonus_possessions": bonus_poss,
+            "bonus_scores": bonus_scores,
+            "total_epa": round(total_epa, 1),
+            "avg_epa": round(total_epa / n, 2),
+            "down_conv_4": down_conv[4],
+            "down_conv_5": down_conv[5],
+            "down_conv_6": down_conv[6],
+            "avg_team_rating": round(sum(team_rating_vals) / max(1, len(team_rating_vals)), 1) if team_rating_vals else None,
+            "avg_viper_eff": round(sum(viper_eff_vals) / max(1, len(viper_eff_vals)), 3) if viper_eff_vals else None,
+        }
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
+        team_stats=team_season_stats,
     ))
 
 
