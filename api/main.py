@@ -150,10 +150,12 @@ class CreateDynastyRequest(BaseModel):
 
 class SimulateWeekRequest(BaseModel):
     week: Optional[int] = None
+    fast_sim: bool = True
 
 
 class SimulateThroughRequest(BaseModel):
     target_week: int
+    fast_sim: bool = True
 
 
 class DynastyStartSeasonRequest(BaseModel):
@@ -834,7 +836,7 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
     dq_mgr = session.get("dq_manager")
     dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
     games = season.simulate_week(week=week, dq_team_boosts=dq_boosts,
-                                  use_fast_sim=True)
+                                  use_fast_sim=req.fast_sim)
 
     if not games:
         return {"week": week, "games": [], "message": "No games to simulate"}
@@ -850,6 +852,7 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
         "games_count": len(games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
+        "engine": "fast_sim" if req.fast_sim else "full",
     }
 
 
@@ -861,7 +864,7 @@ def simulate_through(session_id: str, req: SimulateThroughRequest):
     if session["phase"] not in ("regular",):
         raise HTTPException(status_code=400, detail=f"Cannot simulate in phase '{session['phase']}'")
 
-    all_games = season.simulate_through_week(req.target_week, use_fast_sim=True)
+    all_games = season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -871,11 +874,16 @@ def simulate_through(session_id: str, req: SimulateThroughRequest):
         "games_count": len(all_games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
+        "engine": "fast_sim" if req.fast_sim else "full",
     }
 
 
+class SimulateRestRequest(BaseModel):
+    fast_sim: bool = True
+
+
 @app.post("/sessions/{session_id}/season/simulate-rest")
-def simulate_rest(session_id: str):
+def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRestRequest()):
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -883,7 +891,7 @@ def simulate_rest(session_id: str):
         raise HTTPException(status_code=400, detail=f"Cannot simulate rest in phase '{session['phase']}'")
 
     games_before = sum(1 for g in season.schedule if g.completed)
-    season.simulate_season(generate_polls=True, use_fast_sim=True)
+    season.simulate_season(generate_polls=True, use_fast_sim=req.fast_sim)
     games_after = sum(1 for g in season.schedule if g.completed)
 
     session["phase"] = "playoffs_pending"
@@ -893,6 +901,7 @@ def simulate_rest(session_id: str):
         "total_games": len(season.schedule),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
+        "engine": "fast_sim" if req.fast_sim else "full",
     }
 
 
