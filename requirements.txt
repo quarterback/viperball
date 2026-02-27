@@ -12,6 +12,9 @@ pandas==3.0.1
 numpy==2.4.2
 plotly==6.5.2
 
+# Templating
+jinja2==3.1.6
+
 # HTTP clients
 requests==2.32.5
 httpx==0.28.1
