@@ -1491,6 +1491,8 @@ class Play:
     play_signature: str = ""
     kick_pass_subfamily: str = ""
     formation: str = ""
+    home_score_after: float = 0.0
+    away_score_after: float = 0.0
 
 
 OFFENSE_STYLES = {
@@ -4040,6 +4042,8 @@ class ViperballEngine:
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
             play = self.simulate_play()
+            play.home_score_after = self.state.home_score
+            play.away_score_after = self.state.away_score
             self.play_log.append(play)
             drive_plays += 1
 
@@ -4305,6 +4309,8 @@ class ViperballEngine:
             else:
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
+            final_play.home_score_after = self.state.home_score
+            final_play.away_score_after = self.state.away_score
             self.play_log.append(final_play)
             drive_plays += 1
             if final_play.yards_gained > 0:
@@ -11126,6 +11132,8 @@ class ViperballEngine:
         place_kicks_attempted = [p for p in plays if p.play_type == "place_kick"]
         touchdowns = [p for p in plays if p.result == "touchdown"]
         punt_return_tds = [p for p in plays if p.result == "punt_return_td"]
+        int_return_tds = [p for p in plays if p.result == "int_return_td"]
+        missed_dk_return_tds = [p for p in plays if p.result == "missed_dk_return_td"]
         fumbles_lost = [p for p in plays if p.fumble and p.result == "fumble"]
         turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
         pindowns = [p for p in plays if p.result == "pindown"]
@@ -11184,6 +11192,8 @@ class ViperballEngine:
             "yards_per_play": round(total_yards / max(1, total_plays), 2),
             "touchdowns": len(touchdowns),
             "punt_return_tds": len(punt_return_tds),
+            "int_return_tds": len(int_return_tds),
+            "missed_dk_return_tds": len(missed_dk_return_tds),
             "lateral_chains": len(laterals),
             "successful_laterals": successful_laterals,
             "fumbles_lost": len(fumbles_lost),
@@ -11232,6 +11242,8 @@ class ViperballEngine:
             "laterals": play.laterals if play.laterals > 0 else None,
             "fumble": play.fumble if play.fumble else None,
             "play_signature": play.play_signature if play.play_signature else None,
+            "home_score": play.home_score_after,
+            "away_score": play.away_score_after,
         }
         if play.penalty:
             d["penalty"] = {

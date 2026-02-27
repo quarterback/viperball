@@ -70,6 +70,63 @@ def format_time(seconds):
     return f"{m:02d}:{s:02d}"
 
 
+def _compute_quarter_scores(plays):
+    """Compute per-quarter scoring from play-by-play data.
+
+    Uses running score embedded in each play (home_score / away_score) for
+    exact totals via deltas. Falls back to result-based heuristics for legacy data.
+    """
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+
+    if plays and "home_score" in plays[0]:
+        prev_home = 0.0
+        prev_away = 0.0
+        for p in plays:
+            q = p.get("quarter", 0)
+            if q not in home_q:
+                continue
+            cur_home = p.get("home_score", prev_home)
+            cur_away = p.get("away_score", prev_away)
+            home_q[q] += cur_home - prev_home
+            away_q[q] += cur_away - prev_away
+            prev_home = cur_home
+            prev_away = cur_away
+        return home_q, away_q
+
+    for p in plays:
+        q = p.get("quarter", 0)
+        if q not in home_q:
+            continue
+        if p["result"] in ("touchdown", "punt_return_td", "int_return_td", "missed_dk_return_td"):
+            if p["possession"] == "home":
+                home_q[q] += 9
+            else:
+                away_q[q] += 9
+        elif p["result"] == "successful_kick":
+            pts = 5 if p.get("play_type") == "drop_kick" else 3
+            if p["possession"] == "home":
+                home_q[q] += pts
+            else:
+                away_q[q] += pts
+        elif p["result"] == "pindown":
+            if p["possession"] == "home":
+                home_q[q] += 1
+            else:
+                away_q[q] += 1
+        elif p["result"] == "safety":
+            if p["possession"] == "home":
+                away_q[q] += 2
+            else:
+                home_q[q] += 2
+        elif p["result"] == "fumble":
+            if p["possession"] == "home":
+                home_q[q] += 0.5
+            else:
+                away_q[q] += 0.5
+    return home_q, away_q
+
+
 def fmt_vb_score(v):
     """Format Viperball score: whole numbers without .0, half-points as ½."""
     if v is None:
@@ -96,38 +153,7 @@ def generate_box_score_markdown(result):
     as_ = result["stats"]["away"]
     plays = result["play_by_play"]
 
-    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    for p in plays:
-        q = p["quarter"]
-        if q not in home_q:
-            continue
-        if p["result"] == "touchdown" or p["result"] == "punt_return_td":
-            if p["possession"] == "home":
-                home_q[q] += 9
-            else:
-                away_q[q] += 9
-        elif p["result"] == "successful_kick":
-            pts = 5 if p["play_type"] == "drop_kick" else 3
-            if p["possession"] == "home":
-                home_q[q] += pts
-            else:
-                away_q[q] += pts
-        elif p["result"] == "pindown":
-            if p["possession"] == "home":
-                home_q[q] += 1
-            else:
-                away_q[q] += 1
-        elif p["result"] == "safety":
-            if p["possession"] == "home":
-                away_q[q] += 2
-            else:
-                home_q[q] += 2
-        elif p["result"] == "fumble":
-            if p["possession"] == "home":
-                away_q[q] += 0.5
-            else:
-                home_q[q] += 0.5
+    home_q, away_q = _compute_quarter_scores(plays)
 
     lines = []
     lines.append(f"# {home['team']} vs {away['team']}")
@@ -232,38 +258,7 @@ def generate_forum_box_score(result):
     as_ = result["stats"]["away"]
     plays = result["play_by_play"]
 
-    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    for p in plays:
-        q = p.get("quarter", 0)
-        if q not in home_q:
-            continue
-        if p["result"] in ("touchdown", "punt_return_td"):
-            if p["possession"] == "home":
-                home_q[q] += 9
-            else:
-                away_q[q] += 9
-        elif p["result"] == "successful_kick":
-            pts = 5 if p.get("play_type") == "drop_kick" else 3
-            if p["possession"] == "home":
-                home_q[q] += pts
-            else:
-                away_q[q] += pts
-        elif p["result"] == "pindown":
-            if p["possession"] == "home":
-                home_q[q] += 1
-            else:
-                away_q[q] += 1
-        elif p["result"] == "safety":
-            if p["possession"] == "home":
-                away_q[q] += 2
-            else:
-                home_q[q] += 2
-        elif p["result"] == "fumble":
-            if p["possession"] == "home":
-                away_q[q] += 0.5
-            else:
-                home_q[q] += 0.5
+    home_q, away_q = _compute_quarter_scores(plays)
 
     winner = home['team'] if home['score'] > away['score'] else away['team']
     w_score = max(home['score'], away['score'])
@@ -383,7 +378,7 @@ def generate_forum_box_score(result):
 
     key_plays = []
     for p in plays:
-        if p["result"] in ("touchdown", "punt_return_td"):
+        if p["result"] in ("touchdown", "punt_return_td", "int_return_td", "missed_dk_return_td"):
             key_plays.append(p)
         elif p.get("yards", 0) >= 20:
             key_plays.append(p)
@@ -545,38 +540,7 @@ def render_game_detail(result, key_prefix="gd"):
     caption_parts = [f"Weather: {weather.title()}", f"Seed: {seed}"]
     st.caption(" | ".join(caption_parts))
 
-    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
-    for p in plays:
-        q = p.get("quarter", 0)
-        if q not in home_q:
-            continue
-        if p["result"] in ("touchdown", "punt_return_td"):
-            if p["possession"] == "home":
-                home_q[q] += 9
-            else:
-                away_q[q] += 9
-        elif p["result"] == "successful_kick":
-            pts = 5 if p.get("play_type") == "drop_kick" else 3
-            if p["possession"] == "home":
-                home_q[q] += pts
-            else:
-                away_q[q] += pts
-        elif p["result"] == "pindown":
-            if p["possession"] == "home":
-                home_q[q] += 1
-            else:
-                away_q[q] += 1
-        elif p["result"] == "safety":
-            if p["possession"] == "home":
-                away_q[q] += 2
-            else:
-                home_q[q] += 2
-        elif p["result"] == "fumble":
-            if p["possession"] == "home":
-                away_q[q] += 0.5
-            else:
-                home_q[q] += 0.5
+    home_q, away_q = _compute_quarter_scores(plays)
 
     q_data = []
     q_data.append({"Team": home_name, "Q1": fmt_vb_score(home_q[1]), "Q2": fmt_vb_score(home_q[2]),
