@@ -558,5 +558,133 @@
       "Malacca MYS",
       "Ipoh MYS"
     ]
-  }
+  },
+  "middle_east": {
+    "saudi_arabia": [
+      "Riyadh KSA",
+      "Jeddah KSA",
+      "Mecca KSA",
+      "Medina KSA",
+      "Dammam KSA",
+      "Khobar KSA"
+    ],
+    "uae": [
+      "Dubai UAE",
+      "Abu Dhabi UAE",
+      "Sharjah UAE",
+      "Al Ain UAE",
+      "Ajman UAE"
+    ],
+    "iran": [
+      "Tehran IRN",
+      "Isfahan IRN",
+      "Mashhad IRN",
+      "Tabriz IRN",
+      "Shiraz IRN",
+      "Ahvaz IRN"
+    ],
+    "egypt": [
+      "Cairo EGY",
+      "Alexandria EGY",
+      "Giza EGY",
+      "Port Said EGY",
+      "Luxor EGY",
+      "Aswan EGY"
+    ],
+    "morocco": [
+      "Casablanca MAR",
+      "Rabat MAR",
+      "Marrakech MAR",
+      "Fez MAR",
+      "Tangier MAR",
+      "Agadir MAR"
+    ]
+  },
+  "india": {
+    "major": [
+      "Mumbai IND",
+      "Delhi IND",
+      "Bangalore IND",
+      "Chennai IND",
+      "Hyderabad IND",
+      "Kolkata IND",
+      "Pune IND",
+      "Ahmedabad IND"
+    ],
+    "secondary": [
+      "Jaipur IND",
+      "Lucknow IND",
+      "Chandigarh IND",
+      "Kochi IND",
+      "Bhopal IND",
+      "Thiruvananthapuram IND",
+      "Guwahati IND",
+      "Vadodara IND",
+      "Indore IND",
+      "Nagpur IND",
+      "Visakhapatnam IND",
+      "Coimbatore IND"
+    ]
+  },
+  "russia": {
+    "major": [
+      "Moscow RUS",
+      "Saint Petersburg RUS",
+      "Novosibirsk RUS",
+      "Yekaterinburg RUS",
+      "Kazan RUS",
+      "Nizhny Novgorod RUS"
+    ],
+    "secondary": [
+      "Chelyabinsk RUS",
+      "Samara RUS",
+      "Rostov-on-Don RUS",
+      "Ufa RUS",
+      "Krasnoyarsk RUS",
+      "Perm RUS",
+      "Voronezh RUS",
+      "Volgograd RUS",
+      "Krasnodar RUS",
+      "Saratov RUS"
+    ]
+  },
+  "turkey": {
+    "major": [
+      "Istanbul TUR",
+      "Ankara TUR",
+      "Izmir TUR",
+      "Bursa TUR",
+      "Antalya TUR",
+      "Adana TUR"
+    ],
+    "secondary": [
+      "Konya TUR",
+      "Gaziantep TUR",
+      "Kayseri TUR",
+      "Trabzon TUR",
+      "Eskişehir TUR",
+      "Mersin TUR",
+      "Samsun TUR",
+      "Denizli TUR",
+      "Diyarbakır TUR",
+      "Erzurum TUR"
+    ]
+  },
+  "central_asia": [
+    "Almaty KAZ",
+    "Astana KAZ",
+    "Shymkent KAZ",
+    "Karaganda KAZ",
+    "Aktau KAZ",
+    "Tashkent UZB",
+    "Samarkand UZB",
+    "Bukhara UZB",
+    "Namangan UZB",
+    "Fergana UZB",
+    "Andijan UZB",
+    "Nukus UZB",
+    "Bishkek KGZ",
+    "Dushanbe TJK",
+    "Ashgabat TKM"
+  ]
 }

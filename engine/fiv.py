@@ -668,10 +668,15 @@ def _generate_player_for_nation(
 
     try:
         from scripts.generate_names import generate_player_name
-        name_data = generate_player_name(
-            origin=nation.name_pool if nation.name_pool != "american" else None,
-            gender="female",
-        )
+        pool = nation.name_pool
+        if pool and pool != "american":
+            name_data = generate_player_name(
+                origin=pool,
+                region=pool,
+                gender="female",
+            )
+        else:
+            name_data = generate_player_name(gender="female")
         full_name = name_data.get("full_name", f"Player {number}")
     except Exception:
         full_name = f"Player {number}"
