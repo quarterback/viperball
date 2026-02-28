@@ -676,6 +676,32 @@ def load_all_league_archives(user_id: str = "default") -> dict[str, dict]:
 
 
 # ═══════════════════════════════════════════════════════════════
+# SEASON ARCHIVE (persisted snapshots of completed seasons)
+# ═══════════════════════════════════════════════════════════════
+
+def save_season_archive(archive_key: str, snapshot: dict, user_id: str = "default"):
+    """Save a completed season snapshot (college or FIV) to the database."""
+    save_blob("season_archive", archive_key, snapshot,
+              label=snapshot.get("label", archive_key), user_id=user_id)
+    _log.info(f"Saved season archive '{archive_key}' for user={user_id}")
+
+
+def load_season_archive(archive_key: str, user_id: str = "default") -> Optional[dict]:
+    """Load a season archive snapshot."""
+    return load_blob("season_archive", archive_key, user_id=user_id)
+
+
+def list_season_archives(user_id: str = "default") -> list[dict]:
+    """List all season archives (metadata only, no full data)."""
+    return list_saves("season_archive", user_id=user_id)
+
+
+def delete_season_archive(archive_key: str, user_id: str = "default"):
+    """Delete a season archive."""
+    delete_blob("season_archive", archive_key, user_id=user_id)
+
+
+# ═══════════════════════════════════════════════════════════════
 # AUTO-INITIALIZE on import
 # ═══════════════════════════════════════════════════════════════
 

@@ -94,6 +94,15 @@ def _get_fiv_data():
         return None
 
 
+def _get_archives():
+    """Get list of archived seasons from the database."""
+    try:
+        from engine.db import list_season_archives, load_season_archive
+        return list_season_archives, load_season_archive
+    except Exception:
+        return None, None
+
+
 def _get_fiv_rankings():
     """Get FIV rankings."""
     try:
@@ -212,6 +221,17 @@ def stats_home(request: Request):
     pro = _find_all_pro_sessions()
     fiv_data = _get_fiv_data()
     fiv_rankings = _get_fiv_rankings()
+
+    # Load archived seasons
+    archives = []
+    list_fn, load_fn = _get_archives()
+    if list_fn:
+        try:
+            for meta in list_fn():
+                archives.append(meta)
+        except Exception:
+            pass
+
     return templates.TemplateResponse("home.html", _ctx(
         request,
         section="home",
@@ -219,6 +239,7 @@ def stats_home(request: Request):
         pro_sessions=pro,
         fiv_data=fiv_data,
         fiv_rankings=fiv_rankings,
+        archives=archives,
     ))
 
 
@@ -1552,3 +1573,267 @@ def intl_team(request: Request, nation_code: str):
     return templates.TemplateResponse("international/team.html", _ctx(
         request, section="international", team=team, nation_code=nation_code,
     ))
+
+
+# ── ARCHIVES ────────────────────────────────────────────────────────────
+
+@router.get("/archives/", response_class=HTMLResponse)
+def archives_index(request: Request):
+    """List all archived seasons."""
+    archives = []
+    list_fn, load_fn = _get_archives()
+    if list_fn:
+        try:
+            for meta in list_fn():
+                # Load just the header fields from each archive
+                data = load_fn(meta["save_key"]) if load_fn else None
+                archives.append({
+                    "key": meta["save_key"],
+                    "label": meta.get("label", meta["save_key"]),
+                    "type": data.get("type", "college") if data else "college",
+                    "champion": data.get("champion") if data else None,
+                    "team_count": data.get("team_count", 0) if data else 0,
+                    "games_played": data.get("games_played", 0) if data else 0,
+                    "total_games": data.get("total_games", 0) if data else 0,
+                    "created_at": meta.get("created_at", 0),
+                })
+        except Exception:
+            pass
+
+    return templates.TemplateResponse("archives/index.html", _ctx(
+        request, section="archives", archives=archives,
+    ))
+
+
+@router.get("/archives/{archive_key}/", response_class=HTMLResponse)
+def archive_detail(request: Request, archive_key: str):
+    """View an archived season."""
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    archive_type = data.get("type", "college")
+
+    if archive_type == "fiv":
+        return templates.TemplateResponse("archives/fiv.html", _ctx(
+            request, section="archives", archive=data, archive_key=archive_key,
+        ))
+
+    # College archive
+    return templates.TemplateResponse("archives/college_season.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+    ))
+
+
+@router.get("/archives/{archive_key}/standings", response_class=HTMLResponse)
+def archive_standings(request: Request, archive_key: str):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    standings = data.get("standings", [])
+    conferences = data.get("conferences", {})
+
+    # Build per-conference standings
+    conf_standings = {}
+    if conferences:
+        team_conf = data.get("team_conferences", {})
+        for conf_name in conferences:
+            conf_standings[conf_name] = [
+                s for s in standings if team_conf.get(s["team_name"]) == conf_name
+            ]
+            conf_standings[conf_name].sort(
+                key=lambda s: (s.get("conf_wins", 0), s.get("wins", 0), s.get("points_for", 0)),
+                reverse=True,
+            )
+
+    return templates.TemplateResponse("archives/standings.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        standings=standings, conferences=conferences, conf_standings=conf_standings,
+    ))
+
+
+@router.get("/archives/{archive_key}/schedule", response_class=HTMLResponse)
+def archive_schedule(request: Request, archive_key: str, week: int = 0):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    schedule = data.get("schedule", [])
+    weeks = sorted(set(g["week"] for g in schedule))
+
+    if week > 0:
+        week_games = [g for g in schedule if g["week"] == week]
+    elif weeks:
+        week = weeks[-1]
+        week_games = [g for g in schedule if g["week"] == week]
+    else:
+        week_games = []
+
+    return templates.TemplateResponse("archives/schedule.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        games=week_games, weeks=weeks, selected_week=week,
+    ))
+
+
+@router.get("/archives/{archive_key}/polls", response_class=HTMLResponse)
+def archive_polls(request: Request, archive_key: str, week: int = 0):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    polls = data.get("polls", [])
+    weeks = sorted(set(p["week"] for p in polls))
+
+    if week > 0:
+        selected = [p for p in polls if p["week"] == week]
+    elif polls:
+        selected = [polls[-1]]
+        week = polls[-1]["week"]
+    else:
+        selected = []
+
+    return templates.TemplateResponse("archives/polls.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        polls=selected, weeks=weeks, selected_week=week,
+    ))
+
+
+@router.get("/archives/{archive_key}/team/{team_name}", response_class=HTMLResponse)
+def archive_team(request: Request, archive_key: str, team_name: str):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    # Find team record
+    team_record = None
+    for s in data.get("standings", []):
+        if s["team_name"] == team_name:
+            team_record = s
+            break
+    if not team_record:
+        raise HTTPException(404, f"Team '{team_name}' not found in archive")
+
+    # Team schedule
+    team_games = [g for g in data.get("schedule", [])
+                  if g["home_team"] == team_name or g["away_team"] == team_name]
+
+    # Team roster
+    roster_data = data.get("team_rosters", {}).get(team_name, {})
+    players = roster_data.get("players", [])
+
+    # Aggregate team stats from full_result data in schedule
+    team_season_stats = _aggregate_archive_team_stats(data.get("schedule", []), team_name)
+
+    return templates.TemplateResponse("archives/team.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        team_name=team_name, record=team_record, games=team_games,
+        players=players, team_stats=team_season_stats,
+    ))
+
+
+@router.get("/archives/{archive_key}/playoffs", response_class=HTMLResponse)
+def archive_playoffs(request: Request, archive_key: str):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    return templates.TemplateResponse("archives/playoffs.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        playoff_bracket=data.get("playoff_bracket", []),
+        bowl_games=data.get("bowl_games", []),
+        champion=data.get("champion"),
+    ))
+
+
+@router.get("/archives/{archive_key}/awards", response_class=HTMLResponse)
+def archive_awards(request: Request, archive_key: str):
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+
+    return templates.TemplateResponse("archives/awards.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key,
+        awards=data.get("awards"),
+    ))
+
+
+def _aggregate_archive_team_stats(schedule: list, team_name: str) -> dict | None:
+    """Aggregate team season stats from archived schedule data."""
+    completed_stats = []
+    for game in schedule:
+        if not game.get("completed"):
+            continue
+        if game["home_team"] != team_name and game["away_team"] != team_name:
+            continue
+        side = "home" if game["home_team"] == team_name else "away"
+        fr = game.get("full_result")
+        if not fr:
+            continue
+        stats = fr.get("stats", {}).get(side)
+        if stats:
+            completed_stats.append(stats)
+
+    if not completed_stats:
+        return None
+
+    n = len(completed_stats)
+    total_yards = sum(s.get("total_yards", 0) for s in completed_stats)
+    rushing_yards = sum(s.get("rushing_yards", 0) for s in completed_stats)
+    rushing_carries = sum(s.get("rushing_carries", 0) for s in completed_stats)
+    rushing_tds = sum(s.get("rushing_touchdowns", 0) for s in completed_stats)
+    kp_yards = sum(s.get("kick_pass_yards", 0) for s in completed_stats)
+    kp_att = sum(s.get("kick_passes_attempted", 0) for s in completed_stats)
+    kp_comp = sum(s.get("kick_passes_completed", 0) for s in completed_stats)
+    kp_tds = sum(s.get("kick_pass_tds", 0) for s in completed_stats)
+    kp_ints = sum(s.get("kick_pass_interceptions", 0) for s in completed_stats)
+    touchdowns = sum(s.get("touchdowns", 0) for s in completed_stats)
+    fumbles = sum(s.get("fumbles_lost", 0) for s in completed_stats)
+    penalties = sum(s.get("penalties", 0) for s in completed_stats)
+    penalty_yards = sum(s.get("penalty_yards", 0) for s in completed_stats)
+    total_plays = sum(s.get("total_plays", 0) for s in completed_stats)
+
+    return {
+        "games_played": n,
+        "total_yards": total_yards,
+        "total_plays": total_plays,
+        "avg_yards": round(total_yards / n, 1),
+        "yards_per_play": round(total_yards / max(1, total_plays), 2),
+        "rushing_yards": rushing_yards,
+        "avg_rushing": round(rushing_yards / n, 1),
+        "rushing_carries": rushing_carries,
+        "rushing_tds": rushing_tds,
+        "yards_per_carry": round(rushing_yards / max(1, rushing_carries), 1),
+        "kick_pass_yards": kp_yards,
+        "kp_attempts": kp_att,
+        "kp_completions": kp_comp,
+        "kp_comp_pct": round(kp_comp / max(1, kp_att) * 100, 1),
+        "kp_tds": kp_tds,
+        "kp_ints": kp_ints,
+        "touchdowns": touchdowns,
+        "fumbles": fumbles,
+        "penalties": penalties,
+        "penalty_yards": penalty_yards,
+    }

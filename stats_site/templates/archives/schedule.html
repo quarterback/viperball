@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Schedule — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>Schedule
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} &middot; Schedule <span class="tag">ARCHIVED</span></h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule" class="active">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+{% if weeks %}
+<div style="margin-bottom: 12px; font-size: 11px;">
+  Week:
+  {% for w in weeks %}
+    {% if w == selected_week %}
+      <strong style="color: var(--accent);">{{ w }}</strong>
+    {% else %}
+      <a href="/stats/archives/{{ archive_key }}/schedule?week={{ w }}">{{ w }}</a>
+    {% endif %}
+    {% if not loop.last %}&middot;{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2>Week {{ selected_week }}</h2>
+{% if games %}
+<table>
+  <thead>
+    <tr><th>Away</th><th class="num">Score</th><th>Home</th><th class="num">Score</th><th>Tags</th></tr>
+  </thead>
+  <tbody>
+  {% for g in games %}
+  <tr>
+    <td>
+      {% if g.completed and g.away_score is not none and g.home_score is not none %}
+        <span class="{% if g.away_score > g.home_score %}score-win{% else %}score-loss{% endif %}">
+      {% endif %}
+      <a href="/stats/archives/{{ archive_key }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+      {% if g.completed %}</span>{% endif %}
+    </td>
+    <td class="num">{% if g.completed %}{{ g.away_score|int }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if g.completed and g.away_score is not none and g.home_score is not none %}
+        <span class="{% if g.home_score > g.away_score %}score-win{% else %}score-loss{% endif %}">
+      {% endif %}
+      <a href="/stats/archives/{{ archive_key }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+      {% if g.completed %}</span>{% endif %}
+    </td>
+    <td class="num">{% if g.completed %}{{ g.home_score|int }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+      {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No games for this week.</p>
+{% endif %}
+{% endblock %}
