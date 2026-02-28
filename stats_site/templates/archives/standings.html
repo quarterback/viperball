@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Standings — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>Standings
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} &middot; Standings <span class="tag">ARCHIVED</span></h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings" class="active">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+<h2>Overall Standings</h2>
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>W-L</th><th>Conf</th>
+      <th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th>
+      <th class="num">PPD</th><th class="num">Rating</th><th class="num">Conv%</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/archives/{{ archive_key }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td>{{ s.get('conference', '')[:12] }}</td>
+    <td class="num">{{ s.points_for }}</td>
+    <td class="num">{{ s.points_against }}</td>
+    <td class="num {% if s.point_differential > 0 %}stat-good{% elif s.point_differential < 0 %}stat-bad{% endif %}">{{ s.point_differential }}</td>
+    <td class="num">{{ s.avg_ppd }}</td>
+    <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
+    <td class="num">{{ s.avg_conversion_pct }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if conf_standings %}
+<h2>Conference Standings</h2>
+{% for conf_name, conf_teams in conf_standings.items() %}
+{% if conf_teams %}
+<h3>{{ conf_name }}</h3>
+<table>
+  <thead>
+    <tr><th class="num">#</th><th>Team</th><th>Overall</th><th>Conf</th><th class="num">PF</th><th class="num">PA</th></tr>
+  </thead>
+  <tbody>
+  {% for s in conf_teams %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/archives/{{ archive_key }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td class="record"><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span></td>
+    <td class="num">{{ s.points_for }}</td>
+    <td class="num">{{ s.points_against }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endblock %}

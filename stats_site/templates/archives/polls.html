@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Polls — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>Polls
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} &middot; Polls <span class="tag">ARCHIVED</span></h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls" class="active">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+{% if weeks %}
+<div style="margin-bottom: 12px; font-size: 11px;">
+  Week:
+  {% for w in weeks %}
+    {% if w == selected_week %}
+      <strong style="color: var(--accent);">{{ w }}</strong>
+    {% else %}
+      <a href="/stats/archives/{{ archive_key }}/polls?week={{ w }}">{{ w }}</a>
+    {% endif %}
+    {% if not loop.last %}&middot;{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for poll in polls %}
+<h2>Week {{ poll.week }} Poll</h2>
+<table>
+  <thead>
+    <tr><th class="num">#</th><th>Team</th><th>Record</th><th>Conference</th><th class="num">PWR</th><th class="num">+/-</th></tr>
+  </thead>
+  <tbody>
+  {% for r in poll.rankings %}
+  <tr>
+    <td class="num rank">{{ r.rank }}</td>
+    <td><a href="/stats/archives/{{ archive_key }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
+    <td class="record">{{ r.record }}</td>
+    <td>{{ r.conference }}</td>
+    <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
+    <td class="num {% if r.rank_change and r.rank_change > 0 %}change-up{% elif r.rank_change and r.rank_change < 0 %}change-down{% else %}change-none{% endif %}">
+      {% if r.rank_change and r.rank_change > 0 %}+{{ r.rank_change }}{% elif r.rank_change and r.rank_change < 0 %}{{ r.rank_change }}{% else %}—{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+{% if not polls %}
+<p class="empty">No polls in archive.</p>
+{% endif %}
+{% endblock %}

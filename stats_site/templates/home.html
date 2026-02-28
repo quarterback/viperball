@@ -96,4 +96,26 @@
 </div>
 {% endif %}
 
+{% if archives %}
+<h2 style="margin-top: 24px;">Archived Seasons</h2>
+<table>
+  <thead>
+    <tr><th>Season</th><th>Type</th><th>Champion</th></tr>
+  </thead>
+  <tbody>
+  {% for a in archives %}
+  <tr>
+    <td><a href="/stats/archives/{{ a.save_key }}/">{{ a.label }}</a></td>
+    <td>
+      {% if 'fiv' in a.save_key %}<span class="tag tag-conf">FIV</span>
+      {% else %}<span class="tag">CVL</span>{% endif %}
+    </td>
+    <td>&mdash;</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div style="margin-top: 4px; font-size: 11px;"><a href="/stats/archives/">All archives &rarr;</a></div>
+{% endif %}
+
 {% endblock %}

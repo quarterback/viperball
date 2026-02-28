@@ -14,6 +14,37 @@
     {{ standings|length }} teams &middot; {{ games_played }}/{{ total_games }} games played &middot; Week {{ current_week }}/{{ total_weeks }}
     {% if champion %} &middot; <span class="stat-elite">Champion: {{ champion }}</span>{% endif %}
   </div>
+  {% if champion %}
+  <div style="margin-top: 8px;">
+    <button onclick="archiveSeason()" id="archive-btn" style="background: var(--bg-alt); color: var(--accent); border: 1px solid var(--accent); padding: 4px 12px; font-family: inherit; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">Archive This Season</button>
+    <span id="archive-status" style="margin-left: 8px; font-size: 11px; color: var(--fg-dim);"></span>
+  </div>
+  <script>
+  async function archiveSeason() {
+    const btn = document.getElementById('archive-btn');
+    const status = document.getElementById('archive-status');
+    btn.disabled = true;
+    status.textContent = 'Archiving...';
+    try {
+      const resp = await fetch('/archives/college/{{ session_id }}', { method: 'POST' });
+      const data = await resp.json();
+      if (resp.ok) {
+        status.style.color = 'var(--green)';
+        status.textContent = 'Archived! View in Archives tab.';
+        btn.textContent = 'Archived';
+      } else {
+        status.style.color = 'var(--red)';
+        status.textContent = data.detail || 'Archive failed';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Network error';
+      btn.disabled = false;
+    }
+  }
+  </script>
+  {% endif %}
 </div>
 
 <div class="tabs">

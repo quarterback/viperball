@@ -60,6 +60,8 @@ from engine.draftyqueenz import (
 from engine.db import (
     save_pro_league as db_save_pro_league,
     load_pro_league as db_load_pro_league,
+    save_season_archive, load_season_archive, list_season_archives,
+    delete_season_archive,
 )
 
 
@@ -1366,6 +1368,163 @@ def season_awards(session_id: str):
         return result
     except Exception as e:
         return {"individual_awards": [], "coach_of_year": None, "most_improved": None, "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════
+# SEASON ARCHIVES — persist completed season data to SQLite
+# ═══════════════════════════════════════════════════════════════
+
+def _build_college_archive(session: dict, session_id: str) -> dict:
+    """Build a self-contained archive snapshot of a college season."""
+    season = _require_season(session)
+
+    standings = _serialize_standings(season)
+    schedule = [_serialize_game(g, include_full_result=True) for g in season.schedule]
+
+    polls = []
+    prestige_map = {}
+    dynasty = session.get("dynasty")
+    if dynasty and hasattr(dynasty, "team_prestige"):
+        prestige_map = dynasty.team_prestige or {}
+    for p in season.weekly_polls:
+        polls.append(_serialize_poll(p, prestige_map=prestige_map))
+
+    # Conferences
+    conferences = {}
+    if season.conferences:
+        for conf_name, conf_teams in season.conferences.items():
+            conferences[conf_name] = list(conf_teams)
+
+    # Bowl games
+    bowl_games = []
+    for bg in season.bowl_games:
+        bowl_games.append({
+            "name": bg.name,
+            "tier": bg.tier,
+            "game": _serialize_game(bg.game, include_full_result=True),
+            "team_1_seed": bg.team_1_seed,
+            "team_2_seed": bg.team_2_seed,
+            "team_1_record": bg.team_1_record,
+            "team_2_record": bg.team_2_record,
+        })
+
+    # Playoff bracket
+    playoff = [_serialize_game(g, include_full_result=True) for g in season.playoff_bracket]
+
+    # Awards
+    awards = None
+    try:
+        season_honors = compute_season_awards(
+            season, year=2025,
+            conferences=season.conferences if hasattr(season, 'conferences') else None,
+        )
+        awards = season_honors.to_dict()
+    except Exception:
+        pass
+
+    # Team rosters (player snapshots)
+    team_rosters = {}
+    for team_name, team in season.teams.items():
+        team_rosters[team_name] = {
+            "players": [_serialize_player(p) for p in team.players],
+            "mascot": getattr(team, "mascot", ""),
+            "abbreviation": getattr(team, "abbreviation", ""),
+        }
+
+    label = season.name
+    if dynasty:
+        label = f"{dynasty.dynasty_name} ({dynasty.current_year})"
+
+    return {
+        "type": "college",
+        "label": label,
+        "session_id": session_id,
+        "season_name": season.name,
+        "champion": season.champion,
+        "team_count": len(season.teams),
+        "total_games": len(season.schedule),
+        "games_played": sum(1 for g in season.schedule if g.completed),
+        "standings": standings,
+        "schedule": schedule,
+        "polls": polls,
+        "conferences": conferences,
+        "bowl_games": bowl_games,
+        "playoff_bracket": playoff,
+        "awards": awards,
+        "team_rosters": team_rosters,
+        "is_dynasty": dynasty is not None,
+        "dynasty_name": dynasty.dynasty_name if dynasty else None,
+        "dynasty_year": dynasty.current_year if dynasty else None,
+        "team_conferences": dict(season.team_conferences) if season.team_conferences else {},
+        "style_configs": dict(season.style_configs) if season.style_configs else {},
+    }
+
+
+def _build_fiv_archive() -> dict:
+    """Build a self-contained archive snapshot of the current FIV cycle."""
+    from engine.fiv import load_fiv_rankings
+    fiv_data = _get_fiv_cycle_data()
+    if not fiv_data:
+        raise HTTPException(status_code=404, detail="No active FIV cycle to archive")
+
+    rankings = load_fiv_rankings()
+    rankings_data = rankings.to_dict() if rankings else None
+
+    cycle_num = fiv_data.get("cycle_number", 0)
+    phase = fiv_data.get("phase", "unknown")
+    host = fiv_data.get("host_nation", "")
+
+    return {
+        "type": "fiv",
+        "label": f"FIV Cycle {cycle_num}",
+        "cycle_number": cycle_num,
+        "phase": phase,
+        "host_nation": host,
+        "fiv_data": fiv_data,
+        "rankings": rankings_data,
+    }
+
+
+@app.post("/archives/college/{session_id}")
+def archive_college_season(session_id: str):
+    """Archive a college season to persistent storage."""
+    session = _get_session(session_id)
+    snapshot = _build_college_archive(session, session_id)
+    archive_key = f"college_{session_id}_{int(time.time())}"
+    save_season_archive(archive_key, snapshot)
+    return {"archive_key": archive_key, "label": snapshot["label"], "message": "Season archived successfully"}
+
+
+@app.post("/archives/fiv")
+def archive_fiv_cycle():
+    """Archive the current FIV cycle to persistent storage."""
+    snapshot = _build_fiv_archive()
+    archive_key = f"fiv_cycle_{snapshot['cycle_number']}_{int(time.time())}"
+    save_season_archive(archive_key, snapshot)
+    return {"archive_key": archive_key, "label": snapshot["label"], "message": "FIV cycle archived successfully"}
+
+
+@app.get("/archives")
+def list_archives():
+    """List all archived seasons."""
+    archives = list_season_archives()
+    return {"archives": archives}
+
+
+@app.get("/archives/{archive_key}")
+def get_archive(archive_key: str):
+    """Load a specific archived season."""
+    data = load_season_archive(archive_key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Archive not found")
+    return data
+
+
+@app.delete("/archives/{archive_key}")
+def remove_archive(archive_key: str):
+    """Delete an archived season."""
+    delete_season_archive(archive_key)
+    return {"message": "Archive deleted"}
 
 
 @app.post("/sessions/{session_id}/dynasty")

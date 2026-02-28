@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ archive.label }} (Archived) — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span>{{ archive.label }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} <span class="tag">ARCHIVED</span></h1>
+  <div class="subtitle">
+    Phase: {{ archive.phase | replace('_', ' ') | title }}
+    {% if archive.host_nation %} &middot; Host: {{ archive.host_nation }}{% endif %}
+  </div>
+</div>
+
+{% set fiv = archive.fiv_data %}
+
+{% if archive.rankings %}
+<h2>World Rankings</h2>
+{% set ranked = archive.rankings.get('rankings', {}) %}
+{% if ranked %}
+{% set sorted_nations = ranked | dictsort(by='value', reverse=true) %}
+<table>
+  <thead>
+    <tr><th class="num">#</th><th>Nation</th><th class="num">Rating</th></tr>
+  </thead>
+  <tbody>
+  {% for code, rating in sorted_nations[:30] %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ code }}</td>
+    <td class="num">{{ "%.1f"|format(rating) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if fiv and fiv.get('confederations_data') %}
+<h2>Continental Championships</h2>
+{% for conf_id, conf_data in fiv.confederations_data.items() %}
+<h3>{{ conf_data.get('name', conf_id) }}</h3>
+{% if conf_data.get('champion') %}
+<p style="padding: 4px 8px;"><span class="stat-elite">Champion: {{ conf_data.champion }}</span></p>
+{% endif %}
+
+{% if conf_data.get('groups') %}
+{% for group_name, group_data in conf_data.groups.items() %}
+<h3 style="color: var(--fg-dim);">{{ group_name }}</h3>
+{% if group_data.get('standings') %}
+<table>
+  <thead><tr><th class="num">#</th><th>Team</th><th>W</th><th>D</th><th>L</th><th class="num">GF</th><th class="num">GA</th><th class="num">Pts</th></tr></thead>
+  <tbody>
+  {% for s in group_data.standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ s.get('team', s.get('code', '')) }}</td>
+    <td class="num">{{ s.get('wins', 0) }}</td>
+    <td class="num">{{ s.get('draws', 0) }}</td>
+    <td class="num">{{ s.get('losses', 0) }}</td>
+    <td class="num">{{ s.get('goals_for', 0) }}</td>
+    <td class="num">{{ s.get('goals_against', 0) }}</td>
+    <td class="num">{{ s.get('points', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if fiv and fiv.get('world_cup') %}
+<h2>World Cup</h2>
+{% set wc = fiv.world_cup %}
+{% if wc.get('champion') %}
+<p style="padding: 4px 8px;"><span class="stat-elite">World Cup Champion: {{ wc.champion }}</span></p>
+{% endif %}
+{% endif %}
+
+{% endblock %}

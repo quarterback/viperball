@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Playoffs — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>Playoffs
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} &middot; Playoffs <span class="tag">ARCHIVED</span></h1>
+  {% if champion %}
+  <div class="subtitle"><span class="stat-elite">Champion: {{ champion }}</span></div>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs" class="active">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+{% if playoff_bracket %}
+<h2>Playoff Bracket</h2>
+<table>
+  <thead>
+    <tr><th>Matchup</th><th class="num">Away Score</th><th class="num">Home Score</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+  {% for g in playoff_bracket %}
+  <tr>
+    <td>
+      <a href="/stats/archives/{{ archive_key }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+      @ <a href="/stats/archives/{{ archive_key }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+    </td>
+    <td class="num">{% if g.completed %}{{ g.away_score|int }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if g.completed %}{{ g.home_score|int }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if g.completed %}
+        {% if g.home_score > g.away_score %}
+          <span class="w">{{ g.home_team }}</span> wins
+        {% else %}
+          <span class="w">{{ g.away_team }}</span> wins
+        {% endif %}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if bowl_games %}
+<h2>Bowl Games</h2>
+<table>
+  <thead>
+    <tr><th>Bowl</th><th>Team 1</th><th class="num">Score</th><th>Team 2</th><th class="num">Score</th></tr>
+  </thead>
+  <tbody>
+  {% for bg in bowl_games %}
+  {% set g = bg.game %}
+  <tr>
+    <td>
+      <span class="tag {% if bg.tier == 1 %}tag-playoff{% elif bg.tier == 2 %}tag-conf{% endif %}">{{ bg.name }}</span>
+    </td>
+    <td>
+      <a href="/stats/archives/{{ archive_key }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+      {% if bg.team_1_record %}<span style="color: var(--fg-dim);"> ({{ bg.team_1_record }})</span>{% endif %}
+    </td>
+    <td class="num">{% if g.completed %}{{ g.away_score|int }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      <a href="/stats/archives/{{ archive_key }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+      {% if bg.team_2_record %}<span style="color: var(--fg-dim);"> ({{ bg.team_2_record }})</span>{% endif %}
+    </td>
+    <td class="num">{% if g.completed %}{{ g.home_score|int }}{% else %}&mdash;{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not playoff_bracket and not bowl_games %}
+<p class="empty">No playoff or bowl data in this archive.</p>
+{% endif %}
+{% endblock %}

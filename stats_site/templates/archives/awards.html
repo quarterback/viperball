@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Awards — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>Awards
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} &middot; Awards <span class="tag">ARCHIVED</span></h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards" class="active">Awards</a>
+</div>
+
+{% if awards %}
+
+{% if awards.get('individual_awards') %}
+<h2>Individual Awards</h2>
+<table>
+  <thead>
+    <tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th></tr>
+  </thead>
+  <tbody>
+  {% for a in awards.individual_awards %}
+  <tr>
+    <td><span class="stat-elite">{{ a.award_name }}</span></td>
+    <td>{{ a.player_name }}</td>
+    <td><a href="/stats/archives/{{ archive_key }}/team/{{ a.team_name }}">{{ a.team_name }}</a></td>
+    <td><span class="tag tag-pos">{{ a.position }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if awards.get('all_conference') %}
+<h2>All-Conference Teams</h2>
+{% for conf_name, teams_data in awards.all_conference.items() %}
+<h3>{{ conf_name }}</h3>
+{% if teams_data is mapping %}
+  {% for team_label, players in teams_data.items() %}
+  <h3 style="color: var(--fg-dim);">{{ team_label }}</h3>
+  <table>
+    <thead><tr><th>Player</th><th>Team</th><th>Pos</th></tr></thead>
+    <tbody>
+    {% for p in players %}
+    <tr>
+      <td>{{ p.player_name if p is mapping else p }}</td>
+      <td>{{ p.team_name if p is mapping else '' }}</td>
+      <td>{{ p.position if p is mapping else '' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if awards.get('coach_of_year') %}
+<h2>Coach of the Year</h2>
+<p style="padding: 8px;">
+  <span class="stat-elite">{{ awards.coach_of_year.coach_name if awards.coach_of_year is mapping else awards.coach_of_year }}</span>
+  {% if awards.coach_of_year is mapping and awards.coach_of_year.team_name %}
+    &mdash; {{ awards.coach_of_year.team_name }}
+  {% endif %}
+</p>
+{% endif %}
+
+{% else %}
+<p class="empty">No awards data in this archive.</p>
+{% endif %}
+{% endblock %}

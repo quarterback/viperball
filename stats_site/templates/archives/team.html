@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ team_name }} — {{ archive.label }} (Archived){% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label }}</a><span class="sep">/</span>{{ team_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team_name }} <span class="tag">ARCHIVED</span></h1>
+  <div class="subtitle">
+    {{ archive.label }}
+    {% if record %}
+     &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span>
+     &middot; {{ record.get('conference', '') }}
+    {% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+{% if record %}
+<div class="grid-4">
+  <div class="metric"><div class="label">Team Rating</div><div class="value {% if record.avg_team_rating >= 80 %}accent{% endif %}">{{ record.avg_team_rating }}</div></div>
+  <div class="metric"><div class="label">Points/Drive</div><div class="value">{{ record.avg_ppd }}</div></div>
+  <div class="metric"><div class="label">Point Diff</div><div class="value {% if record.point_differential > 0 %}stat-good{% else %}stat-bad{% endif %}">{{ record.point_differential }}</div></div>
+  <div class="metric"><div class="label">Conversion %</div><div class="value">{{ record.avg_conversion_pct }}</div></div>
+</div>
+{% endif %}
+
+{% if team_stats %}
+<h2>Season Statistics</h2>
+<div class="grid-3">
+  <div class="metric"><div class="label">Total Yards</div><div class="value">{{ team_stats.total_yards }}</div></div>
+  <div class="metric"><div class="label">Avg Yards/Game</div><div class="value">{{ team_stats.avg_yards }}</div></div>
+  <div class="metric"><div class="label">Yards/Play</div><div class="value">{{ team_stats.yards_per_play }}</div></div>
+</div>
+<div class="grid-2" style="margin-top: 12px;">
+  <div>
+    <h3>Rushing</h3>
+    <table>
+      <tbody>
+        <tr><td>Yards</td><td class="num">{{ team_stats.rushing_yards }}</td></tr>
+        <tr><td>Carries</td><td class="num">{{ team_stats.rushing_carries }}</td></tr>
+        <tr><td>Avg/Game</td><td class="num">{{ team_stats.avg_rushing }}</td></tr>
+        <tr><td>Yards/Carry</td><td class="num">{{ team_stats.yards_per_carry }}</td></tr>
+        <tr><td>TDs</td><td class="num">{{ team_stats.rushing_tds }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h3>Kick Passing</h3>
+    <table>
+      <tbody>
+        <tr><td>Yards</td><td class="num">{{ team_stats.kick_pass_yards }}</td></tr>
+        <tr><td>Comp/Att</td><td class="num">{{ team_stats.kp_completions }}/{{ team_stats.kp_attempts }}</td></tr>
+        <tr><td>Comp%</td><td class="num">{{ team_stats.kp_comp_pct }}%</td></tr>
+        <tr><td>TDs</td><td class="num">{{ team_stats.kp_tds }}</td></tr>
+        <tr><td>INTs</td><td class="num">{{ team_stats.kp_ints }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<h2>Schedule</h2>
+{% if games %}
+<table>
+  <thead>
+    <tr><th class="num">Wk</th><th>Opponent</th><th class="num">Score</th><th>Result</th><th>Tags</th></tr>
+  </thead>
+  <tbody>
+  {% for g in games %}
+  {% set is_home = g.home_team == team_name %}
+  {% set opponent = g.away_team if is_home else g.home_team %}
+  {% set team_score = g.home_score if is_home else g.away_score %}
+  {% set opp_score = g.away_score if is_home else g.home_score %}
+  {% set won = team_score is not none and opp_score is not none and team_score > opp_score %}
+  <tr>
+    <td class="num">{{ g.week }}</td>
+    <td>
+      {% if not is_home %}@{% endif %}
+      <a href="/stats/archives/{{ archive_key }}/team/{{ opponent }}">{{ opponent }}</a>
+    </td>
+    <td class="num">
+      {% if g.completed %}
+        {{ team_score|int }}-{{ opp_score|int }}
+      {% else %}&mdash;{% endif %}
+    </td>
+    <td>
+      {% if g.completed %}
+        <span class="{% if won %}w{% else %}l{% endif %}">{{ 'W' if won else 'L' }}</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+      {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if players %}
+<h2>Roster</h2>
+<table>
+  <thead>
+    <tr><th class="num">#</th><th>Name</th><th>Pos</th><th>Archetype</th><th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th></tr>
+  </thead>
+  <tbody>
+  {% for p in players %}
+  <tr>
+    <td class="num">{{ p.number }}</td>
+    <td>{{ p.name }}</td>
+    <td><span class="tag tag-pos">{{ p.position }}</span></td>
+    <td>{{ p.archetype }}</td>
+    <td class="num {% if p.overall >= 90 %}stat-elite{% elif p.overall >= 80 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ p.speed }}</td>
+    <td class="num">{{ p.power }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

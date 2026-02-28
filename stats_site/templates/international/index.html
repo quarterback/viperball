@@ -11,6 +11,37 @@
 <div class="page-header">
   <h1>FIV — INTERNATIONAL VIPERBALL</h1>
   <div class="subtitle">Continental Championships &middot; World Cup &middot; National Team Rankings</div>
+  {% if fiv_data and fiv_data.get('phase') == 'completed' %}
+  <div style="margin-top: 8px;">
+    <button onclick="archiveFiv()" id="archive-fiv-btn" style="background: var(--bg-alt); color: var(--accent); border: 1px solid var(--accent); padding: 4px 12px; font-family: inherit; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">Archive This Cycle</button>
+    <span id="archive-fiv-status" style="margin-left: 8px; font-size: 11px; color: var(--fg-dim);"></span>
+  </div>
+  <script>
+  async function archiveFiv() {
+    const btn = document.getElementById('archive-fiv-btn');
+    const status = document.getElementById('archive-fiv-status');
+    btn.disabled = true;
+    status.textContent = 'Archiving...';
+    try {
+      const resp = await fetch('/archives/fiv', { method: 'POST' });
+      const data = await resp.json();
+      if (resp.ok) {
+        status.style.color = 'var(--green)';
+        status.textContent = 'Archived! View in Archives tab.';
+        btn.textContent = 'Archived';
+      } else {
+        status.style.color = 'var(--red)';
+        status.textContent = data.detail || 'Archive failed';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Network error';
+      btn.disabled = false;
+    }
+  }
+  </script>
+  {% endif %}
 </div>
 
 {% if fiv_data %}

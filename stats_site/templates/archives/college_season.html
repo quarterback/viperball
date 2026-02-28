@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ archive.label }} (Archived) — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span>{{ archive.label }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ archive.label }} <span class="tag">ARCHIVED</span></h1>
+  <div class="subtitle">
+    {{ archive.standings|length }} teams &middot; {{ archive.games_played }}/{{ archive.total_games }} games played
+    {% if archive.champion %} &middot; <span class="stat-elite">Champion: {{ archive.champion }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/archives/{{ archive_key }}/" class="active">Overview</a>
+  <a href="/stats/archives/{{ archive_key }}/standings">Standings</a>
+  <a href="/stats/archives/{{ archive_key }}/schedule">Schedule</a>
+  <a href="/stats/archives/{{ archive_key }}/polls">Polls</a>
+  <a href="/stats/archives/{{ archive_key }}/playoffs">Playoffs</a>
+  <a href="/stats/archives/{{ archive_key }}/awards">Awards</a>
+</div>
+
+<div class="grid-2">
+
+  {# ── Rankings snapshot ── #}
+  <div>
+    {% if archive.polls %}
+    {% set latest_poll = archive.polls[-1] %}
+    <h2>Final Poll (Week {{ latest_poll.week }})</h2>
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Team</th><th>Record</th><th>Conf</th><th class="num">PWR</th></tr>
+      </thead>
+      <tbody>
+      {% for r in latest_poll.rankings[:25] %}
+      <tr>
+        <td class="num rank">{{ r.rank }}</td>
+        <td><a href="/stats/archives/{{ archive_key }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
+        <td class="record">{{ r.record }}</td>
+        <td>{{ r.conference[:12] }}</td>
+        <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/archives/{{ archive_key }}/polls">All polls &rarr;</a></div>
+    {% else %}
+    <h2>Rankings</h2>
+    <p class="empty">No polls in archive.</p>
+    {% endif %}
+  </div>
+
+  {# ── Top standings ── #}
+  <div>
+    <h2>Standings (Top 25)</h2>
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">PPD</th><th class="num">Rating</th></tr>
+      </thead>
+      <tbody>
+      {% for s in archive.standings[:25] %}
+      <tr>
+        <td class="num rank">{{ loop.index }}</td>
+        <td><a href="/stats/archives/{{ archive_key }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+        <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+        <td class="num">{{ s.points_for }}</td>
+        <td class="num">{{ s.points_against }}</td>
+        <td class="num">{{ s.avg_ppd }}</td>
+        <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/archives/{{ archive_key }}/standings">Full standings &rarr;</a></div>
+  </div>
+
+</div>
+{% endblock %}
