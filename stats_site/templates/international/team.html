@@ -12,9 +12,9 @@
   <h1>{{ team.get('name', team.get('nation', {}).get('name', nation_code)) }}</h1>
   <div class="subtitle">
     {{ nation_code }}
-    {% if team.get('nation', {}).get('tier') %} &middot; {{ team.nation.tier | title }}{% endif %}
-    {% if team.get('nation', {}).get('confederation') %} &middot; {{ team.nation.confederation | upper }}{% endif %}
-    {% if team.get('rating') %} &middot; Rating: {{ team.rating }}{% endif %}
+    {% if team.get('nation', {}).get('tier') %} &middot; {{ team.get('nation', {}).get('tier', '') | title }}{% endif %}
+    {% if team.get('nation', {}).get('confederation') %} &middot; {{ team.get('nation', {}).get('confederation', '') | upper }}{% endif %}
+    {% if team.get('rating') %} &middot; Rating: {{ team.get('rating', '') }}{% endif %}
   </div>
 </div>
 
@@ -34,7 +34,7 @@
     <div class="label">Confederation</div>
     <div class="value" style="font-size:13px">
       {% if nation.get('confederation') %}
-      <a href="/stats/international/confederation/{{ nation.confederation }}" style="color:var(--fg-bright)">{{ nation.confederation | upper }}</a>
+      <a href="/stats/international/confederation/{{ nation.get('confederation') }}" style="color:var(--fg-bright)">{{ nation.get('confederation') | upper }}</a>
       {% else %}?{% endif %}
     </div>
   </div>

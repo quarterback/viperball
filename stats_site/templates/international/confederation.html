@@ -12,7 +12,7 @@
   <h1>{{ conf | upper }} — CONTINENTAL CHAMPIONSHIP</h1>
   <div class="subtitle">
     Phase: {{ data.get('phase', '?') | replace('_', ' ') | title }}
-    {% if data.get('champion') %} &middot; <span class="stat-elite">Champion: {{ data.champion }}</span>{% endif %}
+    {% if data.get('champion') %} &middot; <span class="stat-elite">Champion: {{ data.get('champion') }}</span>{% endif %}
   </div>
 </div>
 

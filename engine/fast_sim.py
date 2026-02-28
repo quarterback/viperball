@@ -191,10 +191,53 @@ def _generate_dye_data(total_yards: int, total_plays: int,
     neu_scores = sum(1 for _ in range(neu_count) if rng.random() < 0.28)
 
     return {
-        "penalized": {"count": pen_count, "total_yards": pen_yards, "scores": pen_scores},
-        "boosted": {"count": bst_count, "total_yards": bst_yards, "scores": bst_scores},
-        "neutral": {"count": neu_count, "total_yards": neu_yards, "scores": neu_scores},
+        "penalized": {
+            "count": pen_count,
+            "total_yards": pen_yards,
+            "scores": pen_scores,
+            "yards_per_drive": round(pen_yards / max(1, pen_count), 1),
+            "score_rate": round(pen_scores / max(1, pen_count) * 100, 1),
+            "avg_delta": round(rng.uniform(3, 10), 1) if pen_count > 0 else 0.0,
+        },
+        "boosted": {
+            "count": bst_count,
+            "total_yards": bst_yards,
+            "scores": bst_scores,
+            "yards_per_drive": round(bst_yards / max(1, bst_count), 1),
+            "score_rate": round(bst_scores / max(1, bst_count) * 100, 1),
+            "avg_delta": round(rng.uniform(3, 10), 1) if bst_count > 0 else 0.0,
+        },
+        "neutral": {
+            "count": neu_count,
+            "total_yards": neu_yards,
+            "scores": neu_scores,
+            "yards_per_drive": round(neu_yards / max(1, neu_count), 1),
+            "score_rate": round(neu_scores / max(1, neu_count) * 100, 1),
+            "avg_delta": 0.0,
+        },
     }
+
+
+def _generate_down_conversions(total_plays: int, rng: random.Random) -> Dict:
+    """Generate plausible 4th/5th/6th down conversion data for fast sim."""
+    result = {}
+    for d in [4, 5, 6]:
+        if d == 4:
+            att = max(0, round(total_plays * rng.uniform(0.08, 0.18)))
+            conv_rate = rng.uniform(0.55, 0.80)
+        elif d == 5:
+            att = max(0, round(total_plays * rng.uniform(0.03, 0.10)))
+            conv_rate = rng.uniform(0.40, 0.65)
+        else:
+            att = max(0, round(total_plays * rng.uniform(0.01, 0.05)))
+            conv_rate = rng.uniform(0.30, 0.55)
+        conv = max(0, round(att * conv_rate))
+        result[d] = {
+            "attempts": att,
+            "converted": conv,
+            "rate": round(conv / max(1, att) * 100, 1) if att > 0 else 0.0,
+        }
+    return result
 
 
 def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
@@ -263,6 +306,14 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
 
     chaos_recoveries = max(0, round(rng.gauss(1.0, 0.8)))
 
+    # Special teams returns
+    kick_returns = max(1, round(rng.gauss(4, 1.5)))
+    kick_return_yards = max(0, round(kick_returns * rng.gauss(22, 6)))
+    kick_return_tds = 1 if rng.random() < 0.04 else 0
+    punt_returns = max(0, round(rng.gauss(2.5, 1.2)))
+    punt_return_yards = max(0, round(punt_returns * rng.gauss(10, 4)))
+    punt_return_tds = 1 if rng.random() < 0.06 else 0
+
     return {
         "total_yards": total_yards,
         "rushing_carries": rushing_carries,
@@ -272,7 +323,12 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "total_plays": total_plays,
         "yards_per_play": round(total_yards / max(1, total_plays), 2),
         "touchdowns": scoring["touchdowns"],
-        "punt_return_tds": 1 if rng.random() < 0.06 else 0,
+        "kick_returns": kick_returns,
+        "kick_return_yards": kick_return_yards,
+        "kick_return_tds": kick_return_tds,
+        "punt_returns": punt_returns,
+        "punt_return_yards": punt_return_yards,
+        "punt_return_tds": punt_return_tds,
         "lateral_chains": lateral_chains,
         "successful_laterals": successful_laterals,
         "fumbles_lost": total_fumbles,
@@ -296,7 +352,7 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "play_family_breakdown": {},
         "avg_fatigue": round(rng.gauss(55, 8), 1),
         "safeties_conceded": scoring["safeties"],
-        "down_conversions": {},
+        "down_conversions": _generate_down_conversions(total_plays, rng),
         "penalties": penalties,
         "penalty_yards": penalty_yards,
         "penalties_declined": max(0, round(rng.gauss(1.0, 0.8))),
@@ -306,6 +362,21 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "bonus_possession_scores": 1 if rng.random() < 0.15 else 0,
         "bonus_possession_yards": max(0, round(rng.gauss(20, 12))),
         "delta_yards": round(rng.gauss(0, 8), 1),
+        "adjusted_yards": total_yards + round(rng.gauss(0, 8), 1),
+        "delta_drives": max(0, round(rng.gauss(3, 1.5))),
+        "delta_scores": max(0, round(rng.gauss(0.8, 0.6))),
+        "compelled_efficiency": round(rng.uniform(15, 45), 1),
+        "epa": {
+            "total_epa": round(rng.gauss(0, 5), 2),
+            "epa_per_play": round(rng.gauss(0, 0.1), 3),
+            "wpa": round(rng.gauss(0, 5), 2),
+            "wpa_per_play": round(rng.gauss(0, 0.1), 3),
+            "offense_epa": round(rng.gauss(0, 4), 2),
+            "special_teams_epa": round(rng.gauss(0, 1.5), 2),
+            "success_rate": round(rng.uniform(35, 60), 1),
+            "explosiveness": round(rng.uniform(0.5, 2.5), 3),
+            "total_plays": total_plays,
+        },
     }
 
 
@@ -384,6 +455,12 @@ def _generate_synthetic_metrics(stats: Dict, scoring: Dict,
     to_margin = total_turnovers - max(0, round(rng.gauss(2.5, 1.5)))
     metrics["to_margin"] = round(to_margin, 1)
     metrics["avg_start"] = round(25 + strength_factor * 5 + rng.gauss(0, 3), 1)
+
+    # Fan-friendly metrics: lateral_pct, ppd, conversion_pct
+    lat_eff = stats.get("lateral_efficiency", 50.0)
+    metrics["lateral_pct"] = round(lat_eff, 1)
+    metrics["ppd"] = round(drive_quality, 2)
+    metrics["conversion_pct"] = round(pressure, 2)
 
     return metrics
 
@@ -659,6 +736,64 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
                 st_role="STARTER",
             )
             all_stat_players.append(entry)
+
+    # ── Special teams returns: distribute to fastest skill players ──
+    kr_total = stats.get("kick_returns", 0)
+    kr_yards_total = stats.get("kick_return_yards", 0)
+    kr_tds_total = stats.get("kick_return_tds", 0)
+    pr_total = stats.get("punt_returns", 0)
+    pr_yards_total = stats.get("punt_return_yards", 0)
+    pr_tds_total = stats.get("punt_return_tds", 0)
+
+    if (kr_total > 0 or pr_total > 0) and skill_players:
+        # Pick 1-2 returners (fastest)
+        returners = sorted(skill_players[:4], key=lambda p: p.speed, reverse=True)[:2]
+        for i, ret_player in enumerate(returners):
+            # Find or create the entry
+            entry = None
+            for e in all_stat_players:
+                if e["name"] == ret_player.name:
+                    entry = e
+                    break
+            if not entry:
+                entry = _make_player_entry(ret_player, st_role="STARTER")
+                all_stat_players.append(entry)
+
+            if i == 0:
+                # Primary returner gets majority
+                kr = min(kr_total, max(0, round(kr_total * rng.uniform(0.55, 0.85))))
+                kr_yds = min(kr_yards_total, max(0, round(kr_yards_total * rng.uniform(0.55, 0.85))))
+                pr = min(pr_total, max(0, round(pr_total * rng.uniform(0.55, 0.85))))
+                pr_yds = min(pr_yards_total, max(0, round(pr_yards_total * rng.uniform(0.55, 0.85))))
+                entry["kick_returns"] = kr
+                entry["kick_return_yards"] = kr_yds
+                entry["kick_return_tds"] = kr_tds_total
+                entry["punt_returns"] = pr
+                entry["punt_return_yards"] = pr_yds
+                entry["punt_return_tds"] = pr_tds_total
+                entry["st_role"] = "STARTER"
+                kr_total -= kr
+                kr_yards_total -= kr_yds
+                pr_total -= pr
+                pr_yards_total -= pr_yds
+            else:
+                # Secondary returner gets the rest
+                entry["kick_returns"] = kr_total
+                entry["kick_return_yards"] = kr_yards_total
+                entry["punt_returns"] = pr_total
+                entry["punt_return_yards"] = pr_yards_total
+                if kr_total > 0 or pr_total > 0:
+                    entry["st_role"] = "STARTER"
+
+    # Distribute ST tackles to defenders
+    st_tkl_total = max(0, round(rng.gauss(4, 2)))
+    if defenders and st_tkl_total > 0:
+        for d_player in defenders:
+            for e in all_stat_players:
+                if e["name"] == d_player.name:
+                    share = max(0, round(st_tkl_total * rng.uniform(0.1, 0.4)))
+                    e["st_tackles"] += share
+                    break
 
     all_stat_players.sort(
         key=lambda x: x["touches"] + x["kick_att"] + x["tackles"],

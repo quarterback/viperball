@@ -21,6 +21,19 @@
   </div>
 </div>
 
+{# ── Cross-league links ── #}
+{% if cross_links and (cross_links.get('college') or cross_links.get('international')) %}
+<div style="margin-bottom:12px; padding:6px 10px; border:1px solid var(--border); background:var(--bg-alt); font-size:11px;">
+  <span style="color:var(--fg-dim)">Also see:</span>
+  {% for cl in cross_links.get('college', []) %}
+  <a href="/stats/college/{{ cl.session_id }}/player/{{ cl.team_name }}/{{ pl.get('name', '') }}" style="margin-left:8px"><span class="tag tag-pos">CVL</span> {{ cl.team_name }} ({{ cl.season_name }})</a>
+  {% endfor %}
+  {% for cl in cross_links.get('international', []) %}
+  <a href="/stats/international/team/{{ cl.nation_code }}/player/{{ pl.get('name', '') }}" style="margin-left:8px"><span class="tag tag-conf">INTL</span> {{ cl.nation_name }} ({{ cl.nation_code }})</a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="grid-2">
 
 {# ── Left: Bio + Attributes ── #}

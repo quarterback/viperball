@@ -15,6 +15,49 @@ router = APIRouter()
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# Conference abbreviation mapping — auto-generates from first letters if not listed
+CONF_ABBREVS = {
+    "Southern Sun Conference": "SSC",
+    "Yankee Fourteen": "Y14",
+    "Big Pacific": "BP",
+    "Giant 14": "G14",
+    "Collegiate Commonwealth": "CC",
+    "Interstate Athletic Association": "IAA",
+    "Midwest States Interscholastic Association": "MSIA",
+    "Moonshine League": "MSL",
+    "National Collegiate League": "NCL",
+    "Northern Shield": "NS",
+    "Outlands Coast Conference": "OCC",
+    "Pioneer Athletic Association": "PAA",
+    "Potomac Athletic Conference": "PAC",
+    "Prairie Athletic Union": "PAU",
+    "Border Conference": "BC",
+    "Galactic League": "GL",
+    "Pacific Conference": "PAC",
+    "Mountain West Conference": "MWC",
+    "Plains Athletic Conference": "PlAC",
+    "Southwest Conference": "SWC",
+    "Great Lakes Conference": "GLC",
+    "Southeast Conference": "SEC",
+    "Southern Athletic Conference": "SAC",
+    "Mid-Atlantic Conference": "MAC",
+    "Capital Conference": "CAP",
+    "Northeast Conference": "NEC",
+    "Heartland Conference": "HLC",
+    "Metropolitan Athletic Union": "MAU",
+}
+
+
+def _conf_abbrev(name: str) -> str:
+    """Get conference abbreviation, auto-generating from initials if needed."""
+    if not name:
+        return ""
+    if name in CONF_ABBREVS:
+        return CONF_ABBREVS[name]
+    # Auto-generate from first letters of words
+    words = name.replace("-", " ").split()
+    return "".join(w[0] for w in words[:4]).upper()
+
 
 # ── helpers ──────────────────────────────────────────────────────────────
 
@@ -58,6 +101,55 @@ def _get_fiv_rankings():
         return load_fiv_rankings()
     except Exception:
         return None
+
+
+def _find_cross_league_links(player_name: str, exclude_college_session: str = None, exclude_nation: str = None):
+    """Find appearances of a player across college sessions and international teams.
+
+    Returns a dict with:
+      college: list of {"session_id", "team_name", "season_name"}
+      international: list of {"nation_code", "nation_name"}
+    """
+    links = {"college": [], "international": []}
+
+    # Check college sessions
+    api = _get_api()
+    for sid, sess in api["sessions"].items():
+        if sid == exclude_college_session:
+            continue
+        season = sess.get("season")
+        if not season:
+            continue
+        for team_name, team in season.teams.items():
+            for p in team.players:
+                if p.name == player_name:
+                    links["college"].append({
+                        "session_id": sid,
+                        "team_name": team_name,
+                        "season_name": getattr(season, "name", "Season"),
+                    })
+                    break
+
+    # Check international/FIV
+    fiv_data = _get_fiv_data()
+    if fiv_data:
+        national_teams = fiv_data.get("national_teams", {})
+        for code, team_data in national_teams.items():
+            if code == exclude_nation:
+                continue
+            roster = team_data.get("roster", [])
+            for entry in roster:
+                p = entry.get("player", entry) if isinstance(entry, dict) else entry
+                pname = p.get("name", "") if isinstance(p, dict) else getattr(p, "name", "")
+                if pname == player_name:
+                    nation_name = team_data.get("name", code)
+                    links["international"].append({
+                        "nation_code": code,
+                        "nation_name": nation_name,
+                    })
+                    break
+
+    return links
 
 
 def _find_active_session():
@@ -108,6 +200,7 @@ def _find_all_pro_sessions():
 def _ctx(request, **kwargs):
     """Build template context with request and extras."""
     kwargs["request"] = request
+    kwargs["conf_abbrev"] = _conf_abbrev
     return kwargs
 
 
@@ -340,9 +433,23 @@ def college_team(request: Request, session_id: str, team_name: str):
         penalties = sum(s.get("penalties", 0) for s in completed_games_with_stats)
         penalty_yards = sum(s.get("penalty_yards", 0) for s in completed_games_with_stats)
         delta_yards = sum(s.get("delta_yards", 0) for s in completed_games_with_stats)
+        adjusted_yards = sum(s.get("adjusted_yards", s.get("total_yards", 0) + s.get("delta_yards", 0)) for s in completed_games_with_stats)
+        delta_drives = sum(s.get("delta_drives", 0) for s in completed_games_with_stats)
+        delta_scores_total = sum(s.get("delta_scores", 0) for s in completed_games_with_stats)
         bonus_poss = sum(s.get("bonus_possessions", 0) for s in completed_games_with_stats)
         bonus_scores = sum(s.get("bonus_possession_scores", 0) for s in completed_games_with_stats)
-        total_epa = sum(s.get("epa", 0) for s in completed_games_with_stats)
+        bonus_yards = sum(s.get("bonus_possession_yards", 0) for s in completed_games_with_stats)
+        successful_laterals = sum(s.get("successful_laterals", 0) for s in completed_games_with_stats)
+        total_plays = sum(s.get("total_plays", 0) for s in completed_games_with_stats)
+
+        # EPA: handle both dict (from calculate_game_epa) and number values
+        total_epa = 0
+        for s in completed_games_with_stats:
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                total_epa += epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                total_epa += epa_val
 
         # Down conversions (keys are ints 4, 5, 6)
         down_conv = {}
@@ -371,7 +478,9 @@ def college_team(request: Request, session_id: str, team_name: str):
         team_season_stats = {
             "games_played": n,
             "total_yards": total_yards,
+            "total_plays": total_plays,
             "avg_yards": round(total_yards / n, 1),
+            "yards_per_play": round(total_yards / max(1, total_plays), 2),
             "rushing_yards": rushing_yards,
             "avg_rushing": round(rushing_yards / n, 1),
             "rushing_carries": rushing_carries,
@@ -385,6 +494,8 @@ def college_team(request: Request, session_id: str, team_name: str):
             "kp_ints": kp_ints,
             "lateral_chains": lateral_chains,
             "lateral_yards": lateral_yards,
+            "successful_laterals": successful_laterals,
+            "lateral_pct": round(successful_laterals / max(1, lateral_chains) * 100, 1),
             "touchdowns": touchdowns,
             "dk_made": dk_made,
             "dk_att": dk_att,
@@ -395,8 +506,13 @@ def college_team(request: Request, session_id: str, team_name: str):
             "penalties": penalties,
             "penalty_yards": penalty_yards,
             "delta_yards": delta_yards,
+            "adjusted_yards": adjusted_yards,
+            "delta_drives": delta_drives,
+            "delta_scores": delta_scores_total,
+            "compelled_eff": round(delta_scores_total / max(1, delta_drives) * 100, 1) if delta_drives > 0 else None,
             "bonus_possessions": bonus_poss,
             "bonus_scores": bonus_scores,
+            "bonus_yards": bonus_yards,
             "total_epa": round(total_epa, 1),
             "avg_epa": round(total_epa / n, 2),
             "down_conv_4": down_conv[4],
@@ -529,11 +645,13 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    cross_links = _find_cross_league_links(player_name, exclude_college_session=session_id)
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
-        record=team_record, prestige=prestige,
+        record=team_record, prestige=prestige, cross_links=cross_links,
     ))
 
 
@@ -642,12 +760,16 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
                     "total_yards": 0, "total_plays": 0, "touchdowns": 0,
                     "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
                     "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                    "lateral_chains": 0, "lateral_yards": 0,
+                    "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
                     "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
                     "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
                     "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+                    "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
                     "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
                     "viper_eff_n": 0, "team_rating_n": 0,
+                    "down_4_att": 0, "down_4_conv": 0,
+                    "down_5_att": 0, "down_5_conv": 0,
+                    "down_6_att": 0, "down_6_conv": 0,
                 }
             a = team_agg[t_name]
             a["games"] += 1
@@ -664,6 +786,7 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             a["kp_ints"] += s.get("kick_pass_interceptions", 0)
             a["lateral_chains"] += s.get("lateral_chains", 0)
             a["lateral_yards"] += s.get("lateral_yards", 0)
+            a["successful_laterals"] += s.get("successful_laterals", 0)
             a["dk_made"] += s.get("drop_kicks_made", 0)
             a["dk_att"] += s.get("drop_kicks_attempted", 0)
             a["pk_made"] += s.get("place_kicks_made", 0)
@@ -673,9 +796,17 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             a["penalties"] += s.get("penalties", 0)
             a["penalty_yards"] += s.get("penalty_yards", 0)
             a["delta_yards"] += s.get("delta_yards", 0)
+            a["delta_drives"] += s.get("delta_drives", 0)
+            a["delta_scores"] += s.get("delta_scores", 0)
             a["bonus_possessions"] += s.get("bonus_possessions", 0)
             a["bonus_scores"] += s.get("bonus_possession_scores", 0)
-            a["epa"] += s.get("epa", 0)
+            a["bonus_yards"] += s.get("bonus_possession_yards", 0)
+            # EPA: handle dict or number
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                a["epa"] += epa_val
             ve = s.get("viper_efficiency")
             if ve is not None:
                 a["viper_eff_sum"] += ve
@@ -685,6 +816,12 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             if tr is not None:
                 a["team_rating_sum"] += tr
                 a["team_rating_n"] += 1
+            # Down conversions
+            dc = s.get("down_conversions", {})
+            for d in [4, 5, 6]:
+                dd = dc.get(d, dc.get(str(d), {}))
+                a[f"down_{d}_att"] += dd.get("attempts", 0)
+                a[f"down_{d}_conv"] += dd.get("converted", 0)
 
     teams = list(team_agg.values())
     for t in teams:
@@ -694,9 +831,16 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
         t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+        # Down conversion rates
+        for d in [4, 5, 6]:
+            att = t[f"down_{d}_att"]
+            conv = t[f"down_{d}_conv"]
+            t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
+        t["compelled_eff"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         # Get W-L from standings
         rec = season.standings.get(t["team"])
         if rec:
@@ -729,6 +873,87 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     ))
 
 
+@router.get("/college/{session_id}/playoffs", response_class=HTMLResponse)
+def college_playoffs(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Round labels by week number
+    round_labels = {
+        995: "Play-In Round",
+        996: "Round of 32",
+        997: "Round of 16",
+        998: "Quarterfinals",
+        999: "Semifinals",
+        1000: "National Championship",
+    }
+
+    # Build bracket rounds
+    bracket = season.playoff_bracket or []
+    rounds = {}
+    for g in bracket:
+        sg = api["serialize_game"](g, include_full_result=False)
+        wk = sg.get("week", 0)
+        rounds.setdefault(wk, []).append(sg)
+
+    # Determine total teams for label resolution
+    total_teams = 0
+    if bracket:
+        first_wk = min(g.week for g in bracket)
+        first_round = [g for g in bracket if g.week == first_wk]
+        total_teams = len(first_round) * 2
+        # Check for byes (teams that appear later but not in first round)
+        all_teams = set()
+        for g in bracket:
+            all_teams.add(g.home_team)
+            all_teams.add(g.away_team)
+        total_teams = max(total_teams, len(all_teams))
+
+    # Derive seeds from first-round matchup order
+    seed_map = {}
+    if bracket:
+        first_wk = min(g.week for g in bracket)
+        seed_counter = 1
+        for g in sorted(bracket, key=lambda x: x.week):
+            if g.week == first_wk:
+                if g.home_team not in seed_map:
+                    seed_map[g.home_team] = seed_counter
+                    seed_counter += 1
+                if g.away_team not in seed_map:
+                    seed_map[g.away_team] = seed_counter
+                    seed_counter += 1
+        for g in sorted(bracket, key=lambda x: x.week):
+            for t in [g.home_team, g.away_team]:
+                if t not in seed_map:
+                    seed_map[t] = seed_counter
+                    seed_counter += 1
+
+    sorted_rounds = sorted(rounds.items())
+
+    # Bowl games
+    bowls = []
+    for bg in (season.bowl_games or []):
+        sg = api["serialize_game"](bg.game, include_full_result=False)
+        bowls.append({
+            "name": bg.name,
+            "tier": bg.tier,
+            "tier_label": {1: "Premier", 2: "Major", 3: "Standard"}.get(bg.tier, ""),
+            "game": sg,
+        })
+
+    return templates.TemplateResponse("college/playoffs.html", _ctx(
+        request, section="college", session_id=session_id,
+        rounds=sorted_rounds, round_labels=round_labels,
+        seed_map=seed_map, champion=season.champion,
+        bowls=bowls, total_teams=total_teams,
+        has_playoff=bool(bracket),
+        has_bowls=bool(season.bowl_games),
+        phase=sess.get("phase", ""),
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/awards", response_class=HTMLResponse)
 def college_awards(request: Request, session_id: str):
     api = _get_api()
@@ -742,7 +967,9 @@ def college_awards(request: Request, session_id: str):
             conferences=season.conferences if hasattr(season, 'conferences') else None,
         )
         awards = honors.to_dict()
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         awards = {}
 
     return templates.TemplateResponse("college/awards.html", _ctx(
@@ -864,12 +1091,16 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                         "total_yards": 0, "total_plays": 0, "touchdowns": 0,
                         "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
                         "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                        "lateral_chains": 0, "lateral_yards": 0,
+                        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
                         "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
                         "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                        "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+                        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
+                        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
                         "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
                         "viper_eff_n": 0, "team_rating_n": 0,
+                        "down_4_att": 0, "down_4_conv": 0,
+                        "down_5_att": 0, "down_5_conv": 0,
+                        "down_6_att": 0, "down_6_conv": 0,
                     }
                 a = team_agg[t_key]
                 a["games"] += 1
@@ -886,6 +1117,7 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                 a["kp_ints"] += s.get("kick_pass_interceptions", 0)
                 a["lateral_chains"] += s.get("lateral_chains", 0)
                 a["lateral_yards"] += s.get("lateral_yards", 0)
+                a["successful_laterals"] += s.get("successful_laterals", 0)
                 a["dk_made"] += s.get("drop_kicks_made", 0)
                 a["dk_att"] += s.get("drop_kicks_attempted", 0)
                 a["pk_made"] += s.get("place_kicks_made", 0)
@@ -895,9 +1127,16 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                 a["penalties"] += s.get("penalties", 0)
                 a["penalty_yards"] += s.get("penalty_yards", 0)
                 a["delta_yards"] += s.get("delta_yards", 0)
+                a["delta_drives"] += s.get("delta_drives", 0)
+                a["delta_scores"] += s.get("delta_scores", 0)
                 a["bonus_possessions"] += s.get("bonus_possessions", 0)
                 a["bonus_scores"] += s.get("bonus_possession_scores", 0)
-                a["epa"] += s.get("epa", 0)
+                a["bonus_yards"] += s.get("bonus_possession_yards", 0)
+                epa_val = s.get("epa", 0)
+                if isinstance(epa_val, dict):
+                    a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
+                elif isinstance(epa_val, (int, float)):
+                    a["epa"] += epa_val
                 ve = s.get("viper_efficiency")
                 if ve is not None:
                     a["viper_eff_sum"] += ve
@@ -907,16 +1146,27 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                 if tr is not None:
                     a["team_rating_sum"] += tr
                     a["team_rating_n"] += 1
+                dc = s.get("down_conversions", {})
+                for d in [4, 5, 6]:
+                    dd = dc.get(d, dc.get(str(d), {}))
+                    a[f"down_{d}_att"] += dd.get("attempts", 0)
+                    a[f"down_{d}_conv"] += dd.get("converted", 0)
 
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        for d in [4, 5, 6]:
+            att = t[f"down_{d}_att"]
+            conv = t[f"down_{d}_conv"]
+            t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
+        t["compelled_eff"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         rec = season.standings.get(t["team_key"])
         if rec:
             t["wins"] = rec.wins
@@ -1116,7 +1366,11 @@ def intl_team_stats(request: Request, sort: str = "total_yards"):
             a["kp_yards"] += s.get("kick_pass_yards", 0)
             a["lateral_yards"] += s.get("lateral_yards", 0)
             a["fumbles"] += s.get("fumbles_lost", 0)
-            a["epa"] += s.get("epa", 0)
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                a["epa"] += epa_val
             a["delta_yards"] += s.get("delta_yards", 0)
             ve = s.get("viper_efficiency")
             if ve is not None:
@@ -1178,9 +1432,11 @@ def intl_player(request: Request, nation_code: str, player_name: str):
 
     nation = team_data.get("nation", {}) if isinstance(team_data, dict) else {}
 
+    cross_links = _find_cross_league_links(player_name, exclude_nation=nation_code)
+
     return templates.TemplateResponse("international/player.html", _ctx(
         request, section="international", player=player, nation_code=nation_code,
-        nation=nation, team_data=team_data,
+        nation=nation, team_data=team_data, cross_links=cross_links,
     ))
 
 

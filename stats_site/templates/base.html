@@ -283,8 +283,15 @@ td.rank {
   .box-score-final { font-size: 18px; }
   .box-score-vs { padding: 4px 0; }
   .metric .value { font-size: 14px; }
-  .tabs { flex-wrap: wrap; }
-  .tabs a { padding: 4px 8px; font-size: 10px; }
+  /* Tabs: horizontal scroll instead of wrap to prevent overlap */
+  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { padding: 4px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+  /* Make all tables horizontally scrollable on mobile */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+  .page-header h1 { font-size: 14px; }
+  .container { padding: 0 8px; }
+  body { font-size: 11px; }
 }
 /* Horizontal scroll wrapper for wide tables on small screens */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }

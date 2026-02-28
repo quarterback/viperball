@@ -1766,12 +1766,19 @@ def _render_dynasty_play(shared):
 
                 _render_pre_game_injury_report(session_id, [coach_team] if coach_team else [])
 
+                full_engine = st.checkbox(
+                    "Full Engine (detailed box scores, slower)",
+                    value=False, key="dyn_full_engine",
+                    help="Use the full game engine for CPU games instead of fast sim. Produces detailed play-by-play and complete box scores.",
+                )
+                use_fast = not full_engine
+
                 btn_col1, btn_col2, btn_col3 = st.columns(3)
                 with btn_col1:
                     if st.button("Sim Next Week", type="primary", use_container_width=True, key="dyn_sim_next_week"):
                         with st.spinner(f"Simulating Week {next_week}..."):
                             try:
-                                api_client.simulate_week(session_id, week=next_week)
+                                api_client.simulate_week(session_id, week=next_week, fast_sim=use_fast)
                                 try:
                                     api_client.dq_resolve_week(session_id, next_week)
                                 except api_client.APIError:
@@ -1789,7 +1796,7 @@ def _render_dynasty_play(shared):
                         if st.button("Sim to Week", use_container_width=True, key="dyn_sim_to_week_btn"):
                             with st.spinner(f"Simulating through Week {target}..."):
                                 try:
-                                    api_client.simulate_through_week(session_id, target)
+                                    api_client.simulate_through_week(session_id, target, fast_sim=use_fast)
                                     st.rerun()
                                 except api_client.APIError as e:
                                     st.error(f"Simulation failed: {e.detail}")
@@ -1798,7 +1805,7 @@ def _render_dynasty_play(shared):
                     if st.button("Sim Rest of Season", use_container_width=True, key="dyn_sim_rest"):
                         with st.spinner("Simulating remaining games..."):
                             try:
-                                api_client.simulate_rest(session_id)
+                                api_client.simulate_rest(session_id, fast_sim=use_fast)
                                 st.rerun()
                             except api_client.APIError as e:
                                 st.error(f"Simulation failed: {e.detail}")
@@ -2116,12 +2123,19 @@ def _render_season_play(shared):
 
             st.subheader("Advance Season")
 
+            full_engine = st.checkbox(
+                "Full Engine (detailed box scores, slower)",
+                value=False, key="ssn_full_engine",
+                help="Use the full game engine for CPU games instead of fast sim. Produces detailed play-by-play and complete box scores.",
+            )
+            use_fast = not full_engine
+
             btn_col1, btn_col2, btn_col3 = st.columns(3)
             with btn_col1:
                 if st.button("Sim Next Week", type="primary", use_container_width=True, key="sim_next_week"):
                     with st.spinner(f"Simulating Week {next_week}..."):
                         try:
-                            api_client.simulate_week(session_id, week=next_week)
+                            api_client.simulate_week(session_id, week=next_week, fast_sim=use_fast)
                             try:
                                 api_client.dq_resolve_week(session_id, next_week)
                             except api_client.APIError:
@@ -2139,7 +2153,7 @@ def _render_season_play(shared):
                     if st.button("Sim to Week", use_container_width=True, key="sim_to_week_btn"):
                         with st.spinner(f"Simulating through Week {target}..."):
                             try:
-                                api_client.simulate_through_week(session_id, target)
+                                api_client.simulate_through_week(session_id, target, fast_sim=use_fast)
                                 st.rerun()
                             except api_client.APIError as e:
                                 st.error(f"Simulation failed: {e.detail}")
@@ -2148,7 +2162,7 @@ def _render_season_play(shared):
                 if st.button("Sim Rest of Season", use_container_width=True, key="sim_rest_season"):
                     with st.spinner(f"Simulating remaining {total_games - games_played} games..."):
                         try:
-                            api_client.simulate_rest(session_id)
+                            api_client.simulate_rest(session_id, fast_sim=use_fast)
                             st.rerun()
                         except api_client.APIError as e:
                             st.error(f"Simulation failed: {e.detail}")
