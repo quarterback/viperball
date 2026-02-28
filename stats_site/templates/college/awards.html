@@ -20,6 +20,7 @@
   <a href="/stats/college/{{ session_id }}/polls">Polls</a>
   <a href="/stats/college/{{ session_id }}/players">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards" class="active">Awards</a>
 </div>
 
@@ -27,56 +28,121 @@
 
 {% if awards.get('individual_awards') %}
 <h2>Individual Awards</h2>
+<div class="table-scroll">
 <table>
-  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th>Stats</th></tr></thead>
+  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Reason</th></tr></thead>
   <tbody>
   {% for a in awards.individual_awards %}
   <tr>
-    <td style="color:var(--yellow);font-weight:bold">{{ a.get('award', '?') }}</td>
+    <td style="color:var(--yellow);font-weight:bold">{{ a.get('award_name', '?') }}</td>
     <td>{{ a.get('player_name', '?') }}</td>
-    <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team', '') }}">{{ a.get('team', '?') }}</a></td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
-    <td style="color:var(--fg-dim)">{{ a.get('stat_line', '') }}</td>
+    <td>{{ a.get('year_in_school', '') }}</td>
+    <td class="num {% if a.get('overall_rating', 0) >= 90 %}stat-elite{% elif a.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ a.get('overall_rating', '') }}</td>
+    <td style="color:var(--fg-dim);font-size:10px">{{ a.get('reason', '') }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% endif %}
 
+<div class="grid-2">
 {% if awards.get('coach_of_year') %}
+<div>
 <h2>Coach of the Year</h2>
-<div class="metric" style="max-width: 400px;">
+<div class="metric">
   <div class="label">Coach of the Year</div>
-  <div class="value accent">{{ awards.coach_of_year.get('coach_name', '?') }}</div>
-  <div style="color:var(--fg-dim);font-size:11px;margin-top:2px">
-    {{ awards.coach_of_year.get('team', '') }} &middot; {{ awards.coach_of_year.get('record', '') }}
-  </div>
+  <div class="value accent">{{ awards.coach_of_year }}</div>
+</div>
 </div>
 {% endif %}
 
 {% if awards.get('most_improved') %}
+<div>
 <h2>Most Improved</h2>
-<div class="metric" style="max-width: 400px;">
+<div class="metric">
   <div class="label">Most Improved Team</div>
-  <div class="value accent">{{ awards.most_improved.get('team', '?') }}</div>
+  <div class="value accent">{{ awards.most_improved }}</div>
+</div>
 </div>
 {% endif %}
+</div>
 
-{% if awards.get('honors') %}
-<h2>All-Conference / Honorable Mention</h2>
+{# ── All-CVL Teams ── #}
+{% for tier_key, tier_label in [('all_american_first', 'All-CVL First Team'), ('all_american_second', 'All-CVL Second Team'), ('all_american_third', 'All-CVL Third Team'), ('honorable_mention', 'Honorable Mention'), ('all_freshman', 'All-Freshman Team')] %}
+{% if awards.get(tier_key) %}
+<h2>{{ tier_label }}</h2>
+<div class="table-scroll">
 <table>
-  <thead><tr><th>Honor</th><th>Player</th><th>Team</th><th>Position</th></tr></thead>
+  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th></tr></thead>
   <tbody>
-  {% for h in awards.honors %}
+  {% for s in awards[tier_key].get('slots', []) %}
   <tr>
-    <td>{{ h.get('honor', '?') }}</td>
-    <td>{{ h.get('player_name', '?') }}</td>
-    <td><a href="/stats/college/{{ session_id }}/team/{{ h.get('team', '') }}">{{ h.get('team', '?') }}</a></td>
-    <td><span class="tag tag-pos">{{ h.get('position', '?') }}</span></td>
+    <td>{{ s.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.get('team_name', '') }}">{{ s.get('team_name', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ s.get('position', '?') }}</span></td>
+    <td>{{ s.get('year_in_school', '') }}</td>
+    <td class="num {% if s.get('overall_rating', 0) >= 90 %}stat-elite{% elif s.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ s.get('overall_rating', '') }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
+{% endif %}
+{% endfor %}
+
+{# ── Conference Awards ── #}
+{% if awards.get('conference_awards') %}
+{% for conf_name, conf_awards in awards.conference_awards.items() %}
+{% if conf_awards %}
+<h2>{{ conf_name }} — Individual Awards</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th class="num">OVR</th></tr></thead>
+  <tbody>
+  {% for a in conf_awards %}
+  <tr>
+    <td style="color:var(--yellow)">{{ a.get('award_name', '?') }}</td>
+    <td>{{ a.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
+    <td class="num">{{ a.get('overall_rating', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{# ── All-Conference Teams ── #}
+{% if awards.get('all_conference_teams') %}
+{% for conf_name, tiers in awards.all_conference_teams.items() %}
+{% for tier_key, tier_data in tiers.items() %}
+{% if tier_data and tier_data.get('slots') %}
+<h2>All-{{ conf_name }} {{ 'First' if tier_key == 'first' else 'Second' }} Team</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th></tr></thead>
+  <tbody>
+  {% for s in tier_data.slots %}
+  <tr>
+    <td>{{ s.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.get('team_name', '') }}">{{ s.get('team_name', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ s.get('position', '?') }}</span></td>
+    <td>{{ s.get('year_in_school', '') }}</td>
+    <td class="num {% if s.get('overall_rating', 0) >= 90 %}stat-elite{% elif s.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ s.get('overall_rating', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endfor %}
+{% endfor %}
 {% endif %}
 
 {% else %}

@@ -103,6 +103,55 @@ def _get_fiv_rankings():
         return None
 
 
+def _find_cross_league_links(player_name: str, exclude_college_session: str = None, exclude_nation: str = None):
+    """Find appearances of a player across college sessions and international teams.
+
+    Returns a dict with:
+      college: list of {"session_id", "team_name", "season_name"}
+      international: list of {"nation_code", "nation_name"}
+    """
+    links = {"college": [], "international": []}
+
+    # Check college sessions
+    api = _get_api()
+    for sid, sess in api["sessions"].items():
+        if sid == exclude_college_session:
+            continue
+        season = sess.get("season")
+        if not season:
+            continue
+        for team_name, team in season.teams.items():
+            for p in team.players:
+                if p.name == player_name:
+                    links["college"].append({
+                        "session_id": sid,
+                        "team_name": team_name,
+                        "season_name": getattr(season, "name", "Season"),
+                    })
+                    break
+
+    # Check international/FIV
+    fiv_data = _get_fiv_data()
+    if fiv_data:
+        national_teams = fiv_data.get("national_teams", {})
+        for code, team_data in national_teams.items():
+            if code == exclude_nation:
+                continue
+            roster = team_data.get("roster", [])
+            for entry in roster:
+                p = entry.get("player", entry) if isinstance(entry, dict) else entry
+                pname = p.get("name", "") if isinstance(p, dict) else getattr(p, "name", "")
+                if pname == player_name:
+                    nation_name = team_data.get("name", code)
+                    links["international"].append({
+                        "nation_code": code,
+                        "nation_name": nation_name,
+                    })
+                    break
+
+    return links
+
+
 def _find_active_session():
     """Find the first session with an active season."""
     api = _get_api()
@@ -596,11 +645,13 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    cross_links = _find_cross_league_links(player_name, exclude_college_session=session_id)
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
-        record=team_record, prestige=prestige,
+        record=team_record, prestige=prestige, cross_links=cross_links,
     ))
 
 
@@ -822,6 +873,87 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     ))
 
 
+@router.get("/college/{session_id}/playoffs", response_class=HTMLResponse)
+def college_playoffs(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Round labels by week number
+    round_labels = {
+        995: "Play-In Round",
+        996: "Round of 32",
+        997: "Round of 16",
+        998: "Quarterfinals",
+        999: "Semifinals",
+        1000: "National Championship",
+    }
+
+    # Build bracket rounds
+    bracket = season.playoff_bracket or []
+    rounds = {}
+    for g in bracket:
+        sg = api["serialize_game"](g, include_full_result=False)
+        wk = sg.get("week", 0)
+        rounds.setdefault(wk, []).append(sg)
+
+    # Determine total teams for label resolution
+    total_teams = 0
+    if bracket:
+        first_wk = min(g.week for g in bracket)
+        first_round = [g for g in bracket if g.week == first_wk]
+        total_teams = len(first_round) * 2
+        # Check for byes (teams that appear later but not in first round)
+        all_teams = set()
+        for g in bracket:
+            all_teams.add(g.home_team)
+            all_teams.add(g.away_team)
+        total_teams = max(total_teams, len(all_teams))
+
+    # Derive seeds from first-round matchup order
+    seed_map = {}
+    if bracket:
+        first_wk = min(g.week for g in bracket)
+        seed_counter = 1
+        for g in sorted(bracket, key=lambda x: x.week):
+            if g.week == first_wk:
+                if g.home_team not in seed_map:
+                    seed_map[g.home_team] = seed_counter
+                    seed_counter += 1
+                if g.away_team not in seed_map:
+                    seed_map[g.away_team] = seed_counter
+                    seed_counter += 1
+        for g in sorted(bracket, key=lambda x: x.week):
+            for t in [g.home_team, g.away_team]:
+                if t not in seed_map:
+                    seed_map[t] = seed_counter
+                    seed_counter += 1
+
+    sorted_rounds = sorted(rounds.items())
+
+    # Bowl games
+    bowls = []
+    for bg in (season.bowl_games or []):
+        sg = api["serialize_game"](bg.game, include_full_result=False)
+        bowls.append({
+            "name": bg.name,
+            "tier": bg.tier,
+            "tier_label": {1: "Premier", 2: "Major", 3: "Standard"}.get(bg.tier, ""),
+            "game": sg,
+        })
+
+    return templates.TemplateResponse("college/playoffs.html", _ctx(
+        request, section="college", session_id=session_id,
+        rounds=sorted_rounds, round_labels=round_labels,
+        seed_map=seed_map, champion=season.champion,
+        bowls=bowls, total_teams=total_teams,
+        has_playoff=bool(bracket),
+        has_bowls=bool(season.bowl_games),
+        phase=sess.get("phase", ""),
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/awards", response_class=HTMLResponse)
 def college_awards(request: Request, session_id: str):
     api = _get_api()
@@ -835,7 +967,9 @@ def college_awards(request: Request, session_id: str):
             conferences=season.conferences if hasattr(season, 'conferences') else None,
         )
         awards = honors.to_dict()
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         awards = {}
 
     return templates.TemplateResponse("college/awards.html", _ctx(
@@ -1232,7 +1366,11 @@ def intl_team_stats(request: Request, sort: str = "total_yards"):
             a["kp_yards"] += s.get("kick_pass_yards", 0)
             a["lateral_yards"] += s.get("lateral_yards", 0)
             a["fumbles"] += s.get("fumbles_lost", 0)
-            a["epa"] += s.get("epa", 0)
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                a["epa"] += epa_val
             a["delta_yards"] += s.get("delta_yards", 0)
             ve = s.get("viper_efficiency")
             if ve is not None:
@@ -1294,9 +1432,11 @@ def intl_player(request: Request, nation_code: str, player_name: str):
 
     nation = team_data.get("nation", {}) if isinstance(team_data, dict) else {}
 
+    cross_links = _find_cross_league_links(player_name, exclude_nation=nation_code)
+
     return templates.TemplateResponse("international/player.html", _ctx(
         request, section="international", player=player, nation_code=nation_code,
-        nation=nation, team_data=team_data,
+        nation=nation, team_data=team_data, cross_links=cross_links,
     ))
 
 

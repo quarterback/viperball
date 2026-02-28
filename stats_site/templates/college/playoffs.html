@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Playoffs — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Playoffs
+</div></div>
+{% endblock %}
+
+{% block content %}
+<style>
+.bracket { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0 16px; -webkit-overflow-scrolling: touch; }
+.bracket-round { min-width: 220px; flex-shrink: 0; }
+.bracket-round-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
+.matchup { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg-alt); }
+.matchup.championship { border-color: var(--yellow); }
+.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size: 11px; }
+.matchup-team + .matchup-team { border-top: 1px solid var(--border); }
+.matchup-seed { color: var(--fg-dim); font-size: 10px; width: 18px; text-align: right; flex-shrink: 0; }
+.matchup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup-score { font-variant-numeric: tabular-nums; flex-shrink: 0; width: 32px; text-align: right; }
+.matchup-winner { color: var(--fg-bright); font-weight: bold; }
+.matchup-loser { color: var(--fg-dim); }
+.champion-banner { padding: 12px 16px; border: 2px solid var(--yellow); background: var(--bg-alt); margin-bottom: 16px; text-align: center; }
+.champion-banner .label { font-size: 10px; color: var(--yellow); text-transform: uppercase; letter-spacing: 1px; }
+.champion-banner .name { font-size: 18px; font-weight: bold; color: var(--fg-bright); margin-top: 2px; }
+.bowl-tier { margin-bottom: 16px; }
+.bowl-card { display: inline-block; border: 1px solid var(--border); background: var(--bg-alt); padding: 6px 10px; margin: 2px 4px 2px 0; font-size: 11px; vertical-align: top; min-width: 200px; }
+.bowl-card .bowl-name { color: var(--accent); font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 3px; }
+.bowl-card .bowl-matchup { display: flex; justify-content: space-between; gap: 8px; }
+@media (max-width: 768px) {
+  .bracket { gap: 12px; }
+  .bracket-round { min-width: 180px; }
+  .bowl-card { min-width: 160px; display: block; margin-bottom: 4px; }
+}
+</style>
+
+<div class="page-header">
+  <h1>PLAYOFFS &amp; POSTSEASON</h1>
+  <div class="subtitle">{{ season_name }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/playoffs" class="active">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+</div>
+
+{% if champion %}
+<div class="champion-banner">
+  <div class="label">National Champion</div>
+  <div class="name">{{ champion }}</div>
+</div>
+{% endif %}
+
+{% if has_playoff %}
+<h2>Playoff Bracket</h2>
+<div class="bracket">
+  {% for week, games in rounds %}
+  <div class="bracket-round">
+    <div class="bracket-round-label">{{ round_labels.get(week, 'Round') }}</div>
+    {% for g in games %}
+    <div class="matchup {% if week == 1000 %}championship{% endif %}">
+      {% set home = g.get('home_team', '') %}
+      {% set away = g.get('away_team', '') %}
+      {% set hs = g.get('home_score') %}
+      {% set aws = g.get('away_score') %}
+      {% set completed = g.get('completed', false) %}
+      {% set h_won = completed and hs is not none and aws is not none and hs > aws %}
+      {% set a_won = completed and hs is not none and aws is not none and aws > hs %}
+
+      <div class="matchup-team {% if h_won %}matchup-winner{% elif completed %}matchup-loser{% endif %}">
+        <span class="matchup-seed">{{ seed_map.get(home, '') }}</span>
+        <span class="matchup-name"><a href="/stats/college/{{ session_id }}/team/{{ home }}" style="color:inherit">{{ home }}</a></span>
+        <span class="matchup-score">{% if completed %}{{ hs }}{% else %}&mdash;{% endif %}</span>
+      </div>
+      <div class="matchup-team {% if a_won %}matchup-winner{% elif completed %}matchup-loser{% endif %}">
+        <span class="matchup-seed">{{ seed_map.get(away, '') }}</span>
+        <span class="matchup-name"><a href="/stats/college/{{ session_id }}/team/{{ away }}" style="color:inherit">{{ away }}</a></span>
+        <span class="matchup-score">{% if completed %}{{ aws }}{% else %}&mdash;{% endif %}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{# Playoff results table for detail #}
+<h2>Playoff Results</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Round</th><th>Away</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Home</th><th>Box</th></tr></thead>
+  <tbody>
+  {% for week, games in rounds %}
+  {% for g in games %}
+  {% set completed = g.get('completed', false) %}
+  <tr>
+    <td><span class="tag tag-playoff">{{ round_labels.get(week, 'Round') }}</span></td>
+    <td>
+      <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">
+        {% if seed_map.get(g.away_team) %}<span style="color:var(--fg-dim)">#{{ seed_map[g.away_team] }}</span> {% endif %}{{ g.away_team }}
+      </a>
+    </td>
+    <td class="num {% if completed and g.away_score is not none and g.away_score > g.home_score %}score-win{% elif completed %}score-loss{% endif %}">
+      {% if completed %}{{ g.away_score }}{% else %}&mdash;{% endif %}
+    </td>
+    <td style="color:var(--fg-dim)">@</td>
+    <td class="num {% if completed and g.home_score is not none and g.home_score > g.away_score %}score-win{% elif completed %}score-loss{% endif %}">
+      {% if completed %}{{ g.home_score }}{% else %}&mdash;{% endif %}
+    </td>
+    <td>
+      <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">
+        {% if seed_map.get(g.home_team) %}<span style="color:var(--fg-dim)">#{{ seed_map[g.home_team] }}</span> {% endif %}{{ g.home_team }}
+      </a>
+    </td>
+    <td>
+      {% if completed and g.get('has_full_result') %}
+      <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.get('week_game_idx', 0) }}">Box</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% elif phase in ['playoffs_pending', 'regular'] %}
+<div class="empty">Playoffs have not been run yet.</div>
+{% else %}
+<div class="empty">No playoff data available.</div>
+{% endif %}
+
+{% if has_bowls %}
+<h2>Bowl Games</h2>
+{% set premier = [] %}
+{% set major = [] %}
+{% set standard = [] %}
+{% for b in bowls %}
+  {% if b.tier == 1 %}{% set _ = premier.append(b) %}
+  {% elif b.tier == 2 %}{% set _ = major.append(b) %}
+  {% else %}{% set _ = standard.append(b) %}{% endif %}
+{% endfor %}
+
+{% for tier_label, tier_bowls in [('Premier Bowls', premier), ('Major Bowls', major), ('Standard Bowls', standard)] %}
+{% if tier_bowls %}
+<h3>{{ tier_label }}</h3>
+<div class="bowl-tier">
+{% for b in tier_bowls %}
+  {% set g = b.game %}
+  {% set completed = g.get('completed', false) %}
+  <div class="bowl-card">
+    <div class="bowl-name">{{ b.name }}</div>
+    <div class="bowl-matchup">
+      <span class="{% if completed and g.away_score > g.home_score %}matchup-winner{% elif completed %}matchup-loser{% endif %}">{{ g.away_team }} {% if completed %}{{ g.away_score }}{% endif %}</span>
+      <span style="color:var(--fg-dim)">@</span>
+      <span class="{% if completed and g.home_score > g.away_score %}matchup-winner{% elif completed %}matchup-loser{% endif %}">{{ g.home_team }} {% if completed %}{{ g.home_score }}{% endif %}</span>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endblock %}
