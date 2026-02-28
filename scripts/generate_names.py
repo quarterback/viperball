@@ -132,6 +132,19 @@ REGION_TO_ORIGIN = {
     'nordic': ('nordic', 'Nordic'),
     'east_asian': ('east_asian', 'East Asian'),
     'southeast_asian': ('southeast_asian', 'Southeast Asian'),
+    'french': ('french', 'French'),
+    'german': ('german', 'German'),
+    'spanish': ('spanish', 'Spanish'),
+    'italian': ('italian', 'Italian'),
+    'dutch': ('dutch', 'Dutch'),
+    'russian': ('russian', 'Russian'),
+    'turkish': ('turkish', 'Turkish'),
+    'arabic': ('arabic', 'Arabic'),
+    'indian': ('indian', 'Indian'),
+    'portuguese': ('portuguese', 'Portuguese'),
+    'polish': ('polish', 'Polish'),
+    'czech': ('czech', 'Czech'),
+    'central_asian': ('central_asian', 'Central Asian'),
     'other_intl': ('irish_european', 'European'),
 }
 
@@ -294,6 +307,19 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
         'irish_european': 'irish_european',
         'east_asian': 'east_asian',
         'southeast_asian': 'southeast_asian',
+        'french': 'french',
+        'german': 'german',
+        'spanish': 'spanish',
+        'italian': 'italian',
+        'dutch': 'dutch',
+        'russian': 'russian',
+        'turkish': 'turkish',
+        'arabic': 'arabic',
+        'indian': 'indian',
+        'portuguese': 'portuguese',
+        'polish': 'polish',
+        'czech': 'czech',
+        'central_asian': 'central_asian',
     }
 
     if origin == 'american':
@@ -381,6 +407,32 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
         selected_pool = 'east_asian'
     elif origin == 'southeast_asian':
         selected_pool = 'southeast_asian'
+    elif origin == 'french':
+        selected_pool = 'french'
+    elif origin == 'german':
+        selected_pool = 'german'
+    elif origin == 'spanish':
+        selected_pool = 'spanish'
+    elif origin == 'italian':
+        selected_pool = 'italian'
+    elif origin == 'dutch':
+        selected_pool = 'dutch'
+    elif origin == 'russian':
+        selected_pool = 'russian'
+    elif origin == 'turkish':
+        selected_pool = 'turkish'
+    elif origin == 'arabic':
+        selected_pool = 'arabic'
+    elif origin == 'indian':
+        selected_pool = 'indian'
+    elif origin == 'portuguese':
+        selected_pool = 'portuguese'
+    elif origin == 'polish':
+        selected_pool = 'polish'
+    elif origin == 'czech':
+        selected_pool = 'czech'
+    elif origin == 'central_asian':
+        selected_pool = 'central_asian'
     else:
         selected_pool = 'american_general'
 
@@ -541,6 +593,119 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         city = parts[0]
         return {'city': city, 'state': 'ENG', 'country': 'United Kingdom', 'region': 'uk_european'}
 
+    elif origin == 'french':
+        fr = cities['uk_europe'].get('france', ['Paris FRA'])
+        city_full = random.choice(fr)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'FRA', 'country': 'France', 'region': 'french'}
+
+    elif origin == 'german':
+        de = cities['uk_europe'].get('germany', ['Berlin GER'])
+        city_full = random.choice(de)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'GER', 'country': 'Germany', 'region': 'german'}
+
+    elif origin == 'spanish':
+        es = cities['uk_europe'].get('spain', ['Madrid ESP'])
+        city_full = random.choice(es)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'ESP', 'country': 'Spain', 'region': 'spanish'}
+
+    elif origin == 'italian':
+        ita = cities['uk_europe'].get('other_europe', [])
+        ita_cities = [c for c in ita if c.endswith(' ITA')]
+        if not ita_cities:
+            ita_cities = ['Rome ITA', 'Milan ITA']
+        city_full = random.choice(ita_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'ITA', 'country': 'Italy', 'region': 'italian'}
+
+    elif origin == 'dutch':
+        ned = cities['uk_europe'].get('other_europe', [])
+        ned_cities = [c for c in ned if c.endswith(' NED')]
+        if not ned_cities:
+            ned_cities = ['Amsterdam NED', 'Rotterdam NED']
+        city_full = random.choice(ned_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'NED', 'country': 'Netherlands', 'region': 'dutch'}
+
+    elif origin == 'russian':
+        rus = cities.get('russia', {'major': ['Moscow RUS'], 'secondary': []})
+        all_cities = rus['major'] + rus.get('secondary', [])
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'RUS', 'country': 'Russia', 'region': 'russian'}
+
+    elif origin == 'turkish':
+        tur = cities.get('turkey', {'major': ['Istanbul TUR'], 'secondary': []})
+        all_cities = tur['major'] + tur.get('secondary', [])
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'TUR', 'country': 'Turkey', 'region': 'turkish'}
+
+    elif origin == 'arabic':
+        me = cities.get('middle_east', {})
+        all_cities = []
+        for sub in me.values():
+            all_cities.extend(sub)
+        if not all_cities:
+            all_cities = ['Riyadh KSA']
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KSA'
+        country_map = {
+            'KSA': 'Saudi Arabia', 'UAE': 'United Arab Emirates',
+            'IRN': 'Iran', 'EGY': 'Egypt', 'MAR': 'Morocco',
+        }
+        country = country_map.get(country_code, 'Middle East')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'arabic'}
+
+    elif origin == 'indian':
+        ind = cities.get('india', {'major': ['Mumbai IND'], 'secondary': []})
+        all_cities = ind['major'] + ind.get('secondary', [])
+        city_full = random.choice(all_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'IND', 'country': 'India', 'region': 'indian'}
+
+    elif origin == 'portuguese':
+        eur = cities['uk_europe'].get('other_europe', [])
+        por_cities = [c for c in eur if c.endswith(' POR')]
+        if not por_cities:
+            por_cities = ['Lisbon POR', 'Porto POR']
+        city_full = random.choice(por_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'POR', 'country': 'Portugal', 'region': 'portuguese'}
+
+    elif origin == 'polish':
+        # Use Warsaw as default; no dedicated city pool yet
+        return {'city': 'Warsaw', 'state': 'POL', 'country': 'Poland', 'region': 'polish'}
+
+    elif origin == 'czech':
+        return {'city': 'Prague', 'state': 'CZE', 'country': 'Czech Republic', 'region': 'czech'}
+
+    elif origin == 'central_asian':
+        ca = cities.get('central_asia', ['Almaty KAZ'])
+        city_full = random.choice(ca)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KAZ'
+        country_map = {
+            'KAZ': 'Kazakhstan', 'UZB': 'Uzbekistan',
+            'KGZ': 'Kyrgyzstan', 'TJK': 'Tajikistan', 'TKM': 'Turkmenistan',
+        }
+        country = country_map.get(country_code, 'Central Asia')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'central_asian'}
+
     else:  # American
         if region == 'northeast':
             city_pool = cities['northeast']['major'] + cities['northeast']['secondary']
@@ -605,6 +770,57 @@ def select_high_school(origin: str, hometown: Dict, pools: Dict) -> str:
             return f"{hometown['city']} gymnasium"
         else:
             return f"{hometown['city']} videregående skole"
+
+    elif origin == 'french':
+        return f"Lycée {hometown['city']}"
+
+    elif origin == 'german':
+        return f"{hometown['city']} Gymnasium"
+
+    elif origin == 'spanish':
+        return f"Instituto {hometown['city']}"
+
+    elif origin == 'italian':
+        return f"Liceo {hometown['city']}"
+
+    elif origin == 'dutch':
+        return f"{hometown['city']} Lyceum"
+
+    elif origin == 'russian':
+        return f"{hometown['city']} Sports School"
+
+    elif origin == 'turkish':
+        return f"{hometown['city']} Lisesi"
+
+    elif origin == 'arabic':
+        return f"{hometown['city']} Academy"
+
+    elif origin == 'indian':
+        return f"{hometown['city']} Public School"
+
+    elif origin == 'portuguese':
+        return f"Escola {hometown['city']}"
+
+    elif origin == 'polish':
+        return f"Liceum {hometown['city']}"
+
+    elif origin == 'czech':
+        return f"Gymnázium {hometown['city']}"
+
+    elif origin == 'central_asian':
+        return f"{hometown['city']} Sports Academy"
+
+    elif origin == 'east_asian':
+        country_code = hometown.get('state', 'JPN')
+        if country_code == 'JPN':
+            return f"{hometown['city']} High School"
+        elif country_code == 'KOR':
+            return f"{hometown['city']} High School"
+        else:
+            return f"{hometown['city']} Senior High School"
+
+    elif origin == 'southeast_asian':
+        return f"{hometown['city']} High School"
 
     else:  # American
         city = hometown['city'].lower().replace(' ', '_')

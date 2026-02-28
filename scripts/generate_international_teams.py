@@ -60,53 +60,53 @@ EL_TEAMS = {
     "sto": {
         "city": "Stockholm", "name": "Serpents", "abbr": "STO",
         "state": "SWE", "country": "Sweden", "division": "Nordic",
-        "franchise_rating": 78, "origins": ["nordic", "uk_european"],
+        "franchise_rating": 78, "origins": ["nordic"],
     },
     "hel": {
         "city": "Helsinki", "name": "Frost", "abbr": "HEL",
         "state": "FIN", "country": "Finland", "division": "Nordic",
-        "franchise_rating": 72, "origins": ["nordic", "uk_european"],
+        "franchise_rating": 72, "origins": ["nordic"],
     },
     "cop": {
         "city": "Copenhagen", "name": "Vikings", "abbr": "COP",
         "state": "DEN", "country": "Denmark", "division": "Nordic",
-        "franchise_rating": 75, "origins": ["nordic", "uk_european"],
+        "franchise_rating": 75, "origins": ["nordic"],
     },
     "osl": {
         "city": "Oslo", "name": "Trolls", "abbr": "OSL",
         "state": "NOR", "country": "Norway", "division": "Nordic",
-        "franchise_rating": 68, "origins": ["nordic", "uk_european"],
+        "franchise_rating": 68, "origins": ["nordic"],
     },
     "ams": {
         "city": "Amsterdam", "name": "Windmills", "abbr": "AMS",
         "state": "NED", "country": "Netherlands", "division": "Nordic",
-        "franchise_rating": 76, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 76, "origins": ["dutch", "nordic"],
     },
     # Continental Division
     "bru": {
         "city": "Brussels", "name": "Wolves", "abbr": "BRU",
         "state": "BEL", "country": "Belgium", "division": "Continental",
-        "franchise_rating": 70, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 70, "origins": ["dutch", "french"],
     },
     "ber": {
         "city": "Berlin", "name": "Iron Eagles", "abbr": "BER",
         "state": "GER", "country": "Germany", "division": "Continental",
-        "franchise_rating": 80, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 80, "origins": ["german", "nordic"],
     },
     "pra": {
         "city": "Prague", "name": "Golems", "abbr": "PRA",
         "state": "CZE", "country": "Czech Republic", "division": "Continental",
-        "franchise_rating": 66, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 66, "origins": ["czech", "german"],
     },
     "war": {
         "city": "Warsaw", "name": "Hussars", "abbr": "WAR",
         "state": "POL", "country": "Poland", "division": "Continental",
-        "franchise_rating": 64, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 64, "origins": ["polish", "german"],
     },
     "zur": {
         "city": "Zurich", "name": "Alpines", "abbr": "ZUR",
         "state": "CHE", "country": "Switzerland", "division": "Continental",
-        "franchise_rating": 73, "origins": ["uk_european", "nordic"],
+        "franchise_rating": 73, "origins": ["german", "french"],
     },
 }
 
@@ -133,7 +133,7 @@ AL_TEAMS = {
     "cas": {
         "city": "Casablanca", "name": "Atlas", "abbr": "CAS",
         "state": "MAR", "country": "Morocco", "division": "West",
-        "franchise_rating": 68, "origins": ["african", "uk_european"],
+        "franchise_rating": 68, "origins": ["arabic", "african"],
     },
     "abi": {
         "city": "Abidjan", "name": "Elephants", "abbr": "ABI",
@@ -159,7 +159,7 @@ AL_TEAMS = {
     "cai": {
         "city": "Cairo", "name": "Pharaohs", "abbr": "CAI",
         "state": "EGY", "country": "Egypt", "division": "East",
-        "franchise_rating": 71, "origins": ["african", "uk_european"],
+        "franchise_rating": 71, "origins": ["arabic", "african"],
     },
     "dar": {
         "city": "Dar es Salaam", "name": "Dhows", "abbr": "DAR",
@@ -244,7 +244,7 @@ LA_TEAMS = {
     "bue": {
         "city": "Buenos Aires", "name": "Gauchos", "abbr": "BUE",
         "state": "ARG", "country": "Argentina", "division": "Norte",
-        "franchise_rating": 74, "origins": ["latin_american", "uk_european"],
+        "franchise_rating": 74, "origins": ["latin_american", "italian"],
     },
     "bog": {
         "city": "Bogotá", "name": "Cóndores", "abbr": "BOG",
@@ -280,7 +280,7 @@ LA_TEAMS = {
     "stg": {
         "city": "Santiago", "name": "Mineros", "abbr": "STG",
         "state": "CHI", "country": "Chile", "division": "Caribe",
-        "franchise_rating": 71, "origins": ["latin_american", "uk_european"],
+        "franchise_rating": 71, "origins": ["latin_american", "spanish"],
     },
 }
 

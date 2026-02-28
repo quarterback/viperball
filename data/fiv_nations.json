@@ -30,16 +30,16 @@
         {"name": "South Africa", "code": "RSA", "tier": "strong", "name_pool": "african"},
         {"name": "Ghana", "code": "GHA", "tier": "competitive", "name_pool": "african"},
         {"name": "Kenya", "code": "KEN", "tier": "competitive", "name_pool": "african"},
-        {"name": "Egypt", "code": "EGY", "tier": "competitive", "name_pool": "african"},
-        {"name": "Morocco", "code": "MAR", "tier": "competitive", "name_pool": "african"},
+        {"name": "Egypt", "code": "EGY", "tier": "competitive", "name_pool": "arabic"},
+        {"name": "Morocco", "code": "MAR", "tier": "competitive", "name_pool": "arabic"},
         {"name": "Cameroon", "code": "CMR", "tier": "developing", "name_pool": "african"},
         {"name": "Senegal", "code": "SEN", "tier": "developing", "name_pool": "african"},
         {"name": "Côte d'Ivoire", "code": "CIV", "tier": "developing", "name_pool": "african"},
         {"name": "Tanzania", "code": "TAN", "tier": "developing", "name_pool": "african"},
-        {"name": "Saudi Arabia", "code": "KSA", "tier": "developing", "name_pool": "african"},
-        {"name": "Iran", "code": "IRN", "tier": "developing", "name_pool": "african"},
+        {"name": "Saudi Arabia", "code": "KSA", "tier": "developing", "name_pool": "arabic"},
+        {"name": "Iran", "code": "IRN", "tier": "developing", "name_pool": "arabic"},
         {"name": "Israel", "code": "ISR", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "UAE", "code": "UAE", "tier": "developing", "name_pool": "african"}
+        {"name": "UAE", "code": "UAE", "tier": "developing", "name_pool": "arabic"}
       ]
     },
     "evv": {
@@ -49,21 +49,21 @@
       "wc_spots": 6,
       "nations": [
         {"name": "Sweden", "code": "SWE", "tier": "strong", "name_pool": "nordic"},
-        {"name": "Germany", "code": "GER", "tier": "strong", "name_pool": "uk_european"},
-        {"name": "Netherlands", "code": "NED", "tier": "strong", "name_pool": "uk_european"},
-        {"name": "France", "code": "FRA", "tier": "strong", "name_pool": "uk_european"},
+        {"name": "Germany", "code": "GER", "tier": "strong", "name_pool": "german"},
+        {"name": "Netherlands", "code": "NED", "tier": "strong", "name_pool": "dutch"},
+        {"name": "France", "code": "FRA", "tier": "strong", "name_pool": "french"},
         {"name": "United Kingdom", "code": "GBR", "tier": "competitive", "name_pool": "uk_european"},
         {"name": "Norway", "code": "NOR", "tier": "competitive", "name_pool": "nordic"},
         {"name": "Denmark", "code": "DEN", "tier": "competitive", "name_pool": "nordic"},
         {"name": "Finland", "code": "FIN", "tier": "competitive", "name_pool": "nordic"},
-        {"name": "Spain", "code": "ESP", "tier": "competitive", "name_pool": "latin_american"},
-        {"name": "Italy", "code": "ITA", "tier": "competitive", "name_pool": "uk_european"},
-        {"name": "Poland", "code": "POL", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "Czech Republic", "code": "CZE", "tier": "developing", "name_pool": "uk_european"},
+        {"name": "Spain", "code": "ESP", "tier": "competitive", "name_pool": "spanish"},
+        {"name": "Italy", "code": "ITA", "tier": "competitive", "name_pool": "italian"},
+        {"name": "Poland", "code": "POL", "tier": "developing", "name_pool": "polish"},
+        {"name": "Czech Republic", "code": "CZE", "tier": "developing", "name_pool": "czech"},
         {"name": "Ireland", "code": "IRL", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "Portugal", "code": "POR", "tier": "developing", "name_pool": "latin_american"},
-        {"name": "Belgium", "code": "BEL", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "Ukraine", "code": "UKR", "tier": "developing", "name_pool": "uk_european"}
+        {"name": "Portugal", "code": "POR", "tier": "developing", "name_pool": "portuguese"},
+        {"name": "Belgium", "code": "BEL", "tier": "developing", "name_pool": "dutch"},
+        {"name": "Ukraine", "code": "UKR", "tier": "developing", "name_pool": "russian"}
       ]
     },
     "aav": {
@@ -74,13 +74,13 @@
       "nations": [
         {"name": "Japan", "code": "JPN", "tier": "strong", "name_pool": "east_asian"},
         {"name": "South Korea", "code": "KOR", "tier": "strong", "name_pool": "east_asian"},
-        {"name": "Russia", "code": "RUS", "tier": "strong", "name_pool": "uk_european"},
+        {"name": "Russia", "code": "RUS", "tier": "strong", "name_pool": "russian"},
         {"name": "China", "code": "CHN", "tier": "competitive", "name_pool": "east_asian"},
-        {"name": "India", "code": "IND", "tier": "developing", "name_pool": "african"},
+        {"name": "India", "code": "IND", "tier": "developing", "name_pool": "indian"},
         {"name": "Thailand", "code": "THA", "tier": "developing", "name_pool": "southeast_asian"},
-        {"name": "Kazakhstan", "code": "KAZ", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "Turkey", "code": "TUR", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "Uzbekistan", "code": "UZB", "tier": "developing", "name_pool": "uk_european"},
+        {"name": "Kazakhstan", "code": "KAZ", "tier": "developing", "name_pool": "central_asian"},
+        {"name": "Turkey", "code": "TUR", "tier": "developing", "name_pool": "turkish"},
+        {"name": "Uzbekistan", "code": "UZB", "tier": "developing", "name_pool": "central_asian"},
         {"name": "Mongolia", "code": "MGL", "tier": "developing", "name_pool": "east_asian"}
       ]
     },
