@@ -57,6 +57,77 @@ DEFENSE_STYLE_MODS = {
     "man_press":    {"yards_mult": 0.90, "turnover_mult": 1.15, "dk_suppress": 1.05},
 }
 
+# ═══════════════════════════════════════════════════════════════
+# V2.7 COACHING FLAVOR (No Named Coaches)
+# ═══════════════════════════════════════════════════════════════
+# Maps offense_style → (points_mult, variance_mult)
+# points_mult: base scoring tendency (explosive styles score more, grinders less)
+# variance_mult: how wild the game-to-game swings are (1.0 = baseline)
+COACHING_FLAVOR = {
+    # Explosive / aggressive styles → higher ceiling, wilder swings
+    "air_raid":       (1.08, 1.30),
+    "lateral_chaos":  (1.06, 1.35),
+    "tempo":          (1.07, 1.20),
+    "power_spread":   (1.04, 1.10),
+    # Grinding / conservative styles → lower scoring, tighter outcomes
+    "ground_pound":   (0.93, 0.75),
+    "smashmouth":     (0.91, 0.70),
+    "triple_option":  (0.95, 0.80),
+    # Balanced / methodical → close to neutral, slightly tighter
+    "balanced":       (1.00, 0.90),
+    "west_coast":     (1.03, 0.95),
+}
+
+# Defense style also shifts expected points allowed
+DEFENSE_COACHING_FLAVOR = {
+    "swarm":         0.00,   # neutral
+    "bend_no_break": 0.03,   # gives up yards, saves points → opponent scores a bit more
+    "blitz_heavy":  -0.05,   # aggressive → suppress opponent scoring
+    "zone":          0.02,   # conservative → slightly more porous
+    "man_press":    -0.03,   # tight coverage → suppress opponent scoring
+}
+
+
+def _coaching_flavor(team, rng: random.Random) -> float:
+    """
+    Derive a coaching-personality multiplier from team identity.
+
+    Pro teams don't have named coaches — this extracts coaching-like
+    scoring effects from offense_style, defense_style, and prestige.
+    Returns a multiplier for expected points (0.80-1.20 range).
+    """
+    style = getattr(team, 'offense_style', 'balanced')
+    pts_mult, var_mult = COACHING_FLAVOR.get(style, (1.00, 1.00))
+
+    # Defense style shifts the opponent's expected points, but here
+    # we use it to color this team's scoring envelope
+    def_style = getattr(team, 'defense_style', 'swarm')
+    def_shift = DEFENSE_COACHING_FLAVOR.get(def_style, 0.0)
+    # A blitz-heavy defense correlates with an aggressive coaching
+    # philosophy that also pushes offense harder
+    pts_mult -= def_shift  # blitz_heavy: -(-0.05) = +0.05 boost
+
+    # Prestige widens the gap: elite teams get more from good coaching,
+    # weak teams suffer more from bad coaching
+    prestige = getattr(team, 'prestige', 50)
+    prestige_factor = (prestige - 50) / 200.0  # -0.25 to +0.25
+    pts_mult += prestige_factor * abs(pts_mult - 1.0) * 1.5
+
+    # High-prestige → tighter variance (consistent); low → wilder
+    if prestige >= 80:
+        var_mult *= 0.85
+    elif prestige >= 65:
+        var_mult *= 0.92
+    elif prestige <= 30:
+        var_mult *= 1.20
+    elif prestige <= 45:
+        var_mult *= 1.10
+
+    # Game-to-game random swing within the variance envelope
+    swing = rng.gauss(0, 0.04) * var_mult
+
+    return max(0.80, min(1.20, pts_mult + swing))
+
 
 def _team_strength(team) -> float:
     """Calculate composite team strength (0-100 scale) from ratings."""
@@ -841,6 +912,10 @@ def fast_sim_game(home_team, away_team,
 
     home_expected = _expected_points(home_str, away_def, rng)
     away_expected = _expected_points(away_str, home_def, rng)
+
+    # V2.7: Coaching flavor — style/prestige → scoring personality
+    home_expected *= _coaching_flavor(home_team, rng)
+    away_expected *= _coaching_flavor(away_team, rng)
 
     if not neutral_site:
         home_expected *= rng.uniform(1.02, 1.12)

@@ -942,15 +942,8 @@ def _year_to_age(year: str, rng: random.Random) -> int:
 
 
 def _coach_to_dict(card) -> dict:
-    """Convert a CoachCard to a simple dict."""
-    return {
-        "coach_id": card.coach_id,
-        "first_name": card.first_name,
-        "last_name": card.last_name,
-        "role": card.role,
-        "classification": card.classification,
-        "overall": card.overall,
-    }
+    """Convert a CoachCard to a serializable dict (full attributes)."""
+    return card.to_dict()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -979,6 +972,23 @@ def _play_match(
 
     seed = rng.randint(1, 999999) if rng else random.randint(1, 999999)
 
+    # Reconstruct coaching staffs from stored dicts
+    coaching_kwargs: Dict[str, Any] = {}
+    try:
+        from engine.coaching import CoachCard
+        if home_team.coaching_staff:
+            coaching_kwargs["home_coaching"] = {
+                role: CoachCard.from_dict(card_data)
+                for role, card_data in home_team.coaching_staff.items()
+            }
+        if away_team.coaching_staff:
+            coaching_kwargs["away_coaching"] = {
+                role: CoachCard.from_dict(card_data)
+                for role, card_data in away_team.coaching_staff.items()
+            }
+    except Exception:
+        pass  # Graceful fallback: engine runs without coaching
+
     engine = ViperballEngine(
         home_team=home_engine,
         away_team=away_engine,
@@ -988,6 +998,7 @@ def _play_match(
         home_prestige=home_team.rating,
         away_prestige=away_team.rating,
         is_playoff=(competition in ("wc_knockout", "continental_knockout", "playoff")),
+        **coaching_kwargs,
     )
     result = engine.simulate_game()
 
