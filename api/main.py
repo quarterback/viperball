@@ -67,6 +67,24 @@ from engine.db import (
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+from starlette.responses import RedirectResponse as StarletteRedirect
+
+
+class DomainRedirectMiddleware(BaseHTTPMiddleware):
+    """Redirect viperball.xyz root to the stats site."""
+
+    async def dispatch(self, request: StarletteRequest, call_next):
+        host = request.headers.get("host", "").split(":")[0]
+        if host == "viperball.xyz" and request.url.path == "/":
+            return StarletteRedirect("/stats/", status_code=302)
+        return await call_next(request)
+
+
+app.add_middleware(DomainRedirectMiddleware)
+
 # Mount the stats site as a sub-application so its Mount entry takes
 # precedence over NiceGUI's catch-all Mount("").  With include_router the
 # individual APIRoutes were checked first but /stats (no trailing slash)
