@@ -3076,12 +3076,21 @@ class ViperballEngine:
         self.away_dc_gameplan: Dict[str, float] = {}
         if home_coaching or away_coaching:
             from engine.coaching import compute_gameday_modifiers, roll_dc_gameplan
+            home_off_style = getattr(self.home_team, 'offense_style', 'balanced') if self.home_team else 'balanced'
+            away_off_style = getattr(self.away_team, 'offense_style', 'balanced') if self.away_team else 'balanced'
             if home_coaching:
-                self.home_coaching_mods = compute_gameday_modifiers(home_coaching)
+                self.home_coaching_mods = compute_gameday_modifiers(
+                    home_coaching, offense_style=home_off_style)
                 self.home_dc_gameplan = roll_dc_gameplan(home_coaching)
             if away_coaching:
-                self.away_coaching_mods = compute_gameday_modifiers(away_coaching)
+                self.away_coaching_mods = compute_gameday_modifiers(
+                    away_coaching, offense_style=away_off_style)
                 self.away_dc_gameplan = roll_dc_gameplan(away_coaching)
+
+        # V2.7: Lead management profiles — countermeasure tendencies + sensitivity
+        from engine.coaching import _default_lead_profile
+        self.home_lead_mgmt = self.home_coaching_mods.get("lead_management", _default_lead_profile())
+        self.away_lead_mgmt = self.away_coaching_mods.get("lead_management", _default_lead_profile())
 
         self.home_game_rhythm = random.gauss(1.0, 0.15)
         self.away_game_rhythm = random.gauss(1.0, 0.15)
@@ -4130,6 +4139,19 @@ class ViperballEngine:
                 base_time = 18
                 tempo_mult = 1.30 - tempo * 0.55
 
+            # ── V2.7: Lead management tempo modifier ──
+            # Vault coaches slow down; Avalanche/Counterpunch coaches speed up.
+            lm_tempo = self._lead_management_modifiers()
+            if lm_tempo:
+                t_mult = lm_tempo.get("tempo_mult", 1.0)
+                if t_mult != 1.0:
+                    # Higher tempo_mult = faster = less time per play (divide)
+                    if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                        base_time = int(base_time / max(0.70, min(1.30, t_mult)))
+                        base_time = max(15, min(45, base_time))
+                    else:
+                        tempo_mult = tempo_mult / max(0.70, min(1.30, t_mult))
+
             # ── 3-minute warning clock management ──
             is_three_min = (self.state.quarter in (2, 4) and
                             self.state.time_remaining < 180)
@@ -4669,6 +4691,12 @@ class ViperballEngine:
             int_kick_bias = min(0.20, score_diff / 50.0)  # up to +0.20 at 10+ pts
             kick_prob += int_kick_bias
 
+        # V2.7: Lead management kick mode bias
+        # Slow Drip coaches push toward kick mode; Avalanche coaches resist it.
+        lm_kick = self._lead_management_modifiers()
+        if lm_kick:
+            kick_prob += lm_kick.get("kick_mode_aggression_shift", 0.0)
+
         kick_prob = max(0.05, min(0.85, kick_prob))
 
         if random.random() < kick_prob:
@@ -4680,6 +4708,158 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.state.home_score - self.state.away_score
         return self.state.away_score - self.state.home_score
+
+    # ── V2.7: Lead Management Countermeasure Engine ──
+
+    def _lead_management_modifiers(self) -> Dict:
+        """
+        Compute lead-management modifiers for the current possession team.
+
+        Bidirectional: produces modifiers whether leading OR trailing.
+        Returns empty dict when the score differential is too small for
+        this coach's sensitivity to have engaged.
+        """
+        profile = (self.home_lead_mgmt if self.state.possession == "home"
+                   else self.away_lead_mgmt)
+        score_diff = self._get_score_diff()  # positive = leading
+
+        # Compute ramp (0.0 to 1.0) based on sensitivity
+        offset = profile["sensitivity_offset"]
+        rng = profile["sensitivity_range"]
+        abs_diff = abs(score_diff)
+        ramp = max(0.0, min(1.0, (abs_diff - offset) / max(1.0, rng)))
+
+        if ramp < 0.01:
+            return {}
+
+        leading = score_diff > 0
+        tendencies = profile["tendencies"]
+        band_lo, band_hi = profile["thermostat_band"]
+
+        mods = {
+            "run_weight_mult": 1.0,
+            "kick_pass_weight_mult": 1.0,
+            "lateral_weight_mult": 1.0,
+            "trick_weight_mult": 1.0,
+            "snap_kick_weight_mult": 1.0,
+            "field_goal_weight_mult": 1.0,
+            "tempo_mult": 1.0,
+            "kick_mode_aggression_shift": 0.0,
+            "formation_heavy_shift": 0.0,
+            "td_suppression": 0.0,
+        }
+
+        if leading:
+            self._apply_leading_countermeasures(
+                mods, tendencies, score_diff, band_lo, band_hi)
+        else:
+            self._apply_trailing_countermeasures(mods, tendencies, abs_diff)
+
+        # Apply ramp to all modifiers — gradual engagement
+        for k in mods:
+            if k == "td_suppression":
+                mods[k] *= ramp
+            elif "mult" in k and mods[k] != 1.0:
+                mods[k] = 1.0 + (mods[k] - 1.0) * ramp
+            elif "shift" in k:
+                mods[k] *= ramp
+
+        return mods
+
+    def _apply_leading_countermeasures(self, mods, tendencies, lead,
+                                       band_lo, band_hi):
+        """Apply countermeasure effects when this team is leading."""
+
+        # AVALANCHE: boost explosive plays, maintain/increase tempo
+        w = tendencies.get("avalanche", 0)
+        mods["kick_pass_weight_mult"] += w * 0.30
+        mods["lateral_weight_mult"] += w * 0.25
+        mods["trick_weight_mult"] += w * 0.20
+        mods["tempo_mult"] += w * 0.10
+        mods["run_weight_mult"] -= w * 0.15
+
+        # THERMOSTAT: modulate based on target band
+        w = tendencies.get("thermostat", 0)
+        if lead < band_lo:
+            # Below target band: open up offense
+            mods["kick_pass_weight_mult"] += w * 0.20
+            mods["tempo_mult"] += w * 0.05
+        elif lead > band_hi:
+            # Above target band: throttle down
+            mods["run_weight_mult"] += w * 0.25
+            mods["kick_pass_weight_mult"] -= w * 0.20
+            mods["lateral_weight_mult"] -= w * 0.25
+            mods["tempo_mult"] -= w * 0.10
+            mods["kick_mode_aggression_shift"] += w * 0.15
+        else:
+            # In band: slight conservative tilt
+            mods["run_weight_mult"] += w * 0.05
+
+        # VAULT: grind, possess, deny opponent touches
+        w = tendencies.get("vault", 0)
+        mods["run_weight_mult"] += w * 0.40
+        mods["kick_pass_weight_mult"] -= w * 0.30
+        mods["lateral_weight_mult"] -= w * 0.35
+        mods["trick_weight_mult"] -= w * 0.30
+        mods["tempo_mult"] -= w * 0.20
+        mods["formation_heavy_shift"] += w * 0.25
+
+        # COUNTERPUNCH: maintain offensive aggression even when leading
+        w = tendencies.get("counterpunch", 0)
+        mods["kick_pass_weight_mult"] += w * 0.15
+        mods["lateral_weight_mult"] += w * 0.10
+        mods["tempo_mult"] += w * 0.05
+
+        # SLOW DRIP: soft-score only — FGs and snap kicks, avoid TDs
+        w = tendencies.get("slow_drip", 0)
+        mods["snap_kick_weight_mult"] += w * 0.40
+        mods["field_goal_weight_mult"] += w * 0.35
+        mods["kick_mode_aggression_shift"] += w * 0.25
+        mods["td_suppression"] += w * 0.30
+        mods["run_weight_mult"] += w * 0.10
+        mods["kick_pass_weight_mult"] -= w * 0.15
+        mods["lateral_weight_mult"] -= w * 0.20
+
+    def _apply_trailing_countermeasures(self, mods, tendencies, deficit):
+        """Apply countermeasure effects when this team is trailing."""
+
+        # AVALANCHE trailing: stay aggressive, don't change identity
+        w = tendencies.get("avalanche", 0)
+        mods["kick_pass_weight_mult"] += w * 0.25
+        mods["lateral_weight_mult"] += w * 0.20
+        mods["trick_weight_mult"] += w * 0.25
+        mods["tempo_mult"] += w * 0.15
+        mods["run_weight_mult"] -= w * 0.20
+
+        # THERMOSTAT trailing: measured increase, chip away
+        w = tendencies.get("thermostat", 0)
+        mods["kick_pass_weight_mult"] += w * 0.15
+        mods["tempo_mult"] += w * 0.08
+        mods["run_weight_mult"] += w * 0.05
+
+        # VAULT trailing: trust defense, grind back, won't gamble
+        w = tendencies.get("vault", 0)
+        mods["run_weight_mult"] += w * 0.20
+        mods["kick_pass_weight_mult"] -= w * 0.10
+        mods["lateral_weight_mult"] -= w * 0.15
+        mods["trick_weight_mult"] -= w * 0.15
+        mods["tempo_mult"] -= w * 0.08
+        mods["formation_heavy_shift"] += w * 0.15
+
+        # COUNTERPUNCH trailing: energized, offensive boost
+        w = tendencies.get("counterpunch", 0)
+        mods["kick_pass_weight_mult"] += w * 0.30
+        mods["lateral_weight_mult"] += w * 0.25
+        mods["trick_weight_mult"] += w * 0.20
+        mods["tempo_mult"] += w * 0.12
+        mods["run_weight_mult"] -= w * 0.10
+
+        # SLOW DRIP trailing: chip away with kicks, won't swing for fences
+        w = tendencies.get("slow_drip", 0)
+        mods["snap_kick_weight_mult"] += w * 0.25
+        mods["field_goal_weight_mult"] += w * 0.20
+        mods["kick_mode_aggression_shift"] += w * 0.15
+        mods["kick_pass_weight_mult"] += w * 0.05
 
     def _resolve_kick_type(self) -> PlayType:
         result = self.select_kick_decision()
@@ -5162,6 +5342,18 @@ class ViperballEngine:
             base["spread"] -= 0.05
             base["split"] += 0.05
 
+        # ── V2.7: Lead management formation shift ──
+        lm_form = self._lead_management_modifiers()
+        if lm_form:
+            h_shift = lm_form.get("formation_heavy_shift", 0.0)
+            if h_shift > 0.01:
+                base["heavy"] += h_shift
+                base["tight"] += h_shift * 0.5
+                base["spread"] -= h_shift * 0.8
+            elif h_shift < -0.01:
+                base["spread"] += abs(h_shift) * 0.6
+                base["heavy"] -= abs(h_shift) * 0.5
+
         # ── Normalize (floor at 0.01 to avoid zero weights) ──
         total = sum(max(0.01, v) for v in base.values())
         norm = {k: max(0.01, v) / total for k, v in base.items()}
@@ -5418,6 +5610,28 @@ class ViperballEngine:
             run_boost = 1.0 + int_caution * 0.4
             weights["dive_option"] = weights.get("dive_option", 0.1) * run_boost
             weights["power"] = weights.get("power", 0.1) * run_boost
+
+        # ── V2.7: Lead management countermeasure modifiers ──
+        # Applies the coach's countermeasure profile (Avalanche, Thermostat,
+        # Vault, Counterpunch, Slow Drip) as weight multipliers.  Active when
+        # leading OR trailing, scaled by the coach's sensitivity ramp.
+        lm = self._lead_management_modifiers()
+        if lm:
+            for rk in ("dive_option", "power", "sweep_option", "speed_option"):
+                weights[rk] = weights.get(rk, 0.05) * max(0.3, lm["run_weight_mult"])
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * max(0.3, lm["kick_pass_weight_mult"])
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * max(0.2, lm["lateral_weight_mult"])
+            weights["trick_play"] = weights.get("trick_play", 0.05) * max(0.2, lm["trick_weight_mult"])
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * max(0.3, lm["snap_kick_weight_mult"])
+            weights["field_goal"] = weights.get("field_goal", 0.06) * max(0.3, lm["field_goal_weight_mult"])
+
+            # TD suppression: in red zone when leading, shift weight from TDs to kicks
+            if lm["td_suppression"] > 0.05 and fp >= 80:
+                suppress = lm["td_suppression"]
+                for rk in ("dive_option", "power", "sweep_option", "speed_option", "kick_pass"):
+                    weights[rk] = weights.get(rk, 0.05) * max(0.3, 1.0 - suppress * 0.5)
+                weights["snap_kick"] = weights.get("snap_kick", 0.08) * (1.0 + suppress * 1.5)
+                weights["field_goal"] = weights.get("field_goal", 0.06) * (1.0 + suppress * 1.5)
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
@@ -6915,6 +7129,20 @@ class ViperballEngine:
                 dc_gp = self._def_dc_gameplan()
                 dc_suppression = dc_gp.get(dc_type, 1.0)
                 center *= dc_suppression
+
+        # ── V2.7: Counterpunch — permissive defense when leading big ──
+        # When the defensive team's coach has strong Counterpunch tendency
+        # and is leading by 14+, they deliberately soften defensive effort
+        # to let the opponent score quickly (resetting Delta Yards penalty).
+        def_lead_mgmt = (self.away_lead_mgmt if self.state.possession == "home"
+                         else self.home_lead_mgmt)
+        def_score = (-self._get_score_diff())  # positive = def team leading
+        if def_score > 14:
+            cp = def_lead_mgmt.get("tendencies", {}).get("counterpunch", 0)
+            if cp > 0.20:
+                # Weaken DC suppression proportional to Counterpunch tendency
+                cp_weaken = 1.0 + min(0.15, cp * 0.3)  # up to +15% yards allowed
+                center *= cp_weaken
 
         # ── V2.5: Brick Wall defensive prestige — run suppression ──
         # Opposing run plays get -8% yardage center against a Brick Wall defense.

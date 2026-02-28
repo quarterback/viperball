@@ -344,6 +344,67 @@ HIDDEN_TRAIT_LABELS = {
 
 
 # ──────────────────────────────────────────────
+# V2.7 LEAD MANAGEMENT COUNTERMEASURES
+# ──────────────────────────────────────────────
+# Each HC gets a normalized 5-tendency blend that shapes how the
+# coaching AI adjusts offense (and defense) based on score differential.
+# The profile is bidirectional — it modulates behavior when leading AND
+# trailing.  Derived entirely from existing coach attributes at game init.
+
+COUNTERMEASURE_NAMES = (
+    "avalanche",
+    "thermostat",
+    "vault",
+    "counterpunch",
+    "slow_drip",
+)
+
+COUNTERMEASURE_LABELS = {
+    "avalanche":    "Avalanche",
+    "thermostat":   "Thermostat",
+    "vault":        "Vault",
+    "counterpunch": "Counterpunch",
+    "slow_drip":    "Slow Drip",
+}
+
+COUNTERMEASURE_DESCRIPTIONS = {
+    "avalanche":    "Keep scoring aggressively regardless of lead; accept Delta Yards penalty.",
+    "thermostat":   "Modulate offense to maintain lead within a target band; throttle up or down.",
+    "vault":        "Possess the ball, grind clock, and deny opponent touches.",
+    "counterpunch": "Accept opponent scores to reset Delta Yards; re-attack from better field position.",
+    "slow_drip":    "Score with FGs and snap kicks only; avoid TDs to keep Delta penalty manageable.",
+}
+
+# Classification → base tendency boosts (before personality blending).
+# Values are in 0-1 scale, multiplied by 100 when applied to raw scores.
+CLASSIFICATION_COUNTERMEASURE_BIAS = {
+    "motivator":       {"avalanche": 0.15, "counterpunch": 0.15},
+    "gameday_manager": {"thermostat": 0.25},
+    "disciplinarian":  {"vault": 0.20, "slow_drip": 0.05},
+    "scheme_master":   {"slow_drip": 0.20, "thermostat": 0.05},
+    "players_coach":   {"counterpunch": 0.10, "thermostat": 0.10},
+}
+
+# Offensive style → tendency boosts
+STYLE_COUNTERMEASURE_BIAS = {
+    "chain_gang":      {"avalanche": 0.15, "counterpunch": 0.10},
+    "lateral_spread":  {"avalanche": 0.15, "counterpunch": 0.10},
+    "ghost":           {"avalanche": 0.10, "counterpunch": 0.05},
+    "shock_and_awe":   {"avalanche": 0.20},
+    "ground_pound":    {"vault": 0.20, "slow_drip": 0.05},
+    "ball_control":    {"vault": 0.10, "thermostat": 0.15},
+    "boot_raid":       {"slow_drip": 0.25},
+    "stampede":        {"avalanche": 0.10, "vault": 0.05},
+    "slick_n_slide":   {"thermostat": 0.15},
+    "east_coast":      {"thermostat": 0.10, "slow_drip": 0.10},
+    "balanced":        {"thermostat": 0.15},
+}
+
+# Thermostat target band defaults (points of lead)
+DEFAULT_THERMOSTAT_BAND = (10, 18)
+
+
+# ──────────────────────────────────────────────
 # SALARY TIERS  (coaching budget, not NIL)
 # ──────────────────────────────────────────────
 
@@ -2128,6 +2189,7 @@ def compute_scouting_error(
 def compute_gameday_modifiers(
     coaching_staff: Dict[str, CoachCard],
     rng: Optional[random.Random] = None,
+    offense_style: str = "balanced",
 ) -> Dict[str, float]:
     """
     Compute aggregate gameday modifiers from the full coaching staff.
@@ -2199,6 +2261,149 @@ def compute_gameday_modifiers(
         "hidden_trait_effects": h_trait_effects,
         # V2.4 — coaching dev aura (in-game rolling stat boost)
         "dev_aura": compute_dev_aura(coaching_staff),
+        # V2.7 — lead management countermeasure profile
+        "lead_management": compute_lead_management_profile(coaching_staff, offense_style),
+    }
+
+
+# ──────────────────────────────────────────────
+# V2.7: LEAD MANAGEMENT PROFILE
+# ──────────────────────────────────────────────
+
+
+def _norm95(val: float) -> float:
+    """Normalize a 25-95 attribute to 0-100 scale."""
+    return max(0.0, min(100.0, (val - 25) / 70.0 * 100.0))
+
+
+def _default_lead_profile() -> Dict:
+    """Fallback lead management profile when no HC is available."""
+    return {
+        "tendencies": {
+            "avalanche": 0.15, "thermostat": 0.30, "vault": 0.25,
+            "counterpunch": 0.10, "slow_drip": 0.20,
+        },
+        "primary": "thermostat",
+        "sensitivity_offset": 7.0,
+        "sensitivity_range": 10.0,
+        "thermostat_band": DEFAULT_THERMOSTAT_BAND,
+    }
+
+
+def compute_lead_management_profile(
+    coaching_staff: Dict[str, CoachCard],
+    offense_style: str = "balanced",
+) -> Dict:
+    """
+    Compute lead management countermeasure profile from coaching staff.
+
+    Called once at game init.  Returns a dict consumed by the game engine
+    to modulate play selection, tempo, formations, and kick decisions
+    based on score differential.
+
+    The profile is bidirectional — it affects behavior when leading AND
+    trailing.  Each coach's 5-tendency blend is unique, derived from
+    personality sliders, classification, and offensive style.
+
+    Sensitivity controls how early and how strongly the coach reacts:
+    - High-reactivity coaches (aggressive, chaotic): offset ~1, range ~6
+    - Stoic coaches (stubborn, composed): offset ~11, range ~14
+
+    Returns:
+        {
+            "tendencies": {name: 0.0-1.0 for 5 countermeasures},
+            "primary": str (highest-weighted tendency),
+            "sensitivity_offset": float (1-12, when effects begin),
+            "sensitivity_range": float (6-15, points to full effect),
+            "thermostat_band": (lo, hi) target lead range,
+        }
+    """
+    hc = coaching_staff.get("head_coach")
+    if hc is None:
+        return _default_lead_profile()
+
+    sliders = hc.personality_sliders or {}
+    agg = sliders.get("aggression", 50)
+    risk = sliders.get("risk_tolerance", 50)
+    chaos = sliders.get("chaos_appetite", 50)
+    composure = sliders.get("composure_tendency", 50)
+    adapt = sliders.get("adaptability", 50)
+    stubborn = sliders.get("stubbornness", 50)
+    trust = sliders.get("player_trust", 50)
+    var_tol = sliders.get("variance_tolerance", 50)
+    tempo_pref = sliders.get("tempo_preference", 50)
+
+    inst = getattr(hc, "instincts", 60)   # hidden, 25-95
+    rot = getattr(hc, "rotations", 60)    # 25-95
+
+    # ── Raw tendency scores (weighted slider sums, 0-100 scale) ──
+
+    # Avalanche: aggression + risk + chaos + variance_tolerance + tempo
+    t_avalanche = (agg * 0.30 + risk * 0.25 + chaos * 0.20
+                   + var_tol * 0.15 + tempo_pref * 0.10)
+
+    # Thermostat: composure + adaptability - stubbornness - chaos
+    t_thermostat = (composure * 0.30 + adapt * 0.30
+                    + (100 - stubborn) * 0.25 + (100 - chaos) * 0.15)
+
+    # Vault: inverse risk + rotations + inverse chaos + inverse variance
+    t_vault = ((100 - risk) * 0.25 + _norm95(rot) * 0.30
+               + (100 - chaos) * 0.20 + (100 - var_tol) * 0.15
+               + (100 - tempo_pref) * 0.10)
+
+    # Counterpunch: player_trust + variance + risk + chaos + adaptability
+    t_counterpunch = (trust * 0.30 + var_tol * 0.25 + risk * 0.20
+                      + chaos * 0.15 + adapt * 0.10)
+
+    # Slow Drip: instincts + inverse aggression + composure + adaptability
+    t_slow_drip = (_norm95(inst) * 0.30 + (100 - agg) * 0.25
+                   + composure * 0.20 + adapt * 0.15
+                   + (100 - var_tol) * 0.10)
+
+    tendencies = {
+        "avalanche": t_avalanche,
+        "thermostat": t_thermostat,
+        "vault": t_vault,
+        "counterpunch": t_counterpunch,
+        "slow_drip": t_slow_drip,
+    }
+
+    # ── Apply classification bias ──
+    cls_bias = CLASSIFICATION_COUNTERMEASURE_BIAS.get(hc.classification, {})
+    for k, bonus in cls_bias.items():
+        tendencies[k] += bonus * 100  # scale to 0-100 space
+
+    # ── Apply offensive style bias ──
+    style_bias = STYLE_COUNTERMEASURE_BIAS.get(offense_style, {})
+    for k, bonus in style_bias.items():
+        tendencies[k] += bonus * 100
+
+    # ── Normalize to sum to 1.0 ──
+    total = sum(max(0.01, v) for v in tendencies.values())
+    tendencies = {k: max(0.01, v) / total for k, v in tendencies.items()}
+
+    primary = max(tendencies, key=tendencies.get)
+
+    # ── Sensitivity: how early and fast the coach reacts ──
+    # Reactive coaches (high agg, high chaos, low stubborn): low offset, short range
+    # Stoic coaches (low agg, high stubborn, high composure): high offset, long range
+    reactivity = (agg * 0.30 + chaos * 0.25 + (100 - stubborn) * 0.25
+                  + (100 - composure) * 0.20)
+    # reactivity 0-100 → offset 12 down to 1
+    sensitivity_offset = max(1.0, 12.0 - reactivity * 0.11)
+    # reactivity 0-100 → range 15 down to 6
+    sensitivity_range = max(6.0, 15.0 - reactivity * 0.09)
+
+    # ── Thermostat band: derived from risk tolerance and composure ──
+    band_lo = max(5, int(8 + (100 - risk) / 25))
+    band_hi = max(band_lo + 5, int(16 + risk / 20))
+
+    return {
+        "tendencies": tendencies,
+        "primary": primary,
+        "sensitivity_offset": round(sensitivity_offset, 1),
+        "sensitivity_range": round(sensitivity_range, 1),
+        "thermostat_band": (band_lo, band_hi),
     }
 
 

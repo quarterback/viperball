@@ -368,6 +368,8 @@ def choose_defensive_call(
     team_prestige: int = 50,
     opponent_prestige: int = 50,
     composure: float = 100.0,
+    # V2.7: Lead management profile (countermeasure tendencies)
+    lead_management: Optional[Dict] = None,
 ) -> DefensivePackage:
     """
     Choose a situational defensive package.
@@ -434,6 +436,16 @@ def choose_defensive_call(
     elif composure > 120:
         # Surging: more disciplined
         aggression = aggression * 0.95 + 0.55 * 0.05  # Drift toward optimal
+
+    # ── V2.7: Counterpunch — permissive defense when leading big ──
+    # Coaches with strong Counterpunch tendency reduce defensive aggression
+    # when leading by 14+, deliberately allowing opponent scores to reset
+    # the Delta Yards penalty and attack from better field position.
+    if lead_management and score_diff > 14:
+        cp_tendency = lead_management.get("tendencies", {}).get("counterpunch", 0)
+        if cp_tendency > 0.20:
+            cp_factor = min(0.30, cp_tendency * 0.5)
+            aggression = max(0.15, aggression - cp_factor)
 
     # ── V2: Desperation override ──
     # < 2:00 remaining, down by > 9: all-out aggression
