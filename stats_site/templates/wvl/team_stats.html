@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Team Stats — {{ tier_name }} — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Team Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ tier_name }} &mdash; TEAM STATS</h1>
+  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ selected_tier }}">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats" class="active">Team Stats</a>
+</div>
+
+{# Tier selector #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Tier:</strong>
+  {% for t in tier_list %}
+  {% if t == selected_tier %}
+  <span style="color:var(--accent);font-weight:bold">{{ tier_label(t) }}</span>
+  {% else %}
+  <a href="/stats/wvl/{{ session_id }}/team-stats?tier={{ t }}">{{ tier_label(t) }}</a>
+  {% endif %}
+  {% if not loop.last %} &middot; {% endif %}
+  {% endfor %}
+</div>
+
+{# Sort selector #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Sort:</strong>
+  {% for col, label in [('total_yards', 'Total Yards'), ('avg_yards', 'Avg Yards'), ('touchdowns', 'TDs'), ('rushing_yards', 'Rush Yards'), ('kp_yards', 'KP Yards'), ('lateral_yards', 'Lat Yards')] %}
+  {% if col == sort %}
+  <span style="color:var(--accent);font-weight:bold">{{ label }}</span>
+  {% else %}
+  <a href="/stats/wvl/{{ session_id }}/team-stats?tier={{ selected_tier }}&sort={{ col }}">{{ label }}</a>
+  {% endif %}
+  {% if not loop.last %} &middot; {% endif %}
+  {% endfor %}
+</div>
+
+{% if teams %}
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>W-L</th>
+      <th class="num">GP</th><th class="num">TOT YDS</th><th class="num">AVG</th>
+      <th class="num">TD</th><th class="num">RUSH</th>
+      <th class="num">KP</th><th class="num">LAT</th>
+      <th class="num">FUM</th><th class="num">PEN</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/wvl/{{ session_id }}/team/{{ t.team_key }}">{{ t.team }}</a></td>
+    <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+    <td class="num">{{ t.games }}</td>
+    <td class="num {% if loop.index <= 3 %}stat-good{% endif %}">{{ t.total_yards }}</td>
+    <td class="num">{{ t.avg_yards }}</td>
+    <td class="num {% if t.touchdowns >= 20 %}stat-elite{% elif t.touchdowns >= 10 %}stat-good{% endif %}">{{ t.touchdowns }}</td>
+    <td class="num">{{ t.rushing_yards }}</td>
+    <td class="num">{{ t.kp_yards }}</td>
+    <td class="num">{{ t.lateral_yards }}</td>
+    <td class="num {% if t.fumbles >= 10 %}stat-bad{% endif %}">{{ t.fumbles }}</td>
+    <td class="num {% if t.penalties >= 30 %}stat-bad{% endif %}">{{ t.penalties }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">No team stats available.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Player Stats — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Player Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>WVL &mdash; PLAYER STATS</h1>
+  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats" class="active">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
+</div>
+
+{# Tier selector #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Tier:</strong>
+  {% if selected_tier == 0 %}
+  <span style="color:var(--accent);font-weight:bold">All Tiers</span>
+  {% else %}
+  <a href="/stats/wvl/{{ session_id }}/stats?tier=0">All Tiers</a>
+  {% endif %}
+  {% for t in tier_list %}
+  &middot;
+  {% if t == selected_tier %}
+  <span style="color:var(--accent);font-weight:bold">{{ tier_label(t) }}</span>
+  {% else %}
+  <a href="/stats/wvl/{{ session_id }}/stats?tier={{ t }}">{{ tier_label(t) }}</a>
+  {% endif %}
+  {% endfor %}
+</div>
+
+{# Category selector #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Category:</strong>
+  {% for cat, label in [('all', 'All'), ('rushing', 'Rushing'), ('kick_pass', 'Kick-Pass'), ('defense', 'Defense')] %}
+  {% if cat == category %}
+  <span style="color:var(--accent);font-weight:bold">{{ label }}</span>
+  {% else %}
+  <a href="/stats/wvl/{{ session_id }}/stats?tier={{ selected_tier }}&category={{ cat }}">{{ label }}</a>
+  {% endif %}
+  {% if not loop.last %} &middot; {% endif %}
+  {% endfor %}
+</div>
+
+{% for tier_num, leaders in all_leaders.items() %}
+<h2>{{ tier_label(tier_num) }}</h2>
+
+{% if leaders is mapping %}
+  {% for cat_name, cat_leaders in leaders.items() %}
+  {% if cat_leaders %}
+  <h3>{{ cat_name | replace('_', ' ') | title }}</h3>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Name</th><th>Team</th><th class="num">Value</th></tr>
+    </thead>
+    <tbody>
+    {% for p in cat_leaders[:20] %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td>{{ p.get('name', '?') }}</td>
+      <td>{{ p.get('team', '') }}</td>
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('value', 0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endfor %}
+{% elif leaders is iterable and leaders is not string %}
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Name</th><th>Team</th><th class="num">Value</th></tr>
+    </thead>
+    <tbody>
+    {% for p in leaders[:20] %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td>{{ p.get('name', '?') }}</td>
+      <td>{{ p.get('team', '') }}</td>
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('value', 0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <pre style="color:var(--fg-dim);font-size:11px;">{{ leaders | tojson(indent=2) }}</pre>
+{% endif %}
+{% endfor %}
+
+{% if not all_leaders %}
+<div class="empty">No player stats available yet.</div>
+{% endif %}
+{% endblock %}

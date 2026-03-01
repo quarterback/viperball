@@ -50,6 +50,23 @@ def _set_phase(phase: str):
     app.storage.user[_WVL_PHASE_KEY] = phase
 
 
+def _register_wvl_season(dynasty, season):
+    """Register completed WVL season in shared state for the stats site."""
+    try:
+        from api.main import wvl_sessions
+        session_id = f"wvl_{dynasty.dynasty_name}_{dynasty.current_year - 1}"
+        session_id = session_id.lower().replace(" ", "_").replace("'", "")
+        wvl_sessions[session_id] = {
+            "season": season,
+            "dynasty": dynasty,
+            "dynasty_name": dynasty.dynasty_name,
+            "year": dynasty.current_year - 1,
+            "club_key": dynasty.owner.club_key,
+        }
+    except Exception:
+        pass  # Stats site not available
+
+
 # ═══════════════════════════════════════════════════════════════
 # SETUP PAGE
 # ═══════════════════════════════════════════════════════════════
@@ -219,6 +236,10 @@ def _render_dashboard(container):
                 offseason = dynasty.run_offseason(season, investment_budget=5.0, rng=rng)
 
                 _set_dynasty(dynasty)
+
+                # Register season in shared state for stats site
+                _register_wvl_season(dynasty, season)
+
                 ui.notify(
                     f"Season {dynasty.current_year - 1} complete! "
                     f"Bankroll: ${dynasty.owner.bankroll:.1f}M",

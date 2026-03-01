@@ -105,6 +105,7 @@ TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "te
 
 sessions: Dict[str, dict] = {}
 pro_sessions: Dict[str, ProLeagueSeason] = {}
+wvl_sessions: Dict[str, dict] = {}  # session_id → {"season": WVLMultiTierSeason, "dynasty": WVLDynasty}
 
 LEAGUE_CONFIGS: Dict[str, ProLeagueConfig] = dict(ALL_LEAGUE_CONFIGS)
 

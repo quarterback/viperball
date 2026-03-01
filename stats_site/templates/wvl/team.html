@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ team.get('team_name', team_key) }} — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>{{ team.get('team_name', team_key) }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team.get('team_name', team_key) }}{% if is_owner_club %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOUR CLUB</span>{% endif %}</h1>
+  <div class="subtitle">
+    {{ tier_name }}
+    {% if team.get('country') %} &middot; {{ team.country }}{% endif %}
+    {% if team.get('city') %} &middot; {{ team.city }}{% endif %}
+    {% if team.get('record') %} &middot; {{ team.record.get('wins', 0) }}-{{ team.record.get('losses', 0) }}{% endif %}
+    {% if team.get('narrative_tag') %} &middot; <span style="color:var(--yellow)">[{{ team.narrative_tag }}]</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ tier }}">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats?tier={{ tier }}">Team Stats</a>
+</div>
+
+{# ── Record / Metrics ── #}
+{% if team.get('record') %}
+{% set rec = team.record %}
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ rec.get('wins',0) }}</span>-<span class="l">{{ rec.get('losses',0) }}</span></div></div>
+  <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for',0) }}</div></div>
+  <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against',0) }}</div></div>
+  <div class="metric"><div class="label">Tier</div><div class="value" style="font-size:13px">{{ tier_name }}</div></div>
+</div>
+{% endif %}
+
+{# ── Roster ── #}
+{% set roster = team.get('roster', team.get('players', [])) %}
+{% if roster %}
+<h2>Roster ({{ roster|length }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
+      <th class="num">AGI</th><th class="num">KCK</th><th class="num">LAT</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in roster|sort(attribute='overall', reverse=true) if p is mapping %}
+  <tr>
+    <td class="num">{{ p.get('number', '') }}</td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ p.get('position', p.get('tag', '?')) }}</span></td>
+    <td class="num {% if p.get('overall', 0) >= 85 %}stat-elite{% elif p.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ p.get('overall', '?') }}</td>
+    <td class="num">{{ p.get('speed', '') }}</td>
+    <td class="num">{{ p.get('power', '') }}</td>
+    <td class="num">{{ p.get('agility', '') }}</td>
+    <td class="num">{{ p.get('kicking', '') }}</td>
+    <td class="num">{{ p.get('lateral_skill', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Schedule ── #}
+{% set games = team.get('schedule', team.get('games', [])) %}
+{% if games %}
+<h2>Schedule</h2>
+<table>
+  <thead><tr><th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for g in games %}
+  <tr>
+    <td class="num">{{ g.get('week', '?') }}</td>
+    <td style="color:var(--fg-dim)">{{ 'vs' if g.get('home') else '@' }}</td>
+    <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('opponent_key', '') }}">{{ g.get('opponent_name', g.get('opponent', '?')) }}</a></td>
+    <td>
+      {% if g.get('completed') and g.get('score') %}
+        {% if g.get('matchup_key') %}
+        <a href="/stats/wvl/{{ session_id }}/game/{{ tier }}/{{ g.week }}/{{ g.matchup_key }}" style="text-decoration:none;">
+          <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+          {{ g.score }}
+        </a>
+        {% else %}
+        <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+        {{ g.score }}
+        {% endif %}
+      {% elif g.get('result') %}{{ g.result }}
+      {% else %}<span style="color:var(--fg-dim)">&mdash;</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endblock %}

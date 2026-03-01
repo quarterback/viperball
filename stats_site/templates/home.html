@@ -7,9 +7,9 @@
   <div class="subtitle">Scores, standings, box scores, player stats &mdash; all leagues</div>
 </div>
 
-{% if college_sessions or pro_sessions or fiv_data %}
+{% if college_sessions or pro_sessions or wvl_sessions or fiv_data %}
 
-<div class="grid-3">
+<div class="grid-4">
 
   {# ── College ── #}
   <div>
@@ -50,6 +50,27 @@
     </table>
     {% else %}
     <p class="empty">No active pro leagues.</p>
+    {% endif %}
+  </div>
+
+  {# ── WVL ── #}
+  <div>
+    <h2>WVL (Women's)</h2>
+    {% if wvl_sessions %}
+    <table>
+      <thead><tr><th>Dynasty</th><th class="num">Year</th><th class="num">Tiers</th></tr></thead>
+      <tbody>
+      {% for s in wvl_sessions %}
+      <tr>
+        <td><a href="/stats/wvl/{{ s.session_id }}/">{{ s.dynasty_name }}</a></td>
+        <td class="num">{{ s.year }}</td>
+        <td class="num">{{ s.tier_count }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No active WVL seasons.</p>
     {% endif %}
   </div>
 
