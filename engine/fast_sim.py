@@ -261,21 +261,24 @@ def _generate_dye_data(total_yards: int, total_plays: int,
     bst_scores = sum(1 for _ in range(bst_count) if rng.random() < 0.35)
     neu_scores = sum(1 for _ in range(neu_count) if rng.random() < 0.28)
 
+    pen_sr = round(pen_scores / max(1, pen_count) * 100, 1)
+    bst_sr = round(bst_scores / max(1, bst_count) * 100, 1)
+
     return {
-        "penalized": {
+        "penalty_kill": {
             "count": pen_count,
             "total_yards": pen_yards,
             "scores": pen_scores,
             "yards_per_drive": round(pen_yards / max(1, pen_count), 1),
-            "score_rate": round(pen_scores / max(1, pen_count) * 100, 1),
+            "score_rate": pen_sr,
             "avg_delta": round(rng.uniform(3, 10), 1) if pen_count > 0 else 0.0,
         },
-        "boosted": {
+        "power_play": {
             "count": bst_count,
             "total_yards": bst_yards,
             "scores": bst_scores,
             "yards_per_drive": round(bst_yards / max(1, bst_count), 1),
-            "score_rate": round(bst_scores / max(1, bst_count) * 100, 1),
+            "score_rate": bst_sr,
             "avg_delta": round(rng.uniform(3, 10), 1) if bst_count > 0 else 0.0,
         },
         "neutral": {
@@ -286,6 +289,7 @@ def _generate_dye_data(total_yards: int, total_plays: int,
             "score_rate": round(neu_scores / max(1, neu_count) * 100, 1),
             "avg_delta": 0.0,
         },
+        "mess_rate": round(bst_sr - pen_sr, 1) if pen_count > 0 and bst_count > 0 else None,
     }
 
 
@@ -428,7 +432,8 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "penalty_yards": penalty_yards,
         "penalties_declined": max(0, round(rng.gauss(1.0, 0.8))),
         # DYE: delta kickoff system data
-        "dye": _generate_dye_data(total_yards, total_plays, scoring, rng),
+        "dye": (dye_data := _generate_dye_data(total_yards, total_plays, scoring, rng)),
+        "mess_rate": dye_data.get("mess_rate"),
         "bonus_possessions": max(0, round(rng.gauss(1.2, 0.8))),
         "bonus_possession_scores": 1 if rng.random() < 0.15 else 0,
         "bonus_possession_yards": max(0, round(rng.gauss(20, 12))),
@@ -436,7 +441,7 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
         "adjusted_yards": total_yards + round(rng.gauss(0, 8), 1),
         "delta_drives": max(0, round(rng.gauss(3, 1.5))),
         "delta_scores": max(0, round(rng.gauss(0.8, 0.6))),
-        "compelled_efficiency": round(rng.uniform(15, 45), 1),
+        "kill_rate": round(rng.uniform(15, 45), 1),
         "epa": {
             "total_epa": round(rng.gauss(0, 5), 2),
             "epa_per_play": round(rng.gauss(0, 0.1), 3),

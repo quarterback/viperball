@@ -1591,30 +1591,32 @@ async def _render_awards_stats(session_id, standings, user_team):
             })
         stat_table(leader_rows)
 
-    # DYE Season Analysis
+    # DYE Season Analysis — Power Play / Penalty Kill / Mess Rate
     dye_teams = [r for r in standings if r.get("dye")]
     if dye_teams:
-        ui.markdown("**DYE — Delta Yards Efficiency (Season)**")
+        ui.markdown("**DYE — Power Play / Penalty Kill (Season)**")
         ui.label("How much did the delta kickoff system help or hurt each team over the full season?").classes("text-sm text-gray-500 mb-2")
 
         dye_rows = []
         for r in dye_teams:
             dye = r["dye"]
-            pen = dye.get("penalized", {})
-            bst = dye.get("boosted", {})
+            pp = dye.get("power_play", {})
+            pk = dye.get("penalty_kill", {})
             neu = dye.get("neutral", {})
             bonus = dye.get("bonus_poss", {})
+            mr = dye.get("mess_rate")
+            pp_str = f"{pp.get('scores',0)}/{pp.get('drives',0)} ({pp.get('score_rate',0)}%)" if pp.get("drives", 0) > 0 else "—"
+            pk_str = f"{pk.get('scores',0)}/{pk.get('drives',0)} ({pk.get('score_rate',0)}%)" if pk.get("drives", 0) > 0 else "—"
             dye_rows.append({
                 "Team": _team_label(r["team_name"], user_team),
                 "W-L": f"{r['wins']}-{r['losses']}",
-                "Δ Pen Drives": pen.get("drives", 0),
-                "Pen YPD": pen.get("ypd", 0),
-                "Pen Score%": f"{pen.get('score_rate', 0)}%",
-                "Δ Boost Drives": bst.get("drives", 0),
-                "Boost YPD": bst.get("ypd", 0),
-                "Boost Score%": f"{bst.get('score_rate', 0)}%",
+                "PP Drives": pp.get("drives", 0),
+                "PP%": f"{pp.get('score_rate', 0)}%",
+                "PK Drives": pk.get("drives", 0),
+                "Kill Rate": f"{pk.get('score_rate', 0)}%",
+                "Mess Rate": str(mr) if mr is not None else "—",
                 "Net Yard Impact": int(dye.get("net_yard_impact", 0)),
-                "Opp Boost Scores": dye.get("opponent_boosted_scores", 0),
+                "Opp PP Scores": dye.get("opponent_power_play_scores", 0),
                 "Wins Despite Δ": dye.get("wins_despite_penalty", 0),
             })
         dye_rows.sort(key=lambda x: x["Net Yard Impact"])
@@ -1624,7 +1626,7 @@ async def _render_awards_stats(session_id, standings, user_team):
         chart_data = []
         for r in dye_teams:
             dye = r["dye"]
-            for bucket_key, label in [("penalized", "Leading"), ("boosted", "Trailing"), ("neutral", "Tied")]:
+            for bucket_key, label in [("penalty_kill", "Penalty Kill"), ("power_play", "Power Play"), ("neutral", "Neutral")]:
                 b = dye.get(bucket_key, {})
                 if b.get("drives", 0) > 0:
                     chart_data.append({"Team": r["team_name"], "Situation": label,

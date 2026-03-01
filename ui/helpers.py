@@ -198,14 +198,33 @@ def generate_box_score_markdown(result):
     h_delta_dr = hs.get('delta_drives', 0)
     a_delta_dr = as_.get('delta_drives', 0)
     if h_delta_dr or a_delta_dr:
-        h_ce = hs.get('compelled_efficiency')
-        a_ce = as_.get('compelled_efficiency')
+        h_kr = hs.get('kill_rate')
+        a_kr = as_.get('kill_rate')
         lines.append(f"| Delta Drives | {h_delta_dr} | {a_delta_dr} |")
         lines.append(f"| Delta Scores | {hs.get('delta_scores',0)} | {as_.get('delta_scores',0)} |")
-        if h_ce is not None or a_ce is not None:
-            h_ce_str = f"{h_ce}%" if h_ce is not None else "—"
-            a_ce_str = f"{a_ce}%" if a_ce is not None else "—"
-            lines.append(f"| Compelled Eff % | {h_ce_str} | {a_ce_str} |")
+        if h_kr is not None or a_kr is not None:
+            h_kr_str = f"{h_kr}%" if h_kr is not None else "—"
+            a_kr_str = f"{a_kr}%" if a_kr is not None else "—"
+            lines.append(f"| Kill Rate | {h_kr_str} | {a_kr_str} |")
+    # Power Play / Penalty Kill / Mess Rate line
+    h_dye = hs.get('dye', {})
+    a_dye = as_.get('dye', {})
+    h_pp = h_dye.get('power_play', {})
+    a_pp = a_dye.get('power_play', {})
+    h_pk = h_dye.get('penalty_kill', {})
+    a_pk = a_dye.get('penalty_kill', {})
+    if h_pp.get('count', 0) > 0 or a_pp.get('count', 0) > 0:
+        h_pp_str = f"{h_pp.get('scores',0)}/{h_pp.get('count',0)} ({h_pp.get('score_rate',0)}%)" if h_pp.get('count', 0) > 0 else "—"
+        a_pp_str = f"{a_pp.get('scores',0)}/{a_pp.get('count',0)} ({a_pp.get('score_rate',0)}%)" if a_pp.get('count', 0) > 0 else "—"
+        h_pk_str = f"{h_pk.get('scores',0)}/{h_pk.get('count',0)} ({h_pk.get('score_rate',0)}%)" if h_pk.get('count', 0) > 0 else "—"
+        a_pk_str = f"{a_pk.get('scores',0)}/{a_pk.get('count',0)} ({a_pk.get('score_rate',0)}%)" if a_pk.get('count', 0) > 0 else "—"
+        h_mr = hs.get('mess_rate')
+        a_mr = as_.get('mess_rate')
+        h_mr_str = str(h_mr) if h_mr is not None else "—"
+        a_mr_str = str(a_mr) if a_mr is not None else "—"
+        lines.append(f"| Power Play | {h_pp_str} | {a_pp_str} |")
+        lines.append(f"| Penalty Kill | {h_pk_str} | {a_pk_str} |")
+        lines.append(f"| Mess Rate | {h_mr_str} | {a_mr_str} |")
     lines.append(f"| Rushing Yards | {hs.get('rushing_yards',0)} | {as_.get('rushing_yards',0)} |")
     lines.append(f"| Lateral Yards | {hs.get('lateral_yards',0)} | {as_.get('lateral_yards',0)} |")
     lines.append(f"| Yards/Play | {hs['yards_per_play']} | {as_['yards_per_play']} |")
@@ -579,10 +598,27 @@ def render_game_detail(result, key_prefix="gd"):
             {"Stat": "Delta Drives", home_name: str(h_delta_dr), away_name: str(a_delta_dr)},
             {"Stat": "Delta Scores", home_name: str(hs.get('delta_scores', 0)), away_name: str(as_.get('delta_scores', 0))},
         ])
-        h_ce = hs.get('compelled_efficiency')
-        a_ce = as_.get('compelled_efficiency')
-        if h_ce is not None or a_ce is not None:
-            stat_rows.append({"Stat": "Compelled Eff %", home_name: f"{h_ce}%" if h_ce is not None else "—", away_name: f"{a_ce}%" if a_ce is not None else "—"})
+        h_kr = hs.get('kill_rate')
+        a_kr = as_.get('kill_rate')
+        if h_kr is not None or a_kr is not None:
+            stat_rows.append({"Stat": "Kill Rate", home_name: f"{h_kr}%" if h_kr is not None else "—", away_name: f"{a_kr}%" if a_kr is not None else "—"})
+        # Power Play / Penalty Kill / Mess Rate
+        h_dye2 = hs.get('dye', {})
+        a_dye2 = as_.get('dye', {})
+        h_pp2 = h_dye2.get('power_play', {})
+        a_pp2 = a_dye2.get('power_play', {})
+        h_pk2 = h_dye2.get('penalty_kill', {})
+        a_pk2 = a_dye2.get('penalty_kill', {})
+        def _fmt_pp_pk(bucket):
+            if bucket.get("count", 0) == 0:
+                return "—"
+            return f"{bucket['scores']}/{bucket['count']} ({bucket['score_rate']}%)"
+        if h_pp2.get('count', 0) > 0 or a_pp2.get('count', 0) > 0:
+            stat_rows.append({"Stat": "Power Play", home_name: _fmt_pp_pk(h_pp2), away_name: _fmt_pp_pk(a_pp2)})
+            stat_rows.append({"Stat": "Penalty Kill", home_name: _fmt_pp_pk(h_pk2), away_name: _fmt_pp_pk(a_pk2)})
+            h_mr2 = hs.get('mess_rate')
+            a_mr2 = as_.get('mess_rate')
+            stat_rows.append({"Stat": "Mess Rate", home_name: str(h_mr2) if h_mr2 is not None else "—", away_name: str(a_mr2) if a_mr2 is not None else "—"})
     st.dataframe(pd.DataFrame(stat_rows), hide_index=True, use_container_width=True)
 
     ps = result.get("player_stats", {})

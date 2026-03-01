@@ -333,17 +333,17 @@ def _render_results(container, results):
             metric_card(f"Avg {home_name} Explosiveness", round(sum(home_exp) / n, 3))
             metric_card(f"Avg {away_name} Explosiveness", round(sum(away_exp) / n, 3))
 
-        # -- DYE (Delta Yards Efficiency) across batch ---------------------------
-        ui.label("DYE — Delta Yards Efficiency (Batch)").classes("text-base font-bold mt-4")
+        # -- DYE (Power Play / Penalty Kill) across batch -------------------------
+        ui.label("DYE — Power Play / Penalty Kill (Batch)").classes("text-base font-bold mt-4")
         ui.label("How much did delta kickoff and bonus possessions affect outcomes across all games?").classes("text-sm text-gray-500")
 
-        all_pen_ypd = []
-        all_bst_ypd = []
+        all_pk_ypd = []
+        all_pp_ypd = []
         all_neu_ypd = []
-        all_pen_sr = []
-        all_bst_sr = []
+        all_pk_sr = []
+        all_pp_sr = []
         all_neu_sr = []
-        total_opp_boost_scores = 0
+        total_opp_pp_scores = 0
         wins_despite_delta = 0
         total_bonus_scores = 0
         total_bonus_drives = 0
@@ -351,15 +351,15 @@ def _render_results(container, results):
         for r in results:
             for side in ["home", "away"]:
                 dye = r["stats"][side].get("dye", {})
-                pen = dye.get("penalized", {})
-                bst = dye.get("boosted", {})
+                pk = dye.get("penalty_kill", {})
+                pp = dye.get("power_play", {})
                 neu = dye.get("neutral", {})
-                if pen.get("count", 0) > 0:
-                    all_pen_ypd.append(pen["yards_per_drive"])
-                    all_pen_sr.append(pen["score_rate"])
-                if bst.get("count", 0) > 0:
-                    all_bst_ypd.append(bst["yards_per_drive"])
-                    all_bst_sr.append(bst["score_rate"])
+                if pk.get("count", 0) > 0:
+                    all_pk_ypd.append(pk["yards_per_drive"])
+                    all_pk_sr.append(pk["score_rate"])
+                if pp.get("count", 0) > 0:
+                    all_pp_ypd.append(pp["yards_per_drive"])
+                    all_pp_sr.append(pp["score_rate"])
                 if neu.get("count", 0) > 0:
                     all_neu_ypd.append(neu["yards_per_drive"])
                     all_neu_sr.append(neu["score_rate"])
@@ -370,39 +370,41 @@ def _render_results(container, results):
             loser = "away" if winner == "home" else "home"
             w_dye = r["stats"][winner].get("dye", {})
             l_dye = r["stats"][loser].get("dye", {})
-            if w_dye.get("penalized", {}).get("count", 0) > 0:
+            if w_dye.get("penalty_kill", {}).get("count", 0) > 0:
                 wins_despite_delta += 1
-            total_opp_boost_scores += l_dye.get("boosted", {}).get("scores", 0)
+            total_opp_pp_scores += l_dye.get("power_play", {}).get("scores", 0)
 
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            avg_pen = round(sum(all_pen_ypd) / max(1, len(all_pen_ypd)), 1) if all_pen_ypd else 0
-            avg_bst = round(sum(all_bst_ypd) / max(1, len(all_bst_ypd)), 1) if all_bst_ypd else 0
+            avg_pk = round(sum(all_pk_ypd) / max(1, len(all_pk_ypd)), 1) if all_pk_ypd else 0
+            avg_pp = round(sum(all_pp_ypd) / max(1, len(all_pp_ypd)), 1) if all_pp_ypd else 0
             avg_neu = round(sum(all_neu_ypd) / max(1, len(all_neu_ypd)), 1) if all_neu_ypd else 0
-            metric_card("Penalized YPD", avg_pen)
-            metric_card("Boosted YPD", avg_bst)
+            metric_card("Penalty Kill YPD", avg_pk)
+            metric_card("Power Play YPD", avg_pp)
             metric_card("Neutral YPD", avg_neu)
-            dye_ratio = round(avg_pen / avg_neu, 2) if avg_neu > 0 else "—"
-            metric_card("DYE Ratio (Pen/Neu)", dye_ratio)
+            dye_ratio = round(avg_pk / avg_neu, 2) if avg_neu > 0 else "—"
+            metric_card("DYE Ratio (PK/Neu)", dye_ratio)
 
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            avg_pen_sr = round(sum(all_pen_sr) / max(1, len(all_pen_sr)), 1) if all_pen_sr else 0
-            avg_bst_sr = round(sum(all_bst_sr) / max(1, len(all_bst_sr)), 1) if all_bst_sr else 0
+            avg_pk_sr = round(sum(all_pk_sr) / max(1, len(all_pk_sr)), 1) if all_pk_sr else 0
+            avg_pp_sr = round(sum(all_pp_sr) / max(1, len(all_pp_sr)), 1) if all_pp_sr else 0
             avg_neu_sr = round(sum(all_neu_sr) / max(1, len(all_neu_sr)), 1) if all_neu_sr else 0
-            metric_card("Penalized Score%", f"{avg_pen_sr}%")
-            metric_card("Boosted Score%", f"{avg_bst_sr}%")
+            metric_card("Kill Rate (PK Score%)", f"{avg_pk_sr}%")
+            metric_card("PP%", f"{avg_pp_sr}%")
             metric_card("Neutral Score%", f"{avg_neu_sr}%")
+            batch_mess = round(avg_pp_sr - avg_pk_sr, 1) if all_pp_sr and all_pk_sr else "—"
+            metric_card("Batch Mess Rate", batch_mess)
             metric_card("Wins Despite Δ Penalty", f"{wins_despite_delta}/{n}")
 
         with ui.row().classes("w-full gap-4 flex-wrap"):
-            metric_card("Opp 'Cheap' Boost Scores", round(total_opp_boost_scores / n, 1))
+            metric_card("Opp PP Scores", round(total_opp_pp_scores / n, 1))
             bonus_sr = round(total_bonus_scores / max(1, total_bonus_drives) * 100, 1)
             metric_card("Bonus Poss. Score%", f"{bonus_sr}%")
             metric_card("Bonus Scores/Game", round(total_bonus_scores / n, 2))
 
         dye_chart_data = []
-        for label, ypd_val, sr_val in [("Leading (Penalized)", avg_pen, avg_pen_sr),
-                                        ("Trailing (Boosted)", avg_bst, avg_bst_sr),
-                                        ("Tied (Neutral)", avg_neu, avg_neu_sr)]:
+        for label, ypd_val, sr_val in [("Penalty Kill", avg_pk, avg_pk_sr),
+                                        ("Power Play", avg_pp, avg_pp_sr),
+                                        ("Neutral", avg_neu, avg_neu_sr)]:
             dye_chart_data.append({"Situation": label, "Yds/Drive": ypd_val, "Score %": sr_val})
 
         if dye_chart_data:

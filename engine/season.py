@@ -306,8 +306,8 @@ class TeamRecord:
         self._check_turnover_machine()
 
         if dye_data:
-            pen = dye_data.get("penalized", {})
-            bst = dye_data.get("boosted", {})
+            pen = dye_data.get("penalty_kill", {})
+            bst = dye_data.get("power_play", {})
             neu = dye_data.get("neutral", {})
             self.dye_penalized_drives += pen.get("count", 0)
             self.dye_penalized_yards += pen.get("total_yards", 0)
@@ -320,11 +320,11 @@ class TeamRecord:
             self.dye_neutral_scores += neu.get("scores", 0)
 
         if opponent_dye_data:
-            opp_bst = opponent_dye_data.get("boosted", {})
+            opp_bst = opponent_dye_data.get("power_play", {})
             self.dye_opponent_boosted_scores += opp_bst.get("scores", 0)
 
         if dye_data and won:
-            pen = dye_data.get("penalized", {})
+            pen = dye_data.get("penalty_kill", {})
             if pen.get("count", 0) > 0:
                 self.dye_wins_despite_penalty += 1
 
@@ -434,18 +434,25 @@ class TeamRecord:
             net_impact += (bst_ypd - neu_ypd) * self.dye_boosted_drives
         net_impact = round(net_impact, 0)
 
+        # Season Mess Rate: PP% - Kill Rate
+        if self.dye_boosted_drives > 0 and self.dye_penalized_drives > 0:
+            season_mess_rate = round(bst_score_rate - pen_score_rate, 1)
+        else:
+            season_mess_rate = None
+
         return {
-            "penalized": {"drives": self.dye_penalized_drives, "yards": self.dye_penalized_yards,
-                          "scores": self.dye_penalized_scores, "ypd": pen_ypd, "score_rate": pen_score_rate},
-            "boosted": {"drives": self.dye_boosted_drives, "yards": self.dye_boosted_yards,
-                        "scores": self.dye_boosted_scores, "ypd": bst_ypd, "score_rate": bst_score_rate},
+            "penalty_kill": {"drives": self.dye_penalized_drives, "yards": self.dye_penalized_yards,
+                             "scores": self.dye_penalized_scores, "ypd": pen_ypd, "score_rate": pen_score_rate},
+            "power_play": {"drives": self.dye_boosted_drives, "yards": self.dye_boosted_yards,
+                           "scores": self.dye_boosted_scores, "ypd": bst_ypd, "score_rate": bst_score_rate},
             "neutral": {"drives": self.dye_neutral_drives, "yards": self.dye_neutral_yards,
                         "scores": self.dye_neutral_scores, "ypd": neu_ypd, "score_rate": neu_score_rate},
-            "dye_when_penalized": dye_pen,
-            "dye_when_boosted": dye_bst,
+            "pk_efficiency": dye_pen,
+            "pp_efficiency": dye_bst,
+            "mess_rate": season_mess_rate,
             "net_yard_impact": net_impact,
             "total_delta_yards": self.dye_total_delta_yards,
-            "opponent_boosted_scores": self.dye_opponent_boosted_scores,
+            "opponent_power_play_scores": self.dye_opponent_boosted_scores,
             "wins_despite_penalty": self.dye_wins_despite_penalty,
             "bonus_poss": {"total": self.bonus_poss_total, "scores": self.bonus_poss_scores, "yards": self.bonus_poss_yards},
             "opponent_bonus_scores": self.opponent_bonus_poss_scores,

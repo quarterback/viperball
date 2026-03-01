@@ -10864,27 +10864,27 @@ class ViperballEngine:
         away_stats["fake_punts_attempted"] = len(away_fake_punts)
         away_stats["fake_punts_converted"] = len([p for p in away_fake_punts if p.result in ("first_down", "touchdown")])
 
-        # Compelled Efficiency — scoring rate when starting under delta penalty
+        # Kill Rate — scoring rate when starting under delta penalty (penalty kill drives)
         home_stats["delta_drives"] = self.state.home_delta_drives
         home_stats["delta_scores"] = self.state.home_delta_scores
-        home_stats["compelled_efficiency"] = round(
+        home_stats["kill_rate"] = round(
             self.state.home_delta_scores / max(1, self.state.home_delta_drives) * 100, 1
         ) if self.state.home_delta_drives > 0 else None
         away_stats["delta_drives"] = self.state.away_delta_drives
         away_stats["delta_scores"] = self.state.away_delta_scores
-        away_stats["compelled_efficiency"] = round(
+        away_stats["kill_rate"] = round(
             self.state.away_delta_scores / max(1, self.state.away_delta_drives) * 100, 1
         ) if self.state.away_delta_drives > 0 else None
 
         # ── Delta Yards Efficiency (DYE) ──
         # Post-game analytic: how much did the delta system help/hurt each team?
-        # Splits drives into penalized (leading, delta_cost > 0), boosted (trailing, delta_cost < 0), neutral (tied, delta_cost == 0)
+        # Splits drives into penalty_kill (leading, delta_cost > 0), power_play (trailing, delta_cost < 0), neutral (tied, delta_cost == 0)
         # Compares yards/drive and scoring rate across buckets.
         score_results = {"touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td"}
         for side, stats in [("home", home_stats), ("away", away_stats)]:
             side_drives = [d for d in self.drive_log if d.get("team") == side]
-            penalized = [d for d in side_drives if d.get("delta_cost", 0) > 0]
-            boosted = [d for d in side_drives if d.get("delta_cost", 0) < 0]
+            pk_drives = [d for d in side_drives if d.get("delta_cost", 0) > 0]
+            pp_drives = [d for d in side_drives if d.get("delta_cost", 0) < 0]
             neutral = [d for d in side_drives if d.get("delta_cost", 0) == 0]
 
             def _bucket_stats(drives):
@@ -10902,27 +10902,36 @@ class ViperballEngine:
                     "avg_delta": round(avg_delta, 1),
                 }
 
-            pen_stats = _bucket_stats(penalized)
-            boost_stats = _bucket_stats(boosted)
+            pk_stats = _bucket_stats(pk_drives)
+            pp_stats = _bucket_stats(pp_drives)
             neut_stats = _bucket_stats(neutral)
 
-            neut_ypd = neut_stats["yards_per_drive"] if neut_stats["count"] > 0 else pen_stats["yards_per_drive"]
-            if neut_ypd > 0 and pen_stats["count"] > 0:
-                dye_penalized = round(pen_stats["yards_per_drive"] / neut_ypd, 2)
+            neut_ypd = neut_stats["yards_per_drive"] if neut_stats["count"] > 0 else pk_stats["yards_per_drive"]
+            if neut_ypd > 0 and pk_stats["count"] > 0:
+                pk_efficiency = round(pk_stats["yards_per_drive"] / neut_ypd, 2)
             else:
-                dye_penalized = None
-            if neut_ypd > 0 and boost_stats["count"] > 0:
-                dye_boosted = round(boost_stats["yards_per_drive"] / neut_ypd, 2)
+                pk_efficiency = None
+            if neut_ypd > 0 and pp_stats["count"] > 0:
+                pp_efficiency = round(pp_stats["yards_per_drive"] / neut_ypd, 2)
             else:
-                dye_boosted = None
+                pp_efficiency = None
+
+            # Mess Rate: PP% - Kill Rate (lower = more consistent)
+            pp_pct = pp_stats["score_rate"]
+            kr_pct = pk_stats["score_rate"]
+            if pp_stats["count"] > 0 and pk_stats["count"] > 0:
+                mess_rate = round(pp_pct - kr_pct, 1)
+            else:
+                mess_rate = None
 
             stats["dye"] = {
-                "penalized": pen_stats,
-                "boosted": boost_stats,
+                "penalty_kill": pk_stats,
+                "power_play": pp_stats,
                 "neutral": neut_stats,
-                "dye_when_penalized": dye_penalized,
-                "dye_when_boosted": dye_boosted,
+                "pk_efficiency": pk_efficiency,
+                "pp_efficiency": pp_efficiency,
             }
+            stats["mess_rate"] = mess_rate
 
         # ── Bonus Possession stats (pesäpallo-inspired) ──
         # Count bonus drives from the drive_log and tally yards/scores.

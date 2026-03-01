@@ -640,26 +640,28 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
                           yaxis_title="Cumulative WPA", height=350, template="plotly_white")
         ui.plotly(fig).classes("w-full")
 
-    # Delta Yards Efficiency (DYE)
+    # Delta Yards Efficiency (DYE) — Power Play / Penalty Kill
     h_dye = hs.get("dye", {})
     a_dye = as_.get("dye", {})
     if h_dye or a_dye:
-        ui.label("DYE — Delta Yards Efficiency").classes("font-bold text-slate-700 mt-6")
+        ui.label("DYE — Power Play / Penalty Kill").classes("font-bold text-slate-700 mt-6")
         ui.label("How much does the score-differential kickoff system help or hurt each team?").classes("text-sm text-gray-500")
 
         with ui.row().classes("w-full gap-3 flex-wrap mt-2"):
-            for tname, dye in [(home_name, h_dye), (away_name, a_dye)]:
-                pen = dye.get("penalized", {})
-                bst = dye.get("boosted", {})
-                neu = dye.get("neutral", {})
-                dye_pen = dye.get("dye_when_penalized")
-                dye_bst = dye.get("dye_when_boosted")
-                metric_card(f"{tname} DYE (Leading)", f"{dye_pen}" if dye_pen is not None else "—")
-                metric_card(f"{tname} DYE (Trailing)", f"{dye_bst}" if dye_bst is not None else "—")
+            for tname, dye, side_stats in [(home_name, h_dye, hs), (away_name, a_dye, as_)]:
+                pp = dye.get("power_play", {})
+                pk = dye.get("penalty_kill", {})
+                pp_str = f"{pp['scores']}/{pp['count']} ({pp['score_rate']}%)" if pp.get("count", 0) > 0 else "—"
+                pk_str = f"{pk['scores']}/{pk['count']} ({pk['score_rate']}%)" if pk.get("count", 0) > 0 else "—"
+                mr = side_stats.get("mess_rate")
+                mr_str = str(mr) if mr is not None else "—"
+                metric_card(f"{tname} PP%", pp_str)
+                metric_card(f"{tname} Kill Rate", pk_str)
+                metric_card(f"{tname} Mess Rate", mr_str)
 
         dye_rows = []
         for tname, dye in [(home_name, h_dye), (away_name, a_dye)]:
-            for bucket_key, label in [("penalized", "Leading (Δ penalty)"), ("boosted", "Trailing (Δ bonus)"), ("neutral", "Tied (no Δ)")]:
+            for bucket_key, label in [("penalty_kill", "Penalty Kill (leading)"), ("power_play", "Power Play (trailing)"), ("neutral", "Neutral (tied)")]:
                 b = dye.get(bucket_key, {})
                 if b.get("count", 0) == 0:
                     continue
@@ -676,7 +678,7 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
 
         chart_rows = []
         for tname, dye in [(home_name, h_dye), (away_name, a_dye)]:
-            for bucket_key, label in [("penalized", "Leading"), ("boosted", "Trailing"), ("neutral", "Tied")]:
+            for bucket_key, label in [("penalty_kill", "Penalty Kill"), ("power_play", "Power Play"), ("neutral", "Neutral")]:
                 b = dye.get(bucket_key, {})
                 if b.get("count", 0) > 0:
                     chart_rows.append({"Team": tname, "Situation": label, "Yds/Drive": b["yards_per_drive"], "Score %": b["score_rate"]})
