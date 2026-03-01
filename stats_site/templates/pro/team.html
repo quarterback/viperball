@@ -65,6 +65,68 @@
 </table>
 {% endif %}
 
+{# ── Season Stats ── #}
+{% set pstats = team.get('season_stats', []) %}
+{% if pstats %}
+{% set off_players = [] %}
+{% for p in pstats if p.get('rushing_yards', 0) > 0 or p.get('kick_pass_yards', 0) > 0 or p.get('touchdowns', 0) > 0 %}
+{% if off_players.append(p) %}{% endif %}
+{% endfor %}
+{% if off_players %}
+<h2>Offensive Leaders</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>Pos</th><th class="num">GP</th>
+      <th class="num">Rush</th><th class="num">Car</th><th class="num">YPC</th>
+      <th class="num">KP Yds</th><th class="num">Lat</th>
+      <th class="num">TD</th><th class="num">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in off_players|sort(attribute='total_yards', reverse=true) %}
+  <tr>
+    <td>{{ p.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
+    <td class="num">{{ p.get('games', 0) }}</td>
+    <td class="num {% if p.get('rushing_yards', 0) >= 200 %}stat-elite{% elif p.get('rushing_yards', 0) >= 100 %}stat-good{% endif %}">{{ p.get('rushing_yards', 0) }}</td>
+    <td class="num">{{ p.get('rushing_carries', 0) }}</td>
+    <td class="num">{% if p.get('rushing_carries', 0) > 0 %}{{ '%.1f'|format(p.get('rushing_yards', 0) / p.get('rushing_carries', 1)) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{{ p.get('kick_pass_yards', 0) }}</td>
+    <td class="num">{{ p.get('lateral_yards', 0) }}</td>
+    <td class="num {% if p.get('touchdowns', 0) > 0 %}stat-elite{% endif %}">{{ p.get('touchdowns', 0) }}</td>
+    <td class="num {% if p.get('total_yards', 0) >= 300 %}stat-elite{% elif p.get('total_yards', 0) >= 150 %}stat-good{% endif %}">{{ p.get('total_yards', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% set def_players = [] %}
+{% for p in pstats if p.get('tackles', 0) > 0 %}
+{% if def_players.append(p) %}{% endif %}
+{% endfor %}
+{% if def_players %}
+<h2>Defensive Leaders</h2>
+<table>
+  <thead>
+    <tr><th>Name</th><th>Pos</th><th class="num">GP</th><th class="num">Tackles</th><th class="num">Fumbles</th></tr>
+  </thead>
+  <tbody>
+  {% for p in def_players|sort(attribute='tackles', reverse=true) %}
+  <tr>
+    <td>{{ p.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
+    <td class="num">{{ p.get('games', 0) }}</td>
+    <td class="num {% if p.get('tackles', 0) >= 20 %}stat-elite{% elif p.get('tackles', 0) >= 10 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
 {# ── Schedule ── #}
 {% set games = team.get('schedule', team.get('games', [])) %}
 {% if games %}
