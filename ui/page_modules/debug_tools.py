@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 
 from engine import ViperballEngine
 from engine.game_engine import WEATHER_CONDITIONS
-from ui.helpers import load_team, fmt_vb_score, format_time, safe_filename, generate_batch_summary_csv, drive_result_label
+from ui.helpers import load_team, fmt_vb_score, format_time, safe_filename, generate_batch_summary_csv, generate_batch_full_export, drive_result_label
 
 
 def render_debug_tools(shared):
@@ -86,7 +86,7 @@ def render_debug_tools(shared):
         away_safe = safe_filename(away_name)
         batch_tag = f"batch_{home_safe}_vs_{away_safe}_{n}sims"
 
-        bex1, bex2, bex3 = st.columns(3)
+        bex1, bex2, bex3, bex4 = st.columns(4)
         with bex1:
             batch_csv = generate_batch_summary_csv(results)
             st.download_button(
@@ -116,6 +116,17 @@ def render_debug_tools(shared):
                 "Full Data + Plays (.json)",
                 data=full_batch_json,
                 file_name=f"{batch_tag}_full.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+        with bex4:
+            analysis_json = json.dumps(
+                generate_batch_full_export(results), indent=2, default=str,
+            )
+            st.download_button(
+                "Full Analysis (.json)",
+                data=analysis_json,
+                file_name=f"{batch_tag}_analysis.json",
                 mime="application/json",
                 use_container_width=True,
             )

@@ -21,6 +21,7 @@ from nicegui_app.helpers import (
     fmt_vb_score,
     safe_filename,
     generate_batch_summary_csv,
+    generate_batch_full_export,
     drive_result_label,
 )
 from nicegui_app.components import metric_card, download_button
@@ -198,6 +199,16 @@ def _render_results(container, results):
                     "Full Data + Plays (.json)",
                     full_batch_json,
                     f"{batch_tag}_full.json",
+                    mime="application/json",
+                )
+            with ui.column().classes("flex-1"):
+                analysis_json = json.dumps(
+                    generate_batch_full_export(results), indent=2, default=str,
+                )
+                download_button(
+                    "Full Analysis (.json)",
+                    analysis_json,
+                    f"{batch_tag}_analysis.json",
                     mime="application/json",
                 )
 
