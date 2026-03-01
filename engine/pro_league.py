@@ -595,6 +595,17 @@ class ProLeagueSeason:
         if not game:
             return None
         result = game["result"]
+
+        stats_data = result.get("stats", {})
+        player_stats_data = result.get("player_stats", {})
+
+        # Inject fast_sim metrics as viperball_metrics so templates can find them
+        fsm = result.get("_fast_sim_metrics", {})
+        for side in ("home", "away"):
+            side_stats = stats_data.get(side)
+            if side_stats and side in fsm and "viperball_metrics" not in side_stats:
+                side_stats["viperball_metrics"] = fsm[side]
+
         box = {
             "league": self.config.league_name,
             "week": week,
@@ -605,8 +616,14 @@ class ProLeagueSeason:
             "home_score": game["home_score"],
             "away_score": game["away_score"],
             "weather": game["weather"],
-            "stats": result.get("stats", {}),
-            "player_stats": result.get("player_stats", {}),
+            # Nested structure (used by stats site templates)
+            "stats": stats_data,
+            "player_stats": player_stats_data,
+            # Flat keys (used by NiceGUI box score dialog)
+            "home_stats": stats_data.get("home", {}),
+            "away_stats": stats_data.get("away", {}),
+            "home_player_stats": player_stats_data.get("home", []),
+            "away_player_stats": player_stats_data.get("away", []),
             "drive_summary": result.get("drive_summary", []),
             "play_by_play": result.get("play_by_play", []),
             "modifier_stack": result.get("modifier_stack", {}),
@@ -675,8 +692,10 @@ class ProLeagueSeason:
             acc["games"] += 1
             # rushing_yards: fast_sim="rushing_yards", full engine="game_rushing_yards"/"yards"
             acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
-            # carries: fast_sim="rush_carries", full engine="carries"/"game_carries"
-            acc["rushing_carries"] += ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
+            # carries: rush_carries + lateral_receptions (any ball touch on a run is a carry)
+            rush_car = ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
+            lat_rec = ps.get("lateral_receptions", 0)
+            acc["rushing_carries"] += rush_car + lat_rec
             # touchdowns: fast_sim="tds", full engine="touchdowns"/"game_touchdowns"
             acc["touchdowns"] += ps.get("tds", ps.get("touchdowns", ps.get("game_touchdowns", 0)))
             # kick pass yards: both use "kick_pass_yards"
@@ -694,7 +713,7 @@ class ProLeagueSeason:
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
             acc["dk_attempted"] += ps.get("dk_att", ps.get("dk_attempted", ps.get("game_dk_attempted", 0)))
-            acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"]
+            acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"] + acc["lateral_yards"]
 
     def get_stat_leaders(self, category: str = "all") -> dict:
         all_players = []
@@ -710,6 +729,7 @@ class ProLeagueSeason:
         leaders["rushing"] = [{
             "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
             "position": p["position"],
+            "value": p["rushing_yards"],
             "yards": p["rushing_yards"], "carries": p["rushing_carries"],
             "ypc": round(p["rushing_yards"] / max(1, p["rushing_carries"]), 1),
             "games": p["games"],
@@ -719,6 +739,7 @@ class ProLeagueSeason:
         leaders["kick_pass"] = [{
             "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
             "position": p["position"],
+            "value": p["kick_pass_yards"],
             "yards": p["kick_pass_yards"], "completions": p["kick_pass_completions"],
             "attempts": p["kick_pass_attempts"],
             "pct": round(p["kick_pass_completions"] / max(1, p["kick_pass_attempts"]) * 100, 1),
@@ -729,6 +750,7 @@ class ProLeagueSeason:
         leaders["scoring"] = [{
             "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
             "position": p["position"],
+            "value": p["touchdowns"],
             "touchdowns": p["touchdowns"], "dk_made": p["dk_made"],
             "total_yards": p["total_yards"], "games": p["games"],
         } for p in scoring if p["touchdowns"] > 0]
@@ -737,6 +759,7 @@ class ProLeagueSeason:
         leaders["total_yards"] = [{
             "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
             "position": p["position"],
+            "value": p["total_yards"],
             "total_yards": p["total_yards"], "rushing": p["rushing_yards"],
             "kick_pass": p["kick_pass_yards"], "games": p["games"],
         } for p in total if p["total_yards"] > 0]
@@ -796,13 +819,19 @@ class ProLeagueSeason:
                                 game_info["won"] = res["away_score"] > res["home_score"]
                     team_schedule.append(game_info)
 
+        rec_dict = {
+            "wins": record.wins, "losses": record.losses,
+            "points_for": record.points_for, "points_against": record.points_against,
+            "pct": record.pct,
+        } if record else {"wins": 0, "losses": 0, "points_for": 0, "points_against": 0, "pct": 0.0}
+
         return {
             "team_key": team_key,
             "team_name": team.name,
             "mascot": team.mascot,
             "abbreviation": team.abbreviation,
             "division": self._get_division_for_key(team_key),
-            "record": f"{record.wins}-{record.losses}" if record else "0-0",
+            "record": rec_dict,
             "offense_style": team.offense_style,
             "defense_style": team.defense_style,
             "prestige": team.prestige,

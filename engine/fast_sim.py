@@ -712,6 +712,15 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             kp_tds = min(remaining_kp_tds, 1 if rng.random() < kp_share else 0)
             kp_ints_thrown = min(remaining_kp_ints, 1 if kp_att > 0 and rng.random() < 0.15 else 0)
 
+        # Ensure stat consistency: yards > 0 requires at least 1 attempt
+        if rush_yards > 0 and carries == 0:
+            carries = 1
+        if kp_yards > 0 and kp_att == 0:
+            kp_att = 1
+            kp_comp = min(1, kp_comp) if kp_comp == 0 else kp_comp
+        if kp_comp > kp_att:
+            kp_comp = kp_att
+
         remaining_carries -= carries
         remaining_rush_yards -= rush_yards
         remaining_rush_tds -= rush_tds

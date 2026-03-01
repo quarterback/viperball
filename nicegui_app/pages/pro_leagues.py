@@ -45,6 +45,12 @@ def _try_restore_from_db(league_id: str, sid: str) -> bool:
         if season is not None:
             _pro_sessions[sid] = season
             _pro_dq_managers[sid] = dq
+            # Also register in the API pro_sessions so the stats site can see it
+            try:
+                from api.main import pro_sessions as _api_pro_sessions
+                _api_pro_sessions[f"{league_id}_{sid}"] = season
+            except Exception:
+                pass
             _log.info(f"Restored {league_id} (session={sid}) from database")
             return True
     except Exception as e:
@@ -115,6 +121,12 @@ def _register_session(league_id: str, sid: str, season: ProLeagueSeason, dq: Dra
     sessions_map[league_id] = sid
     app.storage.user["pro_league_sessions"] = sessions_map
     _set_active_league(league_id)
+    # Also register in the API pro_sessions so the stats site can see this league
+    try:
+        from api.main import pro_sessions as _api_pro_sessions
+        _api_pro_sessions[f"{league_id}_{sid}"] = season
+    except Exception:
+        pass
     # Persist to database
     _auto_save(league_id, sid)
 
@@ -133,6 +145,12 @@ def _unregister_session(league_id: str):
                 _db_save_archive(league_id, _completed_league_snapshots[league_id])
             del _pro_sessions[sid]
         _pro_dq_managers.pop(sid, None)
+        # Also remove from API pro_sessions
+        try:
+            from api.main import pro_sessions as _api_pro_sessions
+            _api_pro_sessions.pop(f"{league_id}_{sid}", None)
+        except Exception:
+            pass
         # Remove from DB
         _db_delete_save(league_id, sid)
     if _get_active_league_id() == league_id:
