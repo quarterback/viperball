@@ -262,26 +262,47 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     a_delta_dr = as_.get("delta_drives", 0)
     h_delta_sc = hs.get("delta_scores", 0)
     a_delta_sc = as_.get("delta_scores", 0)
-    h_ce = hs.get("compelled_efficiency")
-    a_ce = as_.get("compelled_efficiency")
+    h_kr = hs.get("kill_rate")
+    a_kr = as_.get("kill_rate")
+    h_mr = hs.get("mess_rate")
+    a_mr = as_.get("mess_rate")
     if h_delta_dr > 0 or a_delta_dr > 0:
-        st.markdown("**Delta Yards & Compelled Efficiency**")
+        st.markdown("**Delta Yards & Power Play / Penalty Kill**")
+        h_dye = hs.get("dye", {})
+        a_dye = as_.get("dye", {})
+        h_pp = h_dye.get("power_play", {})
+        a_pp = a_dye.get("power_play", {})
+        h_pk = h_dye.get("penalty_kill", {})
+        a_pk = a_dye.get("penalty_kill", {})
         delta_labels = [
             "Delta Yards", "Adjusted Yards",
             "Delta Drives", "Delta Scores",
-            "Compelled Eff %",
+            "Kill Rate",
+            "Power Play",
+            "Penalty Kill",
+            "Mess Rate",
         ]
+        def _pp_pk_str(bucket):
+            if bucket.get("count", 0) == 0:
+                return "—"
+            return f"{bucket['scores']}/{bucket['count']} ({bucket['score_rate']}%)"
         delta_home = [
             str(h_delta_yds),
             str(hs.get("adjusted_yards", hs["total_yards"])),
             str(h_delta_dr), str(h_delta_sc),
-            f"{h_ce}%" if h_ce is not None else "—",
+            f"{h_kr}%" if h_kr is not None else "—",
+            _pp_pk_str(h_pp),
+            _pp_pk_str(h_pk),
+            str(h_mr) if h_mr is not None else "—",
         ]
         delta_away = [
             str(a_delta_yds),
             str(as_.get("adjusted_yards", as_["total_yards"])),
             str(a_delta_dr), str(a_delta_sc),
-            f"{a_ce}%" if a_ce is not None else "—",
+            f"{a_kr}%" if a_kr is not None else "—",
+            _pp_pk_str(a_pp),
+            _pp_pk_str(a_pk),
+            str(a_mr) if a_mr is not None else "—",
         ]
         delta_df = pd.DataFrame({"Stat": delta_labels, home_name: delta_home, away_name: delta_away})
         st.dataframe(delta_df, hide_index=True, use_container_width=True,

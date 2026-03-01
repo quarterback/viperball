@@ -228,13 +228,34 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
             {"Stat": "Delta Drives", home_name: str(h_delta_dr), away_name: str(a_delta_dr)},
             {"Stat": "Delta Scores", home_name: str(hs.get('delta_scores', 0)), away_name: str(as_.get('delta_scores', 0))},
         ])
-        h_ce = hs.get('compelled_efficiency')
-        a_ce = as_.get('compelled_efficiency')
-        if h_ce is not None or a_ce is not None:
+        h_kr = hs.get('kill_rate')
+        a_kr = as_.get('kill_rate')
+        if h_kr is not None or a_kr is not None:
             stat_rows.append({
-                "Stat": "Compelled Eff %",
-                home_name: f"{h_ce}%" if h_ce is not None else "\u2014",
-                away_name: f"{a_ce}%" if a_ce is not None else "\u2014",
+                "Stat": "Kill Rate",
+                home_name: f"{h_kr}%" if h_kr is not None else "\u2014",
+                away_name: f"{a_kr}%" if a_kr is not None else "\u2014",
+            })
+        # Power Play / Penalty Kill / Mess Rate
+        h_dye = hs.get('dye', {})
+        a_dye = as_.get('dye', {})
+        h_pp = h_dye.get('power_play', {})
+        a_pp = a_dye.get('power_play', {})
+        h_pk = h_dye.get('penalty_kill', {})
+        a_pk = a_dye.get('penalty_kill', {})
+        def _pp_pk_str(bucket):
+            if bucket.get("count", 0) == 0:
+                return "\u2014"
+            return f"{bucket['scores']}/{bucket['count']} ({bucket['score_rate']}%)"
+        if h_pp.get('count', 0) > 0 or a_pp.get('count', 0) > 0:
+            stat_rows.append({"Stat": "Power Play", home_name: _pp_pk_str(h_pp), away_name: _pp_pk_str(a_pp)})
+            stat_rows.append({"Stat": "Penalty Kill", home_name: _pp_pk_str(h_pk), away_name: _pp_pk_str(a_pk)})
+            h_mr = hs.get('mess_rate')
+            a_mr = as_.get('mess_rate')
+            stat_rows.append({
+                "Stat": "Mess Rate",
+                home_name: str(h_mr) if h_mr is not None else "\u2014",
+                away_name: str(a_mr) if a_mr is not None else "\u2014",
             })
     stat_table(stat_rows)
 

@@ -414,18 +414,18 @@
   {{ stat_row('Adjusted Yards', 'adjusted_yards') }}
   {% if as_.get('delta_drives', 0) > 0 or hs.get('delta_drives', 0) > 0 %}
   <tr>
-    <td class="num">{{ as_.get('delta_scores', 0) }}/{{ as_.get('delta_drives', 0) }}{% if as_.get('compelled_efficiency') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ as_.compelled_efficiency }}%)</span>{% endif %}</td>
-    <td>Delta Scores / Drives (Compelled Eff.)</td>
-    <td class="num">{{ hs.get('delta_scores', 0) }}/{{ hs.get('delta_drives', 0) }}{% if hs.get('compelled_efficiency') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ hs.compelled_efficiency }}%)</span>{% endif %}</td>
+    <td class="num">{{ as_.get('delta_scores', 0) }}/{{ as_.get('delta_drives', 0) }}{% if as_.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ as_.kill_rate }}%)</span>{% endif %}</td>
+    <td>Delta Scores / Drives (Kill Rate)</td>
+    <td class="num">{{ hs.get('delta_scores', 0) }}/{{ hs.get('delta_drives', 0) }}{% if hs.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ hs.kill_rate }}%)</span>{% endif %}</td>
   </tr>
   {% endif %}
   {% endif %}
 
-  {# ── DYE (Delta Yards Efficiency) ── #}
+  {# ── DYE (Power Play / Penalty Kill) ── #}
   {% set adye = as_.get('dye', {}) %}
   {% set hdye = hs.get('dye', {}) %}
   {% if adye or hdye %}
-  {% for bucket, label in [('penalized', 'DYE: When Leading (Penalized)'), ('boosted', 'DYE: When Trailing (Boosted)'), ('neutral', 'DYE: When Tied (Neutral)')] %}
+  {% for bucket, label in [('penalty_kill', 'Penalty Kill (leading)'), ('power_play', 'Power Play (trailing)'), ('neutral', 'Neutral (tied)')] %}
   {% set ab = adye.get(bucket, {}) %}
   {% set hb = hdye.get(bucket, {}) %}
   {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
@@ -436,6 +436,16 @@
   </tr>
   {% endif %}
   {% endfor %}
+  {# Mess Rate row #}
+  {% set a_mr = as_.get('mess_rate') %}
+  {% set h_mr = hs.get('mess_rate') %}
+  {% if a_mr is not none or h_mr is not none %}
+  <tr>
+    <td class="num" style="font-size:10px;">{{ a_mr if a_mr is not none else '—' }}</td>
+    <td style="font-size:10px;">Mess Rate (PP% − Kill Rate)</td>
+    <td class="num" style="font-size:10px;">{{ h_mr if h_mr is not none else '—' }}</td>
+  </tr>
+  {% endif %}
   {% endif %}
 
   {# ── Bonus Possessions ── #}
