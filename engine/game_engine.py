@@ -11003,18 +11003,20 @@ class ViperballEngine:
         away_stats["epa"] = away_epa
 
         # -- Per-player WPA attribution ----------------------------------------
-        # Build lookup from player label -> Player object for both teams.
+        # Build lookup from (side, player_label) -> Player object.
+        # Keyed by side to avoid collisions when teams share player labels.
         _player_lookup: Dict[str, "Player"] = {}
         for _p in self.home_team.players:
-            _player_lookup[player_label(_p)] = _p
+            _player_lookup[("home", player_label(_p))] = _p
         for _p in self.away_team.players:
-            _player_lookup[player_label(_p)] = _p
+            _player_lookup[("away", player_label(_p))] = _p
 
         for pd in play_dicts:
             wpa_val = pd.get("epa", 0)
             involved = pd.get("players", [])
             if not involved:
                 continue
+            side = pd.get("possession", "home")
             # Last player in the list is the ball carrier / primary actor
             # Split WPA: primary gets 60%, others split 40% evenly
             primary_label = involved[-1]
@@ -11023,14 +11025,14 @@ class ViperballEngine:
             primary_share = wpa_val if len(involved) == 1 else wpa_val * 0.6
             assist_share = (wpa_val * 0.4 / len(assist_labels)) if assist_labels else 0
 
-            primary_player = _player_lookup.get(primary_label)
+            primary_player = _player_lookup.get((side, primary_label))
             if primary_player:
                 primary_player.game_wpa += primary_share
                 primary_player.game_vpa += primary_share  # legacy alias
                 primary_player.game_plays_involved += 1
 
             for al in assist_labels:
-                assist_player = _player_lookup.get(al)
+                assist_player = _player_lookup.get((side, al))
                 if assist_player:
                     assist_player.game_wpa += assist_share
                     assist_player.game_vpa += assist_share  # legacy alias
