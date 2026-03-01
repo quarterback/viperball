@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "sporting_cp",
+    "school_name": "Sporting CP",
+    "abbreviation": "SPO",
+    "mascot": "CP",
+    "conference": "WVL Tier 2",
+    "city": "Lisbon",
+    "state": "POR",
+    "country": "Portugal",
+    "colors": [
+      "Green",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "fast",
+    "two_way_emphasis": "medium"
+  },
+  "style": {
+    "offense_style": "lateral_spread",
+    "defense_style": "drift",
+    "st_scheme": "lightning_returns"
+  },
+  "prestige": 77,
+  "franchise_rating": 77,
+  "wvl_metadata": {
+    "tier": 2,
+    "country": "Portugal",
+    "city": "Lisbon",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 77,
+    "avg_stamina": 78,
+    "kicking_strength": 78,
+    "lateral_proficiency": 78,
+    "defensive_strength": 79
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 13,
+        "name": "Filipa Marques",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 173,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "pocket_passer",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 95,
+          "kicking": 76,
+          "lateral_skill": 67,
+          "tackling": 80,
+          "agility": 78,
+          "power": 73,
+          "awareness": 85,
+          "hands": 70,
+          "kick_power": 73,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 25,
+        "name": "Clara Pinto",
+        "position": "Viper",
+        "height": "5-7",
+        "weight": 159,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "dual_threat",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 81,
+          "kicking": 68,
+          "lateral_skill": 71,
+          "tackling": 82,
+          "agility": 88,
+          "power": 70,
+          "awareness": 69,
+          "hands": 65,
+          "kick_power": 88,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 69,
+        "name": "Carolina Gomes",
+        "position": "Viper",
+        "height": "6-3",
+        "weight": 140,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "scrambler",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 87,
+          "kicking": 68,
+          "lateral_skill": 72,
+          "tackling": 80,
+          "agility": 66,
+          "power": 81,
+          "awareness": 83,
+          "hands": 76,
+          "kick_power": 92,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 95,
+        "name": "Teresa Pereira",
+        "position": "Zeroback",
+        "height": "5-5",
+        "weight": 150,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "speed_back",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 64,
+          "kicking": 88,
+          "lateral_skill": 74,
+          "tackling": 62,
+          "agility": 72,
+          "power": 73,
+          "awareness": 94,
+          "hands": 64,
+          "kick_power": 75,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 38,
+        "name": "Mariana Ferreira",
+        "position": "Zeroback",
+        "height": "6-1",
+        "weight": 147,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 77,
+          "kicking": 93,
+          "lateral_skill": 76,
+          "tackling": 72,
+          "agility": 69,
+          "power": 85,
+          "awareness": 72,
+          "hands": 76,
+          "kick_power": 79,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 16,
+        "name": "Maria Silva",
+        "position": "Zeroback",
+        "height": "5-7",
+        "weight": 164,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 79,
+          "kicking": 81,
+          "lateral_skill": 76,
+          "tackling": 81,
+          "agility": 60,
+          "power": 94,
+          "awareness": 67,
+          "hands": 79,
+          "kick_power": 68,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 99,
+        "name": "Mariana Silva",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 182,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "all_purpose",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 71,
+          "kicking": 84,
+          "lateral_skill": 64,
+          "tackling": 92,
+          "agility": 88,
+          "power": 68,
+          "awareness": 67,
+          "hands": 71,
+          "kick_power": 67,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 5,
+        "name": "Beatriz Santos",
+        "position": "Halfback",
+        "height": "5-9",
+        "weight": 187,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "power_back",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 68,
+          "kicking": 62,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 87,
+          "power": 72,
+          "awareness": 69,
+          "hands": 92,
+          "kick_power": 71,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 61,
+        "name": "Ana Silva",
+        "position": "Halfback",
+        "height": "6-3",
+        "weight": 167,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "power_back",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 61,
+          "kicking": 76,
+          "lateral_skill": 75,
+          "tackling": 82,
+          "agility": 68,
+          "power": 83,
+          "awareness": 88,
+          "hands": 70,
+          "kick_power": 69,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 97,
+        "name": "Raquel Ferreira",
+        "position": "Halfback",
+        "height": "6-4",
+        "weight": 215,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "all_purpose",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 86,
+          "kicking": 72,
+          "lateral_skill": 82,
+          "tackling": 79,
+          "agility": 79,
+          "power": 80,
+          "awareness": 87,
+          "hands": 86,
+          "kick_power": 75,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 79,
+        "name": "Helena Rodrigues",
+        "position": "Wingback",
+        "height": "6-4",
+        "weight": 187,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "deep_threat",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 80,
+          "kicking": 73,
+          "lateral_skill": 84,
+          "tackling": 83,
+          "agility": 90,
+          "power": 71,
+          "awareness": 74,
+          "hands": 85,
+          "kick_power": 86,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 50,
+        "name": "Teresa Silva",
+        "position": "Wingback",
+        "height": "5-3",
+        "weight": 211,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 67,
+          "kicking": 82,
+          "lateral_skill": 83,
+          "tackling": 66,
+          "agility": 85,
+          "power": 66,
+          "awareness": 81,
+          "hands": 62,
+          "kick_power": 92,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 96,
+        "name": "Inês Silva",
+        "position": "Wingback",
+        "height": "6-3",
+        "weight": 203,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 73,
+          "kicking": 94,
+          "lateral_skill": 82,
+          "tackling": 72,
+          "agility": 80,
+          "power": 65,
+          "awareness": 90,
+          "hands": 73,
+          "kick_power": 76,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 37,
+        "name": "Clara Almeida",
+        "position": "Wingback",
+        "height": "5-4",
+        "weight": 144,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "burner",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 84,
+          "kicking": 68,
+          "lateral_skill": 64,
+          "tackling": 82,
+          "agility": 87,
+          "power": 66,
+          "awareness": 80,
+          "hands": 70,
+          "kick_power": 82,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 28,
+        "name": "Teresa Lopes",
+        "position": "Slotback",
+        "height": "5-10",
+        "weight": 156,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 78,
+          "kicking": 84,
+          "lateral_skill": 82,
+          "tackling": 80,
+          "agility": 71,
+          "power": 67,
+          "awareness": 77,
+          "hands": 78,
+          "kick_power": 80,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 65,
+        "name": "Carolina Pinto",
+        "position": "Slotback",
+        "height": "6-3",
+        "weight": 150,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 69,
+          "kicking": 75,
+          "lateral_skill": 97,
+          "tackling": 84,
+          "agility": 89,
+          "power": 71,
+          "awareness": 67,
+          "hands": 82,
+          "kick_power": 77,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 91,
+        "name": "Sara Sousa",
+        "position": "Slotback",
+        "height": "5-7",
+        "weight": 169,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 74,
+          "kicking": 85,
+          "lateral_skill": 82,
+          "tackling": 80,
+          "agility": 69,
+          "power": 75,
+          "awareness": 84,
+          "hands": 66,
+          "kick_power": 84,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 24,
+        "name": "Diana Costa",
+        "position": "Slotback",
+        "height": "5-3",
+        "weight": 196,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "possession",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 66,
+          "kicking": 79,
+          "lateral_skill": 79,
+          "tackling": 70,
+          "agility": 66,
+          "power": 90,
+          "awareness": 83,
+          "hands": 73,
+          "kick_power": 63,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 57,
+        "name": "Catarina Silva",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 180,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 89,
+          "kicking": 88,
+          "lateral_skill": 87,
+          "tackling": 87,
+          "agility": 73,
+          "power": 77,
+          "awareness": 75,
+          "hands": 88,
+          "kick_power": 72,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 66,
+        "name": "Joana Ferreira",
+        "position": "Keeper",
+        "height": "5-11",
+        "weight": 152,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 73,
+          "kicking": 82,
+          "lateral_skill": 70,
+          "tackling": 63,
+          "agility": 83,
+          "power": 89,
+          "awareness": 66,
+          "hands": 78,
+          "kick_power": 72,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 60,
+        "name": "Maria Pinto",
+        "position": "Keeper",
+        "height": "5-3",
+        "weight": 140,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "enforcer",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 82,
+          "kicking": 87,
+          "lateral_skill": 87,
+          "tackling": 86,
+          "agility": 65,
+          "power": 65,
+          "awareness": 72,
+          "hands": 71,
+          "kick_power": 78,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 11,
+        "name": "Filipa Carvalho",
+        "position": "Offensive Line",
+        "height": "6-1",
+        "weight": 203,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "mauler",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 94,
+          "stamina": 81,
+          "kicking": 80,
+          "lateral_skill": 89,
+          "tackling": 93,
+          "agility": 93,
+          "power": 72,
+          "awareness": 80,
+          "hands": 79,
+          "kick_power": 74,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 40,
+        "name": "Marta Gomes",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 176,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "technician",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 90,
+          "kicking": 75,
+          "lateral_skill": 91,
+          "tackling": 67,
+          "agility": 75,
+          "power": 72,
+          "awareness": 72,
+          "hands": 74,
+          "kick_power": 72,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 98,
+        "name": "Marta Martins",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 183,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "road_grader",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 73,
+          "kicking": 68,
+          "lateral_skill": 87,
+          "tackling": 70,
+          "agility": 77,
+          "power": 60,
+          "awareness": 82,
+          "hands": 83,
+          "kick_power": 80,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 82,
+        "name": "Joana Costa",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 148,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 83,
+          "kicking": 64,
+          "lateral_skill": 76,
+          "tackling": 84,
+          "agility": 78,
+          "power": 71,
+          "awareness": 86,
+          "hands": 73,
+          "kick_power": 87,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 42,
+        "name": "Helena Pereira",
+        "position": "Offensive Line",
+        "height": "5-10",
+        "weight": 154,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 80,
+          "kicking": 84,
+          "lateral_skill": 75,
+          "tackling": 84,
+          "agility": 76,
+          "power": 86,
+          "awareness": 71,
+          "hands": 95,
+          "kick_power": 66,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 2,
+        "name": "Joana Rodrigues",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 219,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "road_grader",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 85,
+          "kicking": 79,
+          "lateral_skill": 79,
+          "tackling": 66,
+          "agility": 75,
+          "power": 69,
+          "awareness": 69,
+          "hands": 89,
+          "kick_power": 71,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 68,
+        "name": "Sara Lopes",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 159,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "mauler",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 82,
+          "kicking": 82,
+          "lateral_skill": 61,
+          "tackling": 84,
+          "agility": 67,
+          "power": 95,
+          "awareness": 83,
+          "hands": 70,
+          "kick_power": 76,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 85,
+        "name": "Maria Pereira",
+        "position": "Offensive Line",
+        "height": "6-3",
+        "weight": 150,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 95,
+          "kicking": 68,
+          "lateral_skill": 92,
+          "tackling": 90,
+          "agility": 70,
+          "power": 74,
+          "awareness": 88,
+          "hands": 63,
+          "kick_power": 85,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 3,
+        "name": "Beatriz Gonçalves",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 190,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 68,
+          "stamina": 96,
+          "kicking": 67,
+          "lateral_skill": 67,
+          "tackling": 64,
+          "agility": 87,
+          "power": 74,
+          "awareness": 92,
+          "hands": 75,
+          "kick_power": 91,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 8,
+        "name": "Helena Ribeiro",
+        "position": "Defensive Line",
+        "height": "6-2",
+        "weight": 157,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 77,
+          "kicking": 81,
+          "lateral_skill": 94,
+          "tackling": 88,
+          "agility": 70,
+          "power": 91,
+          "awareness": 92,
+          "hands": 70,
+          "kick_power": 89,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 46,
+        "name": "Leonor Ferreira",
+        "position": "Defensive Line",
+        "height": "6-4",
+        "weight": 188,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "run_stuffer",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 90,
+          "kicking": 73,
+          "lateral_skill": 85,
+          "tackling": 92,
+          "agility": 77,
+          "power": 78,
+          "awareness": 86,
+          "hands": 89,
+          "kick_power": 69,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 72,
+        "name": "Diana Pinto",
+        "position": "Defensive Line",
+        "height": "5-7",
+        "weight": 171,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "edge_rusher",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 66,
+          "kicking": 74,
+          "lateral_skill": 80,
+          "tackling": 96,
+          "agility": 68,
+          "power": 62,
+          "awareness": 81,
+          "hands": 72,
+          "kick_power": 77,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 94,
+        "name": "Ana Gomes",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 193,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 84,
+          "kicking": 85,
+          "lateral_skill": 61,
+          "tackling": 87,
+          "agility": 76,
+          "power": 71,
+          "awareness": 81,
+          "hands": 86,
+          "kick_power": 90,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 32,
+        "name": "Helena Silva",
+        "position": "Defensive Line",
+        "height": "5-11",
+        "weight": 192,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "interior_disruptor",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 69,
+          "kicking": 83,
+          "lateral_skill": 69,
+          "tackling": 83,
+          "agility": 72,
+          "power": 90,
+          "awareness": 69,
+          "hands": 72,
+          "kick_power": 81,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 92,
+        "name": "Inês Silva",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 157,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lisbon",
+          "state": "POR",
+          "country": "Portugal",
+          "region": "portugal"
+        },
+        "high_school": "",
+        "nationality": "Portugal",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 74,
+          "kicking": 85,
+          "lateral_skill": 76,
+          "tackling": 76,
+          "agility": 68,
+          "power": 84,
+          "awareness": 66,
+          "hands": 63,
+          "kick_power": 74,
+          "kick_accuracy": 93
+        }
+      }
+    ]
+  }
+}

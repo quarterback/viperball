@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "bodo_glimt",
+    "school_name": "Bodø/Glimt",
+    "abbreviation": "BOD",
+    "mascot": "Bodø/Glimt",
+    "conference": "WVL Tier 4",
+    "city": "Bodø",
+    "state": "NOR",
+    "country": "Norway",
+    "colors": [
+      "Yellow",
+      "Black"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "moderate",
+    "two_way_emphasis": "medium"
+  },
+  "style": {
+    "offense_style": "stampede",
+    "defense_style": "predator",
+    "st_scheme": "chaos_unit"
+  },
+  "prestige": 52,
+  "franchise_rating": 52,
+  "wvl_metadata": {
+    "tier": 4,
+    "country": "Norway",
+    "city": "Bodø",
+    "narrative_tag": "cinderella"
+  },
+  "team_stats": {
+    "avg_speed": 61,
+    "avg_stamina": 59,
+    "kicking_strength": 62,
+    "lateral_proficiency": 61,
+    "defensive_strength": 60
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 48,
+        "name": "Tuva Olsen",
+        "position": "Viper",
+        "height": "5-3",
+        "weight": 212,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "pocket_passer",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 65,
+          "kicking": 69,
+          "lateral_skill": 61,
+          "tackling": 54,
+          "agility": 53,
+          "power": 49,
+          "awareness": 62,
+          "hands": 58,
+          "kick_power": 76,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 31,
+        "name": "Leah Jensen",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 180,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "dual_threat",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 48,
+          "kicking": 61,
+          "lateral_skill": 62,
+          "tackling": 64,
+          "agility": 57,
+          "power": 73,
+          "awareness": 74,
+          "hands": 73,
+          "kick_power": 61,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 75,
+        "name": "Nora Jensen",
+        "position": "Viper",
+        "height": "6-2",
+        "weight": 175,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 47,
+          "kicking": 72,
+          "lateral_skill": 74,
+          "tackling": 62,
+          "agility": 64,
+          "power": 68,
+          "awareness": 62,
+          "hands": 50,
+          "kick_power": 74,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 68,
+        "name": "Astrid Halvorsen",
+        "position": "Zeroback",
+        "height": "5-11",
+        "weight": 168,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "bruiser",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 46,
+          "kicking": 61,
+          "lateral_skill": 72,
+          "tackling": 48,
+          "agility": 68,
+          "power": 68,
+          "awareness": 53,
+          "hands": 81,
+          "kick_power": 47,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 56,
+        "name": "Emilie Halvorsen",
+        "position": "Zeroback",
+        "height": "5-3",
+        "weight": 193,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 67,
+          "kicking": 75,
+          "lateral_skill": 55,
+          "tackling": 64,
+          "agility": 69,
+          "power": 71,
+          "awareness": 73,
+          "hands": 41,
+          "kick_power": 73,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 65,
+        "name": "Amalie Pettersen",
+        "position": "Zeroback",
+        "height": "5-7",
+        "weight": 195,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "power_back",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 51,
+          "stamina": 67,
+          "kicking": 58,
+          "lateral_skill": 66,
+          "tackling": 49,
+          "agility": 71,
+          "power": 52,
+          "awareness": 58,
+          "hands": 63,
+          "kick_power": 50,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 60,
+        "name": "Olivia Karlsen",
+        "position": "Halfback",
+        "height": "5-8",
+        "weight": 210,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "power_back",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 66,
+          "kicking": 52,
+          "lateral_skill": 58,
+          "tackling": 45,
+          "agility": 71,
+          "power": 60,
+          "awareness": 71,
+          "hands": 56,
+          "kick_power": 64,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 53,
+        "name": "Ingrid Pettersen",
+        "position": "Halfback",
+        "height": "5-5",
+        "weight": 197,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "all_purpose",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 63,
+          "kicking": 60,
+          "lateral_skill": 71,
+          "tackling": 65,
+          "agility": 81,
+          "power": 66,
+          "awareness": 62,
+          "hands": 67,
+          "kick_power": 52,
+          "kick_accuracy": 52
+        }
+      },
+      {
+        "number": 94,
+        "name": "Ingrid Pettersen",
+        "position": "Halfback",
+        "height": "5-9",
+        "weight": 215,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 53,
+          "kicking": 46,
+          "lateral_skill": 86,
+          "tackling": 64,
+          "agility": 56,
+          "power": 50,
+          "awareness": 55,
+          "hands": 50,
+          "kick_power": 61,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 51,
+        "name": "Ida Pedersen",
+        "position": "Halfback",
+        "height": "6-4",
+        "weight": 173,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "elusive",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 58,
+          "kicking": 70,
+          "lateral_skill": 50,
+          "tackling": 73,
+          "agility": 64,
+          "power": 55,
+          "awareness": 46,
+          "hands": 55,
+          "kick_power": 79,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 17,
+        "name": "Ida Berg",
+        "position": "Wingback",
+        "height": "5-7",
+        "weight": 162,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "possession",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 49,
+          "stamina": 56,
+          "kicking": 71,
+          "lateral_skill": 58,
+          "tackling": 77,
+          "agility": 53,
+          "power": 69,
+          "awareness": 47,
+          "hands": 53,
+          "kick_power": 74,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 2,
+        "name": "Ida Haugen",
+        "position": "Wingback",
+        "height": "6-2",
+        "weight": 158,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "burner",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 50,
+          "kicking": 58,
+          "lateral_skill": 75,
+          "tackling": 70,
+          "agility": 58,
+          "power": 61,
+          "awareness": 61,
+          "hands": 47,
+          "kick_power": 66,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 88,
+        "name": "Astrid Halvorsen",
+        "position": "Wingback",
+        "height": "5-7",
+        "weight": 218,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 52,
+          "kicking": 64,
+          "lateral_skill": 62,
+          "tackling": 74,
+          "agility": 56,
+          "power": 54,
+          "awareness": 76,
+          "hands": 53,
+          "kick_power": 79,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 29,
+        "name": "Sofie Haugen",
+        "position": "Wingback",
+        "height": "5-2",
+        "weight": 204,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 48,
+          "kicking": 61,
+          "lateral_skill": 42,
+          "tackling": 59,
+          "agility": 61,
+          "power": 61,
+          "awareness": 67,
+          "hands": 71,
+          "kick_power": 60,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 76,
+        "name": "Emilie Bakken",
+        "position": "Slotback",
+        "height": "5-7",
+        "weight": 214,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 56,
+          "kicking": 51,
+          "lateral_skill": 51,
+          "tackling": 48,
+          "agility": 73,
+          "power": 59,
+          "awareness": 64,
+          "hands": 62,
+          "kick_power": 66,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 39,
+        "name": "Solveig Halvorsen",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 202,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 50,
+          "stamina": 63,
+          "kicking": 69,
+          "lateral_skill": 71,
+          "tackling": 49,
+          "agility": 49,
+          "power": 66,
+          "awareness": 52,
+          "hands": 70,
+          "kick_power": 51,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 86,
+        "name": "Sofie Bakken",
+        "position": "Slotback",
+        "height": "5-5",
+        "weight": 168,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 63,
+          "kicking": 79,
+          "lateral_skill": 53,
+          "tackling": 66,
+          "agility": 56,
+          "power": 58,
+          "awareness": 44,
+          "hands": 46,
+          "kick_power": 72,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 46,
+        "name": "Hedda Andersen",
+        "position": "Slotback",
+        "height": "5-10",
+        "weight": 199,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "burner",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 45,
+          "stamina": 68,
+          "kicking": 54,
+          "lateral_skill": 51,
+          "tackling": 47,
+          "agility": 54,
+          "power": 82,
+          "awareness": 62,
+          "hands": 51,
+          "kick_power": 80,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 10,
+        "name": "Ida Karlsen",
+        "position": "Keeper",
+        "height": "5-10",
+        "weight": 155,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "ball_hawk",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 41,
+          "kicking": 76,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 62,
+          "power": 72,
+          "awareness": 67,
+          "hands": 65,
+          "kick_power": 59,
+          "kick_accuracy": 47
+        }
+      },
+      {
+        "number": 59,
+        "name": "Astrid Hansen",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 214,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 71,
+          "kicking": 64,
+          "lateral_skill": 52,
+          "tackling": 43,
+          "agility": 71,
+          "power": 54,
+          "awareness": 56,
+          "hands": 57,
+          "kick_power": 59,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 43,
+        "name": "Ella Berg",
+        "position": "Keeper",
+        "height": "5-8",
+        "weight": 215,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "run_stopper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 55,
+          "kicking": 53,
+          "lateral_skill": 44,
+          "tackling": 73,
+          "agility": 56,
+          "power": 65,
+          "awareness": 62,
+          "hands": 62,
+          "kick_power": 67,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 71,
+        "name": "Ella Moen",
+        "position": "Offensive Line",
+        "height": "5-6",
+        "weight": 142,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 70,
+          "kicking": 81,
+          "lateral_skill": 55,
+          "tackling": 78,
+          "agility": 73,
+          "power": 60,
+          "awareness": 47,
+          "hands": 48,
+          "kick_power": 71,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 50,
+        "name": "Amalie Larsen",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 182,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 45,
+          "stamina": 57,
+          "kicking": 62,
+          "lateral_skill": 60,
+          "tackling": 69,
+          "agility": 68,
+          "power": 56,
+          "awareness": 60,
+          "hands": 64,
+          "kick_power": 73,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 33,
+        "name": "Astrid Berg",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 202,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 64,
+          "kicking": 61,
+          "lateral_skill": 58,
+          "tackling": 45,
+          "agility": 58,
+          "power": 66,
+          "awareness": 70,
+          "hands": 62,
+          "kick_power": 66,
+          "kick_accuracy": 47
+        }
+      },
+      {
+        "number": 61,
+        "name": "Sara Andersen",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 199,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 56,
+          "kicking": 74,
+          "lateral_skill": 66,
+          "tackling": 69,
+          "agility": 45,
+          "power": 51,
+          "awareness": 46,
+          "hands": 74,
+          "kick_power": 48,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 9,
+        "name": "Astrid Andersen",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 215,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "mauler",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 53,
+          "kicking": 53,
+          "lateral_skill": 64,
+          "tackling": 57,
+          "agility": 72,
+          "power": 63,
+          "awareness": 62,
+          "hands": 44,
+          "kick_power": 64,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 40,
+        "name": "Thea Karlsen",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 185,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 69,
+          "kicking": 72,
+          "lateral_skill": 64,
+          "tackling": 58,
+          "agility": 72,
+          "power": 63,
+          "awareness": 63,
+          "hands": 55,
+          "kick_power": 64,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 84,
+        "name": "Thea Pedersen",
+        "position": "Offensive Line",
+        "height": "5-7",
+        "weight": 145,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 44,
+          "stamina": 77,
+          "kicking": 69,
+          "lateral_skill": 53,
+          "tackling": 47,
+          "agility": 61,
+          "power": 62,
+          "awareness": 50,
+          "hands": 58,
+          "kick_power": 74,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 55,
+        "name": "Solveig Johansen",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 195,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 51,
+          "kicking": 64,
+          "lateral_skill": 63,
+          "tackling": 53,
+          "agility": 73,
+          "power": 49,
+          "awareness": 52,
+          "hands": 44,
+          "kick_power": 62,
+          "kick_accuracy": 53
+        }
+      },
+      {
+        "number": 85,
+        "name": "Astrid Andersen",
+        "position": "Defensive Line",
+        "height": "5-9",
+        "weight": 179,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "edge_rusher",
+        "potential": 1,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 66,
+          "kicking": 46,
+          "lateral_skill": 75,
+          "tackling": 63,
+          "agility": 51,
+          "power": 78,
+          "awareness": 46,
+          "hands": 42,
+          "kick_power": 48,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 14,
+        "name": "Maren Johnsen",
+        "position": "Defensive Line",
+        "height": "5-3",
+        "weight": 184,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 62,
+          "kicking": 58,
+          "lateral_skill": 60,
+          "tackling": 67,
+          "agility": 80,
+          "power": 66,
+          "awareness": 51,
+          "hands": 70,
+          "kick_power": 66,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 34,
+        "name": "Emilie Solberg",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 151,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 73,
+          "kicking": 68,
+          "lateral_skill": 66,
+          "tackling": 51,
+          "agility": 56,
+          "power": 66,
+          "awareness": 69,
+          "hands": 46,
+          "kick_power": 43,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 24,
+        "name": "Maja Henriksen",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 192,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 58,
+          "kicking": 60,
+          "lateral_skill": 62,
+          "tackling": 64,
+          "agility": 52,
+          "power": 59,
+          "awareness": 66,
+          "hands": 62,
+          "kick_power": 65,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 15,
+        "name": "Frida Larsen",
+        "position": "Defensive Line",
+        "height": "5-4",
+        "weight": 156,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 53,
+          "kicking": 58,
+          "lateral_skill": 73,
+          "tackling": 49,
+          "agility": 70,
+          "power": 58,
+          "awareness": 63,
+          "hands": 69,
+          "kick_power": 81,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 13,
+        "name": "Leah Pettersen",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 147,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "edge_rusher",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 72,
+          "kicking": 52,
+          "lateral_skill": 63,
+          "tackling": 62,
+          "agility": 63,
+          "power": 61,
+          "awareness": 77,
+          "hands": 51,
+          "kick_power": 78,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 82,
+        "name": "Astrid Andersen",
+        "position": "Defensive Line",
+        "height": "5-4",
+        "weight": 145,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bodø",
+          "state": "NOR",
+          "country": "Norway",
+          "region": "norway"
+        },
+        "high_school": "",
+        "nationality": "Norway",
+        "archetype": "edge_rusher",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 71,
+          "kicking": 48,
+          "lateral_skill": 70,
+          "tackling": 67,
+          "agility": 69,
+          "power": 40,
+          "awareness": 51,
+          "hands": 51,
+          "kick_power": 51,
+          "kick_accuracy": 57
+        }
+      }
+    ]
+  }
+}

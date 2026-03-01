@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "dortmund",
+    "school_name": "Borussia Dortmund",
+    "abbreviation": "DOR",
+    "mascot": "Dortmund",
+    "conference": "WVL Tier 1",
+    "city": "Dortmund",
+    "state": "GER",
+    "country": "Germany",
+    "colors": [
+      "Yellow",
+      "Black"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "moderate",
+    "two_way_emphasis": "high"
+  },
+  "style": {
+    "offense_style": "boot_raid",
+    "defense_style": "swarm",
+    "st_scheme": "block_party"
+  },
+  "prestige": 85,
+  "franchise_rating": 85,
+  "wvl_metadata": {
+    "tier": 1,
+    "country": "Germany",
+    "city": "Dortmund",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 84,
+    "avg_stamina": 88,
+    "kicking_strength": 83,
+    "lateral_proficiency": 88,
+    "defensive_strength": 86
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 24,
+        "name": "Johanna Neumann",
+        "position": "Viper",
+        "height": "6-0",
+        "weight": 177,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "pocket_passer",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 93,
+          "stamina": 80,
+          "kicking": 69,
+          "lateral_skill": 97,
+          "tackling": 82,
+          "agility": 99,
+          "power": 99,
+          "awareness": 82,
+          "hands": 76,
+          "kick_power": 86,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 71,
+        "name": "Katharina Meyer",
+        "position": "Viper",
+        "height": "6-4",
+        "weight": 207,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "dual_threat",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 81,
+          "kicking": 83,
+          "lateral_skill": 94,
+          "tackling": 96,
+          "agility": 71,
+          "power": 77,
+          "awareness": 73,
+          "hands": 76,
+          "kick_power": 86,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 11,
+        "name": "Jana Koch",
+        "position": "Viper",
+        "height": "5-6",
+        "weight": 218,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "scrambler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 99,
+          "kicking": 99,
+          "lateral_skill": 94,
+          "tackling": 72,
+          "agility": 85,
+          "power": 84,
+          "awareness": 97,
+          "hands": 80,
+          "kick_power": 70,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 90,
+        "name": "Lena Koch",
+        "position": "Zeroback",
+        "height": "5-3",
+        "weight": 168,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "receiving_back",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 89,
+          "kicking": 87,
+          "lateral_skill": 95,
+          "tackling": 87,
+          "agility": 97,
+          "power": 78,
+          "awareness": 94,
+          "hands": 79,
+          "kick_power": 74,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 30,
+        "name": "Julia Braun",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 202,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "bruiser",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 83,
+          "kicking": 87,
+          "lateral_skill": 92,
+          "tackling": 81,
+          "agility": 83,
+          "power": 80,
+          "awareness": 82,
+          "hands": 89,
+          "kick_power": 87,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 12,
+        "name": "Marie Schröder",
+        "position": "Zeroback",
+        "height": "5-3",
+        "weight": 190,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 81,
+          "kicking": 96,
+          "lateral_skill": 91,
+          "tackling": 78,
+          "agility": 90,
+          "power": 99,
+          "awareness": 73,
+          "hands": 93,
+          "kick_power": 91,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 75,
+        "name": "Hannah Meyer",
+        "position": "Halfback",
+        "height": "6-3",
+        "weight": 197,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "elusive",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 99,
+          "kicking": 82,
+          "lateral_skill": 78,
+          "tackling": 88,
+          "agility": 95,
+          "power": 81,
+          "awareness": 90,
+          "hands": 93,
+          "kick_power": 87,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 53,
+        "name": "Hannah Müller",
+        "position": "Halfback",
+        "height": "5-11",
+        "weight": 171,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "elusive",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 93,
+          "stamina": 97,
+          "kicking": 81,
+          "lateral_skill": 96,
+          "tackling": 91,
+          "agility": 89,
+          "power": 92,
+          "awareness": 71,
+          "hands": 91,
+          "kick_power": 93,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 89,
+        "name": "Julia Koch",
+        "position": "Halfback",
+        "height": "5-9",
+        "weight": 204,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "elusive",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 86,
+          "kicking": 79,
+          "lateral_skill": 98,
+          "tackling": 73,
+          "agility": 81,
+          "power": 73,
+          "awareness": 79,
+          "hands": 83,
+          "kick_power": 73,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 44,
+        "name": "Lisa Becker",
+        "position": "Halfback",
+        "height": "5-6",
+        "weight": 190,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "elusive",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 96,
+          "kicking": 74,
+          "lateral_skill": 91,
+          "tackling": 82,
+          "agility": 96,
+          "power": 84,
+          "awareness": 90,
+          "hands": 91,
+          "kick_power": 97,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 48,
+        "name": "Nina Schröder",
+        "position": "Wingback",
+        "height": "5-7",
+        "weight": 177,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 73,
+          "kicking": 77,
+          "lateral_skill": 99,
+          "tackling": 91,
+          "agility": 76,
+          "power": 81,
+          "awareness": 81,
+          "hands": 95,
+          "kick_power": 83,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 59,
+        "name": "Katharina Schwarz",
+        "position": "Wingback",
+        "height": "6-3",
+        "weight": 189,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 93,
+          "kicking": 89,
+          "lateral_skill": 88,
+          "tackling": 92,
+          "agility": 83,
+          "power": 92,
+          "awareness": 75,
+          "hands": 94,
+          "kick_power": 86,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 5,
+        "name": "Marie Schwarz",
+        "position": "Wingback",
+        "height": "5-2",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 84,
+          "kicking": 90,
+          "lateral_skill": 88,
+          "tackling": 78,
+          "agility": 85,
+          "power": 96,
+          "awareness": 87,
+          "hands": 84,
+          "kick_power": 92,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 28,
+        "name": "Sarah Weber",
+        "position": "Wingback",
+        "height": "5-6",
+        "weight": 210,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "deep_threat",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 93,
+          "kicking": 87,
+          "lateral_skill": 77,
+          "tackling": 95,
+          "agility": 76,
+          "power": 93,
+          "awareness": 95,
+          "hands": 78,
+          "kick_power": 82,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 9,
+        "name": "Clara Schwarz",
+        "position": "Slotback",
+        "height": "5-9",
+        "weight": 152,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 98,
+          "kicking": 76,
+          "lateral_skill": 76,
+          "tackling": 78,
+          "agility": 71,
+          "power": 91,
+          "awareness": 98,
+          "hands": 78,
+          "kick_power": 70,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 42,
+        "name": "Julia Wagner",
+        "position": "Slotback",
+        "height": "5-11",
+        "weight": 174,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 72,
+          "kicking": 77,
+          "lateral_skill": 86,
+          "tackling": 79,
+          "agility": 94,
+          "power": 76,
+          "awareness": 99,
+          "hands": 75,
+          "kick_power": 92,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 66,
+        "name": "Luisa Schröder",
+        "position": "Slotback",
+        "height": "5-5",
+        "weight": 153,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "hybrid",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 99,
+          "kicking": 90,
+          "lateral_skill": 92,
+          "tackling": 87,
+          "agility": 99,
+          "power": 75,
+          "awareness": 89,
+          "hands": 86,
+          "kick_power": 97,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 41,
+        "name": "Emma Hoffmann",
+        "position": "Slotback",
+        "height": "5-5",
+        "weight": 173,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 95,
+          "kicking": 81,
+          "lateral_skill": 93,
+          "tackling": 87,
+          "agility": 79,
+          "power": 80,
+          "awareness": 99,
+          "hands": 86,
+          "kick_power": 93,
+          "kick_accuracy": 97
+        }
+      },
+      {
+        "number": 49,
+        "name": "Laura Hoffmann",
+        "position": "Keeper",
+        "height": "5-8",
+        "weight": 188,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 77,
+          "kicking": 85,
+          "lateral_skill": 99,
+          "tackling": 93,
+          "agility": 74,
+          "power": 82,
+          "awareness": 91,
+          "hands": 96,
+          "kick_power": 84,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 96,
+        "name": "Marie Wagner",
+        "position": "Keeper",
+        "height": "5-2",
+        "weight": 183,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "ball_hawk",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 86,
+          "kicking": 76,
+          "lateral_skill": 82,
+          "tackling": 99,
+          "agility": 83,
+          "power": 75,
+          "awareness": 94,
+          "hands": 91,
+          "kick_power": 88,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 58,
+        "name": "Hannah Fischer",
+        "position": "Keeper",
+        "height": "6-3",
+        "weight": 186,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "run_stopper",
+        "potential": 5,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 86,
+          "kicking": 96,
+          "lateral_skill": 94,
+          "tackling": 73,
+          "agility": 88,
+          "power": 72,
+          "awareness": 91,
+          "hands": 95,
+          "kick_power": 95,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 97,
+        "name": "Marie Meyer",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 204,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "road_grader",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 87,
+          "kicking": 81,
+          "lateral_skill": 96,
+          "tackling": 91,
+          "agility": 97,
+          "power": 92,
+          "awareness": 81,
+          "hands": 99,
+          "kick_power": 74,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 70,
+        "name": "Luisa Hoffmann",
+        "position": "Offensive Line",
+        "height": "5-3",
+        "weight": 163,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 76,
+          "kicking": 94,
+          "lateral_skill": 78,
+          "tackling": 92,
+          "agility": 99,
+          "power": 72,
+          "awareness": 91,
+          "hands": 79,
+          "kick_power": 81,
+          "kick_accuracy": 98
+        }
+      },
+      {
+        "number": 60,
+        "name": "Emma Richter",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 179,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "technician",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 84,
+          "kicking": 98,
+          "lateral_skill": 87,
+          "tackling": 86,
+          "agility": 77,
+          "power": 96,
+          "awareness": 95,
+          "hands": 97,
+          "kick_power": 79,
+          "kick_accuracy": 80
+        }
+      },
+      {
+        "number": 79,
+        "name": "Lena Weber",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 191,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "balanced",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 99,
+          "kicking": 87,
+          "lateral_skill": 77,
+          "tackling": 86,
+          "agility": 88,
+          "power": 79,
+          "awareness": 86,
+          "hands": 77,
+          "kick_power": 84,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 77,
+        "name": "Lea Schneider",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 193,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 93,
+          "kicking": 73,
+          "lateral_skill": 78,
+          "tackling": 86,
+          "agility": 92,
+          "power": 80,
+          "awareness": 89,
+          "hands": 99,
+          "kick_power": 87,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 47,
+        "name": "Sophia Hoffmann",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 166,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 96,
+          "kicking": 82,
+          "lateral_skill": 97,
+          "tackling": 95,
+          "agility": 67,
+          "power": 80,
+          "awareness": 67,
+          "hands": 78,
+          "kick_power": 71,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 81,
+        "name": "Johanna Meyer",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 158,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "road_grader",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 79,
+          "kicking": 80,
+          "lateral_skill": 97,
+          "tackling": 79,
+          "agility": 76,
+          "power": 78,
+          "awareness": 79,
+          "hands": 99,
+          "kick_power": 80,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 50,
+        "name": "Greta Schröder",
+        "position": "Offensive Line",
+        "height": "6-1",
+        "weight": 213,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 80,
+          "kicking": 74,
+          "lateral_skill": 88,
+          "tackling": 93,
+          "agility": 89,
+          "power": 89,
+          "awareness": 96,
+          "hands": 71,
+          "kick_power": 84,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 67,
+        "name": "Laura Weber",
+        "position": "Defensive Line",
+        "height": "5-7",
+        "weight": 158,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 83,
+          "stamina": 95,
+          "kicking": 85,
+          "lateral_skill": 83,
+          "tackling": 79,
+          "agility": 82,
+          "power": 87,
+          "awareness": 99,
+          "hands": 88,
+          "kick_power": 83,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 51,
+        "name": "Lena Wagner",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 183,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 99,
+          "kicking": 98,
+          "lateral_skill": 76,
+          "tackling": 85,
+          "agility": 79,
+          "power": 98,
+          "awareness": 79,
+          "hands": 90,
+          "kick_power": 80,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 72,
+        "name": "Clara Fischer",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 205,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "edge_rusher",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 95,
+          "stamina": 98,
+          "kicking": 78,
+          "lateral_skill": 95,
+          "tackling": 93,
+          "agility": 83,
+          "power": 99,
+          "awareness": 79,
+          "hands": 80,
+          "kick_power": 98,
+          "kick_accuracy": 92
+        }
+      },
+      {
+        "number": 4,
+        "name": "Marie Koch",
+        "position": "Defensive Line",
+        "height": "5-2",
+        "weight": 191,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 99,
+          "kicking": 83,
+          "lateral_skill": 83,
+          "tackling": 91,
+          "agility": 96,
+          "power": 77,
+          "awareness": 79,
+          "hands": 90,
+          "kick_power": 96,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 55,
+        "name": "Luisa Klein",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 215,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 76,
+          "kicking": 72,
+          "lateral_skill": 79,
+          "tackling": 74,
+          "agility": 90,
+          "power": 69,
+          "awareness": 95,
+          "hands": 99,
+          "kick_power": 78,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 37,
+        "name": "Laura Bauer",
+        "position": "Defensive Line",
+        "height": "6-4",
+        "weight": 174,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "run_stuffer",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 90,
+          "kicking": 77,
+          "lateral_skill": 82,
+          "tackling": 95,
+          "agility": 92,
+          "power": 77,
+          "awareness": 91,
+          "hands": 88,
+          "kick_power": 99,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 34,
+        "name": "Lea Klein",
+        "position": "Defensive Line",
+        "height": "6-3",
+        "weight": 175,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Dortmund",
+          "state": "GER",
+          "country": "Germany",
+          "region": "germany"
+        },
+        "high_school": "",
+        "nationality": "Germany",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 93,
+          "kicking": 99,
+          "lateral_skill": 95,
+          "tackling": 89,
+          "agility": 80,
+          "power": 94,
+          "awareness": 96,
+          "hands": 98,
+          "kick_power": 92,
+          "kick_accuracy": 79
+        }
+      }
+    ]
+  }
+}

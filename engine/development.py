@@ -396,3 +396,121 @@ def get_preseason_breakout_candidates(
 
     candidates.sort(key=lambda x: x[0], reverse=True)
     return [card for _, card in candidates[:top_n]]
+
+
+# ──────────────────────────────────────────────
+# PRO PLAYER DEVELOPMENT (age-based)
+# ──────────────────────────────────────────────
+# Used by WVL (Women's Viperball League) for pro player aging.
+# College development uses year-based progression above.
+
+_PHYSICAL_ATTRS = ["speed", "stamina", "agility", "power"]
+_MENTAL_ATTRS = ["awareness", "hands", "lateral_skill"]
+_KICKING_ATTRS = ["kicking", "kick_power", "kick_accuracy", "tackling"]
+
+# Age brackets: (min_age, max_age) → (physical_delta_range, mental_delta_range, kicking_delta_range)
+_PRO_AGE_CURVES = {
+    (18, 22): {"physical": (1, 4), "mental": (1, 3), "kicking": (0, 2)},     # Growth
+    (23, 25): {"physical": (0, 2), "mental": (1, 3), "kicking": (0, 2)},     # Peak early
+    (26, 28): {"physical": (-1, 1), "mental": (0, 2), "kicking": (0, 1)},    # Peak plateau
+    (29, 31): {"physical": (-3, -1), "mental": (-1, 1), "kicking": (-1, 0)}, # Decline
+    (32, 33): {"physical": (-5, -2), "mental": (-2, 0), "kicking": (-2, -1)},# Steep decline
+    (34, 99): {"physical": (-7, -3), "mental": (-3, -1), "kicking": (-3, -1)},# Sharp decline
+}
+
+
+def _get_age_curve(age: int) -> dict:
+    for (lo, hi), curve in _PRO_AGE_CURVES.items():
+        if lo <= age <= hi:
+            return curve
+    return _PRO_AGE_CURVES[(34, 99)]
+
+
+def apply_pro_development(
+    card: PlayerCard,
+    rng: Optional[random.Random] = None,
+) -> Optional[DevelopmentEvent]:
+    """Apply age-based development to a pro player.
+
+    Increments age by 1 and adjusts attributes based on age curve.
+    Returns a DevelopmentEvent if notable change occurred, else None.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    if card.age is None:
+        return None
+
+    card.age += 1
+    curve = _get_age_curve(card.age)
+
+    changes = {}
+    for attr in _PHYSICAL_ATTRS:
+        lo, hi = curve["physical"]
+        delta = rng.randint(lo, hi)
+        old_val = getattr(card, attr)
+        new_val = max(40, min(99, old_val + delta))
+        if new_val != old_val:
+            setattr(card, attr, new_val)
+            changes[attr] = new_val - old_val
+
+    for attr in _MENTAL_ATTRS:
+        lo, hi = curve["mental"]
+        delta = rng.randint(lo, hi)
+        old_val = getattr(card, attr)
+        new_val = max(40, min(99, old_val + delta))
+        if new_val != old_val:
+            setattr(card, attr, new_val)
+            changes[attr] = new_val - old_val
+
+    for attr in _KICKING_ATTRS:
+        lo, hi = curve["kicking"]
+        delta = rng.randint(lo, hi)
+        old_val = getattr(card, attr)
+        new_val = max(40, min(99, old_val + delta))
+        if new_val != old_val:
+            setattr(card, attr, new_val)
+            changes[attr] = new_val - old_val
+
+    if not changes:
+        return None
+
+    total_delta = sum(changes.values())
+    if total_delta >= 5:
+        event_type = "breakout"
+        desc = f"Age {card.age}: strong growth ({total_delta:+d} total)"
+    elif total_delta <= -5:
+        event_type = "decline"
+        desc = f"Age {card.age}: significant decline ({total_delta:+d} total)"
+    else:
+        event_type = "steady_growth"
+        desc = f"Age {card.age}: steady ({total_delta:+d} total)"
+
+    return DevelopmentEvent(
+        player_name=card.full_name,
+        event_type=event_type,
+        description=desc,
+        attr_changes=changes,
+    )
+
+
+def should_retire(card: PlayerCard, rng: Optional[random.Random] = None) -> bool:
+    """Determine if a pro player should retire based on age and overall rating."""
+    if card.age is None:
+        return False
+    if rng is None:
+        rng = random.Random()
+
+    if card.age >= 38:
+        return True
+    if card.age >= 35 and card.overall < 55:
+        return True
+    if card.age >= 34 and card.overall < 50:
+        return True
+    # Chance-based retirement for older players
+    if card.age >= 32:
+        retire_chance = (card.age - 31) * 0.10  # 10% at 32, 20% at 33, etc.
+        if card.overall < 60:
+            retire_chance += 0.15
+        return rng.random() < retire_chance
+    return False

@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "inter_milan",
+    "school_name": "Inter Milan",
+    "abbreviation": "INT",
+    "mascot": "Milan",
+    "conference": "WVL Tier 1",
+    "city": "Milan",
+    "state": "ITA",
+    "country": "Italy",
+    "colors": [
+      "Blue",
+      "Black"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "moderate",
+    "two_way_emphasis": "medium"
+  },
+  "style": {
+    "offense_style": "chain_gang",
+    "defense_style": "lockdown",
+    "st_scheme": "iron_curtain"
+  },
+  "prestige": 88,
+  "franchise_rating": 88,
+  "wvl_metadata": {
+    "tier": 1,
+    "country": "Italy",
+    "city": "Milan",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 83,
+    "avg_stamina": 85,
+    "kicking_strength": 86,
+    "lateral_proficiency": 86,
+    "defensive_strength": 87
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 60,
+        "name": "Aurora Conti",
+        "position": "Viper",
+        "height": "5-2",
+        "weight": 141,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "scrambler",
+        "potential": 1,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 79,
+          "kicking": 91,
+          "lateral_skill": 85,
+          "tackling": 96,
+          "agility": 81,
+          "power": 78,
+          "awareness": 87,
+          "hands": 82,
+          "kick_power": 86,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 68,
+        "name": "Viola Bruno",
+        "position": "Viper",
+        "height": "6-1",
+        "weight": 156,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "dual_threat",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 87,
+          "kicking": 78,
+          "lateral_skill": 92,
+          "tackling": 93,
+          "agility": 88,
+          "power": 86,
+          "awareness": 89,
+          "hands": 99,
+          "kick_power": 76,
+          "kick_accuracy": 80
+        }
+      },
+      {
+        "number": 52,
+        "name": "Giorgia Santoro",
+        "position": "Viper",
+        "height": "6-1",
+        "weight": 188,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "scrambler",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 74,
+          "kicking": 69,
+          "lateral_skill": 93,
+          "tackling": 82,
+          "agility": 76,
+          "power": 87,
+          "awareness": 80,
+          "hands": 84,
+          "kick_power": 74,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 37,
+        "name": "Chiara Bianchi",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 149,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "bruiser",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 70,
+          "kicking": 73,
+          "lateral_skill": 72,
+          "tackling": 77,
+          "agility": 76,
+          "power": 81,
+          "awareness": 72,
+          "hands": 99,
+          "kick_power": 76,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 50,
+        "name": "Ilaria Mancini",
+        "position": "Zeroback",
+        "height": "5-3",
+        "weight": 167,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "speed_back",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 80,
+          "kicking": 90,
+          "lateral_skill": 72,
+          "tackling": 85,
+          "agility": 87,
+          "power": 92,
+          "awareness": 89,
+          "hands": 96,
+          "kick_power": 94,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 30,
+        "name": "Chiara Bianchi",
+        "position": "Zeroback",
+        "height": "6-1",
+        "weight": 202,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "receiving_back",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 74,
+          "kicking": 85,
+          "lateral_skill": 93,
+          "tackling": 95,
+          "agility": 94,
+          "power": 85,
+          "awareness": 79,
+          "hands": 99,
+          "kick_power": 94,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 56,
+        "name": "Viola Marino",
+        "position": "Halfback",
+        "height": "5-7",
+        "weight": 171,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "all_purpose",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 98,
+          "stamina": 86,
+          "kicking": 87,
+          "lateral_skill": 96,
+          "tackling": 99,
+          "agility": 75,
+          "power": 89,
+          "awareness": 95,
+          "hands": 99,
+          "kick_power": 84,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 49,
+        "name": "Valentina Bruno",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 195,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 73,
+          "kicking": 83,
+          "lateral_skill": 74,
+          "tackling": 81,
+          "agility": 92,
+          "power": 80,
+          "awareness": 90,
+          "hands": 99,
+          "kick_power": 97,
+          "kick_accuracy": 92
+        }
+      },
+      {
+        "number": 27,
+        "name": "Martina Russo",
+        "position": "Halfback",
+        "height": "5-3",
+        "weight": 200,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 97,
+          "stamina": 81,
+          "kicking": 88,
+          "lateral_skill": 94,
+          "tackling": 81,
+          "agility": 72,
+          "power": 87,
+          "awareness": 92,
+          "hands": 75,
+          "kick_power": 98,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 94,
+        "name": "Federica Marino",
+        "position": "Halfback",
+        "height": "5-5",
+        "weight": 161,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 96,
+          "kicking": 98,
+          "lateral_skill": 82,
+          "tackling": 82,
+          "agility": 98,
+          "power": 93,
+          "awareness": 80,
+          "hands": 70,
+          "kick_power": 74,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 70,
+        "name": "Giulia Russo",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 202,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "possession",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 73,
+          "kicking": 84,
+          "lateral_skill": 93,
+          "tackling": 99,
+          "agility": 76,
+          "power": 76,
+          "awareness": 82,
+          "hands": 99,
+          "kick_power": 99,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 95,
+        "name": "Beatrice Ricci",
+        "position": "Wingback",
+        "height": "6-2",
+        "weight": 179,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "deep_threat",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 81,
+          "kicking": 79,
+          "lateral_skill": 91,
+          "tackling": 91,
+          "agility": 99,
+          "power": 71,
+          "awareness": 88,
+          "hands": 79,
+          "kick_power": 88,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 66,
+        "name": "Sara Bianchi",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 207,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "deep_threat",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 83,
+          "stamina": 86,
+          "kicking": 99,
+          "lateral_skill": 84,
+          "tackling": 82,
+          "agility": 95,
+          "power": 86,
+          "awareness": 75,
+          "hands": 76,
+          "kick_power": 76,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 17,
+        "name": "Aurora Ferrari",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 171,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "burner",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 87,
+          "kicking": 89,
+          "lateral_skill": 87,
+          "tackling": 87,
+          "agility": 79,
+          "power": 87,
+          "awareness": 78,
+          "hands": 95,
+          "kick_power": 78,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 16,
+        "name": "Francesca Russo",
+        "position": "Slotback",
+        "height": "6-1",
+        "weight": 179,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 77,
+          "kicking": 82,
+          "lateral_skill": 99,
+          "tackling": 84,
+          "agility": 97,
+          "power": 99,
+          "awareness": 77,
+          "hands": 79,
+          "kick_power": 79,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 23,
+        "name": "Ilaria Ferrari",
+        "position": "Slotback",
+        "height": "5-11",
+        "weight": 177,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 76,
+          "kicking": 76,
+          "lateral_skill": 91,
+          "tackling": 78,
+          "agility": 82,
+          "power": 96,
+          "awareness": 99,
+          "hands": 88,
+          "kick_power": 97,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 98,
+        "name": "Valentina Esposito",
+        "position": "Slotback",
+        "height": "6-3",
+        "weight": 168,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 92,
+          "kicking": 87,
+          "lateral_skill": 72,
+          "tackling": 91,
+          "agility": 73,
+          "power": 96,
+          "awareness": 93,
+          "hands": 94,
+          "kick_power": 94,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 47,
+        "name": "Beatrice Rossi",
+        "position": "Slotback",
+        "height": "5-6",
+        "weight": 179,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 91,
+          "kicking": 76,
+          "lateral_skill": 79,
+          "tackling": 83,
+          "agility": 95,
+          "power": 95,
+          "awareness": 88,
+          "hands": 87,
+          "kick_power": 78,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 91,
+        "name": "Ilaria Rinaldi",
+        "position": "Keeper",
+        "height": "5-2",
+        "weight": 202,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "coverage",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 99,
+          "kicking": 97,
+          "lateral_skill": 74,
+          "tackling": 90,
+          "agility": 93,
+          "power": 75,
+          "awareness": 90,
+          "hands": 96,
+          "kick_power": 78,
+          "kick_accuracy": 97
+        }
+      },
+      {
+        "number": 86,
+        "name": "Giulia Russo",
+        "position": "Keeper",
+        "height": "6-4",
+        "weight": 152,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "ball_hawk",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 76,
+          "kicking": 99,
+          "lateral_skill": 86,
+          "tackling": 73,
+          "agility": 75,
+          "power": 94,
+          "awareness": 73,
+          "hands": 85,
+          "kick_power": 87,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 78,
+        "name": "Federica Romano",
+        "position": "Keeper",
+        "height": "5-9",
+        "weight": 185,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 99,
+          "kicking": 94,
+          "lateral_skill": 85,
+          "tackling": 75,
+          "agility": 83,
+          "power": 73,
+          "awareness": 94,
+          "hands": 92,
+          "kick_power": 99,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 54,
+        "name": "Arianna Rossi",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 174,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 92,
+          "stamina": 76,
+          "kicking": 96,
+          "lateral_skill": 75,
+          "tackling": 78,
+          "agility": 89,
+          "power": 90,
+          "awareness": 92,
+          "hands": 99,
+          "kick_power": 88,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 44,
+        "name": "Viola Esposito",
+        "position": "Offensive Line",
+        "height": "5-3",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "mauler",
+        "potential": 1,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 98,
+          "stamina": 86,
+          "kicking": 99,
+          "lateral_skill": 96,
+          "tackling": 89,
+          "agility": 78,
+          "power": 92,
+          "awareness": 92,
+          "hands": 78,
+          "kick_power": 99,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 14,
+        "name": "Elisa Colombo",
+        "position": "Offensive Line",
+        "height": "6-3",
+        "weight": 170,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 92,
+          "kicking": 86,
+          "lateral_skill": 76,
+          "tackling": 87,
+          "agility": 80,
+          "power": 85,
+          "awareness": 83,
+          "hands": 96,
+          "kick_power": 92,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 62,
+        "name": "Beatrice Greco",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 198,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 78,
+          "stamina": 81,
+          "kicking": 83,
+          "lateral_skill": 92,
+          "tackling": 99,
+          "agility": 88,
+          "power": 80,
+          "awareness": 92,
+          "hands": 88,
+          "kick_power": 93,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 28,
+        "name": "Elena Fontana",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 181,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 93,
+          "kicking": 86,
+          "lateral_skill": 92,
+          "tackling": 92,
+          "agility": 99,
+          "power": 95,
+          "awareness": 93,
+          "hands": 99,
+          "kick_power": 85,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 46,
+        "name": "Serena Rinaldi",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 172,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "balanced",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 98,
+          "stamina": 99,
+          "kicking": 97,
+          "lateral_skill": 77,
+          "tackling": 91,
+          "agility": 96,
+          "power": 85,
+          "awareness": 95,
+          "hands": 99,
+          "kick_power": 84,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 58,
+        "name": "Elena Rinaldi",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 152,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 99,
+          "kicking": 76,
+          "lateral_skill": 93,
+          "tackling": 94,
+          "agility": 89,
+          "power": 87,
+          "awareness": 86,
+          "hands": 94,
+          "kick_power": 75,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 2,
+        "name": "Elena Costa",
+        "position": "Offensive Line",
+        "height": "5-3",
+        "weight": 155,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 78,
+          "kicking": 93,
+          "lateral_skill": 86,
+          "tackling": 83,
+          "agility": 91,
+          "power": 96,
+          "awareness": 92,
+          "hands": 93,
+          "kick_power": 83,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 71,
+        "name": "Ilaria Rossi",
+        "position": "Defensive Line",
+        "height": "6-4",
+        "weight": 173,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 99,
+          "kicking": 79,
+          "lateral_skill": 85,
+          "tackling": 99,
+          "agility": 79,
+          "power": 91,
+          "awareness": 84,
+          "hands": 83,
+          "kick_power": 81,
+          "kick_accuracy": 96
+        }
+      },
+      {
+        "number": 45,
+        "name": "Silvia Marino",
+        "position": "Defensive Line",
+        "height": "5-4",
+        "weight": 174,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 81,
+          "kicking": 74,
+          "lateral_skill": 96,
+          "tackling": 95,
+          "agility": 87,
+          "power": 76,
+          "awareness": 88,
+          "hands": 98,
+          "kick_power": 79,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 6,
+        "name": "Beatrice Fontana",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 194,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 91,
+          "kicking": 99,
+          "lateral_skill": 99,
+          "tackling": 72,
+          "agility": 74,
+          "power": 85,
+          "awareness": 95,
+          "hands": 93,
+          "kick_power": 72,
+          "kick_accuracy": 97
+        }
+      },
+      {
+        "number": 80,
+        "name": "Elena Gallo",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 156,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 86,
+          "kicking": 80,
+          "lateral_skill": 86,
+          "tackling": 96,
+          "agility": 85,
+          "power": 96,
+          "awareness": 99,
+          "hands": 96,
+          "kick_power": 75,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 11,
+        "name": "Chiara Marino",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 157,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "hybrid",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 74,
+          "kicking": 84,
+          "lateral_skill": 99,
+          "tackling": 89,
+          "agility": 91,
+          "power": 78,
+          "awareness": 91,
+          "hands": 88,
+          "kick_power": 91,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 31,
+        "name": "Federica Santoro",
+        "position": "Defensive Line",
+        "height": "5-9",
+        "weight": 145,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "edge_rusher",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 99,
+          "kicking": 79,
+          "lateral_skill": 87,
+          "tackling": 94,
+          "agility": 66,
+          "power": 89,
+          "awareness": 89,
+          "hands": 83,
+          "kick_power": 81,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 25,
+        "name": "Silvia Santoro",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 176,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Milan",
+          "state": "ITA",
+          "country": "Italy",
+          "region": "italy"
+        },
+        "high_school": "",
+        "nationality": "Italy",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 93,
+          "kicking": 88,
+          "lateral_skill": 77,
+          "tackling": 80,
+          "agility": 99,
+          "power": 88,
+          "awareness": 79,
+          "hands": 96,
+          "kick_power": 89,
+          "kick_accuracy": 97
+        }
+      }
+    ]
+  }
+}

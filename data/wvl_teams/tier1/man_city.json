@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "man_city",
+    "school_name": "Manchester City",
+    "abbreviation": "MAN",
+    "mascot": "City",
+    "conference": "WVL Tier 1",
+    "city": "Manchester",
+    "state": "ENG",
+    "country": "England",
+    "colors": [
+      "Sky Blue",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "moderate",
+    "two_way_emphasis": "high"
+  },
+  "style": {
+    "offense_style": "boot_raid",
+    "defense_style": "blitz_pack",
+    "st_scheme": "block_party"
+  },
+  "prestige": 93,
+  "franchise_rating": 93,
+  "wvl_metadata": {
+    "tier": 1,
+    "country": "England",
+    "city": "Manchester",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 88,
+    "avg_stamina": 86,
+    "kicking_strength": 88,
+    "lateral_proficiency": 86,
+    "defensive_strength": 85
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 87,
+        "name": "Lily Evans",
+        "position": "Viper",
+        "height": "5-3",
+        "weight": 170,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 89,
+          "kicking": 79,
+          "lateral_skill": 86,
+          "tackling": 94,
+          "agility": 99,
+          "power": 92,
+          "awareness": 92,
+          "hands": 81,
+          "kick_power": 91,
+          "kick_accuracy": 87
+        }
+      },
+      {
+        "number": 55,
+        "name": "Eleanor Jones",
+        "position": "Viper",
+        "height": "6-3",
+        "weight": 172,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 95,
+          "kicking": 86,
+          "lateral_skill": 94,
+          "tackling": 99,
+          "agility": 95,
+          "power": 91,
+          "awareness": 74,
+          "hands": 95,
+          "kick_power": 89,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 47,
+        "name": "Ruby Robinson",
+        "position": "Viper",
+        "height": "5-3",
+        "weight": 151,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "scrambler",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 93,
+          "kicking": 93,
+          "lateral_skill": 85,
+          "tackling": 91,
+          "agility": 80,
+          "power": 94,
+          "awareness": 99,
+          "hands": 82,
+          "kick_power": 79,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 81,
+        "name": "Hannah Wilson",
+        "position": "Zeroback",
+        "height": "5-5",
+        "weight": 151,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 94,
+          "stamina": 87,
+          "kicking": 94,
+          "lateral_skill": 83,
+          "tackling": 87,
+          "agility": 99,
+          "power": 75,
+          "awareness": 78,
+          "hands": 92,
+          "kick_power": 94,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 86,
+        "name": "Eleanor Robinson",
+        "position": "Zeroback",
+        "height": "5-5",
+        "weight": 168,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 82,
+          "kicking": 79,
+          "lateral_skill": 96,
+          "tackling": 99,
+          "agility": 89,
+          "power": 94,
+          "awareness": 80,
+          "hands": 89,
+          "kick_power": 76,
+          "kick_accuracy": 95
+        }
+      },
+      {
+        "number": 20,
+        "name": "Emma Wright",
+        "position": "Zeroback",
+        "height": "5-7",
+        "weight": 170,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "receiving_back",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 76,
+          "kicking": 85,
+          "lateral_skill": 77,
+          "tackling": 76,
+          "agility": 88,
+          "power": 89,
+          "awareness": 88,
+          "hands": 83,
+          "kick_power": 96,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 11,
+        "name": "Isla Thompson",
+        "position": "Halfback",
+        "height": "5-9",
+        "weight": 215,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 94,
+          "kicking": 89,
+          "lateral_skill": 98,
+          "tackling": 89,
+          "agility": 73,
+          "power": 99,
+          "awareness": 83,
+          "hands": 93,
+          "kick_power": 92,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 4,
+        "name": "Alice Roberts",
+        "position": "Halfback",
+        "height": "5-7",
+        "weight": 169,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "elusive",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 96,
+          "kicking": 99,
+          "lateral_skill": 98,
+          "tackling": 79,
+          "agility": 96,
+          "power": 99,
+          "awareness": 73,
+          "hands": 92,
+          "kick_power": 99,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 54,
+        "name": "Isla Clarke",
+        "position": "Halfback",
+        "height": "5-3",
+        "weight": 191,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 90,
+          "kicking": 74,
+          "lateral_skill": 74,
+          "tackling": 99,
+          "agility": 89,
+          "power": 86,
+          "awareness": 76,
+          "hands": 94,
+          "kick_power": 91,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 50,
+        "name": "Hannah Williams",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 187,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 85,
+          "kicking": 81,
+          "lateral_skill": 94,
+          "tackling": 77,
+          "agility": 78,
+          "power": 87,
+          "awareness": 92,
+          "hands": 96,
+          "kick_power": 76,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 69,
+        "name": "Emma Smith",
+        "position": "Wingback",
+        "height": "5-11",
+        "weight": 144,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "possession",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 83,
+          "stamina": 92,
+          "kicking": 91,
+          "lateral_skill": 79,
+          "tackling": 77,
+          "agility": 88,
+          "power": 81,
+          "awareness": 94,
+          "hands": 74,
+          "kick_power": 85,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 41,
+        "name": "Jessica Brown",
+        "position": "Wingback",
+        "height": "5-5",
+        "weight": 191,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "possession",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 96,
+          "kicking": 80,
+          "lateral_skill": 89,
+          "tackling": 94,
+          "agility": 90,
+          "power": 88,
+          "awareness": 97,
+          "hands": 79,
+          "kick_power": 92,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 63,
+        "name": "Daisy Brown",
+        "position": "Wingback",
+        "height": "5-6",
+        "weight": 203,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "slot_specialist",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 83,
+          "kicking": 85,
+          "lateral_skill": 88,
+          "tackling": 86,
+          "agility": 78,
+          "power": 87,
+          "awareness": 86,
+          "hands": 91,
+          "kick_power": 77,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 89,
+        "name": "Olivia Hall",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 145,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "possession",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 75,
+          "kicking": 93,
+          "lateral_skill": 99,
+          "tackling": 91,
+          "agility": 83,
+          "power": 71,
+          "awareness": 81,
+          "hands": 92,
+          "kick_power": 77,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 60,
+        "name": "Sophie Davies",
+        "position": "Slotback",
+        "height": "5-11",
+        "weight": 171,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 94,
+          "stamina": 93,
+          "kicking": 76,
+          "lateral_skill": 73,
+          "tackling": 87,
+          "agility": 87,
+          "power": 77,
+          "awareness": 97,
+          "hands": 92,
+          "kick_power": 99,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 56,
+        "name": "Daisy Wright",
+        "position": "Slotback",
+        "height": "5-3",
+        "weight": 160,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "possession",
+        "potential": 5,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 93,
+          "kicking": 93,
+          "lateral_skill": 71,
+          "tackling": 83,
+          "agility": 99,
+          "power": 85,
+          "awareness": 78,
+          "hands": 83,
+          "kick_power": 74,
+          "kick_accuracy": 92
+        }
+      },
+      {
+        "number": 10,
+        "name": "Sophie Clarke",
+        "position": "Slotback",
+        "height": "5-2",
+        "weight": 189,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "slot_specialist",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 99,
+          "kicking": 98,
+          "lateral_skill": 89,
+          "tackling": 82,
+          "agility": 80,
+          "power": 99,
+          "awareness": 83,
+          "hands": 72,
+          "kick_power": 76,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 32,
+        "name": "Lucy Young",
+        "position": "Slotback",
+        "height": "5-4",
+        "weight": 177,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 87,
+          "kicking": 94,
+          "lateral_skill": 73,
+          "tackling": 77,
+          "agility": 98,
+          "power": 94,
+          "awareness": 76,
+          "hands": 81,
+          "kick_power": 77,
+          "kick_accuracy": 95
+        }
+      },
+      {
+        "number": 25,
+        "name": "Grace Thompson",
+        "position": "Keeper",
+        "height": "5-2",
+        "weight": 188,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "run_stopper",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 95,
+          "stamina": 87,
+          "kicking": 78,
+          "lateral_skill": 79,
+          "tackling": 93,
+          "agility": 87,
+          "power": 75,
+          "awareness": 90,
+          "hands": 95,
+          "kick_power": 97,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 51,
+        "name": "Daisy Brown",
+        "position": "Keeper",
+        "height": "5-9",
+        "weight": 208,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "ball_hawk",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 81,
+          "kicking": 90,
+          "lateral_skill": 81,
+          "tackling": 89,
+          "agility": 90,
+          "power": 91,
+          "awareness": 81,
+          "hands": 96,
+          "kick_power": 87,
+          "kick_accuracy": 92
+        }
+      },
+      {
+        "number": 38,
+        "name": "Sophie Walker",
+        "position": "Keeper",
+        "height": "6-0",
+        "weight": 191,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "enforcer",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 72,
+          "kicking": 87,
+          "lateral_skill": 86,
+          "tackling": 86,
+          "agility": 77,
+          "power": 89,
+          "awareness": 83,
+          "hands": 83,
+          "kick_power": 98,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 28,
+        "name": "Ruby Johnson",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 183,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 97,
+          "stamina": 73,
+          "kicking": 94,
+          "lateral_skill": 95,
+          "tackling": 85,
+          "agility": 94,
+          "power": 81,
+          "awareness": 93,
+          "hands": 91,
+          "kick_power": 73,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 68,
+        "name": "Lucy Wilson",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 148,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 92,
+          "kicking": 99,
+          "lateral_skill": 99,
+          "tackling": 92,
+          "agility": 87,
+          "power": 99,
+          "awareness": 82,
+          "hands": 88,
+          "kick_power": 99,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 8,
+        "name": "Mia Taylor",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 211,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 85,
+          "kicking": 81,
+          "lateral_skill": 84,
+          "tackling": 81,
+          "agility": 94,
+          "power": 82,
+          "awareness": 97,
+          "hands": 99,
+          "kick_power": 94,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 91,
+        "name": "Lily Davies",
+        "position": "Offensive Line",
+        "height": "5-3",
+        "weight": 162,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "road_grader",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 86,
+          "kicking": 77,
+          "lateral_skill": 84,
+          "tackling": 87,
+          "agility": 75,
+          "power": 90,
+          "awareness": 83,
+          "hands": 89,
+          "kick_power": 72,
+          "kick_accuracy": 92
+        }
+      },
+      {
+        "number": 88,
+        "name": "Eleanor Williams",
+        "position": "Offensive Line",
+        "height": "6-4",
+        "weight": 161,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 99,
+          "kicking": 93,
+          "lateral_skill": 82,
+          "tackling": 99,
+          "agility": 70,
+          "power": 95,
+          "awareness": 71,
+          "hands": 76,
+          "kick_power": 86,
+          "kick_accuracy": 80
+        }
+      },
+      {
+        "number": 35,
+        "name": "Chloe White",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 183,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "road_grader",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 99,
+          "kicking": 93,
+          "lateral_skill": 91,
+          "tackling": 80,
+          "agility": 99,
+          "power": 74,
+          "awareness": 85,
+          "hands": 82,
+          "kick_power": 73,
+          "kick_accuracy": 93
+        }
+      },
+      {
+        "number": 94,
+        "name": "Lily Clarke",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 141,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 88,
+          "kicking": 89,
+          "lateral_skill": 98,
+          "tackling": 86,
+          "agility": 99,
+          "power": 99,
+          "awareness": 78,
+          "hands": 74,
+          "kick_power": 77,
+          "kick_accuracy": 99
+        }
+      },
+      {
+        "number": 21,
+        "name": "Daisy Roberts",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 163,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 97,
+          "stamina": 73,
+          "kicking": 96,
+          "lateral_skill": 83,
+          "tackling": 98,
+          "agility": 95,
+          "power": 81,
+          "awareness": 81,
+          "hands": 81,
+          "kick_power": 84,
+          "kick_accuracy": 90
+        }
+      },
+      {
+        "number": 9,
+        "name": "Chloe Wilson",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 194,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 81,
+          "kicking": 86,
+          "lateral_skill": 80,
+          "tackling": 77,
+          "agility": 99,
+          "power": 83,
+          "awareness": 82,
+          "hands": 77,
+          "kick_power": 74,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 96,
+        "name": "Ruby Hall",
+        "position": "Defensive Line",
+        "height": "5-11",
+        "weight": 173,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 75,
+          "kicking": 83,
+          "lateral_skill": 75,
+          "tackling": 86,
+          "agility": 97,
+          "power": 98,
+          "awareness": 97,
+          "hands": 88,
+          "kick_power": 97,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 59,
+        "name": "Holly Green",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 143,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "run_stuffer",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 89,
+          "stamina": 88,
+          "kicking": 94,
+          "lateral_skill": 98,
+          "tackling": 78,
+          "agility": 94,
+          "power": 90,
+          "awareness": 89,
+          "hands": 83,
+          "kick_power": 90,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 82,
+        "name": "Isla Walker",
+        "position": "Defensive Line",
+        "height": "6-3",
+        "weight": 160,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 95,
+          "kicking": 83,
+          "lateral_skill": 86,
+          "tackling": 80,
+          "agility": 82,
+          "power": 85,
+          "awareness": 82,
+          "hands": 85,
+          "kick_power": 76,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 15,
+        "name": "Charlotte Thompson",
+        "position": "Defensive Line",
+        "height": "5-3",
+        "weight": 142,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 87,
+          "kicking": 89,
+          "lateral_skill": 90,
+          "tackling": 71,
+          "agility": 81,
+          "power": 81,
+          "awareness": 92,
+          "hands": 90,
+          "kick_power": 75,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 33,
+        "name": "Grace Thompson",
+        "position": "Defensive Line",
+        "height": "6-4",
+        "weight": 142,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 90,
+          "kicking": 99,
+          "lateral_skill": 95,
+          "tackling": 78,
+          "agility": 82,
+          "power": 96,
+          "awareness": 85,
+          "hands": 93,
+          "kick_power": 75,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 98,
+        "name": "Isla Young",
+        "position": "Defensive Line",
+        "height": "6-2",
+        "weight": 174,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Manchester",
+          "state": "ENG",
+          "country": "England",
+          "region": "england"
+        },
+        "high_school": "",
+        "nationality": "England",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 72,
+          "kicking": 96,
+          "lateral_skill": 84,
+          "tackling": 81,
+          "agility": 99,
+          "power": 80,
+          "awareness": 99,
+          "hands": 77,
+          "kick_power": 96,
+          "kick_accuracy": 93
+        }
+      }
+    ]
+  }
+}

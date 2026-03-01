@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "fenerbahce",
+    "school_name": "Fenerbahce",
+    "abbreviation": "FEN",
+    "mascot": "Fenerbahce",
+    "conference": "WVL Tier 4",
+    "city": "Istanbul",
+    "state": "TUR",
+    "country": "Turkey",
+    "colors": [
+      "Yellow",
+      "Blue"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "slow",
+    "two_way_emphasis": "medium"
+  },
+  "style": {
+    "offense_style": "boot_raid",
+    "defense_style": "chaos",
+    "st_scheme": "block_party"
+  },
+  "prestige": 67,
+  "franchise_rating": 67,
+  "wvl_metadata": {
+    "tier": 4,
+    "country": "Turkey",
+    "city": "Istanbul",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 62,
+    "avg_stamina": 63,
+    "kicking_strength": 64,
+    "lateral_proficiency": 62,
+    "defensive_strength": 62
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 45,
+        "name": "Nisa Kurt",
+        "position": "Viper",
+        "height": "5-3",
+        "weight": 209,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "pocket_passer",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 53,
+          "kicking": 79,
+          "lateral_skill": 52,
+          "tackling": 61,
+          "agility": 77,
+          "power": 68,
+          "awareness": 65,
+          "hands": 75,
+          "kick_power": 56,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 78,
+        "name": "Ecrin Aydın",
+        "position": "Viper",
+        "height": "6-2",
+        "weight": 154,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid_viper",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 51,
+          "kicking": 71,
+          "lateral_skill": 60,
+          "tackling": 77,
+          "agility": 67,
+          "power": 47,
+          "awareness": 65,
+          "hands": 69,
+          "kick_power": 67,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 32,
+        "name": "Lara Polat",
+        "position": "Viper",
+        "height": "6-4",
+        "weight": 146,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "scrambler",
+        "potential": 1,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 51,
+          "kicking": 57,
+          "lateral_skill": 59,
+          "tackling": 73,
+          "agility": 75,
+          "power": 59,
+          "awareness": 62,
+          "hands": 55,
+          "kick_power": 59,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 75,
+        "name": "Azra Kara",
+        "position": "Zeroback",
+        "height": "5-7",
+        "weight": 150,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "receiving_back",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 68,
+          "kicking": 69,
+          "lateral_skill": 53,
+          "tackling": 57,
+          "agility": 45,
+          "power": 54,
+          "awareness": 52,
+          "hands": 63,
+          "kick_power": 63,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 92,
+        "name": "Yağmur Aslan",
+        "position": "Zeroback",
+        "height": "5-2",
+        "weight": 184,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 70,
+          "kicking": 56,
+          "lateral_skill": 54,
+          "tackling": 49,
+          "agility": 78,
+          "power": 70,
+          "awareness": 65,
+          "hands": 67,
+          "kick_power": 67,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 48,
+        "name": "Berra Yılmaz",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 203,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "receiving_back",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 59,
+          "kicking": 49,
+          "lateral_skill": 71,
+          "tackling": 55,
+          "agility": 54,
+          "power": 57,
+          "awareness": 70,
+          "hands": 72,
+          "kick_power": 51,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 16,
+        "name": "Eylül Yılmaz",
+        "position": "Halfback",
+        "height": "6-1",
+        "weight": 176,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "all_purpose",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 51,
+          "stamina": 47,
+          "kicking": 44,
+          "lateral_skill": 72,
+          "tackling": 49,
+          "agility": 53,
+          "power": 67,
+          "awareness": 63,
+          "hands": 61,
+          "kick_power": 54,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 44,
+        "name": "Azra Özdemir",
+        "position": "Halfback",
+        "height": "5-9",
+        "weight": 168,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "all_purpose",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 60,
+          "kicking": 62,
+          "lateral_skill": 59,
+          "tackling": 64,
+          "agility": 55,
+          "power": 62,
+          "awareness": 67,
+          "hands": 60,
+          "kick_power": 51,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 64,
+        "name": "Ecrin Özdemir",
+        "position": "Halfback",
+        "height": "5-6",
+        "weight": 218,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "power_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 55,
+          "kicking": 63,
+          "lateral_skill": 80,
+          "tackling": 63,
+          "agility": 77,
+          "power": 78,
+          "awareness": 50,
+          "hands": 51,
+          "kick_power": 60,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 63,
+        "name": "Lara Yılmaz",
+        "position": "Halfback",
+        "height": "5-6",
+        "weight": 170,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "all_purpose",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 58,
+          "kicking": 70,
+          "lateral_skill": 53,
+          "tackling": 53,
+          "agility": 54,
+          "power": 56,
+          "awareness": 45,
+          "hands": 68,
+          "kick_power": 55,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 24,
+        "name": "Melis Öztürk",
+        "position": "Wingback",
+        "height": "5-8",
+        "weight": 152,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 72,
+          "kicking": 70,
+          "lateral_skill": 70,
+          "tackling": 55,
+          "agility": 75,
+          "power": 83,
+          "awareness": 76,
+          "hands": 77,
+          "kick_power": 76,
+          "kick_accuracy": 52
+        }
+      },
+      {
+        "number": 35,
+        "name": "Berra Yıldırım",
+        "position": "Wingback",
+        "height": "6-1",
+        "weight": 197,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "burner",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 71,
+          "kicking": 76,
+          "lateral_skill": 71,
+          "tackling": 77,
+          "agility": 72,
+          "power": 67,
+          "awareness": 67,
+          "hands": 77,
+          "kick_power": 74,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 19,
+        "name": "Nehir Yıldırım",
+        "position": "Wingback",
+        "height": "5-9",
+        "weight": 194,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "possession",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 50,
+          "kicking": 62,
+          "lateral_skill": 65,
+          "tackling": 56,
+          "agility": 72,
+          "power": 79,
+          "awareness": 60,
+          "hands": 55,
+          "kick_power": 62,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 62,
+        "name": "Asya Aslan",
+        "position": "Wingback",
+        "height": "5-5",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "slot_specialist",
+        "potential": 1,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 76,
+          "kicking": 76,
+          "lateral_skill": 53,
+          "tackling": 57,
+          "agility": 61,
+          "power": 72,
+          "awareness": 84,
+          "hands": 68,
+          "kick_power": 55,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 47,
+        "name": "Derin Kara",
+        "position": "Slotback",
+        "height": "5-6",
+        "weight": 200,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "possession",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 68,
+          "kicking": 52,
+          "lateral_skill": 60,
+          "tackling": 80,
+          "agility": 67,
+          "power": 55,
+          "awareness": 76,
+          "hands": 60,
+          "kick_power": 69,
+          "kick_accuracy": 45
+        }
+      },
+      {
+        "number": 27,
+        "name": "Sude Öztürk",
+        "position": "Slotback",
+        "height": "5-2",
+        "weight": 151,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 71,
+          "kicking": 58,
+          "lateral_skill": 55,
+          "tackling": 53,
+          "agility": 52,
+          "power": 71,
+          "awareness": 60,
+          "hands": 65,
+          "kick_power": 62,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 76,
+        "name": "Defne Aslan",
+        "position": "Slotback",
+        "height": "5-11",
+        "weight": 198,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 53,
+          "kicking": 50,
+          "lateral_skill": 64,
+          "tackling": 80,
+          "agility": 62,
+          "power": 57,
+          "awareness": 61,
+          "hands": 63,
+          "kick_power": 56,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 60,
+        "name": "Nisa Çelik",
+        "position": "Slotback",
+        "height": "6-2",
+        "weight": 166,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "slot_specialist",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 74,
+          "kicking": 73,
+          "lateral_skill": 79,
+          "tackling": 50,
+          "agility": 53,
+          "power": 78,
+          "awareness": 81,
+          "hands": 73,
+          "kick_power": 74,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 55,
+        "name": "Asya Polat",
+        "position": "Keeper",
+        "height": "5-6",
+        "weight": 192,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "ball_hawk",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 64,
+          "kicking": 66,
+          "lateral_skill": 60,
+          "tackling": 47,
+          "agility": 72,
+          "power": 62,
+          "awareness": 72,
+          "hands": 70,
+          "kick_power": 76,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 6,
+        "name": "Selin Özdemir",
+        "position": "Keeper",
+        "height": "5-11",
+        "weight": 156,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "run_stopper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 66,
+          "kicking": 66,
+          "lateral_skill": 74,
+          "tackling": 54,
+          "agility": 72,
+          "power": 73,
+          "awareness": 74,
+          "hands": 59,
+          "kick_power": 78,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 51,
+        "name": "Asya Aslan",
+        "position": "Keeper",
+        "height": "5-3",
+        "weight": 148,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "coverage",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 58,
+          "kicking": 53,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 50,
+          "power": 49,
+          "awareness": 56,
+          "hands": 48,
+          "kick_power": 61,
+          "kick_accuracy": 49
+        }
+      },
+      {
+        "number": 71,
+        "name": "Nehir Yılmaz",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 211,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "technician",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 74,
+          "kicking": 60,
+          "lateral_skill": 67,
+          "tackling": 64,
+          "agility": 64,
+          "power": 57,
+          "awareness": 53,
+          "hands": 60,
+          "kick_power": 73,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 88,
+        "name": "Lara Özdemir",
+        "position": "Offensive Line",
+        "height": "5-2",
+        "weight": 219,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 71,
+          "kicking": 60,
+          "lateral_skill": 77,
+          "tackling": 57,
+          "agility": 52,
+          "power": 69,
+          "awareness": 79,
+          "hands": 49,
+          "kick_power": 75,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 25,
+        "name": "Nisa Polat",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 146,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "road_grader",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 60,
+          "kicking": 67,
+          "lateral_skill": 52,
+          "tackling": 60,
+          "agility": 48,
+          "power": 68,
+          "awareness": 72,
+          "hands": 67,
+          "kick_power": 67,
+          "kick_accuracy": 43
+        }
+      },
+      {
+        "number": 57,
+        "name": "Eylül Kılıç",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 191,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 80,
+          "kicking": 57,
+          "lateral_skill": 57,
+          "tackling": 73,
+          "agility": 75,
+          "power": 80,
+          "awareness": 67,
+          "hands": 43,
+          "kick_power": 52,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 8,
+        "name": "Yağmur Yıldız",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 142,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "technician",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 48,
+          "stamina": 47,
+          "kicking": 69,
+          "lateral_skill": 61,
+          "tackling": 66,
+          "agility": 55,
+          "power": 55,
+          "awareness": 55,
+          "hands": 54,
+          "kick_power": 61,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 84,
+        "name": "Elif Özkan",
+        "position": "Offensive Line",
+        "height": "5-10",
+        "weight": 218,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 70,
+          "kicking": 71,
+          "lateral_skill": 55,
+          "tackling": 58,
+          "agility": 71,
+          "power": 58,
+          "awareness": 70,
+          "hands": 50,
+          "kick_power": 81,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 21,
+        "name": "Zeynep Yıldırım",
+        "position": "Offensive Line",
+        "height": "5-10",
+        "weight": 212,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "balanced",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 80,
+          "kicking": 78,
+          "lateral_skill": 46,
+          "tackling": 75,
+          "agility": 46,
+          "power": 78,
+          "awareness": 62,
+          "hands": 48,
+          "kick_power": 64,
+          "kick_accuracy": 44
+        }
+      },
+      {
+        "number": 11,
+        "name": "Zeynep Aydın",
+        "position": "Offensive Line",
+        "height": "5-7",
+        "weight": 164,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "balanced",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 68,
+          "kicking": 52,
+          "lateral_skill": 64,
+          "tackling": 66,
+          "agility": 78,
+          "power": 59,
+          "awareness": 56,
+          "hands": 62,
+          "kick_power": 61,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 97,
+        "name": "Melis Arslan",
+        "position": "Defensive Line",
+        "height": "6-3",
+        "weight": 143,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 70,
+          "kicking": 63,
+          "lateral_skill": 60,
+          "tackling": 83,
+          "agility": 57,
+          "power": 68,
+          "awareness": 82,
+          "hands": 78,
+          "kick_power": 62,
+          "kick_accuracy": 49
+        }
+      },
+      {
+        "number": 34,
+        "name": "Azra Yıldız",
+        "position": "Defensive Line",
+        "height": "5-4",
+        "weight": 164,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 59,
+          "kicking": 69,
+          "lateral_skill": 70,
+          "tackling": 56,
+          "agility": 47,
+          "power": 74,
+          "awareness": 56,
+          "hands": 75,
+          "kick_power": 77,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 73,
+        "name": "Melis Koç",
+        "position": "Defensive Line",
+        "height": "6-4",
+        "weight": 164,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 48,
+          "stamina": 68,
+          "kicking": 82,
+          "lateral_skill": 53,
+          "tackling": 69,
+          "agility": 55,
+          "power": 78,
+          "awareness": 64,
+          "hands": 55,
+          "kick_power": 69,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 37,
+        "name": "Asya Çelik",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 174,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 51,
+          "stamina": 75,
+          "kicking": 52,
+          "lateral_skill": 74,
+          "tackling": 69,
+          "agility": 57,
+          "power": 50,
+          "awareness": 59,
+          "hands": 75,
+          "kick_power": 79,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 31,
+        "name": "Yağmur Kılıç",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 199,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "run_stuffer",
+        "potential": 1,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 69,
+          "kicking": 69,
+          "lateral_skill": 74,
+          "tackling": 72,
+          "agility": 64,
+          "power": 63,
+          "awareness": 76,
+          "hands": 49,
+          "kick_power": 66,
+          "kick_accuracy": 52
+        }
+      },
+      {
+        "number": 91,
+        "name": "Zeynep Yıldırım",
+        "position": "Defensive Line",
+        "height": "5-3",
+        "weight": 188,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 48,
+          "kicking": 65,
+          "lateral_skill": 52,
+          "tackling": 63,
+          "agility": 75,
+          "power": 56,
+          "awareness": 61,
+          "hands": 77,
+          "kick_power": 72,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 67,
+        "name": "Ada Yıldırım",
+        "position": "Defensive Line",
+        "height": "5-2",
+        "weight": 216,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Istanbul",
+          "state": "TUR",
+          "country": "Turkey",
+          "region": "turkey"
+        },
+        "high_school": "",
+        "nationality": "Turkey",
+        "archetype": "run_stuffer",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 68,
+          "kicking": 81,
+          "lateral_skill": 62,
+          "tackling": 58,
+          "agility": 77,
+          "power": 73,
+          "awareness": 56,
+          "hands": 67,
+          "kick_power": 80,
+          "kick_accuracy": 69
+        }
+      }
+    ]
+  }
+}

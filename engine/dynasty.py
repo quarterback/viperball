@@ -1693,6 +1693,36 @@ class Dynasty:
         return dynasty
 
 
+    def export_graduating_class(self, season: Season, filepath: str) -> int:
+        """Export graduating seniors/graduates from the current season as a JSON file.
+
+        This produces a free agent pool that can be imported into the WVL.
+
+        Args:
+            season: Completed Season with team rosters
+            filepath: Where to write the JSON export
+
+        Returns:
+            Number of players exported
+        """
+        from engine.player_card import player_to_card
+
+        graduates = []
+        for team_name, team in season.teams.items():
+            for player in team.players:
+                year = getattr(player, 'year', '')
+                if year in ('Senior', 'Graduate'):
+                    card = player_to_card(player, team_name)
+                    card_dict = card.to_dict()
+                    card_dict["graduating_from"] = team_name
+                    graduates.append(card_dict)
+
+        with open(filepath, "w") as f:
+            json.dump(graduates, f, indent=2)
+
+        return len(graduates)
+
+
 def create_dynasty(
     dynasty_name: str,
     coach_name: str,

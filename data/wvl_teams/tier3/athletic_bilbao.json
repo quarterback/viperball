@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "athletic_bilbao",
+    "school_name": "Athletic Bilbao",
+    "abbreviation": "ATH",
+    "mascot": "Bilbao",
+    "conference": "WVL Tier 3",
+    "city": "Bilbao",
+    "state": "SPA",
+    "country": "Spain",
+    "colors": [
+      "Red",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "slow",
+    "two_way_emphasis": "medium"
+  },
+  "style": {
+    "offense_style": "lateral_spread",
+    "defense_style": "shadow",
+    "st_scheme": "lightning_returns"
+  },
+  "prestige": 72,
+  "franchise_rating": 72,
+  "wvl_metadata": {
+    "tier": 3,
+    "country": "Spain",
+    "city": "Bilbao",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 72,
+    "avg_stamina": 70,
+    "kicking_strength": 68,
+    "lateral_proficiency": 70,
+    "defensive_strength": 69
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 48,
+        "name": "Raquel Rubio",
+        "position": "Viper",
+        "height": "5-6",
+        "weight": 207,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "pocket_passer",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 62,
+          "kicking": 62,
+          "lateral_skill": 61,
+          "tackling": 77,
+          "agility": 87,
+          "power": 77,
+          "awareness": 89,
+          "hands": 64,
+          "kick_power": 76,
+          "kick_accuracy": 78
+        }
+      },
+      {
+        "number": 73,
+        "name": "María Rodríguez",
+        "position": "Viper",
+        "height": "5-9",
+        "weight": 180,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "pocket_passer",
+        "potential": 1,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 66,
+          "kicking": 83,
+          "lateral_skill": 65,
+          "tackling": 80,
+          "agility": 76,
+          "power": 79,
+          "awareness": 58,
+          "hands": 76,
+          "kick_power": 76,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 88,
+        "name": "Irene Moreno",
+        "position": "Viper",
+        "height": "5-11",
+        "weight": 153,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "dual_threat",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 79,
+          "kicking": 77,
+          "lateral_skill": 68,
+          "tackling": 63,
+          "agility": 73,
+          "power": 74,
+          "awareness": 74,
+          "hands": 61,
+          "kick_power": 63,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 74,
+        "name": "Silvia López",
+        "position": "Zeroback",
+        "height": "6-0",
+        "weight": 155,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 83,
+          "kicking": 71,
+          "lateral_skill": 78,
+          "tackling": 83,
+          "agility": 63,
+          "power": 53,
+          "awareness": 87,
+          "hands": 75,
+          "kick_power": 72,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 83,
+        "name": "Rosa Díaz",
+        "position": "Zeroback",
+        "height": "5-11",
+        "weight": 152,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "receiving_back",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 77,
+          "kicking": 61,
+          "lateral_skill": 62,
+          "tackling": 61,
+          "agility": 52,
+          "power": 58,
+          "awareness": 70,
+          "hands": 74,
+          "kick_power": 76,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 44,
+        "name": "Paula González",
+        "position": "Zeroback",
+        "height": "5-5",
+        "weight": 188,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "bruiser",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 67,
+          "kicking": 86,
+          "lateral_skill": 73,
+          "tackling": 64,
+          "agility": 84,
+          "power": 65,
+          "awareness": 76,
+          "hands": 57,
+          "kick_power": 85,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 2,
+        "name": "Cristina Pérez",
+        "position": "Halfback",
+        "height": "5-6",
+        "weight": 181,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "elusive",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 55,
+          "stamina": 56,
+          "kicking": 68,
+          "lateral_skill": 75,
+          "tackling": 62,
+          "agility": 90,
+          "power": 59,
+          "awareness": 68,
+          "hands": 81,
+          "kick_power": 68,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 75,
+        "name": "Silvia Romero",
+        "position": "Halfback",
+        "height": "5-4",
+        "weight": 160,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 81,
+          "stamina": 72,
+          "kicking": 66,
+          "lateral_skill": 76,
+          "tackling": 67,
+          "agility": 58,
+          "power": 63,
+          "awareness": 62,
+          "hands": 74,
+          "kick_power": 84,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 5,
+        "name": "Irene Hernández",
+        "position": "Halfback",
+        "height": "5-11",
+        "weight": 169,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "speed_back",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 78,
+          "kicking": 76,
+          "lateral_skill": 92,
+          "tackling": 60,
+          "agility": 61,
+          "power": 67,
+          "awareness": 86,
+          "hands": 64,
+          "kick_power": 72,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 6,
+        "name": "Pilar Álvarez",
+        "position": "Halfback",
+        "height": "6-1",
+        "weight": 218,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "all_purpose",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 60,
+          "kicking": 58,
+          "lateral_skill": 60,
+          "tackling": 56,
+          "agility": 72,
+          "power": 70,
+          "awareness": 84,
+          "hands": 77,
+          "kick_power": 64,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 99,
+        "name": "María Ortega",
+        "position": "Wingback",
+        "height": "5-8",
+        "weight": 198,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "deep_threat",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 68,
+          "kicking": 66,
+          "lateral_skill": 78,
+          "tackling": 57,
+          "agility": 65,
+          "power": 65,
+          "awareness": 66,
+          "hands": 56,
+          "kick_power": 69,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 23,
+        "name": "Julia López",
+        "position": "Wingback",
+        "height": "6-2",
+        "weight": 173,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "possession",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 73,
+          "kicking": 79,
+          "lateral_skill": 69,
+          "tackling": 75,
+          "agility": 79,
+          "power": 83,
+          "awareness": 53,
+          "hands": 87,
+          "kick_power": 79,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 16,
+        "name": "María Moreno",
+        "position": "Wingback",
+        "height": "6-3",
+        "weight": 181,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "deep_threat",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 63,
+          "kicking": 61,
+          "lateral_skill": 73,
+          "tackling": 72,
+          "agility": 79,
+          "power": 81,
+          "awareness": 84,
+          "hands": 57,
+          "kick_power": 61,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 57,
+        "name": "Marta Ramírez",
+        "position": "Wingback",
+        "height": "5-2",
+        "weight": 217,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "deep_threat",
+        "potential": 2,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 83,
+          "stamina": 79,
+          "kicking": 67,
+          "lateral_skill": 84,
+          "tackling": 69,
+          "agility": 87,
+          "power": 86,
+          "awareness": 83,
+          "hands": 65,
+          "kick_power": 54,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 70,
+        "name": "Paula García",
+        "position": "Slotback",
+        "height": "6-0",
+        "weight": 169,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "burner",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 60,
+          "kicking": 80,
+          "lateral_skill": 61,
+          "tackling": 63,
+          "agility": 83,
+          "power": 77,
+          "awareness": 67,
+          "hands": 69,
+          "kick_power": 70,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 60,
+        "name": "Raquel Martínez",
+        "position": "Slotback",
+        "height": "5-6",
+        "weight": 214,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "slot_specialist",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 56,
+          "kicking": 54,
+          "lateral_skill": 58,
+          "tackling": 71,
+          "agility": 72,
+          "power": 72,
+          "awareness": 76,
+          "hands": 61,
+          "kick_power": 76,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 86,
+        "name": "María Romero",
+        "position": "Slotback",
+        "height": "6-2",
+        "weight": 184,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "possession",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 75,
+          "kicking": 84,
+          "lateral_skill": 55,
+          "tackling": 55,
+          "agility": 60,
+          "power": 80,
+          "awareness": 83,
+          "hands": 65,
+          "kick_power": 71,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 29,
+        "name": "Carmen Moreno",
+        "position": "Slotback",
+        "height": "6-4",
+        "weight": 198,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 68,
+          "kicking": 57,
+          "lateral_skill": 64,
+          "tackling": 73,
+          "agility": 88,
+          "power": 60,
+          "awareness": 59,
+          "hands": 87,
+          "kick_power": 58,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 10,
+        "name": "Marta Sánchez",
+        "position": "Keeper",
+        "height": "5-4",
+        "weight": 180,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 67,
+          "kicking": 64,
+          "lateral_skill": 73,
+          "tackling": 63,
+          "agility": 56,
+          "power": 65,
+          "awareness": 65,
+          "hands": 66,
+          "kick_power": 78,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 91,
+        "name": "María Navarro",
+        "position": "Keeper",
+        "height": "5-7",
+        "weight": 169,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "ball_hawk",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 63,
+          "stamina": 73,
+          "kicking": 55,
+          "lateral_skill": 73,
+          "tackling": 77,
+          "agility": 79,
+          "power": 79,
+          "awareness": 82,
+          "hands": 79,
+          "kick_power": 67,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 14,
+        "name": "Lucía Ortega",
+        "position": "Keeper",
+        "height": "5-10",
+        "weight": 206,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "coverage",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 78,
+          "kicking": 60,
+          "lateral_skill": 56,
+          "tackling": 87,
+          "agility": 74,
+          "power": 61,
+          "awareness": 78,
+          "hands": 76,
+          "kick_power": 87,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 95,
+        "name": "Carmen Díaz",
+        "position": "Offensive Line",
+        "height": "5-10",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 76,
+          "kicking": 58,
+          "lateral_skill": 78,
+          "tackling": 68,
+          "agility": 78,
+          "power": 69,
+          "awareness": 69,
+          "hands": 65,
+          "kick_power": 76,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 19,
+        "name": "Nuria Hernández",
+        "position": "Offensive Line",
+        "height": "5-7",
+        "weight": 198,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 82,
+          "stamina": 70,
+          "kicking": 67,
+          "lateral_skill": 64,
+          "tackling": 75,
+          "agility": 60,
+          "power": 52,
+          "awareness": 84,
+          "hands": 60,
+          "kick_power": 76,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 25,
+        "name": "Paula Álvarez",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 154,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "balanced",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 71,
+          "stamina": 59,
+          "kicking": 58,
+          "lateral_skill": 61,
+          "tackling": 88,
+          "agility": 53,
+          "power": 75,
+          "awareness": 58,
+          "hands": 79,
+          "kick_power": 78,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 72,
+        "name": "Pilar García",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 203,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 75,
+          "kicking": 59,
+          "lateral_skill": 67,
+          "tackling": 70,
+          "agility": 68,
+          "power": 56,
+          "awareness": 81,
+          "hands": 82,
+          "kick_power": 80,
+          "kick_accuracy": 77
+        }
+      },
+      {
+        "number": 47,
+        "name": "Lucía Domínguez",
+        "position": "Offensive Line",
+        "height": "5-6",
+        "weight": 149,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 54,
+          "kicking": 83,
+          "lateral_skill": 57,
+          "tackling": 61,
+          "agility": 53,
+          "power": 69,
+          "awareness": 56,
+          "hands": 68,
+          "kick_power": 90,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 18,
+        "name": "Pilar Pérez",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 157,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "road_grader",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 56,
+          "kicking": 80,
+          "lateral_skill": 90,
+          "tackling": 73,
+          "agility": 67,
+          "power": 54,
+          "awareness": 70,
+          "hands": 59,
+          "kick_power": 69,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 59,
+        "name": "Nuria Ramírez",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 156,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "road_grader",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 83,
+          "kicking": 59,
+          "lateral_skill": 77,
+          "tackling": 67,
+          "agility": 66,
+          "power": 79,
+          "awareness": 56,
+          "hands": 72,
+          "kick_power": 79,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 43,
+        "name": "María Gutiérrez",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 157,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 64,
+          "stamina": 82,
+          "kicking": 63,
+          "lateral_skill": 69,
+          "tackling": 70,
+          "agility": 86,
+          "power": 70,
+          "awareness": 65,
+          "hands": 85,
+          "kick_power": 91,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 15,
+        "name": "Elena Rodríguez",
+        "position": "Defensive Line",
+        "height": "5-11",
+        "weight": 199,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "edge_rusher",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 78,
+          "kicking": 58,
+          "lateral_skill": 61,
+          "tackling": 56,
+          "agility": 63,
+          "power": 81,
+          "awareness": 85,
+          "hands": 63,
+          "kick_power": 69,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 53,
+        "name": "Irene Martínez",
+        "position": "Defensive Line",
+        "height": "5-3",
+        "weight": 142,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 80,
+          "stamina": 65,
+          "kicking": 65,
+          "lateral_skill": 68,
+          "tackling": 64,
+          "agility": 75,
+          "power": 80,
+          "awareness": 56,
+          "hands": 71,
+          "kick_power": 78,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 94,
+        "name": "Irene García",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 185,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "run_stuffer",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 85,
+          "kicking": 87,
+          "lateral_skill": 77,
+          "tackling": 77,
+          "agility": 64,
+          "power": 71,
+          "awareness": 63,
+          "hands": 70,
+          "kick_power": 84,
+          "kick_accuracy": 82
+        }
+      },
+      {
+        "number": 7,
+        "name": "Elena Sánchez",
+        "position": "Defensive Line",
+        "height": "5-11",
+        "weight": 179,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 61,
+          "kicking": 79,
+          "lateral_skill": 61,
+          "tackling": 79,
+          "agility": 75,
+          "power": 78,
+          "awareness": 81,
+          "hands": 73,
+          "kick_power": 80,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 69,
+        "name": "Sofía Ramírez",
+        "position": "Defensive Line",
+        "height": "5-9",
+        "weight": 191,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "run_stuffer",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 78,
+          "kicking": 65,
+          "lateral_skill": 81,
+          "tackling": 71,
+          "agility": 86,
+          "power": 60,
+          "awareness": 59,
+          "hands": 62,
+          "kick_power": 73,
+          "kick_accuracy": 89
+        }
+      },
+      {
+        "number": 79,
+        "name": "Alba Rodríguez",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 177,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 70,
+          "kicking": 80,
+          "lateral_skill": 76,
+          "tackling": 70,
+          "agility": 56,
+          "power": 77,
+          "awareness": 75,
+          "hands": 60,
+          "kick_power": 80,
+          "kick_accuracy": 66
+        }
+      },
+      {
+        "number": 90,
+        "name": "Paula Ortega",
+        "position": "Defensive Line",
+        "height": "6-3",
+        "weight": 149,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Bilbao",
+          "state": "SPA",
+          "country": "Spain",
+          "region": "spain"
+        },
+        "high_school": "",
+        "nationality": "Spain",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 70,
+          "kicking": 68,
+          "lateral_skill": 79,
+          "tackling": 76,
+          "agility": 75,
+          "power": 60,
+          "awareness": 63,
+          "hands": 55,
+          "kick_power": 58,
+          "kick_accuracy": 64
+        }
+      }
+    ]
+  }
+}
