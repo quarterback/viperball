@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ dynasty_name }} ({{ year }}) — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span>{{ dynasty_name }} ({{ year }})
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ dynasty_name }} &mdash; YEAR {{ year }}</h1>
+  <div class="subtitle">Women's Viperball League &mdash; 4-Tier Pyramid with Promotion/Relegation</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/" class="active">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
+</div>
+
+{% for tier in tier_data %}
+<h2>
+  Tier {{ tier.tier_num }} &mdash; {{ tier.tier_name }}
+  {% if tier.champion %} &middot; <span class="stat-elite">Champion: {{ tier.champion }}</span>{% endif %}
+</h2>
+
+{% if tier.ranked %}
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>Country</th>
+      <th>W-L</th><th class="num">PF</th><th class="num">PA</th>
+      <th class="num">Diff</th><th>Zone</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in tier.ranked %}
+  {% set diff = t.get('points_for', 0) - t.get('points_against', 0) %}
+  {% set tkey = t.get('team_key', '') %}
+  <tr {% if t.get('is_owner_club') %}style="background:#1a1a00"{% endif %}>
+    <td class="num rank">{{ t.get('position', loop.index) }}</td>
+    <td>
+      <a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a>
+      {% if t.get('is_owner_club') %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOU</span>{% endif %}
+      {% if t.get('narrative_tag') %} <span style="color:var(--fg-dim);font-size:10px">[{{ t.narrative_tag }}]</span>{% endif %}
+    </td>
+    <td style="color:var(--fg-dim)">{{ t.get('country', '') }}</td>
+    <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+    <td class="num">{{ t.get('points_for', 0) }}</td>
+    <td class="num">{{ t.get('points_against', 0) }}</td>
+    <td class="num {% if diff > 0 %}stat-good{% elif diff < 0 %}stat-bad{% endif %}">{{ "%+d"|format(diff) }}</td>
+    <td>
+      {% set zone = t.get('zone', 'safe') %}
+      {% if zone == 'promotion' %}<span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span>
+      {% elif zone == 'relegation' %}<span class="tag" style="border-color:var(--red);color:var(--red)">REL</span>
+      {% elif zone == 'playoff' %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span>
+      {% else %}<span style="color:var(--fg-dim)">&mdash;</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif tier.divisions %}
+  {% for div_name, div_teams in tier.divisions.items() %}
+  <h3>{{ div_name }}</h3>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th></tr>
+    </thead>
+    <tbody>
+    {% for t in div_teams %}
+    {% set tkey = t.get('team_key', t.get('team_name', '')) %}
+    <tr>
+      <td class="num rank">{{ loop.index }}</td>
+      <td><a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
+      <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+      <td class="num">{{ t.get('points_for', 0) }}</td>
+      <td class="num">{{ t.get('points_against', 0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+{% else %}
+<div class="empty">No standings data available for this tier.</div>
+{% endif %}
+{% endfor %}
+
+<div style="margin-top:16px;padding:8px;border:1px solid var(--border);font-size:11px;">
+  <strong style="color:var(--fg-bright)">Promotion/Relegation Key:</strong>
+  <span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span> Auto-promoted
+  &middot; <span class="tag" style="border-color:var(--red);color:var(--red)">REL</span> Auto-relegated
+  &middot; <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span> Playoff spot
+</div>
+{% endblock %}

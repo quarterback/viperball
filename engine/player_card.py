@@ -333,6 +333,13 @@ class PlayerCard:
     redshirt_used: bool = False
     season_games_played: int = 0
 
+    # ── Pro league fields (Optional — None for college players) ──
+    age: Optional[int] = None
+    pro_team: Optional[str] = None
+    contract_years: Optional[int] = None
+    contract_salary: Optional[int] = None
+    pro_status: Optional[str] = None  # "active" | "free_agent" | "retired"
+
     # ── Career history ──
     career_seasons: List[SeasonStats] = field(default_factory=list)
     career_awards: List[Dict] = field(default_factory=list)
@@ -454,6 +461,11 @@ class PlayerCard:
             "redshirt": self.redshirt,
             "redshirt_used": self.redshirt_used,
             "season_games_played": self.season_games_played,
+            "age": self.age,
+            "pro_team": self.pro_team,
+            "contract_years": self.contract_years,
+            "contract_salary": self.contract_salary,
+            "pro_status": self.pro_status,
             "current_team": self.current_team,
             "career_totals": {
                 "games": self.career_games,
@@ -505,6 +517,11 @@ class PlayerCard:
             redshirt=d.get("redshirt", False),
             redshirt_used=d.get("redshirt_used", False),
             season_games_played=d.get("season_games_played", 0),
+            age=d.get("age"),
+            pro_team=d.get("pro_team"),
+            contract_years=d.get("contract_years"),
+            contract_salary=d.get("contract_salary"),
+            pro_status=d.get("pro_status"),
             career_seasons=career,
             career_awards=d.get("career_awards", []),
             current_team=d.get("current_team", ""),

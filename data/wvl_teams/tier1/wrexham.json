@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "wrexham",
+    "school_name": "Wrexham",
+    "abbreviation": "WRE",
+    "mascot": "Wrexham",
+    "conference": "WVL Tier 1",
+    "city": "Wrexham",
+    "state": "WAL",
+    "country": "Wales",
+    "colors": [
+      "Red",
+      "White"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "slow",
+    "two_way_emphasis": "high"
+  },
+  "style": {
+    "offense_style": "ground_pound",
+    "defense_style": "blitz_pack",
+    "st_scheme": "iron_curtain"
+  },
+  "prestige": 62,
+  "franchise_rating": 62,
+  "wvl_metadata": {
+    "tier": 1,
+    "country": "Wales",
+    "city": "Wrexham",
+    "narrative_tag": "vanity_project"
+  },
+  "team_stats": {
+    "avg_speed": 85,
+    "avg_stamina": 81,
+    "kicking_strength": 82,
+    "lateral_proficiency": 83,
+    "defensive_strength": 85
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 47,
+        "name": "Carys Edwards",
+        "position": "Viper",
+        "height": "5-7",
+        "weight": 170,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "hybrid_viper",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 98,
+          "stamina": 93,
+          "kicking": 76,
+          "lateral_skill": 84,
+          "tackling": 92,
+          "agility": 99,
+          "power": 94,
+          "awareness": 82,
+          "hands": 77,
+          "kick_power": 80,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 68,
+        "name": "Megan Hughes",
+        "position": "Viper",
+        "height": "6-4",
+        "weight": 155,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "pocket_passer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 96,
+          "kicking": 95,
+          "lateral_skill": 96,
+          "tackling": 72,
+          "agility": 78,
+          "power": 96,
+          "awareness": 79,
+          "hands": 82,
+          "kick_power": 95,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 20,
+        "name": "Gwen Davies",
+        "position": "Viper",
+        "height": "6-2",
+        "weight": 181,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "hybrid_viper",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 81,
+          "kicking": 94,
+          "lateral_skill": 70,
+          "tackling": 91,
+          "agility": 71,
+          "power": 88,
+          "awareness": 71,
+          "hands": 75,
+          "kick_power": 62,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 61,
+        "name": "Eleri Phillips",
+        "position": "Zeroback",
+        "height": "5-6",
+        "weight": 176,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "receiving_back",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 86,
+          "kicking": 66,
+          "lateral_skill": 71,
+          "tackling": 69,
+          "agility": 96,
+          "power": 94,
+          "awareness": 84,
+          "hands": 90,
+          "kick_power": 88,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 17,
+        "name": "Angharad Jones",
+        "position": "Zeroback",
+        "height": "5-4",
+        "weight": 160,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "speed_back",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 87,
+          "stamina": 86,
+          "kicking": 91,
+          "lateral_skill": 77,
+          "tackling": 74,
+          "agility": 93,
+          "power": 83,
+          "awareness": 70,
+          "hands": 86,
+          "kick_power": 88,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 79,
+        "name": "Eleri Evans",
+        "position": "Zeroback",
+        "height": "5-8",
+        "weight": 195,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "speed_back",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 72,
+          "stamina": 74,
+          "kicking": 84,
+          "lateral_skill": 78,
+          "tackling": 96,
+          "agility": 94,
+          "power": 84,
+          "awareness": 83,
+          "hands": 98,
+          "kick_power": 77,
+          "kick_accuracy": 76
+        }
+      },
+      {
+        "number": 90,
+        "name": "Gwen Thomas",
+        "position": "Halfback",
+        "height": "5-7",
+        "weight": 146,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "power_back",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 74,
+          "kicking": 76,
+          "lateral_skill": 69,
+          "tackling": 88,
+          "agility": 80,
+          "power": 94,
+          "awareness": 73,
+          "hands": 84,
+          "kick_power": 82,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 72,
+        "name": "Megan Phillips",
+        "position": "Halfback",
+        "height": "5-5",
+        "weight": 201,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "power_back",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 95,
+          "stamina": 67,
+          "kicking": 83,
+          "lateral_skill": 88,
+          "tackling": 86,
+          "agility": 81,
+          "power": 78,
+          "awareness": 94,
+          "hands": 78,
+          "kick_power": 90,
+          "kick_accuracy": 84
+        }
+      },
+      {
+        "number": 96,
+        "name": "Eleri Evans",
+        "position": "Halfback",
+        "height": "5-8",
+        "weight": 216,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "elusive",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 81,
+          "kicking": 89,
+          "lateral_skill": 90,
+          "tackling": 76,
+          "agility": 90,
+          "power": 98,
+          "awareness": 89,
+          "hands": 86,
+          "kick_power": 74,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 82,
+        "name": "Angharad Lloyd",
+        "position": "Halfback",
+        "height": "5-11",
+        "weight": 153,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "power_back",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 91,
+          "kicking": 82,
+          "lateral_skill": 92,
+          "tackling": 87,
+          "agility": 92,
+          "power": 92,
+          "awareness": 87,
+          "hands": 76,
+          "kick_power": 88,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 41,
+        "name": "Non Lloyd",
+        "position": "Wingback",
+        "height": "6-0",
+        "weight": 196,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "slot_specialist",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 97,
+          "stamina": 74,
+          "kicking": 80,
+          "lateral_skill": 98,
+          "tackling": 97,
+          "agility": 99,
+          "power": 80,
+          "awareness": 73,
+          "hands": 82,
+          "kick_power": 86,
+          "kick_accuracy": 87
+        }
+      },
+      {
+        "number": 73,
+        "name": "Rhiannon James",
+        "position": "Wingback",
+        "height": "5-10",
+        "weight": 158,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 92,
+          "stamina": 75,
+          "kicking": 85,
+          "lateral_skill": 90,
+          "tackling": 81,
+          "agility": 95,
+          "power": 93,
+          "awareness": 99,
+          "hands": 80,
+          "kick_power": 84,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 71,
+        "name": "Nia Phillips",
+        "position": "Wingback",
+        "height": "5-8",
+        "weight": 209,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "deep_threat",
+        "potential": 2,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 90,
+          "stamina": 87,
+          "kicking": 86,
+          "lateral_skill": 74,
+          "tackling": 97,
+          "agility": 99,
+          "power": 87,
+          "awareness": 77,
+          "hands": 95,
+          "kick_power": 91,
+          "kick_accuracy": 85
+        }
+      },
+      {
+        "number": 67,
+        "name": "Elin Williams",
+        "position": "Wingback",
+        "height": "6-3",
+        "weight": 143,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "possession",
+        "potential": 1,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 71,
+          "kicking": 92,
+          "lateral_skill": 81,
+          "tackling": 86,
+          "agility": 77,
+          "power": 78,
+          "awareness": 73,
+          "hands": 94,
+          "kick_power": 81,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 50,
+        "name": "Eleri Williams",
+        "position": "Slotback",
+        "height": "5-9",
+        "weight": 216,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 89,
+          "kicking": 93,
+          "lateral_skill": 73,
+          "tackling": 82,
+          "agility": 91,
+          "power": 87,
+          "awareness": 87,
+          "hands": 88,
+          "kick_power": 94,
+          "kick_accuracy": 81
+        }
+      },
+      {
+        "number": 9,
+        "name": "Efa Evans",
+        "position": "Slotback",
+        "height": "6-4",
+        "weight": 207,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 95,
+          "stamina": 82,
+          "kicking": 71,
+          "lateral_skill": 89,
+          "tackling": 95,
+          "agility": 72,
+          "power": 86,
+          "awareness": 93,
+          "hands": 71,
+          "kick_power": 68,
+          "kick_accuracy": 69
+        }
+      },
+      {
+        "number": 10,
+        "name": "Catrin Lewis",
+        "position": "Slotback",
+        "height": "6-2",
+        "weight": 194,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "hybrid",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 74,
+          "kicking": 75,
+          "lateral_skill": 81,
+          "tackling": 83,
+          "agility": 82,
+          "power": 90,
+          "awareness": 74,
+          "hands": 99,
+          "kick_power": 91,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 87,
+        "name": "Lowri Evans",
+        "position": "Slotback",
+        "height": "5-6",
+        "weight": 176,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "slot_specialist",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 85,
+          "stamina": 77,
+          "kicking": 79,
+          "lateral_skill": 74,
+          "tackling": 94,
+          "agility": 86,
+          "power": 73,
+          "awareness": 99,
+          "hands": 78,
+          "kick_power": 73,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 59,
+        "name": "Catrin Hughes",
+        "position": "Keeper",
+        "height": "6-1",
+        "weight": 202,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "ball_hawk",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 98,
+          "stamina": 75,
+          "kicking": 78,
+          "lateral_skill": 82,
+          "tackling": 84,
+          "agility": 71,
+          "power": 72,
+          "awareness": 81,
+          "hands": 91,
+          "kick_power": 70,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 58,
+        "name": "Rhiannon Phillips",
+        "position": "Keeper",
+        "height": "5-9",
+        "weight": 201,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "ball_hawk",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 99,
+          "stamina": 96,
+          "kicking": 82,
+          "lateral_skill": 74,
+          "tackling": 89,
+          "agility": 77,
+          "power": 89,
+          "awareness": 89,
+          "hands": 86,
+          "kick_power": 94,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 65,
+        "name": "Rhiannon Price",
+        "position": "Keeper",
+        "height": "5-8",
+        "weight": 212,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "ball_hawk",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 93,
+          "kicking": 70,
+          "lateral_skill": 87,
+          "tackling": 79,
+          "agility": 78,
+          "power": 75,
+          "awareness": 73,
+          "hands": 76,
+          "kick_power": 91,
+          "kick_accuracy": 83
+        }
+      },
+      {
+        "number": 85,
+        "name": "Megan Davies",
+        "position": "Offensive Line",
+        "height": "6-0",
+        "weight": 209,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 88,
+          "stamina": 72,
+          "kicking": 86,
+          "lateral_skill": 93,
+          "tackling": 87,
+          "agility": 87,
+          "power": 80,
+          "awareness": 87,
+          "hands": 85,
+          "kick_power": 99,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 93,
+        "name": "Elin James",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 165,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "balanced",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 87,
+          "kicking": 82,
+          "lateral_skill": 83,
+          "tackling": 91,
+          "agility": 81,
+          "power": 81,
+          "awareness": 92,
+          "hands": 98,
+          "kick_power": 81,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 5,
+        "name": "Mali Morris",
+        "position": "Offensive Line",
+        "height": "5-9",
+        "weight": 144,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "technician",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 83,
+          "kicking": 64,
+          "lateral_skill": 87,
+          "tackling": 79,
+          "agility": 86,
+          "power": 73,
+          "awareness": 92,
+          "hands": 81,
+          "kick_power": 84,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 42,
+        "name": "Eleri Jones",
+        "position": "Offensive Line",
+        "height": "5-6",
+        "weight": 163,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "road_grader",
+        "potential": 5,
+        "development": "slow",
+        "contract": {
+          "years": 3,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 79,
+          "stamina": 91,
+          "kicking": 74,
+          "lateral_skill": 73,
+          "tackling": 93,
+          "agility": 80,
+          "power": 81,
+          "awareness": 81,
+          "hands": 92,
+          "kick_power": 76,
+          "kick_accuracy": 79
+        }
+      },
+      {
+        "number": 60,
+        "name": "Non Price",
+        "position": "Offensive Line",
+        "height": "5-4",
+        "weight": 173,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "mauler",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 75,
+          "stamina": 70,
+          "kicking": 83,
+          "lateral_skill": 72,
+          "tackling": 71,
+          "agility": 87,
+          "power": 77,
+          "awareness": 90,
+          "hands": 99,
+          "kick_power": 70,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 25,
+        "name": "Alys Griffiths",
+        "position": "Offensive Line",
+        "height": "5-10",
+        "weight": 173,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "mauler",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 80,
+          "kicking": 84,
+          "lateral_skill": 85,
+          "tackling": 89,
+          "agility": 84,
+          "power": 82,
+          "awareness": 70,
+          "hands": 81,
+          "kick_power": 67,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 43,
+        "name": "Cerys Lloyd",
+        "position": "Offensive Line",
+        "height": "5-6",
+        "weight": 144,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "road_grader",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 77,
+          "stamina": 89,
+          "kicking": 96,
+          "lateral_skill": 78,
+          "tackling": 92,
+          "agility": 92,
+          "power": 89,
+          "awareness": 90,
+          "hands": 70,
+          "kick_power": 83,
+          "kick_accuracy": 75
+        }
+      },
+      {
+        "number": 28,
+        "name": "Siân Edwards",
+        "position": "Offensive Line",
+        "height": "5-6",
+        "weight": 151,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "road_grader",
+        "potential": 1,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 70,
+          "stamina": 83,
+          "kicking": 95,
+          "lateral_skill": 94,
+          "tackling": 71,
+          "agility": 99,
+          "power": 77,
+          "awareness": 87,
+          "hands": 73,
+          "kick_power": 99,
+          "kick_accuracy": 87
+        }
+      },
+      {
+        "number": 24,
+        "name": "Efa Price",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 147,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "run_stuffer",
+        "potential": 5,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 91,
+          "stamina": 87,
+          "kicking": 87,
+          "lateral_skill": 85,
+          "tackling": 93,
+          "agility": 98,
+          "power": 80,
+          "awareness": 85,
+          "hands": 90,
+          "kick_power": 88,
+          "kick_accuracy": 73
+        }
+      },
+      {
+        "number": 66,
+        "name": "Angharad Morris",
+        "position": "Defensive Line",
+        "height": "5-3",
+        "weight": 194,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "interior_disruptor",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 76,
+          "kicking": 71,
+          "lateral_skill": 80,
+          "tackling": 95,
+          "agility": 88,
+          "power": 79,
+          "awareness": 78,
+          "hands": 98,
+          "kick_power": 92,
+          "kick_accuracy": 88
+        }
+      },
+      {
+        "number": 19,
+        "name": "Cerys Williams",
+        "position": "Defensive Line",
+        "height": "5-10",
+        "weight": 163,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "run_stuffer",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 75,
+          "kicking": 74,
+          "lateral_skill": 86,
+          "tackling": 75,
+          "agility": 70,
+          "power": 91,
+          "awareness": 75,
+          "hands": 66,
+          "kick_power": 78,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 40,
+        "name": "Bethan James",
+        "position": "Defensive Line",
+        "height": "5-5",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 84,
+          "stamina": 87,
+          "kicking": 88,
+          "lateral_skill": 97,
+          "tackling": 94,
+          "agility": 84,
+          "power": 91,
+          "awareness": 74,
+          "hands": 85,
+          "kick_power": 76,
+          "kick_accuracy": 86
+        }
+      },
+      {
+        "number": 92,
+        "name": "Alys Thomas",
+        "position": "Defensive Line",
+        "height": "5-10",
+        "weight": 161,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "hybrid",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 86,
+          "stamina": 74,
+          "kicking": 77,
+          "lateral_skill": 92,
+          "tackling": 74,
+          "agility": 89,
+          "power": 83,
+          "awareness": 94,
+          "hands": 77,
+          "kick_power": 83,
+          "kick_accuracy": 94
+        }
+      },
+      {
+        "number": 13,
+        "name": "Efa Roberts",
+        "position": "Defensive Line",
+        "height": "5-8",
+        "weight": 146,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 4
+        },
+        "stats": {
+          "speed": 96,
+          "stamina": 86,
+          "kicking": 79,
+          "lateral_skill": 95,
+          "tackling": 90,
+          "agility": 75,
+          "power": 96,
+          "awareness": 73,
+          "hands": 93,
+          "kick_power": 99,
+          "kick_accuracy": 91
+        }
+      },
+      {
+        "number": 84,
+        "name": "Manon Roberts",
+        "position": "Defensive Line",
+        "height": "6-2",
+        "weight": 181,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Wrexham",
+          "state": "WAL",
+          "country": "Wales",
+          "region": "wales"
+        },
+        "high_school": "",
+        "nationality": "Wales",
+        "archetype": "edge_rusher",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 69,
+          "stamina": 83,
+          "kicking": 93,
+          "lateral_skill": 91,
+          "tackling": 83,
+          "agility": 95,
+          "power": 68,
+          "awareness": 80,
+          "hands": 89,
+          "kick_power": 89,
+          "kick_accuracy": 78
+        }
+      }
+    ]
+  }
+}

@@ -64,7 +64,7 @@ def _conf_abbrev(name: str) -> str:
 def _get_api():
     """Lazy import to avoid circular imports at module load."""
     from api.main import (
-        sessions, pro_sessions,
+        sessions, pro_sessions, wvl_sessions,
         _fiv_active_cycle, _fiv_active_cycle_data,
         _get_session, _require_season,
         _serialize_standings, _serialize_game, _serialize_team_record,
@@ -74,6 +74,7 @@ def _get_api():
     return {
         "sessions": sessions,
         "pro_sessions": pro_sessions,
+        "wvl_sessions": wvl_sessions,
         "get_session": _get_session,
         "require_season": _require_season,
         "serialize_standings": _serialize_standings,
@@ -206,6 +207,31 @@ def _find_all_pro_sessions():
     return result
 
 
+def _find_all_wvl_sessions():
+    """Return all active WVL sessions."""
+    api = _get_api()
+    result = []
+    for sid, data in api["wvl_sessions"].items():
+        season = data.get("season")
+        result.append({
+            "session_id": sid,
+            "dynasty_name": data.get("dynasty_name", "WVL Dynasty"),
+            "year": data.get("year", "?"),
+            "club_key": data.get("club_key", ""),
+            "tier_count": len(season.tier_seasons) if season else 0,
+        })
+    return result
+
+
+def _get_wvl_session(session_id: str):
+    """Get a WVL session by ID."""
+    api = _get_api()
+    data = api["wvl_sessions"].get(session_id)
+    if not data:
+        raise HTTPException(404, "WVL session not found")
+    return data
+
+
 def _ctx(request, **kwargs):
     """Build template context with request and extras."""
     kwargs["request"] = request
@@ -219,6 +245,7 @@ def _ctx(request, **kwargs):
 def stats_home(request: Request):
     college = _find_all_sessions()
     pro = _find_all_pro_sessions()
+    wvl = _find_all_wvl_sessions()
     fiv_data = _get_fiv_data()
     fiv_rankings = _get_fiv_rankings()
 
@@ -237,6 +264,7 @@ def stats_home(request: Request):
         section="home",
         college_sessions=college,
         pro_sessions=pro,
+        wvl_sessions=wvl,
         fiv_data=fiv_data,
         fiv_rankings=fiv_rankings,
         archives=archives,
@@ -1233,6 +1261,269 @@ def pro_stats(request: Request, league: str, session_id: str, category: str = "a
         request, section="pro", league=league, session_id=session_id,
         leaders=leaders, category=category,
         league_name=season.config.league_name,
+    ))
+
+
+# ── WVL (Women's Viperball League) ──────────────────────────────────────
+
+def _wvl_tier_label(tier_num):
+    """Tier number to display name."""
+    labels = {1: "Galactic Premiership", 2: "Galactic League 1", 3: "Galactic League 2", 4: "Galactic League 3"}
+    return labels.get(tier_num, f"Tier {tier_num}")
+
+
+def _wvl_zone_class(zone):
+    """CSS class for a pro/rel zone."""
+    return {"promotion": "stat-good", "relegation": "stat-bad", "playoff": "stat-elite"}.get(zone, "")
+
+
+@router.get("/wvl/", response_class=HTMLResponse)
+def wvl_index(request: Request):
+    sessions = _find_all_wvl_sessions()
+    return templates.TemplateResponse("wvl/index.html", _ctx(
+        request, section="wvl", sessions=sessions,
+    ))
+
+
+@router.get("/wvl/{session_id}/", response_class=HTMLResponse)
+def wvl_season(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+
+    # Gather standings for all tiers with pro/rel zone annotations
+    all_standings = season.get_all_standings()
+
+    # Get tier configs for display
+    try:
+        from engine.wvl_config import TIER_BY_NUMBER, CLUBS_BY_KEY, RIVALRIES
+    except ImportError:
+        TIER_BY_NUMBER = {}
+        CLUBS_BY_KEY = {}
+        RIVALRIES = []
+
+    tier_data = []
+    for tier_num in sorted(season.tier_seasons.keys()):
+        tier_standings = all_standings.get(tier_num, {})
+        ranked = tier_standings.get("ranked", [])
+        # Enrich with club info
+        for team in ranked:
+            key = team.get("team_key", "")
+            club = CLUBS_BY_KEY.get(key)
+            if club:
+                team["country"] = club.country
+                team["narrative_tag"] = club.narrative_tag
+            team["is_owner_club"] = key == data.get("club_key", "")
+
+        tier_season = season.tier_seasons.get(tier_num)
+        champion = tier_season.champion if tier_season else None
+
+        tier_data.append({
+            "tier_num": tier_num,
+            "tier_name": _wvl_tier_label(tier_num),
+            "ranked": ranked,
+            "champion": champion,
+            "divisions": tier_standings.get("divisions", {}),
+        })
+
+    return templates.TemplateResponse("wvl/season.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        tier_data=tier_data,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+        club_key=data.get("club_key", ""),
+        zone_class=_wvl_zone_class,
+    ))
+
+
+@router.get("/wvl/{session_id}/schedule", response_class=HTMLResponse)
+def wvl_schedule(request: Request, session_id: str, tier: int = 1):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+    tier_season = season.tier_seasons.get(tier)
+    if not tier_season:
+        raise HTTPException(404, f"Tier {tier} not found")
+
+    schedule = tier_season.get_schedule()
+    tier_list = sorted(season.tier_seasons.keys())
+
+    return templates.TemplateResponse("wvl/schedule.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        schedule=schedule, selected_tier=tier,
+        tier_name=_wvl_tier_label(tier),
+        tier_list=tier_list,
+        tier_label=_wvl_tier_label,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+    ))
+
+
+@router.get("/wvl/{session_id}/game/{tier}/{week}/{matchup}", response_class=HTMLResponse)
+def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: str):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+    tier_season = season.tier_seasons.get(tier)
+    if not tier_season:
+        raise HTTPException(404, f"Tier {tier} not found")
+
+    box = tier_season.get_box_score(week, matchup)
+    if not box:
+        raise HTTPException(404, "Game not found")
+
+    # Check if it's a rivalry match
+    try:
+        from engine.wvl_config import is_rivalry_match
+        home_key = box.get("home_key", "")
+        away_key = box.get("away_key", "")
+        rivalry = is_rivalry_match(home_key, away_key)
+    except ImportError:
+        rivalry = None
+
+    return templates.TemplateResponse("wvl/game.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        box=box, week=week, matchup=matchup, tier=tier,
+        tier_name=_wvl_tier_label(tier),
+        rivalry=rivalry,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+    ))
+
+
+@router.get("/wvl/{session_id}/team/{team_key}", response_class=HTMLResponse)
+def wvl_team(request: Request, session_id: str, team_key: str):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+
+    # Find which tier this team is in
+    team_tier = season.tier_assignments.get(team_key)
+    if team_tier is None:
+        raise HTTPException(404, f"Team '{team_key}' not found")
+
+    tier_season = season.tier_seasons.get(team_tier)
+    if not tier_season:
+        raise HTTPException(404, f"Tier {team_tier} not found")
+
+    detail = tier_season.get_team_detail(team_key)
+    if not detail:
+        raise HTTPException(404, f"Team '{team_key}' not found")
+
+    # Enrich with WVL club info
+    try:
+        from engine.wvl_config import CLUBS_BY_KEY
+        club = CLUBS_BY_KEY.get(team_key)
+        if club:
+            detail["country"] = club.country
+            detail["city"] = club.city
+            detail["narrative_tag"] = club.narrative_tag
+            detail["prestige"] = club.prestige
+    except ImportError:
+        pass
+
+    is_owner_club = team_key == data.get("club_key", "")
+
+    return templates.TemplateResponse("wvl/team.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        team=detail, team_key=team_key, tier=team_tier,
+        tier_name=_wvl_tier_label(team_tier),
+        is_owner_club=is_owner_club,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+    ))
+
+
+@router.get("/wvl/{session_id}/stats", response_class=HTMLResponse)
+def wvl_stats(request: Request, session_id: str, tier: int = 0, category: str = "all"):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+
+    # If tier == 0, aggregate across all tiers
+    all_leaders = {}
+    tier_list = sorted(season.tier_seasons.keys())
+
+    if tier > 0 and tier in season.tier_seasons:
+        leaders = season.tier_seasons[tier].get_stat_leaders(category)
+        all_leaders[tier] = leaders
+    else:
+        for t_num in tier_list:
+            leaders = season.tier_seasons[t_num].get_stat_leaders(category)
+            all_leaders[t_num] = leaders
+
+    return templates.TemplateResponse("wvl/stats.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        all_leaders=all_leaders, category=category,
+        selected_tier=tier, tier_list=tier_list,
+        tier_label=_wvl_tier_label,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+    ))
+
+
+@router.get("/wvl/{session_id}/team-stats", response_class=HTMLResponse)
+def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str = "total_yards"):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+    tier_season = season.tier_seasons.get(tier)
+    if not tier_season:
+        raise HTTPException(404, f"Tier {tier} not found")
+
+    tier_list = sorted(season.tier_seasons.keys())
+
+    # Aggregate team stats from completed game results (same logic as pro)
+    team_agg = {}
+    for week_num, week_games in tier_season.results.items():
+        for matchup_key, game in week_games.items():
+            result = game.get("result", {})
+            stats = result.get("stats", {})
+            for side in ("home", "away"):
+                t_key = game.get(f"{side}_key", "")
+                t_name = game.get(f"{side}_name", t_key)
+                s = stats.get(side)
+                if not s or not t_key:
+                    continue
+                if t_key not in team_agg:
+                    team_agg[t_key] = {
+                        "team_key": t_key, "team": t_name, "games": 0,
+                        "total_yards": 0, "touchdowns": 0,
+                        "rushing_yards": 0, "kp_yards": 0,
+                        "lateral_yards": 0, "fumbles": 0, "penalties": 0,
+                    }
+                a = team_agg[t_key]
+                a["games"] += 1
+                a["total_yards"] += s.get("total_yards", 0)
+                a["touchdowns"] += s.get("touchdowns", 0)
+                a["rushing_yards"] += s.get("rushing_yards", 0)
+                a["kp_yards"] += s.get("kick_pass_yards", 0)
+                a["lateral_yards"] += s.get("lateral_yards", 0)
+                a["fumbles"] += s.get("fumbles_lost", 0)
+                a["penalties"] += s.get("penalties", 0)
+
+    teams = list(team_agg.values())
+    for t in teams:
+        n = max(1, t["games"])
+        t["avg_yards"] = round(t["total_yards"] / n, 1)
+        rec = tier_season.standings.get(t["team_key"])
+        if rec:
+            t["wins"] = rec.wins
+            t["losses"] = rec.losses
+        else:
+            t["wins"] = 0
+            t["losses"] = 0
+
+    valid_sorts = {
+        "total_yards": "total_yards", "avg_yards": "avg_yards",
+        "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
+        "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
+        "fumbles": "fumbles", "penalties": "penalties",
+    }
+    sort_key = valid_sorts.get(sort, "total_yards")
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    return templates.TemplateResponse("wvl/team_stats.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        teams=teams, sort=sort, selected_tier=tier,
+        tier_name=_wvl_tier_label(tier),
+        tier_list=tier_list, tier_label=_wvl_tier_label,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
     ))
 
 

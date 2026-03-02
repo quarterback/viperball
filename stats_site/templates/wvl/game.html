@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Box Score — {{ tier_name }} — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/schedule?tier={{ tier }}">{{ tier_name }}</a><span class="sep">/</span>Week {{ week }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+
+{% set home = box.get('home_name', box.get('home_key', '?')) %}
+{% set away = box.get('away_name', box.get('away_key', '?')) %}
+{% set home_key = box.get('home_key', '') %}
+{% set away_key = box.get('away_key', '') %}
+{% set home_score = box.get('home_score', 0) %}
+{% set away_score = box.get('away_score', 0) %}
+
+<div class="box-score-header">
+  <div class="box-team">
+    <div class="name"><a href="/stats/wvl/{{ session_id }}/team/{{ away_key }}">{{ away }}</a></div>
+    <div class="record">Away</div>
+    <div class="box-score-final {% if away_score > home_score %}score-win{% else %}score-loss{% endif %}">{{ away_score }}</div>
+  </div>
+  <div class="box-score-vs">
+    <div>FINAL</div>
+    <div>{{ tier_name }} &middot; Wk {{ week }}</div>
+    {% if rivalry %}<div style="margin-top:4px"><span class="tag tag-rivalry">{{ rivalry }}</span></div>{% endif %}
+  </div>
+  <div class="box-team">
+    <div class="name"><a href="/stats/wvl/{{ session_id }}/team/{{ home_key }}">{{ home }}</a></div>
+    <div class="record">Home</div>
+    <div class="box-score-final {% if home_score > away_score %}score-win{% else %}score-loss{% endif %}">{{ home_score }}</div>
+  </div>
+</div>
+
+{% set stats = box.get('stats', {}) %}
+{% set hs = stats.get('home', {}) %}
+{% set as_ = stats.get('away', {}) %}
+{% set hm = hs.get('viperball_metrics', {}) %}
+{% set am = as_.get('viperball_metrics', {}) %}
+
+{# ── Game Ratings ── #}
+{% if hm or am %}
+<h2>Game Ratings</h2>
+<div class="grid-4" style="margin-bottom:16px;">
+  {% for label, key, src, fmt, elite_thresh, good_thresh in [
+    ('Team Rating', 'team_rating', 'vm', '%.1f', 75, 55),
+    ('PPD', 'ppd', 'vm', '%.2f', 5.0, 3.5),
+    ('EPA', 'epa', 'ts', '%.1f', 5, 0),
+    ('Explosive Plays', 'explosive_plays', 'vm', '%d', 8, 5),
+  ] %}
+  <div class="metric">
+    <div class="label">{{ label }}</div>
+    <div class="value" style="font-size:11px;">
+      {% if src == 'ts' %}
+        {% set av = as_.get(key) %}
+        {% set hv = hs.get(key) %}
+      {% else %}
+        {% set av = am.get(key) %}
+        {% set hv = hm.get(key) %}
+      {% endif %}
+      <span class="{% if av is not none and av >= elite_thresh %}stat-elite{% elif av is not none and av >= good_thresh %}stat-good{% elif av is not none and key == 'epa' and av < 0 %}stat-bad{% endif %}">{{ fmt|format(av) if av is not none else '—' }}</span>
+      <span style="color:var(--fg-dim)">&nbsp;/&nbsp;</span>
+      <span class="{% if hv is not none and hv >= elite_thresh %}stat-elite{% elif hv is not none and hv >= good_thresh %}stat-good{% elif hv is not none and key == 'epa' and hv < 0 %}stat-bad{% endif %}">{{ fmt|format(hv) if hv is not none else '—' }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Team Stats ── #}
+{% macro stat_row(label, key, fmt='d', suffix='') %}
+{% if as_.get(key) is not none or hs.get(key) is not none %}
+<tr>
+  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(as_.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(as_.get(key, 0)) }}{{ suffix }}{% else %}{{ as_.get(key, 0) }}{{ suffix }}{% endif %}</td>
+  <td>{{ label }}</td>
+  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(hs.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(hs.get(key, 0)) }}{{ suffix }}{% else %}{{ hs.get(key, 0) }}{{ suffix }}{% endif %}</td>
+</tr>
+{% endif %}
+{% endmacro %}
+
+{% macro section_header(title) %}
+<tr style="border-top:2px solid var(--border)"><td colspan="3" style="color:var(--accent);font-weight:bold;font-size:11px;letter-spacing:1px;padding-top:8px">{{ title }}</td></tr>
+{% endmacro %}
+
+{% if hs or as_ %}
+<h2>Team Stats</h2>
+<table>
+  <thead>
+    <tr><th class="num">{{ away[:20] }}</th><th>Stat</th><th class="num">{{ home[:20] }}</th></tr>
+  </thead>
+  <tbody>
+  {{ section_header('OFFENSE') }}
+  {{ stat_row('Total Yards', 'total_yards') }}
+  {{ stat_row('Total Plays', 'total_plays') }}
+  {{ stat_row('Yards / Play', 'yards_per_play', 'f2') }}
+  {{ stat_row('Touchdowns', 'touchdowns') }}
+  {{ stat_row('Viper Efficiency', 'viper_efficiency', 'f2') }}
+
+  {% if as_.get('rushing_carries') is not none or hs.get('rushing_carries') is not none %}
+  {{ section_header('RUSHING') }}
+  {{ stat_row('Carries', 'rushing_carries') }}
+  {{ stat_row('Rushing Yards', 'rushing_yards') }}
+  {{ stat_row('Rushing TDs', 'rushing_touchdowns') }}
+  {% endif %}
+
+  {% if as_.get('kick_passes_attempted') or hs.get('kick_passes_attempted') %}
+  {{ section_header('KICK-PASS') }}
+  <tr>
+    <td class="num">{{ as_.get('kick_passes_completed', 0) }}/{{ as_.get('kick_passes_attempted', 0) }}</td>
+    <td>Completions / Attempts</td>
+    <td class="num">{{ hs.get('kick_passes_completed', 0) }}/{{ hs.get('kick_passes_attempted', 0) }}</td>
+  </tr>
+  {{ stat_row('Kick-Pass Yards', 'kick_pass_yards') }}
+  {{ stat_row('Kick-Pass TDs', 'kick_pass_tds') }}
+  {{ stat_row('Interceptions Thrown', 'kick_pass_interceptions') }}
+  {% endif %}
+
+  {% if as_.get('lateral_chains') or hs.get('lateral_chains') %}
+  {{ section_header('LATERAL GAME') }}
+  {{ stat_row('Lateral Chains', 'lateral_chains') }}
+  {{ stat_row('Successful Laterals', 'successful_laterals') }}
+  {{ stat_row('Lateral Yards', 'lateral_yards') }}
+  {% endif %}
+
+  {{ section_header('TURNOVERS') }}
+  {{ stat_row('Fumbles Lost', 'fumbles_lost') }}
+  {{ stat_row('Turnovers on Downs', 'turnovers_on_downs') }}
+  {% if as_.get('penalties') is not none or hs.get('penalties') is not none %}
+  <tr>
+    <td class="num {% if as_.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ as_.get('penalties', 0) }} ({{ as_.get('penalty_yards', 0) }} yds)</td>
+    <td>Penalties (Yards)</td>
+    <td class="num {% if hs.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ hs.get('penalties', 0) }} ({{ hs.get('penalty_yards', 0) }} yds)</td>
+  </tr>
+  {% endif %}
+
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Player Stats ── #}
+{% set ps = box.get('player_stats', {}) %}
+
+{% for side, side_label, team_display, team_key_val in [('away', 'Away', away, away_key), ('home', 'Home', home, home_key)] %}
+{% set side_players = ps.get(side, []) %}
+{% if side_players %}
+
+{% set off_players = [] %}
+{% for p in side_players if p.get('touches', 0) > 0 or p.get('yards', 0) > 0 or p.get('kick_passes_thrown', 0) > 0 %}
+{% if off_players.append(p) %}{% endif %}
+{% endfor %}
+{% if off_players %}
+<h2>{{ team_display }} — Offense</h2>
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th>Tag</th><th>Name</th>
+      <th class="num">TCH</th><th class="num">YDS</th>
+      <th class="num">TD</th><th class="num">FUM</th>
+      <th class="num">WPA</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in off_players|sort(attribute='yards', reverse=true) %}
+  <tr>
+    <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num">{{ p.get('touches', 0) }}</td>
+    <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+    <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+    <td class="num {% if p.get('wpa', 0) > 3 %}stat-good{% elif p.get('wpa', 0) < -3 %}stat-bad{% endif %}">{{ '%.1f'|format(p.get('wpa', 0)) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% set def_players = [] %}
+{% for p in side_players if p.get('tackles', 0) > 0 or p.get('sacks', 0) > 0 %}
+{% if def_players.append(p) %}{% endif %}
+{% endfor %}
+{% if def_players %}
+<h3 style="margin-top:12px;">{{ team_display }} — Defense</h3>
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr><th>Tag</th><th>Name</th><th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th><th class="num">INT</th></tr>
+  </thead>
+  <tbody>
+  {% for p in def_players|sort(attribute='tackles', reverse=true) %}
+  <tr>
+    <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num {% if p.get('tackles', 0) >= 8 %}stat-elite{% elif p.get('tackles', 0) >= 5 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
+    <td class="num {% if p.get('tfl', 0) > 0 %}stat-good{% endif %}">{{ p.get('tfl', 0) }}</td>
+    <td class="num {% if p.get('sacks', 0) > 0 %}stat-elite{% endif %}">{{ p.get('sacks', 0) }}</td>
+    <td class="num {% if p.get('kick_pass_ints', 0) > 0 %}stat-elite{% endif %}">{{ p.get('kick_pass_ints', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+{# ── Drive Summary ── #}
+{% set drives = box.get('drive_summary', []) %}
+{% if drives %}
+<h2>Drive Summary</h2>
+<table>
+  <thead>
+    <tr><th class="num">#</th><th class="num">Qtr</th><th>Team</th><th class="num">Start</th><th class="num">Plays</th><th class="num">Yards</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+  {% for d in drives %}
+  {% set is_score = d.result in ('touchdown', 'successful_kick') if d.result else false %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td class="num">Q{{ d.quarter }}</td>
+    <td>{% if d.team == 'home' %}{{ home[:20] }}{% else %}{{ away[:20] }}{% endif %}</td>
+    <td class="num">{{ d.start_yard_line }}</td>
+    <td class="num">{{ d.plays }}</td>
+    <td class="num {% if d.yards >= 40 %}stat-good{% endif %}">{{ d.yards }}</td>
+    <td><span class="{% if is_score %}stat-elite{% elif d.result == 'punt' %}{% else %}stat-bad{% endif %}">{{ d.result | replace('_', ' ') | title if d.result else '—' }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not stats and not ps and not drives %}
+<pre style="color:var(--fg-dim);font-size:11px;">{{ box | tojson(indent=2) }}</pre>
+{% endif %}
+
+{% endblock %}

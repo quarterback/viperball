@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}WVL — Women's Viperball League — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>WVL
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>WOMEN'S VIPERBALL LEAGUE</h1>
+  <div class="subtitle">Galactic Premiership &mdash; 64 teams, 4 tiers, promotion/relegation</div>
+</div>
+
+{% if sessions %}
+<table>
+  <thead>
+    <tr><th>Dynasty</th><th class="num">Year</th><th class="num">Tiers</th><th>Links</th></tr>
+  </thead>
+  <tbody>
+  {% for s in sessions %}
+  <tr>
+    <td><a href="/stats/wvl/{{ s.session_id }}/">{{ s.dynasty_name }}</a></td>
+    <td class="num">{{ s.year }}</td>
+    <td class="num">{{ s.tier_count }}</td>
+    <td>
+      <a href="/stats/wvl/{{ s.session_id }}/">Standings</a> &middot;
+      <a href="/stats/wvl/{{ s.session_id }}/schedule">Schedule</a> &middot;
+      <a href="/stats/wvl/{{ s.session_id }}/stats">Players</a> &middot;
+      <a href="/stats/wvl/{{ s.session_id }}/team-stats">Team Stats</a>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No active WVL seasons. Start one from Owner Mode in the main app.</div>
+{% endif %}
+{% endblock %}

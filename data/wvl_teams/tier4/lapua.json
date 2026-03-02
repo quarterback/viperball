@@ -1,0 +1,1379 @@
+{
+  "team_info": {
+    "school_id": "lapua",
+    "school_name": "Lapua Virkiä",
+    "abbreviation": "LAP",
+    "mascot": "Virkiä",
+    "conference": "WVL Tier 4",
+    "city": "Lapua",
+    "state": "FIN",
+    "country": "Finland",
+    "colors": [
+      "Blue",
+      "Yellow"
+    ]
+  },
+  "identity": {
+    "style": "hybrid",
+    "philosophy": "hybrid",
+    "tempo": "fast",
+    "two_way_emphasis": "low"
+  },
+  "style": {
+    "offense_style": "balanced",
+    "defense_style": "swarm",
+    "st_scheme": "lightning_returns"
+  },
+  "prestige": 40,
+  "franchise_rating": 40,
+  "wvl_metadata": {
+    "tier": 4,
+    "country": "Finland",
+    "city": "Lapua",
+    "narrative_tag": ""
+  },
+  "team_stats": {
+    "avg_speed": 57,
+    "avg_stamina": 60,
+    "kicking_strength": 59,
+    "lateral_proficiency": 61,
+    "defensive_strength": 57
+  },
+  "roster": {
+    "size": 36,
+    "players": [
+      {
+        "number": 2,
+        "name": "Minja Järvinen",
+        "position": "Viper",
+        "height": "5-11",
+        "weight": 154,
+        "year": "Senior Pro",
+        "age": 32,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "scrambler",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 51,
+          "stamina": 80,
+          "kicking": 70,
+          "lateral_skill": 52,
+          "tackling": 47,
+          "agility": 61,
+          "power": 63,
+          "awareness": 65,
+          "hands": 72,
+          "kick_power": 52,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 88,
+        "name": "Anni Mäkelä",
+        "position": "Viper",
+        "height": "5-11",
+        "weight": 195,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "dual_threat",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 73,
+          "kicking": 69,
+          "lateral_skill": 72,
+          "tackling": 60,
+          "agility": 75,
+          "power": 75,
+          "awareness": 66,
+          "hands": 70,
+          "kick_power": 57,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 51,
+        "name": "Nea Hämäläinen",
+        "position": "Viper",
+        "height": "5-3",
+        "weight": 177,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "dual_threat",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 49,
+          "kicking": 46,
+          "lateral_skill": 51,
+          "tackling": 52,
+          "agility": 72,
+          "power": 61,
+          "awareness": 55,
+          "hands": 76,
+          "kick_power": 60,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 81,
+        "name": "Ella Kinnunen",
+        "position": "Zeroback",
+        "height": "5-11",
+        "weight": 180,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "speed_back",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 47,
+          "kicking": 61,
+          "lateral_skill": 77,
+          "tackling": 48,
+          "agility": 71,
+          "power": 77,
+          "awareness": 57,
+          "hands": 45,
+          "kick_power": 66,
+          "kick_accuracy": 74
+        }
+      },
+      {
+        "number": 41,
+        "name": "Sofia Korhonen",
+        "position": "Zeroback",
+        "height": "6-1",
+        "weight": 149,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "speed_back",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 4,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 66,
+          "stamina": 64,
+          "kicking": 73,
+          "lateral_skill": 74,
+          "tackling": 52,
+          "agility": 77,
+          "power": 58,
+          "awareness": 62,
+          "hands": 58,
+          "kick_power": 63,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 19,
+        "name": "Nea Laine",
+        "position": "Zeroback",
+        "height": "5-2",
+        "weight": 166,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 45,
+          "stamina": 72,
+          "kicking": 51,
+          "lateral_skill": 67,
+          "tackling": 55,
+          "agility": 63,
+          "power": 71,
+          "awareness": 75,
+          "hands": 66,
+          "kick_power": 69,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 21,
+        "name": "Venla Heikkinen",
+        "position": "Halfback",
+        "height": "5-5",
+        "weight": 190,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "elusive",
+        "potential": 1,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 46,
+          "kicking": 46,
+          "lateral_skill": 58,
+          "tackling": 73,
+          "agility": 69,
+          "power": 63,
+          "awareness": 63,
+          "hands": 69,
+          "kick_power": 56,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 93,
+        "name": "Iida Hämäläinen",
+        "position": "Halfback",
+        "height": "6-2",
+        "weight": 212,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "speed_back",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 49,
+          "stamina": 64,
+          "kicking": 64,
+          "lateral_skill": 73,
+          "tackling": 52,
+          "agility": 51,
+          "power": 52,
+          "awareness": 53,
+          "hands": 74,
+          "kick_power": 57,
+          "kick_accuracy": 62
+        }
+      },
+      {
+        "number": 77,
+        "name": "Ronja Heinonen",
+        "position": "Halfback",
+        "height": "5-2",
+        "weight": 220,
+        "year": "Veteran",
+        "age": 25,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "elusive",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 54,
+          "stamina": 63,
+          "kicking": 47,
+          "lateral_skill": 45,
+          "tackling": 60,
+          "agility": 58,
+          "power": 65,
+          "awareness": 49,
+          "hands": 63,
+          "kick_power": 46,
+          "kick_accuracy": 70
+        }
+      },
+      {
+        "number": 60,
+        "name": "Eevi Salonen",
+        "position": "Halfback",
+        "height": "6-0",
+        "weight": 188,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "speed_back",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 74,
+          "stamina": 57,
+          "kicking": 53,
+          "lateral_skill": 74,
+          "tackling": 69,
+          "agility": 68,
+          "power": 71,
+          "awareness": 67,
+          "hands": 61,
+          "kick_power": 57,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 24,
+        "name": "Eevi Virtanen",
+        "position": "Wingback",
+        "height": "5-11",
+        "weight": 174,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "possession",
+        "potential": 2,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 67,
+          "kicking": 52,
+          "lateral_skill": 57,
+          "tackling": 54,
+          "agility": 54,
+          "power": 66,
+          "awareness": 56,
+          "hands": 59,
+          "kick_power": 44,
+          "kick_accuracy": 45
+        }
+      },
+      {
+        "number": 18,
+        "name": "Anni Kinnunen",
+        "position": "Wingback",
+        "height": "6-4",
+        "weight": 162,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 58,
+          "kicking": 56,
+          "lateral_skill": 54,
+          "tackling": 70,
+          "agility": 44,
+          "power": 56,
+          "awareness": 62,
+          "hands": 55,
+          "kick_power": 64,
+          "kick_accuracy": 51
+        }
+      },
+      {
+        "number": 45,
+        "name": "Ronja Lehtonen",
+        "position": "Wingback",
+        "height": "5-10",
+        "weight": 154,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 57,
+          "kicking": 62,
+          "lateral_skill": 76,
+          "tackling": 48,
+          "agility": 51,
+          "power": 51,
+          "awareness": 70,
+          "hands": 52,
+          "kick_power": 54,
+          "kick_accuracy": 63
+        }
+      },
+      {
+        "number": 56,
+        "name": "Venla Mäkinen",
+        "position": "Wingback",
+        "height": "5-6",
+        "weight": 203,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "possession",
+        "potential": 4,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 61,
+          "kicking": 46,
+          "lateral_skill": 62,
+          "tackling": 52,
+          "agility": 55,
+          "power": 61,
+          "awareness": 55,
+          "hands": 63,
+          "kick_power": 69,
+          "kick_accuracy": 47
+        }
+      },
+      {
+        "number": 97,
+        "name": "Emma Lehtinen",
+        "position": "Slotback",
+        "height": "5-2",
+        "weight": 175,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "burner",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 53,
+          "stamina": 68,
+          "kicking": 67,
+          "lateral_skill": 47,
+          "tackling": 63,
+          "agility": 60,
+          "power": 52,
+          "awareness": 66,
+          "hands": 45,
+          "kick_power": 45,
+          "kick_accuracy": 50
+        }
+      },
+      {
+        "number": 50,
+        "name": "Ilona Heinonen",
+        "position": "Slotback",
+        "height": "5-3",
+        "weight": 219,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "slot_specialist",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 64,
+          "kicking": 54,
+          "lateral_skill": 61,
+          "tackling": 75,
+          "agility": 71,
+          "power": 69,
+          "awareness": 44,
+          "hands": 66,
+          "kick_power": 66,
+          "kick_accuracy": 55
+        }
+      },
+      {
+        "number": 27,
+        "name": "Emma Laine",
+        "position": "Slotback",
+        "height": "6-2",
+        "weight": 206,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 42,
+          "stamina": 58,
+          "kicking": 44,
+          "lateral_skill": 74,
+          "tackling": 44,
+          "agility": 65,
+          "power": 68,
+          "awareness": 73,
+          "hands": 61,
+          "kick_power": 68,
+          "kick_accuracy": 72
+        }
+      },
+      {
+        "number": 67,
+        "name": "Ella Kinnunen",
+        "position": "Slotback",
+        "height": "6-1",
+        "weight": 214,
+        "year": "Young Pro",
+        "age": 24,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "hybrid",
+        "potential": 2,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 56,
+          "stamina": 62,
+          "kicking": 70,
+          "lateral_skill": 53,
+          "tackling": 57,
+          "agility": 51,
+          "power": 56,
+          "awareness": 60,
+          "hands": 68,
+          "kick_power": 53,
+          "kick_accuracy": 48
+        }
+      },
+      {
+        "number": 86,
+        "name": "Eevi Salonen",
+        "position": "Keeper",
+        "height": "6-3",
+        "weight": 184,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "enforcer",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 73,
+          "stamina": 56,
+          "kicking": 66,
+          "lateral_skill": 41,
+          "tackling": 72,
+          "agility": 45,
+          "power": 68,
+          "awareness": 68,
+          "hands": 63,
+          "kick_power": 58,
+          "kick_accuracy": 52
+        }
+      },
+      {
+        "number": 95,
+        "name": "Emma Järvinen",
+        "position": "Keeper",
+        "height": "5-9",
+        "weight": 154,
+        "year": "Young Pro",
+        "age": 23,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "ball_hawk",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 62,
+          "stamina": 47,
+          "kicking": 60,
+          "lateral_skill": 64,
+          "tackling": 53,
+          "agility": 68,
+          "power": 57,
+          "awareness": 60,
+          "hands": 44,
+          "kick_power": 63,
+          "kick_accuracy": 59
+        }
+      },
+      {
+        "number": 6,
+        "name": "Nea Korhonen",
+        "position": "Keeper",
+        "height": "5-5",
+        "weight": 184,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "enforcer",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 44,
+          "stamina": 66,
+          "kicking": 51,
+          "lateral_skill": 47,
+          "tackling": 67,
+          "agility": 67,
+          "power": 65,
+          "awareness": 68,
+          "hands": 60,
+          "kick_power": 59,
+          "kick_accuracy": 47
+        }
+      },
+      {
+        "number": 82,
+        "name": "Ronja Koskinen",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 156,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "balanced",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 48,
+          "kicking": 58,
+          "lateral_skill": 56,
+          "tackling": 61,
+          "agility": 61,
+          "power": 43,
+          "awareness": 71,
+          "hands": 51,
+          "kick_power": 45,
+          "kick_accuracy": 68
+        }
+      },
+      {
+        "number": 90,
+        "name": "Aino Mäkinen",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 182,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "road_grader",
+        "potential": 4,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 67,
+          "stamina": 68,
+          "kicking": 63,
+          "lateral_skill": 45,
+          "tackling": 55,
+          "agility": 74,
+          "power": 73,
+          "awareness": 52,
+          "hands": 70,
+          "kick_power": 57,
+          "kick_accuracy": 67
+        }
+      },
+      {
+        "number": 47,
+        "name": "Viivi Kinnunen",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 206,
+        "year": "Senior Pro",
+        "age": 30,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "mauler",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 2,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 43,
+          "kicking": 59,
+          "lateral_skill": 43,
+          "tackling": 46,
+          "agility": 70,
+          "power": 61,
+          "awareness": 45,
+          "hands": 66,
+          "kick_power": 76,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 69,
+        "name": "Pihla Laine",
+        "position": "Offensive Line",
+        "height": "5-11",
+        "weight": 152,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "quick",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 60,
+          "stamina": 78,
+          "kicking": 62,
+          "lateral_skill": 59,
+          "tackling": 68,
+          "agility": 76,
+          "power": 42,
+          "awareness": 56,
+          "hands": 46,
+          "kick_power": 63,
+          "kick_accuracy": 61
+        }
+      },
+      {
+        "number": 92,
+        "name": "Pihla Tuominen",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 160,
+        "year": "Young Pro",
+        "age": 22,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 52,
+          "stamina": 69,
+          "kicking": 65,
+          "lateral_skill": 65,
+          "tackling": 58,
+          "agility": 58,
+          "power": 64,
+          "awareness": 68,
+          "hands": 70,
+          "kick_power": 63,
+          "kick_accuracy": 71
+        }
+      },
+      {
+        "number": 12,
+        "name": "Pihla Kinnunen",
+        "position": "Offensive Line",
+        "height": "5-5",
+        "weight": 210,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "technician",
+        "potential": 5,
+        "development": "normal",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 58,
+          "stamina": 53,
+          "kicking": 66,
+          "lateral_skill": 71,
+          "tackling": 50,
+          "agility": 52,
+          "power": 71,
+          "awareness": 44,
+          "hands": 64,
+          "kick_power": 44,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 71,
+        "name": "Sofia Järvinen",
+        "position": "Offensive Line",
+        "height": "6-2",
+        "weight": 177,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "technician",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 45,
+          "stamina": 52,
+          "kicking": 64,
+          "lateral_skill": 57,
+          "tackling": 54,
+          "agility": 66,
+          "power": 53,
+          "awareness": 56,
+          "hands": 49,
+          "kick_power": 56,
+          "kick_accuracy": 46
+        }
+      },
+      {
+        "number": 38,
+        "name": "Venla Hämäläinen",
+        "position": "Offensive Line",
+        "height": "5-8",
+        "weight": 148,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "road_grader",
+        "potential": 3,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 76,
+          "stamina": 48,
+          "kicking": 74,
+          "lateral_skill": 74,
+          "tackling": 62,
+          "agility": 62,
+          "power": 60,
+          "awareness": 42,
+          "hands": 73,
+          "kick_power": 43,
+          "kick_accuracy": 60
+        }
+      },
+      {
+        "number": 75,
+        "name": "Anni Nieminen",
+        "position": "Defensive Line",
+        "height": "5-2",
+        "weight": 147,
+        "year": "Veteran",
+        "age": 27,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "quick",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 44,
+          "stamina": 74,
+          "kicking": 57,
+          "lateral_skill": 57,
+          "tackling": 58,
+          "agility": 66,
+          "power": 69,
+          "awareness": 64,
+          "hands": 44,
+          "kick_power": 50,
+          "kick_accuracy": 65
+        }
+      },
+      {
+        "number": 37,
+        "name": "Sofia Lehtinen",
+        "position": "Defensive Line",
+        "height": "5-7",
+        "weight": 164,
+        "year": "Senior Pro",
+        "age": 31,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "normal",
+        "contract": {
+          "years": 1,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 61,
+          "stamina": 52,
+          "kicking": 67,
+          "lateral_skill": 63,
+          "tackling": 66,
+          "agility": 57,
+          "power": 62,
+          "awareness": 77,
+          "hands": 51,
+          "kick_power": 55,
+          "kick_accuracy": 57
+        }
+      },
+      {
+        "number": 31,
+        "name": "Nea Saarinen",
+        "position": "Defensive Line",
+        "height": "5-11",
+        "weight": 174,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "slow",
+        "contract": {
+          "years": 4,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 65,
+          "stamina": 75,
+          "kicking": 60,
+          "lateral_skill": 56,
+          "tackling": 49,
+          "agility": 73,
+          "power": 60,
+          "awareness": 52,
+          "hands": 64,
+          "kick_power": 62,
+          "kick_accuracy": 54
+        }
+      },
+      {
+        "number": 43,
+        "name": "Siiri Hämäläinen",
+        "position": "Defensive Line",
+        "height": "5-7",
+        "weight": 151,
+        "year": "Veteran",
+        "age": 28,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "interior_disruptor",
+        "potential": 4,
+        "development": "late_bloomer",
+        "contract": {
+          "years": 3,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 64,
+          "kicking": 56,
+          "lateral_skill": 66,
+          "tackling": 60,
+          "agility": 46,
+          "power": 70,
+          "awareness": 72,
+          "hands": 68,
+          "kick_power": 55,
+          "kick_accuracy": 58
+        }
+      },
+      {
+        "number": 59,
+        "name": "Ilona Heikkinen",
+        "position": "Defensive Line",
+        "height": "5-6",
+        "weight": 176,
+        "year": "Veteran",
+        "age": 26,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 1,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 57,
+          "stamina": 55,
+          "kicking": 65,
+          "lateral_skill": 60,
+          "tackling": 41,
+          "agility": 56,
+          "power": 63,
+          "awareness": 62,
+          "hands": 48,
+          "kick_power": 44,
+          "kick_accuracy": 56
+        }
+      },
+      {
+        "number": 87,
+        "name": "Nea Heinonen",
+        "position": "Defensive Line",
+        "height": "6-1",
+        "weight": 162,
+        "year": "Veteran",
+        "age": 29,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "hybrid",
+        "potential": 5,
+        "development": "quick",
+        "contract": {
+          "years": 3,
+          "salary": 2
+        },
+        "stats": {
+          "speed": 51,
+          "stamina": 52,
+          "kicking": 58,
+          "lateral_skill": 77,
+          "tackling": 46,
+          "agility": 62,
+          "power": 74,
+          "awareness": 59,
+          "hands": 44,
+          "kick_power": 75,
+          "kick_accuracy": 64
+        }
+      },
+      {
+        "number": 89,
+        "name": "Aino Lehtonen",
+        "position": "Defensive Line",
+        "height": "6-0",
+        "weight": 218,
+        "year": "Senior Pro",
+        "age": 33,
+        "hometown": {
+          "city": "Lapua",
+          "state": "FIN",
+          "country": "Finland",
+          "region": "finland"
+        },
+        "high_school": "",
+        "nationality": "Finland",
+        "archetype": "run_stuffer",
+        "potential": 3,
+        "development": "slow",
+        "contract": {
+          "years": 2,
+          "salary": 3
+        },
+        "stats": {
+          "speed": 59,
+          "stamina": 65,
+          "kicking": 48,
+          "lateral_skill": 73,
+          "tackling": 70,
+          "agility": 56,
+          "power": 60,
+          "awareness": 71,
+          "hands": 53,
+          "kick_power": 49,
+          "kick_accuracy": 49
+        }
+      }
+    ]
+  }
+}
