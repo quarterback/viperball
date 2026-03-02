@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from engine.pro_league import ProLeagueConfig, ProLeagueSeason
+from engine.pro_league import ProLeagueConfig, ProLeagueSeason, ProTeamRecord
+from engine.game_engine import load_team_from_json
 from engine.wvl_config import (
     ALL_WVL_TIERS, TIER_BY_NUMBER, WVLTierConfig, CLUBS_BY_KEY,
     is_rivalry_match,
@@ -77,13 +78,51 @@ class WVLMultiTierSeason:
         self.current_week = 0
         self.promotion_result: Optional[PromotionRelegationResult] = None
 
+        # Pre-scan ALL tier directories so promoted/relegated teams are found
+        # regardless of which tier directory they originally lived in.
+        all_wvl_teams = {}
+        for tc in ALL_WVL_TIERS:
+            td = DATA_DIR.parent / tc.teams_dir
+            if td.exists():
+                for f in sorted(td.glob("*.json")):
+                    key = f.stem
+                    if key not in all_wvl_teams:
+                        try:
+                            all_wvl_teams[key] = load_team_from_json(str(f))
+                        except Exception:
+                            pass
+
         for tier_config in ALL_WVL_TIERS:
             config = _tier_to_pro_config(tier_config, self.tier_assignments)
             try:
-                season = ProLeagueSeason(config)
+                # Use __new__ + manual injection (same pattern as create_champions_league)
+                # so team loading searches across all tier dirs, not just this tier's dir.
+                season = ProLeagueSeason.__new__(ProLeagueSeason)
+                season.config = config
+                season.teams = {}
+                season.standings = {}
+                season.schedule = []
+                season.results = {}
+                season.player_season_stats = {}
+                season.current_week = 0
+                season.total_weeks = 0
+                season.phase = "regular_season"
+                season.playoff_bracket = []
+                season.playoff_round = 0
+                season.champion = None
+
+                for div_keys in config.divisions.values():
+                    for key in div_keys:
+                        if key in all_wvl_teams:
+                            season.teams[key] = all_wvl_teams[key]
+
+                if not season.teams:
+                    continue
+
+                season._init_standings()
+                season._generate_schedule()
                 self.tier_seasons[tier_config.tier_number] = season
             except Exception:
-                # If team files don't exist yet, skip
                 pass
 
         if self.tier_seasons:
