@@ -180,7 +180,7 @@ class WVLMultiTierSeason:
                 all_teams = []
                 for div_teams in standings["divisions"].values():
                     all_teams.extend(div_teams)
-                all_teams.sort(key=lambda t: (-t.get("wins", 0), -(t.get("points_for", 0) - t.get("points_against", 0))))
+                all_teams.sort(key=lambda t: (-t.get("wins", 0), -(t.get("pf", 0) - t.get("pa", 0))))
 
                 for i, team in enumerate(all_teams):
                     pos = i + 1
@@ -216,7 +216,7 @@ class WVLMultiTierSeason:
             all_teams = []
             for div_teams in standings.get("divisions", {}).values():
                 all_teams.extend(div_teams)
-            all_teams.sort(key=lambda t: (-t.get("wins", 0), -(t.get("points_for", 0) - t.get("points_against", 0))))
+            all_teams.sort(key=lambda t: (-t.get("wins", 0), -(t.get("pf", 0) - t.get("pa", 0))))
             result[tier_num] = all_teams
         return result
 
