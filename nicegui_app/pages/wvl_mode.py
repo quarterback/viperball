@@ -661,63 +661,88 @@ def _render_dashboard(container):
 
         # ── STATS LEADERS ─────────────────────────────────────
         if last_season is not None and last_season.tier_seasons:
-            leaders = last_season.get_all_stat_leaders(top_n=8)
+            leaders = last_season.get_all_stat_leaders()
             if any(leaders.values()):
                 ui.separator().classes("mt-2")
-                with ui.expansion("Season Stats Leaders", icon="leaderboard", value=False).classes("w-full"):
+                with ui.expansion("Season Stats — All Players", icon="leaderboard", value=False).classes("w-full"):
                     from nicegui_app.pages.pro_leagues import _show_player_card as _show_pc
 
-                    def _make_click(tier_num, team_key, pname):
-                        def _click():
-                            ts = last_season.tier_seasons.get(tier_num)
-                            if ts:
-                                _show_pc(ts, team_key, pname)
-                            else:
-                                ui.notify("Player data not available.", type="warning")
-                        return _click
+                    def _wvl_stat_table(data: list, col_spec: list):
+                        """Sortable full-roster table with clickable player names."""
+                        if not data:
+                            ui.label("No data yet.").classes("text-sm text-slate-400")
+                            return
+                        columns = [
+                            {"name": k, "label": lbl, "field": k, "sortable": True,
+                             "align": "left" if k in ("name", "team") else "center"}
+                            for k, lbl in col_spec
+                        ]
+                        rows = [
+                            {**{k: p.get(k, "") for k, _ in col_spec},
+                             "team_key": p["team_key"], "tier_num": p["tier_num"],
+                             "_idx": i}
+                            for i, p in enumerate(data)
+                        ]
+                        tbl = (
+                            ui.table(columns=columns, rows=rows, row_key="_idx")
+                            .classes("w-full")
+                            .props("dense flat bordered virtual-scroll")
+                            .style("max-height: 420px;")
+                        )
+                        tbl.add_slot("body-cell-name", '''
+                            <q-td :props="props">
+                                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                   @click="$parent.$emit('player_click', props.row)">
+                                    {{ props.row.name }}
+                                </a>
+                            </q-td>
+                        ''')
+                        tbl.on("player_click", lambda e: (
+                            _show_pc(
+                                last_season.tier_seasons.get(e.args.get("tier_num", 0)),
+                                e.args.get("team_key", ""),
+                                e.args.get("name", ""),
+                            )
+                            if last_season.tier_seasons.get(e.args.get("tier_num", 0))
+                            else ui.notify("Player data not available.", type="warning")
+                        ))
 
-                    CATEGORIES = [
-                        ("rushing",    "Rushing Yards",   "yards",        "Yds"),
-                        ("kick_pass",  "Kick-Pass Yards", "kick_pass_yards", "Yds"),
-                        ("scoring",    "Touchdowns",      "touchdowns",   "TD"),
-                        ("tackles",    "Tackles",         "tackles",      "TKL"),
-                        ("total_yards","Total Yards",     "total_yards",  "Yds"),
-                    ]
+                    with ui.tabs().classes("w-full") as stat_tabs:
+                        tab_rush  = ui.tab("Rushing")
+                        tab_kp    = ui.tab("Kick-Pass")
+                        tab_score = ui.tab("Scoring")
+                        tab_def   = ui.tab("Defense")
+                        tab_total = ui.tab("Total Yards")
 
-                    with ui.grid(columns=2).classes("w-full gap-4"):
-                        for cat_key, cat_label, val_field, val_header in CATEGORIES:
-                            rows = leaders.get(cat_key, [])
-                            if not rows:
-                                continue
-                            with ui.card().classes("p-3"):
-                                ui.label(cat_label).classes("text-xs font-bold text-slate-500 uppercase mb-2")
-                                with ui.element("table").classes("w-full text-sm"):
-                                    with ui.element("thead"):
-                                        with ui.element("tr"):
-                                            for hdr in ["#", "Player", "Team", val_header, "GP"]:
-                                                ui.element("th").classes(
-                                                    "text-left text-[10px] text-slate-400 pb-1 pr-2"
-                                                ).text = hdr
-                                    with ui.element("tbody"):
-                                        for i, p in enumerate(rows, 1):
-                                            with ui.element("tr").classes("hover:bg-slate-50"):
-                                                ui.element("td").classes("pr-2 text-slate-400 text-xs").text = str(i)
-                                                with ui.element("td").classes("pr-2"):
-                                                    ui.button(
-                                                        p["name"],
-                                                        on_click=_make_click(p["tier_num"], p["team_key"], p["name"]),
-                                                    ).props("flat dense no-caps").classes(
-                                                        "text-indigo-600 font-semibold text-sm p-0 min-h-0"
-                                                    )
-                                                ui.element("td").classes("pr-2 text-xs text-slate-500").text = (
-                                                    p.get("team_name", "")[:16]
-                                                )
-                                                ui.element("td").classes("pr-2 font-semibold").text = str(
-                                                    p.get(val_field, p.get("value", 0))
-                                                )
-                                                ui.element("td").classes("text-xs text-slate-400").text = str(
-                                                    p.get("games", 0)
-                                                )
+                    with ui.tab_panels(stat_tabs, value=tab_rush).classes("w-full"):
+                        with ui.tab_panel(tab_rush):
+                            _wvl_stat_table(leaders.get("rushing", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("yards", "Rush Yds"), ("carries", "Car"), ("ypc", "YPC"),
+                                ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_kp):
+                            _wvl_stat_table(leaders.get("kick_pass", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("yards", "KP Yds"), ("completions", "Comp"),
+                                ("attempts", "Att"), ("pct", "Pct%"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_score):
+                            _wvl_stat_table(leaders.get("scoring", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("touchdowns", "TD"), ("dk_made", "DK"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_def):
+                            _wvl_stat_table(leaders.get("tackles", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("tackles", "TKL"), ("fumbles", "FUM"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_total):
+                            _wvl_stat_table(leaders.get("total_yards", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("total_yards", "Total"), ("rushing", "Rush"),
+                                ("kick_pass", "KP"), ("games", "GP"),
+                            ])
 
         # ── MANAGEMENT (compact, bottom) ──────────────────────
         ui.separator().classes("mt-4")

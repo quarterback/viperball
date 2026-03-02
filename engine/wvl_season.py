@@ -206,31 +206,66 @@ class WVLMultiTierSeason:
 
         return playoff_results
 
-    def get_all_stat_leaders(self, top_n: int = 10) -> Dict[str, List[dict]]:
-        """Aggregate stat leaders across all 4 tiers.
+    def get_all_stat_leaders(self) -> Dict[str, List[dict]]:
+        """Aggregate all player stats across all 4 tiers.
 
-        Returns a dict of category → list of top players (each entry includes
-        tier_num so the caller can look up the right ProLeagueSeason).
+        Returns category → full sorted list of every player with > 0 in that
+        stat (no cap).  Same field names as ProLeagueSeason.get_stat_leaders()
+        plus tier_num/tier so the UI can route player-card lookups correctly.
         """
         all_players: List[dict] = []
         for tier_num, season in self.tier_seasons.items():
             for team_key, players in season.player_season_stats.items():
                 team_name = season.teams[team_key].name if team_key in season.teams else team_key
-                for pid, stats in players.items():
-                    all_players.append({**stats, "team_name": team_name, "tier_num": tier_num})
+                for pid, p in players.items():
+                    all_players.append({**p, "team_name": team_name, "tier_num": tier_num})
 
-        def _top(sort_key: str, filter_key: str) -> List[dict]:
-            return sorted(
-                [p for p in all_players if p.get(filter_key, 0) > 0],
-                key=lambda p: -p[sort_key],
-            )[:top_n]
+        rushing   = sorted(all_players, key=lambda p: -p["rushing_yards"])
+        kick_pass = sorted(all_players, key=lambda p: -p["kick_pass_yards"])
+        scoring   = sorted(all_players, key=lambda p: -p["touchdowns"])
+        tackles   = sorted(all_players, key=lambda p: -p["tackles"])
+        total     = sorted(all_players, key=lambda p: -p["total_yards"])
+
+        def _tier(p):
+            return f"T{p['tier_num']}"
 
         return {
-            "rushing": _top("rushing_yards", "rushing_yards"),
-            "kick_pass": _top("kick_pass_yards", "kick_pass_yards"),
-            "scoring": _top("touchdowns", "touchdowns"),
-            "tackles": _top("tackles", "tackles"),
-            "total_yards": _top("total_yards", "total_yards"),
+            "rushing": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "yards": p["rushing_yards"], "carries": p["rushing_carries"],
+                "ypc": round(p["rushing_yards"] / max(1, p["rushing_carries"]), 1),
+                "games": p["games"],
+            } for p in rushing if p["rushing_yards"] > 0],
+
+            "kick_pass": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "yards": p["kick_pass_yards"], "completions": p["kick_pass_completions"],
+                "attempts": p["kick_pass_attempts"],
+                "pct": round(p["kick_pass_completions"] / max(1, p["kick_pass_attempts"]) * 100, 1),
+                "games": p["games"],
+            } for p in kick_pass if p["kick_pass_yards"] > 0],
+
+            "scoring": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "touchdowns": p["touchdowns"], "dk_made": p["dk_made"],
+                "total_yards": p["total_yards"], "games": p["games"],
+            } for p in scoring if p["touchdowns"] > 0],
+
+            "tackles": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "tackles": p["tackles"], "fumbles": p["fumbles"], "games": p["games"],
+            } for p in tackles if p["tackles"] > 0],
+
+            "total_yards": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "total_yards": p["total_yards"], "rushing": p["rushing_yards"],
+                "kick_pass": p["kick_pass_yards"], "games": p["games"],
+            } for p in total if p["total_yards"] > 0],
         }
 
     def get_all_standings(self) -> Dict[int, dict]:
