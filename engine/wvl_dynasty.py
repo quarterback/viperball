@@ -413,8 +413,8 @@ class WVLDynasty:
     # SAVE / LOAD
     # ═══════════════════════════════════════════════════════════════
 
-    def save(self, filepath: str):
-        """Save WVL dynasty to JSON."""
+    def to_dict(self) -> dict:
+        """Serialize dynasty to a plain dict (JSON-safe)."""
         data = {
             "type": "wvl_dynasty",
             "dynasty_name": self.dynasty_name,
@@ -434,16 +434,11 @@ class WVLDynasty:
             data["president"] = self.president.to_dict()
         if self.investment:
             data["investment"] = self.investment.to_dict()
-
-        with open(filepath, "w") as f:
-            json.dump(data, f, indent=2)
+        return data
 
     @classmethod
-    def load(cls, filepath: str) -> "WVLDynasty":
-        """Load WVL dynasty from JSON."""
-        with open(filepath) as f:
-            data = json.load(f)
-
+    def from_dict(cls, data: dict) -> "WVLDynasty":
+        """Reconstruct a WVLDynasty from a plain dict."""
         owner = ClubOwner.from_dict(data["owner"])
 
         dynasty = cls(
@@ -483,6 +478,18 @@ class WVLDynasty:
             dynasty.investment = InvestmentAllocation.from_dict(data["investment"])
 
         return dynasty
+
+    def save(self, filepath: str):
+        """Save WVL dynasty to JSON."""
+        with open(filepath, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load(cls, filepath: str) -> "WVLDynasty":
+        """Load WVL dynasty from JSON."""
+        with open(filepath) as f:
+            data = json.load(f)
+        return cls.from_dict(data)
 
 
 # ═══════════════════════════════════════════════════════════════
