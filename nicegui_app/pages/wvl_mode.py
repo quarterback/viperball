@@ -32,6 +32,7 @@ from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
 
 _WVL_DYNASTY_KEY = "wvl_dynasty"
 _WVL_PHASE_KEY = "wvl_phase"  # "setup" | "pre_season" | "in_season" | "offseason"
+_WVL_SEASON_KEY = "wvl_last_season"  # stores last completed WVLMultiTierSeason (not persisted to disk)
 
 
 def _get_dynasty() -> Optional[WVLDynasty]:
@@ -381,6 +382,17 @@ def _render_dashboard(container):
                     ).style("color: rgba(255,255,255,0.7);")
 
         # ── ACTIONS ───────────────────────────────────────────
+        # CVL import path (optional — pass a graduating class JSON to use real players)
+        with ui.expansion("Import CVL Graduates (optional)", icon="upload_file").classes("w-full mb-2"):
+            ui.label(
+                "Export graduating seniors from a CVL dynasty, then paste the file path here "
+                "to use real players in WVL free agency instead of synthetic ones."
+            ).classes("text-xs text-gray-500 mb-1")
+            cvl_import_input = ui.input(
+                "Path to CVL graduating class JSON",
+                placeholder="/path/to/graduates.json",
+            ).classes("w-full font-mono text-sm")
+
         with ui.row().classes("w-full justify-center gap-4 mb-2"):
             async def _sim_season():
                 import random
@@ -398,9 +410,20 @@ def _render_dashboard(container):
                 dynasty.snapshot_season(season)
 
                 dynasty.advance_season(season, rng)
-                offseason = dynasty.run_offseason(season, investment_budget=5.0, rng=rng)
+
+                # Pass CVL import path if provided
+                import_path = cvl_import_input.value.strip() or None
+                offseason = dynasty.run_offseason(
+                    season,
+                    investment_budget=5.0,
+                    import_path=import_path,
+                    rng=rng,
+                )
 
                 _set_dynasty(dynasty)
+
+                # Store season for box score lookups this session
+                app.storage.user[_WVL_SEASON_KEY] = season
 
                 # Register season in shared state for stats site
                 _register_wvl_season(dynasty, season)
@@ -431,6 +454,7 @@ def _render_dashboard(container):
             async def _reset():
                 _set_dynasty(None)
                 _set_phase("setup")
+                app.storage.user.pop(_WVL_SEASON_KEY, None)
                 container.clear()
                 _render_setup(container)
 
@@ -522,6 +546,101 @@ def _render_dashboard(container):
                         </q-td>
                     </q-tr>
                 """)
+
+        # ── SCHEDULE & BOX SCORES ─────────────────────────────
+        last_season = app.storage.user.get(_WVL_SEASON_KEY)
+        if last_season is not None:
+            owner_tier = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+            # owner_tier is the NEW tier after pro/rel; find schedule in the tier they played in
+            # Check stored schedule keys (recorded before pro/rel)
+            schedule_tier = None
+            for t_num, sched in (getattr(dynasty, "last_season_schedule", {}) or {}).items():
+                for wk in sched.get("weeks", []):
+                    for g in wk.get("games", []):
+                        if (g.get("home_key") == dynasty.owner.club_key or
+                                g.get("away_key") == dynasty.owner.club_key):
+                            schedule_tier = t_num
+                            break
+                    if schedule_tier is not None:
+                        break
+                if schedule_tier is not None:
+                    break
+            if schedule_tier is None:
+                schedule_tier = owner_tier
+
+            schedule_data = last_season.get_schedule(schedule_tier)
+            weeks = schedule_data.get("weeks", [])
+            if weeks:
+                ui.separator().classes("mt-2")
+
+                def _show_box(tier_num, wk, mk):
+                    from nicegui_app.pages.pro_leagues import _show_box_score_dialog
+                    box = last_season.get_box_score(tier_num, wk, mk)
+                    if box:
+                        _show_box_score_dialog(box)
+                    else:
+                        ui.notify("Box score not available.", type="warning")
+
+                with ui.expansion(
+                    f"Schedule & Box Scores (Tier {schedule_tier})",
+                    icon="sports_football",
+                    value=False,
+                ).classes("w-full"):
+                    week_options = {w["week"]: f"Week {w['week']}" for w in weeks}
+                    selected_sched_week = {"val": weeks[-1]["week"] if weeks else 1}
+                    sched_container = ui.column().classes("w-full")
+
+                    def _fill_sched_week():
+                        sched_container.clear()
+                        wk = selected_sched_week["val"]
+                        week_data = next((w for w in weeks if w["week"] == wk), None)
+                        if not week_data:
+                            return
+                        with sched_container:
+                            for game in week_data["games"]:
+                                with ui.card().classes("p-3 mb-2 w-full").style("border: 1px solid #e2e8f0;"):
+                                    is_owner = (
+                                        game.get("home_key") == dynasty.owner.club_key or
+                                        game.get("away_key") == dynasty.owner.club_key
+                                    )
+                                    card_style = "border-left: 3px solid #6366f1;" if is_owner else ""
+                                    if game.get("completed"):
+                                        h_score = int(game.get("home_score", 0))
+                                        a_score = int(game.get("away_score", 0))
+                                        h_bold = "font-bold" if h_score > a_score else ""
+                                        a_bold = "font-bold" if a_score > h_score else ""
+                                        with ui.row().classes("items-center gap-3 flex-wrap"):
+                                            ui.label(game["away_name"]).classes(f"text-sm {a_bold} min-w-[160px]")
+                                            ui.label(str(a_score)).classes(f"text-lg {a_bold} w-8 text-center")
+                                            ui.label("@").classes("text-xs text-slate-400")
+                                            ui.label(str(h_score)).classes(f"text-lg {h_bold} w-8 text-center")
+                                            ui.label(game["home_name"]).classes(f"text-sm {h_bold}")
+                                            mk = game.get("matchup_key", "")
+                                            if mk:
+                                                ui.button(
+                                                    "Box Score",
+                                                    icon="assessment",
+                                                    on_click=lambda mk=mk, wk=wk, t=schedule_tier: _show_box(t, wk, mk),
+                                                ).props("flat dense no-caps size=sm color=indigo")
+                                    else:
+                                        with ui.row().classes("items-center gap-3"):
+                                            ui.label(game["away_name"]).classes("text-sm min-w-[160px]")
+                                            ui.label("@").classes("text-xs text-slate-400")
+                                            ui.label(game["home_name"]).classes("text-sm")
+                                            ui.label("Upcoming").classes("text-xs text-slate-400 italic")
+
+                    def _on_sched_week_change(e):
+                        selected_sched_week["val"] = e.value
+                        _fill_sched_week()
+
+                    ui.select(
+                        options=week_options,
+                        value=selected_sched_week["val"],
+                        label="Select Week",
+                        on_change=_on_sched_week_change,
+                    ).classes("w-40 mb-3")
+
+                    _fill_sched_week()
 
         # ── MANAGEMENT (compact, bottom) ──────────────────────
         ui.separator().classes("mt-4")

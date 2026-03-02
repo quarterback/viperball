@@ -220,6 +220,20 @@ class WVLMultiTierSeason:
             result[tier_num] = all_teams
         return result
 
+    def get_box_score(self, tier_num: int, week: int, matchup_key: str) -> Optional[dict]:
+        """Get box score data for a specific game in a tier."""
+        season = self.tier_seasons.get(tier_num)
+        if not season:
+            return None
+        return season.get_box_score(week, matchup_key)
+
+    def get_schedule(self, tier_num: int) -> dict:
+        """Get the full schedule for a specific tier."""
+        season = self.tier_seasons.get(tier_num)
+        if not season:
+            return {"weeks": []}
+        return season.get_schedule()
+
     def run_promotion_relegation(
         self,
         rng: Optional[random.Random] = None,

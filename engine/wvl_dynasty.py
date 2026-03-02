@@ -37,7 +37,7 @@ from engine.promotion_relegation import (
     PromotionRelegationResult, persist_tier_assignments,
 )
 from engine.development import apply_pro_development
-from engine.player_card import PlayerCard
+from engine.player_card import PlayerCard, player_to_card
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -112,6 +112,21 @@ class WVLDynasty:
                     team_name=club.name,
                 )
 
+    def _load_rosters_from_season(self, season: "WVLMultiTierSeason"):
+        """Populate _team_rosters from the live season's Team objects."""
+        self._team_rosters = {}
+        for tier_season in season.tier_seasons.values():
+            for team_key, team in tier_season.teams.items():
+                players = getattr(team, "players", [])
+                cards = []
+                for player in players:
+                    try:
+                        card = player_to_card(player, team_key)
+                        cards.append(card)
+                    except Exception:
+                        pass
+                self._team_rosters[team_key] = cards
+
     def start_season(self) -> WVLMultiTierSeason:
         """Initialize a new season across all 4 tiers."""
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
@@ -134,6 +149,11 @@ class WVLDynasty:
                 for k, v in list(team.items()):
                     if not isinstance(v, (str, int, float, bool, type(None))):
                         team[k] = str(v)
+
+        # Full schedules per tier (for box score lookups)
+        self.last_season_schedule = {}
+        for tier_num, tier_season in season.tier_seasons.items():
+            self.last_season_schedule[tier_num] = tier_season.get_schedule()
 
         # Champions per tier
         self.last_season_champions = {}
@@ -230,6 +250,9 @@ class WVLDynasty:
 
         year = self.current_year
         summary = {"year": year}
+
+        # Load player rosters from the live season before free agency/retirements
+        self._load_rosters_from_season(season)
 
         # 1. Process retirements
         retirements = process_retirements(self._team_rosters, rng)
