@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from engine.pro_league import ProLeagueConfig, ProLeagueSeason
+from engine.pro_league import ProLeagueConfig, ProLeagueSeason, ProTeamRecord
+from engine.game_engine import load_team_from_json
 from engine.wvl_config import (
     ALL_WVL_TIERS, TIER_BY_NUMBER, WVLTierConfig, CLUBS_BY_KEY,
     is_rivalry_match,
@@ -77,24 +78,62 @@ class WVLMultiTierSeason:
         self.current_week = 0
         self.promotion_result: Optional[PromotionRelegationResult] = None
 
+        # Pre-scan ALL tier directories so promoted/relegated teams are found
+        # regardless of which tier directory they originally lived in.
+        all_wvl_teams = {}
+        for tc in ALL_WVL_TIERS:
+            td = DATA_DIR.parent / tc.teams_dir
+            if td.exists():
+                for f in sorted(td.glob("*.json")):
+                    key = f.stem
+                    if key not in all_wvl_teams:
+                        try:
+                            all_wvl_teams[key] = load_team_from_json(str(f))
+                        except Exception:
+                            pass
+
         for tier_config in ALL_WVL_TIERS:
             config = _tier_to_pro_config(tier_config, self.tier_assignments)
             try:
-                season = ProLeagueSeason(config)
+                # Use __new__ + manual injection (same pattern as create_champions_league)
+                # so team loading searches across all tier dirs, not just this tier's dir.
+                season = ProLeagueSeason.__new__(ProLeagueSeason)
+                season.config = config
+                season.teams = {}
+                season.standings = {}
+                season.schedule = []
+                season.results = {}
+                season.player_season_stats = {}
+                season.current_week = 0
+                season.total_weeks = 0
+                season.phase = "regular_season"
+                season.playoff_bracket = []
+                season.playoff_round = 0
+                season.champion = None
+
+                for div_keys in config.divisions.values():
+                    for key in div_keys:
+                        if key in all_wvl_teams:
+                            season.teams[key] = all_wvl_teams[key]
+
+                if not season.teams:
+                    continue
+
+                season._init_standings()
+                season._generate_schedule()
                 self.tier_seasons[tier_config.tier_number] = season
             except Exception:
-                # If team files don't exist yet, skip
                 pass
 
         if self.tier_seasons:
             self.phase = "regular_season"
 
-    def sim_week_all_tiers(self) -> Dict[int, dict]:
+    def sim_week_all_tiers(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Simulate one week across all tiers. Returns tier_num → week results."""
         results = {}
         for tier_num, season in self.tier_seasons.items():
             if season.phase == "regular_season" and season.current_week < season.total_weeks:
-                week_result = season.sim_week()
+                week_result = season.sim_week(use_fast_sim=use_fast_sim)
                 results[tier_num] = week_result
 
                 # Annotate rivalry matches
@@ -115,13 +154,13 @@ class WVLMultiTierSeason:
 
         return results
 
-    def sim_all(self) -> Dict[int, dict]:
+    def sim_all(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Simulate entire regular season for all tiers."""
         all_results = {}
         for tier_num, season in self.tier_seasons.items():
             tier_results = []
             while season.phase == "regular_season" and season.current_week < season.total_weeks:
-                tier_results.append(season.sim_week())
+                tier_results.append(season.sim_week(use_fast_sim=use_fast_sim))
             all_results[tier_num] = {"weeks": tier_results}
 
         self.phase = "playoffs_pending"
@@ -154,9 +193,9 @@ class WVLMultiTierSeason:
 
         return results
 
-    def run_full_season(self) -> Dict[int, dict]:
+    def run_full_season(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Sim entire season (regular + playoffs) for all tiers."""
-        self.sim_all()
+        self.sim_all(use_fast_sim=use_fast_sim)
         self.start_playoffs_all()
 
         playoff_results = {}
@@ -166,6 +205,68 @@ class WVLMultiTierSeason:
                 playoff_results[tier_num] = result
 
         return playoff_results
+
+    def get_all_stat_leaders(self) -> Dict[str, List[dict]]:
+        """Aggregate all player stats across all 4 tiers.
+
+        Returns category → full sorted list of every player with > 0 in that
+        stat (no cap).  Same field names as ProLeagueSeason.get_stat_leaders()
+        plus tier_num/tier so the UI can route player-card lookups correctly.
+        """
+        all_players: List[dict] = []
+        for tier_num, season in self.tier_seasons.items():
+            for team_key, players in season.player_season_stats.items():
+                team_name = season.teams[team_key].name if team_key in season.teams else team_key
+                for pid, p in players.items():
+                    all_players.append({**p, "team_name": team_name, "tier_num": tier_num})
+
+        rushing   = sorted(all_players, key=lambda p: -p["rushing_yards"])
+        kick_pass = sorted(all_players, key=lambda p: -p["kick_pass_yards"])
+        scoring   = sorted(all_players, key=lambda p: -p["touchdowns"])
+        tackles   = sorted(all_players, key=lambda p: -p["tackles"])
+        total     = sorted(all_players, key=lambda p: -p["total_yards"])
+
+        def _tier(p):
+            return f"T{p['tier_num']}"
+
+        return {
+            "rushing": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "yards": p["rushing_yards"], "carries": p["rushing_carries"],
+                "ypc": round(p["rushing_yards"] / max(1, p["rushing_carries"]), 1),
+                "games": p["games"],
+            } for p in rushing if p["rushing_yards"] > 0],
+
+            "kick_pass": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "yards": p["kick_pass_yards"], "completions": p["kick_pass_completions"],
+                "attempts": p["kick_pass_attempts"],
+                "pct": round(p["kick_pass_completions"] / max(1, p["kick_pass_attempts"]) * 100, 1),
+                "games": p["games"],
+            } for p in kick_pass if p["kick_pass_yards"] > 0],
+
+            "scoring": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "touchdowns": p["touchdowns"], "dk_made": p["dk_made"],
+                "total_yards": p["total_yards"], "games": p["games"],
+            } for p in scoring if p["touchdowns"] > 0],
+
+            "tackles": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "tackles": p["tackles"], "fumbles": p["fumbles"], "games": p["games"],
+            } for p in tackles if p["tackles"] > 0],
+
+            "total_yards": [{
+                "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+                "tier": _tier(p), "tier_num": p["tier_num"], "position": p["position"],
+                "total_yards": p["total_yards"], "rushing": p["rushing_yards"],
+                "kick_pass": p["kick_pass_yards"], "games": p["games"],
+            } for p in total if p["total_yards"] > 0],
+        }
 
     def get_all_standings(self) -> Dict[int, dict]:
         """Get standings for all tiers with pro/rel zone annotations."""
@@ -219,6 +320,20 @@ class WVLMultiTierSeason:
             all_teams.sort(key=lambda t: (-t.get("wins", 0), -(t.get("pf", 0) - t.get("pa", 0))))
             result[tier_num] = all_teams
         return result
+
+    def get_box_score(self, tier_num: int, week: int, matchup_key: str) -> Optional[dict]:
+        """Get box score data for a specific game in a tier."""
+        season = self.tier_seasons.get(tier_num)
+        if not season:
+            return None
+        return season.get_box_score(week, matchup_key)
+
+    def get_schedule(self, tier_num: int) -> dict:
+        """Get the full schedule for a specific tier."""
+        season = self.tier_seasons.get(tier_num)
+        if not season:
+            return {"weeks": []}
+        return season.get_schedule()
 
     def run_promotion_relegation(
         self,

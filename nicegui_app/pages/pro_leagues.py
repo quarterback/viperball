@@ -7,6 +7,7 @@ No team management. Users watch seasons unfold and bet via DraftyQueenz.
 from __future__ import annotations
 
 import logging
+from typing import List, Optional
 _log = logging.getLogger("viperball.pro_leagues")
 
 from nicegui import ui, run, app
@@ -1234,7 +1235,12 @@ def _render_schedule(season: ProLeagueSeason):
     _fill_week()
 
 
-def _show_player_card(season: ProLeagueSeason, team_key: str, player_name: str):
+def _show_player_card(
+    season: ProLeagueSeason,
+    team_key: str,
+    player_name: str,
+    career_seasons: Optional[List[dict]] = None,
+):
     card_data = season.get_player_card(team_key, player_name)
     if not card_data:
         ui.notify(f"Player '{player_name}' not found.", type="warning")
@@ -1407,6 +1413,46 @@ def _show_player_card(season: ProLeagueSeason, team_key: str, player_name: str):
                         ).props("dense flat bordered hide-bottom")
                 else:
                     ui.label("No season stats recorded yet.").classes("text-sm text-slate-400 italic")
+
+            # ── College Career (when imported from CVL) ────────────────────
+            if career_seasons:
+                with ui.element("div").classes("w-full px-5 py-3").style(
+                    "border-top:1px solid #e2e8f0;"
+                ):
+                    ui.label("College Career").classes(
+                        "text-sm font-bold text-slate-700 mb-2"
+                    ).style("border-bottom:2px solid #6366f1; display:inline-block; padding-bottom:2px;")
+
+                    career_cols = [
+                        {"name": "year",  "label": "Year",     "field": "year",  "align": "center", "sortable": True},
+                        {"name": "team",  "label": "Team",     "field": "team",  "align": "left"},
+                        {"name": "gp",    "label": "GP",       "field": "gp",    "align": "center"},
+                        {"name": "ryds",  "label": "Rush Yds", "field": "ryds",  "align": "center"},
+                        {"name": "lyds",  "label": "Lat Yds",  "field": "lyds",  "align": "center"},
+                        {"name": "total", "label": "Tot Yds",  "field": "total", "align": "center"},
+                        {"name": "td",    "label": "TD",       "field": "td",    "align": "center"},
+                        {"name": "tkl",   "label": "TKL",      "field": "tkl",   "align": "center"},
+                        {"name": "dk",    "label": "DK",       "field": "dk",    "align": "center"},
+                    ]
+                    career_rows = []
+                    for s in sorted(career_seasons, key=lambda x: x.get("season_year", 0)):
+                        career_rows.append({
+                            "year":  str(s.get("season_year", "")),
+                            "team":  s.get("team", ""),
+                            "gp":    str(s.get("games_played", 0)),
+                            "ryds":  str(s.get("rushing_yards", 0)),
+                            "lyds":  str(s.get("lateral_yards", 0)),
+                            "total": str(s.get("total_yards", 0)),
+                            "td":    str(s.get("touchdowns", 0)),
+                            "tkl":   str(s.get("tackles", 0)),
+                            "dk":    str(s.get("dk_makes", 0)),
+                        })
+                    if career_rows:
+                        ui.table(columns=career_cols, rows=career_rows, row_key="year").classes(
+                            "w-full"
+                        ).props("dense flat bordered hide-bottom")
+                    else:
+                        ui.label("No college game data recorded.").classes("text-xs text-slate-400 italic")
 
             with ui.element("div").classes("w-full px-5 py-2 flex justify-end").style(
                 "background:#f8fafc; border-top:1px solid #e2e8f0;"

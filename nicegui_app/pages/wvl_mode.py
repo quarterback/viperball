@@ -32,6 +32,7 @@ from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
 
 _WVL_DYNASTY_KEY = "wvl_dynasty"
 _WVL_PHASE_KEY = "wvl_phase"  # "setup" | "pre_season" | "in_season" | "offseason"
+_WVL_SEASON_KEY = "wvl_last_season"  # stores last completed WVLMultiTierSeason (not persisted to disk)
 
 
 def _get_dynasty() -> Optional[WVLDynasty]:
@@ -381,6 +382,65 @@ def _render_dashboard(container):
                     ).style("color: rgba(255,255,255,0.7);")
 
         # ── ACTIONS ───────────────────────────────────────────
+        # CVL graduates import (optional)
+        cached_graduates = app.storage.user.get("cvl_graduates")
+        cached_year = app.storage.user.get("cvl_graduates_year", "")
+        _import_state = {"data": cached_graduates}  # None = use synthetic players
+
+        with ui.expansion(
+            "CVL Graduates" + (
+                f" — {len(cached_graduates)} players ready (Year {cached_year})"
+                if cached_graduates else " (optional)"
+            ),
+            icon="school",
+            value=bool(cached_graduates),
+        ).classes("w-full mb-2"):
+            if cached_graduates:
+                with ui.row().classes("items-center gap-3 mb-2"):
+                    ui.icon("check_circle").classes("text-green-600")
+                    ui.label(
+                        f"{len(cached_graduates)} graduates from CVL Year {cached_year} "
+                        "are loaded and will be used in free agency."
+                    ).classes("text-sm text-green-700 font-semibold")
+                with ui.row().classes("gap-2"):
+                    ui.button(
+                        "Clear (use synthetic players instead)",
+                        icon="close",
+                        on_click=lambda: (
+                            app.storage.user.pop("cvl_graduates", None),
+                            app.storage.user.pop("cvl_graduates_year", None),
+                            _import_state.update({"data": None}),
+                            ui.notify("Cleared — will use synthetic free agents.", type="info"),
+                        ),
+                    ).props("flat dense no-caps size=sm color=red-6")
+            else:
+                ui.label(
+                    "No CVL graduates loaded. Run a CVL dynasty season, then use "
+                    "Export → Dynasty Data → Export Graduates for WVL. "
+                    "Or paste a file path below."
+                ).classes("text-xs text-gray-500 mb-1")
+
+            ui.label("Or load from file path:").classes("text-xs text-gray-400 mt-1")
+            cvl_import_input = ui.input(
+                "Path to CVL graduating class JSON",
+                placeholder="/path/to/graduates.json",
+            ).classes("w-full font-mono text-sm")
+
+        # Engine toggle (persisted in a local mutable for this render scope)
+        _engine_opts = {"use_fast_sim": True}
+        with ui.row().classes("items-center gap-3 mb-1"):
+            ui.label("Simulation engine:").classes("text-xs text-gray-500")
+            engine_toggle = ui.toggle(
+                {True: "Fast sim", False: "Full engine"},
+                value=True,
+                on_change=lambda e: _engine_opts.update({"use_fast_sim": e.value}),
+            ).props("dense no-caps")
+            ui.tooltip(
+                "Fast sim: instant bulk season (recommended). "
+                "Full engine: rich play-by-play box scores but ~100× slower — "
+                "expect several minutes for a full season."
+            )
+
         with ui.row().classes("w-full justify-center gap-4 mb-2"):
             async def _sim_season():
                 import random
@@ -391,16 +451,31 @@ def _render_dashboard(container):
                     ui.notify("No team files found. Run scripts/generate_wvl_teams.py first.", type="warning")
                     return
 
-                ui.notify("Simulating full season...", type="info")
-                season.run_full_season()
+                use_fast = _engine_opts["use_fast_sim"]
+                label = "fast sim" if use_fast else "full engine"
+                ui.notify(f"Simulating full season ({label})...", type="info")
+                season.run_full_season(use_fast_sim=use_fast)
 
                 # Snapshot season data BEFORE advance (tier assignments still match)
                 dynasty.snapshot_season(season)
 
                 dynasty.advance_season(season, rng)
-                offseason = dynasty.run_offseason(season, investment_budget=5.0, rng=rng)
+
+                # Pass CVL graduates: prefer in-memory cache, fall back to file path
+                import_data = _import_state.get("data")
+                import_path = cvl_import_input.value.strip() or None
+                offseason = dynasty.run_offseason(
+                    season,
+                    investment_budget=5.0,
+                    import_data=import_data,
+                    import_path=import_path if not import_data else None,
+                    rng=rng,
+                )
 
                 _set_dynasty(dynasty)
+
+                # Store season for box score lookups this session
+                app.storage.user[_WVL_SEASON_KEY] = season
 
                 # Register season in shared state for stats site
                 _register_wvl_season(dynasty, season)
@@ -431,6 +506,7 @@ def _render_dashboard(container):
             async def _reset():
                 _set_dynasty(None)
                 _set_phase("setup")
+                app.storage.user.pop(_WVL_SEASON_KEY, None)
                 container.clear()
                 _render_setup(container)
 
@@ -522,6 +598,194 @@ def _render_dashboard(container):
                         </q-td>
                     </q-tr>
                 """)
+
+        # ── SCHEDULE & BOX SCORES ─────────────────────────────
+        last_season = app.storage.user.get(_WVL_SEASON_KEY)
+        if last_season is not None:
+            owner_tier = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+            # owner_tier is the NEW tier after pro/rel; find schedule in the tier they played in
+            # Check stored schedule keys (recorded before pro/rel)
+            schedule_tier = None
+            for t_num, sched in (getattr(dynasty, "last_season_schedule", {}) or {}).items():
+                for wk in sched.get("weeks", []):
+                    for g in wk.get("games", []):
+                        if (g.get("home_key") == dynasty.owner.club_key or
+                                g.get("away_key") == dynasty.owner.club_key):
+                            schedule_tier = t_num
+                            break
+                    if schedule_tier is not None:
+                        break
+                if schedule_tier is not None:
+                    break
+            if schedule_tier is None:
+                schedule_tier = owner_tier
+
+            schedule_data = last_season.get_schedule(schedule_tier)
+            weeks = schedule_data.get("weeks", [])
+            if weeks:
+                ui.separator().classes("mt-2")
+
+                def _show_box(tier_num, wk, mk):
+                    from nicegui_app.pages.pro_leagues import _show_box_score_dialog
+                    box = last_season.get_box_score(tier_num, wk, mk)
+                    if box:
+                        _show_box_score_dialog(box)
+                    else:
+                        ui.notify("Box score not available.", type="warning")
+
+                with ui.expansion(
+                    f"Schedule & Box Scores (Tier {schedule_tier})",
+                    icon="sports_football",
+                    value=False,
+                ).classes("w-full"):
+                    week_options = {w["week"]: f"Week {w['week']}" for w in weeks}
+                    selected_sched_week = {"val": weeks[-1]["week"] if weeks else 1}
+                    sched_container = ui.column().classes("w-full")
+
+                    def _fill_sched_week():
+                        sched_container.clear()
+                        wk = selected_sched_week["val"]
+                        week_data = next((w for w in weeks if w["week"] == wk), None)
+                        if not week_data:
+                            return
+                        with sched_container:
+                            for game in week_data["games"]:
+                                with ui.card().classes("p-3 mb-2 w-full").style("border: 1px solid #e2e8f0;"):
+                                    is_owner = (
+                                        game.get("home_key") == dynasty.owner.club_key or
+                                        game.get("away_key") == dynasty.owner.club_key
+                                    )
+                                    card_style = "border-left: 3px solid #6366f1;" if is_owner else ""
+                                    if game.get("completed"):
+                                        h_score = int(game.get("home_score", 0))
+                                        a_score = int(game.get("away_score", 0))
+                                        h_bold = "font-bold" if h_score > a_score else ""
+                                        a_bold = "font-bold" if a_score > h_score else ""
+                                        with ui.row().classes("items-center gap-3 flex-wrap"):
+                                            ui.label(game["away_name"]).classes(f"text-sm {a_bold} min-w-[160px]")
+                                            ui.label(str(a_score)).classes(f"text-lg {a_bold} w-8 text-center")
+                                            ui.label("@").classes("text-xs text-slate-400")
+                                            ui.label(str(h_score)).classes(f"text-lg {h_bold} w-8 text-center")
+                                            ui.label(game["home_name"]).classes(f"text-sm {h_bold}")
+                                            mk = game.get("matchup_key", "")
+                                            if mk:
+                                                ui.button(
+                                                    "Box Score",
+                                                    icon="assessment",
+                                                    on_click=lambda mk=mk, wk=wk, t=schedule_tier: _show_box(t, wk, mk),
+                                                ).props("flat dense no-caps size=sm color=indigo")
+                                    else:
+                                        with ui.row().classes("items-center gap-3"):
+                                            ui.label(game["away_name"]).classes("text-sm min-w-[160px]")
+                                            ui.label("@").classes("text-xs text-slate-400")
+                                            ui.label(game["home_name"]).classes("text-sm")
+                                            ui.label("Upcoming").classes("text-xs text-slate-400 italic")
+
+                    def _on_sched_week_change(e):
+                        selected_sched_week["val"] = e.value
+                        _fill_sched_week()
+
+                    ui.select(
+                        options=week_options,
+                        value=selected_sched_week["val"],
+                        label="Select Week",
+                        on_change=_on_sched_week_change,
+                    ).classes("w-40 mb-3")
+
+                    _fill_sched_week()
+
+        # ── STATS LEADERS ─────────────────────────────────────
+        if last_season is not None and last_season.tier_seasons:
+            leaders = last_season.get_all_stat_leaders()
+            if any(leaders.values()):
+                ui.separator().classes("mt-2")
+                with ui.expansion("Season Stats — All Players", icon="leaderboard", value=False).classes("w-full"):
+                    from nicegui_app.pages.pro_leagues import _show_player_card as _show_pc
+
+                    def _wvl_stat_table(data: list, col_spec: list):
+                        """Sortable full-roster table with clickable player names."""
+                        if not data:
+                            ui.label("No data yet.").classes("text-sm text-slate-400")
+                            return
+                        columns = [
+                            {"name": k, "label": lbl, "field": k, "sortable": True,
+                             "align": "left" if k in ("name", "team") else "center"}
+                            for k, lbl in col_spec
+                        ]
+                        rows = [
+                            {**{k: p.get(k, "") for k, _ in col_spec},
+                             "team_key": p["team_key"], "tier_num": p["tier_num"],
+                             "_idx": i}
+                            for i, p in enumerate(data)
+                        ]
+                        tbl = (
+                            ui.table(columns=columns, rows=rows, row_key="_idx")
+                            .classes("w-full")
+                            .props("dense flat bordered virtual-scroll")
+                            .style("max-height: 420px;")
+                        )
+                        tbl.add_slot("body-cell-name", '''
+                            <q-td :props="props">
+                                <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                   @click="$parent.$emit('player_click', props.row)">
+                                    {{ props.row.name }}
+                                </a>
+                            </q-td>
+                        ''')
+                        def _on_player_click(e, _tbl=tbl):
+                            tier_num = e.args.get("tier_num", 0)
+                            team_key = e.args.get("team_key", "")
+                            name = e.args.get("name", "")
+                            ts = last_season.tier_seasons.get(tier_num)
+                            if not ts:
+                                ui.notify("Player data not available.", type="warning")
+                                return
+                            # Look up college career history from dynasty rosters
+                            career = None
+                            for card in dynasty._team_rosters.get(team_key, []):
+                                if card.full_name == name:
+                                    career = [s.to_dict() for s in card.career_seasons]
+                                    break
+                            _show_pc(ts, team_key, name, career_seasons=career)
+
+                        tbl.on("player_click", _on_player_click)
+
+                    with ui.tabs().classes("w-full") as stat_tabs:
+                        tab_rush  = ui.tab("Rushing")
+                        tab_kp    = ui.tab("Kick-Pass")
+                        tab_score = ui.tab("Scoring")
+                        tab_def   = ui.tab("Defense")
+                        tab_total = ui.tab("Total Yards")
+
+                    with ui.tab_panels(stat_tabs, value=tab_rush).classes("w-full"):
+                        with ui.tab_panel(tab_rush):
+                            _wvl_stat_table(leaders.get("rushing", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("yards", "Rush Yds"), ("carries", "Car"), ("ypc", "YPC"),
+                                ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_kp):
+                            _wvl_stat_table(leaders.get("kick_pass", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("yards", "KP Yds"), ("completions", "Comp"),
+                                ("attempts", "Att"), ("pct", "Pct%"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_score):
+                            _wvl_stat_table(leaders.get("scoring", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("touchdowns", "TD"), ("dk_made", "DK"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_def):
+                            _wvl_stat_table(leaders.get("tackles", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("tackles", "TKL"), ("fumbles", "FUM"), ("games", "GP"),
+                            ])
+                        with ui.tab_panel(tab_total):
+                            _wvl_stat_table(leaders.get("total_yards", []), [
+                                ("name", "Player"), ("team", "Team"), ("tier", "Tier"),
+                                ("total_yards", "Total"), ("rushing", "Rush"),
+                                ("kick_pass", "KP"), ("games", "GP"),
+                            ])
 
         # ── MANAGEMENT (compact, bottom) ──────────────────────
         ui.separator().classes("mt-4")

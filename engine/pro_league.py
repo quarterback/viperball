@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from engine.game_engine import load_team_from_json, Team
+from engine.game_engine import load_team_from_json, Team, ViperballEngine
 from engine.fast_sim import fast_sim_game
 from engine.weather import generate_game_weather, describe_conditions
 
@@ -480,7 +480,7 @@ class ProLeagueSeason:
         self.schedule = matchups_by_week
         self.total_weeks = len(matchups_by_week)
 
-    def sim_week(self) -> dict:
+    def sim_week(self, use_fast_sim: bool = True) -> dict:
         if self.phase != "regular_season":
             return {"error": "Season is not in regular season phase"}
         if self.current_week >= self.total_weeks:
@@ -500,13 +500,21 @@ class ProLeagueSeason:
             weather_label = weather_key.replace("_", " ").title() if weather_key else "Clear"
             weather_desc = weather_label
 
-            result = fast_sim_game(
-                home_team=home,
-                away_team=away,
-                weather=weather_key,
-                weather_label=weather_label,
-                weather_description=weather_desc,
-            )
+            if use_fast_sim:
+                result = fast_sim_game(
+                    home_team=home,
+                    away_team=away,
+                    weather=weather_key,
+                    weather_label=weather_label,
+                    weather_description=weather_desc,
+                )
+            else:
+                engine = ViperballEngine(
+                    home, away,
+                    seed=random.randint(1, 1_000_000),
+                    weather=weather_key,
+                )
+                result = engine.simulate_game()
 
             home_score = result["final_score"]["home"]["score"]
             away_score = result["final_score"]["away"]["score"]
@@ -554,10 +562,10 @@ class ProLeagueSeason:
             } for g in week_results],
         }
 
-    def sim_all(self) -> dict:
+    def sim_all(self, use_fast_sim: bool = True) -> dict:
         results = []
         while self.current_week < self.total_weeks:
-            week_result = self.sim_week()
+            week_result = self.sim_week(use_fast_sim=use_fast_sim)
             results.append(week_result)
         return {"weeks_simulated": len(results), "results": results}
 

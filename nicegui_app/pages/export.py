@@ -10,7 +10,7 @@ import io
 import csv
 import json
 
-from nicegui import ui, run
+from nicegui import ui, run, app
 
 from engine.season import BOWL_TIERS
 from ui import api_client
@@ -465,6 +465,55 @@ async def render_export_section(state, shared):
                         "dynasty_awards.csv",
                         mime="text/csv",
                     )
+
+                ui.separator()
+                ui.label("WVL Export").classes("text-xl font-semibold mt-2")
+                ui.label(
+                    "Export your graduating seniors so they can be imported as free agents "
+                    "in a WVL dynasty. The export is cached in your session — just switch "
+                    "to WVL mode and it will be auto-detected."
+                ).classes("text-sm text-gray-500 mb-2")
+
+                async def _export_graduates():
+                    try:
+                        resp = await run.io_bound(
+                            api_client.get_dynasty_graduating_class, session_id
+                        )
+                    except Exception as e:
+                        ui.notify(f"Export failed: {e}", type="negative")
+                        return
+
+                    graduates = resp.get("graduates", [])
+                    count = resp.get("count", 0)
+                    year = resp.get("year", "")
+
+                    if count == 0:
+                        ui.notify(
+                            "No graduating seniors found. Make sure you've completed a season "
+                            "and started the offseason phase.",
+                            type="warning",
+                        )
+                        return
+
+                    # Cache in session storage so WVL mode can pick it up directly
+                    app.storage.user["cvl_graduates"] = graduates
+                    app.storage.user["cvl_graduates_year"] = year
+
+                    # Also offer a browser download as a backup
+                    json_bytes = json.dumps(graduates, indent=2).encode()
+                    fname = f"cvl_graduates_{year}.json" if year else "cvl_graduates.json"
+                    ui.download(json_bytes, fname)
+
+                    ui.notify(
+                        f"Exported {count} graduating players — cached for WVL and downloading.",
+                        type="positive",
+                    )
+
+                ui.button(
+                    "Export Graduates for WVL",
+                    icon="school",
+                    on_click=_export_graduates,
+                ).classes("bg-indigo-600 text-white px-4 py-2 rounded-lg")
 
                 ui.separator()
                 ui.label("Dynasty Save").classes("text-xl font-semibold mt-2")
