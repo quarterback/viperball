@@ -62,6 +62,25 @@ class FreeAgencyResult:
 # POOL BUILDERS
 # ═══════════════════════════════════════════════════════════════
 
+def build_free_agent_pool_from_data(data: list) -> List[FreeAgent]:
+    """Build a free agent pool from an already-loaded list of PlayerCard dicts."""
+    pool = []
+    for d in data:
+        card = PlayerCard.from_dict(d)
+        if card.age is None:
+            card.age = 22
+        card.pro_status = "free_agent"
+        card.contract_years = 0
+        card.contract_salary = 0
+        salary = max(1, min(5, card.overall // 20))
+        pool.append(FreeAgent(
+            player_card=card,
+            asking_salary=salary,
+            source="college_export",
+        ))
+    return pool
+
+
 def build_free_agent_pool_from_import(filepath: str) -> List[FreeAgent]:
     """Load an exported CVL graduating class as a free agent pool.
 
@@ -70,25 +89,7 @@ def build_free_agent_pool_from_import(filepath: str) -> List[FreeAgent]:
     """
     with open(filepath) as f:
         data = json.load(f)
-
-    pool = []
-    for d in data:
-        card = PlayerCard.from_dict(d)
-        # Convert college player to pro
-        if card.age is None:
-            card.age = 22  # default graduating age
-        card.pro_status = "free_agent"
-        card.contract_years = 0
-        card.contract_salary = 0
-
-        salary = max(1, min(5, card.overall // 20))
-        pool.append(FreeAgent(
-            player_card=card,
-            asking_salary=salary,
-            source="college_export",
-        ))
-
-    return pool
+    return build_free_agent_pool_from_data(data)
 
 
 def generate_synthetic_fa_pool(

@@ -382,12 +382,45 @@ def _render_dashboard(container):
                     ).style("color: rgba(255,255,255,0.7);")
 
         # ── ACTIONS ───────────────────────────────────────────
-        # CVL import path (optional — pass a graduating class JSON to use real players)
-        with ui.expansion("Import CVL Graduates (optional)", icon="upload_file").classes("w-full mb-2"):
-            ui.label(
-                "Export graduating seniors from a CVL dynasty, then paste the file path here "
-                "to use real players in WVL free agency instead of synthetic ones."
-            ).classes("text-xs text-gray-500 mb-1")
+        # CVL graduates import (optional)
+        cached_graduates = app.storage.user.get("cvl_graduates")
+        cached_year = app.storage.user.get("cvl_graduates_year", "")
+        _import_state = {"data": cached_graduates}  # None = use synthetic players
+
+        with ui.expansion(
+            "CVL Graduates" + (
+                f" — {len(cached_graduates)} players ready (Year {cached_year})"
+                if cached_graduates else " (optional)"
+            ),
+            icon="school",
+            value=bool(cached_graduates),
+        ).classes("w-full mb-2"):
+            if cached_graduates:
+                with ui.row().classes("items-center gap-3 mb-2"):
+                    ui.icon("check_circle").classes("text-green-600")
+                    ui.label(
+                        f"{len(cached_graduates)} graduates from CVL Year {cached_year} "
+                        "are loaded and will be used in free agency."
+                    ).classes("text-sm text-green-700 font-semibold")
+                with ui.row().classes("gap-2"):
+                    ui.button(
+                        "Clear (use synthetic players instead)",
+                        icon="close",
+                        on_click=lambda: (
+                            app.storage.user.pop("cvl_graduates", None),
+                            app.storage.user.pop("cvl_graduates_year", None),
+                            _import_state.update({"data": None}),
+                            ui.notify("Cleared — will use synthetic free agents.", type="info"),
+                        ),
+                    ).props("flat dense no-caps size=sm color=red-6")
+            else:
+                ui.label(
+                    "No CVL graduates loaded. Run a CVL dynasty season, then use "
+                    "Export → Dynasty Data → Export Graduates for WVL. "
+                    "Or paste a file path below."
+                ).classes("text-xs text-gray-500 mb-1")
+
+            ui.label("Or load from file path:").classes("text-xs text-gray-400 mt-1")
             cvl_import_input = ui.input(
                 "Path to CVL graduating class JSON",
                 placeholder="/path/to/graduates.json",
@@ -428,12 +461,14 @@ def _render_dashboard(container):
 
                 dynasty.advance_season(season, rng)
 
-                # Pass CVL import path if provided
+                # Pass CVL graduates: prefer in-memory cache, fall back to file path
+                import_data = _import_state.get("data")
                 import_path = cvl_import_input.value.strip() or None
                 offseason = dynasty.run_offseason(
                     season,
                     investment_budget=5.0,
-                    import_path=import_path,
+                    import_data=import_data,
+                    import_path=import_path if not import_data else None,
                     rng=rng,
                 )
 
@@ -697,15 +732,23 @@ def _render_dashboard(container):
                                 </a>
                             </q-td>
                         ''')
-                        tbl.on("player_click", lambda e: (
-                            _show_pc(
-                                last_season.tier_seasons.get(e.args.get("tier_num", 0)),
-                                e.args.get("team_key", ""),
-                                e.args.get("name", ""),
-                            )
-                            if last_season.tier_seasons.get(e.args.get("tier_num", 0))
-                            else ui.notify("Player data not available.", type="warning")
-                        ))
+                        def _on_player_click(e, _tbl=tbl):
+                            tier_num = e.args.get("tier_num", 0)
+                            team_key = e.args.get("team_key", "")
+                            name = e.args.get("name", "")
+                            ts = last_season.tier_seasons.get(tier_num)
+                            if not ts:
+                                ui.notify("Player data not available.", type="warning")
+                                return
+                            # Look up college career history from dynasty rosters
+                            career = None
+                            for card in dynasty._team_rosters.get(team_key, []):
+                                if card.full_name == name:
+                                    career = [s.to_dict() for s in card.career_seasons]
+                                    break
+                            _show_pc(ts, team_key, name, career_seasons=career)
+
+                        tbl.on("player_click", _on_player_click)
 
                     with ui.tabs().classes("w-full") as stat_tabs:
                         tab_rush  = ui.tab("Rushing")

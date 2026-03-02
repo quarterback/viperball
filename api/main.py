@@ -1994,6 +1994,44 @@ def dynasty_coaching_history(session_id: str):
     return {"coaching_history": history, "current_staffs": staffs}
 
 
+@app.get("/sessions/{session_id}/dynasty/graduating-class")
+def dynasty_graduating_class(session_id: str):
+    """Return all graduating seniors/graduates as a WVL-importable list of PlayerCard dicts."""
+    session = _get_session(session_id)
+    _require_dynasty(session)
+
+    from engine.player_card import player_to_card
+
+    graduates = []
+
+    # Prefer offseason player_cards (available after season ends)
+    offseason = session.get("offseason", {})
+    player_cards = offseason.get("player_cards", {})
+    if player_cards:
+        for team_name, cards in player_cards.items():
+            for card in cards:
+                if getattr(card, "year", "") in ("Senior", "Graduate"):
+                    d = card.to_dict()
+                    d["graduating_from"] = team_name
+                    graduates.append(d)
+    else:
+        # Fall back to current season rosters
+        season_obj = session.get("season")
+        if season_obj:
+            for team_name, team in season_obj.teams.items():
+                for player in team.players:
+                    if getattr(player, "year", "") in ("Senior", "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        d["graduating_from"] = team_name
+                        graduates.append(d)
+
+    dynasty = session.get("dynasty")
+    year = getattr(dynasty, "year", None) if dynasty else None
+
+    return {"graduates": graduates, "count": len(graduates), "year": year}
+
+
 @app.get("/sessions/{session_id}/team/{team_name}")
 def team_roster(session_id: str, team_name: str):
     session = _get_session(session_id)

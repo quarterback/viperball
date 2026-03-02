@@ -29,7 +29,8 @@ from engine.wvl_owner import (
 )
 from engine.wvl_free_agency import (
     FreeAgent, FreeAgencyResult, run_free_agency, process_retirements,
-    apply_roster_cuts, generate_synthetic_fa_pool, build_free_agent_pool_from_import,
+    apply_roster_cuts, generate_synthetic_fa_pool,
+    build_free_agent_pool_from_import, build_free_agent_pool_from_data,
     compute_fa_attractiveness,
 )
 from engine.wvl_season import WVLMultiTierSeason
@@ -233,6 +234,7 @@ class WVLDynasty:
         investment_budget: float = 5.0,
         owner_targeted_fa_name: Optional[str] = None,
         import_path: Optional[str] = None,
+        import_data: Optional[list] = None,
         rng: Optional[random.Random] = None,
     ) -> Dict:
         """Run full offseason:
@@ -278,7 +280,9 @@ class WVLDynasty:
         persist_tier_assignments(self.tier_assignments, str(assignments_path))
 
         # 3. Free Agency
-        if import_path:
+        if import_data:
+            fa_pool = build_free_agent_pool_from_data(import_data)
+        elif import_path:
             fa_pool = build_free_agent_pool_from_import(import_path)
         else:
             fa_pool = generate_synthetic_fa_pool(70, rng)
