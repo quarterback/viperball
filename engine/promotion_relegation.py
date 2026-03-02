@@ -151,7 +151,7 @@ def simulate_promotion_playoff(
     movements = []
 
     if home_team and away_team:
-        result = fast_sim_game(home_team, away_team, rng=rng)
+        result = fast_sim_game(home_team, away_team, seed=rng.randint(0, 999999) if rng else 0)
         home_score = result.get("home_score", 0)
         away_score = result.get("away_score", 0)
         playoff.score = f"{home_score}-{away_score}"

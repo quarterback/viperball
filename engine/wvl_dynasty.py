@@ -91,6 +91,12 @@ class WVLDynasty:
     president: Optional[TeamPresident] = None
     investment: InvestmentAllocation = field(default_factory=InvestmentAllocation)
 
+    # Last completed season snapshot (plain dicts — survives serialization)
+    last_season_standings: Dict[int, dict] = field(default_factory=dict)  # tier → standings
+    last_season_schedule: Dict[int, list] = field(default_factory=dict)  # tier → list of week results
+    last_season_champions: Dict[int, str] = field(default_factory=dict)  # tier → champion team_key
+    last_season_owner_results: List[dict] = field(default_factory=list)  # [{week, opp, score, result}, ...]
+
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
     _team_rosters: Dict[str, List[PlayerCard]] = field(default_factory=dict, repr=False)
@@ -110,6 +116,69 @@ class WVLDynasty:
         """Initialize a new season across all 4 tiers."""
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
         return self._current_season
+
+    def snapshot_season(self, season: WVLMultiTierSeason):
+        """Extract serializable season data into dynasty fields.
+
+        Must be called BEFORE advance_season() so tier assignments still match.
+        Stores standings, schedules, champions, and owner's game results
+        as plain dicts that survive NiceGUI storage serialization.
+        """
+        # Standings with zone annotations
+        self.last_season_standings = season.get_all_standings()
+        # Strip non-serializable data — keep only plain dict values
+        for tier_num, st in self.last_season_standings.items():
+            ranked = st.get("ranked", [])
+            # Ensure all values are JSON-safe primitives
+            for team in ranked:
+                for k, v in list(team.items()):
+                    if not isinstance(v, (str, int, float, bool, type(None))):
+                        team[k] = str(v)
+
+        # Champions per tier
+        self.last_season_champions = {}
+        for tier_num, tier_season in season.tier_seasons.items():
+            if tier_season.champion:
+                self.last_season_champions[tier_num] = tier_season.champion
+
+        # Owner's game-by-game results
+        owner_tier = self.tier_assignments.get(self.owner.club_key, 1)
+        tier_season = season.tier_seasons.get(owner_tier)
+        self.last_season_owner_results = []
+        if tier_season:
+            schedule = tier_season.get_schedule()
+            for week_data in schedule.get("weeks", []):
+                week_num = week_data.get("week", 0)
+                for game in week_data.get("games", []):
+                    if not game.get("completed"):
+                        continue
+                    is_home = game.get("home_key") == self.owner.club_key
+                    is_away = game.get("away_key") == self.owner.club_key
+                    if not (is_home or is_away):
+                        continue
+                    hs = game.get("home_score", 0)
+                    aws = game.get("away_score", 0)
+                    if is_home:
+                        opp_key = game.get("away_key", "")
+                        opp_name = game.get("away_name", opp_key)
+                        my_score, opp_score = hs, aws
+                        loc = "H"
+                    else:
+                        opp_key = game.get("home_key", "")
+                        opp_name = game.get("home_name", opp_key)
+                        my_score, opp_score = aws, hs
+                        loc = "A"
+                    result = "W" if my_score > opp_score else "L" if my_score < opp_score else "D"
+                    self.last_season_owner_results.append({
+                        "week": week_num,
+                        "opponent": opp_name,
+                        "opponent_key": opp_key,
+                        "location": loc,
+                        "my_score": my_score,
+                        "opp_score": opp_score,
+                        "result": result,
+                        "matchup_key": game.get("matchup_key", ""),
+                    })
 
     def advance_season(
         self,
@@ -329,6 +398,10 @@ class WVLDynasty:
             "financial_history": self.financial_history,
             "promotion_history": self.promotion_history,
             "president_history": self.president_history,
+            "last_season_standings": {str(k): v for k, v in self.last_season_standings.items()},
+            "last_season_schedule": {str(k): v for k, v in self.last_season_schedule.items()},
+            "last_season_champions": {str(k): v for k, v in self.last_season_champions.items()},
+            "last_season_owner_results": self.last_season_owner_results,
         }
         if self.president:
             data["president"] = self.president.to_dict()
@@ -364,6 +437,18 @@ class WVLDynasty:
             int(k): v for k, v in data.get("promotion_history", {}).items()
         }
         dynasty.president_history = data.get("president_history", [])
+
+        # Restore last season snapshot
+        dynasty.last_season_standings = {
+            int(k): v for k, v in data.get("last_season_standings", {}).items()
+        }
+        dynasty.last_season_schedule = {
+            int(k): v for k, v in data.get("last_season_schedule", {}).items()
+        }
+        dynasty.last_season_champions = {
+            int(k): v for k, v in data.get("last_season_champions", {}).items()
+        }
+        dynasty.last_season_owner_results = data.get("last_season_owner_results", [])
 
         if "president" in data:
             dynasty.president = TeamPresident.from_dict(data["president"])

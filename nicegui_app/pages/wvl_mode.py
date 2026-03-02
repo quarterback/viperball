@@ -264,7 +264,7 @@ def _render_preseason_tier(dynasty, tier_num: int):
 # ═══════════════════════════════════════════════════════════════
 
 def _render_dashboard(container):
-    """Main dashboard — hero header, standings, then owner/president."""
+    """Main dashboard — hero header, standings, results, then management."""
     dynasty = _get_dynasty()
     if not dynasty:
         _render_setup(container)
@@ -277,42 +277,110 @@ def _render_dashboard(container):
         tier_config = TIER_BY_NUMBER.get(club_tier)
         tier_name = tier_config.tier_name if tier_config else f"Tier {club_tier}"
 
+        # Pull persisted standings (plain dicts — survive serialization)
+        all_standings = getattr(dynasty, "last_season_standings", {}) or {}
+        owner_results = getattr(dynasty, "last_season_owner_results", []) or []
+        champions = getattr(dynasty, "last_season_champions", {}) or {}
+
+        # Compute owner's position and form from persisted data
+        owner_position = None
+        owner_tier_total = None
+        owner_record = None
+        owner_zone = "safe"
+        owner_form = ""
+        # Look in the tier the owner was in when the season was played
+        # (before pro/rel changed assignments). Check all tiers.
+        for t_num, st in all_standings.items():
+            for i, t in enumerate(st.get("ranked", [])):
+                if t.get("team_key") == dynasty.owner.club_key:
+                    owner_position = i + 1
+                    owner_tier_total = len(st.get("ranked", []))
+                    owner_record = f"{t.get('wins', 0)}-{t.get('losses', 0)}"
+                    owner_zone = t.get("zone", "safe")
+                    owner_form = t.get("last_5", "")
+                    break
+            if owner_position:
+                break
+        # Also compute form from game results if standings don't have it
+        if not owner_form and owner_results:
+            owner_form = "".join(r.get("result", "?") for r in owner_results[-5:])
+
+        # Tier-specific colors
+        _TIER_COLORS = {
+            1: ("#b8860b", "#ffd700", "#fffacd"),  # gold
+            2: ("#6b7280", "#9ca3af", "#f3f4f6"),  # silver
+            3: ("#92400e", "#d97706", "#fef3c7"),  # bronze
+            4: ("#334155", "#64748b", "#f1f5f9"),  # slate
+        }
+        tier_dark, tier_mid, tier_light = _TIER_COLORS.get(club_tier, _TIER_COLORS[4])
+
+        # Bankroll health
+        bankroll = dynasty.owner.bankroll
+        if bankroll >= 50:
+            bank_color, bank_bg = "#065f46", "linear-gradient(135deg, #065f46, #059669)"
+        elif bankroll >= 20:
+            bank_color, bank_bg = "#92400e", "linear-gradient(135deg, #92400e, #d97706)"
+        else:
+            bank_color, bank_bg = "#991b1b", "linear-gradient(135deg, #991b1b, #dc2626)"
+
         # ── HERO HEADER ──────────────────────────────────────
-        # Club name is the headline; tier badge and bankroll are
-        # the two numbers you check every time you open this screen.
         with ui.column().classes("w-full items-center py-4"):
             ui.label(club_name).classes(
                 "text-3xl sm:text-4xl font-extrabold text-center"
             ).style("color: #312e81;")
+
+            # Position + record line
+            if owner_position and owner_record:
+                pos_text = f"{_ordinal(owner_position)} of {owner_tier_total} | {owner_record}"
+                zone_color = {
+                    "promotion": "#16a34a", "playoff": "#d97706",
+                    "relegation": "#dc2626",
+                }.get(owner_zone, "#475569")
+                ui.label(pos_text).classes(
+                    "text-lg font-bold mt-1"
+                ).style(f"color: {zone_color};")
+
+            # Form dots (last 5 results)
+            if owner_form:
+                with ui.row().classes("gap-1 mt-1 justify-center"):
+                    for ch in owner_form[-5:]:
+                        color = {"W": "#16a34a", "L": "#dc2626", "D": "#d97706"}.get(ch, "#9ca3af")
+                        ui.html(
+                            f'<span style="display:inline-block;width:22px;height:22px;'
+                            f'border-radius:50%;background:{color};color:white;'
+                            f'font-size:11px;font-weight:700;line-height:22px;'
+                            f'text-align:center;">{ch}</span>'
+                        )
+
             with ui.row().classes("gap-4 mt-3 justify-center flex-wrap"):
-                # Tier badge — big, gradient
+                # Tier badge — tier-specific color
                 with ui.card().classes("px-6 py-3 text-center").style(
-                    "background: linear-gradient(135deg, #4338ca, #6366f1);"
-                    "border-radius: 12px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);"
+                    f"background: linear-gradient(135deg, {tier_dark}, {tier_mid});"
+                    f"border-radius: 12px; box-shadow: 0 4px 12px {tier_mid}44;"
                 ):
                     ui.label("TIER").classes(
                         "text-[10px] font-bold uppercase tracking-widest"
-                    ).style("color: #c7d2fe;")
+                    ).style(f"color: {tier_light};")
                     ui.label(str(club_tier)).classes(
                         "text-5xl font-black leading-none"
                     ).style("color: white;")
-                    ui.label(tier_name).classes("text-[11px] mt-1").style("color: #c7d2fe;")
-                # Bankroll — big, gradient
+                    ui.label(tier_name).classes("text-[11px] mt-1").style(f"color: {tier_light};")
+                # Bankroll — health-colored
                 with ui.card().classes("px-6 py-3 text-center").style(
-                    "background: linear-gradient(135deg, #065f46, #059669);"
-                    "border-radius: 12px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);"
+                    f"background: {bank_bg};"
+                    f"border-radius: 12px; box-shadow: 0 4px 12px {bank_color}44;"
                 ):
                     ui.label("BANKROLL").classes(
                         "text-[10px] font-bold uppercase tracking-widest"
-                    ).style("color: #a7f3d0;")
-                    ui.label(f"${dynasty.owner.bankroll:.1f}M").classes(
+                    ).style("color: rgba(255,255,255,0.7);")
+                    ui.label(f"${bankroll:.1f}M").classes(
                         "text-5xl font-black leading-none"
                     ).style("color: white;")
                     ui.label(f"Year {dynasty.current_year}").classes(
                         "text-[11px] mt-1"
-                    ).style("color: #a7f3d0;")
+                    ).style("color: rgba(255,255,255,0.7);")
 
-        # ── ACTIONS (right below hero so sim button is easy to reach) ─
+        # ── ACTIONS ───────────────────────────────────────────
         with ui.row().classes("w-full justify-center gap-4 mb-2"):
             async def _sim_season():
                 import random
@@ -325,6 +393,9 @@ def _render_dashboard(container):
 
                 ui.notify("Simulating full season...", type="info")
                 season.run_full_season()
+
+                # Snapshot season data BEFORE advance (tier assignments still match)
+                dynasty.snapshot_season(season)
 
                 dynasty.advance_season(season, rng)
                 offseason = dynasty.run_offseason(season, investment_budget=5.0, rng=rng)
@@ -368,16 +439,8 @@ def _render_dashboard(container):
             )
 
         # ── STANDINGS ─────────────────────────────────────────
-        # Your tier expanded by default, others collapsed.
+        # Read from persisted snapshot (plain dicts — survives serialization)
         ui.separator()
-
-        season = getattr(dynasty, "_current_season", None)
-        all_standings = {}
-        if season:
-            try:
-                all_standings = season.get_all_standings() if season.tier_seasons else {}
-            except Exception:
-                pass
 
         for tier_num in [1, 2, 3, 4]:
             tc = TIER_BY_NUMBER.get(tier_num)
@@ -401,10 +464,10 @@ def _render_dashboard(container):
             elif is_owner_tier and not ranked:
                 header_parts.append("Your tier")
 
-            tier_season = season.tier_seasons.get(tier_num) if season else None
-            if tier_season and getattr(tier_season, "champion", None):
-                champ_club = CLUBS_BY_KEY.get(tier_season.champion)
-                champ_name = champ_club.name if champ_club else tier_season.champion
+            champ_key = champions.get(tier_num)
+            if champ_key:
+                champ_club = CLUBS_BY_KEY.get(champ_key)
+                champ_name = champ_club.name if champ_club else champ_key
                 header_parts.append(f"Champion: {champ_name}")
 
             header = " | ".join(header_parts)
@@ -415,58 +478,100 @@ def _render_dashboard(container):
                 else:
                     _render_preseason_tier(dynasty, tier_num)
 
-        # ── OWNER & PRESIDENT (compact, at the bottom) ────────
+        # ── YOUR SEASON RESULTS ───────────────────────────────
+        if owner_results:
+            ui.separator().classes("mt-2")
+            with ui.expansion(
+                f"Your Season Results ({len(owner_results)} games)",
+                icon="sports_football",
+                value=False,
+            ).classes("w-full"):
+                columns = [
+                    {"name": "wk", "label": "Wk", "field": "wk", "align": "center"},
+                    {"name": "result", "label": "", "field": "result", "align": "center"},
+                    {"name": "score", "label": "Score", "field": "score", "align": "center"},
+                    {"name": "loc", "label": "", "field": "loc", "align": "center"},
+                    {"name": "opponent", "label": "Opponent", "field": "opponent", "align": "left"},
+                ]
+                rows = []
+                for g in owner_results:
+                    rows.append({
+                        "wk": g.get("week", ""),
+                        "result": g.get("result", ""),
+                        "score": f"{g.get('my_score', 0)}-{g.get('opp_score', 0)}",
+                        "loc": g.get("location", ""),
+                        "opponent": g.get("opponent", ""),
+                        "_result": g.get("result", ""),
+                    })
+                tbl = ui.table(columns=columns, rows=rows, row_key="wk").classes(
+                    "w-full"
+                ).props("dense flat")
+                tbl.add_slot("body", r"""
+                    <q-tr :props="props" :style="{
+                        'background-color':
+                            props.row._result === 'W' ? '#f0fdf4' :
+                            props.row._result === 'L' ? '#fef2f2' : ''
+                    }">
+                        <q-td v-for="col in props.cols" :key="col.name" :props="props"
+                              :style="col.name === 'result' ? {
+                                  'color': props.row._result === 'W' ? '#16a34a' :
+                                           props.row._result === 'L' ? '#dc2626' : '#d97706',
+                                  'font-weight': '700'
+                              } : {}">
+                            {{ col.value }}
+                        </q-td>
+                    </q-tr>
+                """)
+
+        # ── MANAGEMENT (compact, bottom) ──────────────────────
         ui.separator().classes("mt-4")
-        ui.label("Management").classes(
-            "text-xs font-semibold text-gray-400 uppercase tracking-wide mt-2"
-        )
-
-        with ui.row().classes("w-full gap-3 flex-wrap"):
-            # Owner — compact card, name + archetype + seasons
-            with ui.card().classes("flex-1 min-w-[220px] p-3"):
-                arch = OWNER_ARCHETYPES.get(dynasty.owner.archetype, {})
-                with ui.row().classes("items-center gap-2"):
-                    ui.icon("person", size="sm").classes("text-indigo-600")
-                    ui.label(dynasty.owner.name).classes("font-semibold text-sm")
-                    ui.badge(
-                        arch.get("label", dynasty.owner.archetype), color="indigo"
-                    ).props("outline dense")
-                ui.label(
-                    f"Seasons: {dynasty.owner.seasons_owned}"
-                ).classes("text-xs text-gray-400 ml-6")
-
-            # President — compact card, ratings hidden behind expansion
-            with ui.card().classes("flex-1 min-w-[220px] p-3"):
-                if dynasty.president:
-                    parch = PRESIDENT_ARCHETYPES.get(dynasty.president.archetype, {})
+        with ui.expansion("Management", icon="business_center").classes("w-full"):
+            with ui.row().classes("w-full gap-3 flex-wrap"):
+                # Owner
+                with ui.card().classes("flex-1 min-w-[220px] p-3"):
+                    arch = OWNER_ARCHETYPES.get(dynasty.owner.archetype, {})
                     with ui.row().classes("items-center gap-2"):
-                        ui.icon("badge", size="sm").classes("text-amber-600")
-                        ui.label(dynasty.president.name).classes("font-semibold text-sm")
+                        ui.icon("person", size="sm").classes("text-indigo-600")
+                        ui.label(dynasty.owner.name).classes("font-semibold text-sm")
                         ui.badge(
-                            parch.get("label", ""), color="amber"
+                            arch.get("label", dynasty.owner.archetype), color="indigo"
                         ).props("outline dense")
                     ui.label(
-                        f"Contract: {dynasty.president.contract_years}yr"
+                        f"Seasons: {dynasty.owner.seasons_owned}"
                     ).classes("text-xs text-gray-400 ml-6")
-                    with ui.expansion("Ratings").classes("w-full mt-1"):
-                        with ui.row().classes("gap-4 py-1"):
-                            for lbl, val in [
-                                ("ACU", dynasty.president.acumen),
-                                ("BDG", dynasty.president.budget_mgmt),
-                                ("EYE", dynasty.president.recruiting_eye),
-                                ("HIR", dynasty.president.staff_hiring),
-                            ]:
-                                with ui.column().classes("items-center"):
-                                    ui.label(str(val)).classes(
-                                        "text-lg font-bold text-gray-800"
-                                    )
-                                    ui.label(lbl).classes(
-                                        "text-[10px] text-gray-400 uppercase"
-                                    )
-                else:
-                    with ui.row().classes("items-center gap-2"):
-                        ui.icon("warning", size="sm").classes("text-red-500")
-                        ui.label("No president hired").classes("text-red-500 text-sm")
+
+                # President
+                with ui.card().classes("flex-1 min-w-[220px] p-3"):
+                    if dynasty.president:
+                        parch = PRESIDENT_ARCHETYPES.get(dynasty.president.archetype, {})
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon("badge", size="sm").classes("text-amber-600")
+                            ui.label(dynasty.president.name).classes("font-semibold text-sm")
+                            ui.badge(
+                                parch.get("label", ""), color="amber"
+                            ).props("outline dense")
+                        ui.label(
+                            f"Contract: {dynasty.president.contract_years}yr"
+                        ).classes("text-xs text-gray-400 ml-6")
+                        with ui.expansion("Ratings").classes("w-full mt-1"):
+                            with ui.row().classes("gap-4 py-1"):
+                                for lbl, val in [
+                                    ("ACU", dynasty.president.acumen),
+                                    ("BDG", dynasty.president.budget_mgmt),
+                                    ("EYE", dynasty.president.recruiting_eye),
+                                    ("HIR", dynasty.president.staff_hiring),
+                                ]:
+                                    with ui.column().classes("items-center"):
+                                        ui.label(str(val)).classes(
+                                            "text-lg font-bold text-gray-800"
+                                        )
+                                        ui.label(lbl).classes(
+                                            "text-[10px] text-gray-400 uppercase"
+                                        )
+                    else:
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon("warning", size="sm").classes("text-red-500")
+                            ui.label("No president hired").classes("text-red-500 text-sm")
 
 
 # ═══════════════════════════════════════════════════════════════
