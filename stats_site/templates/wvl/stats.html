@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>WVL &mdash; PLAYER STATS</h1>
+  <h1>WVL &mdash; STAT LEADERS</h1>
   <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
 </div>
 
@@ -26,28 +26,15 @@
   {% if selected_tier == 0 %}
   <span style="color:var(--accent);font-weight:bold">All Tiers</span>
   {% else %}
-  <a href="/stats/wvl/{{ session_id }}/stats?tier=0">All Tiers</a>
+  <a href="/stats/wvl/{{ session_id }}/stats?tier=0&category={{ category }}">All Tiers</a>
   {% endif %}
   {% for t in tier_list %}
   &middot;
   {% if t == selected_tier %}
   <span style="color:var(--accent);font-weight:bold">{{ tier_label(t) }}</span>
   {% else %}
-  <a href="/stats/wvl/{{ session_id }}/stats?tier={{ t }}">{{ tier_label(t) }}</a>
+  <a href="/stats/wvl/{{ session_id }}/stats?tier={{ t }}&category={{ category }}">{{ tier_label(t) }}</a>
   {% endif %}
-  {% endfor %}
-</div>
-
-{# Category selector #}
-<div style="margin-bottom:12px;font-size:11px;">
-  <strong>Category:</strong>
-  {% for cat, label in [('all', 'All'), ('rushing', 'Rushing'), ('kick_pass', 'Kick-Pass'), ('defense', 'Defense')] %}
-  {% if cat == category %}
-  <span style="color:var(--accent);font-weight:bold">{{ label }}</span>
-  {% else %}
-  <a href="/stats/wvl/{{ session_id }}/stats?tier={{ selected_tier }}&category={{ cat }}">{{ label }}</a>
-  {% endif %}
-  {% if not loop.last %} &middot; {% endif %}
   {% endfor %}
 </div>
 
@@ -55,48 +42,69 @@
 <h2>{{ tier_label(tier_num) }}</h2>
 
 {% if leaders is mapping %}
-  {% for cat_name, cat_leaders in leaders.items() %}
-  {% if cat_leaders %}
+  {% for cat_name, cat_data in leaders.items() %}
+  {% if cat_data is iterable and cat_data is not string and cat_data is not mapping and cat_data|length > 0 %}
   <h3>{{ cat_name | replace('_', ' ') | title }}</h3>
+  <div style="overflow-x:auto;">
   <table>
     <thead>
-      <tr><th class="num">#</th><th>Name</th><th>Team</th><th class="num">Value</th></tr>
+      <tr>
+        <th class="num">#</th><th>Name</th><th>Team</th><th>Pos</th>
+        <th class="num">GP</th>
+        {% if cat_name == 'rushing' %}
+        <th class="num">YDS</th><th class="num">CAR</th><th class="num">YPC</th>
+        {% elif cat_name == 'kick_pass' %}
+        <th class="num">YDS</th><th class="num">CMP</th><th class="num">ATT</th><th class="num">PCT</th>
+        {% elif cat_name == 'scoring' %}
+        <th class="num">TD</th><th class="num">DK</th><th class="num">TOT YDS</th>
+        {% elif cat_name == 'total_yards' %}
+        <th class="num">TOT</th><th class="num">RUSH</th><th class="num">KP</th>
+        {% else %}
+        <th class="num">Value</th>
+        {% endif %}
+      </tr>
     </thead>
     <tbody>
-    {% for p in cat_leaders[:20] %}
+    {% for p in cat_data[:25] %}
     <tr>
       <td class="num rank">{{ loop.index }}</td>
       <td>{{ p.get('name', '?') }}</td>
-      <td>{{ p.get('team', '') }}</td>
-      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('value', 0) }}</td>
+      <td><a href="/stats/wvl/{{ session_id }}/team/{{ p.get('team_key', '') }}">{{ p.get('team', p.get('team_key', '?')) }}</a></td>
+      <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
+      <td class="num">{{ p.get('games', 0) }}</td>
+      {% if cat_name == 'rushing' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+      <td class="num">{{ p.get('carries', 0) }}</td>
+      <td class="num">{{ '%.1f'|format(p.get('ypc', 0)) }}</td>
+      {% elif cat_name == 'kick_pass' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+      <td class="num">{{ p.get('completions', 0) }}</td>
+      <td class="num">{{ p.get('attempts', 0) }}</td>
+      <td class="num {% if p.get('pct', 0) >= 70 %}stat-good{% endif %}">{{ '%.1f'|format(p.get('pct', 0)) }}%</td>
+      {% elif cat_name == 'scoring' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('touchdowns', 0) }}</td>
+      <td class="num">{{ p.get('dk_made', 0) }}</td>
+      <td class="num">{{ p.get('total_yards', 0) }}</td>
+      {% elif cat_name == 'total_yards' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('total_yards', 0) }}</td>
+      <td class="num">{{ p.get('rushing', 0) }}</td>
+      <td class="num">{{ p.get('kick_pass', 0) }}</td>
+      {% else %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% endif %}">{{ p.get('value', p.get('stat_value', '?')) }}</td>
+      {% endif %}
     </tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
   {% endif %}
   {% endfor %}
-{% elif leaders is iterable and leaders is not string %}
-  <table>
-    <thead>
-      <tr><th class="num">#</th><th>Name</th><th>Team</th><th class="num">Value</th></tr>
-    </thead>
-    <tbody>
-    {% for p in leaders[:20] %}
-    <tr>
-      <td class="num rank">{{ loop.index }}</td>
-      <td>{{ p.get('name', '?') }}</td>
-      <td>{{ p.get('team', '') }}</td>
-      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('value', 0) }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
 {% else %}
   <pre style="color:var(--fg-dim);font-size:11px;">{{ leaders | tojson(indent=2) }}</pre>
 {% endif %}
 {% endfor %}
 
 {% if not all_leaders %}
-<div class="empty">No player stats available yet.</div>
+<div class="empty">No player stats available yet. Simulate some games first.</div>
 {% endif %}
 {% endblock %}

@@ -14,8 +14,8 @@
     {{ tier_name }}
     {% if team.get('country') %} &middot; {{ team.country }}{% endif %}
     {% if team.get('city') %} &middot; {{ team.city }}{% endif %}
-    {% if team.get('record') %} &middot; {{ team.record.get('wins', 0) }}-{{ team.record.get('losses', 0) }}{% endif %}
     {% if team.get('narrative_tag') %} &middot; <span style="color:var(--yellow)">[{{ team.narrative_tag }}]</span>{% endif %}
+    {% if team.get('prestige') %} &middot; Prestige: {{ team.prestige }}{% endif %}
   </div>
 </div>
 
@@ -27,13 +27,31 @@
 </div>
 
 {# ── Record / Metrics ── #}
-{% if team.get('record') %}
-{% set rec = team.record %}
+{% set rec = team.get('record') %}
+{% if rec is string %}
+  {% set wins = rec.split('-')[0]|int if '-' in rec else 0 %}
+  {% set losses = rec.split('-')[1]|int if '-' in rec else 0 %}
+{% elif rec is mapping %}
+  {% set wins = rec.get('wins', 0) %}
+  {% set losses = rec.get('losses', 0) %}
+{% else %}
+  {% set wins = 0 %}
+  {% set losses = 0 %}
+{% endif %}
+
 <div class="grid-4" style="margin-bottom:16px;">
-  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ rec.get('wins',0) }}</span>-<span class="l">{{ rec.get('losses',0) }}</span></div></div>
-  <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for',0) }}</div></div>
-  <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against',0) }}</div></div>
+  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ wins }}</span>-<span class="l">{{ losses }}</span></div></div>
+  <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for', rec.get('pf', 0)) if rec is mapping else 0 }}</div></div>
+  <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against', rec.get('pa', 0)) if rec is mapping else 0 }}</div></div>
   <div class="metric"><div class="label">Tier</div><div class="value" style="font-size:13px">{{ tier_name }}</div></div>
+</div>
+
+{% if team.get('offense_style') or team.get('defense_style') %}
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric"><div class="label">Offense</div><div class="value" style="font-size:11px">{{ team.get('offense_style', '—') | replace('_', ' ') | title }}</div></div>
+  <div class="metric"><div class="label">Defense</div><div class="value" style="font-size:11px">{{ team.get('defense_style', '—') | replace('_', ' ') | title }}</div></div>
+  {% if team.get('division') %}<div class="metric"><div class="label">Division</div><div class="value" style="font-size:11px">{{ team.division }}</div></div>{% endif %}
+  {% if team.get('abbreviation') %}<div class="metric"><div class="label">Abbrev</div><div class="value" style="font-size:11px">{{ team.abbreviation }}</div></div>{% endif %}
 </div>
 {% endif %}
 
@@ -41,12 +59,14 @@
 {% set roster = team.get('roster', team.get('players', [])) %}
 {% if roster %}
 <h2>Roster ({{ roster|length }})</h2>
+<div style="overflow-x:auto;">
 <table>
   <thead>
     <tr>
-      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">#</th><th>Name</th><th>Pos</th><th style="font-size:10px">Role</th>
       <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
       <th class="num">AGI</th><th class="num">KCK</th><th class="num">LAT</th>
+      <th class="num">AWR</th><th class="num">HND</th><th class="num">TKL</th>
     </tr>
   </thead>
   <tbody>
@@ -55,16 +75,58 @@
     <td class="num">{{ p.get('number', '') }}</td>
     <td>{{ p.get('name', '?') }}</td>
     <td><span class="tag tag-pos">{{ p.get('position', p.get('tag', '?')) }}</span></td>
+    <td style="font-size:10px;color:var(--fg-dim)">{{ p.get('archetype', '') }}</td>
     <td class="num {% if p.get('overall', 0) >= 85 %}stat-elite{% elif p.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ p.get('overall', '?') }}</td>
     <td class="num">{{ p.get('speed', '') }}</td>
     <td class="num">{{ p.get('power', '') }}</td>
     <td class="num">{{ p.get('agility', '') }}</td>
     <td class="num">{{ p.get('kicking', '') }}</td>
     <td class="num">{{ p.get('lateral_skill', '') }}</td>
+    <td class="num">{{ p.get('awareness', '') }}</td>
+    <td class="num">{{ p.get('hands', '') }}</td>
+    <td class="num">{{ p.get('tackling', '') }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
+{% endif %}
+
+{# ── Season Stats ── #}
+{% set season_stats = team.get('season_stats', []) %}
+{% if season_stats %}
+<h2>Season Stats</h2>
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>Pos</th>
+      <th class="num">GP</th><th class="num">RUSH</th><th class="num">R-CAR</th>
+      <th class="num">TD</th><th class="num">KP-YDS</th><th class="num">KP-C/A</th>
+      <th class="num">LAT</th><th class="num">FUM</th><th class="num">TKL</th>
+      <th class="num">TOT</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in season_stats|sort(attribute='total_yards', reverse=true) %}
+  <tr>
+    <td>{{ p.get('name', '?') }}</td>
+    <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
+    <td class="num">{{ p.get('games', 0) }}</td>
+    <td class="num {% if p.get('rushing_yards', 0) >= 200 %}stat-good{% endif %}">{{ p.get('rushing_yards', 0) }}</td>
+    <td class="num">{{ p.get('rushing_carries', 0) }}</td>
+    <td class="num {% if p.get('touchdowns', 0) >= 3 %}stat-elite{% elif p.get('touchdowns', 0) > 0 %}stat-good{% endif %}">{{ p.get('touchdowns', 0) }}</td>
+    <td class="num">{{ p.get('kick_pass_yards', 0) }}</td>
+    <td class="num">{% if p.get('kick_pass_attempts', 0) > 0 %}{{ p.get('kick_pass_completions', 0) }}/{{ p.get('kick_pass_attempts', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{{ p.get('lateral_yards', 0) }}</td>
+    <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
+    <td class="num {% if p.get('tackles', 0) >= 20 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
+    <td class="num {% if p.get('total_yards', 0) >= 300 %}stat-elite{% elif p.get('total_yards', 0) >= 100 %}stat-good{% endif %}">{{ p.get('total_yards', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
 {% endif %}
 
 {# ── Schedule ── #}

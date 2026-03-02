@@ -188,33 +188,85 @@ def _render_dashboard(container):
 
         ui.separator()
 
-        # 4-Tier Standings
+        # 4-Tier Standings — show real results if a season has been simulated
         ui.label("League Standings").classes("text-lg font-semibold mt-4")
+
+        # Try to get real standings from the last simulated season
+        season = dynasty._current_season
+        all_standings = season.get_all_standings() if season and season.tier_seasons else {}
 
         for tier_num in [1, 2, 3, 4]:
             tier_config = TIER_BY_NUMBER.get(tier_num)
             if not tier_config:
                 continue
 
-            with ui.expansion(f"Tier {tier_num} — {tier_config.tier_name}", icon="table_chart").classes("w-full"):
-                teams_in_tier = [
-                    k for k, t in dynasty.tier_assignments.items()
-                    if t == tier_num
-                ]
-                if teams_in_tier:
-                    with ui.column().classes("w-full gap-1"):
-                        for key in sorted(teams_in_tier, key=lambda k: CLUBS_BY_KEY.get(k, None).prestige if CLUBS_BY_KEY.get(k) else 0, reverse=True):
-                            club_info = CLUBS_BY_KEY.get(key)
-                            if club_info:
-                                is_owner = key == dynasty.owner.club_key
-                                style = "font-bold text-indigo-600" if is_owner else "text-gray-700"
-                                tag = f" [{club_info.narrative_tag}]" if club_info.narrative_tag else ""
-                                ui.label(
-                                    f"{'> ' if is_owner else '  '}{club_info.name} ({club_info.country}) "
-                                    f"— Prestige: {club_info.prestige}{tag}"
-                                ).classes(f"text-sm font-mono {style}")
+            tier_standings = all_standings.get(tier_num, {})
+            ranked = tier_standings.get("ranked", [])
+            champion = None
+            tier_season = season.tier_seasons.get(tier_num) if season else None
+            if tier_season:
+                champion = tier_season.champion
+
+            header = f"Tier {tier_num} — {tier_config.tier_name}"
+            if champion:
+                champ_club = CLUBS_BY_KEY.get(champion)
+                champ_name = champ_club.name if champ_club else champion
+                header += f" — Champion: {champ_name}"
+
+            with ui.expansion(header, icon="table_chart").classes("w-full"):
+                if ranked:
+                    # Real standings with W/L from simulation
+                    columns = [
+                        {"name": "pos", "label": "#", "field": "pos", "align": "center", "style": "width: 40px"},
+                        {"name": "team", "label": "Team", "field": "team", "align": "left"},
+                        {"name": "country", "label": "Country", "field": "country", "align": "left"},
+                        {"name": "record", "label": "W-L", "field": "record", "align": "center"},
+                        {"name": "pf", "label": "PF", "field": "pf", "align": "right"},
+                        {"name": "pa", "label": "PA", "field": "pa", "align": "right"},
+                        {"name": "diff", "label": "Diff", "field": "diff", "align": "right"},
+                        {"name": "zone", "label": "Zone", "field": "zone", "align": "center"},
+                    ]
+                    rows = []
+                    for i, t in enumerate(ranked):
+                        key = t.get("team_key", "")
+                        club_info = CLUBS_BY_KEY.get(key)
+                        is_owner = key == dynasty.owner.club_key
+                        zone = t.get("zone", "safe")
+                        zone_label = {"promotion": "PROM", "relegation": "REL", "playoff": "P/O"}.get(zone, "")
+                        name = t.get("team_name", key)
+                        if is_owner:
+                            name = f">> {name} <<"
+                        rows.append({
+                            "pos": t.get("position", i + 1),
+                            "team": name,
+                            "country": club_info.country if club_info else "",
+                            "record": f"{t.get('wins', 0)}-{t.get('losses', 0)}",
+                            "pf": t.get("pf", t.get("points_for", 0)),
+                            "pa": t.get("pa", t.get("points_against", 0)),
+                            "diff": t.get("diff", 0),
+                            "zone": zone_label,
+                        })
+                    ui.table(columns=columns, rows=rows, row_key="pos").classes("w-full").props("dense flat")
                 else:
-                    ui.label("No teams in this tier").classes("text-gray-400 italic")
+                    # Pre-season: show clubs sorted by prestige
+                    teams_in_tier = [
+                        k for k, t in dynasty.tier_assignments.items()
+                        if t == tier_num
+                    ]
+                    if teams_in_tier:
+                        with ui.column().classes("w-full gap-1"):
+                            for key in sorted(teams_in_tier, key=lambda k: CLUBS_BY_KEY.get(k, None).prestige if CLUBS_BY_KEY.get(k) else 0, reverse=True):
+                                club_info = CLUBS_BY_KEY.get(key)
+                                if club_info:
+                                    is_owner = key == dynasty.owner.club_key
+                                    style = "font-bold text-indigo-600" if is_owner else "text-gray-700"
+                                    tag = f" [{club_info.narrative_tag}]" if club_info.narrative_tag else ""
+                                    ui.label(
+                                        f"{'> ' if is_owner else '  '}{club_info.name} ({club_info.country}) "
+                                        f"— Prestige: {club_info.prestige}{tag}"
+                                    ).classes(f"text-sm font-mono {style}")
+                    else:
+                        ui.label("No teams in this tier").classes("text-gray-400 italic")
 
         ui.separator()
 

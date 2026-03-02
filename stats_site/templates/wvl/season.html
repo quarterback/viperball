@@ -22,37 +22,49 @@
 
 {% for tier in tier_data %}
 <h2>
-  Tier {{ tier.tier_num }} &mdash; {{ tier.tier_name }}
+  <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ tier.tier_num }}" style="color:var(--fg-bright);text-decoration:none;">Tier {{ tier.tier_num }} &mdash; {{ tier.tier_name }}</a>
   {% if tier.champion %} &middot; <span class="stat-elite">Champion: {{ tier.champion }}</span>{% endif %}
 </h2>
 
 {% if tier.ranked %}
+<div style="overflow-x:auto;">
 <table>
   <thead>
     <tr>
       <th class="num">#</th><th>Team</th><th>Country</th>
-      <th>W-L</th><th class="num">PF</th><th class="num">PA</th>
-      <th class="num">Diff</th><th>Zone</th>
+      <th>W-L</th><th class="num">PCT</th>
+      <th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th>
+      <th>DIV</th><th>STRK</th><th>L5</th><th>Zone</th>
     </tr>
   </thead>
   <tbody>
   {% for t in tier.ranked %}
-  {% set diff = t.get('points_for', 0) - t.get('points_against', 0) %}
   {% set tkey = t.get('team_key', '') %}
-  <tr {% if t.get('is_owner_club') %}style="background:#1a1a00"{% endif %}>
+  {% set zone = t.get('zone', 'safe') %}
+  <tr {% if t.get('is_owner_club') %}style="background:#1a1a00"{% elif zone == 'promotion' %}style="background:#0a1a0a"{% elif zone == 'relegation' %}style="background:#1a0a0a"{% endif %}>
     <td class="num rank">{{ t.get('position', loop.index) }}</td>
     <td>
       <a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a>
       {% if t.get('is_owner_club') %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOU</span>{% endif %}
       {% if t.get('narrative_tag') %} <span style="color:var(--fg-dim);font-size:10px">[{{ t.narrative_tag }}]</span>{% endif %}
     </td>
-    <td style="color:var(--fg-dim)">{{ t.get('country', '') }}</td>
+    <td style="color:var(--fg-dim);font-size:10px">{{ t.get('country', '') }}</td>
     <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
-    <td class="num">{{ t.get('points_for', 0) }}</td>
-    <td class="num">{{ t.get('points_against', 0) }}</td>
-    <td class="num {% if diff > 0 %}stat-good{% elif diff < 0 %}stat-bad{% endif %}">{{ "%+d"|format(diff) }}</td>
+    <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
+    <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
+    <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
+    <td class="num {% if t.get('diff', 0) > 0 %}stat-good{% elif t.get('diff', 0) < 0 %}stat-bad{% endif %}">{{ "%+d"|format(t.get('diff', 0)) }}</td>
+    <td style="font-size:10px;color:var(--fg-dim)">{{ t.get('div_record', '') }}</td>
+    <td style="font-size:10px;">
+      {% set strk = t.get('streak', '-') %}
+      <span class="{% if strk and strk[0] == 'W' %}stat-good{% elif strk and strk[0] == 'L' %}stat-bad{% endif %}">{{ strk }}</span>
+    </td>
+    <td style="font-size:10px;letter-spacing:1px;">
+      {% for ch in t.get('last_5', '') %}
+      <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% endif %}">{{ ch }}</span>
+      {% endfor %}
+    </td>
     <td>
-      {% set zone = t.get('zone', 'safe') %}
       {% if zone == 'promotion' %}<span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span>
       {% elif zone == 'relegation' %}<span class="tag" style="border-color:var(--red);color:var(--red)">REL</span>
       {% elif zone == 'playoff' %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span>
@@ -62,12 +74,13 @@
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% elif tier.divisions %}
   {% for div_name, div_teams in tier.divisions.items() %}
   <h3>{{ div_name }}</h3>
   <table>
     <thead>
-      <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th></tr>
+      <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PCT</th><th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th><th>STRK</th><th>L5</th></tr>
     </thead>
     <tbody>
     {% for t in div_teams %}
@@ -76,8 +89,19 @@
       <td class="num rank">{{ loop.index }}</td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
       <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
-      <td class="num">{{ t.get('points_for', 0) }}</td>
-      <td class="num">{{ t.get('points_against', 0) }}</td>
+      <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
+      <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
+      <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
+      <td class="num {% if t.get('diff', 0) > 0 %}stat-good{% elif t.get('diff', 0) < 0 %}stat-bad{% endif %}">{{ "%+d"|format(t.get('diff', 0)) }}</td>
+      <td style="font-size:10px;">
+        {% set strk = t.get('streak', '-') %}
+        <span class="{% if strk and strk[0] == 'W' %}stat-good{% elif strk and strk[0] == 'L' %}stat-bad{% endif %}">{{ strk }}</span>
+      </td>
+      <td style="font-size:10px;letter-spacing:1px;">
+        {% for ch in t.get('last_5', '') %}
+        <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% endif %}">{{ ch }}</span>
+        {% endfor %}
+      </td>
     </tr>
     {% endfor %}
     </tbody>
@@ -93,5 +117,6 @@
   <span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span> Auto-promoted
   &middot; <span class="tag" style="border-color:var(--red);color:var(--red)">REL</span> Auto-relegated
   &middot; <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span> Playoff spot
+  &middot; <span style="background:#1a1a00;padding:0 4px;border:1px solid var(--border);">Owner</span> highlights your club
 </div>
 {% endblock %}
