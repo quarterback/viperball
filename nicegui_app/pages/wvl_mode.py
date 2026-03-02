@@ -382,49 +382,190 @@ def _render_dashboard(container):
                     ).style("color: rgba(255,255,255,0.7);")
 
         # ── ACTIONS ───────────────────────────────────────────
-        # CVL graduates import (optional)
-        cached_graduates = app.storage.user.get("cvl_graduates")
-        cached_year = app.storage.user.get("cvl_graduates_year", "")
-        _import_state = {"data": cached_graduates}  # None = use synthetic players
+        # State for owner's pre-sim decisions (scoped to this dashboard render)
+        _offseason = {
+            "targeted_fa_name": None,
+            "investment_budget": 5.0,
+        }
 
+        # ─── Free Agent Scouting ──────────────────────────────
         with ui.expansion(
-            "CVL Graduates" + (
-                f" — {len(cached_graduates)} players ready (Year {cached_year})"
-                if cached_graduates else " (optional)"
-            ),
-            icon="school",
-            value=bool(cached_graduates),
+            "Scout Free Agents",
+            icon="person_search",
+            value=False,
         ).classes("w-full mb-2"):
-            if cached_graduates:
-                with ui.row().classes("items-center gap-3 mb-2"):
-                    ui.icon("check_circle").classes("text-green-600")
-                    ui.label(
-                        f"{len(cached_graduates)} graduates from CVL Year {cached_year} "
-                        "are loaded and will be used in free agency."
-                    ).classes("text-sm text-green-700 font-semibold")
-                with ui.row().classes("gap-2"):
-                    ui.button(
-                        "Clear (use synthetic players instead)",
-                        icon="close",
-                        on_click=lambda: (
-                            app.storage.user.pop("cvl_graduates", None),
-                            app.storage.user.pop("cvl_graduates_year", None),
-                            _import_state.update({"data": None}),
-                            ui.notify("Cleared — will use synthetic free agents.", type="info"),
-                        ),
-                    ).props("flat dense no-caps size=sm color=red-6")
-            else:
-                ui.label(
-                    "No CVL graduates loaded. Run a CVL dynasty season, then use "
-                    "Export → Dynasty Data → Export Graduates for WVL. "
-                    "Or paste a file path below."
-                ).classes("text-xs text-gray-500 mb-1")
+            ui.label(
+                "Generate the incoming free agent class, browse available players, "
+                "and pick ONE as your guaranteed signing target before simming the season."
+            ).classes("text-xs text-gray-500 mb-2")
 
-            ui.label("Or load from file path:").classes("text-xs text-gray-400 mt-1")
-            cvl_import_input = ui.input(
-                "Path to CVL graduating class JSON",
-                placeholder="/path/to/graduates.json",
-            ).classes("w-full font-mono text-sm")
+            # CVL graduates note
+            cached_graduates = app.storage.user.get("cvl_graduates")
+            cached_year = app.storage.user.get("cvl_graduates_year", "")
+            if cached_graduates:
+                with ui.row().classes("items-center gap-2 mb-2"):
+                    ui.icon("school").classes("text-green-600 text-sm")
+                    ui.label(
+                        f"{len(cached_graduates)} CVL graduates from Year {cached_year} "
+                        "will be used automatically in free agency."
+                    ).classes("text-xs text-green-700 font-semibold")
+
+            _target_banner = ui.label("Target: None set").classes(
+                "text-sm font-semibold text-amber-700 mb-2"
+            )
+
+            _fa_table_area = ui.column().classes("w-full")
+
+            def _update_target_banner():
+                name = _offseason["targeted_fa_name"]
+                if name:
+                    _target_banner.set_text(f"Target set: {name}")
+                    _target_banner.style("color: #15803d;")
+                else:
+                    _target_banner.set_text("Target: None set")
+                    _target_banner.style("color: #b45309;")
+
+            def _on_target_fa(e):
+                name = e.args.get("name", "") if isinstance(e.args, dict) else ""
+                _offseason["targeted_fa_name"] = name or None
+                _update_target_banner()
+                if name:
+                    ui.notify(f"Target locked: {name}", type="positive")
+
+            def _clear_target():
+                _offseason["targeted_fa_name"] = None
+                _update_target_banner()
+                ui.notify("Target cleared.", type="info")
+
+            async def _gen_fa_pool():
+                import random as _rand
+                from engine.wvl_free_agency import generate_synthetic_fa_pool
+                rng = _rand.Random(dynasty.current_year * 31 + 7)
+                pool = generate_synthetic_fa_pool(60, rng)
+
+                _fa_table_area.clear()
+                with _fa_table_area:
+                    cols = [
+                        {"name": "name", "label": "Player", "field": "name",
+                         "sortable": True, "align": "left"},
+                        {"name": "pos", "label": "Position", "field": "pos",
+                         "sortable": True, "align": "left"},
+                        {"name": "ovr", "label": "OVR", "field": "ovr",
+                         "sortable": True, "align": "center"},
+                        {"name": "age", "label": "Age", "field": "age",
+                         "sortable": True, "align": "center"},
+                        {"name": "nat", "label": "Nationality", "field": "nat",
+                         "sortable": True, "align": "left"},
+                        {"name": "sal", "label": "Salary", "field": "sal",
+                         "sortable": True, "align": "center"},
+                    ]
+                    rows = [
+                        {
+                            "name": fa.player_card.full_name,
+                            "pos": fa.player_card.position,
+                            "ovr": fa.player_card.overall,
+                            "age": fa.player_card.age or 22,
+                            "nat": fa.player_card.nationality or "",
+                            "sal": f"T{fa.asking_salary}",
+                        }
+                        for fa in pool
+                    ]
+                    tbl = (
+                        ui.table(columns=cols, rows=rows, row_key="name")
+                        .classes("w-full")
+                        .props("dense flat virtual-scroll")
+                        .style("max-height: 340px;")
+                    )
+                    # Inline Target button per row
+                    tbl.add_slot("body-cell-name", r"""
+                        <q-td :props="props">
+                            <span class="font-medium">{{ props.row.name }}</span>
+                            <q-btn flat dense no-caps size="xs" color="amber-8"
+                                   class="ml-2"
+                                   @click="$parent.$emit('target_fa', {name: props.row.name})">
+                                Target
+                            </q-btn>
+                        </q-td>
+                    """)
+                    tbl.on("target_fa", _on_target_fa)
+
+                ui.notify(f"Generated {len(pool)} free agents for Year {dynasty.current_year}.", type="info")
+
+            with ui.row().classes("gap-2 mb-3 items-center flex-wrap"):
+                ui.button(
+                    "Generate Player Pool",
+                    icon="group_add",
+                    on_click=_gen_fa_pool,
+                ).props("no-caps color=indigo")
+                ui.button(
+                    "Clear Target",
+                    icon="close",
+                    on_click=_clear_target,
+                ).props("flat no-caps size=sm color=red")
+
+        # ─── Investment Plan ──────────────────────────────────
+        _INVEST_AREAS = [
+            ("training",  "Training",  "Boosts speed, stamina & agility for all players"),
+            ("coaching",  "Coaching",  "Boosts awareness & tackling across the roster"),
+            ("stadium",   "Stadium",   "Raises FA attractiveness and attendance revenue"),
+            ("youth",     "Youth",     "Accelerates development for players under 25"),
+            ("science",   "Science",   "Improves injury resilience (stamina + power)"),
+            ("marketing", "Marketing", "Raises FA attractiveness and brand revenue"),
+        ]
+
+        with ui.expansion("Investment Plan", icon="trending_up", value=False).classes("w-full mb-2"):
+            ui.label(
+                "Set your annual investment budget and allocate across departments. "
+                "Higher values = stronger player and club boosts each offseason."
+            ).classes("text-xs text-gray-500 mb-3")
+
+            # Budget slider
+            max_budget = max(5, min(30, int(dynasty.owner.bankroll * 0.5) + 1))
+            init_budget = int(_offseason["investment_budget"])
+            with ui.row().classes("items-center gap-3 mb-4 flex-wrap"):
+                ui.label("Annual Budget:").classes("text-sm font-semibold")
+                _budget_lbl = ui.label(f"${init_budget}M").classes(
+                    "text-sm font-bold text-indigo-700 w-12"
+                )
+                _budget_sl = ui.slider(
+                    min=1, max=max_budget, step=1,
+                    value=init_budget,
+                ).classes("w-56")
+
+                def _on_budget_change(e):
+                    v = int(e.value or 1)
+                    _offseason["investment_budget"] = float(v)
+                    _budget_lbl.set_text(f"${v}M")
+
+                _budget_sl.on("change", _on_budget_change)
+                ui.label(f"Bankroll: ${dynasty.owner.bankroll:.1f}M").classes(
+                    "text-xs text-gray-400"
+                )
+
+            # Per-area sliders (independent 0–1 each)
+            ui.label("Allocation per area (0 = skip, 1.0 = full focus):").classes(
+                "text-xs text-gray-400 mb-2"
+            )
+            for area_key, area_label, area_tip in _INVEST_AREAS:
+                current_val = getattr(dynasty.investment, area_key, 0.0)
+                with ui.row().classes("items-center gap-3 w-full mb-1"):
+                    ui.label(area_label).classes("text-sm font-medium w-24 shrink-0")
+                    _pct_lbl = ui.label(f"{int(current_val * 100)}%").classes(
+                        "text-xs text-right text-gray-600 w-8 shrink-0"
+                    )
+                    _sl = ui.slider(
+                        min=0.0, max=1.0, step=0.05,
+                        value=current_val,
+                    ).classes("flex-1")
+
+                    def _make_handler(key, lbl_ref):
+                        def _h(e):
+                            setattr(dynasty.investment, key, float(e.value))
+                            lbl_ref.set_text(f"{int(float(e.value) * 100)}%")
+                        return _h
+
+                    _sl.on("change", _make_handler(area_key, _pct_lbl))
+                    ui.tooltip(area_tip)
 
         # Engine toggle (persisted in a local mutable for this render scope)
         _engine_opts = {"use_fast_sim": True}
@@ -461,16 +602,19 @@ def _render_dashboard(container):
 
                 dynasty.advance_season(season, rng)
 
-                # Pass CVL graduates: prefer in-memory cache, fall back to file path
-                import_data = _import_state.get("data")
-                import_path = cvl_import_input.value.strip() or None
+                # CVL graduates from storage cache (if any), otherwise engine uses synthetic pool
+                import_data = app.storage.user.get("cvl_graduates") or None
+
                 offseason = dynasty.run_offseason(
                     season,
-                    investment_budget=5.0,
+                    investment_budget=_offseason["investment_budget"],
+                    owner_targeted_fa_name=_offseason["targeted_fa_name"],
                     import_data=import_data,
-                    import_path=import_path if not import_data else None,
                     rng=rng,
                 )
+
+                # Reset targeted FA after the season (pick a new one next year)
+                _offseason["targeted_fa_name"] = None
 
                 _set_dynasty(dynasty)
 
@@ -480,11 +624,22 @@ def _render_dashboard(container):
                 # Register season in shared state for stats site
                 _register_wvl_season(dynasty, season)
 
+                # Build result notifications
+                fa_result = offseason.get("free_agency", {})
+                targeted = fa_result.get("owner_targeted_signing")
+                targeted_msg = f" Signed: {targeted['player_name']}." if targeted else ""
+
                 ui.notify(
                     f"Season {dynasty.current_year - 1} complete! "
-                    f"Bankroll: ${dynasty.owner.bankroll:.1f}M",
+                    f"Bankroll: ${dynasty.owner.bankroll:.1f}M.{targeted_msg}",
                     type="positive",
                 )
+
+                # Show investment boosts summary if non-trivial
+                boosts = offseason.get("investment_boosts", {})
+                if boosts:
+                    boost_parts = [f"{k}: +{v}" for k, v in list(boosts.items())[:4]]
+                    ui.notify("Investment boosts: " + ", ".join(boost_parts), type="info")
 
                 # Show pro/rel results
                 prom_rel = offseason.get("promotion_relegation", {})
@@ -787,11 +942,11 @@ def _render_dashboard(container):
                                 ("kick_pass", "KP"), ("games", "GP"),
                             ])
 
-        # ── MANAGEMENT (compact, bottom) ──────────────────────
+        # ── MANAGEMENT (owner + president hire/fire + financials) ──
         ui.separator().classes("mt-4")
         with ui.expansion("Management", icon="business_center").classes("w-full"):
             with ui.row().classes("w-full gap-3 flex-wrap"):
-                # Owner
+                # Owner card
                 with ui.card().classes("flex-1 min-w-[220px] p-3"):
                     arch = OWNER_ARCHETYPES.get(dynasty.owner.archetype, {})
                     with ui.row().classes("items-center gap-2"):
@@ -801,41 +956,242 @@ def _render_dashboard(container):
                             arch.get("label", dynasty.owner.archetype), color="indigo"
                         ).props("outline dense")
                     ui.label(
-                        f"Seasons: {dynasty.owner.seasons_owned}"
+                        f"Seasons: {dynasty.owner.seasons_owned} | "
+                        f"Bad runs: {dynasty.owner.consecutive_bad_seasons}"
                     ).classes("text-xs text-gray-400 ml-6")
+                    arch_desc = arch.get("description", "")
+                    if arch_desc:
+                        ui.label(arch_desc).classes("text-xs text-gray-500 mt-1 ml-6")
+                    # Patience indicator
+                    patience = arch.get("patience_threshold", 3)
+                    bad = dynasty.owner.consecutive_bad_seasons
+                    if bad >= patience:
+                        ui.label("⚠ Ownership pressure mounting!").classes(
+                            "text-xs text-red-600 font-semibold mt-1"
+                        )
+                    elif bad > 0:
+                        ui.label(f"Patience: {bad}/{patience} bad seasons").classes(
+                            "text-xs text-amber-600 mt-1"
+                        )
 
-                # President
-                with ui.card().classes("flex-1 min-w-[220px] p-3"):
+                # President card with hire/fire
+                _pres_card = ui.card().classes("flex-1 min-w-[260px] p-3")
+                with _pres_card:
                     if dynasty.president:
                         parch = PRESIDENT_ARCHETYPES.get(dynasty.president.archetype, {})
-                        with ui.row().classes("items-center gap-2"):
+                        with ui.row().classes("items-center gap-2 flex-wrap"):
                             ui.icon("badge", size="sm").classes("text-amber-600")
                             ui.label(dynasty.president.name).classes("font-semibold text-sm")
                             ui.badge(
                                 parch.get("label", ""), color="amber"
                             ).props("outline dense")
                         ui.label(
-                            f"Contract: {dynasty.president.contract_years}yr"
-                        ).classes("text-xs text-gray-400 ml-6")
-                        with ui.expansion("Ratings").classes("w-full mt-1"):
-                            with ui.row().classes("gap-4 py-1"):
-                                for lbl, val in [
-                                    ("ACU", dynasty.president.acumen),
-                                    ("BDG", dynasty.president.budget_mgmt),
-                                    ("EYE", dynasty.president.recruiting_eye),
-                                    ("HIR", dynasty.president.staff_hiring),
-                                ]:
-                                    with ui.column().classes("items-center"):
-                                        ui.label(str(val)).classes(
-                                            "text-lg font-bold text-gray-800"
-                                        )
-                                        ui.label(lbl).classes(
-                                            "text-[10px] text-gray-400 uppercase"
-                                        )
+                            f"Contract: {dynasty.president.contract_years}yr | "
+                            f"Salary: ${dynasty.president.salary}M/yr"
+                        ).classes("text-xs text-gray-400 ml-6 mb-1")
+                        # Ratings row
+                        with ui.row().classes("gap-4 py-1 ml-4"):
+                            for lbl, val, tip in [
+                                ("ACU", dynasty.president.acumen, "Football IQ"),
+                                ("BDG", dynasty.president.budget_mgmt, "Budget Management"),
+                                ("EYE", dynasty.president.recruiting_eye, "Recruiting Eye"),
+                                ("HIR", dynasty.president.staff_hiring, "Staff Hiring"),
+                            ]:
+                                bar_pct = int(val)
+                                bar_color = (
+                                    "#16a34a" if val >= 75 else
+                                    "#d97706" if val >= 55 else
+                                    "#dc2626"
+                                )
+                                with ui.column().classes("items-center gap-0"):
+                                    ui.label(str(val)).classes(
+                                        "text-base font-bold"
+                                    ).style(f"color: {bar_color};")
+                                    ui.label(lbl).classes(
+                                        "text-[10px] text-gray-400 uppercase"
+                                    )
+                                    ui.tooltip(tip)
+
+                        def _open_hire_dialog():
+                            import random as _rand
+                            pool = generate_president_pool(5, _rand.Random())
+                            with ui.dialog() as dlg, ui.card().classes("w-full max-w-2xl p-4"):
+                                ui.label("Hire a New President").classes(
+                                    "text-lg font-bold mb-2"
+                                )
+                                if dynasty.president:
+                                    ui.label(
+                                        f"Firing {dynasty.president.name} costs $0 "
+                                        "(contract bought out). Choose a replacement:"
+                                    ).classes("text-sm text-gray-500 mb-3")
+
+                                for candidate in pool:
+                                    carch = PRESIDENT_ARCHETYPES.get(candidate.archetype, {})
+                                    with ui.card().classes("w-full p-3 mb-2").style(
+                                        "border: 1px solid #e2e8f0;"
+                                    ):
+                                        with ui.row().classes("items-center justify-between flex-wrap gap-2"):
+                                            with ui.column().classes("gap-0"):
+                                                ui.label(candidate.name).classes("font-semibold text-sm")
+                                                ui.badge(
+                                                    carch.get("label", ""), color="amber"
+                                                ).props("outline dense")
+                                                ui.label(
+                                                    carch.get("description", "")
+                                                ).classes("text-xs text-gray-500 mt-1")
+                                            with ui.row().classes("gap-3 items-end"):
+                                                for lbl, val in [
+                                                    ("ACU", candidate.acumen),
+                                                    ("BDG", candidate.budget_mgmt),
+                                                    ("EYE", candidate.recruiting_eye),
+                                                    ("HIR", candidate.staff_hiring),
+                                                ]:
+                                                    with ui.column().classes("items-center gap-0"):
+                                                        col = (
+                                                            "#16a34a" if val >= 75 else
+                                                            "#d97706" if val >= 55 else
+                                                            "#dc2626"
+                                                        )
+                                                        ui.label(str(val)).classes(
+                                                            "text-sm font-bold"
+                                                        ).style(f"color: {col};")
+                                                        ui.label(lbl).classes(
+                                                            "text-[9px] text-gray-400 uppercase"
+                                                        )
+                                                ui.label(
+                                                    f"${candidate.salary}M/yr · {candidate.contract_years}yr"
+                                                ).classes("text-xs text-gray-500")
+
+                                            def _hire(c=candidate, d=dlg):
+                                                dynasty.president = c
+                                                _set_dynasty(dynasty)
+                                                d.close()
+                                                ui.notify(
+                                                    f"Hired {c.name} as President!",
+                                                    type="positive",
+                                                )
+                                                container.clear()
+                                                _render_dashboard(container)
+
+                                            ui.button(
+                                                "Hire", icon="how_to_reg",
+                                                on_click=_hire,
+                                            ).props("no-caps color=green size=sm")
+
+                                with ui.row().classes("mt-2 justify-end"):
+                                    ui.button("Cancel", on_click=dlg.close).props(
+                                        "flat no-caps"
+                                    )
+                            dlg.open()
+
+                        ui.button(
+                            "Hire / Fire President",
+                            icon="swap_horiz",
+                            on_click=_open_hire_dialog,
+                        ).props("flat no-caps size=sm color=amber-8").classes("mt-2")
+
                     else:
-                        with ui.row().classes("items-center gap-2"):
+                        with ui.row().classes("items-center gap-2 mb-2"):
                             ui.icon("warning", size="sm").classes("text-red-500")
-                            ui.label("No president hired").classes("text-red-500 text-sm")
+                            ui.label("No president hired — click below to hire one.").classes(
+                                "text-red-500 text-sm"
+                            )
+
+                        def _open_hire_dialog_empty():
+                            import random as _rand
+                            pool = generate_president_pool(5, _rand.Random())
+                            with ui.dialog() as dlg, ui.card().classes("w-full max-w-2xl p-4"):
+                                ui.label("Hire a President").classes("text-lg font-bold mb-3")
+                                for candidate in pool:
+                                    carch = PRESIDENT_ARCHETYPES.get(candidate.archetype, {})
+                                    with ui.card().classes("w-full p-3 mb-2").style(
+                                        "border: 1px solid #e2e8f0;"
+                                    ):
+                                        with ui.row().classes("items-center justify-between flex-wrap gap-2"):
+                                            with ui.column().classes("gap-0"):
+                                                ui.label(candidate.name).classes("font-semibold text-sm")
+                                                ui.badge(carch.get("label", ""), color="amber").props("outline dense")
+                                                ui.label(carch.get("description", "")).classes("text-xs text-gray-500 mt-1")
+                                            with ui.row().classes("gap-3 items-end"):
+                                                for lbl, val in [
+                                                    ("ACU", candidate.acumen),
+                                                    ("BDG", candidate.budget_mgmt),
+                                                    ("EYE", candidate.recruiting_eye),
+                                                    ("HIR", candidate.staff_hiring),
+                                                ]:
+                                                    with ui.column().classes("items-center gap-0"):
+                                                        col = (
+                                                            "#16a34a" if val >= 75 else
+                                                            "#d97706" if val >= 55 else
+                                                            "#dc2626"
+                                                        )
+                                                        ui.label(str(val)).classes("text-sm font-bold").style(f"color: {col};")
+                                                        ui.label(lbl).classes("text-[9px] text-gray-400 uppercase")
+                                                ui.label(f"${candidate.salary}M/yr · {candidate.contract_years}yr").classes("text-xs text-gray-500")
+
+                                            def _hire_empty(c=candidate, d=dlg):
+                                                dynasty.president = c
+                                                _set_dynasty(dynasty)
+                                                d.close()
+                                                ui.notify(f"Hired {c.name} as President!", type="positive")
+                                                container.clear()
+                                                _render_dashboard(container)
+
+                                            ui.button("Hire", icon="how_to_reg", on_click=_hire_empty).props("no-caps color=green size=sm")
+
+                                with ui.row().classes("mt-2 justify-end"):
+                                    ui.button("Cancel", on_click=dlg.close).props("flat no-caps")
+                            dlg.open()
+
+                        ui.button(
+                            "Hire President",
+                            icon="how_to_reg",
+                            on_click=_open_hire_dialog_empty,
+                        ).props("no-caps color=green size=sm")
+
+            # Financial history (if available)
+            fin_history = getattr(dynasty, "financial_history", {}) or {}
+            if fin_history:
+                ui.separator().classes("mt-3")
+                ui.label("Financial History").classes("text-sm font-semibold mt-2 mb-1")
+                fin_cols = [
+                    {"name": "year", "label": "Year", "field": "year", "align": "center"},
+                    {"name": "tier", "label": "Tier", "field": "tier", "align": "center"},
+                    {"name": "revenue", "label": "Revenue", "field": "revenue", "align": "right"},
+                    {"name": "expenses", "label": "Expenses", "field": "expenses", "align": "right"},
+                    {"name": "net", "label": "Net", "field": "net", "align": "right"},
+                    {"name": "bankroll", "label": "Bankroll End", "field": "bankroll", "align": "right"},
+                ]
+                fin_rows = []
+                for yr, fin in sorted(fin_history.items(), reverse=True):
+                    net = fin.get("net_income", 0)
+                    fin_rows.append({
+                        "year": yr,
+                        "tier": fin.get("tier", ""),
+                        "revenue": f"${fin.get('revenue', 0):.1f}M",
+                        "expenses": f"${fin.get('expenses', 0):.1f}M",
+                        "net": f"{'+' if net >= 0 else ''}${net:.1f}M",
+                        "bankroll": f"${fin.get('bankroll_end', 0):.1f}M",
+                        "_positive": net >= 0,
+                    })
+                fin_tbl = (
+                    ui.table(columns=fin_cols, rows=fin_rows, row_key="year")
+                    .classes("w-full")
+                    .props("dense flat")
+                )
+                fin_tbl.add_slot("body", r"""
+                    <q-tr :props="props" :style="{
+                        'background-color': props.row._positive ? '#f0fdf4' : '#fef2f2'
+                    }">
+                        <q-td v-for="col in props.cols" :key="col.name" :props="props"
+                              :style="col.name === 'net' ? {
+                                  'color': props.row._positive ? '#16a34a' : '#dc2626',
+                                  'font-weight': '600'
+                              } : {}">
+                            {{ col.value }}
+                        </q-td>
+                    </q-tr>
+                """)
 
 
 # ═══════════════════════════════════════════════════════════════
