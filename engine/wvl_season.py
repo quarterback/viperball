@@ -128,12 +128,12 @@ class WVLMultiTierSeason:
         if self.tier_seasons:
             self.phase = "regular_season"
 
-    def sim_week_all_tiers(self) -> Dict[int, dict]:
+    def sim_week_all_tiers(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Simulate one week across all tiers. Returns tier_num → week results."""
         results = {}
         for tier_num, season in self.tier_seasons.items():
             if season.phase == "regular_season" and season.current_week < season.total_weeks:
-                week_result = season.sim_week()
+                week_result = season.sim_week(use_fast_sim=use_fast_sim)
                 results[tier_num] = week_result
 
                 # Annotate rivalry matches
@@ -154,13 +154,13 @@ class WVLMultiTierSeason:
 
         return results
 
-    def sim_all(self) -> Dict[int, dict]:
+    def sim_all(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Simulate entire regular season for all tiers."""
         all_results = {}
         for tier_num, season in self.tier_seasons.items():
             tier_results = []
             while season.phase == "regular_season" and season.current_week < season.total_weeks:
-                tier_results.append(season.sim_week())
+                tier_results.append(season.sim_week(use_fast_sim=use_fast_sim))
             all_results[tier_num] = {"weeks": tier_results}
 
         self.phase = "playoffs_pending"
@@ -193,9 +193,9 @@ class WVLMultiTierSeason:
 
         return results
 
-    def run_full_season(self) -> Dict[int, dict]:
+    def run_full_season(self, use_fast_sim: bool = True) -> Dict[int, dict]:
         """Sim entire season (regular + playoffs) for all tiers."""
-        self.sim_all()
+        self.sim_all(use_fast_sim=use_fast_sim)
         self.start_playoffs_all()
 
         playoff_results = {}
@@ -205,6 +205,33 @@ class WVLMultiTierSeason:
                 playoff_results[tier_num] = result
 
         return playoff_results
+
+    def get_all_stat_leaders(self, top_n: int = 10) -> Dict[str, List[dict]]:
+        """Aggregate stat leaders across all 4 tiers.
+
+        Returns a dict of category → list of top players (each entry includes
+        tier_num so the caller can look up the right ProLeagueSeason).
+        """
+        all_players: List[dict] = []
+        for tier_num, season in self.tier_seasons.items():
+            for team_key, players in season.player_season_stats.items():
+                team_name = season.teams[team_key].name if team_key in season.teams else team_key
+                for pid, stats in players.items():
+                    all_players.append({**stats, "team_name": team_name, "tier_num": tier_num})
+
+        def _top(sort_key: str, filter_key: str) -> List[dict]:
+            return sorted(
+                [p for p in all_players if p.get(filter_key, 0) > 0],
+                key=lambda p: -p[sort_key],
+            )[:top_n]
+
+        return {
+            "rushing": _top("rushing_yards", "rushing_yards"),
+            "kick_pass": _top("kick_pass_yards", "kick_pass_yards"),
+            "scoring": _top("touchdowns", "touchdowns"),
+            "tackles": _top("tackles", "tackles"),
+            "total_yards": _top("total_yards", "total_yards"),
+        }
 
     def get_all_standings(self) -> Dict[int, dict]:
         """Get standings for all tiers with pro/rel zone annotations."""

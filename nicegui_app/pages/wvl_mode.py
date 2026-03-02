@@ -393,6 +393,21 @@ def _render_dashboard(container):
                 placeholder="/path/to/graduates.json",
             ).classes("w-full font-mono text-sm")
 
+        # Engine toggle (persisted in a local mutable for this render scope)
+        _engine_opts = {"use_fast_sim": True}
+        with ui.row().classes("items-center gap-3 mb-1"):
+            ui.label("Simulation engine:").classes("text-xs text-gray-500")
+            engine_toggle = ui.toggle(
+                {True: "Fast sim", False: "Full engine"},
+                value=True,
+                on_change=lambda e: _engine_opts.update({"use_fast_sim": e.value}),
+            ).props("dense no-caps")
+            ui.tooltip(
+                "Fast sim: instant bulk season (recommended). "
+                "Full engine: rich play-by-play box scores but ~100× slower — "
+                "expect several minutes for a full season."
+            )
+
         with ui.row().classes("w-full justify-center gap-4 mb-2"):
             async def _sim_season():
                 import random
@@ -403,8 +418,10 @@ def _render_dashboard(container):
                     ui.notify("No team files found. Run scripts/generate_wvl_teams.py first.", type="warning")
                     return
 
-                ui.notify("Simulating full season...", type="info")
-                season.run_full_season()
+                use_fast = _engine_opts["use_fast_sim"]
+                label = "fast sim" if use_fast else "full engine"
+                ui.notify(f"Simulating full season ({label})...", type="info")
+                season.run_full_season(use_fast_sim=use_fast)
 
                 # Snapshot season data BEFORE advance (tier assignments still match)
                 dynasty.snapshot_season(season)
@@ -641,6 +658,66 @@ def _render_dashboard(container):
                     ).classes("w-40 mb-3")
 
                     _fill_sched_week()
+
+        # ── STATS LEADERS ─────────────────────────────────────
+        if last_season is not None and last_season.tier_seasons:
+            leaders = last_season.get_all_stat_leaders(top_n=8)
+            if any(leaders.values()):
+                ui.separator().classes("mt-2")
+                with ui.expansion("Season Stats Leaders", icon="leaderboard", value=False).classes("w-full"):
+                    from nicegui_app.pages.pro_leagues import _show_player_card as _show_pc
+
+                    def _make_click(tier_num, team_key, pname):
+                        def _click():
+                            ts = last_season.tier_seasons.get(tier_num)
+                            if ts:
+                                _show_pc(ts, team_key, pname)
+                            else:
+                                ui.notify("Player data not available.", type="warning")
+                        return _click
+
+                    CATEGORIES = [
+                        ("rushing",    "Rushing Yards",   "yards",        "Yds"),
+                        ("kick_pass",  "Kick-Pass Yards", "kick_pass_yards", "Yds"),
+                        ("scoring",    "Touchdowns",      "touchdowns",   "TD"),
+                        ("tackles",    "Tackles",         "tackles",      "TKL"),
+                        ("total_yards","Total Yards",     "total_yards",  "Yds"),
+                    ]
+
+                    with ui.grid(columns=2).classes("w-full gap-4"):
+                        for cat_key, cat_label, val_field, val_header in CATEGORIES:
+                            rows = leaders.get(cat_key, [])
+                            if not rows:
+                                continue
+                            with ui.card().classes("p-3"):
+                                ui.label(cat_label).classes("text-xs font-bold text-slate-500 uppercase mb-2")
+                                with ui.element("table").classes("w-full text-sm"):
+                                    with ui.element("thead"):
+                                        with ui.element("tr"):
+                                            for hdr in ["#", "Player", "Team", val_header, "GP"]:
+                                                ui.element("th").classes(
+                                                    "text-left text-[10px] text-slate-400 pb-1 pr-2"
+                                                ).text = hdr
+                                    with ui.element("tbody"):
+                                        for i, p in enumerate(rows, 1):
+                                            with ui.element("tr").classes("hover:bg-slate-50"):
+                                                ui.element("td").classes("pr-2 text-slate-400 text-xs").text = str(i)
+                                                with ui.element("td").classes("pr-2"):
+                                                    ui.button(
+                                                        p["name"],
+                                                        on_click=_make_click(p["tier_num"], p["team_key"], p["name"]),
+                                                    ).props("flat dense no-caps").classes(
+                                                        "text-indigo-600 font-semibold text-sm p-0 min-h-0"
+                                                    )
+                                                ui.element("td").classes("pr-2 text-xs text-slate-500").text = (
+                                                    p.get("team_name", "")[:16]
+                                                )
+                                                ui.element("td").classes("pr-2 font-semibold").text = str(
+                                                    p.get(val_field, p.get("value", 0))
+                                                )
+                                                ui.element("td").classes("text-xs text-slate-400").text = str(
+                                                    p.get("games", 0)
+                                                )
 
         # ── MANAGEMENT (compact, bottom) ──────────────────────
         ui.separator().classes("mt-4")
