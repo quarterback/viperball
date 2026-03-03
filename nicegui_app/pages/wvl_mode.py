@@ -30,11 +30,19 @@ _WVL_SEASON_KEY = "wvl_last_season"
 
 
 def _get_dynasty() -> Optional[WVLDynasty]:
-    return app.storage.user.get(_WVL_DYNASTY_KEY)
+    raw = app.storage.user.get(_WVL_DYNASTY_KEY)
+    if raw is None:
+        return None
+    if isinstance(raw, WVLDynasty):
+        return raw
+    try:
+        return WVLDynasty.from_dict(raw)
+    except Exception:
+        return None
 
 
 def _set_dynasty(dynasty: Optional[WVLDynasty]):
-    app.storage.user[_WVL_DYNASTY_KEY] = dynasty
+    app.storage.user[_WVL_DYNASTY_KEY] = dynasty.to_dict() if dynasty is not None else None
 
 
 def _get_phase() -> str:
