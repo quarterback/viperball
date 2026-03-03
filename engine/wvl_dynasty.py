@@ -101,6 +101,7 @@ class WVLDynasty:
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
     _team_rosters: Dict[str, List[PlayerCard]] = field(default_factory=dict, repr=False)
+    _fa_pool: List[FreeAgent] = field(default_factory=list, repr=False)
 
     def __post_init__(self):
         if not self.tier_assignments:
@@ -408,6 +409,123 @@ class WVLDynasty:
         self.current_year += 1
 
         return summary
+
+    # ═══════════════════════════════════════════════════════════════
+    # ROSTER MANAGEMENT
+    # ═══════════════════════════════════════════════════════════════
+
+    def get_owner_roster(self) -> List[dict]:
+        roster = self._team_rosters.get(self.owner.club_key, [])
+        if not roster and self._current_season:
+            self._load_rosters_from_season(self._current_season)
+            roster = self._team_rosters.get(self.owner.club_key, [])
+        result = []
+        for card in roster:
+            result.append({
+                "name": card.full_name,
+                "position": card.position,
+                "age": card.age,
+                "overall": card.overall,
+                "speed": card.speed,
+                "kicking": card.kicking,
+                "lateral_skill": card.lateral_skill,
+                "tackling": card.tackling,
+                "stamina": card.stamina,
+                "archetype": card.archetype,
+                "development": card.development,
+                "potential": card.potential,
+                "contract_years": card.contract_years,
+                "contract_salary": card.contract_salary,
+                "number": card.number,
+                "height": card.height,
+                "weight": card.weight,
+                "nationality": card.nationality,
+            })
+        return result
+
+    def cut_player(self, player_name: str):
+        roster = self._team_rosters.get(self.owner.club_key, [])
+        if len(roster) <= 30:
+            return False, "Cannot cut player: roster is at minimum size (30)."
+        for i, card in enumerate(roster):
+            if card.full_name == player_name:
+                roster.pop(i)
+                card.pro_status = "free_agent"
+                return True, f"{player_name} has been released."
+        return False, f"Player '{player_name}' not found on roster."
+
+    def sign_free_agent(self, player_card: PlayerCard, salary_tier: int):
+        roster = self._team_rosters.get(self.owner.club_key, [])
+        if len(roster) >= 40:
+            return False, "Cannot sign player: roster is at maximum size (40)."
+        player_card.pro_team = self.owner.club_key
+        player_card.pro_status = "active"
+        player_card.contract_years = 3
+        player_card.contract_salary = salary_tier
+        if self.owner.club_key not in self._team_rosters:
+            self._team_rosters[self.owner.club_key] = []
+        self._team_rosters[self.owner.club_key].append(player_card)
+        for fa in list(self._fa_pool):
+            if fa.player_card is player_card or fa.player_card.full_name == player_card.full_name:
+                self._fa_pool.remove(fa)
+                break
+        return True, f"{player_card.full_name} signed for salary tier {salary_tier}."
+
+    def get_owner_team_summary(self) -> dict:
+        club = CLUBS_BY_KEY.get(self.owner.club_key)
+        team_name = club.name if club else self.owner.club_key
+        tier = self.tier_assignments.get(self.owner.club_key, 1)
+        roster = self._team_rosters.get(self.owner.club_key, [])
+        if not roster and self._current_season:
+            self._load_rosters_from_season(self._current_season)
+            roster = self._team_rosters.get(self.owner.club_key, [])
+
+        wins, losses = 0, 0
+        for r in self.last_season_owner_results:
+            if r.get("result") == "W":
+                wins += 1
+            elif r.get("result") == "L":
+                losses += 1
+        record = f"{wins}-{losses}"
+
+        overall_rating = 0
+        average_age = 0
+        position_counts: Dict[str, int] = {}
+        if roster:
+            overall_rating = round(sum(c.overall for c in roster) / len(roster), 1)
+            ages = [c.age for c in roster if c.age is not None]
+            average_age = round(sum(ages) / max(1, len(ages)), 1) if ages else 0
+            for c in roster:
+                position_counts[c.position] = position_counts.get(c.position, 0) + 1
+
+        return {
+            "team_name": team_name,
+            "tier": tier,
+            "record": record,
+            "overall_rating": overall_rating,
+            "average_age": average_age,
+            "roster_size": len(roster),
+            "position_counts": position_counts,
+            "bankroll": self.owner.bankroll,
+        }
+
+    def get_available_free_agents(self, count: int = 20) -> List[dict]:
+        if not self._fa_pool:
+            self._fa_pool = generate_synthetic_fa_pool(count, random.Random())
+        result = []
+        for fa in self._fa_pool[:count]:
+            card = fa.player_card
+            result.append({
+                "name": card.full_name,
+                "position": card.position,
+                "age": card.age,
+                "overall": card.overall,
+                "speed": card.speed,
+                "kicking": card.kicking,
+                "archetype": card.archetype,
+                "asking_salary": fa.asking_salary,
+            })
+        return result
 
     # ═══════════════════════════════════════════════════════════════
     # SAVE / LOAD
