@@ -1,7 +1,7 @@
 # Viperball Simulation Sandbox
 
 ## Overview
-The Viperball Simulation Sandbox is a browser-accessible platform for Viperball simulation. It contains two core modes: the Collegiate Viperball League (CVL) for women's college play with team management, and the NVL (National Viperball League) professional men's league as a spectator-only experience. The platform facilitates detailed simulation and analysis of Viperball game logic, season progression, and professional league tracking. Its purpose is to enhance game development and understanding by providing insights through features like detailed box scores, play-by-play logs, and custom sabermetrics.
+The Viperball Simulation Sandbox is a browser-accessible platform for Viperball simulation. It contains three core modes: the Collegiate Viperball League (CVL) for women's college play with team management, the NVL (National Viperball League) professional men's league as a spectator-only experience, and the WVL (Women's Viperball League) with full Owner Mode dynasty gameplay including promotion/relegation, free agency, and bankroll management. The platform facilitates detailed simulation and analysis of Viperball game logic, season progression, and professional league tracking. Its purpose is to enhance game development and understanding by providing insights through features like detailed box scores, play-by-play logs, and custom sabermetrics.
 
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations.
@@ -15,7 +15,7 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## System Architecture
 
 ### UI/UX Decisions
-The user interface is built with NiceGUI using a 7-section top navigation bar: Play, Pro Leagues, League, My Team, Export, Debug, and Inspector. On mobile (<768px), the nav bar collapses to a hamburger dropdown menu, tab bars show scroll arrows, tables scroll horizontally, and metric cards flex-wrap to fit narrow screens. The CVL system supports up to 4 human-coached teams out of 188 across 16 conferences, with the rest AI-controlled. Dynasty mode has been replaced by the Pro Leagues spectator experience.
+The user interface is built with NiceGUI using a 9-section top navigation bar: Play, Pro Leagues, WVL, International, League, My Team, Export, Debug, and Inspector. On mobile (<768px), the nav bar collapses to a hamburger dropdown menu, tab bars show scroll arrows, tables scroll horizontally, and metric cards flex-wrap to fit narrow screens. The CVL system supports up to 4 human-coached teams out of 188 across 16 conferences, with the rest AI-controlled. Dynasty mode has been replaced by the Pro Leagues spectator experience.
 
 ### API-First Architecture
 The project utilizes a FastAPI backend as the single source of truth for all simulation logic, with the NiceGUI app acting as a thin display layer that interacts with API endpoints. Game objects are managed in-memory on the FastAPI server, keyed by session IDs. `main.py` launches the unified FastAPI+NiceGUI server on port 5000. A comprehensive set of API endpoints (55+) manages session lifecycle, season operations, roster management, injury tracking, data retrieval, and pro league operations.
@@ -45,6 +45,23 @@ The project maintains a clear separation of concerns:
 - **UI tabs**: Dashboard (sim controls), Standings (4-division tables), Schedule & Results (week-by-week with box score viewer), Stats Leaders (rushing/kick pass/scoring/total yards), Playoffs (bracket), Teams (roster + season stats + schedule).
 - **Pro Box Scores**: Full-screen maximized dialog with dark header showing score prominently. 5 tabs: Team Stats (HTML table with alternating rows), Offense (Rushing/Kick Passing/Receiving/Laterals sub-tables), Defense (Tkl/TFL/Sck/Hur/INT), Kicking (DK/PK made/attempted + points), Forum Export (monospace ASCII box score with copy-to-clipboard). `_generate_pro_forum_box_score()` creates shareable plain-text box scores for forums/Discord. All player names clickable for player cards.
 - **Player Cards**: Clickable player names throughout all NVL tables (roster, season stats, stat leaders, box scores) open a Pro Football Reference-style player card dialog. Cards show bio info (position, height, weight, hometown, archetype, play style), attribute ratings (OVR + 11 ratings with color-coded tiles), and season stats in tabular format (rushing, kick passing, laterals, defense, drop kicking). Data sourced from `ProLeagueSeason.get_player_card(team_key, player_name)`. Same pattern reusable for CVL.
+
+### WVL Owner Mode System
+- **Full dynasty mode**: Own a club, manage finances, navigate promotion/relegation across a 4-tier pyramid (64 clubs).
+- **64 clubs across 4 tiers**: Tier 1 (16 elite), Tier 2 (16), Tier 3 (16), Tier 4 (16). Promotion/relegation between tiers each season.
+- **Female players**: Separate name pools. Pro-level attributes (45-90 range).
+- **Week-by-week sim**: `sim_week_all_tiers()` simulates one week across all tiers. Fast sim toggle available. Owner's game result highlighted after each week.
+- **Tab-based UI**: Dashboard (sim controls + phase indicator + results), My Team (roster viewer + free agents), Schedule (week picker with box scores), League (all-tier standings with zone coloring), Finances (bankroll, president, investments, history).
+- **Roster management**: `get_owner_roster()`, `cut_player()`, `sign_free_agent()`, `get_available_free_agents()` methods on WVLDynasty. Roster limits: min 30, max 40. FA pool cached in `_fa_pool`.
+- **Owner archetypes**: Patient Builder, Win Now, Moneyball, Sugar Daddy — each with different starting bankroll, patience threshold, and bonuses.
+- **President system**: Hired presidents with acumen, budget management, recruiting eye, staff hiring ratings. Contract terms and firing/hiring flow.
+- **Investment allocation**: 6 categories (Training, Coaching, Stadium, Youth Academy, Sports Science, Marketing) with slider-based allocation and attribute boost effects.
+- **Financial system**: `compute_financials()` calculates revenue (tickets, tier bonus, playoffs), expenses (salaries, president, operations). Bankroll tracking with forced sale risk.
+- **Multi-step offseason wizard**: 8-step interactive flow — Season Recap, Promotion/Relegation, Retirements, Player Import, Free Agency, Development, Investment, Financial Summary. Progress dots, back/next navigation.
+- **CVL graduate import**: Auto-detects CVL graduates cached in `app.storage.user["cvl_graduates"]`. Preview table shows top graduates. Custom JSON import also available.
+- **Engine files**: `engine/wvl_dynasty.py` (WVLDynasty class), `engine/wvl_season.py` (WVLMultiTierSeason), `engine/wvl_free_agency.py` (FA pool/signings), `engine/wvl_owner.py` (financials/presidents), `engine/wvl_config.py` (64 clubs, tiers, rivalries).
+- **UI file**: `nicegui_app/pages/wvl_mode.py` — container-based refresh pattern (container.clear() + re-render) for reliable tab updates.
+- **Data files**: `data/wvl_teams/` (64 club JSON files), `data/wvl_tier_assignments.json` (persisted tier mapping).
 
 ### Feature Specifications
 - **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 58 yards hard cap), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, Penalty System (30+ types), Victory Formation (kneel-down with 35-40s clock burn), and Defensive Timeout Strategy (Q4 trailing defense calls TOs to preserve clock).

@@ -1063,128 +1063,530 @@ def _fill_finance(containers, dynasty):
 
 
 # ═══════════════════════════════════════════════════════════════
-# OFFSEASON FLOW
+# OFFSEASON FLOW — MULTI-STEP WIZARD
 # ═══════════════════════════════════════════════════════════════
 
+_OFFSEASON_STEPS = [
+    ("recap", "Season Recap", "emoji_events"),
+    ("prom_rel", "Promotion & Relegation", "swap_vert"),
+    ("retirements", "Retirements", "airline_seat_flat"),
+    ("import", "Player Import", "file_upload"),
+    ("free_agency", "Free Agency", "groups"),
+    ("development", "Development", "trending_up"),
+    ("investment", "Investment", "savings"),
+    ("financials", "Financial Summary", "account_balance"),
+]
+
+
 def _render_offseason_controls(container, dynasty):
-    ui.label("Offseason").classes("text-xl font-bold text-amber-700 mb-2")
-    ui.label(
-        "Process retirements, promotion/relegation, free agency, "
-        "player development, and financial summary."
-    ).classes("text-sm text-slate-500 mb-4")
+    offseason_data = app.storage.user.get("_wvl_offseason_data")
+    step_idx = app.storage.user.get("_wvl_offseason_step", 0)
+
+    if not offseason_data or not isinstance(offseason_data, dict):
+        _render_offseason_start(container, dynasty)
+    else:
+        if not isinstance(step_idx, int) or step_idx < 0 or step_idx >= len(_OFFSEASON_STEPS):
+            step_idx = 0
+            app.storage.user["_wvl_offseason_step"] = 0
+        _render_offseason_step(container, dynasty, offseason_data, step_idx)
+
+
+def _render_offseason_start(container, dynasty):
+    with ui.element("div").classes("w-full").style(
+        "background: linear-gradient(135deg, #92400e 0%, #d97706 100%); padding: 24px; border-radius: 8px;"
+    ):
+        ui.label(f"Year {dynasty.current_year} Offseason").classes("text-2xl font-bold text-white")
+        ui.label("Process your end-of-season transitions step by step.").classes("text-sm text-amber-100")
 
     cached_graduates = app.storage.user.get("cvl_graduates")
     if cached_graduates:
-        with ui.row().classes("items-center gap-2 mb-2"):
+        with ui.row().classes("items-center gap-2 mt-3 mb-1"):
             ui.icon("check_circle").classes("text-green-600")
             ui.label(
-                f"{len(cached_graduates)} CVL graduates loaded for free agency."
+                f"{len(cached_graduates)} CVL graduates available for import."
             ).classes("text-sm text-green-700 font-semibold")
 
-    _import_state = {"data": cached_graduates}
+    with ui.row().classes("gap-2 mt-4"):
+        async def _begin_offseason():
+            import random
+            d = _get_dynasty()
+            s = app.storage.user.get(_WVL_SEASON_KEY)
+            if not d or not s:
+                ui.notify("No season data.", type="warning")
+                return
 
-    async def _run_offseason():
-        import random
-        d = _get_dynasty()
-        s = app.storage.user.get(_WVL_SEASON_KEY)
-        if not d or not s:
-            ui.notify("No season data.", type="warning")
-            return
+            rng = random.Random()
+            cached_grads = app.storage.user.get("cvl_graduates")
 
-        rng = random.Random()
-        import_data = _import_state.get("data")
+            ui.notify("Processing offseason...", type="info")
 
-        ui.notify("Processing offseason...", type="info")
-
-        offseason = d.run_offseason(
-            s,
-            investment_budget=5.0,
-            import_data=import_data,
-            rng=rng,
-        )
-
-        _set_dynasty(d)
-        _register_wvl_season(d, s)
-        app.storage.user.pop(_WVL_SEASON_KEY, None)
-        _set_phase("pre_season")
-
-        prom_rel = offseason.get("promotion_relegation", {})
-        movements = prom_rel.get("movements", [])
-        fa = offseason.get("free_agency", {})
-        dev = offseason.get("development", [])
-        fin = offseason.get("financials", {})
-
-        with ui.dialog() as dlg, ui.card().classes("p-6 min-w-[500px] max-w-3xl max-h-[80vh] overflow-auto"):
-            ui.label("Offseason Summary").classes("text-xl font-bold text-amber-700 mb-4")
-
-            if movements:
-                ui.label("Promotion & Relegation").classes("text-sm font-semibold text-slate-700 mt-2")
-                for m in movements:
-                    direction = "promoted" if m["to_tier"] < m["from_tier"] else "relegated"
-                    icon = "arrow_upward" if direction == "promoted" else "arrow_downward"
-                    color = "text-green-600" if direction == "promoted" else "text-red-600"
-                    is_owner = m.get("team_key") == d.owner.club_key
-                    with ui.row().classes("items-center gap-1"):
-                        ui.icon(icon, size="xs").classes(color)
-                        label_text = f"{m['team_name']} {direction} (T{m['from_tier']} -> T{m['to_tier']})"
-                        if is_owner:
-                            label_text = f"YOUR CLUB: {label_text}"
-                        ui.label(label_text).classes(f"text-sm {'font-bold' if is_owner else ''}")
-
-            retirements = offseason.get("retirements", {})
-            total_retired = sum(len(v) for v in retirements.values()) if isinstance(retirements, dict) else 0
-            if total_retired:
-                ui.label(f"Retirements: {total_retired} players retired").classes("text-sm text-slate-600 mt-2")
-
-            if fa:
-                ui.label(f"Free Agency: {fa.get('total_signed', 0)} players signed").classes("text-sm text-slate-600 mt-1")
-                if fa.get("owner_targeted_signing"):
-                    ots = fa["owner_targeted_signing"]
-                    ui.label(f"  Your signing: {ots.get('player_name', '?')}").classes("text-sm text-indigo-600 font-semibold")
-
-            if dev:
-                ui.label(f"Player Development: {len(dev)} events").classes("text-sm text-slate-600 mt-1")
-
-            if fin:
-                ui.separator().classes("mt-2")
-                ui.label("Financial Summary").classes("text-sm font-semibold text-slate-700 mt-2")
-                rev = fin.get("total_revenue", 0)
-                exp = fin.get("total_expenses", 0)
-                net = rev - exp
-                ui.label(f"Revenue: ${rev:.1f}M | Expenses: ${exp:.1f}M | Net: {'+' if net >= 0 else ''}{net:.1f}M").classes("text-sm text-slate-600")
-                ui.label(f"Bankroll: ${fin.get('bankroll_end', d.owner.bankroll):.1f}M").classes("text-sm font-bold text-slate-800")
-
-            if offseason.get("forced_sale"):
-                ui.label("FORCED SALE: Your club has been sold due to financial collapse!").classes(
-                    "text-lg font-bold text-red-600 mt-3"
-                )
-
-            ui.button("Continue to Next Season", on_click=lambda: (dlg.close(), _post_offseason_refresh())).classes(
-                "mt-4 bg-green-600 text-white"
+            offseason = d.run_offseason(
+                s,
+                investment_budget=5.0,
+                import_data=cached_grads,
+                rng=rng,
             )
 
-        dlg.open()
+            _set_dynasty(d)
+            _register_wvl_season(d, s)
 
-    def _post_offseason_refresh():
+            app.storage.user["_wvl_offseason_data"] = offseason
+            app.storage.user["_wvl_offseason_step"] = 0
+
+            refresh = app.storage.user.get("_wvl_refresh")
+            if refresh:
+                refresh()
+
+        ui.button("Begin Offseason", icon="autorenew", on_click=_begin_offseason).classes(
+            "bg-amber-600 text-white px-6 py-2 rounded-lg"
+        )
+
+        async def _reset():
+            _set_dynasty(None)
+            _set_phase("setup")
+            app.storage.user.pop(_WVL_SEASON_KEY, None)
+            app.storage.user.pop("_wvl_offseason_data", None)
+            app.storage.user.pop("_wvl_offseason_step", None)
+            refresh = app.storage.user.get("_wvl_refresh")
+            if refresh:
+                refresh()
+
+        ui.button("New Dynasty", icon="restart_alt", on_click=_reset).classes(
+            "bg-red-600 text-white px-4 py-2 rounded-lg"
+        )
+
+
+def _render_offseason_step(container, dynasty, data, step_idx):
+    step_key, step_title, step_icon = _OFFSEASON_STEPS[step_idx]
+    total_steps = len(_OFFSEASON_STEPS)
+
+    with ui.element("div").classes("w-full").style(
+        "background: linear-gradient(135deg, #92400e 0%, #d97706 100%); padding: 20px 24px; border-radius: 8px;"
+    ):
+        with ui.row().classes("w-full items-center justify-between"):
+            with ui.column().classes("gap-0"):
+                ui.label(f"Offseason — Step {step_idx + 1}/{total_steps}").classes("text-lg font-bold text-white")
+                ui.label(step_title).classes("text-sm text-amber-100")
+            with ui.row().classes("gap-1"):
+                for i in range(total_steps):
+                    dot_color = "bg-white" if i <= step_idx else "bg-amber-300 opacity-40"
+                    ui.element("div").classes(f"w-2 h-2 rounded-full {dot_color}")
+
+    with ui.card().classes("w-full p-5 mt-3"):
+        step_renderers = {
+            "recap": _offseason_step_recap,
+            "prom_rel": _offseason_step_prom_rel,
+            "retirements": _offseason_step_retirements,
+            "import": _offseason_step_import,
+            "free_agency": _offseason_step_free_agency,
+            "development": _offseason_step_development,
+            "investment": _offseason_step_investment,
+            "financials": _offseason_step_financials,
+        }
+        renderer = step_renderers.get(step_key)
+        if renderer:
+            renderer(dynasty, data)
+
+    with ui.row().classes("w-full justify-between mt-3"):
+        if step_idx > 0:
+            async def _prev():
+                app.storage.user["_wvl_offseason_step"] = step_idx - 1
+                refresh = app.storage.user.get("_wvl_refresh")
+                if refresh:
+                    refresh()
+            ui.button("Back", icon="arrow_back", on_click=_prev).props("flat no-caps")
+        else:
+            ui.element("div")
+
+        if step_idx < total_steps - 1:
+            async def _next():
+                app.storage.user["_wvl_offseason_step"] = step_idx + 1
+                refresh = app.storage.user.get("_wvl_refresh")
+                if refresh:
+                    refresh()
+            ui.button("Next", icon="arrow_forward", on_click=_next).classes(
+                "bg-amber-600 text-white"
+            ).props("no-caps")
+        else:
+            async def _finish():
+                app.storage.user.pop("_wvl_offseason_data", None)
+                app.storage.user.pop("_wvl_offseason_step", None)
+                app.storage.user.pop(_WVL_SEASON_KEY, None)
+                _set_phase("pre_season")
+                refresh = app.storage.user.get("_wvl_refresh")
+                if refresh:
+                    refresh()
+            ui.button("Start Next Season", icon="play_arrow", on_click=_finish).classes(
+                "bg-green-600 text-white"
+            ).props("no-caps")
+
+
+def _offseason_step_recap(dynasty, data):
+    ui.label("Season Recap").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    owner_results = dynasty.last_season_owner_results
+    wins = sum(1 for r in owner_results if r.get("result") == "W")
+    losses = sum(1 for r in owner_results if r.get("result") == "L")
+
+    club = CLUBS_BY_KEY.get(dynasty.owner.club_key)
+    club_name = club.name if club else dynasty.owner.club_key
+    owner_tier = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+
+    with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
+        with ui.card().classes("flex-1 min-w-[160px] p-4 text-center"):
+            ui.label(club_name).classes("text-xs text-slate-400 uppercase")
+            ui.label(f"{wins}-{losses}").classes("text-3xl font-bold text-slate-800")
+
+        for tier_num in sorted(dynasty.last_season_champions.keys()):
+            champ_key = dynasty.last_season_champions[tier_num]
+            champ_club = CLUBS_BY_KEY.get(champ_key)
+            champ_name = champ_club.name if champ_club else champ_key
+            tc = TIER_BY_NUMBER.get(tier_num)
+            tier_label = tc.tier_name if tc else f"Tier {tier_num}"
+            is_owner = champ_key == dynasty.owner.club_key
+            with ui.card().classes(f"flex-1 min-w-[160px] p-4 text-center {'ring-2 ring-amber-400' if is_owner else ''}"):
+                ui.label(f"{tier_label} Champion").classes("text-xs text-amber-500 uppercase")
+                ui.icon("emoji_events", size="md").classes("text-amber-500")
+                ui.label(champ_name).classes(f"text-sm font-bold {'text-amber-700' if is_owner else 'text-slate-700'}")
+
+    if owner_results:
+        _render_results_table(owner_results)
+
+
+def _offseason_step_prom_rel(dynasty, data):
+    ui.label("Promotion & Relegation").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    prom_rel = data.get("promotion_relegation") or {}
+    movements = prom_rel.get("movements") or []
+
+    if not movements:
+        ui.label("No promotion or relegation movements this season.").classes("text-sm text-slate-400 italic")
+        return
+
+    promotions = [m for m in movements if m["to_tier"] < m["from_tier"]]
+    relegations = [m for m in movements if m["to_tier"] > m["from_tier"]]
+
+    if promotions:
+        ui.label("Promoted").classes("text-sm font-semibold text-green-700 mb-1")
+        for m in promotions:
+            is_owner = m.get("team_key") == dynasty.owner.club_key
+            with ui.row().classes("items-center gap-2 mb-1"):
+                ui.icon("arrow_upward", size="sm").classes("text-green-600")
+                text = f"{m['team_name']} — Tier {m['from_tier']} to Tier {m['to_tier']}"
+                if is_owner:
+                    text = f"YOUR CLUB: {text}"
+                ui.label(text).classes(f"text-sm {'font-bold text-green-700' if is_owner else ''}")
+
+    if relegations:
+        ui.label("Relegated").classes("text-sm font-semibold text-red-700 mb-1 mt-3")
+        for m in relegations:
+            is_owner = m.get("team_key") == dynasty.owner.club_key
+            with ui.row().classes("items-center gap-2 mb-1"):
+                ui.icon("arrow_downward", size="sm").classes("text-red-600")
+                text = f"{m['team_name']} — Tier {m['from_tier']} to Tier {m['to_tier']}"
+                if is_owner:
+                    text = f"YOUR CLUB: {text}"
+                ui.label(text).classes(f"text-sm {'font-bold text-red-700' if is_owner else ''}")
+
+
+def _offseason_step_retirements(dynasty, data):
+    ui.label("Retirements & Departures").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    retirements = data.get("retirements") or {}
+    if not isinstance(retirements, dict):
+        retirements = {}
+    if not retirements or sum(len(v) for v in retirements.values()) == 0:
+        ui.label("No retirements this offseason.").classes("text-sm text-slate-400 italic")
+        return
+
+    owner_retirements = retirements.get(dynasty.owner.club_key, [])
+    other_count = sum(len(v) for k, v in retirements.items() if k != dynasty.owner.club_key) if isinstance(retirements, dict) else 0
+
+    if owner_retirements:
+        ui.label("Your Team").classes("text-sm font-semibold text-indigo-700 mb-1")
+        columns = [
+            {"name": "name", "label": "Player", "field": "name", "align": "left"},
+            {"name": "pos", "label": "Position", "field": "pos", "align": "center"},
+            {"name": "age", "label": "Age", "field": "age", "align": "center"},
+            {"name": "ovr", "label": "OVR", "field": "ovr", "align": "center"},
+        ]
+        rows = []
+        for i, p in enumerate(owner_retirements):
+            if isinstance(p, str):
+                rows.append({"name": p, "pos": "-", "age": "-", "ovr": "-", "_idx": i})
+            elif isinstance(p, dict):
+                rows.append({
+                    "name": p.get("name", p.get("player_name", "?")),
+                    "pos": p.get("position", "-"),
+                    "age": str(p.get("age", "-")),
+                    "ovr": str(p.get("overall", "-")),
+                    "_idx": i,
+                })
+            else:
+                rows.append({"name": str(p), "pos": "-", "age": "-", "ovr": "-", "_idx": i})
+        ui.table(columns=columns, rows=rows, row_key="_idx").classes("w-full mb-3").props("dense flat bordered")
+
+    if other_count:
+        ui.label(f"{other_count} other players retired across the league.").classes("text-sm text-slate-500 mt-2")
+
+
+def _offseason_step_import(dynasty, data):
+    ui.label("Player Import").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    cached_graduates = app.storage.user.get("cvl_graduates")
+    cached_year = app.storage.user.get("cvl_graduates_year")
+
+    if cached_graduates:
+        ui.label(
+            f"CVL Class of {cached_year or '?'} — {len(cached_graduates)} graduates available"
+        ).classes("text-sm text-green-700 font-semibold mb-2")
+        ui.label(
+            "These players were automatically included in this offseason's free agency pool."
+        ).classes("text-xs text-slate-500 mb-3")
+
+        preview = cached_graduates[:15]
+        columns = [
+            {"name": "name", "label": "Name", "field": "name", "align": "left"},
+            {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
+            {"name": "school", "label": "School", "field": "school", "align": "left"},
+            {"name": "ovr", "label": "OVR", "field": "ovr", "align": "center"},
+        ]
+        rows = []
+        for i, p in enumerate(preview):
+            name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or p.get("name", "?")
+            rows.append({
+                "name": name,
+                "pos": p.get("position", "-"),
+                "school": p.get("graduating_from", "-"),
+                "ovr": str(p.get("overall", "-")),
+                "_idx": i,
+            })
+        ui.table(columns=columns, rows=rows, row_key="_idx").classes("w-full").props("dense flat bordered")
+        if len(cached_graduates) > 15:
+            ui.label(f"... and {len(cached_graduates) - 15} more").classes("text-xs text-slate-400 italic mt-1")
+    else:
+        ui.label("No CVL graduates available.").classes("text-sm text-slate-400 italic mb-2")
+        ui.label(
+            "To import college players, run a CVL season first and use "
+            "Export > Export Graduating Class before starting WVL offseason."
+        ).classes("text-xs text-slate-500")
+
+    ui.separator().classes("mt-3 mb-3")
+    ui.label("Custom Player Import").classes("text-sm font-semibold text-slate-600")
+    ui.label("Paste a JSON array of player objects to add to the FA pool.").classes("text-xs text-slate-400 mb-2")
+
+    json_input = ui.textarea(
+        label="Player JSON",
+        placeholder='[{"first_name": "Jane", "last_name": "Doe", "position": "ZB", ...}]',
+    ).classes("w-full").props("outlined rows=3")
+
+    async def _import_custom():
+        import json as _json
+        d = _get_dynasty()
+        if not d:
+            return
+        text = json_input.value.strip()
+        if not text:
+            ui.notify("Paste player data first.", type="warning")
+            return
+        try:
+            players = _json.loads(text)
+            if not isinstance(players, list):
+                players = [players]
+        except _json.JSONDecodeError as exc:
+            ui.notify(f"Invalid JSON: {exc}", type="negative")
+            return
+
+        from engine.wvl_free_agency import build_free_agent_pool_from_data
+        new_fas = build_free_agent_pool_from_data(players)
+        d._fa_pool.extend(new_fas)
+        for fa in new_fas:
+            roster = d._team_rosters.get(d.owner.club_key, [])
+            if len(roster) < 40:
+                roster.append(fa.player_card)
+                d._team_rosters[d.owner.club_key] = roster
+
+        _set_dynasty(d)
+        ui.notify(f"Imported {len(new_fas)} players!", type="positive")
         refresh = app.storage.user.get("_wvl_refresh")
         if refresh:
             refresh()
 
-    ui.button("Run Offseason", icon="autorenew", on_click=_run_offseason).classes(
-        "bg-amber-600 text-white px-6 py-2"
-    )
+    ui.button("Import Players", icon="file_upload", on_click=_import_custom).props("no-caps").classes("mt-1")
 
-    async def _reset():
-        _set_dynasty(None)
-        _set_phase("setup")
-        app.storage.user.pop(_WVL_SEASON_KEY, None)
-        refresh = app.storage.user.get("_wvl_refresh")
-        if refresh:
-            refresh()
 
-    ui.button("New Dynasty", icon="restart_alt", on_click=_reset).classes(
-        "bg-red-600 text-white px-4 py-2 ml-2"
-    )
+def _offseason_step_free_agency(dynasty, data):
+    ui.label("Free Agency Results").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    fa = data.get("free_agency") or {}
+    if not fa:
+        ui.label("No free agency activity.").classes("text-sm text-slate-400 italic")
+        return
+
+    ots = fa.get("owner_targeted_signing")
+    if ots:
+        with ui.card().classes("w-full p-3 mb-3").style("border-left: 4px solid #6366f1;"):
+            ui.label("Your Targeted Signing").classes("text-xs text-indigo-500 uppercase font-semibold")
+            ui.label(ots.get("player_name", "?")).classes("text-lg font-bold text-indigo-700")
+            sal = ots.get("salary", "?")
+            ui.label(f"Salary Tier: {sal}").classes("text-sm text-slate-500")
+
+    signings = fa.get("signings", [])
+    total = fa.get("total_signed", len(signings))
+    unsigned = fa.get("unsigned", [])
+
+    with ui.row().classes("gap-4 flex-wrap mb-3"):
+        with ui.card().classes("p-3 text-center min-w-[120px]"):
+            ui.label("Signed").classes("text-xs text-slate-400 uppercase")
+            ui.label(str(total)).classes("text-2xl font-bold text-green-600")
+        with ui.card().classes("p-3 text-center min-w-[120px]"):
+            ui.label("Unsigned").classes("text-xs text-slate-400 uppercase")
+            ui.label(str(len(unsigned))).classes("text-2xl font-bold text-slate-500")
+
+    if signings:
+        owner_signings = [s for s in signings if s.get("team_key") == dynasty.owner.club_key]
+        if owner_signings:
+            ui.label("Signed to Your Club").classes("text-sm font-semibold text-indigo-600 mb-1")
+            for s in owner_signings:
+                ui.label(f"  {s.get('player_name', '?')} (Salary: {s.get('salary', '?')})").classes("text-sm")
+
+        with ui.expansion("All League Signings", icon="list").classes("w-full mt-2"):
+            columns = [
+                {"name": "player", "label": "Player", "field": "player", "align": "left"},
+                {"name": "team", "label": "Team", "field": "team", "align": "left"},
+                {"name": "salary", "label": "Salary", "field": "salary", "align": "center"},
+            ]
+            rows = [{"player": s.get("player_name", "?"), "team": s.get("team_key", "?"),
+                      "salary": str(s.get("salary", "")), "_idx": i}
+                     for i, s in enumerate(signings[:50])]
+            ui.table(columns=columns, rows=rows, row_key="_idx").classes("w-full").props("dense flat bordered")
+
+
+def _offseason_step_development(dynasty, data):
+    ui.label("Player Development").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    dev = data.get("development", [])
+    if not dev:
+        ui.label("No development events.").classes("text-sm text-slate-400 italic")
+        return
+
+    owner_dev = [e for e in dev if e.get("team") == dynasty.owner.club_key]
+    other_dev = [e for e in dev if e.get("team") != dynasty.owner.club_key]
+
+    if owner_dev:
+        ui.label("Your Team").classes("text-sm font-semibold text-indigo-700 mb-1")
+        for e in owner_dev:
+            ev_type = e.get("type", "")
+            icon_name = "trending_up" if ev_type in ("improved", "breakout") else "trending_down" if ev_type == "declined" else "swap_horiz"
+            color = "text-green-600" if ev_type in ("improved", "breakout") else "text-red-600" if ev_type == "declined" else "text-slate-500"
+            with ui.row().classes("items-center gap-2 mb-1"):
+                ui.icon(icon_name, size="xs").classes(color)
+                ui.label(f"{e.get('player', '?')}: {e.get('description', '')}").classes("text-sm")
+
+    if other_dev:
+        ui.label(f"{len(other_dev)} development events across other teams.").classes("text-sm text-slate-500 mt-3")
+
+
+def _offseason_step_investment(dynasty, data):
+    ui.label("Investment Allocation").classes("text-lg font-semibold text-slate-700 mb-3")
+    ui.label("Adjust how your budget is distributed for next season.").classes("text-xs text-slate-500 mb-3")
+
+    inv = dynasty.investment
+    sliders = {}
+
+    for label_text, attr in [
+        ("Training", "training"),
+        ("Coaching", "coaching"),
+        ("Stadium", "stadium"),
+        ("Youth Academy", "youth"),
+        ("Sports Science", "science"),
+        ("Marketing", "marketing"),
+    ]:
+        current_val = getattr(inv, attr, 0.0)
+        with ui.row().classes("items-center gap-3 w-full mb-2"):
+            ui.label(label_text).classes("text-sm text-slate-600 w-32")
+            slider = ui.slider(min=0, max=50, value=int(current_val * 100), step=5).classes("flex-1")
+            pct_label = ui.label(f"{int(current_val * 100)}%").classes("text-sm text-slate-500 w-10 text-right")
+            slider.on("update:model-value", lambda e, lbl=pct_label: lbl.set_text(f"{int(e.args)}%"))
+            sliders[attr] = slider
+
+    async def _save_investment():
+        d = _get_dynasty()
+        if not d:
+            return
+        total = sum(s.value for s in sliders.values())
+        if total == 0:
+            ui.notify("Allocate at least some budget.", type="warning")
+            return
+        for attr, slider in sliders.items():
+            setattr(d.investment, attr, slider.value / total)
+        _set_dynasty(d)
+        ui.notify("Investment allocation saved!", type="positive")
+
+    ui.button("Save Allocation", icon="save", on_click=_save_investment).props("no-caps").classes("mt-2")
+
+
+def _offseason_step_financials(dynasty, data):
+    ui.label("Financial Summary").classes("text-lg font-semibold text-slate-700 mb-3")
+
+    fin = data.get("financials", {})
+    if not fin:
+        ui.label("No financial data available.").classes("text-sm text-slate-400 italic")
+        return
+
+    rev = fin.get("total_revenue", 0)
+    exp = fin.get("total_expenses", 0)
+    net = rev - exp
+
+    with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
+        with ui.card().classes("flex-1 min-w-[140px] p-4 text-center"):
+            ui.label("Revenue").classes("text-xs text-slate-400 uppercase")
+            ui.label(f"${rev:.1f}M").classes("text-2xl font-bold text-green-600")
+        with ui.card().classes("flex-1 min-w-[140px] p-4 text-center"):
+            ui.label("Expenses").classes("text-xs text-slate-400 uppercase")
+            ui.label(f"${exp:.1f}M").classes("text-2xl font-bold text-red-600")
+        with ui.card().classes("flex-1 min-w-[140px] p-4 text-center"):
+            ui.label("Net Income").classes("text-xs text-slate-400 uppercase")
+            color = "text-green-600" if net >= 0 else "text-red-600"
+            ui.label(f"{'+'if net>=0 else ''}{net:.1f}M").classes(f"text-2xl font-bold {color}")
+        with ui.card().classes("flex-1 min-w-[140px] p-4 text-center"):
+            ui.label("Bankroll").classes("text-xs text-slate-400 uppercase")
+            bankroll = fin.get("bankroll_end", dynasty.owner.bankroll)
+            bcolor = "text-green-600" if bankroll > 15 else "text-amber-600" if bankroll > 5 else "text-red-600"
+            ui.label(f"${bankroll:.1f}M").classes(f"text-2xl font-bold {bcolor}")
+
+    rev_breakdown = fin.get("revenue_breakdown", {})
+    exp_breakdown = fin.get("expense_breakdown", {})
+
+    if rev_breakdown or exp_breakdown:
+        with ui.row().classes("w-full gap-4 flex-wrap"):
+            if rev_breakdown:
+                with ui.card().classes("flex-1 min-w-[250px] p-4"):
+                    ui.label("Revenue Breakdown").classes("text-sm font-semibold text-slate-600 mb-2")
+                    for key, val in rev_breakdown.items():
+                        label_text = key.replace("_", " ").title()
+                        with ui.row().classes("items-center justify-between"):
+                            ui.label(label_text).classes("text-xs text-slate-500")
+                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold")
+            if exp_breakdown:
+                with ui.card().classes("flex-1 min-w-[250px] p-4"):
+                    ui.label("Expense Breakdown").classes("text-sm font-semibold text-slate-600 mb-2")
+                    for key, val in exp_breakdown.items():
+                        label_text = key.replace("_", " ").title()
+                        with ui.row().classes("items-center justify-between"):
+                            ui.label(label_text).classes("text-xs text-slate-500")
+                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold")
+
+    if data.get("forced_sale"):
+        ui.separator().classes("mt-3")
+        ui.label("FORCED SALE: Your club has been sold due to financial collapse!").classes(
+            "text-lg font-bold text-red-600 mt-3"
+        )
+    elif data.get("pressure_mounting"):
+        ui.separator().classes("mt-3")
+        ui.label("Warning: Pressure mounting from poor results and low bankroll.").classes(
+            "text-sm font-semibold text-amber-600 mt-2"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════
