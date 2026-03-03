@@ -45,16 +45,17 @@ def _set_phase(phase: str):
     app.storage.user[_WVL_PHASE_KEY] = phase
 
 
-def _register_wvl_season(dynasty, season):
+def _register_wvl_season(dynasty, season, year=None):
     try:
         from api.main import wvl_sessions
-        session_id = f"wvl_{dynasty.dynasty_name}_{dynasty.current_year - 1}"
+        effective_year = year if year is not None else dynasty.current_year - 1
+        session_id = f"wvl_{dynasty.dynasty_name}_{effective_year}"
         session_id = session_id.lower().replace(" ", "_").replace("'", "")
         wvl_sessions[session_id] = {
             "season": season,
             "dynasty": dynasty,
             "dynasty_name": dynasty.dynasty_name,
-            "year": dynasty.current_year - 1,
+            "year": effective_year,
             "club_key": dynasty.owner.club_key,
         }
     except Exception:
@@ -282,6 +283,7 @@ def _fill_dashboard(containers, dynasty):
                     app.storage.user[_WVL_SEASON_KEY] = s
                     _set_phase("in_season")
                     _set_dynasty(d)
+                    _register_wvl_season(d, s, year=d.current_year)
                     ui.notify("Season started!", type="positive")
                     refresh = app.storage.user.get("_wvl_refresh")
                     if refresh:
@@ -314,6 +316,7 @@ def _fill_dashboard(containers, dynasty):
 
                     app.storage.user[_WVL_SEASON_KEY] = s
                     _set_dynasty(d)
+                    _register_wvl_season(d, s, year=d.current_year)
 
                     owner_result = _get_owner_week_result(results, d, owner_tier)
                     if owner_result:
@@ -341,6 +344,7 @@ def _fill_dashboard(containers, dynasty):
                     s.start_playoffs_all()
                     app.storage.user[_WVL_SEASON_KEY] = s
                     _set_dynasty(d)
+                    _register_wvl_season(d, s, year=d.current_year)
                     ui.notify("Regular season complete! Playoffs started.", type="positive")
                     refresh = app.storage.user.get("_wvl_refresh")
                     if refresh:
@@ -374,6 +378,7 @@ def _fill_dashboard(containers, dynasty):
 
                     app.storage.user[_WVL_SEASON_KEY] = s
                     _set_dynasty(d)
+                    _register_wvl_season(d, s, year=d.current_year)
                     refresh = app.storage.user.get("_wvl_refresh")
                     if refresh:
                         refresh()
