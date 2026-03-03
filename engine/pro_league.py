@@ -299,48 +299,57 @@ class ProTeamRecord:
     division: str
     wins: int = 0
     losses: int = 0
+    ties: int = 0
     points_for: int = 0
     points_against: int = 0
     div_wins: int = 0
     div_losses: int = 0
+    div_ties: int = 0
     streak: int = 0
     streak_type: str = ""
     last_5: List[str] = field(default_factory=list)
 
     @property
+    def points(self) -> int:
+        """Soccer-style table points: 3 for a win, 1 for a draw, 0 for a loss."""
+        return 3 * self.wins + self.ties
+
+    @property
     def pct(self) -> float:
-        total = self.wins + self.losses
-        return self.wins / total if total > 0 else 0.0
+        total = self.wins + self.losses + self.ties
+        return (self.wins + 0.5 * self.ties) / total if total > 0 else 0.0
 
     @property
     def point_diff(self) -> int:
         return self.points_for - self.points_against
 
-    def record_result(self, won: bool, pf: int, pa: int, is_div: bool):
-        if won:
+    def record_result(self, won: Optional[bool], pf: int, pa: int, is_div: bool):
+        """Record a game result. won=True → win, won=False → loss, won=None → draw."""
+        if won is True:
             self.wins += 1
-            if self.streak_type == "W":
-                self.streak += 1
-            else:
-                self.streak = 1
-                self.streak_type = "W"
-            self.last_5.append("W")
-        else:
+            streak_char = "W"
+        elif won is False:
             self.losses += 1
-            if self.streak_type == "L":
-                self.streak += 1
-            else:
-                self.streak = 1
-                self.streak_type = "L"
-            self.last_5.append("L")
+            streak_char = "L"
+        else:
+            self.ties += 1
+            streak_char = "T"
+        if self.streak_type == streak_char:
+            self.streak += 1
+        else:
+            self.streak = 1
+            self.streak_type = streak_char
+        self.last_5.append(streak_char)
         self.last_5 = self.last_5[-5:]
         self.points_for += pf
         self.points_against += pa
         if is_div:
-            if won:
+            if won is True:
                 self.div_wins += 1
-            else:
+            elif won is False:
                 self.div_losses += 1
+            else:
+                self.div_ties += 1
 
 
 @dataclass
@@ -520,11 +529,14 @@ class ProLeagueSeason:
             away_score = result["final_score"]["away"]["score"]
             is_div = self._same_division(matchup.home_key, matchup.away_key)
 
+            is_tie = home_score == away_score
             self.standings[matchup.home_key].record_result(
-                won=home_score > away_score, pf=int(home_score), pa=int(away_score), is_div=is_div
+                won=None if is_tie else (home_score > away_score),
+                pf=int(home_score), pa=int(away_score), is_div=is_div
             )
             self.standings[matchup.away_key].record_result(
-                won=away_score > home_score, pf=int(away_score), pa=int(home_score), is_div=is_div
+                won=None if is_tie else (away_score > home_score),
+                pf=int(away_score), pa=int(home_score), is_div=is_div
             )
 
             self._accumulate_player_stats(matchup.home_key, result, "home")
@@ -576,17 +588,19 @@ class ProLeagueSeason:
                 rec for rec in self.standings.values()
                 if rec.division == div_name
             ]
-            div_teams.sort(key=lambda r: (-r.wins, -r.pct, -r.point_diff))
+            div_teams.sort(key=lambda r: (-r.points, -r.pct, -r.point_diff))
             divisions[div_name] = [{
                 "team_key": r.team_key,
                 "team_name": r.team_name,
                 "wins": r.wins,
                 "losses": r.losses,
+                "ties": r.ties,
+                "points": r.points,
                 "pct": round(r.pct, 3),
                 "pf": r.points_for,
                 "pa": r.points_against,
                 "diff": r.point_diff,
-                "div_record": f"{r.div_wins}-{r.div_losses}",
+                "div_record": f"{r.div_wins}-{r.div_losses}-{r.div_ties}",
                 "streak": f"{r.streak_type}{r.streak}" if r.streak_type else "-",
                 "last_5": "".join(r.last_5[-5:]),
             } for r in div_teams]
@@ -821,17 +835,20 @@ class ProLeagueSeason:
                         if res:
                             if m.home_key == team_key:
                                 game_info["score"] = f"{int(res['home_score'])}-{int(res['away_score'])}"
-                                game_info["won"] = res["home_score"] > res["away_score"]
+                                hs, as_ = res["home_score"], res["away_score"]
+                                game_info["won"] = None if hs == as_ else (hs > as_)
                             else:
                                 game_info["score"] = f"{int(res['away_score'])}-{int(res['home_score'])}"
-                                game_info["won"] = res["away_score"] > res["home_score"]
+                                hs, as_ = res["home_score"], res["away_score"]
+                                game_info["won"] = None if hs == as_ else (as_ > hs)
                     team_schedule.append(game_info)
 
         rec_dict = {
-            "wins": record.wins, "losses": record.losses,
+            "wins": record.wins, "losses": record.losses, "ties": record.ties,
+            "points": record.points,
             "points_for": record.points_for, "points_against": record.points_against,
             "pct": record.pct,
-        } if record else {"wins": 0, "losses": 0, "points_for": 0, "points_against": 0, "pct": 0.0}
+        } if record else {"wins": 0, "losses": 0, "ties": 0, "points": 0, "points_for": 0, "points_against": 0, "pct": 0.0}
 
         return {
             "team_key": team_key,

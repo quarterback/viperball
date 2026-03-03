@@ -1420,6 +1420,32 @@ def wvl_team(request: Request, session_id: str, team_key: str):
 
     is_owner_club = team_key == data.get("club_key", "")
 
+    # Build financial snapshot for the owner's club page
+    financial = None
+    if is_owner_club:
+        dynasty = data.get("dynasty")
+        if dynasty and hasattr(dynasty, "owner"):
+            owner = dynasty.owner
+            investment = getattr(dynasty, "investment", None)
+            current_year = data.get("year", "?")
+            fin_hist = getattr(dynasty, "financial_history", {})
+            latest_fin = fin_hist.get(current_year) or (
+                fin_hist.get(max(fin_hist.keys())) if fin_hist else None
+            )
+            financial = {
+                "bankroll": getattr(owner, "bankroll", None),
+                "archetype": getattr(owner, "archetype", ""),
+                "investment": {
+                    "training": getattr(investment, "training", 0) if investment else 0,
+                    "coaching_staff": getattr(investment, "coaching_staff", 0) if investment else 0,
+                    "stadium": getattr(investment, "stadium", 0) if investment else 0,
+                    "youth_academy": getattr(investment, "youth_academy", 0) if investment else 0,
+                    "sports_science": getattr(investment, "sports_science", 0) if investment else 0,
+                    "marketing": getattr(investment, "marketing", 0) if investment else 0,
+                } if investment else {},
+                "season_financials": latest_fin,
+            }
+
     return templates.TemplateResponse("wvl/team.html", _ctx(
         request, section="wvl", session_id=session_id,
         team=detail, team_key=team_key, tier=team_tier,
@@ -1427,6 +1453,7 @@ def wvl_team(request: Request, session_id: str, team_key: str):
         is_owner_club=is_owner_club,
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
+        financial=financial,
     ))
 
 
