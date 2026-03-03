@@ -110,8 +110,7 @@ def _render_setup(container):
             club_options = {}
             for tier_num in [1, 2, 3, 4]:
                 for club in CLUBS_BY_TIER[tier_num]:
-                    tag = f" [{club.narrative_tag}]" if club.narrative_tag else ""
-                    club_options[club.key] = f"T{tier_num}: {club.name} ({club.country}){tag}"
+                    club_options[club.key] = f"T{tier_num}: {club.name} ({club.country})"
 
             club_select = ui.select(options=club_options, value="vimpeli").classes("w-full")
 
