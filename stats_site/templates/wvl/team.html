@@ -31,16 +31,19 @@
 {% if rec is string %}
   {% set wins = rec.split('-')[0]|int if '-' in rec else 0 %}
   {% set losses = rec.split('-')[1]|int if '-' in rec else 0 %}
+  {% set ties = 0 %}
 {% elif rec is mapping %}
   {% set wins = rec.get('wins', 0) %}
   {% set losses = rec.get('losses', 0) %}
+  {% set ties = rec.get('ties', 0) %}
 {% else %}
   {% set wins = 0 %}
   {% set losses = 0 %}
+  {% set ties = 0 %}
 {% endif %}
 
 <div class="grid-4" style="margin-bottom:16px;">
-  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ wins }}</span>-<span class="l">{{ losses }}</span></div></div>
+  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ wins }}</span>-<span class="l">{{ losses }}</span>{% if ties > 0 %}-<span class="t">{{ ties }}</span>{% endif %}</div></div>
   <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for', rec.get('pf', 0)) if rec is mapping else 0 }}</div></div>
   <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against', rec.get('pa', 0)) if rec is mapping else 0 }}</div></div>
   <div class="metric"><div class="label">Tier</div><div class="value" style="font-size:13px">{{ tier_name }}</div></div>
@@ -143,13 +146,16 @@
     <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('opponent_key', '') }}">{{ g.get('opponent_name', g.get('opponent', '?')) }}</a></td>
     <td>
       {% if g.get('completed') and g.get('score') %}
+        {% set won_val = g.get('won') %}
+        {% set result_class = 'w' if won_val == true else ('l' if won_val == false else 't') %}
+        {% set result_label = 'W' if won_val == true else ('L' if won_val == false else 'D') %}
         {% if g.get('matchup_key') %}
         <a href="/stats/wvl/{{ session_id }}/game/{{ tier }}/{{ g.week }}/{{ g.matchup_key }}" style="text-decoration:none;">
-          <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+          <span class="{{ result_class }}" style="font-weight:bold">{{ result_label }}</span>
           {{ g.score }}
         </a>
         {% else %}
-        <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+        <span class="{{ result_class }}" style="font-weight:bold">{{ result_label }}</span>
         {{ g.score }}
         {% endif %}
       {% elif g.get('result') %}{{ g.result }}
@@ -160,6 +166,43 @@
   {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+{# ── Club Finances (owner club only) ── #}
+{% if is_owner_club and financial %}
+<h2>Club Finances</h2>
+<div class="grid-4" style="margin-bottom:16px;">
+  {% if financial.bankroll is not none %}
+  <div class="metric"><div class="label">Bankroll</div><div class="value" style="color:var(--green)">${{ '%.1f'|format(financial.bankroll) }}M</div></div>
+  {% endif %}
+  {% if financial.archetype %}
+  <div class="metric"><div class="label">Owner Type</div><div class="value" style="font-size:11px">{{ financial.archetype | replace('_', ' ') | title }}</div></div>
+  {% endif %}
+  {% if financial.season_financials %}
+  {% set sf = financial.season_financials %}
+  {% if sf.get('revenue') is not none %}
+  <div class="metric"><div class="label">Revenue</div><div class="value">${{ '%.1f'|format(sf.get('revenue', 0)) }}M</div></div>
+  {% endif %}
+  {% if sf.get('expenses') is not none %}
+  <div class="metric"><div class="label">Expenses</div><div class="value" style="color:var(--red)">${{ '%.1f'|format(sf.get('expenses', 0)) }}M</div></div>
+  {% endif %}
+  {% endif %}
+</div>
+{% if financial.investment %}
+{% set inv = financial.investment %}
+<h3 style="margin-top:8px">Investment Allocation</h3>
+<table>
+  <thead><tr><th>Category</th><th class="num">Level ($M)</th></tr></thead>
+  <tbody>
+  {% for cat, val in inv.items() if val > 0 %}
+  <tr>
+    <td>{{ cat | replace('_', ' ') | title }}</td>
+    <td class="num {% if val >= 3 %}stat-elite{% elif val >= 2 %}stat-good{% endif %}">${{ '%.1f'|format(val) }}M</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endif %}
 
 {% endblock %}

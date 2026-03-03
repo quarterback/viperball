@@ -1604,6 +1604,91 @@ def _generate_pro_forum_box_score(box: dict) -> str:
     return "\n".join(lines)
 
 
+def _render_quarterly_scoring(box: dict):
+    """Build and display a Q1-Q4 scoring table from play-by-play data."""
+    pbp = box.get("play_by_play", [])
+    away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    if pbp and "home_score" in (pbp[0] if pbp else {}):
+        prev_home = prev_away = 0.0
+        for play in pbp:
+            q = play.get("quarter", 1)
+            if q not in home_q:
+                continue
+            cur_home = play.get("home_score", prev_home)
+            cur_away = play.get("away_score", prev_away)
+            home_q[q] += cur_home - prev_home
+            away_q[q] += cur_away - prev_away
+            prev_home, prev_away = cur_home, cur_away
+
+    def _fmt(v: float) -> str:
+        return str(int(v)) if v == int(v) else f"{v:.1f}"
+
+    away_total = int(box.get("away_score", 0))
+    home_total = int(box.get("home_score", 0))
+
+    with ui.element("div").classes("w-full overflow-x-auto mb-4"):
+        with ui.element("table").classes("w-full").style(
+            "border-collapse: collapse; font-size: 13px; max-width: 540px;"
+        ):
+            with ui.element("thead"):
+                with ui.element("tr").style("background: #1e293b; color: #94a3b8;"):
+                    for label in ["Team", "Q1", "Q2", "Q3", "Q4", "F"]:
+                        ui.element("th").classes("py-1 px-3 text-center font-semibold").set_content(label)
+            with ui.element("tbody"):
+                for side_name, q_dict, total, won in [
+                    (box["away_name"], away_q, away_total, away_total > home_total),
+                    (box["home_name"], home_q, home_total, home_total > away_total),
+                ]:
+                    with ui.element("tr").style("border-bottom: 1px solid #334155;"):
+                        ui.element("td").classes("py-1 px-3 text-left font-semibold text-slate-200").set_content(
+                            side_name.split()[-1]
+                        )
+                        for q in [1, 2, 3, 4]:
+                            ui.element("td").classes("py-1 px-3 text-center text-slate-300").set_content(
+                                _fmt(q_dict[q])
+                            )
+                        color = "text-white font-black" if won else "text-slate-400"
+                        ui.element("td").classes(f"py-1 px-3 text-center {color}").set_content(str(total))
+
+
+def _render_drives(box: dict):
+    """Render drive summary table."""
+    drives = box.get("drive_summary", [])
+    if not drives:
+        ui.label("No drive data available for this game.").classes("text-slate-500 italic text-sm mt-4")
+        return
+    with ui.element("div").classes("w-full overflow-x-auto"):
+        with ui.element("table").classes("w-full").style(
+            "border-collapse: collapse; font-size: 13px;"
+        ):
+            with ui.element("thead"):
+                with ui.element("tr").style("background: #f1f5f9; border-bottom: 2px solid #cbd5e1;"):
+                    for col in ["#", "Team", "Start", "Plays", "Yards", "Result"]:
+                        ui.element("th").classes("py-2 px-3 text-center font-semibold text-slate-600").set_content(col)
+            with ui.element("tbody"):
+                for i, drive in enumerate(drives):
+                    bg = "background: #f8fafc;" if i % 2 == 0 else ""
+                    result_str = str(drive.get("result", drive.get("outcome", "—"))).replace("_", " ").title()
+                    is_score = any(kw in result_str.lower() for kw in ("touchdown", "td", "field goal", "kick"))
+                    with ui.element("tr").style(f"{bg} border-bottom: 1px solid #e2e8f0;"):
+                        ui.element("td").classes("py-1 px-3 text-center text-slate-500").set_content(str(i + 1))
+                        ui.element("td").classes("py-1 px-3 text-left font-medium text-slate-700").set_content(
+                            str(drive.get("team", drive.get("possession", "?")))
+                        )
+                        ui.element("td").classes("py-1 px-3 text-center text-slate-500").set_content(
+                            str(drive.get("start_pos", drive.get("start", "—")))
+                        )
+                        ui.element("td").classes("py-1 px-3 text-center text-slate-600").set_content(
+                            str(drive.get("plays", "—"))
+                        )
+                        ui.element("td").classes("py-1 px-3 text-center text-slate-600").set_content(
+                            str(drive.get("yards", "—"))
+                        )
+                        result_color = "text-green-600 font-semibold" if is_score else "text-slate-500"
+                        ui.element("td").classes(f"py-1 px-3 text-left {result_color}").set_content(result_str)
+
+
 def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
     with ui.dialog().props("maximized") as dlg:
         with ui.card().classes("w-full h-full overflow-auto p-0"):
@@ -1619,22 +1704,23 @@ def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
                             "text-sm text-slate-300"
                         )
                     with ui.row().classes("items-center gap-6"):
+                        away_s = int(box["away_score"])
+                        home_s = int(box["home_score"])
+                        is_draw = away_s == home_s
+                        away_won = away_s > home_s
+                        home_won = home_s > away_s
                         with ui.column().classes("items-center gap-0"):
                             ui.label(box["away_name"].split()[-1]).classes("text-xs text-slate-400 uppercase tracking-wider")
-                            away_s = int(box["away_score"])
-                            away_won = away_s > int(box["home_score"])
                             ui.label(str(away_s)).classes(
-                                f"text-4xl font-black {'text-white' if away_won else 'text-slate-400'}"
+                                f"text-4xl font-black {'text-white' if away_won else ('text-yellow-400' if is_draw else 'text-slate-400')}"
                             )
                         ui.label("—").classes("text-2xl text-slate-500 font-light")
                         with ui.column().classes("items-center gap-0"):
                             ui.label(box["home_name"].split()[-1]).classes("text-xs text-slate-400 uppercase tracking-wider")
-                            home_s = int(box["home_score"])
-                            home_won = home_s > away_s
                             ui.label(str(home_s)).classes(
-                                f"text-4xl font-black {'text-white' if home_won else 'text-slate-400'}"
+                                f"text-4xl font-black {'text-white' if home_won else ('text-yellow-400' if is_draw else 'text-slate-400')}"
                             )
-                        ui.label("FINAL").classes("text-xs font-bold text-amber-400 tracking-widest ml-4")
+                        ui.label("DRAW" if is_draw else "FINAL").classes("text-xs font-bold text-amber-400 tracking-widest ml-4")
 
                 with ui.row().classes("w-full justify-end gap-2 mt-3"):
                     async def _copy_forum():
@@ -1652,11 +1738,14 @@ def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
                     ).classes("bg-slate-600 hover:bg-slate-500")
 
             with ui.element("div").classes("w-full px-4 md:px-8 py-6").style("max-width: 1200px; margin: 0 auto;"):
+                _render_quarterly_scoring(box)
+
                 with ui.tabs().classes("w-full") as bs_tabs:
                     tab_team = ui.tab("Team Stats")
                     tab_offense = ui.tab("Offense")
                     tab_defense = ui.tab("Defense")
                     tab_kicking = ui.tab("Kicking")
+                    tab_drives = ui.tab("Drives")
                     tab_forum = ui.tab("Forum Export")
 
                 with ui.tab_panels(bs_tabs, value=tab_team).classes("w-full"):
@@ -1668,6 +1757,8 @@ def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
                         _render_defense_stats(box, season)
                     with ui.tab_panel(tab_kicking):
                         _render_kicking_stats(box, season)
+                    with ui.tab_panel(tab_drives):
+                        _render_drives(box)
                     with ui.tab_panel(tab_forum):
                         _render_forum_export(box)
 
@@ -1745,6 +1836,12 @@ def _make_clickable_player_table(columns, rows, season, team_key):
 
 
 def _render_offense_stats(box: dict, season: ProLeagueSeason = None):
+    has_any = any(box.get(f"{side}_player_stats", []) for side in ("away", "home"))
+    if not has_any:
+        ui.label("Player stats not available for fast-simmed games.").classes(
+            "text-slate-500 italic text-sm mt-4"
+        )
+        return
     for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
         players = box.get(f"{side_key}_player_stats", [])
         team_key = box.get(f"{side_key}_key", "")
@@ -1853,6 +1950,12 @@ def _render_offense_stats(box: dict, season: ProLeagueSeason = None):
 
 
 def _render_defense_stats(box: dict, season: ProLeagueSeason = None):
+    has_any = any(box.get(f"{side}_player_stats", []) for side in ("away", "home"))
+    if not has_any:
+        ui.label("Player stats not available for fast-simmed games.").classes(
+            "text-slate-500 italic text-sm mt-4"
+        )
+        return
     for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
         players = box.get(f"{side_key}_player_stats", [])
         team_key = box.get(f"{side_key}_key", "")
@@ -1892,6 +1995,12 @@ def _render_defense_stats(box: dict, season: ProLeagueSeason = None):
 
 
 def _render_kicking_stats(box: dict, season: ProLeagueSeason = None):
+    has_any = any(box.get(f"{side}_player_stats", []) for side in ("away", "home"))
+    if not has_any:
+        ui.label("Player stats not available for fast-simmed games.").classes(
+            "text-slate-500 italic text-sm mt-4"
+        )
+        return
     for side_key, side_name in [("away", box["away_name"]), ("home", box["home_name"])]:
         players = box.get(f"{side_key}_player_stats", [])
         team_key = box.get(f"{side_key}_key", "")

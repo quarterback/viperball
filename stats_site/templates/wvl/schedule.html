@@ -46,12 +46,13 @@
     {% for g in games %}
     <tr>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('away_key', '') }}">{{ g.get('away_name', g.get('away_team', g.get('away', '?'))) }}</a></td>
-      <td class="num {% if g.get('away_score', 0) > g.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">
-        {% if g.get('completed', g.get('away_score') is not none) %}{{ g.get('away_score', 0) }}{% else %}&mdash;{% endif %}
+      {% set as_ = g.get('away_score', 0) %}{% set hs_ = g.get('home_score', 0) %}
+      <td class="num {% if as_ > hs_ %}score-win{% elif as_ < hs_ %}score-loss{% else %}score-tie{% endif %}">
+        {% if g.get('completed', g.get('away_score') is not none) %}{{ as_ }}{% else %}&mdash;{% endif %}
       </td>
       <td style="color:var(--fg-dim)">@</td>
-      <td class="num {% if g.get('home_score', 0) > g.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">
-        {% if g.get('completed', g.get('home_score') is not none) %}{{ g.get('home_score', 0) }}{% else %}&mdash;{% endif %}
+      <td class="num {% if hs_ > as_ %}score-win{% elif hs_ < as_ %}score-loss{% else %}score-tie{% endif %}">
+        {% if g.get('completed', g.get('home_score') is not none) %}{{ hs_ }}{% else %}&mdash;{% endif %}
       </td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('home_key', '') }}">{{ g.get('home_name', g.get('home_team', g.get('home', '?'))) }}</a></td>
       <td>
@@ -78,12 +79,13 @@
     {% for g in games %}
     <tr>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('away_key', '') }}">{{ g.get('away_name', g.get('away_team', g.get('away', '?'))) }}</a></td>
-      <td class="num {% if g.get('away_score', 0) > g.get('home_score', 0) %}score-win{% else %}score-loss{% endif %}">
-        {% if g.get('completed') %}{{ g.get('away_score', 0) }}{% else %}&mdash;{% endif %}
+      {% set as_ = g.get('away_score', 0) %}{% set hs_ = g.get('home_score', 0) %}
+      <td class="num {% if as_ > hs_ %}score-win{% elif as_ < hs_ %}score-loss{% else %}score-tie{% endif %}">
+        {% if g.get('completed') %}{{ as_ }}{% else %}&mdash;{% endif %}
       </td>
       <td style="color:var(--fg-dim)">@</td>
-      <td class="num {% if g.get('home_score', 0) > g.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">
-        {% if g.get('completed') %}{{ g.get('home_score', 0) }}{% else %}&mdash;{% endif %}
+      <td class="num {% if hs_ > as_ %}score-win{% elif hs_ < as_ %}score-loss{% else %}score-tie{% endif %}">
+        {% if g.get('completed') %}{{ hs_ }}{% else %}&mdash;{% endif %}
       </td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('home_key', '') }}">{{ g.get('home_name', g.get('home_team', g.get('home', '?'))) }}</a></td>
       <td>

@@ -20,17 +20,17 @@
   <div class="box-team">
     <div class="name"><a href="/stats/wvl/{{ session_id }}/team/{{ away_key }}">{{ away }}</a></div>
     <div class="record">Away</div>
-    <div class="box-score-final {% if away_score > home_score %}score-win{% else %}score-loss{% endif %}">{{ away_score }}</div>
+    <div class="box-score-final {% if away_score > home_score %}score-win{% elif away_score < home_score %}score-loss{% else %}score-tie{% endif %}">{{ away_score }}</div>
   </div>
   <div class="box-score-vs">
-    <div>FINAL</div>
+    <div>{% if home_score == away_score %}DRAW{% else %}FINAL{% endif %}</div>
     <div>{{ tier_name }} &middot; Wk {{ week }}</div>
     {% if rivalry %}<div style="margin-top:4px"><span class="tag tag-rivalry">RIVALRY: {{ rivalry }}</span></div>{% endif %}
   </div>
   <div class="box-team">
     <div class="name"><a href="/stats/wvl/{{ session_id }}/team/{{ home_key }}">{{ home }}</a></div>
     <div class="record">Home</div>
-    <div class="box-score-final {% if home_score > away_score %}score-win{% else %}score-loss{% endif %}">{{ home_score }}</div>
+    <div class="box-score-final {% if home_score > away_score %}score-win{% elif home_score < away_score %}score-loss{% else %}score-tie{% endif %}">{{ home_score }}</div>
   </div>
 </div>
 
@@ -377,6 +377,54 @@
 </div>
 {% endif %}
 {% endfor %}
+{% endif %}
+
+{# ── Play Distribution ── #}
+{% set a_pfb = as_.get('play_family_breakdown', {}) %}
+{% set h_pfb = hs.get('play_family_breakdown', {}) %}
+{% if a_pfb or h_pfb %}
+<h2>Play Distribution</h2>
+<table>
+  <thead>
+    <tr><th class="num">{{ away[:20] }}</th><th>Play Type</th><th class="num">{{ home[:20] }}</th></tr>
+  </thead>
+  <tbody>
+    {% set all_families = [] %}
+    {% for k in a_pfb %}{% if k not in all_families %}{% if all_families.append(k) %}{% endif %}{% endif %}{% endfor %}
+    {% for k in h_pfb %}{% if k not in all_families %}{% if all_families.append(k) %}{% endif %}{% endif %}{% endfor %}
+    {% for fam in all_families|sort %}
+    <tr>
+      <td class="num">{{ a_pfb.get(fam, 0) }}</td>
+      <td>{{ fam | replace('_', ' ') | title }}</td>
+      <td class="num">{{ h_pfb.get(fam, 0) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Plays Per Quarter ── #}
+{% set a_ppq = as_.get('plays_per_quarter', {}) %}
+{% set h_ppq = hs.get('plays_per_quarter', {}) %}
+{% if a_ppq or h_ppq %}
+<h2>Plays Per Quarter</h2>
+<table>
+  <thead>
+    <tr><th class="num">{{ away[:20] }}</th><th>Quarter</th><th class="num">{{ home[:20] }}</th></tr>
+  </thead>
+  <tbody>
+    {% set all_qs = [] %}
+    {% for k in a_ppq %}{% if k not in all_qs %}{% if all_qs.append(k) %}{% endif %}{% endif %}{% endfor %}
+    {% for k in h_ppq %}{% if k not in all_qs %}{% if all_qs.append(k) %}{% endif %}{% endif %}{% endfor %}
+    {% for q in all_qs|sort %}
+    <tr>
+      <td class="num">{{ a_ppq.get(q, 0) }}</td>
+      <td>Q{{ q }}</td>
+      <td class="num">{{ h_ppq.get(q, 0) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endif %}
 
 {# ══════════════════════════════════════════════════════════

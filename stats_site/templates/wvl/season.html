@@ -32,7 +32,7 @@
   <thead>
     <tr>
       <th class="num">#</th><th>Team</th><th>Country</th>
-      <th>W-L</th><th class="num">PCT</th>
+      <th class="num" title="Table points (W=3, D=1)">PTS</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">PCT</th>
       <th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th>
       <th>DIV</th><th>STRK</th><th>L5</th><th>Zone</th>
     </tr>
@@ -49,7 +49,10 @@
       {% if t.get('narrative_tag') %} <span style="color:var(--fg-dim);font-size:10px">[{{ t.narrative_tag }}]</span>{% endif %}
     </td>
     <td style="color:var(--fg-dim);font-size:10px">{{ t.get('country', '') }}</td>
-    <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+    <td class="num" style="font-weight:bold;color:var(--fg-bright)">{{ t.get('points', t.get('wins', 0) * 3) }}</td>
+    <td class="num"><span class="w">{{ t.get('wins', 0) }}</span></td>
+    <td class="num"><span class="l">{{ t.get('losses', 0) }}</span></td>
+    <td class="num" style="color:var(--fg-dim)">{{ t.get('ties', 0) }}</td>
     <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
     <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
     <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
@@ -61,7 +64,7 @@
     </td>
     <td style="font-size:10px;letter-spacing:1px;">
       {% for ch in t.get('last_5', '') %}
-      <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% endif %}">{{ ch }}</span>
+      <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% else %}t{% endif %}">{{ ch }}</span>
       {% endfor %}
     </td>
     <td>
@@ -80,7 +83,7 @@
   <h3>{{ div_name }}</h3>
   <table>
     <thead>
-      <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PCT</th><th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th><th>STRK</th><th>L5</th></tr>
+      <tr><th class="num">#</th><th>Team</th><th class="num" title="Table points (W=3, D=1)">PTS</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">PCT</th><th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th><th>STRK</th><th>L5</th></tr>
     </thead>
     <tbody>
     {% for t in div_teams %}
@@ -88,7 +91,10 @@
     <tr>
       <td class="num rank">{{ loop.index }}</td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
-      <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
+      <td class="num" style="font-weight:bold;color:var(--fg-bright)">{{ t.get('points', t.get('wins', 0) * 3) }}</td>
+      <td class="num"><span class="w">{{ t.get('wins', 0) }}</span></td>
+      <td class="num"><span class="l">{{ t.get('losses', 0) }}</span></td>
+      <td class="num" style="color:var(--fg-dim)">{{ t.get('ties', 0) }}</td>
       <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
       <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
       <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
@@ -99,7 +105,7 @@
       </td>
       <td style="font-size:10px;letter-spacing:1px;">
         {% for ch in t.get('last_5', '') %}
-        <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% endif %}">{{ ch }}</span>
+        <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% else %}t{% endif %}">{{ ch }}</span>
         {% endfor %}
       </td>
     </tr>
