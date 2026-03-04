@@ -1437,10 +1437,10 @@ def wvl_team(request: Request, session_id: str, team_key: str):
                 "archetype": getattr(owner, "archetype", ""),
                 "investment": {
                     "training": getattr(investment, "training", 0) if investment else 0,
-                    "coaching_staff": getattr(investment, "coaching_staff", 0) if investment else 0,
+                    "coaching": getattr(investment, "coaching", 0) if investment else 0,
                     "stadium": getattr(investment, "stadium", 0) if investment else 0,
-                    "youth_academy": getattr(investment, "youth_academy", 0) if investment else 0,
-                    "sports_science": getattr(investment, "sports_science", 0) if investment else 0,
+                    "youth": getattr(investment, "youth", 0) if investment else 0,
+                    "science": getattr(investment, "science", 0) if investment else 0,
                     "marketing": getattr(investment, "marketing", 0) if investment else 0,
                 } if investment else {},
                 "season_financials": latest_fin,
@@ -1481,6 +1481,114 @@ def wvl_stats(request: Request, session_id: str, tier: int = 0, category: str = 
         tier_label=_wvl_tier_label,
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
+    ))
+
+
+@router.get("/wvl/{session_id}/player/{team_key}/{player_name}", response_class=HTMLResponse)
+def wvl_player(request: Request, session_id: str, team_key: str, player_name: str):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+
+    team_tier = season.tier_assignments.get(team_key)
+    if team_tier is None:
+        raise HTTPException(404, f"Team '{team_key}' not found")
+    tier_season = season.tier_seasons.get(team_tier)
+    if not tier_season:
+        raise HTTPException(404, f"Tier {team_tier} not found")
+
+    # Find the player on the team
+    team = tier_season.teams.get(team_key)
+    if not team:
+        raise HTTPException(404, f"Team '{team_key}' not found in tier")
+
+    player = None
+    for p in getattr(team, "players", []):
+        if p.name == player_name:
+            player = p
+            break
+    if not player:
+        raise HTTPException(404, f"Player '{player_name}' not found on {team_key}")
+
+    # Build player card
+    card = None
+    try:
+        from engine.player_card import player_to_card
+        pc = player_to_card(player, team_key)
+        card = pc.to_dict()
+    except Exception:
+        pass
+
+    # Build season stats from completed games
+    season_totals = {
+        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
+        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
+        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
+        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
+        "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+    }
+    game_log = []
+    for week_num, week_games in tier_season.results.items():
+        for matchup_key, game_data in week_games.items():
+            if not game_data:
+                continue
+            home_key = game_data.get("home_key", "")
+            away_key = game_data.get("away_key", "")
+            if home_key != team_key and away_key != team_key:
+                continue
+            side = "home" if home_key == team_key else "away"
+            opponent_key = away_key if side == "home" else home_key
+            opponent_name = game_data.get(f"{'away' if side == 'home' else 'home'}_name", opponent_key)
+            result = game_data.get("result", {})
+            ps = result.get("player_stats", {}).get(side, [])
+            for pg in ps:
+                if pg.get("name") == player_name:
+                    home_score = game_data.get("home_score", 0)
+                    away_score = game_data.get("away_score", 0)
+                    my_score = home_score if side == "home" else away_score
+                    opp_score = away_score if side == "home" else home_score
+                    entry = {
+                        "week": week_num,
+                        "opponent": opponent_name,
+                        "is_home": side == "home",
+                        "won": my_score > opp_score,
+                        "team_score": my_score,
+                        "opp_score": opp_score,
+                    }
+                    entry.update(pg)
+                    game_log.append(entry)
+                    season_totals["games"] += 1
+                    for stat in [
+                        "touches", "yards", "rushing_yards", "lateral_yards",
+                        "tds", "fumbles", "laterals_thrown",
+                        "kick_att", "kick_made", "pk_att", "pk_made",
+                        "dk_att", "dk_made", "tackles", "tfl", "sacks",
+                        "kick_pass_yards", "kick_pass_tds",
+                        "kick_passes_thrown", "kick_passes_completed",
+                    ]:
+                        season_totals[stat] += pg.get(stat, 0)
+                    break
+
+    season_totals["ypc"] = round(
+        season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
+    )
+    season_totals["kp_pct"] = round(
+        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+
+    from engine.wvl_config import CLUBS_BY_KEY
+    club = CLUBS_BY_KEY.get(team_key)
+    team_name = club.name if club else team_key
+
+    return templates.TemplateResponse("wvl/player.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        player=player, card=card,
+        team_key=team_key, team_name=team_name,
+        tier=team_tier, tier_name=_wvl_tier_label(team_tier),
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+        game_log=sorted(game_log, key=lambda g: g["week"]),
+        season_totals=season_totals,
     ))
 
 

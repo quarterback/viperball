@@ -26,6 +26,7 @@ from engine.wvl_owner import (
     ClubOwner, TeamPresident, InvestmentAllocation, ClubFinancials,
     OWNER_ARCHETYPES, generate_president_pool, apply_investment_boosts,
     compute_financials, president_set_team_style,
+    compute_investment_modifier, generate_ai_investment,
 )
 from engine.wvl_free_agency import (
     FreeAgent, FreeAgencyResult, run_free_agency, process_retirements,
@@ -91,6 +92,7 @@ class WVLDynasty:
     # Current state
     president: Optional[TeamPresident] = None
     investment: InvestmentAllocation = field(default_factory=InvestmentAllocation)
+    investment_budget: float = 5.0  # Annual spend (millions) drawn from bankroll
 
     # Last completed season snapshot (plain dicts — survives serialization)
     last_season_standings: Dict[int, dict] = field(default_factory=dict)  # tier → standings
@@ -130,9 +132,32 @@ class WVLDynasty:
                 self._team_rosters[team_key] = cards
 
     def start_season(self) -> WVLMultiTierSeason:
-        """Initialize a new season across all 4 tiers."""
+        """Initialize a new season across all 4 tiers.
+
+        Also injects per-team investment modifiers into Team objects so that
+        investment allocation has a marginal in-season effect on dice rolls
+        (via fast_sim._team_strength).
+        """
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
+        self._inject_investment_modifiers(self._current_season)
         return self._current_season
+
+    def _inject_investment_modifiers(self, season: WVLMultiTierSeason):
+        """Set investment_modifier attribute on each Team object before simming."""
+        from engine.wvl_config import CLUBS_BY_KEY
+        owner_modifier = compute_investment_modifier(self.investment, self.investment_budget)
+        for tier_season in season.tier_seasons.values():
+            for team_key, team in tier_season.teams.items():
+                if team_key == self.owner.club_key:
+                    modifier = owner_modifier
+                else:
+                    club = CLUBS_BY_KEY.get(team_key)
+                    prestige = club.prestige if club else 50
+                    modifier = prestige * 0.03  # ~1.5 for prestige-50, ~2.4 for prestige-80
+                try:
+                    team.investment_modifier = modifier
+                except Exception:
+                    pass
 
     def snapshot_season(self, season: WVLMultiTierSeason):
         """Extract serializable season data into dynasty fields.
@@ -326,15 +351,34 @@ class WVLDynasty:
         summary["free_agency"] = fa_result.to_dict()
 
         # 4. Apply investment boosts to owner's team
+        # Use self.investment_budget if caller passed the default
+        effective_budget = investment_budget if investment_budget != 5.0 else self.investment_budget
         owner_roster = self._team_rosters.get(self.owner.club_key, [])
         boosts = apply_investment_boosts(
             roster=owner_roster,
             allocation=self.investment,
-            investment_budget=investment_budget,
+            investment_budget=effective_budget,
             owner_archetype=self.owner.archetype,
             rng=rng,
         )
         summary["investment_boosts"] = boosts
+
+        # 4b. Apply AI investment boosts to all other teams
+        from engine.wvl_config import CLUBS_BY_KEY
+        for team_key, roster in self._team_rosters.items():
+            if team_key == self.owner.club_key:
+                continue
+            club = CLUBS_BY_KEY.get(team_key)
+            prestige = club.prestige if club else 50
+            ai_alloc = generate_ai_investment(prestige, rng)
+            ai_budget = float(team_budgets.get(team_key, 5.0))
+            apply_investment_boosts(
+                roster=roster,
+                allocation=ai_alloc,
+                investment_budget=ai_budget,
+                owner_archetype="patient_builder",
+                rng=rng,
+            )
 
         # 5. Pro development (age-based) for all teams
         dev_events = []
@@ -547,11 +591,16 @@ class WVLDynasty:
             "last_season_schedule": {str(k): v for k, v in self.last_season_schedule.items()},
             "last_season_champions": {str(k): v for k, v in self.last_season_champions.items()},
             "last_season_owner_results": self.last_season_owner_results,
+            "investment_budget": self.investment_budget,
         }
         if self.president:
             data["president"] = self.president.to_dict()
         if self.investment:
             data["investment"] = self.investment.to_dict()
+        # Persist owner's roster so it survives page reloads (draft picks, edits)
+        owner_roster = self._team_rosters.get(self.owner.club_key, [])
+        if owner_roster:
+            data["owner_roster"] = [c.to_dict() for c in owner_roster]
         return data
 
     @classmethod
@@ -594,6 +643,15 @@ class WVLDynasty:
             dynasty.president = TeamPresident.from_dict(data["president"])
         if "investment" in data:
             dynasty.investment = InvestmentAllocation.from_dict(data["investment"])
+        dynasty.investment_budget = float(data.get("investment_budget", 5.0))
+
+        # Restore owner's persisted roster (from draft or edits)
+        for card_dict in data.get("owner_roster", []):
+            try:
+                card = PlayerCard.from_dict(card_dict)
+                dynasty._team_rosters.setdefault(owner.club_key, []).append(card)
+            except Exception:
+                pass
 
         return dynasty
 

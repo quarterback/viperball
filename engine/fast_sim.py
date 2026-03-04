@@ -144,7 +144,10 @@ def _team_strength(team) -> float:
         team.prestige * 0.15 +
         avg_ovr * 0.25
     )
-    return min(99, max(20, off_components))
+    # investment_modifier is injected by WVLDynasty._inject_investment_modifiers()
+    # to provide marginal in-season dice-roll effects from investment allocation
+    investment_bonus = getattr(team, 'investment_modifier', 0.0)
+    return min(99, max(20, off_components + investment_bonus))
 
 
 def _defensive_strength(team) -> float:

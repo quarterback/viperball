@@ -34,11 +34,18 @@ def _get_dynasty() -> Optional[WVLDynasty]:
     if raw is None:
         return None
     if isinstance(raw, WVLDynasty):
-        return raw
-    try:
-        return WVLDynasty.from_dict(raw)
-    except Exception:
-        return None
+        dynasty = raw
+    else:
+        try:
+            dynasty = WVLDynasty.from_dict(raw)
+        except Exception:
+            return None
+    # Re-link the live season so roster/OVR populate from Team objects when
+    # _team_rosters is empty (e.g., after a page reload)
+    season = app.storage.user.get(_WVL_SEASON_KEY)
+    if season and hasattr(season, 'tier_seasons') and not dynasty._team_rosters:
+        dynasty._current_season = season
+    return dynasty
 
 
 def _set_dynasty(dynasty: Optional[WVLDynasty]):
@@ -90,6 +97,76 @@ def _rating_color(val: int) -> str:
         return "color: #dc2626;"
 
 
+def _open_edit_player_dialog(player_name: str, dynasty, team_key: str):
+    """Open a modal dialog to edit a player's attributes.
+
+    Works for any team — owner's roster or AI teams stored in _team_rosters.
+    """
+    roster = dynasty._team_rosters.get(team_key, [])
+    if not roster and dynasty._current_season:
+        dynasty._load_rosters_from_season(dynasty._current_season)
+        roster = dynasty._team_rosters.get(team_key, [])
+
+    card = next((c for c in roster if c.full_name == player_name), None)
+    if not card:
+        ui.notify(f"Player '{player_name}' not found in roster.", type="warning")
+        return
+
+    _ATTRS = [
+        ("Speed", "speed"), ("Stamina", "stamina"), ("Agility", "agility"),
+        ("Power", "power"), ("Awareness", "awareness"), ("Hands", "hands"),
+        ("Kicking", "kicking"), ("Kick Power", "kick_power"),
+        ("Kick Accuracy", "kick_accuracy"), ("Lateral Skill", "lateral_skill"),
+        ("Tackling", "tackling"),
+    ]
+
+    with ui.dialog() as dlg, ui.card().classes("w-[500px] p-6"):
+        ui.label(f"Edit: {card.full_name}").classes("text-lg font-bold text-slate-800 mb-1")
+        ui.label(f"{card.position} | OVR {card.overall}").classes("text-sm text-slate-500 mb-3")
+
+        inputs = {}
+        with ui.grid(columns=2).classes("w-full gap-2"):
+            for label, attr in _ATTRS:
+                with ui.column().classes("gap-0"):
+                    ui.label(label).classes("text-xs text-slate-500")
+                    inputs[attr] = ui.number(
+                        value=getattr(card, attr, 0),
+                        min=0, max=99, step=1,
+                    ).classes("w-full").props("dense outlined")
+
+        with ui.row().classes("w-full gap-2 mt-4 justify-end"):
+            ui.button("Cancel", on_click=dlg.close).props("flat no-caps")
+
+            async def _save():
+                d = _get_dynasty()
+                if not d:
+                    dlg.close()
+                    return
+                # Re-find the card in the fresh dynasty's roster
+                target_roster = d._team_rosters.get(team_key, [])
+                if not target_roster and d._current_season:
+                    d._load_rosters_from_season(d._current_season)
+                    target_roster = d._team_rosters.get(team_key, [])
+                target = next((c for c in target_roster if c.full_name == player_name), None)
+                if not target:
+                    ui.notify("Player no longer found.", type="warning")
+                    dlg.close()
+                    return
+                for attr, inp in inputs.items():
+                    val = int(inp.value or 0)
+                    setattr(target, attr, max(0, min(99, val)))
+                _set_dynasty(d)
+                ui.notify(f"{player_name} attributes saved!", type="positive")
+                dlg.close()
+                refresh = app.storage.user.get("_wvl_refresh")
+                if refresh:
+                    refresh()
+
+            ui.button("Save Changes", on_click=_save).classes("bg-indigo-600 text-white").props("no-caps")
+
+    dlg.open()
+
+
 # ═══════════════════════════════════════════════════════════════
 # SETUP PAGE
 # ═══════════════════════════════════════════════════════════════
@@ -123,6 +200,33 @@ def _render_setup(container):
 
             club_select = ui.select(options=club_options, value="vimpeli").classes("w-full")
 
+        with ui.card().classes("w-full p-6 mt-4"):
+            ui.label("Step 3: Investment Strategy").classes("text-lg font-semibold")
+            ui.label(
+                "Set your annual investment allocation. Budget is drawn from bankroll each season. "
+                "Allocation determines where the money goes and marginally affects player ratings and in-game performance."
+            ).classes("text-xs text-slate-500 mb-3")
+
+            inv_budget_slider = ui.slider(min=1, max=20, value=5, step=1).classes("w-full")
+            inv_budget_label = ui.label("Annual Budget: $5M").classes("text-sm font-semibold text-indigo-700 mb-3")
+            inv_budget_slider.on("update:model-value", lambda e: inv_budget_label.set_text(f"Annual Budget: ${int(e.args)}M"))
+
+            inv_sliders = {}
+            for label_text, attr, default_pct in [
+                ("Training Facilities", "training", 30),
+                ("Coaching Staff", "coaching", 25),
+                ("Stadium", "stadium", 15),
+                ("Youth Academy", "youth", 10),
+                ("Sports Science", "science", 10),
+                ("Marketing", "marketing", 10),
+            ]:
+                with ui.row().classes("items-center gap-3 w-full mb-1"):
+                    ui.label(label_text).classes("text-sm text-slate-600 w-36")
+                    sl = ui.slider(min=0, max=50, value=default_pct, step=5).classes("flex-1")
+                    lbl = ui.label(f"{default_pct}%").classes("text-sm text-slate-500 w-10 text-right")
+                    sl.on("update:model-value", lambda e, lb=lbl: lb.set_text(f"{int(e.args)}%"))
+                    inv_sliders[attr] = sl
+
         async def _start():
             owner_name = name_input.value.strip() or "The Owner"
             archetype = archetype_select.value
@@ -139,15 +243,216 @@ def _render_setup(container):
             pool = generate_president_pool(5, random.Random())
             dynasty.president = pool[0]
 
+            # Apply investment settings from setup
+            dynasty.investment_budget = float(inv_budget_slider.value)
+            total = sum(s.value for s in inv_sliders.values())
+            if total > 0:
+                for attr, sl in inv_sliders.items():
+                    setattr(dynasty.investment, attr, sl.value / total)
+
             _set_dynasty(dynasty)
-            _set_phase("pre_season")
+            _set_phase("draft")
             ui.notify(f"Dynasty created! You own {CLUBS_BY_KEY[club_key].name}.", type="positive")
             container.clear()
-            _render_main(container)
+            _render_draft(container, dynasty)
 
-        ui.button("Start Dynasty", on_click=_start).classes(
+        ui.button("Next: Draft Players →", on_click=_start).classes(
             "mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg"
         )
+
+
+# ═══════════════════════════════════════════════════════════════
+# DRAFT PHASE
+# ═══════════════════════════════════════════════════════════════
+
+def _render_draft(container, dynasty):
+    """Initial draft: build your opening roster before season 1."""
+    from engine.wvl_free_agency import generate_synthetic_fa_pool
+    import random
+
+    pool_key = "_wvl_draft_pool"
+    raw_pool = app.storage.user.get(pool_key)
+    if not raw_pool:
+        fa_list = generate_synthetic_fa_pool(60, random.Random())
+        raw_pool = []
+        for fa in fa_list:
+            c = fa.player_card
+            raw_pool.append({
+                "name": c.full_name, "position": c.position,
+                "age": c.age or 24, "overall": c.overall,
+                "speed": c.speed, "kicking": c.kicking,
+                "lateral_skill": c.lateral_skill, "tackling": c.tackling,
+                "archetype": c.archetype, "asking_salary": fa.asking_salary,
+                "_fa_obj": fa,  # will be stripped on storage but we have it in-memory
+            })
+        app.storage.user[pool_key] = raw_pool
+
+    drafted_names = app.storage.user.get("_wvl_drafted", [])
+    pool = sorted(raw_pool, key=lambda x: -x.get("overall", 0))
+
+    with container:
+        with ui.element("div").classes("w-full").style(
+            "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 28px; border-radius: 10px;"
+        ):
+            ui.label("Build Your Opening Roster").classes("text-2xl font-bold text-white")
+            ui.label(
+                f"Draft players to start your dynasty. Pick 15–30 to form a competitive squad."
+            ).classes("text-sm text-blue-200")
+
+        drafted_label = ui.label(f"Drafted: {len(drafted_names)} / 30").classes(
+            "text-lg font-semibold text-indigo-700 mt-3"
+        )
+        roster_box = ui.column().classes("w-full")
+
+        columns = [
+            {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+            {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+            {"name": "age", "label": "Age", "field": "age", "align": "center", "sortable": True},
+            {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
+            {"name": "spd", "label": "SPD", "field": "speed", "align": "center", "sortable": True},
+            {"name": "kck", "label": "KCK", "field": "kicking", "align": "center"},
+            {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
+            {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center"},
+            {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
+            {"name": "action", "label": "", "field": "action", "align": "center"},
+        ]
+
+        rows = []
+        for p in pool:
+            is_drafted = p["name"] in drafted_names
+            rows.append({**p, "action": "drafted" if is_drafted else "draft"})
+
+        tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full mt-3").props(
+            "dense flat bordered virtual-scroll"
+        ).style("max-height: 450px;")
+
+        tbl.add_slot("body-cell-ovr", r'''
+            <q-td :props="props">
+                <span :style="{
+                    color: parseInt(props.row.overall) >= 85 ? '#15803d' :
+                           parseInt(props.row.overall) >= 75 ? '#16a34a' :
+                           parseInt(props.row.overall) >= 65 ? '#ca8a04' :
+                           parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
+                    fontWeight: '700'
+                }">{{ props.row.overall }}</span>
+            </q-td>
+        ''')
+        tbl.add_slot("body-cell-action", r'''
+            <q-td :props="props">
+                <q-btn v-if="props.row.action === 'draft'"
+                       flat dense size="sm" color="green" icon="add" label="Draft"
+                       @click="$parent.$emit('draft_player', props.row)" />
+                <q-badge v-else color="indigo" label="Drafted" />
+            </q-td>
+        ''')
+
+        def _update_label():
+            dn = app.storage.user.get("_wvl_drafted", [])
+            drafted_label.set_text(f"Drafted: {len(dn)} / 30")
+
+        def _on_draft(e):
+            player_name = e.args.get("name", "")
+            dn = app.storage.user.get("_wvl_drafted", [])
+            if player_name in dn or len(dn) >= 30:
+                return
+            dn.append(player_name)
+            app.storage.user["_wvl_drafted"] = dn
+            # Update row action in the table
+            for row in tbl.rows:
+                if row["name"] == player_name:
+                    row["action"] = "drafted"
+            tbl.update()
+            _update_label()
+
+        tbl.on("draft_player", _on_draft)
+
+        with ui.row().classes("gap-3 mt-4"):
+            async def _autodraft():
+                d = _get_dynasty()
+                if not d:
+                    return
+                dn = app.storage.user.get("_wvl_drafted", [])
+                for p in pool:
+                    if len(dn) >= 30:
+                        break
+                    if p["name"] not in dn:
+                        dn.append(p["name"])
+                app.storage.user["_wvl_drafted"] = dn
+                _update_label()
+                for row in tbl.rows:
+                    if row["name"] in dn:
+                        row["action"] = "drafted"
+                tbl.update()
+                ui.notify(f"Autodrafted {len(dn)} players!", type="positive")
+
+            ui.button("Autodraft Top 30", icon="auto_fix_high", on_click=_autodraft).props("no-caps").classes(
+                "bg-blue-600 text-white"
+            )
+
+            async def _finish_draft():
+                d = _get_dynasty()
+                if not d:
+                    return
+                dn = app.storage.user.get("_wvl_drafted", [])
+                if len(dn) < 15:
+                    ui.notify("Draft at least 15 players before continuing.", type="warning")
+                    return
+
+                # Build roster from pool
+                from engine.wvl_free_agency import generate_synthetic_fa_pool as _gen
+                fa_list = _gen(60, random.Random())
+                fa_by_name = {fa.player_card.full_name: fa.player_card for fa in fa_list}
+
+                # Also try to rebuild from raw_pool if we have the original fa_list
+                rp = app.storage.user.get(pool_key, [])
+                picked = []
+                for entry in rp:
+                    if entry["name"] in dn:
+                        # Re-generate card matching this entry (best effort)
+                        card = fa_by_name.get(entry["name"])
+                        if card is None:
+                            # Manually recreate from stored data
+                            from engine.wvl_free_agency import FreeAgent
+                            from engine.wvl_free_agency import generate_synthetic_fa_pool as gsp
+                            # Can't recover original card exactly; regenerate using same name
+                            pass
+                        if card:
+                            picked.append(card)
+
+                # If we couldn't recover cards, regenerate and just pick by index
+                if not picked:
+                    from engine.wvl_free_agency import generate_synthetic_fa_pool as gsp
+                    fresh = gsp(60, random.Random())
+                    name_set = set(dn)
+                    for fa in fresh:
+                        if fa.player_card.full_name in name_set:
+                            picked.append(fa.player_card)
+                            if len(picked) >= len(dn):
+                                break
+
+                d._team_rosters[d.owner.club_key] = picked
+                _set_dynasty(d)
+                app.storage.user.pop("_wvl_drafted", None)
+                app.storage.user.pop(pool_key, None)
+                _set_phase("pre_season")
+                ui.notify(f"Roster set with {len(picked)} players! Season ready.", type="positive")
+                container.clear()
+                _render_main(container)
+
+            ui.button("Start First Season →", icon="play_arrow", on_click=_finish_draft).props("no-caps").classes(
+                "bg-green-600 text-white"
+            )
+
+            async def _skip_draft():
+                _set_phase("pre_season")
+                container.clear()
+                d = _get_dynasty()
+                if d:
+                    app.storage.user.pop("_wvl_drafted", None)
+                    app.storage.user.pop(pool_key, None)
+                    _render_main(container)
+
+            ui.button("Skip Draft", icon="skip_next", on_click=_skip_draft).props("no-caps flat")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -594,6 +899,8 @@ def _render_roster_table(roster, dynasty):
 
     tbl.add_slot("body-cell-action", r'''
         <q-td :props="props">
+            <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
+                   @click="$parent.$emit('edit_player', props.row)" class="q-mr-xs" />
             <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
                    @click="$parent.$emit('cut_player', props.row)" />
         </q-td>
@@ -615,6 +922,12 @@ def _render_roster_table(roster, dynasty):
             ui.notify(msg, type="warning")
 
     tbl.on("cut_player", _on_cut)
+
+    def _on_edit(e):
+        player_name = e.args.get("name", "")
+        _open_edit_player_dialog(player_name, dynasty, dynasty.owner.club_key)
+
+    tbl.on("edit_player", _on_edit)
 
 
 def _render_free_agents(dynasty):
@@ -799,6 +1112,96 @@ def _fill_schedule(containers, dynasty):
         _fill_week()
 
 
+def _render_all_team_rosters(dynasty):
+    """Render an expandable roster browser for every team — allows editing any player."""
+    from engine.wvl_config import CLUBS_BY_KEY
+    season = app.storage.user.get(_WVL_SEASON_KEY)
+    if season and hasattr(season, 'tier_seasons') and not dynasty._team_rosters:
+        dynasty._load_rosters_from_season(season)
+
+    # Group teams by tier
+    tier_teams: dict = {}
+    for team_key, tier_num in sorted(dynasty.tier_assignments.items(), key=lambda x: (x[1], x[0])):
+        tier_teams.setdefault(tier_num, []).append(team_key)
+
+    for tier_num in sorted(tier_teams.keys()):
+        tc = TIER_BY_NUMBER.get(tier_num)
+        tier_label = tc.tier_name if tc else f"Tier {tier_num}"
+        with ui.expansion(f"Tier {tier_num} — {tier_label}", icon="groups").classes("w-full"):
+            for team_key in tier_teams[tier_num]:
+                club = CLUBS_BY_KEY.get(team_key)
+                team_name = club.name if club else team_key
+                is_owner = team_key == dynasty.owner.club_key
+                label = f"{'★ ' if is_owner else ''}{team_name}"
+                with ui.expansion(label, icon="person").classes("w-full ml-4"):
+                    roster_cards = dynasty._team_rosters.get(team_key, [])
+                    if not roster_cards:
+                        ui.label("No roster loaded yet — start a season first.").classes(
+                            "text-xs text-slate-400 italic"
+                        )
+                        continue
+                    # Capture team_key for closure
+                    _render_any_team_roster(sorted(roster_cards, key=lambda c: -c.overall), dynasty, team_key)
+
+
+def _render_any_team_roster(roster_cards, dynasty, team_key):
+    """Render a compact roster table with edit buttons for any team."""
+    _COLS = [
+        {"name": "name", "label": "Name", "field": "name", "align": "left"},
+        {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+        {"name": "age", "label": "Age", "field": "age", "align": "center"},
+        {"name": "ovr", "label": "OVR", "field": "overall", "align": "center"},
+        {"name": "spd", "label": "SPD", "field": "speed", "align": "center"},
+        {"name": "kck", "label": "KCK", "field": "kicking", "align": "center"},
+        {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
+        {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center"},
+        {"name": "action", "label": "", "field": "action", "align": "center"},
+    ]
+    rows = [
+        {
+            "name": c.full_name,
+            "position": c.position,
+            "age": str(c.age or ""),
+            "overall": str(c.overall),
+            "speed": str(c.speed),
+            "kicking": str(c.kicking),
+            "lateral_skill": str(c.lateral_skill),
+            "tackling": str(c.tackling),
+            "action": "edit",
+        }
+        for c in roster_cards
+    ]
+    tbl = ui.table(columns=_COLS, rows=rows, row_key="name").classes("w-full").props(
+        "dense flat bordered virtual-scroll"
+    ).style("max-height: 300px;")
+
+    tbl.add_slot("body-cell-ovr", r'''
+        <q-td :props="props">
+            <span :style="{
+                color: parseInt(props.row.overall) >= 85 ? '#15803d' :
+                       parseInt(props.row.overall) >= 75 ? '#16a34a' :
+                       parseInt(props.row.overall) >= 65 ? '#ca8a04' :
+                       parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
+                fontWeight: '700'
+            }">{{ props.row.overall }}</span>
+        </q-td>
+    ''')
+    tbl.add_slot("body-cell-action", r'''
+        <q-td :props="props">
+            <q-btn flat dense size="sm" color="indigo" icon="edit"
+                   @click="$parent.$emit('edit_player', props.row)" />
+        </q-td>
+    ''')
+
+    captured_team_key = team_key
+
+    def _on_edit(e):
+        pname = e.args.get("name", "")
+        _open_edit_player_dialog(pname, dynasty, captured_team_key)
+
+    tbl.on("edit_player", _on_edit)
+
+
 # ═══════════════════════════════════════════════════════════════
 # LEAGUE TAB
 # ═══════════════════════════════════════════════════════════════
@@ -842,6 +1245,12 @@ def _fill_league(containers, dynasty):
                 ui.separator().classes("mt-4")
                 ui.label("Season Stat Leaders").classes("text-lg font-semibold text-slate-700 mb-2")
                 _render_stat_leaders(leaders, season, dynasty)
+
+        # Team Roster Browser — allows viewing and editing any team's roster
+        ui.separator().classes("mt-4")
+        with ui.expansion("Team Roster Browser", icon="manage_accounts").classes("w-full mt-2"):
+            ui.label("Click a team to view and edit their roster.").classes("text-xs text-slate-400 mb-2")
+            _render_all_team_rosters(dynasty)
 
 
 def _render_zone_standings(ranked, owner_club_key):
@@ -1134,7 +1543,7 @@ def _render_offseason_start(container, dynasty):
 
             offseason = d.run_offseason(
                 s,
-                investment_budget=5.0,
+                investment_budget=d.investment_budget,
                 import_data=cached_grads,
                 rng=rng,
             )
@@ -1609,7 +2018,10 @@ async def render_wvl_section(state, shared):
     container = ui.column().classes("w-full max-w-5xl mx-auto p-4")
 
     dynasty = _get_dynasty()
-    if dynasty:
+    phase = _get_phase()
+    if dynasty and phase == "draft":
+        _render_draft(container, dynasty)
+    elif dynasty:
         _render_main(container)
     else:
         _render_setup(container)
