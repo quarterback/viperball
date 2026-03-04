@@ -283,7 +283,7 @@ def _render_draft(container, dynasty):
                 "speed": c.speed, "kicking": c.kicking,
                 "lateral_skill": c.lateral_skill, "tackling": c.tackling,
                 "archetype": c.archetype, "asking_salary": fa.asking_salary,
-                "_fa_obj": fa,  # will be stripped on storage but we have it in-memory
+                "card_dict": c.to_dict(),  # persisted so _finish_draft can reconstruct
             })
         app.storage.user[pool_key] = raw_pool
 
@@ -357,10 +357,8 @@ def _render_draft(container, dynasty):
                 return
             dn.append(player_name)
             app.storage.user["_wvl_drafted"] = dn
-            # Update row action in the table
-            for row in tbl.rows:
-                if row["name"] == player_name:
-                    row["action"] = "drafted"
+            # Reassign rows (not in-place mutation) to ensure Vue re-renders
+            tbl.rows = [{**r, "action": "drafted"} if r["name"] == player_name else r for r in tbl.rows]
             tbl.update()
             _update_label()
 
@@ -379,9 +377,7 @@ def _render_draft(container, dynasty):
                         dn.append(p["name"])
                 app.storage.user["_wvl_drafted"] = dn
                 _update_label()
-                for row in tbl.rows:
-                    if row["name"] in dn:
-                        row["action"] = "drafted"
+                tbl.rows = [{**r, "action": "drafted"} if r["name"] in dn else r for r in tbl.rows]
                 tbl.update()
                 ui.notify(f"Autodrafted {len(dn)} players!", type="positive")
 
@@ -398,37 +394,14 @@ def _render_draft(container, dynasty):
                     ui.notify("Draft at least 15 players before continuing.", type="warning")
                     return
 
-                # Build roster from pool
-                from engine.wvl_free_agency import generate_synthetic_fa_pool as _gen
-                fa_list = _gen(60, random.Random())
-                fa_by_name = {fa.player_card.full_name: fa.player_card for fa in fa_list}
-
-                # Also try to rebuild from raw_pool if we have the original fa_list
+                # Reconstruct cards from stored card_dict (avoids random seed mismatch)
+                from engine.player_card import PlayerCard
                 rp = app.storage.user.get(pool_key, [])
-                picked = []
-                for entry in rp:
-                    if entry["name"] in dn:
-                        # Re-generate card matching this entry (best effort)
-                        card = fa_by_name.get(entry["name"])
-                        if card is None:
-                            # Manually recreate from stored data
-                            from engine.wvl_free_agency import FreeAgent
-                            from engine.wvl_free_agency import generate_synthetic_fa_pool as gsp
-                            # Can't recover original card exactly; regenerate using same name
-                            pass
-                        if card:
-                            picked.append(card)
-
-                # If we couldn't recover cards, regenerate and just pick by index
-                if not picked:
-                    from engine.wvl_free_agency import generate_synthetic_fa_pool as gsp
-                    fresh = gsp(60, random.Random())
-                    name_set = set(dn)
-                    for fa in fresh:
-                        if fa.player_card.full_name in name_set:
-                            picked.append(fa.player_card)
-                            if len(picked) >= len(dn):
-                                break
+                picked = [
+                    PlayerCard.from_dict(e["card_dict"])
+                    for e in rp
+                    if e["name"] in dn and "card_dict" in e
+                ]
 
                 d._team_rosters[d.owner.club_key] = picked
                 _set_dynasty(d)
