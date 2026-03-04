@@ -335,8 +335,8 @@ def _render_draft(container, dynasty):
             rows.append({**p, "action": "drafted" if is_drafted else "draft"})
 
         tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full mt-3").props(
-            "dense flat bordered virtual-scroll"
-        ).style("max-height: 450px;")
+            "dense flat bordered"
+        ).style("max-height: 450px; overflow-y: auto;")
 
         tbl.add_slot("body-cell-ovr", r'''
             <q-td :props="props">
@@ -353,7 +353,7 @@ def _render_draft(container, dynasty):
             <q-td :props="props">
                 <q-btn v-if="props.row.action === 'draft'"
                        flat dense size="sm" color="green" icon="add" label="Draft"
-                       @click="$parent.$emit('draft_player', props.row)" />
+                       @click="$parent.$emit('draft_player', {name: props.row.name})" />
                 <q-badge v-else color="indigo" label="Drafted" />
             </q-td>
         ''')
@@ -362,8 +362,11 @@ def _render_draft(container, dynasty):
             dn = app.storage.user.get("_wvl_drafted", [])
             drafted_label.set_text(f"Drafted: {len(dn)} / 30")
 
-        def _on_draft(e):
+        async def _on_draft(e):
             player_name = _extract_args(e).get("name", "")
+            if not player_name:
+                ui.notify("Draft event received no player name.", type="warning")
+                return
             dn = app.storage.user.get("_wvl_drafted", [])
             if player_name in dn or len(dn) >= 30:
                 return
@@ -867,8 +870,8 @@ def _render_roster_table(roster, dynasty):
         })
 
     tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props(
-        "dense flat bordered virtual-scroll"
-    ).style("max-height: 500px;")
+        "dense flat bordered"
+    ).style("max-height: 500px; overflow-y: auto;")
 
     tbl.add_slot("body-cell-ovr", r'''
         <q-td :props="props">
@@ -885,9 +888,9 @@ def _render_roster_table(roster, dynasty):
     tbl.add_slot("body-cell-action", r'''
         <q-td :props="props">
             <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
-                   @click="$parent.$emit('edit_player', props.row)" class="q-mr-xs" />
+                   @click="$parent.$emit('edit_player', {name: props.row.name})" class="q-mr-xs" />
             <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
-                   @click="$parent.$emit('cut_player', props.row)" />
+                   @click="$parent.$emit('cut_player', {name: props.row.name})" />
         </q-td>
     ''')
 
@@ -896,6 +899,9 @@ def _render_roster_table(roster, dynasty):
         if not d:
             return
         name = _extract_args(e).get("name", "")
+        if not name:
+            ui.notify("Cut event received no player name.", type="warning")
+            return
         success, msg = d.cut_player(name)
         if success:
             _set_dynasty(d)
@@ -910,6 +916,9 @@ def _render_roster_table(roster, dynasty):
 
     def _on_edit(e):
         player_name = _extract_args(e).get("name", "")
+        if not player_name:
+            ui.notify("Edit event received no player name.", type="warning")
+            return
         _open_edit_player_dialog(player_name, dynasty, dynasty.owner.club_key)
 
     tbl.on("edit_player", _on_edit)
@@ -952,8 +961,8 @@ def _render_free_agents(dynasty):
         })
 
     tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props(
-        "dense flat bordered virtual-scroll"
-    ).style("max-height: 400px;")
+        "dense flat bordered"
+    ).style("max-height: 400px; overflow-y: auto;")
 
     tbl.add_slot("body-cell-ovr", r'''
         <q-td :props="props">
@@ -970,7 +979,7 @@ def _render_free_agents(dynasty):
     tbl.add_slot("body-cell-action", r'''
         <q-td :props="props">
             <q-btn flat dense size="sm" color="green" icon="person_add" label="Sign"
-                   @click="$parent.$emit('sign_player', props.row)" />
+                   @click="$parent.$emit('sign_player', {name: props.row.name, asking_salary: props.row.asking_salary})" />
         </q-td>
     ''')
 
@@ -980,6 +989,9 @@ def _render_free_agents(dynasty):
             return
         args = _extract_args(e)
         name = args.get("name", "")
+        if not name:
+            ui.notify("Sign event received no player name.", type="warning")
+            return
         salary = args.get("asking_salary", 1)
         if isinstance(salary, str) and salary.startswith("Tier "):
             try:
