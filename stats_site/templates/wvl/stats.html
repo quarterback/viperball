@@ -68,7 +68,7 @@
     {% for p in cat_data[:25] %}
     <tr>
       <td class="num rank">{{ loop.index }}</td>
-      <td>{{ p.get('name', '?') }}</td>
+      <td><a href="/stats/wvl/{{ session_id }}/player/{{ p.get('team_key', '') }}/{{ p.get('name', '?') }}">{{ p.get('name', '?') }}</a></td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ p.get('team_key', '') }}">{{ p.get('team', p.get('team_key', '?')) }}</a></td>
       <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
       <td class="num">{{ p.get('games', 0) }}</td>

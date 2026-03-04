@@ -466,6 +466,61 @@ def compute_financials(
 
 
 # ═══════════════════════════════════════════════════════════════
+# INVESTMENT MODIFIERS (in-season dice roll bonuses)
+# ═══════════════════════════════════════════════════════════════
+
+def compute_investment_modifier(allocation: InvestmentAllocation, budget: float) -> float:
+    """Return a small additive team-strength bonus (0–4 points on 0–100 scale).
+
+    Used to inject in-season effects from investment spending into fast_sim
+    without requiring attribute changes.  Specifically:
+      - training  → offensive output (speed/agility)
+      - coaching  → overall consistency
+      - science   → marginal stamina / resilience
+    """
+    budget_scale = min(2.0, budget / 10.0)
+    training_bonus = allocation.training * budget_scale * 2.0
+    coaching_bonus = allocation.coaching * budget_scale * 1.5
+    science_bonus  = allocation.science  * budget_scale * 1.0
+    return min(4.0, training_bonus + coaching_bonus + science_bonus)
+
+
+def generate_ai_investment(prestige: int, rng: Optional[random.Random] = None) -> InvestmentAllocation:
+    """Generate a plausible investment allocation for an AI team based on prestige."""
+    if rng is None:
+        rng = random.Random()
+    # Add slight randomness so teams aren't identical
+    noise = lambda: rng.uniform(-0.03, 0.03)
+    if prestige >= 75:
+        return InvestmentAllocation(
+            training=max(0, 0.30 + noise()),
+            coaching=max(0, 0.25 + noise()),
+            stadium=max(0, 0.15 + noise()),
+            youth=max(0, 0.10 + noise()),
+            science=max(0, 0.15 + noise()),
+            marketing=max(0, 0.05 + noise()),
+        )
+    elif prestige >= 50:
+        return InvestmentAllocation(
+            training=max(0, 0.25 + noise()),
+            coaching=max(0, 0.20 + noise()),
+            stadium=max(0, 0.15 + noise()),
+            youth=max(0, 0.20 + noise()),
+            science=max(0, 0.10 + noise()),
+            marketing=max(0, 0.10 + noise()),
+        )
+    else:
+        return InvestmentAllocation(
+            training=max(0, 0.20 + noise()),
+            coaching=max(0, 0.15 + noise()),
+            stadium=max(0, 0.10 + noise()),
+            youth=max(0, 0.30 + noise()),
+            science=max(0, 0.10 + noise()),
+            marketing=max(0, 0.15 + noise()),
+        )
+
+
+# ═══════════════════════════════════════════════════════════════
 # AI PRESIDENT DECISIONS
 # ═══════════════════════════════════════════════════════════════
 
