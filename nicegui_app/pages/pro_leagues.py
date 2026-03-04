@@ -1627,29 +1627,27 @@ def _render_quarterly_scoring(box: dict):
     away_total = int(box.get("away_score", 0))
     home_total = int(box.get("home_score", 0))
 
-    with ui.element("div").classes("w-full overflow-x-auto mb-4"):
-        with ui.element("table").classes("w-full").style(
-            "border-collapse: collapse; font-size: 13px; max-width: 540px;"
-        ):
-            with ui.element("thead"):
-                with ui.element("tr").style("background: #1e293b; color: #94a3b8;"):
-                    for label in ["Team", "Q1", "Q2", "Q3", "Q4", "F"]:
-                        ui.element("th").classes("py-1 px-3 text-center font-semibold").set_content(label)
-            with ui.element("tbody"):
-                for side_name, q_dict, total, won in [
-                    (box["away_name"], away_q, away_total, away_total > home_total),
-                    (box["home_name"], home_q, home_total, home_total > away_total),
-                ]:
-                    with ui.element("tr").style("border-bottom: 1px solid #334155;"):
-                        ui.element("td").classes("py-1 px-3 text-left font-semibold text-slate-200").set_content(
-                            side_name.split()[-1]
-                        )
-                        for q in [1, 2, 3, 4]:
-                            ui.element("td").classes("py-1 px-3 text-center text-slate-300").set_content(
-                                _fmt(q_dict[q])
-                            )
-                        color = "text-white font-black" if won else "text-slate-400"
-                        ui.element("td").classes(f"py-1 px-3 text-center {color}").set_content(str(total))
+    rows_html = ""
+    for side_name, q_dict, total, won in [
+        (box["away_name"], away_q, away_total, away_total > home_total),
+        (box["home_name"], home_q, home_total, home_total > away_total),
+    ]:
+        color = "color:#fff;font-weight:900;" if won else "color:#94a3b8;"
+        cells = f'<td style="padding:4px 12px;text-align:left;font-weight:600;color:#e2e8f0;">{side_name.split()[-1]}</td>'
+        for q in [1, 2, 3, 4]:
+            cells += f'<td style="padding:4px 12px;text-align:center;color:#cbd5e1;">{_fmt(q_dict[q])}</td>'
+        cells += f'<td style="padding:4px 12px;text-align:center;{color}">{total}</td>'
+        rows_html += f'<tr style="border-bottom:1px solid #334155;">{cells}</tr>'
+
+    html = (
+        '<div style="width:100%;overflow-x:auto;margin-bottom:1rem;">'
+        '<table style="border-collapse:collapse;font-size:13px;max-width:540px;">'
+        '<thead><tr style="background:#1e293b;color:#94a3b8;">'
+        + "".join(f'<th style="padding:4px 12px;text-align:center;font-weight:600;">{h}</th>'
+                  for h in ["Team", "Q1", "Q2", "Q3", "Q4", "F"])
+        + f'</tr></thead><tbody>{rows_html}</tbody></table></div>'
+    )
+    ui.html(html)
 
 
 def _render_drives(box: dict):
@@ -1658,35 +1656,35 @@ def _render_drives(box: dict):
     if not drives:
         ui.label("No drive data available for this game.").classes("text-slate-500 italic text-sm mt-4")
         return
-    with ui.element("div").classes("w-full overflow-x-auto"):
-        with ui.element("table").classes("w-full").style(
-            "border-collapse: collapse; font-size: 13px;"
-        ):
-            with ui.element("thead"):
-                with ui.element("tr").style("background: #f1f5f9; border-bottom: 2px solid #cbd5e1;"):
-                    for col in ["#", "Team", "Start", "Plays", "Yards", "Result"]:
-                        ui.element("th").classes("py-2 px-3 text-center font-semibold text-slate-600").set_content(col)
-            with ui.element("tbody"):
-                for i, drive in enumerate(drives):
-                    bg = "background: #f8fafc;" if i % 2 == 0 else ""
-                    result_str = str(drive.get("result", drive.get("outcome", "—"))).replace("_", " ").title()
-                    is_score = any(kw in result_str.lower() for kw in ("touchdown", "td", "field goal", "kick"))
-                    with ui.element("tr").style(f"{bg} border-bottom: 1px solid #e2e8f0;"):
-                        ui.element("td").classes("py-1 px-3 text-center text-slate-500").set_content(str(i + 1))
-                        ui.element("td").classes("py-1 px-3 text-left font-medium text-slate-700").set_content(
-                            str(drive.get("team", drive.get("possession", "?")))
-                        )
-                        ui.element("td").classes("py-1 px-3 text-center text-slate-500").set_content(
-                            str(drive.get("start_pos", drive.get("start", "—")))
-                        )
-                        ui.element("td").classes("py-1 px-3 text-center text-slate-600").set_content(
-                            str(drive.get("plays", "—"))
-                        )
-                        ui.element("td").classes("py-1 px-3 text-center text-slate-600").set_content(
-                            str(drive.get("yards", "—"))
-                        )
-                        result_color = "text-green-600 font-semibold" if is_score else "text-slate-500"
-                        ui.element("td").classes(f"py-1 px-3 text-left {result_color}").set_content(result_str)
+
+    rows_html = ""
+    for i, drive in enumerate(drives):
+        bg = "background:#f8fafc;" if i % 2 == 0 else ""
+        result_str = str(drive.get("result", drive.get("outcome", "—"))).replace("_", " ").title()
+        is_score = any(kw in result_str.lower() for kw in ("touchdown", "td", "field goal", "kick"))
+        result_color = "color:#16a34a;font-weight:600;" if is_score else "color:#64748b;"
+        rows_html += (
+            f'<tr style="{bg}border-bottom:1px solid #e2e8f0;">'
+            f'<td style="padding:4px 12px;text-align:center;color:#94a3b8;">{i + 1}</td>'
+            f'<td style="padding:4px 12px;text-align:left;font-weight:500;color:#334155;">'
+            f'{drive.get("team", drive.get("possession", "?"))}</td>'
+            f'<td style="padding:4px 12px;text-align:center;color:#64748b;">'
+            f'{drive.get("start_pos", drive.get("start", "—"))}</td>'
+            f'<td style="padding:4px 12px;text-align:center;color:#475569;">{drive.get("plays", "—")}</td>'
+            f'<td style="padding:4px 12px;text-align:center;color:#475569;">{drive.get("yards", "—")}</td>'
+            f'<td style="padding:4px 12px;text-align:left;{result_color}">{result_str}</td>'
+            f'</tr>'
+        )
+
+    html = (
+        '<div style="width:100%;overflow-x:auto;">'
+        '<table style="border-collapse:collapse;font-size:13px;width:100%;">'
+        '<thead><tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">'
+        + "".join(f'<th style="padding:8px 12px;text-align:center;font-weight:600;color:#475569;">{c}</th>'
+                  for c in ["#", "Team", "Start", "Plays", "Yards", "Result"])
+        + f'</tr></thead><tbody>{rows_html}</tbody></table></div>'
+    )
+    ui.html(html)
 
 
 def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
