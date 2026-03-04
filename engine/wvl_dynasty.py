@@ -94,6 +94,9 @@ class WVLDynasty:
     investment: InvestmentAllocation = field(default_factory=InvestmentAllocation)
     investment_budget: float = 5.0  # Annual spend (millions) drawn from bankroll
 
+    # Seeded FA pool — unique per dynasty, persisted across reloads
+    dynasty_seed: int = 0  # set once in create_wvl_dynasty; seeds FA pool generation
+
     # Last completed season snapshot (plain dicts — survives serialization)
     last_season_standings: Dict[int, dict] = field(default_factory=dict)  # tier → standings
     last_season_schedule: Dict[int, list] = field(default_factory=dict)  # tier → list of week results
@@ -103,7 +106,7 @@ class WVLDynasty:
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
     _team_rosters: Dict[str, List[PlayerCard]] = field(default_factory=dict, repr=False)
-    _fa_pool: List[FreeAgent] = field(default_factory=list, repr=False)
+    _fa_pool_dicts: List[dict] = field(default_factory=list, repr=False)  # persisted via to_dict/from_dict
 
     def __post_init__(self):
         if not self.tier_assignments:
@@ -394,9 +397,26 @@ class WVLDynasty:
                     })
         summary["development"] = dev_events
 
-        # Roster cuts
-        cuts = apply_roster_cuts(self._team_rosters, limit=36)
+        # Roster cuts — collect released PlayerCard objects to add to FA pool
+        cut_cards = []
+        for team_key, roster in self._team_rosters.items():
+            if len(roster) > 36:
+                roster.sort(key=lambda c: -c.overall)
+                while len(roster) > 36:
+                    cut = roster.pop()
+                    cut.pro_status = "free_agent"
+                    cut_cards.append(cut)
+        cuts = [{"player_name": c.full_name, "team_key": "auto", "overall": c.overall} for c in cut_cards]
         summary["roster_cuts"] = cuts
+        # Add cut players to the persistent FA pool
+        self._ensure_fa_pool()
+        for card in cut_cards:
+            salary = max(1, min(5, card.overall // 20))
+            self._fa_pool_dicts.append({
+                "card_dict": card.to_dict(),
+                "asking_salary": salary,
+                "source": "cut",
+            })
 
         # 6. Financials (for owner's team)
         owner_tier = self.tier_assignments.get(self.owner.club_key, 2)
@@ -489,31 +509,42 @@ class WVLDynasty:
 
     def cut_player(self, player_name: str):
         roster = self._team_rosters.get(self.owner.club_key, [])
-        if len(roster) <= 30:
-            return False, "Cannot cut player: roster is at minimum size (30)."
+        if len(roster) <= 15:
+            return False, "Cannot cut player: roster is at minimum size (15)."
         for i, card in enumerate(roster):
             if card.full_name == player_name:
                 roster.pop(i)
                 card.pro_status = "free_agent"
+                salary = max(1, min(5, card.overall // 20))
+                self._fa_pool_dicts.insert(0, {
+                    "card_dict": card.to_dict(),
+                    "asking_salary": salary,
+                    "source": "cut",
+                })
                 return True, f"{player_name} has been released."
         return False, f"Player '{player_name}' not found on roster."
 
-    def sign_free_agent(self, player_card: PlayerCard, salary_tier: int):
+    def sign_free_agent(self, player_name: str, salary_tier: int):
+        """Sign a free agent by name from the FA pool."""
         roster = self._team_rosters.get(self.owner.club_key, [])
         if len(roster) >= 40:
             return False, "Cannot sign player: roster is at maximum size (40)."
-        player_card.pro_team = self.owner.club_key
-        player_card.pro_status = "active"
-        player_card.contract_years = 3
-        player_card.contract_salary = salary_tier
-        if self.owner.club_key not in self._team_rosters:
-            self._team_rosters[self.owner.club_key] = []
-        self._team_rosters[self.owner.club_key].append(player_card)
-        for fa in list(self._fa_pool):
-            if fa.player_card is player_card or fa.player_card.full_name == player_card.full_name:
-                self._fa_pool.remove(fa)
-                break
-        return True, f"{player_card.full_name} signed for salary tier {salary_tier}."
+        self._ensure_fa_pool()
+        entry = next(
+            (e for e in self._fa_pool_dicts
+             if PlayerCard.from_dict(e["card_dict"]).full_name == player_name),
+            None,
+        )
+        if not entry:
+            return False, f"{player_name} not found in free agency."
+        card = PlayerCard.from_dict(entry["card_dict"])
+        card.pro_team = self.owner.club_key
+        card.pro_status = "active"
+        card.contract_years = 3
+        card.contract_salary = salary_tier
+        self._team_rosters.setdefault(self.owner.club_key, []).append(card)
+        self._fa_pool_dicts.remove(entry)
+        return True, f"{card.full_name} signed for salary tier {salary_tier}."
 
     def get_owner_team_summary(self) -> dict:
         club = CLUBS_BY_KEY.get(self.owner.club_key)
@@ -553,22 +584,40 @@ class WVLDynasty:
             "bankroll": self.owner.bankroll,
         }
 
-    def get_available_free_agents(self, count: int = 20) -> List[dict]:
-        if not self._fa_pool:
-            self._fa_pool = generate_synthetic_fa_pool(count, random.Random())
+    def _ensure_fa_pool(self):
+        """Lazily generate the FA pool from dynasty_seed (unique per dynasty)."""
+        if not self._fa_pool_dicts:
+            seed = self.dynasty_seed if self.dynasty_seed else random.randint(1, 999_999)
+            rng = random.Random(seed)
+            fa_list = generate_synthetic_fa_pool(70, rng)
+            self._fa_pool_dicts = [
+                {
+                    "card_dict": fa.player_card.to_dict(),
+                    "asking_salary": fa.asking_salary,
+                    "source": "synthetic",
+                }
+                for fa in fa_list
+            ]
+
+    def get_available_free_agents(self, count: int = 25) -> List[dict]:
+        self._ensure_fa_pool()
         result = []
-        for fa in self._fa_pool[:count]:
-            card = fa.player_card
-            result.append({
-                "name": card.full_name,
-                "position": card.position,
-                "age": card.age,
-                "overall": card.overall,
-                "speed": card.speed,
-                "kicking": card.kicking,
-                "archetype": card.archetype,
-                "asking_salary": fa.asking_salary,
-            })
+        for entry in self._fa_pool_dicts[:count]:
+            try:
+                card = PlayerCard.from_dict(entry["card_dict"])
+                result.append({
+                    "name": card.full_name,
+                    "position": card.position,
+                    "age": card.age,
+                    "overall": card.overall,
+                    "speed": card.speed,
+                    "kicking": card.kicking,
+                    "archetype": card.archetype,
+                    "asking_salary": entry.get("asking_salary", 1),
+                    "_idx": id(entry),
+                })
+            except Exception:
+                pass
         return result
 
     # ═══════════════════════════════════════════════════════════════
@@ -592,6 +641,7 @@ class WVLDynasty:
             "last_season_champions": {str(k): v for k, v in self.last_season_champions.items()},
             "last_season_owner_results": self.last_season_owner_results,
             "investment_budget": self.investment_budget,
+            "dynasty_seed": self.dynasty_seed,
         }
         if self.president:
             data["president"] = self.president.to_dict()
@@ -601,6 +651,9 @@ class WVLDynasty:
         owner_roster = self._team_rosters.get(self.owner.club_key, [])
         if owner_roster:
             data["owner_roster"] = [c.to_dict() for c in owner_roster]
+        # Persist FA pool (unique per dynasty, includes cut players)
+        if self._fa_pool_dicts:
+            data["fa_pool"] = list(self._fa_pool_dicts)
         return data
 
     @classmethod
@@ -644,6 +697,10 @@ class WVLDynasty:
         if "investment" in data:
             dynasty.investment = InvestmentAllocation.from_dict(data["investment"])
         dynasty.investment_budget = float(data.get("investment_budget", 5.0))
+        dynasty.dynasty_seed = int(data.get("dynasty_seed", 0))
+
+        # Restore FA pool (includes cut players; regenerated from seed if missing)
+        dynasty._fa_pool_dicts = list(data.get("fa_pool", []))
 
         # Restore owner's persisted roster (from draft or edits)
         for card_dict in data.get("owner_roster", []):
@@ -701,6 +758,7 @@ def create_wvl_dynasty(
         dynasty_name=dynasty_name,
         owner=owner,
         current_year=starting_year,
+        dynasty_seed=random.randint(1, 999_999),
     )
 
     return dynasty

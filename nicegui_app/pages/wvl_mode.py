@@ -60,6 +60,18 @@ def _set_phase(phase: str):
     app.storage.user[_WVL_PHASE_KEY] = phase
 
 
+def _extract_args(e) -> dict:
+    """Safely extract row dict from NiceGUI table slot event args.
+
+    NiceGUI 2.x may deliver $parent.$emit('event', row) args as either
+    the dict directly OR as a single-element list wrapping the dict.
+    """
+    args = e.args
+    if isinstance(args, list):
+        args = args[0] if args else {}
+    return args if isinstance(args, dict) else {}
+
+
 def _register_wvl_season(dynasty, season, year=None):
     try:
         from api.main import wvl_sessions
@@ -351,7 +363,7 @@ def _render_draft(container, dynasty):
             drafted_label.set_text(f"Drafted: {len(dn)} / 30")
 
         def _on_draft(e):
-            player_name = e.args.get("name", "")
+            player_name = _extract_args(e).get("name", "")
             dn = app.storage.user.get("_wvl_drafted", [])
             if player_name in dn or len(dn) >= 30:
                 return
@@ -883,7 +895,7 @@ def _render_roster_table(roster, dynasty):
         d = _get_dynasty()
         if not d:
             return
-        name = e.args.get("name", "")
+        name = _extract_args(e).get("name", "")
         success, msg = d.cut_player(name)
         if success:
             _set_dynasty(d)
@@ -897,7 +909,7 @@ def _render_roster_table(roster, dynasty):
     tbl.on("cut_player", _on_cut)
 
     def _on_edit(e):
-        player_name = e.args.get("name", "")
+        player_name = _extract_args(e).get("name", "")
         _open_edit_player_dialog(player_name, dynasty, dynasty.owner.club_key)
 
     tbl.on("edit_player", _on_edit)
@@ -966,17 +978,15 @@ def _render_free_agents(dynasty):
         d = _get_dynasty()
         if not d:
             return
-        name = e.args.get("name", "")
-        fa_pool = getattr(d, '_fa_pool', [])
-        target = None
-        for fa in fa_pool:
-            if fa.player_card.full_name == name:
-                target = fa
-                break
-        if not target:
-            ui.notify("Player not found in FA pool.", type="warning")
-            return
-        success, msg = d.sign_free_agent(target.player_card, target.asking_salary)
+        args = _extract_args(e)
+        name = args.get("name", "")
+        salary = args.get("asking_salary", 1)
+        if isinstance(salary, str) and salary.startswith("Tier "):
+            try:
+                salary = int(salary.replace("Tier ", ""))
+            except ValueError:
+                salary = 1
+        success, msg = d.sign_free_agent(name, int(salary))
         if success:
             _set_dynasty(d)
             ui.notify(msg, type="positive")
@@ -1054,12 +1064,15 @@ def _fill_schedule(containers, dynasty):
                                 mk = game.get("matchup_key", "")
                                 if mk:
                                     def _show_box(t=owner_tier, w=wk, m=mk):
-                                        from nicegui_app.pages.pro_leagues import _show_box_score_dialog
-                                        box = season.get_box_score(t, w, m)
-                                        if box:
-                                            _show_box_score_dialog(box)
-                                        else:
-                                            ui.notify("Box score not available.", type="warning")
+                                        try:
+                                            from nicegui_app.pages.pro_leagues import _show_box_score_dialog
+                                            box = season.get_box_score(t, w, m)
+                                            if box:
+                                                _show_box_score_dialog(box)
+                                            else:
+                                                ui.notify("Box score not available.", type="warning")
+                                        except Exception as ex:
+                                            ui.notify(f"Box score error: {ex}", type="negative")
 
                                     ui.button("Box Score", icon="assessment", on_click=_show_box).props(
                                         "flat dense no-caps size=sm color=indigo"
@@ -1793,7 +1806,13 @@ def _offseason_step_import(dynasty, data):
 
         from engine.wvl_free_agency import build_free_agent_pool_from_data
         new_fas = build_free_agent_pool_from_data(players)
-        d._fa_pool.extend(new_fas)
+        d._ensure_fa_pool()
+        for fa in new_fas:
+            d._fa_pool_dicts.append({
+                "card_dict": fa.player_card.to_dict(),
+                "asking_salary": fa.asking_salary,
+                "source": "import",
+            })
         for fa in new_fas:
             roster = d._team_rosters.get(d.owner.club_key, [])
             if len(roster) < 40:
