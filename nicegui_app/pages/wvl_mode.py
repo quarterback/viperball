@@ -837,21 +837,6 @@ def _render_roster_table(roster, dynasty):
         ui.label("No roster data available. Start a season first.").classes("text-sm text-slate-400 italic")
         return
 
-    columns = [
-        {"name": "num", "label": "#", "field": "number", "align": "center"},
-        {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
-        {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
-        {"name": "age", "label": "Age", "field": "age", "align": "center", "sortable": True},
-        {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
-        {"name": "spd", "label": "SPD", "field": "speed", "align": "center", "sortable": True},
-        {"name": "kick", "label": "KICK", "field": "kicking", "align": "center", "sortable": True},
-        {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center", "sortable": True},
-        {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center", "sortable": True},
-        {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
-        {"name": "dev", "label": "Dev", "field": "development", "align": "center"},
-        {"name": "action", "label": "", "field": "action", "align": "center"},
-    ]
-
     rows = []
     for p in sorted(roster, key=lambda x: -x.get("overall", 0)):
         rows.append({
@@ -869,30 +854,19 @@ def _render_roster_table(roster, dynasty):
             "action": "cut",
         })
 
-    tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props(
-        "dense flat bordered"
-    ).style("max-height: 500px; overflow-y: auto;")
-
-    tbl.add_slot("body-cell-ovr", r'''
-        <q-td :props="props">
-            <span :style="{
-                color: parseInt(props.row.overall) >= 85 ? '#15803d' :
-                       parseInt(props.row.overall) >= 75 ? '#16a34a' :
-                       parseInt(props.row.overall) >= 65 ? '#ca8a04' :
-                       parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
-                fontWeight: '700'
-            }">{{ props.row.overall }}</span>
-        </q-td>
-    ''')
-
-    tbl.add_slot("body-cell-action", r'''
-        <q-td :props="props">
-            <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
-                   @click="$parent.$emit('edit_player', {name: props.row.name})" class="q-mr-xs" />
-            <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
-                   @click="$parent.$emit('cut_player', {name: props.row.name})" />
-        </q-td>
-    ''')
+    def _on_player_click(e):
+        from nicegui_app.pages.pro_leagues import _show_player_card as _show_pc
+        name = _extract_args(e).get("name", "")
+        if not name:
+            return
+        season = getattr(dynasty, "_current_season", None)
+        tier_num = getattr(dynasty.owner, "tier_num", 1) if dynasty.owner else 1
+        team_key = dynasty.owner.club_key if dynasty.owner else ""
+        ts = season.tier_seasons.get(tier_num) if season and hasattr(season, "tier_seasons") else None
+        if ts:
+            _show_pc(ts, team_key, name)
+        else:
+            _open_edit_player_dialog(name, dynasty, dynasty.owner.club_key)
 
     async def _on_cut(e):
         d = _get_dynasty()
@@ -912,8 +886,6 @@ def _render_roster_table(roster, dynasty):
         else:
             ui.notify(msg, type="warning")
 
-    tbl.on("cut_player", _on_cut)
-
     def _on_edit(e):
         player_name = _extract_args(e).get("name", "")
         if not player_name:
@@ -921,7 +893,96 @@ def _render_roster_table(roster, dynasty):
             return
         _open_edit_player_dialog(player_name, dynasty, dynasty.owner.club_key)
 
-    tbl.on("edit_player", _on_edit)
+    _OVR_SLOT = r'''
+        <q-td :props="props">
+            <span :style="{
+                color: parseInt(props.row.overall) >= 85 ? '#15803d' :
+                       parseInt(props.row.overall) >= 75 ? '#16a34a' :
+                       parseInt(props.row.overall) >= 65 ? '#ca8a04' :
+                       parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
+                fontWeight: '700'
+            }">{{ props.row.overall }}</span>
+        </q-td>
+    '''
+    _NAME_SLOT = '''
+        <q-td :props="props">
+            <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+               @click="$parent.$emit('player_click', props.row)">
+                {{ props.row.name }}
+            </a>
+        </q-td>
+    '''
+
+    view_toggle = ui.toggle(["Full Roster", "Depth Chart"], value="Full Roster").classes("mb-2")
+    roster_container = ui.column().classes("w-full")
+
+    def _render_view():
+        roster_container.clear()
+        with roster_container:
+            if view_toggle.value == "Depth Chart":
+                dc_positions = sorted(set(p.get("position", "") for p in roster if p.get("position")))
+                dc_cols = [
+                    {"name": "num", "label": "#", "field": "number", "align": "center"},
+                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                    {"name": "age", "label": "Age", "field": "age", "align": "center"},
+                    {"name": "ovr", "label": "OVR", "field": "overall", "align": "center"},
+                    {"name": "spd", "label": "SPD", "field": "speed", "align": "center"},
+                    {"name": "kick", "label": "KICK", "field": "kicking", "align": "center"},
+                    {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
+                    {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center"},
+                    {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
+                ]
+                for pos in dc_positions:
+                    group = sorted(
+                        [r for r in rows if r.get("position") == pos],
+                        key=lambda x: -int(x.get("overall", 0) or 0),
+                    )
+                    ui.markdown(f"**{pos}**").classes("mt-3")
+                    dc_tbl = (
+                        ui.table(columns=dc_cols, rows=group, row_key="name")
+                        .classes("w-full")
+                        .props("dense flat bordered")
+                    )
+                    dc_tbl.add_slot("body-cell-ovr", _OVR_SLOT)
+                    dc_tbl.add_slot("body-cell-name", _NAME_SLOT)
+                    dc_tbl.on("player_click", _on_player_click)
+            else:
+                full_cols = [
+                    {"name": "num", "label": "#", "field": "number", "align": "center"},
+                    {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+                    {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+                    {"name": "age", "label": "Age", "field": "age", "align": "center", "sortable": True},
+                    {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
+                    {"name": "spd", "label": "SPD", "field": "speed", "align": "center", "sortable": True},
+                    {"name": "kick", "label": "KICK", "field": "kicking", "align": "center", "sortable": True},
+                    {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center", "sortable": True},
+                    {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center", "sortable": True},
+                    {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
+                    {"name": "dev", "label": "Dev", "field": "development", "align": "center"},
+                    {"name": "action", "label": "", "field": "action", "align": "center"},
+                ]
+                tbl = (
+                    ui.table(columns=full_cols, rows=rows, row_key="name")
+                    .classes("w-full")
+                    .props("dense flat bordered")
+                    .style("max-height: 500px; overflow-y: auto;")
+                )
+                tbl.add_slot("body-cell-ovr", _OVR_SLOT)
+                tbl.add_slot("body-cell-name", _NAME_SLOT)
+                tbl.add_slot("body-cell-action", r'''
+                    <q-td :props="props">
+                        <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
+                               @click="$parent.$emit('edit_player', {name: props.row.name})" class="q-mr-xs" />
+                        <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
+                               @click="$parent.$emit('cut_player', {name: props.row.name})" />
+                    </q-td>
+                ''')
+                tbl.on("player_click", _on_player_click)
+                tbl.on("cut_player", _on_cut)
+                tbl.on("edit_player", _on_edit)
+
+    view_toggle.on("update:model-value", lambda: _render_view())
+    _render_view()
 
 
 def _render_free_agents(dynasty):
