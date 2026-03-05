@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from engine.pro_league import ProLeagueConfig, ProLeagueSeason, ProTeamRecord
+from engine.injuries import InjuryTracker
 from engine.game_engine import load_team_from_json
 from engine.wvl_config import (
     ALL_WVL_TIERS, TIER_BY_NUMBER, WVLTierConfig, CLUBS_BY_KEY,
@@ -121,6 +122,10 @@ class WVLMultiTierSeason:
 
                 season._init_standings()
                 season._generate_schedule()
+                # Attach an injury tracker for this tier
+                tracker = InjuryTracker()
+                tracker.seed(random.randint(1, 999_999))
+                season.injury_tracker = tracker
                 self.tier_seasons[tier_config.tier_number] = season
             except Exception:
                 pass

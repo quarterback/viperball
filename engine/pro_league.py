@@ -379,6 +379,7 @@ class ProLeagueSeason:
         self.playoff_bracket: List[dict] = []
         self.playoff_round: int = 0
         self.champion: Optional[str] = None
+        self.injury_tracker = None  # Optional InjuryTracker; set externally
 
         self._load_teams()
         self._init_standings()
@@ -496,14 +497,33 @@ class ProLeagueSeason:
             return {"error": "All regular season weeks completed"}
 
         week_idx = self.current_week
+        week_num = week_idx + 1
         week_matchups = self.schedule[week_idx]
         week_results = []
+
+        # Process injuries: resolve recoveries then roll new injuries for this week
+        if self.injury_tracker is not None:
+            self.injury_tracker.resolve_week(week_num)
+            name_teams = {team.name: team for team in self.teams.values()}
+            name_standings = {
+                self.teams[k].name: v
+                for k, v in self.standings.items()
+                if k in self.teams
+            }
+            self.injury_tracker.process_week(week_num, name_teams, name_standings)
 
         for matchup in week_matchups:
             home = self.teams.get(matchup.home_key)
             away = self.teams.get(matchup.away_key)
             if not home or not away:
                 continue
+
+            # Build unavailable sets from injury tracker
+            unavail_home: set = set()
+            unavail_away: set = set()
+            if self.injury_tracker is not None:
+                unavail_home = self.injury_tracker.get_unavailable_names(home.name, week_num)
+                unavail_away = self.injury_tracker.get_unavailable_names(away.name, week_num)
 
             weather_key = generate_game_weather()
             weather_label = weather_key.replace("_", " ").title() if weather_key else "Clear"
@@ -516,12 +536,15 @@ class ProLeagueSeason:
                     weather=weather_key,
                     weather_label=weather_label,
                     weather_description=weather_desc,
+                    unavailable_home=unavail_home,
+                    unavailable_away=unavail_away,
                 )
             else:
                 engine = ViperballEngine(
                     home, away,
                     seed=random.randint(1, 1_000_000),
                     weather=weather_key,
+                    injury_tracker=self.injury_tracker,
                 )
                 result = engine.simulate_game()
 
