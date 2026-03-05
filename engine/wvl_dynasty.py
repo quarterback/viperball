@@ -23,10 +23,12 @@ from engine.wvl_config import (
     ALL_CLUBS, CLUBS_BY_KEY, get_default_tier_assignments,
 )
 from engine.wvl_owner import (
-    ClubOwner, TeamPresident, InvestmentAllocation, ClubFinancials,
-    OWNER_ARCHETYPES, generate_president_pool, apply_investment_boosts,
+    ClubOwner, TeamPresident, InvestmentAllocation, ClubFinancials, ClubLoan,
+    OWNER_ARCHETYPES, AI_OWNER_PROFILES, generate_president_pool, apply_investment_boosts,
     compute_financials, president_set_team_style,
     compute_investment_modifier, generate_ai_investment,
+    assign_ai_owner_profile, starting_fanbase, compute_fanbase_update,
+    compute_loan_payment, _BROADCAST_REVENUE, _TIER_STARTING_FANBASE,
 )
 from engine.wvl_free_agency import (
     FreeAgent, FreeAgencyResult, run_free_agency, process_retirements,
@@ -107,10 +109,26 @@ class WVLDynasty:
     # First name in each list is the designated starter for that position.
     depth_chart: Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
 
+    # ── Economic simulation state ────────────────────────────────
+    # Fanbase: persistent metric driving ticket/sponsorship/merch revenue
+    fanbase: float = 0.0
+
+    # Infrastructure levels (0.0–10.0) per investment category
+    # Grow from sustained annual spending; depreciate slightly without investment
+    infrastructure: Dict[str, float] = field(default_factory=dict)
+
+    # AI owner personality for every club (team_key → AI_OWNER_PROFILES key)
+    ai_team_owners: Dict[str, str] = field(default_factory=dict)
+
+    # Active loans: list of ClubLoan.to_dict() entries
+    loans: List[dict] = field(default_factory=list)
+
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
     _team_rosters: Dict[str, List[PlayerCard]] = field(default_factory=dict, repr=False)
     _fa_pool_dicts: List[dict] = field(default_factory=list, repr=False)  # persisted via to_dict/from_dict
+
+    _INFRA_KEYS = ("training", "coaching", "stadium", "youth", "science", "marketing")
 
     def __post_init__(self):
         if not self.tier_assignments:
@@ -122,6 +140,10 @@ class WVLDynasty:
                     team_key=club.key,
                     team_name=club.name,
                 )
+        # Ensure infrastructure always has all six keys (baseline 1.0)
+        for key in self._INFRA_KEYS:
+            if key not in self.infrastructure:
+                self.infrastructure[key] = 1.0
 
     def _load_rosters_from_season(self, season: "WVLMultiTierSeason"):
         """Populate _team_rosters from the live season's Team objects."""
@@ -366,7 +388,16 @@ class WVLDynasty:
                 prestige=prestige,
             )
             team_attractiveness[team_key] = attractiveness
-            team_budgets[team_key] = max(3, min(15, int(prestige / 8)))
+
+            # AI team budgets: use AI owner profile spending_ratio × estimated revenue
+            if team_key == self.owner.club_key:
+                team_budgets[team_key] = max(3, min(15, int(prestige / 8)))
+            else:
+                ai_profile_key = self.ai_team_owners.get(team_key, "balanced")
+                ai_profile = AI_OWNER_PROFILES.get(ai_profile_key, AI_OWNER_PROFILES["balanced"])
+                est_revenue = _BROADCAST_REVENUE.get(tier, 3.0) + float(tier) * 2.0
+                ai_budget = min(20.0, max(2.0, est_revenue * ai_profile["spending_ratio"] * 0.3))
+                team_budgets[team_key] = ai_budget
 
         fa_result = run_free_agency(
             pool=fa_pool,
@@ -389,6 +420,7 @@ class WVLDynasty:
             investment_budget=effective_budget,
             owner_archetype=self.owner.archetype,
             rng=rng,
+            infrastructure=self.infrastructure,
         )
         summary["investment_boosts"] = boosts
 
@@ -408,6 +440,15 @@ class WVLDynasty:
                 owner_archetype="patient_builder",
                 rng=rng,
             )
+
+        # 4c. Accumulate infrastructure levels from this season's spending
+        for key in self._INFRA_KEYS:
+            fraction = getattr(self.investment, key, 0.0)
+            budget_spent = effective_budget * fraction
+            gain = min(0.5, budget_spent / 10.0)
+            depreciation = 0.05
+            current = self.infrastructure.get(key, 1.0)
+            self.infrastructure[key] = max(1.0, min(10.0, current + gain - depreciation))
 
         # 5. Pro development (age-based) for all teams
         dev_events = []
@@ -444,12 +485,25 @@ class WVLDynasty:
                 "source": "cut",
             })
 
+        # 5b. Fanbase update — record before value, then compute new
+        owner_pre_promo_tier = self.tier_assignments.get(self.owner.club_key, 2)
+        is_promoted = any(
+            m.team_key == self.owner.club_key and m.to_tier < m.from_tier
+            for m in prom_rel.movements
+        )
+        is_relegated = any(
+            m.team_key == self.owner.club_key and m.to_tier > m.from_tier
+            for m in prom_rel.movements
+        )
+
         # 6. Financials (for owner's team)
         owner_tier = self.tier_assignments.get(self.owner.club_key, 2)
         # Get owner's team record from season
         owner_wins, owner_losses = 0, 0
         playoff_result = "none"
-        tier_season = season.tier_seasons.get(owner_tier)
+        # Use the tier from before promotion/relegation for win records
+        pre_tier = owner_pre_promo_tier
+        tier_season = season.tier_seasons.get(pre_tier)
         if tier_season:
             for rec in tier_season.standings.values():
                 if rec.team_key == self.owner.club_key:
@@ -459,22 +513,69 @@ class WVLDynasty:
             if tier_season.champion == self.owner.club_key:
                 playoff_result = "champion"
 
+        # Process loan payments before computing financials
+        total_loan_payment = 0.0
+        surviving_loans = []
+        for loan_dict in self.loans:
+            loan = ClubLoan.from_dict(loan_dict)
+            self.owner.bankroll -= loan.annual_payment
+            total_loan_payment += loan.annual_payment
+            loan.years_remaining -= 1
+            if loan.years_remaining > 0:
+                surviving_loans.append(loan.to_dict())
+        self.loans = surviving_loans
+
         if self.president:
             financials = compute_financials(
                 year=year,
-                tier=owner_tier,
+                tier=pre_tier,
                 wins=owner_wins,
                 losses=owner_losses,
                 playoff_result=playoff_result,
                 roster=owner_roster,
                 president=self.president,
                 investment=self.investment,
-                investment_budget=investment_budget,
+                investment_budget=effective_budget,
                 bankroll_start=self.owner.bankroll,
+                fanbase=self.fanbase,
+                loan_payments=total_loan_payment,
             )
             self.owner.bankroll = financials.bankroll_end
-            self.financial_history[year] = financials.to_dict()
-            summary["financials"] = financials.to_dict()
+            fin_dict = financials.to_dict()
+            # Inject revenue/expense breakdowns for UI consumption
+            fin_dict["revenue_breakdown"] = {
+                "Ticket Sales":    financials.ticket_revenue,
+                "Broadcasting":    financials.broadcast_revenue,
+                "Sponsorship":     financials.sponsorship_revenue,
+                "Merchandise":     financials.merchandise_revenue,
+                "Prize Money":     financials.prize_money,
+            }
+            fin_dict["expense_breakdown"] = {
+                "Roster Wages":    financials.roster_cost,
+                "President":       financials.president_cost,
+                "Operations":      financials.base_ops_cost,
+                "Investment":      financials.investment_spend,
+                "Loan Repayments": financials.loan_payments,
+            }
+            self.financial_history[year] = fin_dict
+            summary["financials"] = fin_dict
+
+        # Fanbase update (after we know wins/losses and promotion/relegation)
+        fanbase_before = int(self.fanbase)
+        self.fanbase = compute_fanbase_update(
+            fanbase=self.fanbase,
+            wins=owner_wins,
+            total_games=max(1, owner_wins + owner_losses),
+            promoted=is_promoted,
+            relegated=is_relegated,
+            marketing_fraction=self.investment.marketing,
+        )
+        fanbase_after = int(self.fanbase)
+        summary["fanbase_before"] = fanbase_before
+        summary["fanbase_after"] = fanbase_after
+        if "financials" in summary:
+            summary["financials"]["fanbase_before"] = fanbase_before
+            summary["financials"]["fanbase_after"] = fanbase_after
 
         # Update owner tracking
         self.owner.seasons_owned += 1
@@ -483,14 +584,10 @@ class WVLDynasty:
         else:
             self.owner.consecutive_bad_seasons = 0
 
-        # Check forced sale
+        # Check forced sale (bankruptcy at bankroll < -15M)
         arch = OWNER_ARCHETYPES.get(self.owner.archetype, {})
         patience = arch.get("patience_threshold", 3)
-        is_relegated = any(
-            m.team_key == self.owner.club_key and m.to_tier > m.from_tier
-            for m in prom_rel.movements
-        )
-        if self.owner.bankroll <= 0 and is_relegated:
+        if self.owner.bankroll < -15.0 and is_relegated:
             summary["forced_sale"] = True
         elif self.owner.consecutive_bad_seasons >= patience and self.owner.bankroll < 10:
             summary["pressure_mounting"] = True
@@ -610,6 +707,24 @@ class WVLDynasty:
             "bankroll": self.owner.bankroll,
         }
 
+    def take_loan(
+        self,
+        amount: float,
+        interest_rate: float = 0.08,
+        years: int = 5,
+    ) -> ClubLoan:
+        """Take a loan against future revenue. Adds amount to bankroll immediately."""
+        annual_payment = compute_loan_payment(amount, interest_rate, years)
+        loan = ClubLoan(
+            amount=amount,
+            interest_rate=interest_rate,
+            annual_payment=annual_payment,
+            years_remaining=years,
+        )
+        self.loans.append(loan.to_dict())
+        self.owner.bankroll += amount
+        return loan
+
     def _ensure_fa_pool(self):
         """Lazily generate the FA pool from dynasty_seed (unique per dynasty)."""
         if not self._fa_pool_dicts:
@@ -669,6 +784,11 @@ class WVLDynasty:
             "investment_budget": self.investment_budget,
             "dynasty_seed": self.dynasty_seed,
             "depth_chart": self.depth_chart,
+            # Economic simulation state
+            "fanbase": self.fanbase,
+            "infrastructure": self.infrastructure,
+            "ai_team_owners": self.ai_team_owners,
+            "loans": self.loans,
         }
         if self.president:
             data["president"] = self.president.to_dict()
@@ -727,6 +847,17 @@ class WVLDynasty:
         dynasty.dynasty_seed = int(data.get("dynasty_seed", 0))
         dynasty.depth_chart = data.get("depth_chart", {})
 
+        # Economic simulation state
+        dynasty.fanbase = float(data.get("fanbase", 0.0))
+        raw_infra = data.get("infrastructure", {})
+        dynasty.infrastructure = {str(k): float(v) for k, v in raw_infra.items()}
+        # Fill any missing keys with baseline
+        for key in dynasty._INFRA_KEYS:
+            if key not in dynasty.infrastructure:
+                dynasty.infrastructure[key] = 1.0
+        dynasty.ai_team_owners = data.get("ai_team_owners", {})
+        dynasty.loans = list(data.get("loans", []))
+
         # Restore FA pool (includes cut players; regenerated from seed if missing)
         dynasty._fa_pool_dicts = list(data.get("fa_pool", []))
 
@@ -782,11 +913,26 @@ def create_wvl_dynasty(
         bankroll=float(arch["starting_bankroll"]),
     )
 
+    rng = random.Random(random.randint(1, 999_999))
+
     dynasty = WVLDynasty(
         dynasty_name=dynasty_name,
         owner=owner,
         current_year=starting_year,
-        dynasty_seed=random.randint(1, 999_999),
+        dynasty_seed=rng.randint(1, 999_999),
     )
+
+    # Initialize owner's fanbase from club prestige + tier
+    club = CLUBS_BY_KEY.get(club_key)
+    if club:
+        tier = dynasty.tier_assignments.get(club_key, 4)
+        dynasty.fanbase = float(starting_fanbase(tier, club.prestige))
+
+    # Infrastructure baseline is already set to 1.0 in __post_init__
+
+    # Assign AI owner profiles to all other clubs
+    for c in ALL_CLUBS:
+        if c.key != club_key:
+            dynasty.ai_team_owners[c.key] = assign_ai_owner_profile(c.prestige, rng)
 
     return dynasty

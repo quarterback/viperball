@@ -18,8 +18,9 @@ from engine.wvl_config import (
     TIER_BY_NUMBER, RIVALRIES,
 )
 from engine.wvl_owner import (
-    OWNER_ARCHETYPES, PRESIDENT_ARCHETYPES,
+    OWNER_ARCHETYPES, PRESIDENT_ARCHETYPES, AI_OWNER_PROFILES,
     generate_president_pool, InvestmentAllocation,
+    compute_final_score,
 )
 from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
 
@@ -482,6 +483,16 @@ def _render_main(container):
                     with ui.column().classes("items-center gap-0"):
                         ui.label(str(summary.get("overall_rating", 0))).classes("text-xl font-bold text-amber-300")
                         ui.label("OVR").classes("text-[10px] text-indigo-300 uppercase")
+                    with ui.column().classes("items-center gap-0"):
+                        fanbase_val = int(getattr(dynasty, "fanbase", 0))
+                        if fanbase_val >= 1_000_000:
+                            fb_str = f"{fanbase_val/1_000_000:.1f}M"
+                        elif fanbase_val >= 1_000:
+                            fb_str = f"{fanbase_val/1_000:.1f}K"
+                        else:
+                            fb_str = str(fanbase_val)
+                        ui.label(fb_str).classes("text-xl font-bold text-cyan-300")
+                        ui.label("Fanbase").classes("text-[10px] text-indigo-300 uppercase")
 
         with ui.tabs().classes("w-full mt-2") as tabs:
             tab_dash = ui.tab("Dashboard", icon="dashboard")
@@ -1785,30 +1796,189 @@ def _fill_finance(containers, dynasty):
                         )
                         ui.label(f"{pct:.0f}%").classes("text-xs text-slate-500 w-10 text-right")
 
+        # ── Fanbase Tracker ─────────────────────────────────────────
+        fanbase_val = int(getattr(dynasty, "fanbase", 0))
+        with ui.card().classes("w-full p-4 mb-2"):
+            with ui.row().classes("items-center gap-2 mb-1"):
+                ui.icon("people", size="sm").classes("text-cyan-600")
+                ui.label("Fanbase").classes("text-sm font-semibold text-slate-700")
+            with ui.row().classes("items-center gap-6 flex-wrap"):
+                with ui.column().classes("gap-0"):
+                    if fanbase_val >= 1_000:
+                        fb_display = f"{fanbase_val:,}"
+                    else:
+                        fb_display = str(fanbase_val)
+                    ui.label(fb_display).classes("text-3xl font-bold text-cyan-700")
+                    ui.label("Current Supporters").classes("text-xs text-slate-400")
+                if dynasty.financial_history:
+                    last_fin = dynasty.financial_history[max(dynasty.financial_history.keys())]
+                    fb_before = last_fin.get("fanbase_before", fanbase_val)
+                    fb_after  = last_fin.get("fanbase_after",  fanbase_val)
+                    delta = fb_after - fb_before
+                    if delta != 0 and fb_before > 0:
+                        pct = delta / fb_before * 100
+                        arrow = "arrow_upward" if delta > 0 else "arrow_downward"
+                        color = "text-green-600" if delta > 0 else "text-red-600"
+                        with ui.row().classes("items-center gap-1"):
+                            ui.icon(arrow, size="xs").classes(color)
+                            ui.label(f"{abs(delta):,} ({pct:+.1f}%) last season").classes(f"text-sm {color}")
+            ui.label("Fanbase grows with wins, promotions, and marketing investment.").classes(
+                "text-xs text-slate-400 mt-2"
+            )
+
+        # ── Revenue Breakdown (last season) ─────────────────────────
         if dynasty.financial_history:
-            with ui.card().classes("w-full p-4"):
+            last_year = max(dynasty.financial_history.keys())
+            last_fin = dynasty.financial_history[last_year]
+            rev_bk = last_fin.get("revenue_breakdown", {})
+            if rev_bk:
+                with ui.card().classes("w-full p-4 mb-2"):
+                    ui.label(f"Year {last_year} Revenue Breakdown").classes("text-sm font-semibold text-slate-700 mb-3")
+                    rev_total = sum(rev_bk.values())
+                    rev_icons = {
+                        "Ticket Sales": "confirmation_number",
+                        "Broadcasting": "broadcast_on_home",
+                        "Sponsorship": "handshake",
+                        "Merchandise": "shopping_bag",
+                        "Prize Money": "emoji_events",
+                    }
+                    for stream, val in rev_bk.items():
+                        pct_of_total = (val / rev_total * 100) if rev_total > 0 else 0
+                        with ui.row().classes("items-center gap-2 w-full mb-1"):
+                            icon_name = rev_icons.get(stream, "attach_money")
+                            ui.icon(icon_name, size="xs").classes("text-slate-400 w-4")
+                            ui.label(stream).classes("text-xs text-slate-600 w-28")
+                            ui.linear_progress(
+                                value=val / rev_total if rev_total > 0 else 0,
+                                size="10px",
+                            ).classes("flex-1").props("color=green")
+                            ui.label(f"${val:.1f}M").classes("text-xs font-semibold text-green-700 w-14 text-right")
+                            ui.label(f"({pct_of_total:.0f}%)").classes("text-xs text-slate-400 w-10")
+
+        # ── Club Infrastructure Levels ───────────────────────────────
+        infra = getattr(dynasty, "infrastructure", {})
+        if infra:
+            with ui.card().classes("w-full p-4 mb-2"):
+                ui.label("Club Infrastructure").classes("text-sm font-semibold text-slate-700 mb-1")
+                ui.label("Grows from sustained investment each season (max level 10).").classes(
+                    "text-xs text-slate-400 mb-3"
+                )
+                infra_labels = {
+                    "training": "Training",
+                    "coaching": "Coaching",
+                    "stadium": "Stadium",
+                    "youth": "Youth Academy",
+                    "science": "Sports Science",
+                    "marketing": "Marketing",
+                }
+                for key, label in infra_labels.items():
+                    level = infra.get(key, 1.0)
+                    with ui.row().classes("items-center gap-2 w-full mb-1"):
+                        ui.label(label).classes("text-xs text-slate-600 w-28")
+                        ui.linear_progress(value=level / 10.0, size="10px").classes("flex-1").props(
+                            f"color={'indigo' if level > 5 else 'blue'}"
+                        )
+                        ui.label(f"{level:.1f}").classes("text-xs font-semibold text-indigo-700 w-8 text-right")
+
+        # ── Active Loans ─────────────────────────────────────────────
+        loans = getattr(dynasty, "loans", [])
+        with ui.card().classes("w-full p-4 mb-2"):
+            ui.label("Loans & Debt").classes("text-sm font-semibold text-slate-700 mb-2")
+            if loans:
+                loan_cols = [
+                    {"name": "amount", "label": "Principal", "field": "amount", "align": "right"},
+                    {"name": "rate",   "label": "Rate",      "field": "rate",   "align": "center"},
+                    {"name": "pmt",    "label": "Annual Pmt","field": "pmt",    "align": "right"},
+                    {"name": "yrs",    "label": "Yrs Left",  "field": "yrs",    "align": "center"},
+                ]
+                loan_rows = []
+                for ld in loans:
+                    loan_rows.append({
+                        "amount": f"${ld.get('amount', 0):.1f}M",
+                        "rate":   f"{ld.get('interest_rate', 0)*100:.0f}%",
+                        "pmt":    f"${ld.get('annual_payment', 0):.2f}M/yr",
+                        "yrs":    str(ld.get("years_remaining", 0)),
+                    })
+                ui.table(columns=loan_cols, rows=loan_rows, row_key="amount").classes("w-full mb-3").props("dense flat bordered")
+            else:
+                ui.label("No active loans.").classes("text-xs text-slate-400 italic mb-2")
+
+            async def _take_loan():
+                d = _get_dynasty()
+                if not d:
+                    return
+                loan = d.take_loan(10.0, 0.08, 5)
+                _set_dynasty(d)
+                ui.notify(
+                    f"Loan taken: $10M @ 8% over 5 years. Annual payment: ${loan.annual_payment:.2f}M",
+                    type="positive",
+                )
+                refresh = app.storage.user.get("_wvl_refresh")
+                if refresh:
+                    refresh()
+
+            ui.button("Take Loan ($10M @ 8%, 5yr)", icon="account_balance", on_click=_take_loan).props(
+                "no-caps outline"
+            ).classes("text-sm")
+            if dynasty.owner.bankroll < -15:
+                ui.label("⚠ Bankruptcy risk — bankroll below -$15M!").classes("text-xs text-red-600 font-semibold mt-2")
+
+        # ── Financial History ────────────────────────────────────────
+        if dynasty.financial_history:
+            with ui.card().classes("w-full p-4 mb-2"):
                 ui.label("Financial History").classes("text-sm font-semibold text-slate-700 mb-2")
                 fh_cols = [
-                    {"name": "year", "label": "Year", "field": "year", "align": "center"},
+                    {"name": "year",    "label": "Year",    "field": "year",    "align": "center"},
                     {"name": "revenue", "label": "Revenue", "field": "revenue", "align": "right"},
-                    {"name": "expenses", "label": "Expenses", "field": "expenses", "align": "right"},
-                    {"name": "net", "label": "Net", "field": "net", "align": "right"},
-                    {"name": "bankroll", "label": "Bankroll", "field": "bankroll", "align": "right"},
+                    {"name": "expenses","label": "Expenses","field": "expenses","align": "right"},
+                    {"name": "net",     "label": "Net",     "field": "net",     "align": "right"},
+                    {"name": "fanbase", "label": "Fanbase", "field": "fanbase", "align": "right"},
+                    {"name": "bankroll","label": "Bankroll","field": "bankroll","align": "right"},
                 ]
                 fh_rows = []
                 for year in sorted(dynasty.financial_history.keys()):
                     fh = dynasty.financial_history[year]
-                    rev = fh.get("total_revenue", 0)
-                    exp = fh.get("total_expenses", 0)
+                    rev = fh.get("total_revenue", fh.get("revenue", 0))
+                    exp = fh.get("total_expenses", fh.get("expenses", 0))
                     net = rev - exp
+                    fb  = fh.get("fanbase_end", fh.get("fanbase_after", 0))
                     fh_rows.append({
-                        "year": str(year),
-                        "revenue": f"${rev:.1f}M",
+                        "year":     str(year),
+                        "revenue":  f"${rev:.1f}M",
                         "expenses": f"${exp:.1f}M",
-                        "net": f"{'+'if net>=0 else ''}{net:.1f}M",
+                        "net":      f"{'+'if net>=0 else ''}{net:.1f}M",
+                        "fanbase":  f"{fb:,}" if fb else "—",
                         "bankroll": f"${fh.get('bankroll_end', 0):.1f}M",
                     })
                 ui.table(columns=fh_cols, rows=fh_rows, row_key="year").classes("w-full").props("dense flat bordered")
+
+        # ── Scorecard ────────────────────────────────────────────────
+        score_data = compute_final_score(dynasty)
+        is_final = score_data.get("is_final", False)
+        with ui.card().classes("w-full p-4"):
+            label = "Final Score" if is_final else "Running Score"
+            ui.label(label).classes("text-sm font-semibold text-slate-700 mb-1")
+            if not is_final:
+                seasons_left = 20 - dynasty.owner.seasons_owned
+                ui.label(f"{seasons_left} season(s) remaining for final tally.").classes("text-xs text-slate-400 mb-3")
+            with ui.row().classes("items-center gap-4 flex-wrap mb-3"):
+                score_color = "text-amber-600" if is_final else "text-indigo-700"
+                ui.label(f"{score_data['total']:,}").classes(f"text-4xl font-bold {score_color}")
+                ui.label("pts").classes("text-sm text-slate-500 self-end pb-1")
+            score_items = [
+                ("emoji_events",  "League Titles",    str(score_data["league_titles"])),
+                ("leaderboard",   "Avg Tier",         str(score_data["avg_tier"])),
+                ("people",        "Fanbase",          f"{score_data['fanbase']:,}"),
+                ("business",      "Club Value",       f"${score_data['club_valuation_M']:.1f}M"),
+                ("account_balance","Bankroll",        f"${score_data['bankroll_M']:.1f}M"),
+                ("construction",  "Avg Infra Level",  str(score_data["infra_avg"])),
+            ]
+            with ui.row().classes("gap-4 flex-wrap"):
+                for icon_name, lbl, val in score_items:
+                    with ui.column().classes("items-center gap-0 min-w-[80px]"):
+                        ui.icon(icon_name, size="sm").classes("text-slate-500")
+                        ui.label(val).classes("text-sm font-bold text-slate-800")
+                        ui.label(lbl).classes("text-[10px] text-slate-400 uppercase")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -2310,6 +2480,26 @@ def _offseason_step_financials(dynasty, data):
             bcolor = "text-green-600" if bankroll > 15 else "text-amber-600" if bankroll > 5 else "text-red-600"
             ui.label(f"${bankroll:.1f}M").classes(f"text-2xl font-bold {bcolor}")
 
+    # Fanbase change row
+    fb_before = data.get("fanbase_before", fin.get("fanbase_before"))
+    fb_after  = data.get("fanbase_after",  fin.get("fanbase_after"))
+    if fb_before is not None and fb_after is not None:
+        fb_delta = fb_after - fb_before
+        fb_pct   = (fb_delta / max(1, fb_before)) * 100
+        with ui.card().classes("w-full p-3 mb-3"):
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("people", size="sm").classes("text-cyan-600")
+                ui.label("Fanbase").classes("text-sm font-semibold text-slate-700")
+            with ui.row().classes("items-center gap-3 mt-1 flex-wrap"):
+                ui.label(f"{fb_before:,}").classes("text-sm text-slate-500")
+                ui.icon("arrow_forward", size="xs").classes("text-slate-400")
+                ui.label(f"{fb_after:,}").classes("text-sm font-bold text-cyan-700")
+                arrow = "arrow_upward" if fb_delta >= 0 else "arrow_downward"
+                color = "text-green-600" if fb_delta >= 0 else "text-red-600"
+                with ui.row().classes("items-center gap-0"):
+                    ui.icon(arrow, size="xs").classes(color)
+                    ui.label(f"{abs(fb_delta):,} ({fb_pct:+.1f}%)").classes(f"text-xs {color}")
+
     rev_breakdown = fin.get("revenue_breakdown", {})
     exp_breakdown = fin.get("expense_breakdown", {})
 
@@ -2319,18 +2509,16 @@ def _offseason_step_financials(dynasty, data):
                 with ui.card().classes("flex-1 min-w-[250px] p-4"):
                     ui.label("Revenue Breakdown").classes("text-sm font-semibold text-slate-600 mb-2")
                     for key, val in rev_breakdown.items():
-                        label_text = key.replace("_", " ").title()
                         with ui.row().classes("items-center justify-between"):
-                            ui.label(label_text).classes("text-xs text-slate-500")
-                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold")
+                            ui.label(str(key)).classes("text-xs text-slate-500")
+                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold text-green-700")
             if exp_breakdown:
                 with ui.card().classes("flex-1 min-w-[250px] p-4"):
                     ui.label("Expense Breakdown").classes("text-sm font-semibold text-slate-600 mb-2")
                     for key, val in exp_breakdown.items():
-                        label_text = key.replace("_", " ").title()
                         with ui.row().classes("items-center justify-between"):
-                            ui.label(label_text).classes("text-xs text-slate-500")
-                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold")
+                            ui.label(str(key)).classes("text-xs text-slate-500")
+                            ui.label(f"${val:.1f}M" if isinstance(val, (int, float)) else str(val)).classes("text-xs font-semibold text-red-700")
 
     if data.get("forced_sale"):
         ui.separator().classes("mt-3")
