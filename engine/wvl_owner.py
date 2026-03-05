@@ -13,6 +13,7 @@ All other operations (free agency, coaching, lineups) are AI-driven.
 
 import random
 from dataclasses import dataclass, field, asdict
+from statistics import mean
 from typing import Dict, List, Optional
 
 
@@ -149,6 +150,63 @@ PRESIDENT_ARCHETYPES = {
 
 
 # ═══════════════════════════════════════════════════════════════
+# AI OWNER BEHAVIOR PROFILES
+# ═══════════════════════════════════════════════════════════════
+
+AI_OWNER_PROFILES = {
+    "aggressive": {
+        "label": "Aggressive Investor",
+        "description": "Heavy payroll spending, frequent roster turnover, risk of instability.",
+        "spending_ratio": 0.80,
+        "patience": 2,
+        "infra_weight": 0.5,
+    },
+    "balanced": {
+        "label": "Balanced Owner",
+        "description": "Moderate spend, stable finances, middling growth.",
+        "spending_ratio": 0.60,
+        "patience": 3,
+        "infra_weight": 0.6,
+    },
+    "frugal": {
+        "label": "Frugal Owner",
+        "description": "Rarely signs expensive players, large cash reserves, rarely elite.",
+        "spending_ratio": 0.40,
+        "patience": 5,
+        "infra_weight": 0.5,
+    },
+    "builder": {
+        "label": "Builder",
+        "description": "Heavy academy investment, slower rise, strong long-term performance.",
+        "spending_ratio": 0.55,
+        "patience": 5,
+        "infra_weight": 0.9,
+    },
+    "vanity": {
+        "label": "Vanity Project",
+        "description": "Extremely high payroll, debt accumulation, boom-bust cycles.",
+        "spending_ratio": 0.90,
+        "patience": 1,
+        "infra_weight": 0.3,
+    },
+}
+
+
+def assign_ai_owner_profile(prestige: int, rng: Optional[random.Random] = None) -> str:
+    """Assign an AI owner profile key based on club prestige."""
+    if rng is None:
+        rng = random.Random()
+    if prestige >= 80:
+        return rng.choice(["aggressive", "aggressive", "vanity", "balanced"])
+    elif prestige >= 60:
+        return rng.choice(["balanced", "aggressive", "balanced", "frugal"])
+    elif prestige >= 40:
+        return rng.choice(["balanced", "frugal", "builder", "frugal"])
+    else:
+        return rng.choice(["frugal", "builder", "builder", "frugal"])
+
+
+# ═══════════════════════════════════════════════════════════════
 # DATA STRUCTURES
 # ═══════════════════════════════════════════════════════════════
 
@@ -215,15 +273,44 @@ class InvestmentAllocation:
 
 
 @dataclass
+class ClubLoan:
+    """A loan taken against the club's future revenue."""
+    amount: float           # principal in millions
+    interest_rate: float    # annual rate, e.g. 0.08
+    annual_payment: float   # fixed annual repayment in millions
+    years_remaining: int
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ClubLoan":
+        return cls(**d)
+
+
+@dataclass
 class ClubFinancials:
     """Financial summary for one season."""
     year: int
     tier: int
-    revenue: float = 0.0
-    expenses: float = 0.0
+    # Revenue streams
+    total_revenue: float = 0.0
+    ticket_revenue: float = 0.0
+    broadcast_revenue: float = 0.0
+    sponsorship_revenue: float = 0.0
+    merchandise_revenue: float = 0.0
+    prize_money: float = 0.0
+    # Expenses
+    total_expenses: float = 0.0
+    roster_cost: float = 0.0
+    president_cost: float = 0.0
+    base_ops_cost: float = 0.0
     investment_spend: float = 0.0
+    loan_payments: float = 0.0
+    # Summary
     net_income: float = 0.0
     attendance_avg: int = 0
+    fanbase_end: int = 0
     bankroll_start: float = 0.0
     bankroll_end: float = 0.0
 
@@ -232,7 +319,15 @@ class ClubFinancials:
 
     @classmethod
     def from_dict(cls, d: dict) -> "ClubFinancials":
-        return cls(**d)
+        # Backward-compat: old saves used "revenue"/"expenses" keys
+        if "revenue" in d and "total_revenue" not in d:
+            d = dict(d)
+            d["total_revenue"] = d.pop("revenue")
+        if "expenses" in d and "total_expenses" not in d:
+            d = dict(d)
+            d["total_expenses"] = d.pop("expenses")
+        known = {k for k in cls.__dataclass_fields__}
+        return cls(**{k: d[k] for k in known if k in d})
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -296,13 +391,17 @@ def apply_investment_boosts(
     investment_budget: float,
     owner_archetype: str,
     rng: Optional[random.Random] = None,
+    infrastructure: Optional[Dict[str, float]] = None,
 ) -> Dict[str, int]:
     """Apply temporary annual boosts to roster based on investment allocation.
 
     Returns dict of {attr_name: total_boost_applied} for reporting.
+    infra dict (optional) scales youth academy boosts by accumulated level.
     """
     if rng is None:
         rng = random.Random()
+    if infrastructure is None:
+        infrastructure = {}
 
     arch = OWNER_ARCHETYPES.get(owner_archetype, {})
     bonus_mult = arch.get("investment_bonus", 1.0)
@@ -310,6 +409,9 @@ def apply_investment_boosts(
     # Budget effectiveness: more money = stronger boosts (diminishing returns)
     budget_factor = min(2.0, investment_budget / 10.0) * bonus_mult
     boosts_applied = {}
+
+    # Youth infra multiplier: infrastructure level 1–10 gives 1.0–2.0x
+    youth_infra_mult = 1.0 + infrastructure.get("youth", 1.0) / 10.0
 
     for card in roster:
         # Training Facilities → physical attrs
@@ -334,10 +436,10 @@ def apply_investment_boosts(
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
 
-        # Youth Academy → development speed for young players
+        # Youth Academy → development speed for young players (infra-scaled)
         if allocation.youth > 0.05 and getattr(card, "age", 30) and card.age is not None and card.age < 25:
-            boost = int(allocation.youth * budget_factor * rng.uniform(1, 4))
-            boost = max(0, min(4, boost))
+            raw_boost = allocation.youth * budget_factor * rng.uniform(1, 4) * youth_infra_mult
+            boost = max(0, min(5, int(raw_boost)))
             for attr in ["speed", "agility", "lateral_skill", "hands"]:
                 old = getattr(card, attr)
                 new = min(99, old + boost)
@@ -360,61 +462,135 @@ def apply_investment_boosts(
 
 
 # ═══════════════════════════════════════════════════════════════
-# FINANCIALS
+# FANBASE MODEL
 # ═══════════════════════════════════════════════════════════════
 
-# Revenue by tier (base, in millions)
-_TIER_BASE_REVENUE = {1: 20.0, 2: 12.0, 3: 7.0, 4: 4.0}
+# Starting fanbase by tier; prestige scales within ±50%
+_TIER_STARTING_FANBASE = {1: 60_000, 2: 28_000, 3: 12_000, 4: 5_000}
+
+# Broadcast revenue by tier (millions) — largest fixed revenue driver
+_BROADCAST_REVENUE = {1: 12.0, 2: 6.0, 3: 3.0, 4: 1.0}
 
 
-def compute_season_revenue(
+def starting_fanbase(tier: int, prestige: int) -> int:
+    """Compute a club's starting fanbase from tier and prestige (0–99)."""
+    base = _TIER_STARTING_FANBASE.get(tier, 5_000)
+    scale = 0.5 + prestige / 100.0   # 0.5× at prestige 0, 1.5× at prestige 100
+    return max(1_000, round(base * scale))
+
+
+def compute_fanbase_update(
+    fanbase: float,
+    wins: int,
+    total_games: int,
+    promoted: bool,
+    relegated: bool,
+    marketing_fraction: float,
+) -> int:
+    """Compute new fanbase after one season.
+
+    Args:
+        fanbase: Current fanbase size.
+        wins: Season wins.
+        total_games: Total games played.
+        promoted: True if team was promoted this offseason.
+        relegated: True if team was relegated this offseason.
+        marketing_fraction: InvestmentAllocation.marketing value (0.0–1.0).
+
+    Returns:
+        New fanbase (integer, minimum 1000).
+    """
+    win_rate = wins / max(1, total_games)
+
+    if win_rate > 0.55:
+        perf_delta = 0.05 * fanbase
+    elif win_rate < 0.40:
+        perf_delta = -0.03 * fanbase
+    else:
+        perf_delta = 0.0
+
+    marketing_growth = min(0.08, marketing_fraction * 2.0) * fanbase
+    promotion_bonus = 0.15 * fanbase if promoted else 0.0
+    relegation_loss = -0.20 * fanbase if relegated else 0.0
+
+    new_fanbase = fanbase + perf_delta + marketing_growth + promotion_bonus + relegation_loss
+    return max(1_000, round(new_fanbase))
+
+
+# ═══════════════════════════════════════════════════════════════
+# EXPANDED REVENUE STREAMS
+# ═══════════════════════════════════════════════════════════════
+
+_HOME_GAMES = {1: 17, 2: 19, 3: 12, 4: 12}
+_TICKET_PRICE = {1: 45, 2: 35, 3: 25, 4: 18}       # dollars per seat
+_SPONSOR_TIER_MULT = {1: 3.0, 2: 2.0, 3: 1.0, 4: 0.5}
+
+
+def compute_ticket_revenue(
+    fanbase: float,
     tier: int,
     wins: int,
-    losses: int,
-    playoff_result: str = "none",  # "none" | "made_playoffs" | "finalist" | "champion"
-    stadium_investment: float = 0.0,
-    brand_investment: float = 0.0,
+    total_games: int,
+    stadium_fraction: float = 0.0,
 ) -> float:
-    """Compute season revenue in millions."""
-    base = _TIER_BASE_REVENUE.get(tier, 5.0)
-
-    # Win bonus: ~0.3M per win
-    total_games = max(1, wins + losses)
-    win_rate = wins / total_games
-    win_bonus = win_rate * 8.0
-
-    # Playoff bonus
-    playoff_bonus = {
-        "none": 0.0,
-        "made_playoffs": 3.0,
-        "finalist": 6.0,
-        "champion": 12.0,
-    }.get(playoff_result, 0.0)
-
-    # Investment bonuses
-    stadium_bonus = stadium_investment * 4.0
-    brand_bonus = brand_investment * 3.0
-
-    return round(base + win_bonus + playoff_bonus + stadium_bonus + brand_bonus, 2)
+    """Ticket revenue driven by fanbase, performance, and stadium investment."""
+    home_games = _HOME_GAMES.get(tier, 12)
+    ticket_price = _TICKET_PRICE.get(tier, 20)
+    attendance_rate = 0.55 + (wins / max(1, total_games)) * 0.35
+    # Stadium investment expands effective capacity slightly
+    stadium_cap = fanbase * (1.0 + stadium_fraction * 0.5)
+    effective_fans = min(fanbase, stadium_cap)
+    return round(attendance_rate * effective_fans * ticket_price * home_games / 1_000_000, 2)
 
 
-def compute_season_expenses(
-    roster_salary_total: int,
-    president_salary: int,
-    investment_spend: float,
+def compute_broadcast_revenue(tier: int) -> float:
+    """Fixed broadcast rights deal by tier."""
+    return _BROADCAST_REVENUE.get(tier, 1.0)
+
+
+def compute_sponsorship_revenue(
+    fanbase: float,
+    marketing_fraction: float,
+    tier: int,
 ) -> float:
-    """Compute season expenses in millions."""
-    # Roster cost: each salary tier ~1.5M
-    roster_cost = roster_salary_total * 0.15
+    """Sponsorship driven by fanbase reach and marketing investment."""
+    tier_mult = _SPONSOR_TIER_MULT.get(tier, 0.5)
+    return round((fanbase / 50_000) * tier_mult * (0.8 + marketing_fraction * 0.4), 2)
 
-    # President cost
-    pres_cost = president_salary * 1.0
 
-    # Base operating costs
-    base_ops = 5.0
+def compute_merchandise_revenue(fanbase: float, marketing_fraction: float) -> float:
+    """Merchandise revenue scales with fanbase and marketing."""
+    merch_per_fan = 12 * (1.0 + marketing_fraction * 0.5)   # $12–18 per fan
+    return round(fanbase * merch_per_fan / 1_000_000, 2)
 
-    return round(roster_cost + pres_cost + base_ops + investment_spend, 2)
 
+def compute_prize_money(playoff_result: str, tier: int) -> float:
+    """Prize money based on final league position."""
+    base = {1: 10.0, 2: 5.0, 3: 2.5, 4: 1.0}.get(tier, 1.0)
+    mult = {
+        "champion": 1.0,
+        "finalist": 0.5,
+        "made_playoffs": 0.3,
+        "none": 0.1,
+    }.get(playoff_result, 0.1)
+    return round(base * mult, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
+# DEBT HELPERS
+# ═══════════════════════════════════════════════════════════════
+
+def compute_loan_payment(amount: float, rate: float, years: int) -> float:
+    """Compute the fixed annual payment for a loan (annuity formula)."""
+    if rate == 0 or years <= 0:
+        return round(amount / max(1, years), 2)
+    payment = amount * rate / (1 - (1 + rate) ** (-years))
+    return round(payment, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
+# FINANCIALS
+# ═══════════════════════════════════════════════════════════════
 
 def compute_financials(
     year: int,
@@ -427,39 +603,53 @@ def compute_financials(
     investment: InvestmentAllocation,
     investment_budget: float,
     bankroll_start: float,
+    fanbase: float = 0.0,
+    loan_payments: float = 0.0,
 ) -> ClubFinancials:
     """Compute complete financial summary for one season."""
-    # Revenue
-    revenue = compute_season_revenue(
-        tier=tier,
-        wins=wins,
-        losses=losses,
-        playoff_result=playoff_result,
-        stadium_investment=investment.stadium,
-        brand_investment=investment.marketing,
-    )
+    total_games = wins + losses
 
-    # Expenses
-    roster_salary_total = sum(
-        getattr(c, "contract_salary", 1) or 1 for c in roster
-    )
-    expenses = compute_season_expenses(
-        roster_salary_total=roster_salary_total,
-        president_salary=president.salary,
-        investment_spend=investment_budget,
-    )
+    # Revenue streams
+    ticket  = compute_ticket_revenue(fanbase, tier, wins, total_games, investment.stadium)
+    bcast   = compute_broadcast_revenue(tier)
+    sponsor = compute_sponsorship_revenue(fanbase, investment.marketing, tier)
+    merch   = compute_merchandise_revenue(fanbase, investment.marketing)
+    prize   = compute_prize_money(playoff_result, tier)
+    total_rev = round(ticket + bcast + sponsor + merch + prize, 2)
 
-    net = revenue - expenses
-    bankroll_end = bankroll_start + net
+    # Expense breakdown
+    roster_salary_total = sum(getattr(c, "contract_salary", 1) or 1 for c in roster)
+    r_cost   = round(roster_salary_total * 0.15, 2)
+    p_cost   = float(president.salary)
+    ops_cost = 5.0
+    total_exp = round(r_cost + p_cost + ops_cost + investment_budget + loan_payments, 2)
+
+    net = round(total_rev - total_exp, 2)
+    bankroll_end = round(bankroll_start + net, 2)
+
+    attendance = int(
+        (0.55 + (wins / max(1, total_games)) * 0.35)
+        * min(fanbase, fanbase * (1 + investment.stadium * 0.5))
+    )
 
     return ClubFinancials(
         year=year,
         tier=tier,
-        revenue=revenue,
-        expenses=expenses,
+        total_revenue=total_rev,
+        ticket_revenue=ticket,
+        broadcast_revenue=bcast,
+        sponsorship_revenue=sponsor,
+        merchandise_revenue=merch,
+        prize_money=prize,
+        total_expenses=total_exp,
+        roster_cost=r_cost,
+        president_cost=p_cost,
+        base_ops_cost=ops_cost,
         investment_spend=investment_budget,
+        loan_payments=loan_payments,
         net_income=net,
-        attendance_avg=int(10000 + (100 - tier * 15) * 200 + wins * 500),
+        attendance_avg=attendance,
+        fanbase_end=int(fanbase),
         bankroll_start=bankroll_start,
         bankroll_end=bankroll_end,
     )
@@ -548,4 +738,64 @@ def president_set_team_style(
         "offense_style": offense,
         "defense_style": defense,
         "st_scheme": st,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# 20-YEAR SCORING
+# ═══════════════════════════════════════════════════════════════
+
+def compute_club_valuation(
+    total_revenue: float,
+    fanbase: int,
+    infrastructure: Dict[str, float],
+) -> float:
+    """Estimate club market value in millions."""
+    infra_sum = sum(infrastructure.values()) if infrastructure else 6.0  # baseline 6 keys × 1.0
+    brand_mult = 1.0 + infra_sum / 100.0
+    stadium_val = infrastructure.get("stadium", 1.0) * 5.0
+    return round(total_revenue * brand_mult * 3.5 + stadium_val, 1)
+
+
+def compute_final_score(dynasty) -> dict:
+    """Compute owner's running/final score.
+
+    Works at any point in the dynasty — shows a 'running score' before 20 seasons
+    and the 'final score' label at 20+.
+    """
+    hist = dynasty.team_histories.get(dynasty.owner.club_key)
+    titles = len(hist.championship_years) if hist else 0
+    tier_history = hist.tier_history if hist else []
+    avg_tier = mean(tier_history) if tier_history else 4.0
+
+    last_fin = None
+    if dynasty.financial_history:
+        last_fin = max(dynasty.financial_history.values(), key=lambda f: f.get("year", 0))
+    rev = last_fin.get("total_revenue", last_fin.get("revenue", 0)) if last_fin else 0.0
+
+    infra = getattr(dynasty, "infrastructure", {})
+    fanbase = int(getattr(dynasty, "fanbase", 0))
+    valuation = compute_club_valuation(rev, fanbase, infra)
+
+    infra_values = list(infra.values()) if infra else []
+    infra_avg = round(mean(infra_values), 1) if infra_values else 1.0
+
+    score = (
+        titles * 1000
+        + (5.0 - avg_tier) * 250
+        + fanbase / 1000.0
+        + valuation * 8.0
+        + max(0.0, dynasty.owner.bankroll) * 5.0
+        + sum(infra_values) * 20.0
+    )
+
+    return {
+        "total": round(score),
+        "league_titles": titles,
+        "avg_tier": round(avg_tier, 1),
+        "club_valuation_M": valuation,
+        "fanbase": fanbase,
+        "bankroll_M": round(dynasty.owner.bankroll, 1),
+        "infra_avg": infra_avg,
+        "is_final": dynasty.owner.seasons_owned >= 20,
     }
