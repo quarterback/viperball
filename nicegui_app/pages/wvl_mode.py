@@ -20,7 +20,7 @@ from engine.wvl_config import (
 from engine.wvl_owner import (
     OWNER_ARCHETYPES, PRESIDENT_ARCHETYPES, AI_OWNER_PROFILES,
     generate_president_pool, InvestmentAllocation,
-    compute_final_score,
+    compute_final_score_report,
 )
 from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
 
@@ -1588,43 +1588,83 @@ def _fill_league(containers, dynasty):
         # ── League Economy ──────────────────────────────────────────
         ui.separator().classes("mt-4")
         with ui.expansion("League Economy", icon="bar_chart", value=False).classes("w-full mt-2"):
-            ui.label("Estimated financials and fan activity across all clubs.").classes("text-xs text-slate-400 mb-3")
+            ui.label("Club financials and fan activity across all clubs.").classes("text-xs text-slate-400 mb-3")
             from engine.wvl_config import ALL_CLUBS, CLUBS_BY_KEY
-            from engine.wvl_owner import _BROADCAST_REVENUE
+            from engine.wvl_owner import _BROADCAST_REVENUE, _TIER_STARTING_FANBASE
             eco_cols = [
-                {"name": "team",    "label": "Club",          "field": "team",    "align": "left"},
-                {"name": "tier",    "label": "Tier",          "field": "tier",    "align": "center"},
-                {"name": "owner",   "label": "Owner Type",    "field": "owner",   "align": "left"},
-                {"name": "payroll", "label": "Est. Payroll",  "field": "payroll", "align": "right"},
-                {"name": "bcast",   "label": "Broadcast ₯",  "field": "bcast",   "align": "right"},
-                {"name": "fanbase", "label": "Est. Fanbase",  "field": "fanbase", "align": "right"},
+                {"name": "club",     "label": "Club",          "field": "club",     "align": "left"},
+                {"name": "tier",     "label": "Tier",          "field": "tier",     "align": "center"},
+                {"name": "owner",    "label": "Owner",         "field": "owner",    "align": "left"},
+                {"name": "payroll",  "label": "Payroll ₯M",    "field": "payroll",  "align": "right"},
+                {"name": "revenue",  "label": "Revenue ₯M",    "field": "revenue",  "align": "right"},
+                {"name": "expenses", "label": "Expenses ₯M",   "field": "expenses", "align": "right"},
+                {"name": "bankroll", "label": "Bankroll ₯M",   "field": "bankroll", "align": "right"},
+                {"name": "fanbase",  "label": "Fanbase",       "field": "fanbase",  "align": "right"},
             ]
             eco_rows = []
-            from engine.wvl_owner import _TIER_STARTING_FANBASE
+
+            # Build lookup from last offseason AI financials (if available)
+            _last_offseason = app.storage.user.get("wvl_last_offseason_data", {})
+            _ai_fin_lookup = {}
+            for af in _last_offseason.get("ai_financials", []):
+                _ai_fin_lookup[af.get("team_key", "")] = af
+
             for club in sorted(ALL_CLUBS, key=lambda c: (dynasty.tier_assignments.get(c.key, 5), -c.prestige)):
                 tier = dynasty.tier_assignments.get(club.key, 4)
                 is_owner_club = (club.key == dynasty.owner.club_key)
                 if is_owner_club:
                     owner_label = f"You ({dynasty.owner.archetype.replace('_', ' ').title()})"
                     est_fanbase = int(dynasty.fanbase)
+                    # Use real financials from history
+                    if dynasty.financial_history:
+                        last_fin = dynasty.financial_history[max(dynasty.financial_history.keys())]
+                        revenue = last_fin.get("total_revenue", 0)
+                        expenses = last_fin.get("total_expenses", 0)
+                        bankroll = last_fin.get("bankroll_end", dynasty.owner.bankroll)
+                        payroll = last_fin.get("roster_cost", 0)
+                    else:
+                        revenue = expenses = payroll = 0
+                        bankroll = dynasty.owner.bankroll
                 else:
                     ai_profile = dynasty.ai_team_owners.get(club.key, "balanced")
                     owner_label = f"AI ({ai_profile.replace('_', ' ').title()})"
-                    base_fanbase = _TIER_STARTING_FANBASE.get(tier, 5_000)
-                    est_fanbase = int(base_fanbase * (0.5 + club.prestige / 100))
-                bcast = _BROADCAST_REVENUE.get(tier, 1.0)
-                # Rough payroll estimate from tier and prestige
-                est_payroll = round(max(2.0, min(15.0, club.prestige / 8.0 + tier * 0.5)), 1)
+                    ai_fin = _ai_fin_lookup.get(club.key)
+                    if ai_fin:
+                        est_fanbase = ai_fin.get("fanbase", 0)
+                        revenue = ai_fin.get("revenue", 0)
+                        expenses = ai_fin.get("expenses", 0)
+                        payroll = ai_fin.get("payroll", 0)
+                        bankroll = ai_fin.get("bankroll", 0)
+                    else:
+                        base_fanbase = _TIER_STARTING_FANBASE.get(tier, 5_000)
+                        est_fanbase = int(base_fanbase * (0.5 + club.prestige / 100))
+                        bcast = _BROADCAST_REVENUE.get(tier, 1.0)
+                        revenue = round(bcast + est_fanbase * 30 * 12 / 1_000_000, 1)
+                        ai_p = AI_OWNER_PROFILES.get(ai_profile, AI_OWNER_PROFILES["balanced"])
+                        payroll = round(revenue * ai_p["spending_ratio"], 1)
+                        expenses = round(payroll + 5.0, 1)
+                        bankroll = round(club.prestige * 0.5, 1)
                 eco_rows.append({
-                    "team":    club.name,
-                    "tier":    str(tier),
-                    "owner":   owner_label,
-                    "payroll": f"₯{est_payroll:.1f}M",
-                    "bcast":   f"₯{bcast:.1f}M",
-                    "fanbase": f"{est_fanbase:,}",
+                    "club":     club.name,
+                    "tier":     str(tier),
+                    "owner":    owner_label,
+                    "payroll":  f"₯{payroll:.1f}",
+                    "revenue":  f"₯{revenue:.1f}",
+                    "expenses": f"₯{expenses:.1f}",
+                    "bankroll": f"₯{bankroll:.1f}",
+                    "fanbase":  f"{est_fanbase:,}",
                     "_is_owner": is_owner_club,
+                    "_payroll_raw": payroll,
                 })
-            eco_table = ui.table(columns=eco_cols, rows=eco_rows, row_key="team").classes("w-full").props("dense flat bordered")
+
+            # Task 13: Display payroll ranking
+            sorted_by_payroll = sorted(eco_rows, key=lambda r: r.get("_payroll_raw", 0), reverse=True)
+            payroll_rank = {r["club"]: i + 1 for i, r in enumerate(sorted_by_payroll)}
+            for row in eco_rows:
+                rank = payroll_rank.get(row["club"], 0)
+                row["payroll"] = f"#{rank} {row['payroll']}"
+
+            eco_table = ui.table(columns=eco_cols, rows=eco_rows, row_key="club").classes("w-full").props("dense flat bordered")
             eco_table.add_slot("body", r"""
                 <q-tr :props="props" :style="{'font-weight': props.row._is_owner ? '700' : '400', 'background-color': props.row._is_owner ? '#e0e7ff' : ''}">
                     <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
@@ -1816,6 +1856,16 @@ def _fill_finance(containers, dynasty):
                 ui.label(arch.get("label", dynasty.owner.archetype)).classes("text-lg font-bold text-indigo-700")
                 ui.label(arch.get("description", "")).classes("text-xs text-slate-500")
 
+        # ── Owner Profile Panel ─────────────────────────────────────
+        with ui.card().classes("w-full p-4 mb-4").props("outlined"):
+            ui.label("Owner Profile").classes("text-sm font-semibold text-slate-700 mb-2")
+            arch = OWNER_ARCHETYPES.get(dynasty.owner.archetype, {})
+            ui.label(f"Type: {arch.get('label', dynasty.owner.archetype)}").classes("text-sm text-slate-600")
+            spending_ratio = arch.get("fa_reputation_mod", 1.0)
+            ui.label(f"Spending Ratio: {spending_ratio:.2f}").classes("text-sm text-slate-600")
+            patience = arch.get("patience_threshold", 3)
+            ui.label(f"Patience: {patience} seasons").classes("text-sm text-slate-600")
+
         with ui.row().classes("w-full gap-4 flex-wrap mb-4"):
             with ui.card().classes("flex-1 min-w-[300px] p-4"):
                 ui.label("President").classes("text-sm font-semibold text-slate-700 mb-2")
@@ -1934,13 +1984,24 @@ def _fill_finance(containers, dynasty):
                     "science": "Sports Science",
                     "marketing": "Marketing",
                 }
+                infra_tooltips = {
+                    "training": "+player development",
+                    "science": "-injury probability",
+                    "scouting": "+free agent quality",
+                    "youth": "+academy prospects",
+                    "marketing": "+fanbase growth",
+                    "stadium": "+attendance",
+                    "coaching": "+mental attributes",
+                }
                 for key, label in infra_labels.items():
                     level = infra.get(key, 1.0)
+                    tip = infra_tooltips.get(key, "")
                     with ui.row().classes("items-center gap-2 w-full mb-1"):
-                        ui.label(label).classes("text-xs text-slate-600 w-28")
-                        ui.linear_progress(value=level / 10.0, size="10px").classes("flex-1").props(
+                        ui.label(label).classes("text-xs text-slate-600 w-28").tooltip(tip)
+                        bar = ui.linear_progress(value=level / 10.0, size="10px").classes("flex-1").props(
                             f"color={'indigo' if level > 5 else 'blue'}"
                         )
+                        bar.tooltip(f"{label}: {tip} (Level {level:.1f}/10)")
                         ui.label(f"{level:.1f}").classes("text-xs font-semibold text-indigo-700 w-8 text-right")
 
         # ── Active Loans ─────────────────────────────────────────────
@@ -2016,7 +2077,7 @@ def _fill_finance(containers, dynasty):
                 ui.table(columns=fh_cols, rows=fh_rows, row_key="year").classes("w-full").props("dense flat bordered")
 
         # ── Scorecard ────────────────────────────────────────────────
-        score_data = compute_final_score(dynasty)
+        score_data = compute_final_score_report(dynasty)
         is_final = score_data.get("is_final", False)
         with ui.card().classes("w-full p-4"):
             label = "Final Score" if is_final else "Running Score"
@@ -2113,6 +2174,7 @@ def _render_offseason_start(container, dynasty):
             _register_wvl_season(d, s)
 
             app.storage.user["_wvl_offseason_data"] = offseason
+            app.storage.user["wvl_last_offseason_data"] = offseason
             app.storage.user["_wvl_offseason_step"] = 0
 
             refresh = app.storage.user.get("_wvl_refresh")

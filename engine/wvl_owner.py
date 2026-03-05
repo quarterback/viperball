@@ -386,6 +386,30 @@ def generate_president_pool(
 # INVESTMENT BOOSTS
 # ═══════════════════════════════════════════════════════════════
 
+def apply_infrastructure_effects(team, infra):
+    """
+    Modify team attributes based on infrastructure levels.
+    """
+
+    # Training → player development multiplier
+    team.dev_multiplier = 1.0 + (infra.get("training", 1.0) * 0.02)
+
+    # Medical → injury probability reduction
+    team.injury_modifier = max(0.6, 1.0 - infra.get("science", 1.0) * 0.03)
+
+    # Scouting → free agent discovery bonus
+    team.fa_quality_bonus = infra.get("scouting", 0.0) * 0.05
+
+    # Youth → academy prospect rating boost
+    team.youth_rating_bonus = infra.get("youth", 1.0) * 1.5
+
+    # Marketing → fanbase growth multiplier
+    team.fan_growth_multiplier = 1.0 + infra.get("marketing", 1.0) * 0.03
+
+    # Stadium → attendance multiplier
+    team.attendance_multiplier = 1.0 + infra.get("stadium", 1.0) * 0.02
+
+
 def apply_investment_boosts(
     roster: list,
     allocation: InvestmentAllocation,
@@ -753,21 +777,40 @@ def president_set_team_style(
 # ═══════════════════════════════════════════════════════════════
 
 def compute_club_valuation(
-    total_revenue: float,
+    revenue: float,
     fanbase: int,
-    infrastructure: Dict[str, float],
+    infra_total: float,
 ) -> float:
     """Estimate club market value in millions.
 
-    Formula (engineer spec):
-      club_value = revenue * 4 + infra_total * 5 + fanbase * 200 / 1_000_000
+    Formula:
+      club_value = revenue * 4 + fanbase * 50 + infra_total * 2
     """
-    infra_total = sum(infrastructure.values()) if infrastructure else 6.0
-    return round(total_revenue * 4.0 + infra_total * 5.0 + fanbase * 200 / 1_000_000, 1)
+    return round(
+        revenue * 4
+        + fanbase * 50
+        + infra_total * 2,
+        1,
+    )
 
 
-def compute_final_score(dynasty) -> dict:
-    """Compute owner's running/final score.
+def compute_final_score(titles, avg_tier, fanbase, club_value, bankroll):
+    """Compute owner's final/running score.
+
+    Formula:
+      titles * 500 + (5 - avg_tier) * 200 + fanbase * 0.1 + club_value + bankroll
+    """
+    return (
+        titles * 500
+        + (5 - avg_tier) * 200
+        + fanbase * 0.1
+        + club_value
+        + bankroll
+    )
+
+
+def compute_final_score_report(dynasty) -> dict:
+    """Compute owner's running/final score report dict.
 
     Works at any point in the dynasty — shows a 'running score' before 20 seasons
     and the 'final score' label at 20+.
@@ -784,20 +827,13 @@ def compute_final_score(dynasty) -> dict:
 
     infra = getattr(dynasty, "infrastructure", {})
     fanbase = int(getattr(dynasty, "fanbase", 0))
-    valuation = compute_club_valuation(rev, fanbase, infra)
+    infra_total = sum(infra.values()) if infra else 6.0
+    valuation = compute_club_valuation(rev, fanbase, infra_total)
 
     infra_values = list(infra.values()) if infra else []
     infra_avg = round(mean(infra_values), 1) if infra_values else 1.0
 
-    # Engineer spec scoring formula:
-    # titles * 500 + (5 - avg_tier) * 200 + fanbase * 0.1 + club_value + bankroll
-    score = (
-        titles * 500
-        + (5.0 - avg_tier) * 200
-        + fanbase * 0.1
-        + valuation
-        + max(0.0, dynasty.owner.bankroll)
-    )
+    score = compute_final_score(titles, avg_tier, fanbase, valuation, max(0.0, dynasty.owner.bankroll))
 
     return {
         "total": round(score),
@@ -808,4 +844,27 @@ def compute_final_score(dynasty) -> dict:
         "bankroll_M": round(dynasty.owner.bankroll, 1),
         "infra_avg": infra_avg,
         "is_final": dynasty.owner.seasons_owned >= 20,
+    }
+
+
+def club_health(financials, infra):
+    """Compute club health metrics for dashboard display."""
+
+    infra_score = sum(infra.values()) / len(infra) if infra else 1.0
+
+    # Support both ClubFinancials dataclass and plain dict
+    if isinstance(financials, dict):
+        bankroll = financials.get("bankroll_end", financials.get("bankroll", 0))
+        fanbase = financials.get("fanbase_end", financials.get("fanbase", 0))
+        net_income = financials.get("net_income", 0)
+    else:
+        bankroll = getattr(financials, "bankroll_end", 0)
+        fanbase = getattr(financials, "fanbase_end", 0)
+        net_income = getattr(financials, "net_income", 0)
+
+    return {
+        "financial": bankroll,
+        "infrastructure": infra_score,
+        "fanbase": fanbase,
+        "profit": net_income,
     }

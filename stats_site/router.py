@@ -1503,22 +1503,37 @@ def wvl_economy(request: Request, session_id: str):
             owner_label = f"Human ({dynasty.owner.archetype.replace('_', ' ').title()})"
             fanbase = int(dynasty.fanbase)
             bankroll = round(dynasty.owner.bankroll, 1)
+            if dynasty.financial_history:
+                last_fin = dynasty.financial_history[max(dynasty.financial_history.keys())]
+                revenue = last_fin.get("total_revenue", 0)
+                expenses = last_fin.get("total_expenses", 0)
+                payroll = last_fin.get("roster_cost", 0)
+            else:
+                bcast = _BROADCAST_REVENUE.get(tier, 1.0)
+                revenue = bcast
+                expenses = 5.0
+                payroll = 0
         else:
             ai_key = dynasty.ai_team_owners.get(club.key, "balanced")
             owner_label = f"AI ({ai_key.replace('_', ' ').title()})"
             base = _TIER_STARTING_FANBASE.get(tier, 5_000)
             fanbase = int(base * (0.5 + club.prestige / 100))
-            bankroll = None
-        bcast = _BROADCAST_REVENUE.get(tier, 1.0)
-        est_payroll = round(max(2.0, min(15.0, club.prestige / 8.0 + tier * 0.5)), 1)
+            ai_p = AI_OWNER_PROFILES.get(ai_key, AI_OWNER_PROFILES["balanced"])
+            bcast = _BROADCAST_REVENUE.get(tier, 1.0)
+            est_ticket = round(fanbase * 30 * 12 / 1_000_000, 2)
+            revenue = round(bcast + est_ticket, 1)
+            payroll = round(revenue * ai_p["spending_ratio"], 1)
+            expenses = round(payroll + 5.0, 1)
+            bankroll = round(club.prestige * 0.5, 1)
         eco_rows.append({
             "club_key": club.key,
             "team": club.name,
             "tier": tier,
             "owner": owner_label,
             "is_owner": is_owner,
-            "payroll": est_payroll,
-            "broadcast": bcast,
+            "payroll": payroll,
+            "revenue": revenue,
+            "expenses": expenses,
             "fanbase": fanbase,
             "bankroll": bankroll,
         })
@@ -1537,6 +1552,14 @@ def wvl_economy(request: Request, session_id: str):
 
     current_rate = getattr(dynasty, "bourse_rate", 1.0)
 
+    # Build fanbase trend history from financial records
+    fanbase_history = []
+    fin_hist = getattr(dynasty, "financial_history", {})
+    for yr in sorted(fin_hist.keys()):
+        fb = fin_hist[yr].get("fanbase_after", fin_hist[yr].get("fanbase_end", 0))
+        if fb:
+            fanbase_history.append({"year": yr, "fanbase": int(fb)})
+
     return templates.TemplateResponse("wvl/economy.html", _ctx(
         request, section="wvl", session_id=session_id,
         dynasty_name=data.get("dynasty_name", "WVL"),
@@ -1544,6 +1567,7 @@ def wvl_economy(request: Request, session_id: str):
         eco_rows=eco_rows,
         rate_history=rate_history,
         current_rate=current_rate,
+        fanbase_history=fanbase_history,
     ))
 
 
