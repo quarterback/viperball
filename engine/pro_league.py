@@ -310,6 +310,10 @@ class ProTeamRecord:
     last_5: List[str] = field(default_factory=list)
 
     @property
+    def games_played(self) -> int:
+        return self.wins + self.losses + self.ties
+
+    @property
     def points(self) -> int:
         """Soccer-style table points: 3 for a win, 1 for a draw, 0 for a loss."""
         return 3 * self.wins + self.ties
