@@ -129,13 +129,14 @@ def _coaching_flavor(team, rng: random.Random) -> float:
     return max(0.80, min(1.20, pts_mult + swing))
 
 
-def _team_strength(team) -> float:
+def _team_strength(team, unavailable: set = None) -> float:
     """Calculate composite team strength (0-100 scale) from ratings."""
-    players = team.players
-    if not players:
+    all_players = team.players
+    if not all_players:
         return 50.0
 
-    avg_ovr = sum(p.overall for p in players) / len(players)
+    avail = [p for p in all_players if p.name not in (unavailable or set())] or all_players
+    avg_ovr = sum(p.overall for p in avail) / len(avail)
 
     off_components = (
         team.avg_speed * 0.25 +
@@ -150,9 +151,11 @@ def _team_strength(team) -> float:
     return min(99, max(20, off_components + investment_bonus))
 
 
-def _defensive_strength(team) -> float:
+def _defensive_strength(team, unavailable: set = None) -> float:
     """Calculate defensive strength from team attributes."""
-    avg_ovr = sum(p.overall for p in team.players) / max(1, len(team.players))
+    all_players = team.players
+    avail = [p for p in all_players if p.name not in (unavailable or set())] or all_players
+    avg_ovr = sum(p.overall for p in avail) / max(1, len(avail))
     return (
         team.defensive_strength * 0.40 +
         team.prestige * 0.20 +
@@ -897,7 +900,9 @@ def fast_sim_game(home_team, away_team,
                   weather_label: str = "Clear",
                   weather_description: str = "Clear skies",
                   is_rivalry: bool = False,
-                  neutral_site: bool = False) -> Dict:
+                  neutral_site: bool = False,
+                  unavailable_home: set = None,
+                  unavailable_away: set = None) -> Dict:
     """
     Fast-simulate a Viperball game using a statistical model.
 
@@ -922,10 +927,10 @@ def fast_sim_game(home_team, away_team,
         seed = random.randint(1, 999999)
     rng = random.Random(seed)
 
-    home_str = _team_strength(home_team)
-    away_str = _team_strength(away_team)
-    home_def = _defensive_strength(home_team)
-    away_def = _defensive_strength(away_team)
+    home_str = _team_strength(home_team, unavailable=unavailable_home)
+    away_str = _team_strength(away_team, unavailable=unavailable_away)
+    home_def = _defensive_strength(home_team, unavailable=unavailable_home)
+    away_def = _defensive_strength(away_team, unavailable=unavailable_away)
 
     home_expected = _expected_points(home_str, away_def, rng)
     away_expected = _expected_points(away_str, home_def, rng)

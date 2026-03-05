@@ -907,6 +907,9 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
         if getattr(p, 'injured_in_game', False):
             injured.add(p.name)
 
+    # Depth-chart overrides: position → player_name of designated starter
+    forced = getattr(team, 'forced_starters', {})
+
     # ── OFFENSE ──────────────────────────────────────────────────────
     skill = [p for p in team.players
              if p.position in ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
@@ -938,7 +941,11 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
             arch_mult = 1.08
         elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
             arch_mult = 1.04
-        return base * arch_mult
+        score = base * arch_mult
+        # Depth-chart override: massive boost so designated starter wins selection
+        if forced.get(p.position) == p.name:
+            score *= 10.0
+        return score
 
     def recv_score(p):
         hands = getattr(p, 'hands', 75)
@@ -952,7 +959,10 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
             arch_mult = 1.08
         elif p.archetype in ("reliable_flanker",):
             arch_mult = 1.04
-        return base * arch_mult
+        score = base * arch_mult
+        if forced.get(p.position) == p.name:
+            score *= 10.0
+        return score
 
     for p in skill:
         p.game_role = "ROTATION"

@@ -602,6 +602,9 @@ def _fill_dashboard(containers, dynasty):
                     s = app.storage.user.get(_WVL_SEASON_KEY)
                     if not d or not s:
                         return
+                    # Apply depth-chart starter overrides before each sim
+                    if hasattr(d, 'inject_forced_starters'):
+                        d.inject_forced_starters(s)
                     results = s.sim_week_all_tiers(use_fast_sim=_engine_opts["use_fast_sim"])
 
                     owner_tier = d.tier_assignments.get(d.owner.club_key, 1)
@@ -639,6 +642,8 @@ def _fill_dashboard(containers, dynasty):
                         t.phase == "regular_season" and t.current_week < t.total_weeks
                         for t in s.tier_seasons.values()
                     ):
+                        if hasattr(d, 'inject_forced_starters'):
+                            d.inject_forced_starters(s)
                         s.sim_week_all_tiers(use_fast_sim=True)
 
                     _set_phase("playoffs")
@@ -794,6 +799,133 @@ def _render_results_table(results):
 # MY TEAM (ROSTER) TAB
 # ═══════════════════════════════════════════════════════════════
 
+_INJ_TIER_LABELS = {
+    "day_to_day": "Day-to-Day",
+    "minor": "Minor",
+    "moderate": "Moderate",
+    "major": "Major",
+    "severe": "Severe / Season-Ending",
+}
+_INJ_STATUS_COLOR = {
+    "OUT FOR SEASON": "#991b1b",
+    "OUT": "#dc2626",
+    "DTD": "#d97706",
+    "QUESTIONABLE": "#ca8a04",
+}
+
+
+def _render_injury_panel(dynasty):
+    """Render the owner team's injury report panel."""
+    season = getattr(dynasty, "_current_season", None)
+    if not season or not hasattr(season, "tier_seasons"):
+        ui.label("No active season — start a season to see injuries.").classes("text-sm text-slate-400 italic")
+        return
+
+    tier_num = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+    ts = season.tier_seasons.get(tier_num)
+    if not ts:
+        ui.label("Tier season not found.").classes("text-sm text-slate-400 italic")
+        return
+
+    tracker = getattr(ts, "injury_tracker", None)
+    if tracker is None:
+        ui.label("Injury tracking not active for this season.").classes("text-sm text-slate-400 italic")
+        return
+
+    owner_team = ts.teams.get(dynasty.owner.club_key)
+    team_name = owner_team.name if owner_team else dynasty.owner.club_key
+    week = ts.current_week
+
+    active = tracker.get_active_injuries(team_name, week)
+    season_log = [i for i in tracker.season_log if i.team_name == team_name]
+
+    # Summary metrics
+    dtd_count = sum(1 for i in active if i.is_day_to_day)
+    out_count = sum(1 for i in active if not i.is_day_to_day and not i.is_season_ending)
+    se_count = sum(1 for i in active if i.is_season_ending)
+
+    with ui.row().classes("w-full flex-wrap gap-3 mb-4"):
+        for label, val in [
+            ("Active Injuries", len(active)),
+            ("Day-to-Day", dtd_count),
+            ("Out", out_count),
+            ("Season-Ending", se_count),
+            ("Season Total", len(season_log)),
+        ]:
+            with ui.card().classes("flex-1 min-w-[100px] p-3 text-center"):
+                ui.label(label).classes("text-xs text-slate-400 uppercase")
+                ui.label(str(val)).classes("text-lg font-bold text-slate-800")
+
+    if active:
+        ui.label("Currently Injured Players").classes("text-base font-semibold text-slate-700 mb-2")
+        inj_rows = []
+        for inj in active:
+            if inj.is_season_ending:
+                status = "OUT FOR SEASON"
+            elif inj.is_day_to_day:
+                status = "DTD"
+            else:
+                status = "OUT"
+            orig = inj.original_weeks_out if inj.original_weeks_out >= 0 else inj.weeks_out
+            cur = inj.weeks_out
+            if status == "OUT FOR SEASON":
+                timeline = "Season-ending"
+            elif orig != cur and orig > 0:
+                timeline = f"{cur} wk (was {orig})"
+            else:
+                timeline = f"{cur} wk" if cur else "DTD"
+            inj_rows.append({
+                "Player": inj.player_name,
+                "Pos": inj.position,
+                "Injury": inj.description,
+                "Body Part": (inj.body_part or "").title(),
+                "Status": status,
+                "Timeline": timeline,
+                "Return": "Season-ending" if status == "OUT FOR SEASON" else f"Wk {inj.week_return}",
+                "Note": inj.recovery_note or "—",
+            })
+        cols = ["Player", "Pos", "Injury", "Body Part", "Status", "Timeline", "Return", "Note"]
+        tbl_cols = [{"name": k.lower().replace(" ", "_"), "label": k, "field": k,
+                     "align": "left" if k in ("Player", "Injury", "Body Part", "Note") else "center"}
+                    for k in cols]
+        tbl = (
+            ui.table(columns=tbl_cols, rows=inj_rows, row_key="Player")
+            .classes("w-full")
+            .props("dense flat bordered")
+        )
+        tbl.add_slot("body-cell-Status", '''
+            <q-td :props="props">
+                <q-badge
+                    :color="props.row.Status === 'OUT FOR SEASON' ? 'red-10' :
+                            props.row.Status === 'OUT' ? 'red' :
+                            props.row.Status === 'DTD' ? 'orange' : 'yellow'"
+                    :label="props.row.Status"
+                    style="font-weight:700;" />
+            </q-td>
+        ''')
+    else:
+        ui.label("No active injuries — full health!").classes("text-sm text-green-600 font-semibold")
+
+    if season_log:
+        with ui.expansion("Full Season Injury Log").classes("w-full mt-3"):
+            log_rows = []
+            for inj in season_log:
+                status = "OUT FOR SEASON" if inj.is_season_ending else ("DTD" if inj.is_day_to_day else "OUT")
+                log_rows.append({
+                    "Player": inj.player_name,
+                    "Pos": inj.position,
+                    "Injury": inj.description,
+                    "Tier": _INJ_TIER_LABELS.get(inj.tier, inj.tier),
+                    "Week In": inj.week_injured,
+                    "Wks Out": inj.weeks_out,
+                    "Status": status,
+                })
+            log_cols = ["Player", "Pos", "Injury", "Tier", "Week In", "Wks Out", "Status"]
+            log_tbl_cols = [{"name": k.lower().replace(" ", "_"), "label": k, "field": k,
+                             "align": "left" if k in ("Player", "Injury", "Tier") else "center"}
+                            for k in log_cols]
+            ui.table(columns=log_tbl_cols, rows=log_rows, row_key="Player").classes("w-full").props("dense flat bordered")
+
 def _fill_roster(containers, dynasty):
     c = containers.get("roster")
     if not c:
@@ -824,33 +956,21 @@ def _fill_roster(containers, dynasty):
         with ui.tabs().classes("w-full") as roster_tabs:
             tab_full = ui.tab("Full Roster")
             tab_fa = ui.tab("Free Agents")
+            tab_inj = ui.tab("Injuries")
 
         with ui.tab_panels(roster_tabs, value=tab_full).classes("w-full"):
             with ui.tab_panel(tab_full):
                 _render_roster_table(roster, dynasty)
             with ui.tab_panel(tab_fa):
                 _render_free_agents(dynasty)
+            with ui.tab_panel(tab_inj):
+                _render_injury_panel(dynasty)
 
 
 def _render_roster_table(roster, dynasty):
     if not roster:
         ui.label("No roster data available. Start a season first.").classes("text-sm text-slate-400 italic")
         return
-
-    columns = [
-        {"name": "num", "label": "#", "field": "number", "align": "center"},
-        {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
-        {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
-        {"name": "age", "label": "Age", "field": "age", "align": "center", "sortable": True},
-        {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
-        {"name": "spd", "label": "SPD", "field": "speed", "align": "center", "sortable": True},
-        {"name": "kick", "label": "KICK", "field": "kicking", "align": "center", "sortable": True},
-        {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center", "sortable": True},
-        {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center", "sortable": True},
-        {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
-        {"name": "dev", "label": "Dev", "field": "development", "align": "center"},
-        {"name": "action", "label": "", "field": "action", "align": "center"},
-    ]
 
     rows = []
     for p in sorted(roster, key=lambda x: -x.get("overall", 0)):
@@ -869,30 +989,19 @@ def _render_roster_table(roster, dynasty):
             "action": "cut",
         })
 
-    tbl = ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props(
-        "dense flat bordered"
-    ).style("max-height: 500px; overflow-y: auto;")
-
-    tbl.add_slot("body-cell-ovr", r'''
-        <q-td :props="props">
-            <span :style="{
-                color: parseInt(props.row.overall) >= 85 ? '#15803d' :
-                       parseInt(props.row.overall) >= 75 ? '#16a34a' :
-                       parseInt(props.row.overall) >= 65 ? '#ca8a04' :
-                       parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
-                fontWeight: '700'
-            }">{{ props.row.overall }}</span>
-        </q-td>
-    ''')
-
-    tbl.add_slot("body-cell-action", r'''
-        <q-td :props="props">
-            <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
-                   @click="$parent.$emit('edit_player', {name: props.row.name})" class="q-mr-xs" />
-            <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
-                   @click="$parent.$emit('cut_player', {name: props.row.name})" />
-        </q-td>
-    ''')
+    def _on_player_click(e):
+        from nicegui_app.pages.pro_leagues import _show_player_card as _show_pc
+        name = _extract_args(e).get("name", "")
+        if not name:
+            return
+        season = getattr(dynasty, "_current_season", None)
+        tier_num = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+        team_key = dynasty.owner.club_key if dynasty.owner else ""
+        ts = season.tier_seasons.get(tier_num) if season and hasattr(season, "tier_seasons") else None
+        if ts:
+            _show_pc(ts, team_key, name)
+        else:
+            _open_edit_player_dialog(name, dynasty, dynasty.owner.club_key)
 
     async def _on_cut(e):
         d = _get_dynasty()
@@ -912,8 +1021,6 @@ def _render_roster_table(roster, dynasty):
         else:
             ui.notify(msg, type="warning")
 
-    tbl.on("cut_player", _on_cut)
-
     def _on_edit(e):
         player_name = _extract_args(e).get("name", "")
         if not player_name:
@@ -921,7 +1028,230 @@ def _render_roster_table(roster, dynasty):
             return
         _open_edit_player_dialog(player_name, dynasty, dynasty.owner.club_key)
 
-    tbl.on("edit_player", _on_edit)
+    _OVR_SLOT = r'''
+        <q-td :props="props">
+            <span :style="{
+                color: parseInt(props.row.overall) >= 85 ? '#15803d' :
+                       parseInt(props.row.overall) >= 75 ? '#16a34a' :
+                       parseInt(props.row.overall) >= 65 ? '#ca8a04' :
+                       parseInt(props.row.overall) >= 55 ? '#ea580c' : '#dc2626',
+                fontWeight: '700'
+            }">{{ props.row.overall }}</span>
+        </q-td>
+    '''
+    _NAME_SLOT = '''
+        <q-td :props="props">
+            <a class="text-indigo-600 font-semibold cursor-pointer hover:underline"
+               @click="$parent.$emit('player_click', props.row)">
+                {{ props.row.name }}
+            </a>
+        </q-td>
+    '''
+
+    view_toggle = ui.toggle(["Full Roster", "Depth Chart"], value="Full Roster").classes("mb-2")
+    roster_container = ui.column().classes("w-full")
+
+    def _get_injury_sets():
+        """Return (unavailable: set, dtd: set, tracker, team_name, current_week) for owner."""
+        season = getattr(dynasty, "_current_season", None)
+        if not season or not hasattr(season, "tier_seasons"):
+            return set(), set(), None, "", 0
+        tier_num = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+        ts = season.tier_seasons.get(tier_num)
+        if not ts:
+            return set(), set(), None, "", 0
+        tracker = getattr(ts, "injury_tracker", None)
+        owner_team = ts.teams.get(dynasty.owner.club_key)
+        team_name = owner_team.name if owner_team else ""
+        week = ts.current_week
+        if tracker and team_name:
+            return (
+                tracker.get_unavailable_names(team_name, week),
+                tracker.get_dtd_names(team_name, week),
+                tracker,
+                team_name,
+                week,
+            )
+        return set(), set(), None, team_name, week
+
+    def _render_view():
+        roster_container.clear()
+        with roster_container:
+            if view_toggle.value == "Depth Chart":
+                unavailable, dtd, _tracker, _tname, _week = _get_injury_sets()
+                club_key = dynasty.owner.club_key
+                owner_dc = (dynasty.depth_chart.get(club_key, {})
+                            if hasattr(dynasty, 'depth_chart') else {})
+
+                dc_positions = sorted(set(p.get("position", "") for p in roster if p.get("position")))
+                dc_cols = [
+                    {"name": "order", "label": "", "field": "order", "align": "center"},
+                    {"name": "status", "label": "Status", "field": "status", "align": "center"},
+                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                    {"name": "ovr", "label": "OVR", "field": "overall", "align": "center"},
+                    {"name": "spd", "label": "SPD", "field": "speed", "align": "center"},
+                    {"name": "kick", "label": "KICK", "field": "kicking", "align": "center"},
+                    {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center"},
+                    {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center"},
+                    {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
+                ]
+
+                for pos in dc_positions:
+                    pos_rows = [r for r in rows if r.get("position") == pos]
+                    # Apply custom ordering if set, otherwise sort by OVR
+                    custom_order = owner_dc.get(pos, [])
+                    if custom_order:
+                        ordered = sorted(
+                            pos_rows,
+                            key=lambda r: (
+                                custom_order.index(r["name"]) if r["name"] in custom_order else 999,
+                                -int(r.get("overall", 0) or 0),
+                            ),
+                        )
+                    else:
+                        ordered = sorted(pos_rows, key=lambda x: -int(x.get("overall", 0) or 0))
+
+                    # Build display rows with status + order rank
+                    group = []
+                    for rank_idx, r in enumerate(ordered):
+                        pname = r["name"]
+                        if pname in unavailable:
+                            status = "OUT"
+                        elif pname in dtd:
+                            status = "DTD"
+                        else:
+                            status = "OK"
+                        group.append({**r, "order": rank_idx + 1, "status": status})
+
+                    with ui.row().classes("items-center gap-2 mt-3"):
+                        ui.markdown(f"**{pos}**")
+                        ui.label(f"({len(group)} players)").classes("text-xs text-slate-400")
+
+                    dc_tbl = (
+                        ui.table(columns=dc_cols, rows=group, row_key="name")
+                        .classes("w-full")
+                        .props("dense flat bordered")
+                    )
+                    dc_tbl.add_slot("body-cell-ovr", _OVR_SLOT)
+                    dc_tbl.add_slot("body-cell-name", _NAME_SLOT)
+                    dc_tbl.add_slot("body-cell-status", '''
+                        <q-td :props="props">
+                            <q-badge :color="props.row.status === 'OUT' ? 'red' :
+                                            props.row.status === 'DTD' ? 'orange' : 'green'"
+                                     :label="props.row.status" />
+                        </q-td>
+                    ''')
+                    dc_tbl.add_slot("body-cell-order", '''
+                        <q-td :props="props">
+                            <span v-if="props.row.order === 1"
+                                  style="background:#1d4ed8;color:#fff;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;">
+                                STARTER
+                            </span>
+                            <span v-else style="color:#94a3b8;font-size:12px;">
+                                #{{ props.row.order }}
+                            </span>
+                            <span style="margin-left:4px;">
+                                <q-btn flat dense round size="xs" icon="arrow_upward"
+                                       @click="$parent.$emit('move_up', {name: props.row.name, pos: props.row.position})" />
+                                <q-btn flat dense round size="xs" icon="arrow_downward"
+                                       @click="$parent.$emit('move_down', {name: props.row.name, pos: props.row.position})" />
+                            </span>
+                        </q-td>
+                    ''')
+                    dc_tbl.on("player_click", _on_player_click)
+
+                    def _make_move_handler(position, pos_rows_snapshot):
+                        def _move(e, direction):
+                            args = _extract_args(e)
+                            pname = args.get("name", "")
+                            if not pname:
+                                return
+                            d = _get_dynasty()
+                            if not d:
+                                return
+                            if not hasattr(d, 'depth_chart') or d.depth_chart is None:
+                                d.depth_chart = {}
+                            club_dc = d.depth_chart.setdefault(d.owner.club_key, {})
+                            current = club_dc.get(position, [r["name"] for r in pos_rows_snapshot])
+                            # Ensure all roster players are in the list
+                            for r in pos_rows_snapshot:
+                                if r["name"] not in current:
+                                    current.append(r["name"])
+                            if pname not in current:
+                                current.append(pname)
+                            idx = current.index(pname)
+                            if direction == "up" and idx > 0:
+                                current[idx], current[idx - 1] = current[idx - 1], current[idx]
+                            elif direction == "down" and idx < len(current) - 1:
+                                current[idx], current[idx + 1] = current[idx + 1], current[idx]
+                            club_dc[position] = current
+                            d.depth_chart[d.owner.club_key] = club_dc
+                            _set_dynasty(d)
+                            # Re-render depth chart
+                            refresh = app.storage.user.get("_wvl_refresh")
+                            if refresh:
+                                refresh()
+                        return _move
+
+                    _move = _make_move_handler(pos, list(ordered))
+                    dc_tbl.on("move_up", lambda e, fn=_move: fn(e, "up"))
+                    dc_tbl.on("move_down", lambda e, fn=_move: fn(e, "down"))
+            else:
+                unavail_fr, dtd_fr, _, _, _ = _get_injury_sets()
+                full_cols = [
+                    {"name": "status", "label": "Avail", "field": "status", "align": "center"},
+                    {"name": "num", "label": "#", "field": "number", "align": "center"},
+                    {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+                    {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+                    {"name": "age", "label": "Age", "field": "age", "align": "center", "sortable": True},
+                    {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
+                    {"name": "spd", "label": "SPD", "field": "speed", "align": "center", "sortable": True},
+                    {"name": "kick", "label": "KICK", "field": "kicking", "align": "center", "sortable": True},
+                    {"name": "lat", "label": "LAT", "field": "lateral_skill", "align": "center", "sortable": True},
+                    {"name": "tkl", "label": "TKL", "field": "tackling", "align": "center", "sortable": True},
+                    {"name": "arch", "label": "Archetype", "field": "archetype", "align": "left"},
+                    {"name": "dev", "label": "Dev", "field": "development", "align": "center"},
+                    {"name": "action", "label": "", "field": "action", "align": "center"},
+                ]
+                full_rows = []
+                for r in rows:
+                    pname = r["name"]
+                    if pname in unavail_fr:
+                        st = "OUT"
+                    elif pname in dtd_fr:
+                        st = "DTD"
+                    else:
+                        st = "OK"
+                    full_rows.append({**r, "status": st})
+                tbl = (
+                    ui.table(columns=full_cols, rows=full_rows, row_key="name")
+                    .classes("w-full")
+                    .props("dense flat bordered")
+                    .style("max-height: 500px; overflow-y: auto;")
+                )
+                tbl.add_slot("body-cell-ovr", _OVR_SLOT)
+                tbl.add_slot("body-cell-name", _NAME_SLOT)
+                tbl.add_slot("body-cell-status", '''
+                    <q-td :props="props">
+                        <q-badge :color="props.row.status === 'OUT' ? 'red' :
+                                        props.row.status === 'DTD' ? 'orange' : 'green'"
+                                 :label="props.row.status" />
+                    </q-td>
+                ''')
+                tbl.add_slot("body-cell-action", r'''
+                    <q-td :props="props">
+                        <q-btn flat dense size="sm" color="indigo" icon="edit" label="Edit"
+                               @click="$parent.$emit('edit_player', {name: props.row.name})" class="q-mr-xs" />
+                        <q-btn flat dense size="sm" color="red" icon="person_remove" label="Cut"
+                               @click="$parent.$emit('cut_player', {name: props.row.name})" />
+                    </q-td>
+                ''')
+                tbl.on("player_click", _on_player_click)
+                tbl.on("cut_player", _on_cut)
+                tbl.on("edit_player", _on_edit)
+
+    view_toggle.on("update:model-value", lambda: _render_view())
+    _render_view()
 
 
 def _render_free_agents(dynasty):

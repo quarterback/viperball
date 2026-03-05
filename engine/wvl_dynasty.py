@@ -103,6 +103,10 @@ class WVLDynasty:
     last_season_champions: Dict[int, str] = field(default_factory=dict)  # tier → champion team_key
     last_season_owner_results: List[dict] = field(default_factory=list)  # [{week, opp, score, result}, ...]
 
+    # Depth chart overrides: club_key → {position → [player_name, ...] in priority order}
+    # First name in each list is the designated starter for that position.
+    depth_chart: Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
+
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
     _team_rosters: Dict[str, List[PlayerCard]] = field(default_factory=dict, repr=False)
@@ -144,6 +148,28 @@ class WVLDynasty:
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
         self._inject_investment_modifiers(self._current_season)
         return self._current_season
+
+    def inject_forced_starters(self, season: WVLMultiTierSeason):
+        """Apply owner's depth-chart ordering to their team object before each sim.
+
+        Sets team.forced_starters = {position: player_name} on the owner's team
+        so assign_game_roles() in the game engine gives those players starter priority.
+        """
+        owner_dc = self.depth_chart.get(self.owner.club_key, {})
+        if not owner_dc:
+            return
+        tier_num = self.tier_assignments.get(self.owner.club_key, 1)
+        ts = season.tier_seasons.get(tier_num)
+        if not ts:
+            return
+        owner_team = ts.teams.get(self.owner.club_key)
+        if not owner_team:
+            return
+        forced = {pos: names[0] for pos, names in owner_dc.items() if names}
+        try:
+            owner_team.forced_starters = forced
+        except Exception:
+            pass
 
     def _inject_investment_modifiers(self, season: WVLMultiTierSeason):
         """Set investment_modifier attribute on each Team object before simming."""
@@ -642,6 +668,7 @@ class WVLDynasty:
             "last_season_owner_results": self.last_season_owner_results,
             "investment_budget": self.investment_budget,
             "dynasty_seed": self.dynasty_seed,
+            "depth_chart": self.depth_chart,
         }
         if self.president:
             data["president"] = self.president.to_dict()
@@ -698,6 +725,7 @@ class WVLDynasty:
             dynasty.investment = InvestmentAllocation.from_dict(data["investment"])
         dynasty.investment_budget = float(data.get("investment_budget", 5.0))
         dynasty.dynasty_seed = int(data.get("dynasty_seed", 0))
+        dynasty.depth_chart = data.get("depth_chart", {})
 
         # Restore FA pool (includes cut players; regenerated from seed if missing)
         dynasty._fa_pool_dicts = list(data.get("fa_pool", []))
