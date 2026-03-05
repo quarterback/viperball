@@ -1484,6 +1484,69 @@ def wvl_stats(request: Request, session_id: str, tier: int = 0, category: str = 
     ))
 
 
+@router.get("/wvl/{session_id}/economy", response_class=HTMLResponse)
+def wvl_economy(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    if not dynasty:
+        raise HTTPException(503, "Dynasty not loaded in this session")
+
+    # Build team economy table
+    from engine.wvl_owner import _BROADCAST_REVENUE, _TIER_STARTING_FANBASE, AI_OWNER_PROFILES
+    from engine.wvl_config import ALL_CLUBS, CLUBS_BY_KEY
+
+    eco_rows = []
+    for club in sorted(ALL_CLUBS, key=lambda c: (dynasty.tier_assignments.get(c.key, 5), -c.prestige)):
+        tier = dynasty.tier_assignments.get(club.key, 4)
+        is_owner = club.key == dynasty.owner.club_key
+        if is_owner:
+            owner_label = f"Human ({dynasty.owner.archetype.replace('_', ' ').title()})"
+            fanbase = int(dynasty.fanbase)
+            bankroll = round(dynasty.owner.bankroll, 1)
+        else:
+            ai_key = dynasty.ai_team_owners.get(club.key, "balanced")
+            owner_label = f"AI ({ai_key.replace('_', ' ').title()})"
+            base = _TIER_STARTING_FANBASE.get(tier, 5_000)
+            fanbase = int(base * (0.5 + club.prestige / 100))
+            bankroll = None
+        bcast = _BROADCAST_REVENUE.get(tier, 1.0)
+        est_payroll = round(max(2.0, min(15.0, club.prestige / 8.0 + tier * 0.5)), 1)
+        eco_rows.append({
+            "club_key": club.key,
+            "team": club.name,
+            "tier": tier,
+            "owner": owner_label,
+            "is_owner": is_owner,
+            "payroll": est_payroll,
+            "broadcast": bcast,
+            "fanbase": fanbase,
+            "bankroll": bankroll,
+        })
+
+    # Bourse exchange rate history
+    rate_history = []
+    bourse_hist = getattr(dynasty, "bourse_rate_history", {})
+    for yr in sorted(bourse_hist.keys()):
+        rec = bourse_hist[yr]
+        rate_history.append({
+            "year": yr,
+            "rate": rec.get("rate", 1.0),
+            "delta_pct": rec.get("delta_pct", 0),
+            "label": rec.get("label", ""),
+        })
+
+    current_rate = getattr(dynasty, "bourse_rate", 1.0)
+
+    return templates.TemplateResponse("wvl/economy.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+        eco_rows=eco_rows,
+        rate_history=rate_history,
+        current_rate=current_rate,
+    ))
+
+
 @router.get("/wvl/{session_id}/player/{team_key}/{player_name}", response_class=HTMLResponse)
 def wvl_player(request: Request, session_id: str, team_key: str, player_name: str):
     data = _get_wvl_session(session_id)

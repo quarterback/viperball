@@ -307,6 +307,7 @@ class ClubFinancials:
     base_ops_cost: float = 0.0
     investment_spend: float = 0.0
     loan_payments: float = 0.0
+    infra_maintenance: float = 0.0
     # Summary
     net_income: float = 0.0
     attendance_avg: int = 0
@@ -605,6 +606,7 @@ def compute_financials(
     bankroll_start: float,
     fanbase: float = 0.0,
     loan_payments: float = 0.0,
+    infrastructure: Optional[Dict] = None,
 ) -> ClubFinancials:
     """Compute complete financial summary for one season."""
     total_games = wins + losses
@@ -617,12 +619,16 @@ def compute_financials(
     prize   = compute_prize_money(playoff_result, tier)
     total_rev = round(ticket + bcast + sponsor + merch + prize, 2)
 
+    # Infrastructure maintenance: ₯0.5M per infra level across all categories
+    infra_levels = infrastructure or {}
+    infra_maintenance = round(sum(infra_levels.values()) * 0.5, 2) if infra_levels else 0.0
+
     # Expense breakdown
     roster_salary_total = sum(getattr(c, "contract_salary", 1) or 1 for c in roster)
     r_cost   = round(roster_salary_total * 0.15, 2)
     p_cost   = float(president.salary)
     ops_cost = 5.0
-    total_exp = round(r_cost + p_cost + ops_cost + investment_budget + loan_payments, 2)
+    total_exp = round(r_cost + p_cost + ops_cost + investment_budget + loan_payments + infra_maintenance, 2)
 
     net = round(total_rev - total_exp, 2)
     bankroll_end = round(bankroll_start + net, 2)
@@ -647,6 +653,7 @@ def compute_financials(
         base_ops_cost=ops_cost,
         investment_spend=investment_budget,
         loan_payments=loan_payments,
+        infra_maintenance=infra_maintenance,
         net_income=net,
         attendance_avg=attendance,
         fanbase_end=int(fanbase),
@@ -750,11 +757,13 @@ def compute_club_valuation(
     fanbase: int,
     infrastructure: Dict[str, float],
 ) -> float:
-    """Estimate club market value in millions."""
-    infra_sum = sum(infrastructure.values()) if infrastructure else 6.0  # baseline 6 keys × 1.0
-    brand_mult = 1.0 + infra_sum / 100.0
-    stadium_val = infrastructure.get("stadium", 1.0) * 5.0
-    return round(total_revenue * brand_mult * 3.5 + stadium_val, 1)
+    """Estimate club market value in millions.
+
+    Formula (engineer spec):
+      club_value = revenue * 4 + infra_total * 5 + fanbase * 200 / 1_000_000
+    """
+    infra_total = sum(infrastructure.values()) if infrastructure else 6.0
+    return round(total_revenue * 4.0 + infra_total * 5.0 + fanbase * 200 / 1_000_000, 1)
 
 
 def compute_final_score(dynasty) -> dict:
@@ -780,13 +789,14 @@ def compute_final_score(dynasty) -> dict:
     infra_values = list(infra.values()) if infra else []
     infra_avg = round(mean(infra_values), 1) if infra_values else 1.0
 
+    # Engineer spec scoring formula:
+    # titles * 500 + (5 - avg_tier) * 200 + fanbase * 0.1 + club_value + bankroll
     score = (
-        titles * 1000
-        + (5.0 - avg_tier) * 250
-        + fanbase / 1000.0
-        + valuation * 8.0
-        + max(0.0, dynasty.owner.bankroll) * 5.0
-        + sum(infra_values) * 20.0
+        titles * 500
+        + (5.0 - avg_tier) * 200
+        + fanbase * 0.1
+        + valuation
+        + max(0.0, dynasty.owner.bankroll)
     )
 
     return {

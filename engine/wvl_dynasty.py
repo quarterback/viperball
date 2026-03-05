@@ -42,6 +42,7 @@ from engine.promotion_relegation import (
 )
 from engine.development import apply_pro_development
 from engine.player_card import PlayerCard, player_to_card
+from engine.bourse import next_bourse_rate, revenue_modifier, build_rate_record
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -122,6 +123,12 @@ class WVLDynasty:
 
     # Active loans: list of ClubLoan.to_dict() entries
     loans: List[dict] = field(default_factory=list)
+
+    # Bourse exchange rate vs SDR basket (baseline 1.0).
+    # Fluctuates each season via mean-reverting random walk.
+    bourse_rate: float = 1.0
+    # year → BourseRateRecord.to_dict()
+    bourse_rate_history: Dict[int, dict] = field(default_factory=dict)
 
     # Season-level caches (not persisted)
     _current_season: Optional[WVLMultiTierSeason] = field(default=None, repr=False)
@@ -525,6 +532,13 @@ class WVLDynasty:
                 surviving_loans.append(loan.to_dict())
         self.loans = surviving_loans
 
+        # Advance Bourse exchange rate for this season
+        old_bourse_rate = self.bourse_rate
+        self.bourse_rate = next_bourse_rate(self.bourse_rate, rng=rng)
+        bourse_record = build_rate_record(year, old_bourse_rate, self.bourse_rate)
+        self.bourse_rate_history[year] = bourse_record.to_dict()
+        summary["bourse_rate"] = bourse_record.to_dict()
+
         if self.president:
             financials = compute_financials(
                 year=year,
@@ -539,9 +553,24 @@ class WVLDynasty:
                 bankroll_start=self.owner.bankroll,
                 fanbase=self.fanbase,
                 loan_payments=total_loan_payment,
+                infrastructure=self.infrastructure,
             )
-            self.owner.bankroll = financials.bankroll_end
+            # Apply Bourse exchange rate modifier to revenue
+            bourse_mod = revenue_modifier(self.bourse_rate)
+            raw_revenue = financials.total_revenue
+            adjusted_revenue = round(raw_revenue * bourse_mod, 2)
+            revenue_delta = round(adjusted_revenue - raw_revenue, 2)
+            # Recalculate net and bankroll with adjusted revenue
+            adjusted_net = round(adjusted_revenue - financials.total_expenses, 2)
+            adjusted_bankroll_end = round(financials.bankroll_start + adjusted_net, 2)
+            self.owner.bankroll = adjusted_bankroll_end
             fin_dict = financials.to_dict()
+            # Patch the dict to reflect exchange-rate-adjusted totals
+            fin_dict["total_revenue"] = adjusted_revenue
+            fin_dict["net_income"] = adjusted_net
+            fin_dict["bankroll_end"] = adjusted_bankroll_end
+            fin_dict["bourse_rate"] = self.bourse_rate
+            fin_dict["bourse_revenue_delta"] = revenue_delta
             # Inject revenue/expense breakdowns for UI consumption
             fin_dict["revenue_breakdown"] = {
                 "Ticket Sales":    financials.ticket_revenue,
@@ -551,11 +580,12 @@ class WVLDynasty:
                 "Prize Money":     financials.prize_money,
             }
             fin_dict["expense_breakdown"] = {
-                "Roster Wages":    financials.roster_cost,
-                "President":       financials.president_cost,
-                "Operations":      financials.base_ops_cost,
-                "Investment":      financials.investment_spend,
-                "Loan Repayments": financials.loan_payments,
+                "Roster Wages":         financials.roster_cost,
+                "President":            financials.president_cost,
+                "Operations":           financials.base_ops_cost,
+                "Investment":           financials.investment_spend,
+                "Loan Repayments":      financials.loan_payments,
+                "Infra Maintenance":    financials.infra_maintenance,
             }
             self.financial_history[year] = fin_dict
             summary["financials"] = fin_dict
@@ -789,6 +819,8 @@ class WVLDynasty:
             "infrastructure": self.infrastructure,
             "ai_team_owners": self.ai_team_owners,
             "loans": self.loans,
+            "bourse_rate": self.bourse_rate,
+            "bourse_rate_history": {str(k): v for k, v in self.bourse_rate_history.items()},
         }
         if self.president:
             data["president"] = self.president.to_dict()
@@ -857,6 +889,10 @@ class WVLDynasty:
                 dynasty.infrastructure[key] = 1.0
         dynasty.ai_team_owners = data.get("ai_team_owners", {})
         dynasty.loans = list(data.get("loans", []))
+        dynasty.bourse_rate = float(data.get("bourse_rate", 1.0))
+        dynasty.bourse_rate_history = {
+            int(k): v for k, v in data.get("bourse_rate_history", {}).items()
+        }
 
         # Restore FA pool (includes cut players; regenerated from seed if missing)
         dynasty._fa_pool_dicts = list(data.get("fa_pool", []))

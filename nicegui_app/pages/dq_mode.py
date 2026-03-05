@@ -146,7 +146,7 @@ async def render_dq_play(state: UserState, shared: dict):
 
         with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
             bal_color = ACCENT if bal > 0 else ACCENT_RED
-            _betting_card("Bankroll", f"${bal:,}", bal_color)
+            _betting_card("Bankroll", f"${bal:,} (≈₯{bal*10:,})", bal_color)
             _betting_card("Week", f"{current_week}/{total_weeks}", TEXT_PRIMARY)
             _betting_card("ROI", f"{roi:+.1f}%", ACCENT if roi >= 0 else ACCENT_RED)
             _betting_card("Peak", f"${peak:,}", GOLD)

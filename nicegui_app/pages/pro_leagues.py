@@ -565,7 +565,7 @@ async def render_pro_leagues_section(state, shared):
     def _fill_dq_summary():
         dq_box.clear()
         with dq_box:
-            metric_card("DQ$ Balance", f"${dq_mgr.bankroll.balance:,}")
+            metric_card("DQ$ Balance", f"${dq_mgr.bankroll.balance:,} (≈₯{dq_mgr.bankroll.balance * 10:,})")
             picks_made = dq_mgr.total_picks_made
             picks_won = dq_mgr.total_picks_won
             pct = (picks_won / picks_made * 100) if picks_made > 0 else 0

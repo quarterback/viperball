@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}League Economy — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Economy
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>WVL &mdash; LEAGUE ECONOMY</h1>
+  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/wvl/{{ session_id }}/economy" class="active">Economy</a>
+</div>
+
+<!-- Bourse Exchange Rate -->
+<h2 style="margin-top:20px;">&#x20AF; Bourse Exchange Rate</h2>
+<div style="margin-bottom:8px;font-size:12px;color:#888;">
+  The Bourse (&#x20AF;) is the currency of Viperball. It floats against a synthetic SDR basket.
+  Rate &gt; 1.000 = &#x20AF; is strong (international revenue up). Rate &lt; 1.000 = &#x20AF; is weak.
+</div>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+  <div class="stat-card" style="min-width:160px;">
+    <div class="stat-label">Current Rate</div>
+    <div class="stat-value {% if current_rate >= 1.06 %}positive{% elif current_rate < 0.95 %}negative{% endif %}">
+      &#x20AF;1 = {{ '%.4f'|format(current_rate) }} SDR
+    </div>
+  </div>
+  {% if rate_history %}
+  {% set last = rate_history[-1] %}
+  <div class="stat-card" style="min-width:160px;">
+    <div class="stat-label">Last Season Change</div>
+    <div class="stat-value {% if last.delta_pct >= 0 %}positive{% else %}negative{% endif %}">
+      {{ '+' if last.delta_pct >= 0 else '' }}{{ '%.2f'|format(last.delta_pct) }}%
+    </div>
+  </div>
+  <div class="stat-card" style="min-width:240px;">
+    <div class="stat-label">Status</div>
+    <div class="stat-value" style="font-size:12px;">{{ last.label }}</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if rate_history %}
+<h3>Exchange Rate History</h3>
+<div style="overflow-x:auto;margin-bottom:24px;">
+<table>
+  <thead>
+    <tr>
+      <th>Year</th>
+      <th class="num">Rate (SDR)</th>
+      <th class="num">Change</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rec in rate_history | reverse %}
+    <tr>
+      <td>{{ rec.year }}</td>
+      <td class="num">{{ '%.4f'|format(rec.rate) }}</td>
+      <td class="num {% if rec.delta_pct >= 0 %}positive{% else %}negative{% endif %}">
+        {{ '+' if rec.delta_pct >= 0 else '' }}{{ '%.2f'|format(rec.delta_pct) }}%
+      </td>
+      <td style="font-size:11px;color:#888;">{{ rec.label }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Club Financials Table -->
+<h2>Club Financials</h2>
+<div style="margin-bottom:8px;font-size:12px;color:#888;">
+  Est. Payroll and Fanbase are estimates based on club prestige and tier. Broadcast deal is fixed by tier.
+  All values in Bourses (&#x20AF;).
+</div>
+
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th>Club</th>
+      <th class="num">Tier</th>
+      <th>Owner Type</th>
+      <th class="num">Est. Payroll &#x20AF;</th>
+      <th class="num">Broadcast &#x20AF;</th>
+      <th class="num">Est. Fanbase</th>
+      <th class="num">Bankroll &#x20AF;</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in eco_rows %}
+    <tr {% if row.is_owner %}style="font-weight:700;background:#e8eeff;"{% endif %}>
+      <td>{{ row.team }}{% if row.is_owner %} &#x2605;{% endif %}</td>
+      <td class="num">{{ row.tier }}</td>
+      <td style="font-size:11px;">{{ row.owner }}</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(row.payroll) }}M</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(row.broadcast) }}M</td>
+      <td class="num">{{ '{:,}'.format(row.fanbase) }}</td>
+      <td class="num">
+        {% if row.bankroll is not none %}
+          <span class="{% if row.bankroll > 15 %}positive{% elif row.bankroll > 0 %}{% else %}negative{% endif %}">
+            &#x20AF;{{ '%.1f'|format(row.bankroll) }}M
+          </span>
+        {% else %}
+          <span style="color:#aaa;">N/A</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<div style="margin-top:8px;font-size:11px;color:#aaa;">
+  &#x2605; = Your club &nbsp;|&nbsp;
+  DQ$ game tokens are quoted at &#x20AF;10 per DQ$ (cosmetic conversion only).
+</div>
+{% endblock %}
