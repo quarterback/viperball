@@ -81,7 +81,6 @@
 <!-- Club Financials Table -->
 <h2>Club Financials</h2>
 <div style="margin-bottom:8px;font-size:12px;color:#888;">
-  Est. Payroll and Fanbase are estimates based on club prestige and tier. Broadcast deal is fixed by tier.
   All values in Bourses (&#x20AF;).
 </div>
 
@@ -92,10 +91,11 @@
       <th>Club</th>
       <th class="num">Tier</th>
       <th>Owner Type</th>
-      <th class="num">Est. Payroll &#x20AF;</th>
-      <th class="num">Broadcast &#x20AF;</th>
-      <th class="num">Est. Fanbase</th>
-      <th class="num">Bankroll &#x20AF;</th>
+      <th class="num">Payroll &#x20AF;M</th>
+      <th class="num">Revenue &#x20AF;M</th>
+      <th class="num">Expenses &#x20AF;M</th>
+      <th class="num">Bankroll &#x20AF;M</th>
+      <th class="num">Fanbase</th>
     </tr>
   </thead>
   <tbody>
@@ -105,8 +105,8 @@
       <td class="num">{{ row.tier }}</td>
       <td style="font-size:11px;">{{ row.owner }}</td>
       <td class="num">&#x20AF;{{ '%.1f'|format(row.payroll) }}M</td>
-      <td class="num">&#x20AF;{{ '%.1f'|format(row.broadcast) }}M</td>
-      <td class="num">{{ '{:,}'.format(row.fanbase) }}</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(row.revenue) }}M</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(row.expenses) }}M</td>
       <td class="num">
         {% if row.bankroll is not none %}
           <span class="{% if row.bankroll > 15 %}positive{% elif row.bankroll > 0 %}{% else %}negative{% endif %}">
@@ -116,6 +116,7 @@
           <span style="color:#aaa;">N/A</span>
         {% endif %}
       </td>
+      <td class="num">{{ '{:,}'.format(row.fanbase) }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -126,4 +127,43 @@
   &#x2605; = Your club &nbsp;|&nbsp;
   DQ$ game tokens are quoted at &#x20AF;10 per DQ$ (cosmetic conversion only).
 </div>
+
+<!-- Fanbase Trend Graph -->
+{% if fanbase_history %}
+<h2 style="margin-top:24px;">Fanbase Trend</h2>
+<div style="max-width:700px;">
+  <canvas id="fanbase_chart"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var seasons = {{ fanbase_history | map(attribute='year') | list | tojson }};
+  var fanbase_values = {{ fanbase_history | map(attribute='fanbase') | list | tojson }};
+  var ctx = document.getElementById('fanbase_chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: seasons,
+      datasets: [{
+        label: 'Fanbase',
+        data: fanbase_values,
+        borderColor: '#0ea5e9',
+        backgroundColor: 'rgba(14,165,233,0.1)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: {
+        y: { beginAtZero: false, title: { display: true, text: 'Supporters' } },
+        x: { title: { display: true, text: 'Season' } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

@@ -106,6 +106,16 @@ def cost_modifier(rate: float) -> float:
     return round(1.0 + (1.0 - rev_mod) * 0.5, 4)
 
 
+def macro_shock(rate, rng):
+    """Apply a rare macro-economic shock to the exchange rate.
+
+    5 % chance per season of a ±15 % jolt, clamped to [0.60, 1.50].
+    """
+    if rng.random() < 0.05:
+        rate *= rng.uniform(0.85, 1.15)
+    return max(0.60, min(1.50, rate))
+
+
 def build_rate_record(year: int, old_rate: float, new_rate: float) -> BourseRateRecord:
     delta = (new_rate - old_rate) / old_rate * 100 if old_rate else 0.0
     return BourseRateRecord(

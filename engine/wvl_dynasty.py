@@ -25,6 +25,7 @@ from engine.wvl_config import (
 from engine.wvl_owner import (
     ClubOwner, TeamPresident, InvestmentAllocation, ClubFinancials, ClubLoan,
     OWNER_ARCHETYPES, AI_OWNER_PROFILES, generate_president_pool, apply_investment_boosts,
+    apply_infrastructure_effects,
     compute_financials, president_set_team_style,
     compute_investment_modifier, generate_ai_investment,
     assign_ai_owner_profile, starting_fanbase, compute_fanbase_update,
@@ -42,7 +43,7 @@ from engine.promotion_relegation import (
 )
 from engine.development import apply_pro_development
 from engine.player_card import PlayerCard, player_to_card
-from engine.bourse import next_bourse_rate, revenue_modifier, build_rate_record
+from engine.bourse import next_bourse_rate, revenue_modifier, build_rate_record, macro_shock
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -363,6 +364,24 @@ class WVLDynasty:
         assignments_path = DATA_DIR / "wvl_tier_assignments.json"
         persist_tier_assignments(self.tier_assignments, str(assignments_path))
 
+        # 2b. Apply owner strategy for AI teams before FA
+        for team_key in self.tier_assignments:
+            if team_key == self.owner.club_key:
+                continue
+            ai_profile_key = self.ai_team_owners.get(team_key, "balanced")
+
+            class _OwnerProxy:
+                pass
+            op = _OwnerProxy()
+            op.type = ai_profile_key
+
+            class _TeamProxy:
+                pass
+            tp = _TeamProxy()
+            bcast = _BROADCAST_REVENUE.get(self.tier_assignments.get(team_key, 4), 1.0)
+            tp.revenue = bcast + float(self.tier_assignments.get(team_key, 4)) * 2.0
+            owner_strategy(tp, op)
+
         # 3. Free Agency
         if import_data:
             fa_pool = build_free_agent_pool_from_data(import_data)
@@ -457,6 +476,19 @@ class WVLDynasty:
             current = self.infrastructure.get(key, 1.0)
             self.infrastructure[key] = max(1.0, min(10.0, current + gain - depreciation))
 
+        # 4d. Apply infrastructure effects to owner's team attributes
+        # Use a simple namespace so apply_infrastructure_effects can set attrs
+        class _TeamProxy:
+            pass
+        team_proxy = _TeamProxy()
+        apply_infrastructure_effects(team_proxy, self.infrastructure)
+        summary["infrastructure_effects"] = {
+            "dev_multiplier": team_proxy.dev_multiplier,
+            "injury_modifier": team_proxy.injury_modifier,
+            "fan_growth_multiplier": team_proxy.fan_growth_multiplier,
+            "attendance_multiplier": team_proxy.attendance_multiplier,
+        }
+
         # 5. Pro development (age-based) for all teams
         dev_events = []
         for team_key, roster in self._team_rosters.items():
@@ -532,9 +564,11 @@ class WVLDynasty:
                 surviving_loans.append(loan.to_dict())
         self.loans = surviving_loans
 
-        # Advance Bourse exchange rate for this season
+        # Advance Bourse exchange rate for this season (OU step + macro shock)
         old_bourse_rate = self.bourse_rate
-        self.bourse_rate = next_bourse_rate(self.bourse_rate, rng=rng)
+        rate = next_bourse_rate(self.bourse_rate, rng=rng)
+        rate = macro_shock(rate, rng)
+        self.bourse_rate = rate
         bourse_record = build_rate_record(year, old_bourse_rate, self.bourse_rate)
         self.bourse_rate_history[year] = bourse_record.to_dict()
         summary["bourse_rate"] = bourse_record.to_dict()
@@ -606,6 +640,68 @@ class WVLDynasty:
         if "financials" in summary:
             summary["financials"]["fanbase_before"] = fanbase_before
             summary["financials"]["fanbase_after"] = fanbase_after
+
+        # 6b. AI owner turnover — 3 % chance per AI team per season
+        owner_changes = []
+        for team_key in list(self.ai_team_owners.keys()):
+            if team_key == self.owner.club_key:
+                continue
+            if rng.random() < 0.03:
+                old_profile = self.ai_team_owners[team_key]
+                new_profile = random_owner_profile(rng)
+                self.ai_team_owners[team_key] = new_profile
+                club = CLUBS_BY_KEY.get(team_key)
+                club_name = club.name if club else team_key
+                owner_changes.append({
+                    "team": club_name,
+                    "from": old_profile,
+                    "to": new_profile,
+                })
+        if owner_changes:
+            summary["owner_changes"] = owner_changes
+
+        # 6c. Compute real AI club financials and store on summary
+        ai_financials = []
+        for team_key in self.tier_assignments:
+            if team_key == self.owner.club_key:
+                continue
+            tier = self.tier_assignments.get(team_key, 4)
+            club = CLUBS_BY_KEY.get(team_key)
+            prestige = club.prestige if club else 50
+            ai_profile_key = self.ai_team_owners.get(team_key, "balanced")
+            ai_profile = AI_OWNER_PROFILES.get(ai_profile_key, AI_OWNER_PROFILES["balanced"])
+
+            # Estimate AI team fanbase from tier and prestige
+            base_fanbase = _TIER_STARTING_FANBASE.get(tier, 5_000)
+            est_fanbase = int(base_fanbase * (0.5 + prestige / 100))
+
+            # Revenue streams (simplified for AI)
+            bcast = _BROADCAST_REVENUE.get(tier, 1.0)
+            est_ticket = round(est_fanbase * 30 * 12 / 1_000_000, 2)
+            est_sponsor = round((est_fanbase / 50_000) * {1: 3.0, 2: 2.0, 3: 1.0, 4: 0.5}.get(tier, 0.5), 2)
+            est_merch = round(est_fanbase * 14 / 1_000_000, 2)
+            total_revenue = round(bcast + est_ticket + est_sponsor + est_merch, 2)
+
+            # Expenses
+            est_payroll = round(total_revenue * ai_profile["spending_ratio"], 2)
+            est_ops = 5.0
+            total_expenses = round(est_payroll + est_ops, 2)
+
+            net_income = round(total_revenue - total_expenses, 2)
+
+            ai_financials.append({
+                "team_key": team_key,
+                "team": club.name if club else team_key,
+                "tier": tier,
+                "owner_type": ai_profile_key,
+                "fanbase": est_fanbase,
+                "revenue": total_revenue,
+                "expenses": total_expenses,
+                "payroll": est_payroll,
+                "net_income": net_income,
+                "bankroll": round(prestige * 0.5 + net_income * 2, 1),
+            })
+        summary["ai_financials"] = ai_financials
 
         # Update owner tracking
         self.owner.seasons_owned += 1
@@ -918,6 +1014,39 @@ class WVLDynasty:
         with open(filepath) as f:
             data = json.load(f)
         return cls.from_dict(data)
+
+
+# ═══════════════════════════════════════════════════════════════
+# OWNER BEHAVIOR / TURNOVER
+# ═══════════════════════════════════════════════════════════════
+
+def owner_strategy(team, owner):
+    """Set team spending targets based on AI owner personality."""
+
+    if owner.type == "aggressive":
+        team.payroll_target = team.revenue * 0.80
+        team.infra_focus = ["training"]
+
+    elif owner.type == "balanced":
+        team.payroll_target = team.revenue * 0.60
+        team.infra_focus = ["training", "marketing"]
+
+    elif owner.type == "frugal":
+        team.payroll_target = team.revenue * 0.40
+        team.infra_focus = []
+
+    elif owner.type == "builder":
+        team.payroll_target = team.revenue * 0.55
+        team.infra_focus = ["youth", "scouting"]
+
+    elif owner.type == "vanity":
+        team.payroll_target = team.revenue * 0.90
+        team.infra_focus = ["training"]
+
+
+def random_owner_profile(rng):
+    """Return a random AI owner profile key."""
+    return rng.choice(["aggressive", "balanced", "frugal", "builder", "vanity"])
 
 
 # ═══════════════════════════════════════════════════════════════
