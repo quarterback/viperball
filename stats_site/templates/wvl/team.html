@@ -8,6 +8,15 @@
 {% endblock %}
 
 {% block content %}
+<style>
+.achievement-banner { display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; margin-bottom: 8px; }
+.achievement-champion { background: #78350f; color: #fbbf24; border: 1px solid #fbbf24; }
+.achievement-finalist { background: #1e293b; color: #94a3b8; border: 1px solid #64748b; }
+.achievement-semifinalist { background: #451a03; color: #d97706; border: 1px solid #92400e; }
+.achievement-quarterfinalist { background: #1e293b; color: #64748b; border: 1px solid #475569; }
+.achievement-qualifier { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+</style>
+
 <div class="page-header">
   <h1>{{ team.get('team_name', team_key) }}{% if is_owner_club %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOUR CLUB</span>{% endif %}</h1>
   <div class="subtitle">
@@ -17,11 +26,17 @@
     {% if team.get('narrative_tag') %} &middot; <span style="color:var(--yellow)">[{{ team.narrative_tag }}]</span>{% endif %}
     {% if team.get('prestige') %} &middot; Prestige: {{ team.prestige }}{% endif %}
   </div>
+  {% if team_achievement %}
+  <div style="margin-top:6px;">
+    <span class="achievement-banner {{ team_achievement.css_class }}">{{ team_achievement.label }}</span>
+  </div>
+  {% endif %}
 </div>
 
 <div class="tabs">
   <a href="/stats/wvl/{{ session_id }}/">Standings</a>
   <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ tier }}">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
   <a href="/stats/wvl/{{ session_id }}/team-stats?tier={{ tier }}">Team Stats</a>
   <a href="/stats/wvl/{{ session_id }}/economy">Economy</a>

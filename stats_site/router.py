@@ -1357,6 +1357,74 @@ def wvl_schedule(request: Request, session_id: str, tier: int = 1):
     ))
 
 
+def _compute_wvl_playoff_achievements(bracket_data):
+    """Given get_playoff_bracket() output, compute per-team achievement labels."""
+    rounds = bracket_data.get("rounds", [])
+    champion = bracket_data.get("champion")
+    total_rounds = len(rounds)
+
+    team_depth = {}  # team_key → (max_round_idx, team_name)
+    for round_idx, rnd in enumerate(rounds):
+        for m in rnd.get("matchups", []):
+            home = m.get("home", {})
+            away = m.get("away")
+            if home.get("team_key"):
+                k = home["team_key"]
+                if k not in team_depth or round_idx > team_depth[k][0]:
+                    team_depth[k] = (round_idx, home.get("team_name", k))
+            if away and away.get("team_key"):
+                k = away["team_key"]
+                if k not in team_depth or round_idx > team_depth[k][0]:
+                    team_depth[k] = (round_idx, away.get("team_name", k))
+        for bt in rnd.get("bye_teams", []):
+            k = bt.get("team_key")
+            if k and (k not in team_depth or round_idx > team_depth[k][0]):
+                team_depth[k] = (round_idx, bt.get("team_name", k))
+
+    results = {}
+    for team_key, (depth, name) in team_depth.items():
+        if team_key == champion:
+            label, css = "Champion", "achievement-champion"
+        elif depth == total_rounds - 1 and total_rounds > 0:
+            label, css = "Finalist", "achievement-finalist"
+        elif total_rounds <= 2:
+            label, css = "Playoff Qualifier", "achievement-qualifier"
+        elif depth == total_rounds - 2:
+            label, css = "Semifinalist", "achievement-semifinalist"
+        elif depth == total_rounds - 3:
+            label, css = "Quarterfinalist", "achievement-quarterfinalist"
+        else:
+            label, css = "Playoff Qualifier", "achievement-qualifier"
+        results[team_key] = {"label": label, "team_name": name, "round_depth": depth, "css_class": css}
+    return results
+
+
+@router.get("/wvl/{session_id}/playoffs", response_class=HTMLResponse)
+def wvl_playoffs(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    season = data["season"]
+
+    tier_brackets = []
+    for tier_num in sorted(season.tier_seasons.keys()):
+        ts = season.tier_seasons[tier_num]
+        bracket = ts.get_playoff_bracket()
+        achievements = _compute_wvl_playoff_achievements(bracket)
+        tier_brackets.append({
+            "tier_num": tier_num,
+            "tier_name": _wvl_tier_label(tier_num),
+            "bracket": bracket,
+            "achievements": achievements,
+        })
+
+    return templates.TemplateResponse("wvl/playoffs.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        tier_brackets=tier_brackets,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+        club_key=data.get("club_key", ""),
+    ))
+
+
 @router.get("/wvl/{session_id}/game/{tier}/{week}/{matchup}", response_class=HTMLResponse)
 def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: str):
     data = _get_wvl_session(session_id)
@@ -1446,6 +1514,13 @@ def wvl_team(request: Request, session_id: str, team_key: str):
                 "season_financials": latest_fin,
             }
 
+    # Compute playoff achievement for this team
+    team_achievement = None
+    bracket = tier_season.get_playoff_bracket()
+    if bracket.get("rounds"):
+        achievements = _compute_wvl_playoff_achievements(bracket)
+        team_achievement = achievements.get(team_key)
+
     return templates.TemplateResponse("wvl/team.html", _ctx(
         request, section="wvl", session_id=session_id,
         team=detail, team_key=team_key, tier=team_tier,
@@ -1454,6 +1529,7 @@ def wvl_team(request: Request, session_id: str, team_key: str):
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
         financial=financial,
+        team_achievement=team_achievement,
     ))
 
 

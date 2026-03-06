@@ -1503,6 +1503,58 @@ def _fill_schedule(containers, dynasty):
 # PLAYOFFS TAB
 # ═══════════════════════════════════════════════════════════════
 
+_ACHIEVEMENT_STYLES = {
+    "Champion": {"bg": "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)", "text": "text-white", "icon": "emoji_events"},
+    "Finalist": {"bg": "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)", "text": "text-white", "icon": "military_tech"},
+    "Semifinalist": {"bg": "linear-gradient(135deg, #d97706 0%, #b45309 100%)", "text": "text-white", "icon": "star_half"},
+    "Quarterfinalist": {"bg": "linear-gradient(135deg, #475569 0%, #334155 100%)", "text": "text-slate-100", "icon": "stars"},
+    "Playoff Qualifier": {"bg": "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", "text": "text-slate-200", "icon": "check_circle"},
+}
+
+
+def _compute_playoff_achievements(bracket_data):
+    """Given get_playoff_bracket() output, compute per-team achievement labels."""
+    rounds = bracket_data.get("rounds", [])
+    champion = bracket_data.get("champion")
+    total_rounds = len(rounds)
+
+    # Track deepest round each team reached (0-indexed)
+    team_depth = {}  # team_key → (max_round_idx, team_name)
+
+    for round_idx, rnd in enumerate(rounds):
+        for m in rnd.get("matchups", []):
+            home = m.get("home", {})
+            away = m.get("away")
+            if home.get("team_key"):
+                k = home["team_key"]
+                if k not in team_depth or round_idx > team_depth[k][0]:
+                    team_depth[k] = (round_idx, home.get("team_name", k))
+            if away and away.get("team_key"):
+                k = away["team_key"]
+                if k not in team_depth or round_idx > team_depth[k][0]:
+                    team_depth[k] = (round_idx, away.get("team_name", k))
+        for bt in rnd.get("bye_teams", []):
+            k = bt.get("team_key")
+            if k and (k not in team_depth or round_idx > team_depth[k][0]):
+                team_depth[k] = (round_idx, bt.get("team_name", k))
+
+    results = {}
+    for team_key, (depth, name) in team_depth.items():
+        if team_key == champion:
+            label = "Champion"
+        elif depth == total_rounds - 1 and total_rounds > 0:
+            label = "Finalist"
+        elif total_rounds <= 2:
+            label = "Playoff Qualifier"
+        elif depth == total_rounds - 2:
+            label = "Semifinalist"
+        elif depth == total_rounds - 3:
+            label = "Quarterfinalist"
+        else:
+            label = "Playoff Qualifier"
+        results[team_key] = {"label": label, "team_name": name, "round_depth": depth}
+    return results
+
 def _fill_playoffs(containers, dynasty):
     c = containers.get("playoffs")
     if not c:
@@ -1618,6 +1670,34 @@ def _fill_playoffs(containers, dynasty):
                                 ui.label("Bye:").classes("text-xs text-slate-400")
                                 for bt in bye_teams:
                                     ui.badge(bt.get("team_name", "?"), color="blue-grey").props("dense outline")
+
+                # ── Playoff Achievement Banners ──
+                achievements = _compute_playoff_achievements(bracket_data)
+                if achievements:
+                    ui.separator().classes("my-2")
+                    ui.label("Playoff Achievements").classes("text-sm font-bold text-slate-600 mb-1")
+                    # Group by label, ordered by depth (deepest first)
+                    by_label = {}
+                    for tk, ach in sorted(achievements.items(), key=lambda x: -x[1]["round_depth"]):
+                        by_label.setdefault(ach["label"], []).append((tk, ach["team_name"]))
+
+                    label_order = ["Champion", "Finalist", "Semifinalist", "Quarterfinalist", "Playoff Qualifier"]
+                    for label in label_order:
+                        teams = by_label.get(label)
+                        if not teams:
+                            continue
+                        style = _ACHIEVEMENT_STYLES.get(label, _ACHIEVEMENT_STYLES["Playoff Qualifier"])
+                        with ui.row().classes("w-full gap-2 flex-wrap mb-1"):
+                            for tk, tname in teams:
+                                is_owner = tk == dynasty.owner.club_key
+                                border = "border: 2px solid #6366f1;" if is_owner else ""
+                                with ui.card().classes("p-2 px-3").style(
+                                    f"background: {style['bg']}; border-radius: 6px; {border}"
+                                ):
+                                    with ui.row().classes("items-center gap-2"):
+                                        ui.icon(style["icon"]).classes(f"text-base {style['text']}")
+                                        ui.label(tname).classes(f"text-sm font-semibold {style['text']}")
+                                        ui.label(label).classes(f"text-xs {style['text']}" + " opacity-75")
 
 
 def _render_champions_banner(champions_dict):
