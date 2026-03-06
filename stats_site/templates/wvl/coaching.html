@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Coaching Staff — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Coaching
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>WVL &mdash; COACHING STAFF</h1>
+  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/wvl/{{ session_id }}/economy">Economy</a>
+  <a href="/stats/wvl/{{ session_id }}/coaching" class="active">Coaching</a>
+</div>
+
+{% set current_tier = namespace(val=0) %}
+{% for team in all_staffs %}
+  {% if team.tier != current_tier.val %}
+    {% set current_tier.val = team.tier %}
+    <h2 style="margin-top:24px;">Tier {{ team.tier }}</h2>
+  {% endif %}
+
+<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:4px;padding:12px;{% if team.is_owner %}background:#111;border-color:var(--yellow);{% endif %}">
+  <h3 style="margin-bottom:8px;">
+    <a href="/stats/wvl/{{ session_id }}/team/{{ team.team_key }}">{{ team.team_name }}</a>
+    {% if team.is_owner %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow);">YOUR CLUB</span>{% endif %}
+  </h3>
+  <div style="overflow-x:auto;">
+  <table style="margin-bottom:0;">
+    <thead>
+      <tr>
+        <th style="width:40px;">Role</th>
+        <th>Name</th>
+        <th class="num">OVR</th>
+        <th>Style</th>
+        <th>Composure</th>
+        <th class="num">LDR</th>
+        <th class="num">DEV</th>
+        <th class="num">REC</th>
+        <th class="num">ROT</th>
+        <th class="num">W-L</th>
+        <th class="num">Win%</th>
+        <th class="num">Champs</th>
+        <th class="num">Salary</th>
+        <th class="num">Yrs</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in team.staff %}
+      <tr>
+        <td><span class="tag {% if c.role == 'head_coach' %}stat-elite{% endif %}">{{ c.role_label }}</span></td>
+        <td>{{ c.name }}</td>
+        <td class="num {% if c.overall >= 80 %}stat-elite{% elif c.overall >= 65 %}positive{% elif c.overall < 45 %}negative{% endif %}">{{ '%.0f'|format(c.overall) }}</td>
+        <td style="font-size:11px;">{{ c.classification_label }}</td>
+        <td style="font-size:11px;">{{ c.composure_label }}</td>
+        <td class="num">{{ c.leadership }}</td>
+        <td class="num">{{ c.development }}</td>
+        <td class="num">{{ c.recruiting }}</td>
+        <td class="num">{{ c.rotations }}</td>
+        <td class="num" style="font-size:11px;">{{ c.career_wins }}-{{ c.career_losses }}</td>
+        <td class="num">{{ '%.3f'|format(c.win_pct) }}</td>
+        <td class="num">{{ c.championships }}</td>
+        <td class="num" style="font-size:11px;">${{ '{:,}'.format(c.contract_salary) }}</td>
+        <td class="num">{{ c.contract_years }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if team.staff and team.staff[0].philosophy %}
+  <div style="margin-top:6px;font-size:11px;color:#888;">
+    <strong>HC Philosophy:</strong> {{ team.staff[0].philosophy }}
+    {% if team.staff[0].coaching_style %} &mdash; <em>{{ team.staff[0].coaching_style }}</em>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if not all_staffs %}
+<div style="margin-top:24px;color:#888;">No coaching staff data available.</div>
+{% endif %}
+
+{% endblock %}

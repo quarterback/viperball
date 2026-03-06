@@ -95,6 +95,15 @@ def _get_fiv_data():
         return None
 
 
+def _get_fiv_cycle():
+    """Get live FIV cycle object (not dict), returns None if unavailable."""
+    try:
+        from api.main import _fiv_active_cycle
+        return _fiv_active_cycle
+    except Exception:
+        return None
+
+
 def _get_archives():
     """Get list of archived seasons from the database."""
     try:
@@ -1028,6 +1037,60 @@ def college_awards(request: Request, session_id: str):
     ))
 
 
+# ── DRAFTYQUEENZ ─────────────────────────────────────────────────────────
+
+@router.get("/college/{session_id}/draftyqueenz", response_class=HTMLResponse)
+def college_draftyqueenz(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+
+    dq_mgr = sess.get("dq_manager")
+    if not dq_mgr:
+        raise HTTPException(404, "DraftyQueenz not active in this session")
+
+    summary = dq_mgr.season_summary()
+
+    # Build pick history
+    all_picks = []
+    total_won = 0
+    total_lost = 0
+    for week_num in sorted(dq_mgr.weekly_contests.keys()):
+        contest = dq_mgr.weekly_contests[week_num]
+        for pick in contest.picks:
+            d = pick.to_dict()
+            d["week"] = week_num
+            d["resolved"] = contest.resolved
+            all_picks.append(d)
+            if pick.result == "win":
+                total_won += pick.payout
+            elif pick.result == "loss":
+                total_lost += pick.amount
+        for parlay in contest.parlays:
+            d = parlay.to_dict()
+            d["week"] = week_num
+            d["resolved"] = contest.resolved
+            d["pick_type"] = "parlay"
+            d["matchup"] = f"{len(parlay.legs)}-leg parlay"
+            all_picks.append(d)
+            if parlay.result == "win":
+                total_won += parlay.payout
+            elif parlay.result == "loss":
+                total_lost += parlay.amount
+
+    season = api["require_season"](sess)
+
+    return templates.TemplateResponse("college/draftyqueenz.html", _ctx(
+        request, section="college", session_id=session_id,
+        summary=summary,
+        picks=all_picks,
+        total_won=total_won,
+        total_lost=total_lost,
+        net=total_won - total_lost,
+        has_dq=True,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
 
 @router.get("/pro/", response_class=HTMLResponse)
@@ -1243,6 +1306,25 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         request, section="pro", league=league, session_id=session_id,
         teams=teams, sort=sort, division=division,
         divisions=divisions,
+        league_name=season.config.league_name,
+    ))
+
+
+@router.get("/pro/{league}/{session_id}/playoffs", response_class=HTMLResponse)
+def pro_playoffs(request: Request, league: str, session_id: str):
+    api = _get_api()
+    key = f"{league.lower()}_{session_id}"
+    season = api["pro_sessions"].get(key)
+    if not season:
+        raise HTTPException(404, "Pro league session not found")
+
+    bracket = season.get_playoff_bracket() if season.phase in ("playoffs", "completed") else {}
+
+    return templates.TemplateResponse("pro/playoffs.html", _ctx(
+        request, section="pro", league=league, session_id=session_id,
+        bracket=bracket,
+        champion=season.champion,
+        phase=season.phase,
         league_name=season.config.league_name,
     ))
 
@@ -1636,6 +1718,29 @@ def wvl_economy(request: Request, session_id: str):
         if fb:
             fanbase_history.append({"year": yr, "fanbase": int(fb)})
 
+    # Build year-by-year financial history for charts
+    financial_years = []
+    for yr in sorted(fin_hist.keys()):
+        rec = fin_hist[yr]
+        financial_years.append({
+            "year": yr,
+            "total_revenue": round(rec.get("total_revenue", 0), 2),
+            "ticket_revenue": round(rec.get("ticket_revenue", 0), 2),
+            "broadcast_revenue": round(rec.get("broadcast_revenue", 0), 2),
+            "sponsorship_revenue": round(rec.get("sponsorship_revenue", 0), 2),
+            "merchandise_revenue": round(rec.get("merchandise_revenue", 0), 2),
+            "prize_money": round(rec.get("prize_money", 0), 2),
+            "total_expenses": round(rec.get("total_expenses", 0), 2),
+            "roster_cost": round(rec.get("roster_cost", 0), 2),
+            "president_cost": round(rec.get("president_cost", 0), 2),
+            "base_ops_cost": round(rec.get("base_ops_cost", 0), 2),
+            "investment_spend": round(rec.get("investment_spend", 0), 2),
+            "loan_payments": round(rec.get("loan_payments", 0), 2),
+            "net_income": round(rec.get("net_income", 0), 2),
+            "bankroll_end": round(rec.get("bankroll_end", 0), 2),
+            "attendance_avg": rec.get("attendance_avg", 0),
+        })
+
     # Active loans
     loans = getattr(dynasty, "loans", [])
 
@@ -1650,8 +1755,91 @@ def wvl_economy(request: Request, session_id: str):
         rate_history=rate_history,
         current_rate=current_rate,
         fanbase_history=fanbase_history,
+        financial_years=financial_years,
         loans=loans,
         infrastructure=infrastructure,
+    ))
+
+
+@router.get("/wvl/{session_id}/coaching", response_class=HTMLResponse)
+def wvl_coaching(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    season = data["season"]
+    if not dynasty:
+        raise HTTPException(503, "Dynasty not loaded in this session")
+
+    # Load coaching staffs from all WVL tier team JSON files
+    import json as _json
+    from engine.coaching import CoachCard, CLASSIFICATION_LABELS
+    from engine.wvl_config import ALL_WVL_TIERS, CLUBS_BY_KEY
+    from pathlib import Path
+
+    all_staffs = []
+    data_dir = Path(__file__).parent.parent / "data"
+
+    for tier_cfg in ALL_WVL_TIERS:
+        tier_dir = data_dir.parent / tier_cfg.teams_dir
+        if not tier_dir.exists():
+            continue
+        for team_file in sorted(tier_dir.glob("*.json")):
+            try:
+                with open(team_file) as f:
+                    raw = _json.load(f)
+                team_key = team_file.stem
+                team_name = raw.get("team_info", {}).get("school", team_key)
+                cs = raw.get("coaching_staff")
+                if not cs:
+                    continue
+                tier = dynasty.tier_assignments.get(team_key, 0)
+                is_owner = team_key == dynasty.owner.club_key
+                staff_entries = []
+                for role in ["head_coach", "oc", "dc", "stc"]:
+                    card_data = cs.get(role)
+                    if not card_data or not isinstance(card_data, dict):
+                        continue
+                    card = CoachCard.from_dict(card_data)
+                    staff_entries.append({
+                        "role": role,
+                        "role_label": {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, role),
+                        "name": card.full_name,
+                        "overall": round(card.visible_score, 1),
+                        "star_rating": card.star_rating,
+                        "classification": card.classification,
+                        "classification_label": card.classification_label,
+                        "composure_label": card.composure_label,
+                        "leadership": card.leadership,
+                        "composure": card.composure,
+                        "rotations": card.rotations,
+                        "development": card.development,
+                        "recruiting": card.recruiting,
+                        "career_wins": card.career_wins,
+                        "career_losses": card.career_losses,
+                        "win_pct": round(card.win_percentage, 3),
+                        "championships": card.championships,
+                        "contract_salary": card.contract_salary,
+                        "contract_years": card.contract_years_remaining,
+                        "philosophy": card.philosophy,
+                        "coaching_style": card.coaching_style,
+                    })
+                if staff_entries:
+                    all_staffs.append({
+                        "team_key": team_key,
+                        "team_name": team_name,
+                        "tier": tier,
+                        "is_owner": is_owner,
+                        "staff": staff_entries,
+                    })
+            except Exception:
+                continue
+
+    all_staffs.sort(key=lambda s: (s["tier"], s["team_name"]))
+
+    return templates.TemplateResponse("wvl/coaching.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        dynasty_name=data.get("dynasty_name", "WVL"),
+        year=data.get("year", "?"),
+        all_staffs=all_staffs,
     ))
 
 
@@ -1969,6 +2157,50 @@ def intl_game(request: Request, match_id: str):
         match=match, gr=game_result,
         home_code=home_code, away_code=away_code,
         home_name=home_name, away_name=away_name,
+    ))
+
+
+@router.get("/international/worldcup/stats", response_class=HTMLResponse)
+def intl_worldcup_stats(request: Request):
+    fiv_data = _get_fiv_data()
+    cycle = _get_fiv_cycle()
+    if not fiv_data:
+        raise HTTPException(404, "No active FIV cycle")
+
+    wc = fiv_data.get("world_cup")
+    leaders = None
+    golden_boot = wc.get("golden_boot") if wc else None
+    mvp = wc.get("mvp") if wc else None
+
+    if cycle and cycle.world_cup and cycle.world_cup.all_results:
+        from engine.fiv import compute_tournament_stat_leaders
+        leaders = compute_tournament_stat_leaders(cycle.world_cup.all_results)
+
+    return templates.TemplateResponse("international/worldcup_stats.html", _ctx(
+        request, section="international",
+        leaders=leaders, golden_boot=golden_boot, mvp=mvp,
+    ))
+
+
+@router.get("/international/confederation/{conf}/stats", response_class=HTMLResponse)
+def intl_confederation_stats(request: Request, conf: str):
+    cycle = _get_fiv_cycle()
+    if not cycle:
+        raise HTTPException(404, "No active FIV cycle")
+
+    cc = cycle.confederations_data.get(conf)
+    if not cc:
+        raise HTTPException(404, f"Confederation '{conf}' not found")
+
+    from engine.fiv import compute_tournament_stat_leaders
+    leaders = compute_tournament_stat_leaders(cc.all_results)
+
+    conf_name = getattr(cc, "conf_full_name", conf)
+    champion = getattr(cc, "champion", None)
+
+    return templates.TemplateResponse("international/confederation_stats.html", _ctx(
+        request, section="international",
+        leaders=leaders, conf=conf, conf_name=conf_name, champion=champion,
     ))
 
 

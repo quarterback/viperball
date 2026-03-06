@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}DraftyQueenz — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>DraftyQueenz
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>DraftyQueenz</h1>
+  <div class="subtitle">{{ season_name }} &mdash; Betting &amp; Fantasy Results</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz" class="active">DraftyQueenz</a>
+</div>
+
+<!-- Summary Cards -->
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;margin-bottom:20px;">
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">Bankroll</div>
+    <div class="stat-value {% if summary.bankroll > 10000 %}positive{% elif summary.bankroll < 5000 %}negative{% endif %}">
+      DQ${{ '{:,.0f}'.format(summary.bankroll) }}
+    </div>
+  </div>
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">Peak Bankroll</div>
+    <div class="stat-value">DQ${{ '{:,.0f}'.format(summary.peak_bankroll) }}</div>
+  </div>
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">ROI</div>
+    <div class="stat-value {% if summary.roi > 0 %}positive{% elif summary.roi < 0 %}negative{% endif %}">
+      {{ '+' if summary.roi > 0 else '' }}{{ '%.1f'|format(summary.roi * 100 if summary.roi < 10 else summary.roi) }}%
+    </div>
+  </div>
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">Pick Accuracy</div>
+    <div class="stat-value">{{ '%.1f'|format(summary.pick_accuracy * 100 if summary.pick_accuracy <= 1 else summary.pick_accuracy) }}%</div>
+  </div>
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">Total Earned</div>
+    <div class="stat-value">DQ${{ '{:,.0f}'.format(summary.total_earned) }}</div>
+  </div>
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">Total Wagered</div>
+    <div class="stat-value">DQ${{ '{:,.0f}'.format(summary.total_wagered) }}</div>
+  </div>
+  <div class="stat-card" style="min-width:180px;">
+    <div class="stat-label">Booster Tier</div>
+    <div class="stat-value" style="font-size:12px;">{{ summary.booster_tier }}</div>
+    <div style="font-size:10px;color:#888;margin-top:2px;">{{ summary.booster_tier_description }}</div>
+  </div>
+</div>
+
+<!-- Parlay & Fantasy Stats -->
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+  <div class="stat-card" style="min-width:120px;">
+    <div class="stat-label">Parlays Won</div>
+    <div class="stat-value">{{ summary.parlays_won }} / {{ summary.parlays_made }}</div>
+  </div>
+  <div class="stat-card" style="min-width:120px;">
+    <div class="stat-label">Jackpots</div>
+    <div class="stat-value {% if summary.jackpots > 0 %}positive{% endif %}">{{ summary.jackpots }}</div>
+  </div>
+  <div class="stat-card" style="min-width:120px;">
+    <div class="stat-label">Fantasy Top 3</div>
+    <div class="stat-value">{{ '%.0f'|format(summary.fantasy_top3_rate * 100 if summary.fantasy_top3_rate <= 1 else summary.fantasy_top3_rate) }}%</div>
+  </div>
+  <div class="stat-card" style="min-width:120px;">
+    <div class="stat-label">Total Donated</div>
+    <div class="stat-value">DQ${{ '{:,.0f}'.format(summary.total_donated) }}</div>
+  </div>
+  {% if summary.next_tier %}
+  <div class="stat-card" style="min-width:180px;">
+    <div class="stat-label">Next Tier</div>
+    <div class="stat-value" style="font-size:11px;">{{ summary.next_tier.name }}</div>
+    <div style="font-size:10px;color:#888;margin-top:2px;">DQ${{ '{:,.0f}'.format(summary.next_tier.amount_needed) }} more needed</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Active Boosts -->
+{% if summary.active_boosts %}
+<h2>Active Boosts</h2>
+<div style="overflow-x:auto;margin-bottom:20px;">
+<table>
+  <thead><tr><th>Type</th><th class="num">Boost Value</th></tr></thead>
+  <tbody>
+    {% for boost_type, boost_val in summary.active_boosts.items() %}
+    <tr>
+      <td>{{ boost_type | replace('_', ' ') | title }}</td>
+      <td class="num positive">+{{ '%.1f'|format(boost_val) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Weekly Breakdown -->
+{% if summary.weeks %}
+<h2>Weekly Results</h2>
+<div style="overflow-x:auto;margin-bottom:20px;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">Week</th>
+      <th class="num">Picks</th>
+      <th class="num">Won</th>
+      <th class="num">Pred. Earnings</th>
+      <th class="num">Fantasy?</th>
+      <th class="num">Fantasy Pts</th>
+      <th class="num">Fantasy Earn.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for w in summary.weeks %}
+    <tr>
+      <td class="num">{{ w.week }}</td>
+      <td class="num">{{ w.picks_made }}</td>
+      <td class="num">{{ w.picks_won }}</td>
+      <td class="num {% if w.prediction_earnings > 0 %}positive{% elif w.prediction_earnings < 0 %}negative{% endif %}">
+        {{ '+' if w.prediction_earnings > 0 else '' }}DQ${{ '{:,.0f}'.format(w.prediction_earnings) }}
+      </td>
+      <td class="num">{{ 'Yes' if w.fantasy_entered else '-' }}</td>
+      <td class="num">{{ '%.1f'|format(w.fantasy_points) if w.fantasy_entered else '-' }}</td>
+      <td class="num {% if w.fantasy_earnings > 0 %}positive{% elif w.fantasy_earnings < 0 %}negative{% endif %}">
+        {% if w.fantasy_entered %}{{ '+' if w.fantasy_earnings > 0 else '' }}DQ${{ '{:,.0f}'.format(w.fantasy_earnings) }}{% else %}-{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Pick History -->
+{% if picks %}
+<h2>Pick History</h2>
+<div style="margin-bottom:8px;font-size:12px;color:#888;">
+  Net P&amp;L: <span class="{% if net > 0 %}positive{% elif net < 0 %}negative{% endif %}">
+    {{ '+' if net > 0 else '' }}DQ${{ '{:,.0f}'.format(net) }}
+  </span>
+  &nbsp;|&nbsp; Won: DQ${{ '{:,.0f}'.format(total_won) }} &nbsp;|&nbsp; Lost: DQ${{ '{:,.0f}'.format(total_lost) }}
+</div>
+<div style="overflow-x:auto;margin-bottom:20px;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">Week</th>
+      <th>Type</th>
+      <th>Matchup</th>
+      <th>Selection</th>
+      <th class="num">Amount</th>
+      <th class="num">Odds</th>
+      <th class="num">Result</th>
+      <th class="num">Payout</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in picks | reverse %}
+    <tr>
+      <td class="num">{{ p.week }}</td>
+      <td style="font-size:11px;">{{ p.pick_type | replace('_', ' ') | title }}</td>
+      <td style="font-size:11px;">{{ p.get('matchup', p.get('game_away', '') ~ ' @ ' ~ p.get('game_home', '')) }}</td>
+      <td style="font-size:11px;">{{ p.get('selection', '-') }}</td>
+      <td class="num">DQ${{ '{:,.0f}'.format(p.get('amount', 0)) }}</td>
+      <td class="num" style="font-size:11px;">
+        {% if p.get('odds_snapshot') %}{{ p.odds_snapshot }}{% else %}-{% endif %}
+      </td>
+      <td class="num {% if p.get('result') == 'win' %}positive{% elif p.get('result') == 'loss' %}negative{% endif %}">
+        {{ p.get('result', 'pending') | upper }}
+      </td>
+      <td class="num {% if p.get('payout', 0) > 0 %}positive{% endif %}">
+        {% if p.get('payout', 0) > 0 %}DQ${{ '{:,.0f}'.format(p.payout) }}{% else %}-{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Donations -->
+{% if summary.donations %}
+<h2>Donation History</h2>
+<div style="overflow-x:auto;margin-bottom:20px;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">Week</th>
+      <th>Type</th>
+      <th>Target Team</th>
+      <th class="num">Amount</th>
+      <th class="num">Boost</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in summary.donations | reverse %}
+    <tr>
+      <td class="num">{{ d.get('week', '-') }}</td>
+      <td>{{ d.get('label', d.get('donation_type', '')) | replace('_', ' ') | title }}</td>
+      <td>{{ d.get('target_team', '-') }}</td>
+      <td class="num">DQ${{ '{:,.0f}'.format(d.get('amount', 0)) }}</td>
+      <td class="num positive">+{{ '%.1f'|format(d.get('boost_value', 0)) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if not summary.weeks %}
+<div style="margin-top:24px;color:#888;">No DraftyQueenz activity recorded yet this season.</div>
+{% endif %}
+
+{% endblock %}

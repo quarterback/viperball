@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}World Cup Stats — FIV — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">FIV</a><span class="sep">/</span><a href="/stats/international/worldcup">World Cup</a><span class="sep">/</span>Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>FIV WORLD CUP &mdash; STAT LEADERS</h1>
+</div>
+
+<div class="tabs">
+  <a href="/stats/international/">Home</a>
+  <a href="/stats/international/rankings">Rankings</a>
+  <a href="/stats/international/worldcup">World Cup</a>
+  <a href="/stats/international/worldcup/stats" class="active">WC Stats</a>
+  <a href="/stats/international/team-stats">Team Stats</a>
+</div>
+
+<!-- Awards -->
+{% if golden_boot or mvp %}
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;margin-bottom:20px;">
+  {% if golden_boot %}
+  <div class="stat-card" style="min-width:200px;">
+    <div class="stat-label">Golden Boot</div>
+    <div class="stat-value" style="font-size:12px;">{{ golden_boot.get('name', 'TBD') }}</div>
+    <div style="font-size:10px;color:#888;">{{ golden_boot.get('nation', '') }} &mdash; {{ golden_boot.get('goals', golden_boot.get('total_tds', 0)) }} TDs</div>
+  </div>
+  {% endif %}
+  {% if mvp %}
+  <div class="stat-card" style="min-width:200px;">
+    <div class="stat-label">Tournament MVP</div>
+    <div class="stat-value" style="font-size:12px;">{{ mvp.get('name', 'TBD') }}</div>
+    <div style="font-size:10px;color:#888;">{{ mvp.get('nation', '') }}</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if leaders %}
+  {% for cat_name in ['scoring', 'rushing', 'kick_passing', 'defensive', 'kicking'] %}
+    {% set cat_data = leaders.get(cat_name, []) %}
+    {% if cat_data %}
+    <h2 style="margin-top:20px;">{{ cat_name | replace('_', ' ') | title }} Leaders</h2>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+    <table>
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>Player</th>
+          <th>Nation</th>
+          <th class="num">GP</th>
+          {% if cat_name == 'scoring' %}
+          <th class="num">TDs</th><th class="num">Rush TD</th><th class="num">KP TD</th><th class="num">Lat TD</th>
+          {% elif cat_name == 'rushing' %}
+          <th class="num">Car</th><th class="num">Yards</th><th class="num">TDs</th><th class="num">Long</th>
+          {% elif cat_name == 'kick_passing' %}
+          <th class="num">Att</th><th class="num">Comp</th><th class="num">Yards</th><th class="num">TDs</th><th class="num">INT</th>
+          {% elif cat_name == 'defensive' %}
+          <th class="num">Tackles</th><th class="num">TFL</th><th class="num">Sacks</th><th class="num">INT</th>
+          {% elif cat_name == 'kicking' %}
+          <th class="num">DK Made</th><th class="num">DK Att</th><th class="num">PK Made</th><th class="num">PK Att</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in cat_data[:15] %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td>{{ p.name }}</td>
+          <td style="font-size:11px;">{{ p.nation }}</td>
+          <td class="num">{{ p.games }}</td>
+          {% if cat_name == 'scoring' %}
+          <td class="num stat-elite">{{ p.total_tds }}</td><td class="num">{{ p.rushing_tds }}</td><td class="num">{{ p.kick_pass_tds }}</td><td class="num">{{ p.lateral_tds }}</td>
+          {% elif cat_name == 'rushing' %}
+          <td class="num">{{ p.rush_carries }}</td><td class="num stat-elite">{{ p.rushing_yards }}</td><td class="num">{{ p.rushing_tds }}</td><td class="num">{{ p.long_rush }}</td>
+          {% elif cat_name == 'kick_passing' %}
+          <td class="num">{{ p.kick_passes_thrown }}</td><td class="num">{{ p.kick_passes_completed }}</td><td class="num stat-elite">{{ p.kick_pass_yards }}</td><td class="num">{{ p.kick_pass_tds }}</td><td class="num">{{ p.kick_pass_interceptions_thrown }}</td>
+          {% elif cat_name == 'defensive' %}
+          <td class="num stat-elite">{{ p.tackles }}</td><td class="num">{{ p.tfl }}</td><td class="num">{{ p.sacks }}</td><td class="num">{{ p.kick_pass_ints }}</td>
+          {% elif cat_name == 'kicking' %}
+          <td class="num">{{ p.drop_kicks_made }}</td><td class="num">{{ p.drop_kicks_attempted }}</td><td class="num">{{ p.place_kicks_made }}</td><td class="num">{{ p.place_kicks_attempted }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+<div style="margin-top:24px;color:#888;">World Cup stats are not yet available. The tournament may not have started.</div>
+{% endif %}
+
+{% endblock %}
