@@ -729,6 +729,8 @@ class ProLeagueSeason:
                     "kick_pass_yards": 0,
                     "kick_pass_completions": 0,
                     "kick_pass_attempts": 0,
+                    "kick_pass_tds": 0,
+                    "kick_pass_receptions": 0,
                     "lateral_yards": 0,
                     "laterals": 0,
                     "fumbles": 0,
@@ -753,6 +755,8 @@ class ProLeagueSeason:
             acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", 0)))
             # kick pass attempts: fast_sim="kick_passes_thrown", full engine="kick_pass_attempts"
             acc["kick_pass_attempts"] += ps.get("kick_passes_thrown", ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0)))
+            acc["kick_pass_tds"] += ps.get("kick_pass_tds", ps.get("game_kick_pass_tds", 0))
+            acc["kick_pass_receptions"] += ps.get("kick_pass_receptions", ps.get("game_kick_pass_receptions", 0))
             # lateral yards: both use "lateral_yards"
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
             # laterals: fast_sim uses "laterals_thrown"+"lateral_receptions", full engine uses "laterals"/"lateral_chains"
