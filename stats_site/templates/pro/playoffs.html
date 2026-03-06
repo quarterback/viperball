@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Playoffs — {{ league_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/pro/">Pro Leagues</a><span class="sep">/</span><a href="/stats/pro/{{ league }}/{{ session_id }}/">{{ league_name }}</a><span class="sep">/</span>Playoffs
+</div></div>
+{% endblock %}
+
+{% block content %}
+<style>
+.bracket { display: flex; gap: 24px; overflow-x: auto; padding-bottom: 12px; }
+.bracket-round { min-width: 220px; }
+.bracket-round h3 { font-size: 11px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; letter-spacing: 0.5px; }
+.matchup { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg-alt); }
+.matchup.championship { border-color: var(--yellow); }
+.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size: 11px; }
+.matchup-team + .matchup-team { border-top: 1px solid var(--border); }
+.matchup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup-score { font-variant-numeric: tabular-nums; flex-shrink: 0; width: 32px; text-align: right; }
+.matchup-winner { color: var(--fg-bright); font-weight: bold; }
+.bye-list { font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
+</style>
+
+<div class="page-header">
+  <h1>{{ league_name }} &mdash; PLAYOFFS</h1>
+  {% if champion %}
+  <div class="subtitle"><span class="stat-elite">Champion: {{ champion }}</span></div>
+  {% elif phase == 'regular_season' %}
+  <div class="subtitle">Playoffs have not started yet</div>
+  {% else %}
+  <div class="subtitle">Playoffs in progress</div>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/stats">Players</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/pro/{{ league }}/{{ session_id }}/playoffs" class="active">Playoffs</a>
+</div>
+
+{% if bracket and bracket.get('rounds') %}
+<div class="bracket" style="margin-top:20px;">
+  {% for round in bracket.rounds %}
+  <div class="bracket-round">
+    <h3>{{ round.round_name }}</h3>
+    {% for m in round.matchups %}
+    <div class="matchup {% if loop.last and loop.parent is not defined and not loop.revindex0 %}championship{% endif %}">
+      {% if m.home %}
+      <div class="matchup-team {% if m.get('winner') == m.home.team_key %}matchup-winner{% endif %}">
+        <span class="matchup-name">
+          <a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ m.home.team_key }}">{{ m.home.team_name }}</a>
+        </span>
+        {% if m.get('home_score') is not none %}
+        <span class="matchup-score">{{ '%.1f'|format(m.home_score) }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if m.away %}
+      <div class="matchup-team {% if m.get('winner') == m.away.team_key %}matchup-winner{% endif %}">
+        <span class="matchup-name">
+          <a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ m.away.team_key }}">{{ m.away.team_name }}</a>
+        </span>
+        {% if m.get('away_score') is not none %}
+        <span class="matchup-score">{{ '%.1f'|format(m.away_score) }}</span>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="matchup-team" style="color:var(--fg-dim);">
+        <span class="matchup-name">BYE</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% if round.bye_teams %}
+    <div class="bye-list">
+      <strong>Byes:</strong>
+      {% for bt in round.bye_teams %}
+        <a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ bt.team_key }}">{{ bt.team_name }}</a>{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% elif phase == 'regular_season' %}
+<div style="margin-top:24px;color:#888;">
+  The regular season is still in progress. Playoffs will begin after all regular season games are complete.
+</div>
+{% else %}
+<div style="margin-top:24px;color:#888;">No playoff data available.</div>
+{% endif %}
+
+{% endblock %}

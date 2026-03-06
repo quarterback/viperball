@@ -19,6 +19,7 @@
   <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
   <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
   <a href="/stats/wvl/{{ session_id }}/economy" class="active">Economy</a>
+  <a href="/stats/wvl/{{ session_id }}/coaching">Coaching</a>
 </div>
 
 <!-- Bourse Exchange Rate -->
@@ -177,19 +178,193 @@
 </div>
 {% endif %}
 
+<!-- Financial History -->
+{% if financial_years and financial_years | length > 0 %}
+<h2 style="margin-top:24px;">Financial History</h2>
+<div style="margin-bottom:8px;font-size:12px;color:#888;">
+  Year-by-year revenue, expenses, and net income for your club.
+</div>
+
+<!-- Revenue vs Expenses Chart -->
+<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:24px;">
+<div style="flex:1;min-width:340px;max-width:700px;">
+  <h3>Revenue &amp; Expenses</h3>
+  <canvas id="rev_exp_chart"></canvas>
+</div>
+<div style="flex:1;min-width:340px;max-width:700px;">
+  <h3>Net Income &amp; Bankroll</h3>
+  <canvas id="net_bankroll_chart"></canvas>
+</div>
+</div>
+
+<!-- Revenue Breakdown Chart -->
+<div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:24px;">
+<div style="flex:1;min-width:340px;max-width:700px;">
+  <h3>Revenue Breakdown</h3>
+  <canvas id="rev_breakdown_chart"></canvas>
+</div>
+<div style="flex:1;min-width:340px;max-width:700px;">
+  <h3>Expense Breakdown</h3>
+  <canvas id="exp_breakdown_chart"></canvas>
+</div>
+</div>
+
+<!-- Financial History Table -->
+<h3>Year-by-Year Detail</h3>
+<div style="overflow-x:auto;margin-bottom:24px;">
+<table>
+  <thead>
+    <tr>
+      <th>Year</th>
+      <th class="num">Revenue &#x20AF;M</th>
+      <th class="num">Tickets</th>
+      <th class="num">Broadcast</th>
+      <th class="num">Sponsors</th>
+      <th class="num">Merch</th>
+      <th class="num">Prize</th>
+      <th class="num">Expenses &#x20AF;M</th>
+      <th class="num">Roster</th>
+      <th class="num">Net &#x20AF;M</th>
+      <th class="num">Bankroll</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for yr in financial_years | reverse %}
+    <tr>
+      <td>{{ yr.year }}</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(yr.total_revenue) }}M</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.ticket_revenue) }}</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.broadcast_revenue) }}</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.sponsorship_revenue) }}</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.merchandise_revenue) }}</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.prize_money) }}</td>
+      <td class="num">&#x20AF;{{ '%.1f'|format(yr.total_expenses) }}M</td>
+      <td class="num" style="font-size:11px;">{{ '%.1f'|format(yr.roster_cost) }}</td>
+      <td class="num {% if yr.net_income >= 0 %}positive{% else %}negative{% endif %}">
+        {{ '+' if yr.net_income >= 0 else '' }}&#x20AF;{{ '%.1f'|format(yr.net_income) }}M
+      </td>
+      <td class="num {% if yr.bankroll_end > 15 %}positive{% elif yr.bankroll_end <= 0 %}negative{% endif %}">
+        &#x20AF;{{ '%.1f'|format(yr.bankroll_end) }}M
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 <!-- Fanbase Trend Graph -->
 {% if fanbase_history %}
 <h2 style="margin-top:24px;">Fanbase Trend</h2>
 <div style="max-width:700px;">
   <canvas id="fanbase_chart"></canvas>
 </div>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function() {
+  var chartDefaults = {
+    responsive: true,
+    plugins: { legend: { display: true, labels: { color: '#c8c8c8', font: { size: 10 } } } },
+    scales: {
+      y: { ticks: { color: '#888' }, grid: { color: '#222' }, title: { display: true, color: '#888' } },
+      x: { ticks: { color: '#888' }, grid: { color: '#222' }, title: { display: true, text: 'Season', color: '#888' } }
+    }
+  };
+
+  {% if financial_years and financial_years | length > 0 %}
+  var finYears = {{ financial_years | map(attribute='year') | list | tojson }};
+  var totalRev = {{ financial_years | map(attribute='total_revenue') | list | tojson }};
+  var totalExp = {{ financial_years | map(attribute='total_expenses') | list | tojson }};
+  var netIncome = {{ financial_years | map(attribute='net_income') | list | tojson }};
+  var bankroll = {{ financial_years | map(attribute='bankroll_end') | list | tojson }};
+
+  // Revenue vs Expenses
+  new Chart(document.getElementById('rev_exp_chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: finYears,
+      datasets: [
+        { label: 'Revenue', data: totalRev, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: false, tension: 0.3 },
+        { label: 'Expenses', data: totalExp, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: false, tension: 0.3 }
+      ]
+    },
+    options: Object.assign({}, chartDefaults, { scales: Object.assign({}, chartDefaults.scales, { y: Object.assign({}, chartDefaults.scales.y, { title: { display: true, text: 'Millions (₯)', color: '#888' } }) }) })
+  });
+
+  // Net Income & Bankroll
+  new Chart(document.getElementById('net_bankroll_chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: finYears,
+      datasets: [
+        { label: 'Net Income', data: netIncome, backgroundColor: netIncome.map(function(v) { return v >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'; }), borderWidth: 0 },
+        { label: 'Bankroll', data: bankroll, type: 'line', borderColor: '#0ea5e9', backgroundColor: 'transparent', tension: 0.3, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true, labels: { color: '#c8c8c8', font: { size: 10 } } } },
+      scales: {
+        y: { ticks: { color: '#888' }, grid: { color: '#222' }, title: { display: true, text: 'Net Income (₯M)', color: '#888' } },
+        y1: { position: 'right', ticks: { color: '#0ea5e9' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Bankroll (₯M)', color: '#0ea5e9' } },
+        x: { ticks: { color: '#888' }, grid: { color: '#222' } }
+      }
+    }
+  });
+
+  // Revenue Breakdown (stacked)
+  new Chart(document.getElementById('rev_breakdown_chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: finYears,
+      datasets: [
+        { label: 'Tickets', data: {{ financial_years | map(attribute='ticket_revenue') | list | tojson }}, backgroundColor: '#22c55e' },
+        { label: 'Broadcast', data: {{ financial_years | map(attribute='broadcast_revenue') | list | tojson }}, backgroundColor: '#3399ff' },
+        { label: 'Sponsors', data: {{ financial_years | map(attribute='sponsorship_revenue') | list | tojson }}, backgroundColor: '#eab308' },
+        { label: 'Merch', data: {{ financial_years | map(attribute='merchandise_revenue') | list | tojson }}, backgroundColor: '#a855f7' },
+        { label: 'Prize', data: {{ financial_years | map(attribute='prize_money') | list | tojson }}, backgroundColor: '#f97316' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true, labels: { color: '#c8c8c8', font: { size: 10 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } },
+        y: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' }, title: { display: true, text: 'Revenue (₯M)', color: '#888' } }
+      }
+    }
+  });
+
+  // Expense Breakdown (stacked)
+  new Chart(document.getElementById('exp_breakdown_chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: finYears,
+      datasets: [
+        { label: 'Roster', data: {{ financial_years | map(attribute='roster_cost') | list | tojson }}, backgroundColor: '#ef4444' },
+        { label: 'President', data: {{ financial_years | map(attribute='president_cost') | list | tojson }}, backgroundColor: '#f97316' },
+        { label: 'Operations', data: {{ financial_years | map(attribute='base_ops_cost') | list | tojson }}, backgroundColor: '#eab308' },
+        { label: 'Investment', data: {{ financial_years | map(attribute='investment_spend') | list | tojson }}, backgroundColor: '#a855f7' },
+        { label: 'Loan Payments', data: {{ financial_years | map(attribute='loan_payments') | list | tojson }}, backgroundColor: '#6b7280' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true, labels: { color: '#c8c8c8', font: { size: 10 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } },
+        y: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' }, title: { display: true, text: 'Expenses (₯M)', color: '#888' } }
+      }
+    }
+  });
+  {% endif %}
+
+  {% if fanbase_history %}
   var seasons = {{ fanbase_history | map(attribute='year') | list | tojson }};
   var fanbase_values = {{ fanbase_history | map(attribute='fanbase') | list | tojson }};
-  var ctx = document.getElementById('fanbase_chart').getContext('2d');
-  new Chart(ctx, {
+  new Chart(document.getElementById('fanbase_chart').getContext('2d'), {
     type: 'line',
     data: {
       labels: seasons,
@@ -202,17 +377,10 @@
         tension: 0.3
       }]
     },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true } },
-      scales: {
-        y: { beginAtZero: false, title: { display: true, text: 'Supporters' } },
-        x: { title: { display: true, text: 'Season' } }
-      }
-    }
+    options: Object.assign({}, chartDefaults, { scales: Object.assign({}, chartDefaults.scales, { y: Object.assign({}, chartDefaults.scales.y, { beginAtZero: false, title: { display: true, text: 'Supporters', color: '#888' } }) }) })
   });
+  {% endif %}
 })();
 </script>
-{% endif %}
 
 {% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ conf_name }} Stats — FIV — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/international/">FIV</a><span class="sep">/</span><a href="/stats/international/confederation/{{ conf }}">{{ conf_name }}</a><span class="sep">/</span>Stats
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ conf_name | upper }} &mdash; STAT LEADERS</h1>
+  {% if champion %}
+  <div class="subtitle"><span class="stat-elite">Champion: {{ champion }}</span></div>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <a href="/stats/international/">Home</a>
+  <a href="/stats/international/rankings">Rankings</a>
+  <a href="/stats/international/confederation/{{ conf }}">{{ conf }}</a>
+  <a href="/stats/international/confederation/{{ conf }}/stats" class="active">{{ conf }} Stats</a>
+  <a href="/stats/international/team-stats">Team Stats</a>
+</div>
+
+{% if leaders %}
+  {% for cat_name in ['scoring', 'rushing', 'kick_passing', 'defensive', 'kicking'] %}
+    {% set cat_data = leaders.get(cat_name, []) %}
+    {% if cat_data %}
+    <h2 style="margin-top:20px;">{{ cat_name | replace('_', ' ') | title }} Leaders</h2>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+    <table>
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>Player</th>
+          <th>Nation</th>
+          <th class="num">GP</th>
+          {% if cat_name == 'scoring' %}
+          <th class="num">TDs</th><th class="num">Rush TD</th><th class="num">KP TD</th><th class="num">Lat TD</th>
+          {% elif cat_name == 'rushing' %}
+          <th class="num">Car</th><th class="num">Yards</th><th class="num">TDs</th><th class="num">Long</th>
+          {% elif cat_name == 'kick_passing' %}
+          <th class="num">Att</th><th class="num">Comp</th><th class="num">Yards</th><th class="num">TDs</th><th class="num">INT</th>
+          {% elif cat_name == 'defensive' %}
+          <th class="num">Tackles</th><th class="num">TFL</th><th class="num">Sacks</th><th class="num">INT</th>
+          {% elif cat_name == 'kicking' %}
+          <th class="num">DK Made</th><th class="num">DK Att</th><th class="num">PK Made</th><th class="num">PK Att</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in cat_data[:15] %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td>{{ p.name }}</td>
+          <td style="font-size:11px;">{{ p.nation }}</td>
+          <td class="num">{{ p.games }}</td>
+          {% if cat_name == 'scoring' %}
+          <td class="num stat-elite">{{ p.total_tds }}</td><td class="num">{{ p.rushing_tds }}</td><td class="num">{{ p.kick_pass_tds }}</td><td class="num">{{ p.lateral_tds }}</td>
+          {% elif cat_name == 'rushing' %}
+          <td class="num">{{ p.rush_carries }}</td><td class="num stat-elite">{{ p.rushing_yards }}</td><td class="num">{{ p.rushing_tds }}</td><td class="num">{{ p.long_rush }}</td>
+          {% elif cat_name == 'kick_passing' %}
+          <td class="num">{{ p.kick_passes_thrown }}</td><td class="num">{{ p.kick_passes_completed }}</td><td class="num stat-elite">{{ p.kick_pass_yards }}</td><td class="num">{{ p.kick_pass_tds }}</td><td class="num">{{ p.kick_pass_interceptions_thrown }}</td>
+          {% elif cat_name == 'defensive' %}
+          <td class="num stat-elite">{{ p.tackles }}</td><td class="num">{{ p.tfl }}</td><td class="num">{{ p.sacks }}</td><td class="num">{{ p.kick_pass_ints }}</td>
+          {% elif cat_name == 'kicking' %}
+          <td class="num">{{ p.drop_kicks_made }}</td><td class="num">{{ p.drop_kicks_attempted }}</td><td class="num">{{ p.place_kicks_made }}</td><td class="num">{{ p.place_kicks_attempted }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+<div style="margin-top:24px;color:#888;">No tournament stats available yet.</div>
+{% endif %}
+
+{% endblock %}
