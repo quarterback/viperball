@@ -643,7 +643,9 @@ class ProLeagueSeason:
         game = week_data.get(matchup_key)
         if not game:
             return None
-        result = game["result"]
+        result = game.get("result") if isinstance(game, dict) else None
+        if not result:
+            return None
 
         stats_data = result.get("stats", {})
         player_stats_data = result.get("player_stats", {})
@@ -676,8 +678,8 @@ class ProLeagueSeason:
             "drive_summary": result.get("drive_summary", []),
             "play_by_play": result.get("play_by_play", []),
             "modifier_stack": result.get("modifier_stack", {}),
-            "home_scoring": result["final_score"]["home"].get("stats", {}),
-            "away_scoring": result["final_score"]["away"].get("stats", {}),
+            "home_scoring": result.get("final_score", {}).get("home", {}).get("stats", {}),
+            "away_scoring": result.get("final_score", {}).get("away", {}).get("stats", {}),
         }
         # Include top-level result keys for game context
         for key in ("weather_label", "weather_description", "home_style",

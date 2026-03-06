@@ -223,13 +223,14 @@ def _player_stats_markdown(player_list, team_name):
         receivers.sort(key=lambda p: p.get("kick_pass_receptions", 0), reverse=True)
         lines.append("")
         lines.append("**Receiving (Kick Pass)**")
-        lines.append("| Player | Rec | KP Yds |")
-        lines.append("|--------|----:|-------:|")
+        lines.append("| Player | Rec | KP Yds | TD |")
+        lines.append("|--------|----:|-------:|---:|")
         for p in receivers:
             tag = p.get("tag", "")
             name = p.get("name", "?")
             kp_yds = p.get("kick_pass_yards", 0)
-            lines.append(f"| {tag} {name} | {p.get('kick_pass_receptions',0)} | {kp_yds} |")
+            kp_tds = p.get("kick_pass_tds", 0)
+            lines.append(f"| {tag} {name} | {p.get('kick_pass_receptions',0)} | {kp_yds} | {kp_tds} |")
 
     passers = [p for p in player_list if p.get("kick_passes_thrown", 0) > 0]
     if passers:
@@ -299,6 +300,7 @@ def generate_box_score_markdown(result):
     lines.append(f"| Rushing | {h_car} car, {hs['rushing_yards']} yds ({round(hs['rushing_yards']/max(1,h_car),1)} YPC) | {a_car} car, {as_['rushing_yards']} yds ({round(as_['rushing_yards']/max(1,a_car),1)} YPC) |")
     lines.append(f"| KP Comp/Att | {hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)} | {as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)} |")
     lines.append(f"| KP Yards | {hs.get('kick_pass_yards',0)} | {as_.get('kick_pass_yards',0)} |")
+    lines.append(f"| KP TDs | {hs.get('kick_pass_tds',0)} | {as_.get('kick_pass_tds',0)} |")
     lines.append(f"| Snap Kicks | {hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)} | {as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)} |")
     lines.append(f"| Field Goals | {hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)} | {as_.get('place_kicks_made',0)}/{as_.get('place_kicks_attempted',0)} |")
     lines.append(f"| Fumbles Lost | {hs['fumbles_lost']} | {as_['fumbles_lost']} |")
@@ -370,6 +372,7 @@ def generate_forum_box_score(result):
     lines.append(_stat_line("Rushing", f"{h_car2} car, {hs.get('rushing_yards',0)} yds", f"{a_car2} car, {as_.get('rushing_yards',0)} yds"))
     lines.append(_stat_line("KP Comp/Att", f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}", f"{as_.get('kick_passes_completed',0)}/{as_.get('kick_passes_attempted',0)}"))
     lines.append(_stat_line("KP Yards", hs.get('kick_pass_yards', 0), as_.get('kick_pass_yards', 0)))
+    lines.append(_stat_line("KP TDs", hs.get('kick_pass_tds', 0), as_.get('kick_pass_tds', 0)))
     lines.append(_stat_line("Snap Kicks", f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}", f"{as_.get('drop_kicks_made',0)}/{as_.get('drop_kicks_attempted',0)}"))
     lines.append(_stat_line("Field Goals", f"{hs.get('place_kicks_made',0)}/{hs.get('place_kicks_attempted',0)}", f"{as_.get('place_kicks_made',0)}/{as_.get('place_kicks_attempted',0)}"))
     lines.append(_stat_line("Fumbles Lost", hs['fumbles_lost'], as_['fumbles_lost']))
@@ -406,7 +409,10 @@ def generate_forum_box_score(result):
             if receivers:
                 lines.append("  RECEIVING:")
                 for p in receivers[:5]:
-                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {p.get('kick_pass_receptions',0)} rec")
+                    rec = p.get('kick_pass_receptions', 0)
+                    yds = p.get('kick_pass_yards', 0)
+                    tds = p.get('kick_pass_tds', 0)
+                    lines.append(f"    {p.get('tag','')} {p.get('name','?')}: {rec} rec, {yds} yds, {tds} TD")
             defenders = sorted([p for p in plist if p.get("tackles", 0) > 0],
                                key=lambda x: x.get("tackles", 0), reverse=True)
             if defenders:
