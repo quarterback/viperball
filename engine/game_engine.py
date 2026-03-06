@@ -8776,6 +8776,7 @@ class ViperballEngine:
                     self.add_score(9)
                     receiver.game_tds += 1
                     kicker.game_kick_pass_tds += 1
+                    receiver.game_kick_pass_tds = getattr(receiver, 'game_kick_pass_tds', 0) + 1
                     description = f"{chain_desc} → {total_yards} — TOUCHDOWN!"
                 elif total_yards >= self.state.yards_to_go:
                     result = PlayResult.FIRST_DOWN
@@ -8797,8 +8798,8 @@ class ViperballEngine:
                         description += " — TURNOVER ON DOWNS"
 
                 kicker.game_kick_pass_yards += total_yards
-                receiver.game_kick_pass_yards += kick_distance
-                receiver.game_yards += kick_distance
+                receiver.game_kick_pass_yards += total_yards
+                receiver.game_yards += total_yards
 
                 self.apply_stamina_drain(5)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
