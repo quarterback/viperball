@@ -1560,6 +1560,12 @@ def wvl_economy(request: Request, session_id: str):
         if fb:
             fanbase_history.append({"year": yr, "fanbase": int(fb)})
 
+    # Active loans
+    loans = getattr(dynasty, "loans", [])
+
+    # Infrastructure levels
+    infrastructure = getattr(dynasty, "infrastructure", {})
+
     return templates.TemplateResponse("wvl/economy.html", _ctx(
         request, section="wvl", session_id=session_id,
         dynasty_name=data.get("dynasty_name", "WVL"),
@@ -1568,6 +1574,8 @@ def wvl_economy(request: Request, session_id: str):
         rate_history=rate_history,
         current_rate=current_rate,
         fanbase_history=fanbase_history,
+        loans=loans,
+        infrastructure=infrastructure,
     ))
 
 

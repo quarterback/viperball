@@ -128,6 +128,55 @@
   DQ$ game tokens are quoted at &#x20AF;10 per DQ$ (cosmetic conversion only).
 </div>
 
+<!-- Active Loans -->
+{% if loans %}
+<h2 style="margin-top:24px;">Active Loans</h2>
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">Amount &#x20AF;M</th>
+      <th class="num">Interest</th>
+      <th class="num">Annual Payment &#x20AF;M</th>
+      <th class="num">Years Remaining</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for loan in loans %}
+    <tr>
+      <td class="num">&#x20AF;{{ '%.1f'|format(loan.get('amount', 0)) }}M</td>
+      <td class="num">{{ '%.0f'|format((loan.get('interest_rate', 0)) * 100) }}%</td>
+      <td class="num">&#x20AF;{{ '%.2f'|format(loan.get('annual_payment', 0)) }}M</td>
+      <td class="num {% if loan.get('years_remaining', 0) <= 1 %}stat-good{% endif %}">{{ loan.get('years_remaining', 0) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Infrastructure Levels -->
+{% if infrastructure %}
+<h2 style="margin-top:24px;">Club Infrastructure</h2>
+<div style="margin-bottom:8px;font-size:12px;color:#888;">
+  Investment levels (0&ndash;10). Higher levels improve club performance in each area.
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+  {% for key in ['training', 'coaching', 'stadium', 'youth', 'science', 'marketing'] %}
+  {% set val = infrastructure.get(key, 0) %}
+  <div class="stat-card" style="min-width:140px;">
+    <div class="stat-label">{{ key | title }}</div>
+    <div class="stat-value {% if val >= 7 %}positive{% elif val <= 2 %}negative{% endif %}">
+      {{ '%.1f'|format(val) }}
+    </div>
+    <div style="margin-top:4px;height:6px;background:#333;border-radius:3px;">
+      <div style="width:{{ (val / 10 * 100)|int }}%;height:100%;background:{% if val >= 7 %}#22c55e{% elif val >= 4 %}#eab308{% else %}#ef4444{% endif %};border-radius:3px;"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Fanbase Trend Graph -->
 {% if fanbase_history %}
 <h2 style="margin-top:24px;">Fanbase Trend</h2>

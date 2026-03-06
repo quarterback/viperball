@@ -200,11 +200,39 @@
       <td>Bonus Possessions Earned</td>
       <td class="num {% if hdi.get('bonus_possessions', 0) >= 3 %}stat-elite{% elif hdi.get('bonus_possessions', 0) >= 1 %}stat-good{% endif %}">{{ hdi.get('bonus_possessions', 0) }}</td>
     </tr>
+    {% if adi.get('bonus_possessions', 0) > 0 or hdi.get('bonus_possessions', 0) > 0 %}
+    <tr>
+      <td class="num">{{ '%.1f'|format(adi.get('bonus_conv_rate', 0)) }}%</td>
+      <td>Bonus Conversion Rate</td>
+      <td class="num">{{ '%.1f'|format(hdi.get('bonus_conv_rate', 0)) }}%</td>
+    </tr>
+    {% endif %}
     <tr>
       <td class="num {% if adi.get('turnovers_forced', 0) >= 3 %}stat-elite{% elif adi.get('turnovers_forced', 0) >= 2 %}stat-good{% endif %}">{{ adi.get('turnovers_forced', 0) }}</td>
       <td>Turnovers Forced</td>
       <td class="num {% if hdi.get('turnovers_forced', 0) >= 3 %}stat-elite{% elif hdi.get('turnovers_forced', 0) >= 2 %}stat-good{% endif %}">{{ hdi.get('turnovers_forced', 0) }}</td>
     </tr>
+    {% if adi.get('fumbles_forced', 0) > 0 or hdi.get('fumbles_forced', 0) > 0 %}
+    <tr>
+      <td class="num">{{ adi.get('fumbles_forced', 0) }}</td>
+      <td style="padding-left:20px;color:var(--fg-dim);">Fumbles Forced</td>
+      <td class="num">{{ hdi.get('fumbles_forced', 0) }}</td>
+    </tr>
+    {% endif %}
+    {% if adi.get('ints_forced', 0) > 0 or hdi.get('ints_forced', 0) > 0 %}
+    <tr>
+      <td class="num">{{ adi.get('ints_forced', 0) }}</td>
+      <td style="padding-left:20px;color:var(--fg-dim);">INTs Forced</td>
+      <td class="num">{{ hdi.get('ints_forced', 0) }}</td>
+    </tr>
+    {% endif %}
+    {% if adi.get('tod_forced', 0) > 0 or hdi.get('tod_forced', 0) > 0 %}
+    <tr>
+      <td class="num">{{ adi.get('tod_forced', 0) }}</td>
+      <td style="padding-left:20px;color:var(--fg-dim);">TOD Forced</td>
+      <td class="num">{{ hdi.get('tod_forced', 0) }}</td>
+    </tr>
+    {% endif %}
     <tr>
       <td class="num">{{ adi.get('defensive_stops', 0) }}</td>
       <td>Defensive Stops</td>
@@ -322,6 +350,19 @@
   {{ section_header('TURNOVERS & DISCIPLINE') }}
   {{ stat_row('Fumbles Lost', 'fumbles_lost') }}
   {{ stat_row('Turnovers on Downs', 'turnovers_on_downs') }}
+  {% if as_.get('kick_pass_interceptions') or hs.get('kick_pass_interceptions') %}
+  {{ stat_row('KP INTs Thrown', 'kick_pass_interceptions') }}
+  {% endif %}
+  {% if as_.get('lateral_interceptions') or hs.get('lateral_interceptions') %}
+  {{ stat_row('Lateral INTs Thrown', 'lateral_interceptions') }}
+  {% endif %}
+  {% if am.get('to_margin') is not none or hm.get('to_margin') is not none %}
+  <tr>
+    <td class="num {% if am.get('to_margin', 0) > 0 %}stat-good{% elif am.get('to_margin', 0) < 0 %}stat-bad{% endif %}">{{ '%+d'|format(am.get('to_margin', 0)) }}</td>
+    <td>Turnover Margin</td>
+    <td class="num {% if hm.get('to_margin', 0) > 0 %}stat-good{% elif hm.get('to_margin', 0) < 0 %}stat-bad{% endif %}">{{ '%+d'|format(hm.get('to_margin', 0)) }}</td>
+  </tr>
+  {% endif %}
   {% if as_.get('penalties') is not none or hs.get('penalties') is not none %}
   <tr>
     <td class="num {% if as_.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ as_.get('penalties', 0) }} ({{ as_.get('penalty_yards', 0) }} yds)</td>
@@ -344,7 +385,17 @@
   {% endif %}
   {% endfor %}
   {% endif %}
+  {{ stat_row('Chaos Recoveries', 'chaos_recoveries') }}
 
+  {# ── Keeper / Defense ── #}
+  {% if as_.get('keeper_deflections', 0) > 0 or hs.get('keeper_deflections', 0) > 0 or as_.get('keeper_bells_generated', 0) > 0 or hs.get('keeper_bells_generated', 0) > 0 or as_.get('keeper_tackles', 0) > 0 or hs.get('keeper_tackles', 0) > 0 %}
+  {{ section_header('KEEPER / DEFENSE') }}
+  {{ stat_row('Keeper Deflections', 'keeper_deflections') }}
+  {{ stat_row('Bells Generated', 'keeper_bells_generated') }}
+  {{ stat_row('Keeper Tackles', 'keeper_tackles') }}
+  {% endif %}
+
+  {# ── Delta System ── #}
   {% if as_.get('delta_yards') is not none or hs.get('delta_yards') is not none %}
   {{ section_header('DELTA SYSTEM') }}
   <tr>
@@ -353,6 +404,40 @@
     <td class="num {% if hs.get('delta_yards', 0) > 0 %}stat-good{% elif hs.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ hs.get('delta_yards', 0) }}</td>
   </tr>
   {{ stat_row('Adjusted Yards', 'adjusted_yards') }}
+  {% if as_.get('delta_drives', 0) > 0 or hs.get('delta_drives', 0) > 0 %}
+  <tr>
+    <td class="num">{{ as_.get('delta_scores', 0) }}/{{ as_.get('delta_drives', 0) }}{% if as_.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ as_.kill_rate }}%)</span>{% endif %}</td>
+    <td>Delta Scores / Drives (Kill Rate)</td>
+    <td class="num">{{ hs.get('delta_scores', 0) }}/{{ hs.get('delta_drives', 0) }}{% if hs.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ hs.kill_rate }}%)</span>{% endif %}</td>
+  </tr>
+  {% endif %}
+  {% endif %}
+
+  {# ── DYE (Power Play / Penalty Kill) ── #}
+  {% set adye = as_.get('dye', {}) %}
+  {% set hdye = hs.get('dye', {}) %}
+  {% if adye or hdye %}
+  {% for bucket, label in [('penalty_kill', 'Penalty Kill (leading)'), ('power_play', 'Power Play (trailing)'), ('neutral', 'Neutral (tied)')] %}
+  {% set ab = adye.get(bucket, {}) %}
+  {% set hb = hdye.get(bucket, {}) %}
+  {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
+  <tr>
+    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }}dr / {{ '%.1f'|format(ab.get('yards_per_drive', 0)) }}ypd / {{ '%.0f'|format(ab.get('score_rate', 0)) }}%</td>
+    <td style="font-size:10px;">{{ label }}</td>
+    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }}dr / {{ '%.1f'|format(hb.get('yards_per_drive', 0)) }}ypd / {{ '%.0f'|format(hb.get('score_rate', 0)) }}%</td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+  {# Mess Rate row #}
+  {% set a_mr = as_.get('mess_rate') %}
+  {% set h_mr = hs.get('mess_rate') %}
+  {% if a_mr is not none or h_mr is not none %}
+  <tr>
+    <td class="num" style="font-size:10px;">{{ a_mr if a_mr is not none else '—' }}</td>
+    <td style="font-size:10px;">Mess Rate (PP% − Kill Rate)</td>
+    <td class="num" style="font-size:10px;">{{ h_mr if h_mr is not none else '—' }}</td>
+  </tr>
+  {% endif %}
   {% endif %}
 
   {% if as_.get('bonus_possessions', 0) > 0 or hs.get('bonus_possessions', 0) > 0 %}
@@ -505,9 +590,34 @@
 </table>
 {% endif %}
 
+{# ── Kick-Pass Receiving Leaders ── #}
+{% set kp_receivers = [] %}
+{% for p in side_players if p.get('kick_pass_receptions', 0) > 0 %}
+{% if kp_receivers.append(p) %}{% endif %}
+{% endfor %}
+{% if kp_receivers %}
+<h3 style="margin-top:12px;">{{ team_display }} — Kick-Pass Receiving</h3>
+<table>
+  <thead>
+    <tr><th>Name</th><th class="num">REC</th><th class="num">YDS</th><th class="num">AVG</th><th class="num">TD</th></tr>
+  </thead>
+  <tbody>
+  {% for p in kp_receivers|sort(attribute='kick_pass_yards', reverse=true) %}
+  <tr>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num">{{ p.get('kick_pass_receptions', 0) }}</td>
+    <td class="num {% if p.get('kick_pass_yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('kick_pass_yards', 0) }}</td>
+    <td class="num">{% if p.get('kick_pass_receptions', 0) > 0 %}{{ '%.1f'|format(p.get('kick_pass_yards', 0) / p.get('kick_pass_receptions', 1)) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if p.get('kick_pass_tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('kick_pass_tds', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {# ── Defensive Players ── #}
 {% set def_players = [] %}
-{% for p in side_players if p.get('tackles', 0) > 0 or p.get('sacks', 0) > 0 or p.get('tfl', 0) > 0 or p.get('hurries', 0) > 0 or p.get('kick_pass_ints', 0) > 0 or p.get('keeper_bells', 0) > 0 %}
+{% for p in side_players if p.get('tackles', 0) > 0 or p.get('sacks', 0) > 0 or p.get('tfl', 0) > 0 or p.get('hurries', 0) > 0 or p.get('kick_pass_ints', 0) > 0 or p.get('kick_deflections', 0) > 0 or p.get('keeper_bells', 0) > 0 or p.get('keeper_tackles', 0) > 0 %}
 {% if def_players.append(p) %}{% endif %}
 {% endfor %}
 {% if def_players %}
@@ -519,8 +629,8 @@
       <th>Tag</th><th>Name</th>
       <th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th>
       <th class="num">HUR</th><th class="num">INT</th>
-      <th class="num">DEFL</th><th class="num">BELLS</th>
-      <th class="num">WPA</th>
+      <th class="num">DEFL</th><th class="num">BELLS</th><th class="num">K-TKL</th>
+      <th class="num">BLK</th><th class="num">WPA</th>
     </tr>
   </thead>
   <tbody>
@@ -535,6 +645,8 @@
     <td class="num {% if p.get('kick_pass_ints', 0) > 0 %}stat-elite{% endif %}">{{ p.get('kick_pass_ints', 0) }}</td>
     <td class="num">{{ p.get('kick_deflections', 0) }}</td>
     <td class="num">{{ p.get('keeper_bells', 0) }}</td>
+    <td class="num">{{ p.get('keeper_tackles', 0) }}</td>
+    <td class="num">{{ p.get('blocks', 0) }}</td>
     <td class="num {% if p.get('wpa', 0) > 3 %}stat-good{% elif p.get('wpa', 0) < -3 %}stat-bad{% endif %}">{{ '%.1f'|format(p.get('wpa', 0)) }}</td>
   </tr>
   {% endfor %}
@@ -545,7 +657,7 @@
 
 {# ── Special Teams ── #}
 {% set st_players = [] %}
-{% for p in side_players if p.get('kick_return_yards', 0) > 0 or p.get('punt_return_yards', 0) > 0 or p.get('kick_att', 0) > 0 or p.get('st_tackles', 0) > 0 %}
+{% for p in side_players if p.get('kick_return_yards', 0) > 0 or p.get('punt_return_yards', 0) > 0 or p.get('kick_att', 0) > 0 or p.get('st_tackles', 0) > 0 or p.get('kick_deflections', 0) > 0 or p.get('muffs', 0) > 0 %}
 {% if st_players.append(p) %}{% endif %}
 {% endfor %}
 {% if st_players %}
@@ -558,7 +670,7 @@
       <th class="num">DK</th><th class="num">PK</th>
       <th class="num">KR</th><th class="num">KR-YDS</th><th class="num">KR-TD</th>
       <th class="num">PR</th><th class="num">PR-YDS</th><th class="num">PR-TD</th>
-      <th class="num">ST-TKL</th>
+      <th class="num">ST-TKL</th><th class="num">MUFF</th>
     </tr>
   </thead>
   <tbody>
@@ -574,6 +686,7 @@
     <td class="num {% if p.get('punt_return_yards', 0) >= 30 %}stat-good{% endif %}">{{ p.get('punt_return_yards', 0) }}</td>
     <td class="num {% if p.get('punt_return_tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('punt_return_tds', 0) }}</td>
     <td class="num">{{ p.get('st_tackles', 0) }}</td>
+    <td class="num {% if p.get('muffs', 0) > 0 %}stat-bad{% endif %}">{{ p.get('muffs', 0) }}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -614,6 +727,7 @@
       </span>
       {% if d.get('bonus_drive') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">BONUS</span>{% endif %}
       {% if d.get('delta_drive') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">DELTA</span>{% endif %}
+      {% if d.get('delta_cost') %}<span style="font-size:10px;color:var(--fg-dim)"> ({{ "%+d"|format(d.delta_cost) }}yd)</span>{% endif %}
     </td>
   </tr>
   {% endfor %}
