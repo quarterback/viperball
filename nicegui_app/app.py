@@ -13,6 +13,7 @@ Every blocking HTTP call to the local API must go through
 from __future__ import annotations
 
 import traceback
+from pathlib import Path
 
 from nicegui import ui, app, run
 
@@ -23,9 +24,14 @@ from nicegui_app.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS
 from engine import get_available_teams, OFFENSE_STYLES
 from engine.game_engine import DEFENSE_STYLES, ST_SCHEMES
 
+# ─── Serve P5.js sketch files via NiceGUI's static file support ───
+_sketches_dir = Path(__file__).parent / "sketches"
+if _sketches_dir.is_dir():
+    app.add_static_files("/sketches", _sketches_dir)
+
 
 APP_CSS = """
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -133,12 +139,24 @@ def index():
     ui.add_head_html(APP_CSS)
 
     # ─── P5.js ambient layers ───
-    # Background particle canvas (fixed behind everything)
+    # Container divs (rendered via innerHTML — fine for non-script elements)
     ui.html('<div id="vb-ambient-bg"></div>')
-    ui.html('<script src="/sketches/ambient_bg.js"></script>')
-    # Page transition overlay (fixed, pointer-events: none)
     ui.html('<div id="vb-page-transition"></div>')
-    ui.html('<script src="/sketches/page_transition.js"></script>')
+
+    # Load sketch JS files dynamically after the page renders.
+    # ui.html() strips <script> tags (innerHTML doesn't execute them),
+    # so we use ui.run_javascript() with createElement('script') instead.
+    _P5_INIT_JS = """
+    function _vbLoadSketch(src) {
+        var s = document.createElement('script');
+        s.src = src;
+        document.head.appendChild(s);
+    }
+    _vbLoadSketch('/sketches/ambient_bg.js');
+    _vbLoadSketch('/sketches/page_transition.js');
+    _vbLoadSketch('/sketches/nav_glow.js');
+    """
+    ui.timer(0.3, lambda: ui.run_javascript(_P5_INIT_JS), once=True)
 
     shared = _load_shared_data()
     state = UserState()
@@ -155,8 +173,8 @@ def index():
             return
         active_nav["current"] = name
 
-        # Trigger P5.js page transition animation
-        await ui.run_javascript("if (window.vbTransition) window.vbTransition();")
+        # Trigger P5.js page transition animation (fire-and-forget)
+        ui.run_javascript("if (window.vbTransition) window.vbTransition();")
 
         for btn_name, btn in nav_buttons.items():
             if btn_name == name:
@@ -252,9 +270,8 @@ def index():
                     "flat dense size=sm color=red no-caps"
                 )
 
-    # ─── Nav glow strip (P5.js animated gradient line under header) ───
+    # Nav glow container (script loaded by _P5_INIT_JS timer above)
     ui.html('<div id="vb-nav-glow"></div>')
-    ui.html('<script src="/sketches/nav_glow.js"></script>')
 
     content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 

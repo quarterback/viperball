@@ -52,8 +52,10 @@ const viperballNavGlow = (p) => {
   };
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('vb-nav-glow')) {
-    new p5(viperballNavGlow);
+(function _initNavGlow() {
+  if (typeof p5 === 'undefined' || !document.getElementById('vb-nav-glow')) {
+    setTimeout(_initNavGlow, 100);
+    return;
   }
-});
+  new p5(viperballNavGlow);
+})();

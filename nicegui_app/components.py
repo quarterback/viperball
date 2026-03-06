@@ -21,20 +21,26 @@ def p5_sketch(sketch_name: str, container_id: str, data: dict | None = None,
 
     The sketch JS file is served from /sketches/{sketch_name}.js and runs
     in instance mode inside a <div id="{container_id}">.
+
+    NOTE: ui.html() uses innerHTML which does NOT execute <script> tags.
+    We inject data and load scripts via ui.run_javascript() instead.
     """
-    data_script = ""
+    style = f"width: {width}; height: {height}; {extra_style}"
+    ui.html(f'<div id="{container_id}" class="{extra_classes}" style="{style}"></div>')
+
+    # Inject data as a global variable, then dynamically load the sketch script
+    js_parts = []
     if data is not None:
         data_json = json.dumps(data)
-        # Inject data as a global var the sketch can read
         var_name = f"_vb{container_id.replace('-', '_')}Data"
-        data_script = f"<script>window.{var_name} = {data_json};</script>"
+        js_parts.append(f"window.{var_name} = {data_json};")
 
-    style = f"width: {width}; height: {height}; {extra_style}"
-    ui.html(f"""
-        {data_script}
-        <div id="{container_id}" class="{extra_classes}" style="{style}"></div>
-        <script src="/sketches/{sketch_name}.js"></script>
+    js_parts.append(f"""
+        var s = document.createElement('script');
+        s.src = '/sketches/{sketch_name}.js';
+        document.head.appendChild(s);
     """)
+    ui.run_javascript("\n".join(js_parts))
 
 
 def metric_card(label: str, value, delta: str = ""):

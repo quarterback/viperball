@@ -67,8 +67,10 @@ const viperballPageTransition = (p) => {
   };
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('vb-page-transition')) {
-    new p5(viperballPageTransition);
+(function _initPageTransition() {
+  if (typeof p5 === 'undefined' || !document.getElementById('vb-page-transition')) {
+    setTimeout(_initPageTransition, 100);
+    return;
   }
-});
+  new p5(viperballPageTransition);
+})();
