@@ -599,6 +599,31 @@
 </table>
 {% endif %}
 
+{# ── Kick-Pass Receiving Leaders ── #}
+{% set kp_receivers = [] %}
+{% for p in side_players if p.get('kick_pass_receptions', 0) > 0 %}
+{% if kp_receivers.append(p) %}{% endif %}
+{% endfor %}
+{% if kp_receivers %}
+<h3 style="margin-top:12px;">{{ team_display }} — Kick-Pass Receiving</h3>
+<table>
+  <thead>
+    <tr><th>Name</th><th class="num">REC</th><th class="num">YDS</th><th class="num">AVG</th><th class="num">TD</th></tr>
+  </thead>
+  <tbody>
+  {% for p in kp_receivers|sort(attribute='kick_pass_yards', reverse=true) %}
+  <tr>
+    <td>{{ p.get('name', '?') }}</td>
+    <td class="num">{{ p.get('kick_pass_receptions', 0) }}</td>
+    <td class="num {% if p.get('kick_pass_yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('kick_pass_yards', 0) }}</td>
+    <td class="num">{% if p.get('kick_pass_receptions', 0) > 0 %}{{ '%.1f'|format(p.get('kick_pass_yards', 0) / p.get('kick_pass_receptions', 1)) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if p.get('kick_pass_tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('kick_pass_tds', 0) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {# ── Defensive Players ── #}
 {% set def_players = [] %}
 {% for p in side_players if p.get('tackles', 0) > 0 or p.get('sacks', 0) > 0 or p.get('tfl', 0) > 0 or p.get('hurries', 0) > 0 or p.get('kick_pass_ints', 0) > 0 or p.get('kick_deflections', 0) > 0 or p.get('keeper_bells', 0) > 0 or p.get('keeper_tackles', 0) > 0 %}
