@@ -498,8 +498,10 @@ def _render_main(container):
             tab_dash = ui.tab("Dashboard", icon="dashboard")
             tab_roster = ui.tab("My Team", icon="groups")
             tab_schedule = ui.tab("Schedule", icon="calendar_month")
+            tab_playoffs = ui.tab("Playoffs", icon="emoji_events")
             tab_league = ui.tab("League", icon="leaderboard")
             tab_finance = ui.tab("Finances", icon="account_balance")
+            tab_history = ui.tab("History", icon="history")
 
         with ui.tab_panels(tabs, value=tab_dash).classes("w-full"):
             with ui.tab_panel(tab_dash):
@@ -508,16 +510,22 @@ def _render_main(container):
                 containers["roster"] = ui.column().classes("w-full")
             with ui.tab_panel(tab_schedule):
                 containers["schedule"] = ui.column().classes("w-full")
+            with ui.tab_panel(tab_playoffs):
+                containers["playoffs"] = ui.column().classes("w-full")
             with ui.tab_panel(tab_league):
                 containers["league"] = ui.column().classes("w-full")
             with ui.tab_panel(tab_finance):
                 containers["finance"] = ui.column().classes("w-full")
+            with ui.tab_panel(tab_history):
+                containers["history"] = ui.column().classes("w-full")
 
     _fill_dashboard(containers, dynasty)
     _fill_roster(containers, dynasty)
     _fill_schedule(containers, dynasty)
+    _fill_playoffs(containers, dynasty)
     _fill_league(containers, dynasty)
     _fill_finance(containers, dynasty)
+    _fill_history(containers, dynasty)
 
     def _refresh_all():
         dynasty_fresh = _get_dynasty()
@@ -531,8 +539,10 @@ def _render_main(container):
         _fill_dashboard(containers, dynasty_fresh)
         _fill_roster(containers, dynasty_fresh)
         _fill_schedule(containers, dynasty_fresh)
+        _fill_playoffs(containers, dynasty_fresh)
         _fill_league(containers, dynasty_fresh)
         _fill_finance(containers, dynasty_fresh)
+        _fill_history(containers, dynasty_fresh)
 
     app.storage.user["_wvl_refresh"] = _refresh_all
 
@@ -562,6 +572,16 @@ def _fill_dashboard(containers, dynasty):
                     "offseason": "Offseason",
                     "season_complete": "Season Complete",
                 }.get(phase, phase)
+                # Enrich playoff phase label with progress info
+                if phase == "playoffs" and season and hasattr(season, 'tier_seasons'):
+                    done_count = sum(1 for ts in season.tier_seasons.values() if ts.champion)
+                    total = len(season.tier_seasons)
+                    if done_count > 0 and done_count < total:
+                        phase_label = f"Playoffs ({done_count}/{total} tiers done)"
+                elif phase == "offseason":
+                    step_idx = app.storage.user.get("_wvl_offseason_step", 0)
+                    if isinstance(step_idx, int) and step_idx > 0:
+                        phase_label = f"Offseason (Step {step_idx + 1}/8)"
                 ui.label(phase_label).classes("text-lg font-bold text-slate-800")
 
             if season and hasattr(season, 'tier_seasons'):
@@ -686,6 +706,7 @@ def _fill_dashboard(containers, dynasty):
                     champs = [r.get("champion") for r in results.values() if r.get("champion")]
                     if s.phase == "season_complete":
                         d.snapshot_season(s)
+                        d.advance_season(s)
                         _set_phase("offseason")
                         ui.notify("Season complete! Proceed to offseason.", type="positive")
                     elif champs:
@@ -700,8 +721,35 @@ def _fill_dashboard(containers, dynasty):
                     if refresh:
                         refresh()
 
+                async def _sim_all_playoffs():
+                    d = _get_dynasty()
+                    s = app.storage.user.get(_WVL_SEASON_KEY)
+                    if not d or not s:
+                        return
+                    ui.notify("Simulating all playoff rounds...", type="info")
+                    safety = 0
+                    while s.phase != "season_complete" and safety < 20:
+                        s.advance_playoffs_all()
+                        safety += 1
+                    if s.phase == "season_complete":
+                        d.snapshot_season(s)
+                        d.advance_season(s)
+                        _set_phase("offseason")
+                        ui.notify("Season complete! Proceed to offseason.", type="positive")
+                    else:
+                        ui.notify("Playoffs still in progress.", type="warning")
+                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _set_dynasty(d)
+                    _register_wvl_season(d, s, year=d.current_year)
+                    refresh = app.storage.user.get("_wvl_refresh")
+                    if refresh:
+                        refresh()
+
                 ui.button("Advance Playoffs", icon="emoji_events", on_click=_advance_playoffs).classes(
                     "bg-amber-600 text-white"
+                )
+                ui.button("Sim All Playoffs", icon="fast_forward", on_click=_sim_all_playoffs).classes(
+                    "bg-purple-600 text-white"
                 )
 
             elif phase == "offseason":
@@ -1451,6 +1499,145 @@ def _fill_schedule(containers, dynasty):
         _fill_week()
 
 
+# ═══════════════════════════════════════════════════════════════
+# PLAYOFFS TAB
+# ═══════════════════════════════════════════════════════════════
+
+def _fill_playoffs(containers, dynasty):
+    c = containers.get("playoffs")
+    if not c:
+        return
+
+    season = app.storage.user.get(_WVL_SEASON_KEY)
+    phase = _get_phase()
+
+    with c:
+        if not season or not hasattr(season, 'tier_seasons') or phase not in ("playoffs", "offseason", "season_complete"):
+            # Show last season's champions if available
+            if dynasty.last_season_champions:
+                ui.label("Last Season Champions").classes("text-xl font-bold text-slate-800 mb-3")
+                _render_champions_banner(dynasty.last_season_champions)
+            else:
+                ui.label("Playoffs haven't started yet.").classes("text-sm text-slate-400 italic")
+                ui.label("Complete the regular season to see the playoff bracket.").classes("text-xs text-slate-400")
+            return
+
+        owner_tier = dynasty.tier_assignments.get(dynasty.owner.club_key, 1)
+
+        # Show champion banner if season is complete
+        if phase in ("offseason", "season_complete") and dynasty.last_season_champions:
+            _render_champions_banner(dynasty.last_season_champions)
+            ui.separator().classes("my-3")
+
+        for tier_num in sorted(season.tier_seasons.keys()):
+            ts = season.tier_seasons[tier_num]
+            tc = TIER_BY_NUMBER.get(tier_num)
+            tier_name = tc.tier_name if tc else f"Tier {tier_num}"
+            is_owner_tier = (tier_num == owner_tier)
+
+            bracket_data = ts.get_playoff_bracket()
+            champion = bracket_data.get("champion")
+            champion_name = bracket_data.get("champion_name")
+            rounds = bracket_data.get("rounds", [])
+
+            header = f"Tier {tier_num} — {tier_name}"
+            if champion_name:
+                header += f"  ★ Champion: {champion_name}"
+
+            with ui.expansion(header, icon="emoji_events" if champion else "sports_score",
+                              value=is_owner_tier).classes("w-full mb-2"):
+                if champion_name:
+                    with ui.card().classes("w-full p-4 mb-3").style(
+                        "background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px;"
+                    ):
+                        with ui.row().classes("items-center gap-3"):
+                            ui.icon("emoji_events").classes("text-3xl text-white")
+                            ui.column().classes("gap-0")
+                            ui.label(f"{champion_name}").classes("text-lg font-bold text-white")
+                            ui.label(f"Tier {tier_num} Champion").classes("text-sm text-amber-100")
+
+                if not rounds:
+                    ui.label("No playoff bracket available.").classes("text-sm text-slate-400 italic")
+                    continue
+
+                for rnd_idx, rnd in enumerate(rounds):
+                    round_name = rnd.get("round_name", f"Round {rnd_idx + 1}")
+                    completed = rnd.get("completed", False)
+                    matchups = rnd.get("matchups", [])
+                    bye_teams = rnd.get("bye_teams", [])
+
+                    with ui.column().classes("w-full mb-3"):
+                        with ui.row().classes("items-center gap-2 mb-1"):
+                            ui.label(round_name).classes("text-sm font-bold text-slate-700 uppercase")
+                            if completed:
+                                ui.badge("Complete", color="green").props("dense")
+                            else:
+                                ui.badge("In Progress", color="orange").props("dense")
+
+                        for matchup in matchups:
+                            home = matchup.get("home", {})
+                            away = matchup.get("away")
+                            is_owner_game = (
+                                home.get("team_key") == dynasty.owner.club_key or
+                                (away and away.get("team_key") == dynasty.owner.club_key)
+                            )
+                            border = "border-left: 4px solid #6366f1;" if is_owner_game else "border-left: 4px solid transparent;"
+                            winner = matchup.get("winner")
+
+                            with ui.card().classes("p-3 mb-1 w-full").style(
+                                f"border: 1px solid #e2e8f0; {border}"
+                            ):
+                                if "home_score" in matchup and away:
+                                    h_score = int(matchup["home_score"])
+                                    a_score = int(matchup["away_score"])
+                                    h_bold = "font-bold" if winner == home.get("team_key") else ""
+                                    a_bold = "font-bold" if winner == (away.get("team_key") if away else "") else ""
+                                    h_win = "text-green-700" if winner == home.get("team_key") else "text-slate-500"
+                                    a_win = "text-green-700" if away and winner == away.get("team_key") else "text-slate-500"
+
+                                    with ui.row().classes("items-center gap-3 flex-wrap"):
+                                        ui.label(home.get("team_name", "?")).classes(f"text-sm {h_bold} {h_win} min-w-[160px]")
+                                        ui.label(str(h_score)).classes(f"text-lg {h_bold} w-8 text-center")
+                                        ui.label("vs").classes("text-xs text-slate-400")
+                                        ui.label(str(a_score)).classes(f"text-lg {a_bold} w-8 text-center")
+                                        ui.label(away.get("team_name", "?")).classes(f"text-sm {a_bold} {a_win}")
+                                        if winner:
+                                            w_name = home.get("team_name") if winner == home.get("team_key") else away.get("team_name", "?")
+                                            ui.badge(f"W: {w_name}", color="green").props("dense")
+                                elif away:
+                                    with ui.row().classes("items-center gap-3"):
+                                        ui.label(home.get("team_name", "?")).classes("text-sm min-w-[160px]")
+                                        ui.label("vs").classes("text-xs text-slate-400")
+                                        ui.label(away.get("team_name", "?")).classes("text-sm")
+                                        ui.badge("Upcoming", color="grey").props("dense")
+                                else:
+                                    ui.label(f"{home.get('team_name', '?')} — BYE").classes("text-sm text-slate-500 italic")
+
+                        if bye_teams:
+                            with ui.row().classes("gap-2 mt-1"):
+                                ui.label("Bye:").classes("text-xs text-slate-400")
+                                for bt in bye_teams:
+                                    ui.badge(bt.get("team_name", "?"), color="blue-grey").props("dense outline")
+
+
+def _render_champions_banner(champions_dict):
+    """Render a banner showing tier champions."""
+    with ui.row().classes("w-full gap-3 flex-wrap"):
+        for tier_num in sorted(champions_dict.keys()):
+            champ_key = champions_dict[tier_num]
+            club = CLUBS_BY_KEY.get(champ_key)
+            tc = TIER_BY_NUMBER.get(tier_num)
+            tier_name = tc.tier_name if tc else f"Tier {tier_num}"
+            champ_name = club.name if club else champ_key
+
+            with ui.card().classes("flex-1 min-w-[200px] p-4 text-center").style(
+                "background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px;"
+            ):
+                ui.icon("emoji_events").classes("text-2xl text-white")
+                ui.label(champ_name).classes("text-base font-bold text-white")
+                ui.label(tier_name).classes("text-xs text-amber-100")
+
+
 def _render_all_team_rosters(dynasty):
     """Render an expandable roster browser for every team — allows editing any player."""
     from engine.wvl_config import CLUBS_BY_KEY
@@ -2103,6 +2290,165 @@ def _fill_finance(containers, dynasty):
                         ui.icon(icon_name, size="sm").classes("text-slate-500")
                         ui.label(val).classes("text-sm font-bold text-slate-800")
                         ui.label(lbl).classes("text-[10px] text-slate-400 uppercase")
+
+
+# ═══════════════════════════════════════════════════════════════
+# HISTORY TAB
+# ═══════════════════════════════════════════════════════════════
+
+def _fill_history(containers, dynasty):
+    c = containers.get("history")
+    if not c:
+        return
+
+    with c:
+        ui.label("Dynasty History").classes("text-xl font-bold text-slate-800 mb-2")
+
+        # ── Championship History ──────────────────────────────────
+        with ui.expansion("Championship History", icon="emoji_events", value=True).classes("w-full mb-2"):
+            # Build champions by tier → list of (year, team_key, team_name)
+            champ_by_tier = {}  # tier → [(year, team_key, team_name)]
+            for team_key, hist in dynasty.team_histories.items():
+                club = CLUBS_BY_KEY.get(team_key)
+                name = club.name if club else team_key
+                for yr in hist.championship_years:
+                    tier = None
+                    # Determine which tier the team was in that year from tier_history
+                    idx = yr - (dynasty.current_year - len(hist.tier_history))
+                    if 0 <= idx < len(hist.tier_history):
+                        tier = hist.tier_history[idx]
+                    if tier is None:
+                        tier = dynasty.tier_assignments.get(team_key, 0)
+                    champ_by_tier.setdefault(tier, []).append((yr, team_key, name))
+
+            # Also include last_season_champions if not already captured
+            if dynasty.last_season_champions:
+                last_yr = dynasty.current_year - 1
+                for tier_num, champ_key in dynasty.last_season_champions.items():
+                    existing_years = {y for y, _, _ in champ_by_tier.get(tier_num, [])}
+                    if last_yr not in existing_years:
+                        club = CLUBS_BY_KEY.get(champ_key)
+                        name = club.name if club else champ_key
+                        champ_by_tier.setdefault(tier_num, []).append((last_yr, champ_key, name))
+
+            if not champ_by_tier:
+                ui.label("No championships recorded yet. Complete a season to see champions here.").classes(
+                    "text-sm text-slate-400 italic"
+                )
+            else:
+                for tier_num in sorted(champ_by_tier.keys()):
+                    tc = TIER_BY_NUMBER.get(tier_num)
+                    tier_name = tc.tier_name if tc else f"Tier {tier_num}"
+                    entries = sorted(champ_by_tier[tier_num], key=lambda x: x[0], reverse=True)
+                    ui.label(f"Tier {tier_num} — {tier_name}").classes("text-sm font-bold text-slate-700 mt-2")
+
+                    cols = [
+                        {"name": "year", "label": "Year", "field": "year", "align": "center"},
+                        {"name": "team", "label": "Champion", "field": "team", "align": "left"},
+                    ]
+                    rows = [{"year": yr, "team": name, "_key": team_key,
+                             "_owner": team_key == dynasty.owner.club_key}
+                            for yr, team_key, name in entries]
+                    tbl = ui.table(columns=cols, rows=rows, row_key="year").classes("w-full").props("dense flat bordered")
+                    tbl.add_slot("body", r"""
+                        <q-tr :props="props" :style="{'font-weight': props.row._owner ? '700' : '400',
+                            'background-color': props.row._owner ? '#fef3c7' : ''}">
+                            <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
+                        </q-tr>
+                    """)
+
+        # ── Promotion/Relegation History ──────────────────────────
+        with ui.expansion("Promotion & Relegation History", icon="swap_vert", value=False).classes("w-full mb-2"):
+            if not dynasty.promotion_history:
+                ui.label("No promotion/relegation events yet.").classes("text-sm text-slate-400 italic")
+            else:
+                for year in sorted(dynasty.promotion_history.keys(), reverse=True):
+                    pr = dynasty.promotion_history[year]
+                    movements = pr.get("movements", [])
+                    if not movements:
+                        continue
+                    ui.label(f"Year {year}").classes("text-sm font-bold text-slate-700 mt-2")
+                    for mv in movements:
+                        team_key = mv.get("team_key", "")
+                        club = CLUBS_BY_KEY.get(team_key)
+                        name = club.name if club else team_key
+                        from_tier = mv.get("from_tier", "?")
+                        to_tier = mv.get("to_tier", "?")
+                        reason = mv.get("reason", "")
+                        is_promo = to_tier < from_tier if isinstance(to_tier, int) and isinstance(from_tier, int) else False
+                        color = "text-green-600" if is_promo else "text-red-600"
+                        arrow = "↑" if is_promo else "↓"
+                        is_owner = team_key == dynasty.owner.club_key
+                        weight = "font-bold" if is_owner else ""
+                        ui.label(
+                            f"  {arrow} {name} — Tier {from_tier} → Tier {to_tier} ({reason})"
+                        ).classes(f"text-sm {color} {weight}")
+
+        # ── Dynasty Timeline ──────────────────────────────────────
+        with ui.expansion("Season-by-Season Timeline", icon="timeline", value=False).classes("w-full mb-2"):
+            if not dynasty.financial_history:
+                ui.label("Complete a season to see your dynasty timeline.").classes("text-sm text-slate-400 italic")
+            else:
+                cols = [
+                    {"name": "year", "label": "Year", "field": "year", "align": "center"},
+                    {"name": "tier", "label": "Tier", "field": "tier", "align": "center"},
+                    {"name": "record", "label": "Record", "field": "record", "align": "center"},
+                    {"name": "bankroll", "label": "Bankroll ₯M", "field": "bankroll", "align": "right"},
+                    {"name": "fanbase", "label": "Fanbase", "field": "fanbase", "align": "right"},
+                ]
+                rows = []
+                owner_hist = dynasty.team_histories.get(dynasty.owner.club_key)
+                for year in sorted(dynasty.financial_history.keys(), reverse=True):
+                    fin = dynasty.financial_history[year]
+                    tier = "?"
+                    if owner_hist and owner_hist.tier_history:
+                        idx = year - (dynasty.current_year - len(owner_hist.tier_history))
+                        if 0 <= idx < len(owner_hist.tier_history):
+                            tier = str(owner_hist.tier_history[idx])
+                    record_str = f"{fin.get('season_wins', '?')}-{fin.get('season_losses', '?')}"
+                    rows.append({
+                        "year": year,
+                        "tier": tier,
+                        "record": record_str,
+                        "bankroll": f"₯{fin.get('bankroll_end', 0):.1f}",
+                        "fanbase": f"{int(fin.get('fanbase_end', fin.get('fanbase', 0))):,}",
+                    })
+                ui.table(columns=cols, rows=rows, row_key="year").classes("w-full").props("dense flat bordered")
+
+        # ── Team Records ──────────────────────────────────────────
+        with ui.expansion("All-Time Team Records", icon="bar_chart", value=False).classes("w-full mb-2"):
+            cols = [
+                {"name": "team", "label": "Team", "field": "team", "align": "left"},
+                {"name": "tier", "label": "Current Tier", "field": "tier", "align": "center"},
+                {"name": "record", "label": "All-Time W-L", "field": "record", "align": "center"},
+                {"name": "titles", "label": "Titles", "field": "titles", "align": "center"},
+                {"name": "promos", "label": "Promotions", "field": "promos", "align": "center"},
+                {"name": "rels", "label": "Relegations", "field": "rels", "align": "center"},
+            ]
+            rows = []
+            for team_key, hist in sorted(dynasty.team_histories.items(),
+                                         key=lambda x: len(x[1].championship_years), reverse=True):
+                club = CLUBS_BY_KEY.get(team_key)
+                name = club.name if club else team_key
+                tier = dynasty.tier_assignments.get(team_key, "?")
+                rows.append({
+                    "team": name,
+                    "tier": str(tier),
+                    "record": f"{hist.total_wins}-{hist.total_losses}",
+                    "titles": str(len(hist.championship_years)),
+                    "promos": str(len(hist.promotion_years)),
+                    "rels": str(len(hist.relegation_years)),
+                    "_owner": team_key == dynasty.owner.club_key,
+                })
+            tbl = ui.table(columns=cols, rows=rows, row_key="team").classes("w-full").props(
+                "dense flat bordered virtual-scroll"
+            ).style("max-height: 500px;")
+            tbl.add_slot("body", r"""
+                <q-tr :props="props" :style="{'font-weight': props.row._owner ? '700' : '400',
+                    'background-color': props.row._owner ? '#e0e7ff' : ''}">
+                    <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
+                </q-tr>
+            """)
 
 
 # ═══════════════════════════════════════════════════════════════
