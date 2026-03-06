@@ -1522,6 +1522,7 @@ def _generate_pro_forum_box_score(box: dict) -> str:
                       f"{hs.get('kick_passes_completed',0)}/{hs.get('kick_passes_attempted',0)}",
                       f"{aws.get('kick_passes_completed',0)}/{aws.get('kick_passes_attempted',0)}"))
     lines.append(_sl("KP Yards", hs.get("kick_pass_yards", 0), aws.get("kick_pass_yards", 0)))
+    lines.append(_sl("KP TDs", hs.get("kick_pass_tds", 0), aws.get("kick_pass_tds", 0)))
     lines.append(_sl("Snap Kicks",
                       f"{hs.get('drop_kicks_made',0)}/{hs.get('drop_kicks_attempted',0)}",
                       f"{aws.get('drop_kicks_made',0)}/{aws.get('drop_kicks_attempted',0)}"))
@@ -1588,11 +1589,18 @@ def _generate_pro_forum_box_score(box: dict) -> str:
             lines.append("  RECEIVING:")
             shown = receivers[:5]
             for p in shown:
-                lines.append(f"    {p.get('name','?'):<22} {p.get('kick_pass_receptions',0):>3} rec")
+                rec = p.get('kick_pass_receptions', 0)
+                yds = p.get('kick_pass_yards', 0)
+                tds = p.get('kick_pass_tds', 0)
+                avg = round(yds / max(1, rec), 1)
+                lines.append(f"    {p.get('name','?'):<22} {rec:>3} rec  {yds:>4} yds  {avg:>5} avg  {tds:>2} TD")
             rest = receivers[5:]
             if rest:
                 r_rec = sum(p.get("kick_pass_receptions", 0) for p in rest)
-                lines.append(f"    {'Others':<22} {r_rec:>3} rec")
+                r_yds = sum(p.get("kick_pass_yards", 0) for p in rest)
+                r_avg = round(r_yds / max(1, r_rec), 1)
+                r_td = sum(p.get("kick_pass_tds", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_rec:>3} rec  {r_yds:>4} yds  {r_avg:>5} avg  {r_td:>2} TD")
 
         lateralists = sorted(
             [p for p in plist if p.get("laterals_thrown", 0) + p.get("lateral_receptions", 0) > 0],
@@ -1958,8 +1966,17 @@ def _render_offense_stats(box: dict, season: ProLeagueSeason = None):
                 {"name": "name", "label": "Player", "field": "name", "align": "left", "sortable": True},
                 {"name": "pos", "label": "Pos", "field": "pos", "align": "center"},
                 {"name": "rec", "label": "Rec", "field": "rec", "align": "center", "sortable": True},
+                {"name": "yds", "label": "Yds", "field": "yds", "align": "center", "sortable": True},
+                {"name": "avg", "label": "Avg", "field": "avg", "align": "center"},
+                {"name": "td", "label": "TD", "field": "td", "align": "center"},
             ]
-            rec_rows = [{"name": p.get("name", "?"), "pos": p.get("position", ""), "rec": str(p.get("kick_pass_receptions", 0))} for p in receivers]
+            rec_rows = [{
+                "name": p.get("name", "?"), "pos": p.get("position", ""),
+                "rec": str(p.get("kick_pass_receptions", 0)),
+                "yds": str(p.get("kick_pass_yards", 0)),
+                "avg": f"{round(p.get('kick_pass_yards', 0) / max(1, p.get('kick_pass_receptions', 1)), 1)}",
+                "td": str(p.get("kick_pass_tds", 0)),
+            } for p in receivers]
             _make_clickable_player_table(rec_cols, rec_rows, season, team_key)
 
         lateralists = sorted(
