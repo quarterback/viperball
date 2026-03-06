@@ -668,13 +668,15 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
     all_stat_players = []
 
     total_carries = stats["rushing_carries"]
-    total_rush_yards = stats["rushing_yards"]
+    total_rush_yards = stats["rushing_yards"]  # includes lateral yards
     total_rush_tds = stats["rushing_touchdowns"]
     total_kp_att = stats["kick_passes_attempted"]
     total_kp_comp = stats["kick_passes_completed"]
     total_kp_yards = stats["kick_pass_yards"]
     total_kp_tds = stats["kick_pass_tds"]
     total_kp_ints = stats.get("kick_pass_interceptions", 0)
+    total_lat_chains = stats.get("lateral_chains", 0)
+    total_lat_yards = stats.get("lateral_yards", 0)
 
     carry_weights = [p.overall + p.speed * 0.3 + rng.gauss(0, 10) for p in skill_players]
     total_w = sum(max(1, w) for w in carry_weights)
@@ -687,20 +689,28 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
     remaining_kp_yards = total_kp_yards
     remaining_kp_tds = total_kp_tds
     remaining_kp_ints = total_kp_ints
+    remaining_lat_chains = total_lat_chains
+    remaining_lat_yards = total_lat_yards
+
+    # Pre-distribute kick-pass receptions from team completions
+    remaining_kp_rec = total_kp_comp
 
     for i, player in enumerate(skill_players):
         is_last = (i == len(skill_players) - 1)
         share = max(1, carry_weights[i]) / total_w
 
         if is_last:
-            carries = remaining_carries
-            rush_yards = remaining_rush_yards
-            rush_tds = remaining_rush_tds
-            kp_att = remaining_kp_att
-            kp_comp = remaining_kp_comp
-            kp_yards = remaining_kp_yards
-            kp_tds = remaining_kp_tds
-            kp_ints_thrown = remaining_kp_ints
+            carries = max(0, remaining_carries)
+            rush_yards = max(0, remaining_rush_yards)
+            rush_tds = max(0, remaining_rush_tds)
+            kp_att = max(0, remaining_kp_att)
+            kp_comp = max(0, remaining_kp_comp)
+            kp_yards = max(0, remaining_kp_yards)
+            kp_tds = max(0, remaining_kp_tds)
+            kp_ints_thrown = max(0, remaining_kp_ints)
+            lat_chains = max(0, remaining_lat_chains)
+            lat_yards = max(0, remaining_lat_yards)
+            kp_rec = max(0, remaining_kp_rec)
         else:
             carries = max(0, round(total_carries * share * rng.uniform(0.7, 1.3)))
             carries = min(carries, remaining_carries)
@@ -718,12 +728,25 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             kp_tds = min(remaining_kp_tds, 1 if rng.random() < kp_share else 0)
             kp_ints_thrown = min(remaining_kp_ints, 1 if kp_att > 0 and rng.random() < 0.15 else 0)
 
-        # Ensure stat consistency: yards > 0 requires at least 1 attempt
-        if rush_yards > 0 and carries == 0:
-            carries = 1
-        if kp_yards > 0 and kp_att == 0:
-            kp_att = 1
-            kp_comp = min(1, kp_comp) if kp_comp == 0 else kp_comp
+            # Distribute lateral stats from team totals
+            lat_chains = max(0, round(total_lat_chains * share * rng.uniform(0.5, 1.5)))
+            lat_chains = min(lat_chains, remaining_lat_chains)
+            lat_yards = max(0, round(total_lat_yards * share * rng.uniform(0.5, 1.5))) if lat_chains > 0 else 0
+            lat_yards = min(lat_yards, remaining_lat_yards)
+            # Lateral yards are a subset of rushing yards, so cap accordingly
+            lat_yards = min(lat_yards, rush_yards)
+
+            # Distribute receptions from team completions
+            kp_rec = max(0, round(total_kp_comp * share * rng.uniform(0.3, 1.0)))
+            kp_rec = min(kp_rec, remaining_kp_rec)
+
+        # Ensure stat consistency: yards without attempts makes no sense.
+        # Give orphaned yards/completions back to the remaining pool
+        # so the next player (or last player) gets them.
+        if rush_yards > 0 and carries == 0 and not is_last:
+            rush_yards = 0
+        if kp_yards > 0 and kp_att == 0 and not is_last:
+            kp_yards = 0
         if kp_comp > kp_att:
             kp_comp = kp_att
 
@@ -735,20 +758,20 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
         remaining_kp_yards -= kp_yards
         remaining_kp_tds -= kp_tds
         remaining_kp_ints -= kp_ints_thrown
+        remaining_lat_chains -= lat_chains
+        remaining_lat_yards -= lat_yards
+        remaining_kp_rec -= kp_rec
 
-        lateral_chains = max(0, round(rng.gauss(2, 1.5)))
-        lat_yards = max(0, round(rng.gauss(8, 5))) if lateral_chains > 0 else 0
-        lat_thrown = max(0, round(lateral_chains * rng.uniform(0.3, 0.7)))
-        lat_recv = max(0, lateral_chains - lat_thrown)
+        lat_thrown = max(0, round(lat_chains * rng.uniform(0.3, 0.7)))
+        lat_recv = max(0, lat_chains - lat_thrown)
         lat_assists = max(0, round(lat_thrown * rng.uniform(0.3, 0.8)))
 
         tackles = max(0, round(rng.gauss(1, 1))) if player.position in ("Halfback", "Wingback") else 0
         fumbles = 1 if rng.random() < 0.08 else 0
 
-        # Receiving: distribute completed passes as receptions
-        kp_rec = max(0, round(kp_comp * rng.uniform(0.3, 0.7))) if kp_comp > 0 else 0
-
-        total_yds = rush_yards + lat_yards + kp_yards
+        # rush_yards already includes the lateral portion, so total is
+        # rush_yards + kp_yards (not + lat_yards, which would double-count).
+        total_yds = rush_yards + kp_yards
         total_tds = rush_tds + kp_tds
 
         entry = _make_player_entry(
@@ -758,7 +781,7 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             rushing_tds=rush_tds,
             yards=total_yds,
             tds=total_tds,
-            touches=carries + kp_comp + lateral_chains,
+            touches=carries + kp_comp + lat_chains,
             fumbles=fumbles,
             kick_passes_thrown=kp_att,
             kick_passes_completed=kp_comp,
@@ -775,6 +798,20 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             off_role="STARTER" if i < 4 else "ROTATION",
         )
         all_stat_players.append(entry)
+
+    # Post-distribution fixup: redistribute any lost kp_comp caused by
+    # per-player kp_comp <= kp_att capping.
+    actual_kp_comp = sum(p["kick_passes_completed"] for p in all_stat_players)
+    deficit = total_kp_comp - actual_kp_comp
+    if deficit > 0:
+        for p in all_stat_players:
+            room = p["kick_passes_thrown"] - p["kick_passes_completed"]
+            if room > 0 and deficit > 0:
+                add = min(room, deficit)
+                p["kick_passes_completed"] += add
+                deficit -= add
+            if deficit <= 0:
+                break
 
     for player in defenders:
         tackles = max(1, round(rng.gauss(5, 2.5)))

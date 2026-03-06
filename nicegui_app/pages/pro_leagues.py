@@ -1550,15 +1550,35 @@ def _generate_pro_forum_box_score(box: dict) -> str:
         )
         if rushers:
             lines.append("  RUSHING:")
-            for p in rushers[:6]:
+            shown = rushers[:6]
+            for p in shown:
                 ypc = round(p.get("rushing_yards", 0) / max(1, p.get("rush_carries", 1)), 1)
                 lines.append(f"    {p.get('name','?'):<22} {p.get('rush_carries',0):>3} car  {p.get('rushing_yards',0):>4} yds  {ypc:>5} avg  {p.get('rushing_tds',0):>2} TD")
+            rest = rushers[6:]
+            if rest:
+                r_car = sum(p.get("rush_carries", 0) for p in rest)
+                r_yds = sum(p.get("rushing_yards", 0) for p in rest)
+                r_avg = round(r_yds / max(1, r_car), 1)
+                r_td = sum(p.get("rushing_tds", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_car:>3} car  {r_yds:>4} yds  {r_avg:>5} avg  {r_td:>2} TD")
 
-        passers = [p for p in plist if p.get("kick_passes_thrown", 0) > 0]
+        passers = sorted(
+            [p for p in plist if p.get("kick_passes_thrown", 0) > 0],
+            key=lambda x: x.get("kick_passes_thrown", 0), reverse=True
+        )
         if passers:
             lines.append("  KICK PASSING:")
-            for p in passers[:3]:
+            shown = passers[:4]
+            for p in shown:
                 lines.append(f"    {p.get('name','?'):<22} {p.get('kick_passes_completed',0)}/{p.get('kick_passes_thrown',0)}  {p.get('kick_pass_yards',0):>4} yds  {p.get('kick_pass_tds',0):>2} TD  {p.get('kick_pass_interceptions_thrown',0):>2} INT")
+            rest = passers[4:]
+            if rest:
+                r_comp = sum(p.get("kick_passes_completed", 0) for p in rest)
+                r_att = sum(p.get("kick_passes_thrown", 0) for p in rest)
+                r_yds = sum(p.get("kick_pass_yards", 0) for p in rest)
+                r_td = sum(p.get("kick_pass_tds", 0) for p in rest)
+                r_int = sum(p.get("kick_pass_interceptions_thrown", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_comp}/{r_att}  {r_yds:>4} yds  {r_td:>2} TD  {r_int:>2} INT")
 
         receivers = sorted(
             [p for p in plist if p.get("kick_pass_receptions", 0) > 0],
@@ -1566,8 +1586,13 @@ def _generate_pro_forum_box_score(box: dict) -> str:
         )
         if receivers:
             lines.append("  RECEIVING:")
-            for p in receivers[:5]:
+            shown = receivers[:5]
+            for p in shown:
                 lines.append(f"    {p.get('name','?'):<22} {p.get('kick_pass_receptions',0):>3} rec")
+            rest = receivers[5:]
+            if rest:
+                r_rec = sum(p.get("kick_pass_receptions", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_rec:>3} rec")
 
         lateralists = sorted(
             [p for p in plist if p.get("laterals_thrown", 0) + p.get("lateral_receptions", 0) > 0],
@@ -1575,8 +1600,15 @@ def _generate_pro_forum_box_score(box: dict) -> str:
         )
         if lateralists:
             lines.append("  LATERALS:")
-            for p in lateralists[:4]:
+            shown = lateralists[:5]
+            for p in shown:
                 lines.append(f"    {p.get('name','?'):<22} {p.get('laterals_thrown',0):>2} thr  {p.get('lateral_receptions',0):>2} rec  {p.get('lateral_yards',0):>3} yds")
+            rest = lateralists[5:]
+            if rest:
+                r_thr = sum(p.get("laterals_thrown", 0) for p in rest)
+                r_rec = sum(p.get("lateral_receptions", 0) for p in rest)
+                r_yds = sum(p.get("lateral_yards", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_thr:>2} thr  {r_rec:>2} rec  {r_yds:>3} yds")
 
         defenders = sorted(
             [p for p in plist if p.get("tackles", 0) > 0],
@@ -1584,8 +1616,16 @@ def _generate_pro_forum_box_score(box: dict) -> str:
         )
         if defenders:
             lines.append("  DEFENSE:")
-            for p in defenders[:5]:
+            shown = defenders[:5]
+            for p in shown:
                 lines.append(f"    {p.get('name','?'):<22} {p.get('tackles',0):>3} tkl  {p.get('tfl',0):>2} tfl  {p.get('sacks',0):>2} sck  {p.get('hurries',0):>2} hur")
+            rest = defenders[5:]
+            if rest:
+                r_tkl = sum(p.get("tackles", 0) for p in rest)
+                r_tfl = sum(p.get("tfl", 0) for p in rest)
+                r_sck = sum(p.get("sacks", 0) for p in rest)
+                r_hur = sum(p.get("hurries", 0) for p in rest)
+                lines.append(f"    {'Others':<22} {r_tkl:>3} tkl  {r_tfl:>2} tfl  {r_sck:>2} sck  {r_hur:>2} hur")
 
         kickers = [p for p in plist if p.get("dk_att", p.get("drop_kicks_attempted", 0)) + p.get("pk_att", p.get("place_kicks_attempted", 0)) > 0]
         if kickers:
