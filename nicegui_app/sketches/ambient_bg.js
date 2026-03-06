@@ -106,8 +106,11 @@ const viperballAmbient = (p) => {
   };
 };
 
-/* Auto-launch when DOM is ready */
-document.addEventListener('DOMContentLoaded', () => {
-  const el = document.getElementById('vb-ambient-bg');
-  if (el) new p5(viperballAmbient);
-});
+/* Wait for both P5.js (defer-loaded) and the container div (NiceGUI-rendered) */
+(function _initAmbient() {
+  if (typeof p5 === 'undefined' || !document.getElementById('vb-ambient-bg')) {
+    setTimeout(_initAmbient, 100);
+    return;
+  }
+  new p5(viperballAmbient);
+})();

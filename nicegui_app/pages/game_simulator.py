@@ -139,10 +139,13 @@ def render_game_simulator(state: UserState, shared: dict):
             "home": {"name": home_name, "score": home_score},
             "away": {"name": away_name, "score": away_score},
         })
-        ui.html(f"""
-            <script>window._vbScoreData = {_score_data};</script>
-            <div id="vb-score-ticker" style="width: 100%; height: 120px;"></div>
-            <script src="/sketches/score_ticker.js"></script>
+        ui.html('<div id="vb-score-ticker" style="width: 100%; height: 120px;"></div>')
+        # innerHTML doesn't execute <script> tags; load via dynamic JS instead
+        ui.run_javascript(f"""
+            window._vbScoreData = {_score_data};
+            var s = document.createElement('script');
+            s.src = '/sketches/score_ticker.js';
+            document.head.appendChild(s);
         """)
 
         ui.label(f"Seed: {actual_seed}").classes("text-sm text-gray-400 text-center w-full")

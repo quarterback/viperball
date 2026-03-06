@@ -142,9 +142,11 @@ const viperballScoreTicker = (p) => {
   };
 };
 
-/* Auto-launch when container exists */
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('vb-score-ticker')) {
-    new p5(viperballScoreTicker);
+/* Init: wait for P5.js and the container div, then launch */
+(function _initScoreTicker() {
+  if (typeof p5 === 'undefined' || !document.getElementById('vb-score-ticker')) {
+    setTimeout(_initScoreTicker, 100);
+    return;
   }
-});
+  new p5(viperballScoreTicker);
+})();
