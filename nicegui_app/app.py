@@ -25,11 +25,47 @@ from engine.game_engine import DEFENSE_STYLES, ST_SCHEMES
 
 
 APP_CSS = """
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background-color: #f1f5f9;
     }
+
+    /* ─── Ambient P5 Background ─── */
+    #vb-ambient-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+    #vb-nav-glow {
+        width: 100%;
+        height: 3px;
+        position: relative;
+        z-index: 2001;
+        pointer-events: none;
+    }
+    #vb-page-transition {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        pointer-events: none;
+    }
+
+    /* Ensure main content sits above the ambient canvas */
+    .q-page, .nicegui-content, .q-header {
+        position: relative;
+        z-index: 1;
+    }
+
     .score-big { font-size: 2.8rem; font-weight: 800; text-align: center; line-height: 1; color: #0f172a; }
     .team-name { font-size: 1.05rem; font-weight: 600; text-align: center; color: #475569; }
     .drive-td { color: #16a34a; font-weight: 700; }
@@ -96,6 +132,14 @@ NAV_SECTIONS = [
 def index():
     ui.add_head_html(APP_CSS)
 
+    # ─── P5.js ambient layers ───
+    # Background particle canvas (fixed behind everything)
+    ui.html('<div id="vb-ambient-bg"></div>')
+    ui.html('<script src="/sketches/ambient_bg.js"></script>')
+    # Page transition overlay (fixed, pointer-events: none)
+    ui.html('<div id="vb-page-transition"></div>')
+    ui.html('<script src="/sketches/page_transition.js"></script>')
+
     shared = _load_shared_data()
     state = UserState()
 
@@ -110,6 +154,9 @@ def index():
         if active_nav["current"] == name:
             return
         active_nav["current"] = name
+
+        # Trigger P5.js page transition animation
+        await ui.run_javascript("if (window.vbTransition) window.vbTransition();")
 
         for btn_name, btn in nav_buttons.items():
             if btn_name == name:
@@ -204,6 +251,10 @@ def index():
                 ui.button("End", icon="stop", on_click=_end_session).props(
                     "flat dense size=sm color=red no-caps"
                 )
+
+    # ─── Nav glow strip (P5.js animated gradient line under header) ───
+    ui.html('<div id="vb-nav-glow"></div>')
+    ui.html('<script src="/sketches/nav_glow.js"></script>')
 
     content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 

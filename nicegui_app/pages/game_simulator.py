@@ -134,15 +134,16 @@ def render_game_simulator(state: UserState, shared: dict):
         as_ = result["stats"]["away"]
         plays = result["play_by_play"]
 
-        # Score header
-        with ui.row().classes("w-full justify-center items-center gap-8 my-4"):
-            with ui.column().classes("items-center"):
-                ui.label(home_name).classes("text-base font-semibold").style("color: #475569;")
-                ui.label(fmt_vb_score(home_score)).classes("text-5xl font-extrabold").style("color: #0f172a;")
-            ui.label("vs").classes("text-xl opacity-40 pt-4")
-            with ui.column().classes("items-center"):
-                ui.label(away_name).classes("text-base font-semibold").style("color: #475569;")
-                ui.label(fmt_vb_score(away_score)).classes("text-5xl font-extrabold").style("color: #0f172a;")
+        # Score header — P5.js animated ticker
+        _score_data = json.dumps({
+            "home": {"name": home_name, "score": home_score},
+            "away": {"name": away_name, "score": away_score},
+        })
+        ui.html(f"""
+            <script>window._vbScoreData = {_score_data};</script>
+            <div id="vb-score-ticker" style="width: 100%; height: 120px;"></div>
+            <script src="/sketches/score_ticker.js"></script>
+        """)
 
         ui.label(f"Seed: {actual_seed}").classes("text-sm text-gray-400 text-center w-full")
 

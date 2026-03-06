@@ -14,6 +14,29 @@ from typing import Optional
 from nicegui import ui
 
 
+def p5_sketch(sketch_name: str, container_id: str, data: dict | None = None,
+              width: str = "100%", height: str = "400px",
+              extra_classes: str = "", extra_style: str = ""):
+    """Embed a P5.js sketch canvas with optional data injection.
+
+    The sketch JS file is served from /sketches/{sketch_name}.js and runs
+    in instance mode inside a <div id="{container_id}">.
+    """
+    data_script = ""
+    if data is not None:
+        data_json = json.dumps(data)
+        # Inject data as a global var the sketch can read
+        var_name = f"_vb{container_id.replace('-', '_')}Data"
+        data_script = f"<script>window.{var_name} = {data_json};</script>"
+
+    style = f"width: {width}; height: {height}; {extra_style}"
+    ui.html(f"""
+        {data_script}
+        <div id="{container_id}" class="{extra_classes}" style="{style}"></div>
+        <script src="/sketches/{sketch_name}.js"></script>
+    """)
+
+
 def metric_card(label: str, value, delta: str = ""):
     """Render a KPI metric card (replaces st.metric)."""
     with ui.card().classes("p-3 min-w-[100px] flex-1").style(
