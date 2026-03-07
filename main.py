@@ -28,7 +28,7 @@ ui.run_with(
     fastapi_app,
     title="Viperball Sandbox",
     storage_secret="viperball-sandbox-secret",
-    reconnect_timeout=300.0,
+    reconnect_timeout=43200.0,
 )
 logger.info("Viperball ready.")
 

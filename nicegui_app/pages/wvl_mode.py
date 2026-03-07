@@ -23,11 +23,58 @@ from engine.wvl_owner import (
     compute_final_score_report,
 )
 from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
+from engine.db import save_wvl_season as _db_save_season, load_wvl_season as _db_load_season, delete_wvl_season as _db_delete_season
 
 
 _WVL_DYNASTY_KEY = "wvl_dynasty"
 _WVL_PHASE_KEY = "wvl_phase"
 _WVL_SEASON_KEY = "wvl_last_season"
+
+# In-memory cache for the active WVL season (avoids repeated DB reads)
+_wvl_season_cache = {}
+
+
+def _get_wvl_season():
+    """Load the WVL season from in-memory cache, then DB, then legacy storage."""
+    if "current" in _wvl_season_cache:
+        return _wvl_season_cache["current"]
+    # Try database
+    season = _db_load_season()
+    if season is not None:
+        _wvl_season_cache["current"] = season
+        return season
+    # Legacy fallback: try app.storage.user (old cookie-based storage)
+    legacy = app.storage.user.get(_WVL_SEASON_KEY)
+    if legacy and hasattr(legacy, 'tier_seasons'):
+        _wvl_season_cache["current"] = legacy
+        # Migrate to DB
+        try:
+            _db_save_season(legacy)
+            app.storage.user.pop(_WVL_SEASON_KEY, None)
+            _log.info("Migrated WVL season from app.storage.user to database")
+        except Exception as e:
+            _log.warning(f"Failed to migrate WVL season to DB: {e}")
+        return legacy
+    return None
+
+
+def _save_wvl_season(season):
+    """Save the WVL season to in-memory cache and database."""
+    _wvl_season_cache["current"] = season
+    try:
+        _db_save_season(season)
+    except Exception as e:
+        _log.warning(f"Failed to save WVL season to DB: {e}")
+
+
+def _clear_wvl_season():
+    """Clear the WVL season from cache and database."""
+    _wvl_season_cache.pop("current", None)
+    try:
+        _db_delete_season()
+    except Exception:
+        pass
+    app.storage.user.pop(_WVL_SEASON_KEY, None)
 
 
 def _get_dynasty() -> Optional[WVLDynasty]:
@@ -43,7 +90,7 @@ def _get_dynasty() -> Optional[WVLDynasty]:
             return None
     # Re-link the live season so roster/OVR populate from Team objects when
     # _team_rosters is empty (e.g., after a page reload)
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
     if season and hasattr(season, 'tier_seasons') and not dynasty._team_rosters:
         dynasty._current_season = season
     return dynasty
@@ -556,7 +603,7 @@ def _fill_dashboard(containers, dynasty):
     if not c:
         return
 
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
 
     with c:
         phase = _get_phase()
@@ -612,7 +659,7 @@ def _fill_dashboard(containers, dynasty):
                     if not s.tier_seasons:
                         ui.notify("No team files found. Run scripts/generate_wvl_teams.py first.", type="warning")
                         return
-                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _save_wvl_season(s)
                     _set_phase("in_season")
                     _set_dynasty(d)
                     _register_wvl_season(d, s, year=d.current_year)
@@ -629,7 +676,7 @@ def _fill_dashboard(containers, dynasty):
 
                 async def _sim_week():
                     d = _get_dynasty()
-                    s = app.storage.user.get(_WVL_SEASON_KEY)
+                    s = _get_wvl_season()
                     if not d or not s:
                         return
                     # Apply depth-chart starter overrides before each sim
@@ -648,7 +695,7 @@ def _fill_dashboard(containers, dynasty):
                         _set_phase("playoffs")
                         s.start_playoffs_all()
 
-                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _save_wvl_season(s)
                     _set_dynasty(d)
                     _register_wvl_season(d, s, year=d.current_year)
 
@@ -664,7 +711,7 @@ def _fill_dashboard(containers, dynasty):
 
                 async def _sim_rest():
                     d = _get_dynasty()
-                    s = app.storage.user.get(_WVL_SEASON_KEY)
+                    s = _get_wvl_season()
                     if not d or not s:
                         return
                     ui.notify("Simulating remaining regular season...", type="info")
@@ -678,7 +725,7 @@ def _fill_dashboard(containers, dynasty):
 
                     _set_phase("playoffs")
                     s.start_playoffs_all()
-                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _save_wvl_season(s)
                     _set_dynasty(d)
                     _register_wvl_season(d, s, year=d.current_year)
                     ui.notify("Regular season complete! Playoffs started.", type="positive")
@@ -700,7 +747,7 @@ def _fill_dashboard(containers, dynasty):
             elif phase == "playoffs":
                 async def _advance_playoffs():
                     d = _get_dynasty()
-                    s = app.storage.user.get(_WVL_SEASON_KEY)
+                    s = _get_wvl_season()
                     if not d or not s:
                         return
                     results = s.advance_playoffs_all()
@@ -716,7 +763,7 @@ def _fill_dashboard(containers, dynasty):
                     else:
                         ui.notify("Playoff round complete!", type="info")
 
-                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _save_wvl_season(s)
                     _set_dynasty(d)
                     _register_wvl_season(d, s, year=d.current_year)
                     refresh = app.storage.user.get("_wvl_refresh")
@@ -725,7 +772,7 @@ def _fill_dashboard(containers, dynasty):
 
                 async def _sim_all_playoffs():
                     d = _get_dynasty()
-                    s = app.storage.user.get(_WVL_SEASON_KEY)
+                    s = _get_wvl_season()
                     if not d or not s:
                         return
                     ui.notify("Simulating all playoff rounds...", type="info")
@@ -740,7 +787,7 @@ def _fill_dashboard(containers, dynasty):
                         ui.notify("Season complete! Proceed to offseason.", type="positive")
                     else:
                         ui.notify("Playoffs still in progress.", type="warning")
-                    app.storage.user[_WVL_SEASON_KEY] = s
+                    _save_wvl_season(s)
                     _set_dynasty(d)
                     _register_wvl_season(d, s, year=d.current_year)
                     refresh = app.storage.user.get("_wvl_refresh")
@@ -1411,7 +1458,7 @@ def _fill_schedule(containers, dynasty):
     if not c:
         return
 
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
 
     with c:
         if not season or not hasattr(season, 'tier_seasons'):
@@ -1562,7 +1609,7 @@ def _fill_playoffs(containers, dynasty):
     if not c:
         return
 
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
     phase = _get_phase()
 
     with c:
@@ -1723,7 +1770,7 @@ def _render_champions_banner(champions_dict):
 def _render_all_team_rosters(dynasty):
     """Render an expandable roster browser for every team — allows editing any player."""
     from engine.wvl_config import CLUBS_BY_KEY
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
     if season and hasattr(season, 'tier_seasons') and not dynasty._team_rosters:
         dynasty._load_rosters_from_season(season)
 
@@ -1819,7 +1866,7 @@ def _fill_league(containers, dynasty):
     if not c:
         return
 
-    season = app.storage.user.get(_WVL_SEASON_KEY)
+    season = _get_wvl_season()
 
     with c:
         if season and hasattr(season, 'tier_seasons'):
@@ -2581,7 +2628,7 @@ def _render_offseason_start(container, dynasty):
         async def _begin_offseason():
             import random
             d = _get_dynasty()
-            s = app.storage.user.get(_WVL_SEASON_KEY)
+            s = _get_wvl_season()
             if not d or not s:
                 ui.notify("No season data.", type="warning")
                 return
@@ -2616,7 +2663,7 @@ def _render_offseason_start(container, dynasty):
         async def _reset():
             _set_dynasty(None)
             _set_phase("setup")
-            app.storage.user.pop(_WVL_SEASON_KEY, None)
+            _clear_wvl_season()
             app.storage.user.pop("_wvl_offseason_data", None)
             app.storage.user.pop("_wvl_offseason_step", None)
             refresh = app.storage.user.get("_wvl_refresh")
@@ -2683,7 +2730,7 @@ def _render_offseason_step(container, dynasty, data, step_idx):
             async def _finish():
                 app.storage.user.pop("_wvl_offseason_data", None)
                 app.storage.user.pop("_wvl_offseason_step", None)
-                app.storage.user.pop(_WVL_SEASON_KEY, None)
+                _clear_wvl_season()
                 _set_phase("pre_season")
                 refresh = app.storage.user.get("_wvl_refresh")
                 if refresh:

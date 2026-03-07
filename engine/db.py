@@ -230,10 +230,12 @@ def serialize_pro_league_season(season) -> dict:
             "division": rec.division,
             "wins": rec.wins,
             "losses": rec.losses,
+            "ties": rec.ties,
             "points_for": rec.points_for,
             "points_against": rec.points_against,
             "div_wins": rec.div_wins,
             "div_losses": rec.div_losses,
+            "div_ties": rec.div_ties,
             "streak": rec.streak,
             "streak_type": rec.streak_type,
             "last_5": rec.last_5,
@@ -379,10 +381,12 @@ def deserialize_pro_league_season(data: dict):
             division=rec_data["division"],
             wins=rec_data["wins"],
             losses=rec_data["losses"],
+            ties=rec_data.get("ties", 0),
             points_for=rec_data["points_for"],
             points_against=rec_data["points_against"],
             div_wins=rec_data["div_wins"],
             div_losses=rec_data["div_losses"],
+            div_ties=rec_data.get("div_ties", 0),
             streak=rec_data["streak"],
             streak_type=rec_data["streak_type"],
             last_5=rec_data["last_5"],
@@ -699,6 +703,181 @@ def list_season_archives(user_id: str = "default") -> list[dict]:
 def delete_season_archive(archive_key: str, user_id: str = "default"):
     """Delete a season archive."""
     delete_blob("season_archive", archive_key, user_id=user_id)
+
+
+# ═══════════════════════════════════════════════════════════════
+# WVL MULTI-TIER SEASON SERIALIZATION
+# ═══════════════════════════════════════════════════════════════
+
+def serialize_wvl_season(wvl_season) -> dict:
+    """Serialize a WVLMultiTierSeason to a JSON-safe dict.
+
+    Reuses serialize_pro_league_season for each tier's ProLeagueSeason,
+    plus WVL-specific fields (tier_assignments, phase, promotion_result).
+    """
+    tier_data = {}
+    for tier_num, season in wvl_season.tier_seasons.items():
+        tier_data[str(tier_num)] = serialize_pro_league_season(season)
+        # Also serialize the injury tracker if present
+        if getattr(season, 'injury_tracker', None) is not None:
+            tracker = season.injury_tracker
+            tier_data[str(tier_num)]["injury_tracker"] = _serialize_injury_tracker(tracker)
+
+    result = {
+        "version": 1,
+        "tier_assignments": {k: v for k, v in wvl_season.tier_assignments.items()},
+        "tier_seasons": tier_data,
+        "phase": wvl_season.phase,
+        "current_week": wvl_season.current_week,
+    }
+
+    if wvl_season.promotion_result is not None:
+        result["promotion_result"] = wvl_season.promotion_result.to_dict()
+
+    return result
+
+
+def _serialize_injury_tracker(tracker) -> dict:
+    """Serialize an InjuryTracker to a JSON-safe dict."""
+    active = {}
+    for team_name, injuries in tracker.active_injuries.items():
+        active[team_name] = [inj.to_dict() for inj in injuries]
+    season_log = [inj.to_dict() for inj in tracker.season_log]
+    return {"active_injuries": active, "season_log": season_log}
+
+
+def _deserialize_injury_tracker(data: dict):
+    """Reconstruct an InjuryTracker from a serialized dict."""
+    from engine.injuries import InjuryTracker, Injury
+    import random
+
+    tracker = InjuryTracker()
+    tracker.rng = random.Random()
+
+    for team_name, inj_list in data.get("active_injuries", {}).items():
+        tracker.active_injuries[team_name] = [
+            Injury(**{k: v for k, v in d.items() if k in Injury.__dataclass_fields__})
+            for d in inj_list
+        ]
+    tracker.season_log = [
+        Injury(**{k: v for k, v in d.items() if k in Injury.__dataclass_fields__})
+        for d in data.get("season_log", [])
+    ]
+    return tracker
+
+
+def deserialize_wvl_season(data: dict):
+    """Reconstruct a WVLMultiTierSeason from a serialized dict."""
+    from engine.wvl_season import WVLMultiTierSeason
+    from engine.promotion_relegation import (
+        PromotionRelegationResult, TierMovement, PromotionPlayoff,
+    )
+
+    # Build without __init__ to avoid re-loading all teams
+    wvl = WVLMultiTierSeason.__new__(WVLMultiTierSeason)
+    wvl.tier_assignments = data["tier_assignments"]
+    wvl.phase = data.get("phase", "regular_season")
+    wvl.current_week = data.get("current_week", 0)
+
+    # Deserialize each tier's ProLeagueSeason
+    wvl.tier_seasons = {}
+    for tier_str, season_data in data.get("tier_seasons", {}).items():
+        tier_num = int(tier_str)
+        season = deserialize_pro_league_season(season_data)
+
+        # Restore injury tracker if present
+        if "injury_tracker" in season_data:
+            season.injury_tracker = _deserialize_injury_tracker(season_data["injury_tracker"])
+        else:
+            season.injury_tracker = None
+
+        # For WVL tiers, teams may span multiple directories. If deserialization
+        # didn't find all teams (teams_dir only covers one tier), scan all dirs.
+        if not season.teams:
+            from engine.wvl_config import ALL_WVL_TIERS
+            from engine.game_engine import load_team_from_json
+            from engine.wvl_season import DATA_DIR
+            all_wvl_teams = {}
+            for tc in ALL_WVL_TIERS:
+                td = DATA_DIR.parent / tc.teams_dir
+                if td.exists():
+                    for f in sorted(td.glob("*.json")):
+                        key = f.stem
+                        if key not in all_wvl_teams:
+                            try:
+                                all_wvl_teams[key] = load_team_from_json(str(f))
+                            except Exception:
+                                pass
+            for div_keys in season.config.divisions.values():
+                for key in div_keys:
+                    if key in all_wvl_teams:
+                        season.teams[key] = all_wvl_teams[key]
+
+        wvl.tier_seasons[tier_num] = season
+
+    # Restore promotion result if present
+    prom_data = data.get("promotion_result")
+    if prom_data:
+        movements = [
+            TierMovement(
+                team_key=m["team_key"],
+                team_name=m["team_name"],
+                from_tier=m["from_tier"],
+                to_tier=m["to_tier"],
+                reason=m["reason"],
+            )
+            for m in prom_data.get("movements", [])
+        ]
+        playoffs = [
+            PromotionPlayoff(
+                higher_tier=p["higher_tier"],
+                higher_tier_team_key=p.get("higher_tier_team", ""),
+                higher_tier_team_name=p.get("higher_tier_team_name", ""),
+                lower_tier_team_key=p.get("lower_tier_team", ""),
+                lower_tier_team_name=p.get("lower_tier_team_name", ""),
+                winner_key=p.get("winner"),
+                winner_name=p.get("winner_name"),
+                score=p.get("score"),
+            )
+            for p in prom_data.get("playoffs", [])
+        ]
+        wvl.promotion_result = PromotionRelegationResult(
+            movements=movements,
+            playoffs=playoffs,
+            new_tier_assignments=prom_data.get("new_tier_assignments", {}),
+        )
+    else:
+        wvl.promotion_result = None
+
+    return wvl
+
+
+# ═══════════════════════════════════════════════════════════════
+# HIGH-LEVEL SAVE/LOAD FOR WVL
+# ═══════════════════════════════════════════════════════════════
+
+def save_wvl_season(wvl_season, user_id: str = "default"):
+    """Save a WVL multi-tier season to the database."""
+    data = serialize_wvl_season(wvl_season)
+    save_blob("wvl_season", "current", data, label="WVL Season", user_id=user_id)
+    _log.info(f"Saved WVL season for user={user_id}")
+
+
+def load_wvl_season(user_id: str = "default"):
+    """Load a WVL multi-tier season. Returns the season or None."""
+    data = load_blob("wvl_season", "current", user_id=user_id)
+    if data is None:
+        return None
+    try:
+        return deserialize_wvl_season(data)
+    except Exception as e:
+        _log.warning(f"Failed to deserialize WVL season: {e}")
+        return None
+
+
+def delete_wvl_season(user_id: str = "default"):
+    """Delete a saved WVL season."""
+    delete_blob("wvl_season", "current", user_id=user_id)
 
 
 # ═══════════════════════════════════════════════════════════════
