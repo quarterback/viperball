@@ -1066,6 +1066,27 @@ def college_playoffs(request: Request, session_id: str):
     ))
 
 
+@router.get("/college/{session_id}/bracketology", response_class=HTMLResponse)
+def college_bracketology(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    playoff_size = sess.get("config", {}).get("playoff_size", 8)
+    bracketology = season.get_bracketology(playoff_size)
+
+    return templates.TemplateResponse("college/bracketology.html", _ctx(
+        request, section="college", session_id=session_id,
+        field=bracketology["field"],
+        bracket=bracketology["bracket"],
+        bubble_in=bracketology["bubble_in"],
+        bubble_out=bracketology["bubble_out"],
+        num_teams=bracketology["num_teams"],
+        season_name=getattr(season, "name", "Season"),
+        phase=sess.get("phase", ""),
+    ))
+
+
 @router.get("/college/{session_id}/awards", response_class=HTMLResponse)
 def college_awards(request: Request, session_id: str):
     api = _get_api()
