@@ -601,6 +601,17 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     game = week_games[game_idx]
     game_data = api["serialize_game"](game, include_full_result=True)
 
+    # Inject fast_sim metrics as viperball_metrics so templates can find them
+    # (mirrors the fix in pro_league.get_box_score)
+    fr = game_data.get("full_result")
+    if fr and fr.get("_fast_sim"):
+        fsm = fr.get("_fast_sim_metrics", {})
+        stats_data = fr.get("stats", {})
+        for side in ("home", "away"):
+            side_stats = stats_data.get(side)
+            if side_stats and side in fsm and "viperball_metrics" not in side_stats:
+                side_stats["viperball_metrics"] = fsm[side]
+
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
@@ -647,6 +658,25 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
         "kick_passes_thrown": 0, "kick_passes_completed": 0,
         "kick_return_yards": 0, "punt_return_yards": 0,
+        # Rushing detail
+        "rush_carries": 0, "rushing_tds": 0,
+        # Lateral chain
+        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+        # Kick pass detail
+        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
+        "kick_pass_ints": 0,
+        # Special teams
+        "kick_returns": 0, "kick_return_tds": 0,
+        "punt_returns": 0, "punt_return_tds": 0,
+        "muffs": 0, "st_tackles": 0,
+        # Keeper
+        "keeper_tackles": 0, "keeper_bells": 0,
+        "kick_deflections": 0, "coverage_snaps": 0,
+        "keeper_return_yards": 0,
+        # Line play
+        "blocks": 0, "pancakes": 0,
+        # Impact
+        "wpa": 0.0, "plays_involved": 0,
     }
     for game in season.schedule:
         if not game.completed or not getattr(game, "full_result", None):
@@ -679,6 +709,18 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
                     "kick_pass_yards", "kick_pass_tds",
                     "kick_passes_thrown", "kick_passes_completed",
                     "kick_return_yards", "punt_return_yards",
+                    "rush_carries", "rushing_tds",
+                    "lateral_receptions", "lateral_assists", "lateral_tds",
+                    "kick_pass_interceptions_thrown", "kick_pass_receptions",
+                    "kick_pass_ints",
+                    "kick_returns", "kick_return_tds",
+                    "punt_returns", "punt_return_tds",
+                    "muffs", "st_tackles",
+                    "keeper_tackles", "keeper_bells",
+                    "kick_deflections", "coverage_snaps",
+                    "keeper_return_yards",
+                    "blocks", "pancakes",
+                    "wpa", "plays_involved",
                 ]:
                     season_totals[stat] += pg.get(stat, 0)
                 break
@@ -692,6 +734,18 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     )
     season_totals["total_return_yards"] = (
         season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+    season_totals["kp_pct"] = round(
+        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+    season_totals["kick_return_avg"] = round(
+        season_totals["kick_return_yards"] / max(1, season_totals["kick_returns"]), 1
+    )
+    season_totals["punt_return_avg"] = round(
+        season_totals["punt_return_yards"] / max(1, season_totals["punt_returns"]), 1
+    )
+    season_totals["wpa_per_play"] = round(
+        season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
 
     # Team record for context
@@ -1883,8 +1937,28 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
         "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
         "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
-        "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
         "kick_passes_thrown": 0, "kick_passes_completed": 0,
+        "kick_return_yards": 0, "punt_return_yards": 0,
+        # Rushing detail
+        "rush_carries": 0, "rushing_tds": 0,
+        # Lateral chain
+        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+        # Kick pass detail
+        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
+        "kick_pass_ints": 0,
+        # Special teams
+        "kick_returns": 0, "kick_return_tds": 0,
+        "punt_returns": 0, "punt_return_tds": 0,
+        "muffs": 0, "st_tackles": 0,
+        # Keeper
+        "keeper_tackles": 0, "keeper_bells": 0,
+        "kick_deflections": 0, "coverage_snaps": 0,
+        "keeper_return_yards": 0,
+        # Line play
+        "blocks": 0, "pancakes": 0,
+        # Impact
+        "wpa": 0.0, "plays_involved": 0,
     }
     game_log = []
     for week_num, week_games in tier_season.results.items():
@@ -1922,8 +1996,22 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                         "tds", "fumbles", "laterals_thrown",
                         "kick_att", "kick_made", "pk_att", "pk_made",
                         "dk_att", "dk_made", "tackles", "tfl", "sacks",
+                        "hurries",
                         "kick_pass_yards", "kick_pass_tds",
                         "kick_passes_thrown", "kick_passes_completed",
+                        "kick_return_yards", "punt_return_yards",
+                        "rush_carries", "rushing_tds",
+                        "lateral_receptions", "lateral_assists", "lateral_tds",
+                        "kick_pass_interceptions_thrown", "kick_pass_receptions",
+                        "kick_pass_ints",
+                        "kick_returns", "kick_return_tds",
+                        "punt_returns", "punt_return_tds",
+                        "muffs", "st_tackles",
+                        "keeper_tackles", "keeper_bells",
+                        "kick_deflections", "coverage_snaps",
+                        "keeper_return_yards",
+                        "blocks", "pancakes",
+                        "wpa", "plays_involved",
                     ]:
                         season_totals[stat] += pg.get(stat, 0)
                     break
@@ -1931,8 +2019,24 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
     season_totals["ypc"] = round(
         season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
     )
+    season_totals["yards_per_touch"] = season_totals["ypc"]
     season_totals["kp_pct"] = round(
         season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+    season_totals["kick_pct"] = round(
+        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
+    )
+    season_totals["total_return_yards"] = (
+        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+    season_totals["kick_return_avg"] = round(
+        season_totals["kick_return_yards"] / max(1, season_totals["kick_returns"]), 1
+    )
+    season_totals["punt_return_avg"] = round(
+        season_totals["punt_return_yards"] / max(1, season_totals["punt_returns"]), 1
+    )
+    season_totals["wpa_per_play"] = round(
+        season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
 
     from engine.wvl_config import CLUBS_BY_KEY

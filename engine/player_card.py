@@ -51,6 +51,35 @@ class GameLog:
     sacks: int = 0
     hurries: int = 0
     st_tackles: int = 0
+    # Rushing detail
+    rush_carries: int = 0
+    rushing_tds: int = 0
+    # Lateral chain
+    lateral_receptions: int = 0
+    lateral_assists: int = 0
+    lateral_tds: int = 0
+    # Kick pass
+    kick_passes_thrown: int = 0
+    kick_passes_completed: int = 0
+    kick_pass_yards: int = 0
+    kick_pass_tds: int = 0
+    kick_pass_interceptions: int = 0
+    kick_pass_receptions: int = 0
+    kick_pass_ints: int = 0  # defensive INTs
+    # Special teams
+    kick_returns: int = 0
+    kick_return_yards: int = 0
+    kick_return_tds: int = 0
+    punt_returns: int = 0
+    punt_return_yards: int = 0
+    punt_return_tds: int = 0
+    muffs: int = 0
+    # Line play
+    blocks: int = 0
+    pancakes: int = 0
+    # Impact
+    wpa: float = 0.0
+    plays_involved: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -79,11 +108,35 @@ class GameLog:
             "sacks": self.sacks,
             "hurries": self.hurries,
             "st_tackles": self.st_tackles,
+            "rush_carries": self.rush_carries,
+            "rushing_tds": self.rushing_tds,
+            "lateral_receptions": self.lateral_receptions,
+            "lateral_assists": self.lateral_assists,
+            "lateral_tds": self.lateral_tds,
+            "kick_passes_thrown": self.kick_passes_thrown,
+            "kick_passes_completed": self.kick_passes_completed,
+            "kick_pass_yards": self.kick_pass_yards,
+            "kick_pass_tds": self.kick_pass_tds,
+            "kick_pass_interceptions": self.kick_pass_interceptions,
+            "kick_pass_receptions": self.kick_pass_receptions,
+            "kick_pass_ints": self.kick_pass_ints,
+            "kick_returns": self.kick_returns,
+            "kick_return_yards": self.kick_return_yards,
+            "kick_return_tds": self.kick_return_tds,
+            "punt_returns": self.punt_returns,
+            "punt_return_yards": self.punt_return_yards,
+            "punt_return_tds": self.punt_return_tds,
+            "muffs": self.muffs,
+            "blocks": self.blocks,
+            "pancakes": self.pancakes,
+            "wpa": self.wpa,
+            "plays_involved": self.plays_involved,
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> "GameLog":
-        return cls(**{k: d.get(k, 0) if k not in ("opponent",) else d.get(k, "")
+        return cls(**{k: d.get(k, 0.0) if k == "wpa" else
+                       d.get(k, 0) if k not in ("opponent",) else d.get(k, "")
                       for k in cls.__dataclass_fields__})
 
 
@@ -120,6 +173,35 @@ class SeasonStats:
     sacks: int = 0
     hurries: int = 0
     st_tackles: int = 0
+    # Rushing detail
+    rush_carries: int = 0
+    rushing_tds: int = 0
+    # Lateral chain
+    lateral_receptions: int = 0
+    lateral_assists: int = 0
+    lateral_tds: int = 0
+    # Kick pass
+    kick_passes_thrown: int = 0
+    kick_passes_completed: int = 0
+    kick_pass_yards: int = 0
+    kick_pass_tds: int = 0
+    kick_pass_interceptions: int = 0
+    kick_pass_receptions: int = 0
+    kick_pass_ints: int = 0
+    # Special teams
+    kick_returns: int = 0
+    kick_return_yards: int = 0
+    kick_return_tds: int = 0
+    punt_returns: int = 0
+    punt_return_yards: int = 0
+    punt_return_tds: int = 0
+    muffs: int = 0
+    # Line play
+    blocks: int = 0
+    pancakes: int = 0
+    # Impact
+    wpa: float = 0.0
+    plays_involved: int = 0
     game_log: List[GameLog] = field(default_factory=list)
 
     # ── computed properties ──
@@ -143,6 +225,22 @@ class SeasonStats:
     def points(self) -> float:
         """Approximate scoring contribution (6 per TD)."""
         return self.touchdowns * 6.0
+
+    @property
+    def kick_pass_pct(self) -> float:
+        return round(self.kick_passes_completed / max(1, self.kick_passes_thrown) * 100, 1)
+
+    @property
+    def kick_return_avg(self) -> float:
+        return round(self.kick_return_yards / max(1, self.kick_returns), 1)
+
+    @property
+    def punt_return_avg(self) -> float:
+        return round(self.punt_return_yards / max(1, self.punt_returns), 1)
+
+    @property
+    def wpa_per_play(self) -> float:
+        return round(self.wpa / max(1, self.plays_involved), 3)
 
     def add_game(self, log: GameLog) -> None:
         """Accumulate a game log entry into season totals."""
@@ -171,6 +269,29 @@ class SeasonStats:
         self.sacks += log.sacks
         self.hurries += log.hurries
         self.st_tackles += log.st_tackles
+        self.rush_carries += log.rush_carries
+        self.rushing_tds += log.rushing_tds
+        self.lateral_receptions += log.lateral_receptions
+        self.lateral_assists += log.lateral_assists
+        self.lateral_tds += log.lateral_tds
+        self.kick_passes_thrown += log.kick_passes_thrown
+        self.kick_passes_completed += log.kick_passes_completed
+        self.kick_pass_yards += log.kick_pass_yards
+        self.kick_pass_tds += log.kick_pass_tds
+        self.kick_pass_interceptions += log.kick_pass_interceptions
+        self.kick_pass_receptions += log.kick_pass_receptions
+        self.kick_pass_ints += log.kick_pass_ints
+        self.kick_returns += log.kick_returns
+        self.kick_return_yards += log.kick_return_yards
+        self.kick_return_tds += log.kick_return_tds
+        self.punt_returns += log.punt_returns
+        self.punt_return_yards += log.punt_return_yards
+        self.punt_return_tds += log.punt_return_tds
+        self.muffs += log.muffs
+        self.blocks += log.blocks
+        self.pancakes += log.pancakes
+        self.wpa += log.wpa
+        self.plays_involved += log.plays_involved
 
     def to_dict(self) -> dict:
         return {
@@ -200,10 +321,37 @@ class SeasonStats:
             "sacks": self.sacks,
             "hurries": self.hurries,
             "st_tackles": self.st_tackles,
+            "rush_carries": self.rush_carries,
+            "rushing_tds": self.rushing_tds,
+            "lateral_receptions": self.lateral_receptions,
+            "lateral_assists": self.lateral_assists,
+            "lateral_tds": self.lateral_tds,
+            "kick_passes_thrown": self.kick_passes_thrown,
+            "kick_passes_completed": self.kick_passes_completed,
+            "kick_pass_yards": self.kick_pass_yards,
+            "kick_pass_tds": self.kick_pass_tds,
+            "kick_pass_interceptions": self.kick_pass_interceptions,
+            "kick_pass_receptions": self.kick_pass_receptions,
+            "kick_pass_ints": self.kick_pass_ints,
+            "kick_returns": self.kick_returns,
+            "kick_return_yards": self.kick_return_yards,
+            "kick_return_tds": self.kick_return_tds,
+            "punt_returns": self.punt_returns,
+            "punt_return_yards": self.punt_return_yards,
+            "punt_return_tds": self.punt_return_tds,
+            "muffs": self.muffs,
+            "blocks": self.blocks,
+            "pancakes": self.pancakes,
+            "wpa": self.wpa,
+            "plays_involved": self.plays_involved,
             "yards_per_touch": self.yards_per_touch,
             "kick_pct": self.kick_pct,
             "pk_pct": self.pk_pct,
             "dk_pct": self.dk_pct,
+            "kick_pass_pct": self.kick_pass_pct,
+            "kick_return_avg": self.kick_return_avg,
+            "punt_return_avg": self.punt_return_avg,
+            "wpa_per_play": self.wpa_per_play,
             "game_log": [g.to_dict() for g in self.game_log],
         }
 
@@ -214,7 +362,12 @@ class SeasonStats:
         d.pop("kick_pct", None)
         d.pop("pk_pct", None)
         d.pop("dk_pct", None)
-        obj = cls(**{k: d.get(k, 0) if k not in ("team",) else d.get(k, "")
+        d.pop("kick_pass_pct", None)
+        d.pop("kick_return_avg", None)
+        d.pop("punt_return_avg", None)
+        d.pop("wpa_per_play", None)
+        obj = cls(**{k: d.get(k, 0.0) if k == "wpa" else
+                       d.get(k, 0) if k not in ("team",) else d.get(k, "")
                      for k in cls.__dataclass_fields__ if k != "game_log"})
         obj.game_log = logs
         return obj
@@ -613,4 +766,27 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         sacks=player.game_sacks,
         hurries=player.game_hurries,
         st_tackles=player.game_st_tackles,
+        rush_carries=getattr(player, 'game_rush_carries', 0),
+        rushing_tds=getattr(player, 'game_rushing_tds', 0),
+        lateral_receptions=getattr(player, 'game_lateral_receptions', 0),
+        lateral_assists=getattr(player, 'game_lateral_assists', 0),
+        lateral_tds=getattr(player, 'game_lateral_tds', 0),
+        kick_passes_thrown=getattr(player, 'game_kick_passes_thrown', 0),
+        kick_passes_completed=getattr(player, 'game_kick_passes_completed', 0),
+        kick_pass_yards=getattr(player, 'game_kick_pass_yards', 0),
+        kick_pass_tds=getattr(player, 'game_kick_pass_tds', 0),
+        kick_pass_interceptions=getattr(player, 'game_kick_pass_interceptions', 0),
+        kick_pass_receptions=getattr(player, 'game_kick_pass_receptions', 0),
+        kick_pass_ints=getattr(player, 'game_kick_pass_ints', 0),
+        kick_returns=getattr(player, 'game_kick_returns', 0),
+        kick_return_yards=getattr(player, 'game_kick_return_yards', 0),
+        kick_return_tds=getattr(player, 'game_kick_return_tds', 0),
+        punt_returns=getattr(player, 'game_punt_returns', 0),
+        punt_return_yards=getattr(player, 'game_punt_return_yards', 0),
+        punt_return_tds=getattr(player, 'game_punt_return_tds', 0),
+        muffs=getattr(player, 'game_muffs', 0),
+        blocks=getattr(player, 'game_blocks', 0),
+        pancakes=getattr(player, 'game_pancakes', 0),
+        wpa=round(getattr(player, 'game_wpa', 0.0), 2),
+        plays_involved=getattr(player, 'game_plays_involved', 0),
     )
