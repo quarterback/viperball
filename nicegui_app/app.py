@@ -193,8 +193,8 @@ def index():
 
     nav_buttons: dict = {}
 
-    async def _switch_to(name: str):
-        if active_nav["current"] == name:
+    async def _switch_to(name: str, *, play_tab: str | None = None):
+        if active_nav["current"] == name and play_tab is None:
             return
         active_nav["current"] = name
 
@@ -211,7 +211,7 @@ def index():
         content_container.clear()
         with content_container:
             try:
-                await _render_section(name, state, shared, _switch_to)
+                await _render_section(name, state, shared, _switch_to, play_tab=play_tab)
             except Exception as exc:
                 import logging
                 logging.getLogger("viperball").error(f"Error loading {name}: {exc}", exc_info=True)
@@ -345,17 +345,17 @@ def index():
     else:
         with content_container:
             from nicegui_app.pages.home import render_home_sync
-            render_home_sync(state, shared, lambda n: _switch_to(n))
+            render_home_sync(state, shared, lambda n, **kw: _switch_to(n, **kw))
 
 
-async def _render_section(name: str, state: UserState, shared: dict, switch_fn):
+async def _render_section(name: str, state: UserState, shared: dict, switch_fn, *, play_tab: str | None = None):
     """Route to the correct page module for a given section name."""
     if name == "Home":
         from nicegui_app.pages.home import render_home_section
         await render_home_section(state, shared, switch_fn)
     elif name == "Play":
         from nicegui_app.pages.play import render_play_section
-        await render_play_section(state, shared)
+        await render_play_section(state, shared, play_tab=play_tab)
     elif name == "Pro Leagues":
         try:
             from nicegui_app.pages.pro_leagues import render_pro_leagues_section

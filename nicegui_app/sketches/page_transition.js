@@ -21,6 +21,7 @@ const viperballPageTransition = (p) => {
     canvas.parent('vb-page-transition');
     p.noStroke();
     p.frameRate(60);
+    p.noLoop(); /* Start paused — only runs during transitions */
 
     /* Expose trigger function globally */
     window.vbTransition = () => {
@@ -36,12 +37,13 @@ const viperballPageTransition = (p) => {
           delay: p.random(0, 0.3),
         });
       }
+      p.loop(); /* Resume draw loop for the animation */
     };
   };
 
   p.draw = () => {
     p.clear();
-    if (!active) return;
+    if (!active) { p.noLoop(); return; }
 
     progress += SPEED;
 
@@ -57,6 +59,7 @@ const viperballPageTransition = (p) => {
 
     if (progress > 2) {
       active = false;
+      p.noLoop(); /* Stop draw loop when animation is done */
     }
   };
 

@@ -18,10 +18,6 @@ from nicegui_app.state import UserState
 from nicegui_app.helpers import fmt_vb_score
 from nicegui_app.components import metric_card, stat_table, notify_error, notify_info, notify_success
 from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_games
-from nicegui_app.pages.game_simulator import render_game_simulator
-from nicegui_app.pages.season_simulator import render_season_simulator
-from nicegui_app.pages.dq_mode import render_dq_setup, render_dq_play
-from nicegui_app.pages.dynasty_mode import render_dynasty_mode
 
 
 def render_play_section_sync(state: UserState, shared: dict):
@@ -39,23 +35,29 @@ async def _deferred_play_load(state: UserState, shared: dict):
         if state.mode in ("season", "dynasty"):
             await _render_season_play(state, shared)
         elif state.mode == "dq":
+            from nicegui_app.pages.dq_mode import render_dq_play
             await render_dq_play(state, shared)
     except Exception as exc:
         ui.label(f"Error: {exc}").classes("text-red-500")
 
 
-async def render_play_section(state: UserState, shared: dict):
+async def render_play_section(state: UserState, shared: dict, *, play_tab: str | None = None):
     """Async entry point — used when switching tabs via nav buttons."""
     if state.mode in ("season", "dynasty"):
         await _render_season_play(state, shared)
     elif state.mode == "dq":
+        from nicegui_app.pages.dq_mode import render_dq_play
         await render_dq_play(state, shared)
     else:
-        _render_mode_selection(state, shared)
+        _render_mode_selection(state, shared, play_tab=play_tab)
 
 
-def _render_mode_selection(state: UserState, shared: dict):
-    """Show mode selection tabs when no active session."""
+def _render_mode_selection(state: UserState, shared: dict, *, play_tab: str | None = None):
+    """Show mode selection tabs when no active session.
+
+    ``play_tab`` selects which sub-tab to show initially:
+    ``"season"`` / ``"dynasty"`` / ``"quick"`` (default) / ``"dq"``.
+    """
     ui.label("Play").classes("text-2xl font-bold text-slate-800")
     ui.label("Start a new season or play a quick exhibition game").classes("text-sm text-gray-500 mb-4")
 
@@ -65,30 +67,59 @@ def _render_mode_selection(state: UserState, shared: dict):
         quick_tab = ui.tab("Quick Game")
         dq_tab = ui.tab("DraftyQueenz")
 
-    with ui.tab_panels(mode_tabs, value=quick_tab).classes("w-full"):
-        with ui.tab_panel(season_tab):
-            try:
-                render_season_simulator(state, shared)
-            except Exception as e:
-                ui.label(f"Error loading season setup: {e}").classes("text-red-500")
+    # Map landing-page card keys to the tab objects
+    _tab_map = {
+        "season": season_tab,
+        "dynasty": dynasty_tab,
+        "quick": quick_tab,
+        "dq": dq_tab,
+    }
+    initial_tab = _tab_map.get(play_tab, quick_tab)
 
-        with ui.tab_panel(dynasty_tab):
-            try:
-                render_dynasty_mode(state, shared)
-            except Exception as e:
-                ui.label(f"Error loading dynasty setup: {e}").classes("text-red-500")
+    # --- Lazy tab rendering: only build content when a tab is first shown ---
+    _rendered: dict[str, bool] = {}
 
-        with ui.tab_panel(quick_tab):
-            try:
-                render_game_simulator(state, shared)
-            except Exception as e:
-                ui.label(f"Error loading game simulator: {e}").classes("text-red-500")
+    # Container that holds the active tab's content
+    panel_container = ui.column().classes("w-full")
 
-        with ui.tab_panel(dq_tab):
+    def _render_tab(tab_key: str):
+        """Render the content for the given tab key into panel_container."""
+        if tab_key in _rendered:
+            return
+        _rendered[tab_key] = True
+        panel_container.clear()
+        with panel_container:
             try:
-                render_dq_setup(state, shared)
+                if tab_key == "season":
+                    from nicegui_app.pages.season_simulator import render_season_simulator
+                    render_season_simulator(state, shared)
+                elif tab_key == "dynasty":
+                    from nicegui_app.pages.dynasty_mode import render_dynasty_mode
+                    render_dynasty_mode(state, shared)
+                elif tab_key == "quick":
+                    from nicegui_app.pages.game_simulator import render_game_simulator
+                    render_game_simulator(state, shared)
+                elif tab_key == "dq":
+                    from nicegui_app.pages.dq_mode import render_dq_setup
+                    render_dq_setup(state, shared)
             except Exception as e:
-                ui.label(f"Error loading DraftyQueenz: {e}").classes("text-red-500")
+                ui.label(f"Error loading: {e}").classes("text-red-500")
+
+    # Reverse map: tab object → key
+    _tab_key_map = {id(v): k for k, v in _tab_map.items()}
+
+    def _on_tab_change(e):
+        tab_key = _tab_key_map.get(id(e.value))
+        if tab_key:
+            _rendered.clear()          # Clear tracked state so we re-render
+            _render_tab(tab_key)
+
+    mode_tabs.on_value_change(_on_tab_change)
+
+    # Render initial tab
+    initial_key = play_tab if play_tab in _tab_map else "quick"
+    mode_tabs.set_value(initial_tab)
+    _render_tab(initial_key)
 
 
 _PORTAL_POSITIONS = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]

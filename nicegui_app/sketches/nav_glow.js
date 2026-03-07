@@ -18,15 +18,20 @@ const viperballNavGlow = (p) => {
     const canvas = p.createCanvas(canvasW, canvasH);
     canvas.parent('vb-nav-glow');
     p.noStroke();
-    p.frameRate(30);
+    p.frameRate(15);
+
+    /* Pause when tab is not visible */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { p.noLoop(); } else { p.loop(); }
+    });
   };
 
   p.draw = () => {
     p.clear();
-    const t = p.frameCount * 0.01;
+    const t = p.frameCount * 0.02;
     const mouseRatio = p.mouseX / (canvasW || 1);
 
-    for (let x = 0; x < canvasW; x += 2) {
+    for (let x = 0; x < canvasW; x += 4) {
       const ratio = x / canvasW;
       /* Combine time-based drift with mouse proximity */
       const dist = p.abs(ratio - mouseRatio);
@@ -40,7 +45,7 @@ const viperballNavGlow = (p) => {
       const b = p.lerp(229, 246, p.sin(t * 0.7 + ratio * 2) * 0.5 + 0.5);
 
       p.fill(r, g, b, alpha);
-      p.rect(x, 0, 3, canvasH);
+      p.rect(x, 0, 5, canvasH);
     }
   };
 

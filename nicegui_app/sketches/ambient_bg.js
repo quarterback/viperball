@@ -82,11 +82,16 @@ const viperballAmbient = (p) => {
 
     const canvas = p.createCanvas(canvasW, canvasH);
     canvas.parent('vb-ambient-bg');
-    p.frameRate(30);
+    p.frameRate(15);
 
     for (let i = 0; i < NUM_PARTICLES; i++) {
       particles.push(new Particle());
     }
+
+    /* Pause when tab is not visible to save CPU/GPU */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { p.noLoop(); } else { p.loop(); }
+    });
   };
 
   p.draw = () => {

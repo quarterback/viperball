@@ -10,9 +10,6 @@ from __future__ import annotations
 import random
 import json
 
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from nicegui import ui
 
 from engine import ViperballEngine, OFFENSE_STYLES
@@ -508,6 +505,8 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
 
 
 def _render_drives(result, home_name, away_name):
+    import plotly.express as px  # deferred: heavy import only needed after simulation
+
     drives = result.get("drive_summary", [])
     if not drives:
         ui.label("No drive data available.").classes("text-gray-400 italic")
@@ -603,6 +602,10 @@ def _render_play_by_play(plays, home_name, away_name):
 
 
 def _render_analytics(result, plays, home_name, away_name, hs, as_):
+    import pandas as pd  # deferred: heavy import only needed after simulation
+    import plotly.express as px
+    import plotly.graph_objects as go
+
     ui.label("WPA - Win Probability Added").classes("font-bold text-slate-700")
     ui.label("Play efficiency vs league-average expectation.").classes("text-sm text-gray-500")
 
@@ -816,6 +819,8 @@ def _render_analytics(result, plays, home_name, away_name, hs, as_):
 
 def _render_player_impact(result, home_name, away_name):
     """Render the Player Impact Report — per-player WPA attribution."""
+    import plotly.graph_objects as go  # deferred: heavy import only needed after simulation
+
     ui.label("Player Impact Report").classes("font-bold text-slate-700")
     ui.label("WPA (Win Probability Added) attributed to individual players.").classes("text-sm text-gray-500")
 

@@ -39,9 +39,14 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.label("Season Simulator").classes("text-2xl font-bold text-slate-800")
     ui.label("Simulate a full round-robin season with standings, metrics, and playoffs").classes("text-sm text-gray-500 mb-4")
 
-    all_teams = load_teams_from_directory(TEAMS_DIR)
+    # Cache heavy disk I/O in shared dict so it's only loaded once per session
+    if "_all_teams" not in shared:
+        shared["_all_teams"] = load_teams_from_directory(TEAMS_DIR)
+    if "_team_identities" not in shared:
+        shared["_team_identities"] = load_team_identity(TEAMS_DIR)
+    all_teams = shared["_all_teams"]
     all_team_names = sorted(all_teams.keys())
-    team_identities = load_team_identity(TEAMS_DIR)
+    team_identities = shared["_team_identities"]
 
     if len(all_team_names) < 2:
         ui.label("Not enough teams loaded to run a season.").classes("text-yellow-600")
@@ -195,9 +200,11 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.separator().classes("my-4")
     ui.label("Conference Setup").classes("text-lg font-semibold text-slate-700")
 
-    # Load stock conferences from team files
-    from engine.geography import read_conferences_from_team_files
-    stock_conferences = read_conferences_from_team_files(TEAMS_DIR, all_team_names) or {}
+    # Load stock conferences from team files (cached in shared dict)
+    if "_stock_conferences" not in shared:
+        from engine.geography import read_conferences_from_team_files
+        shared["_stock_conferences"] = read_conferences_from_team_files(TEAMS_DIR, all_team_names) or {}
+    stock_conferences = shared["_stock_conferences"]
     # Track editable conference assignments (team → conference name)
     _conf_assignments: dict[str, str] = {}
     for conf_name, members in stock_conferences.items():
