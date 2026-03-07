@@ -200,9 +200,11 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.separator().classes("my-4")
     ui.label("Conference Setup").classes("text-lg font-semibold text-slate-700")
 
-    # Load stock conferences from team files
-    from engine.geography import read_conferences_from_team_files
-    stock_conferences = read_conferences_from_team_files(TEAMS_DIR, all_team_names) or {}
+    # Load stock conferences from team files (cached in shared dict)
+    if "_stock_conferences" not in shared:
+        from engine.geography import read_conferences_from_team_files
+        shared["_stock_conferences"] = read_conferences_from_team_files(TEAMS_DIR, all_team_names) or {}
+    stock_conferences = shared["_stock_conferences"]
     # Track editable conference assignments (team → conference name)
     _conf_assignments: dict[str, str] = {}
     for conf_name, members in stock_conferences.items():

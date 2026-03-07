@@ -85,9 +85,14 @@ def render_dynasty_mode(state: UserState, shared: dict):
     ui.separator().classes("my-4")
     ui.label("Create New Dynasty").classes("text-xl font-bold text-slate-700")
 
-    all_teams = load_teams_from_directory(TEAMS_DIR)
+    # Cache heavy disk I/O in shared dict so it's only loaded once per session
+    if "_all_teams" not in shared:
+        shared["_all_teams"] = load_teams_from_directory(TEAMS_DIR)
+    if "_team_identities" not in shared:
+        shared["_team_identities"] = load_team_identity(TEAMS_DIR)
+    all_teams = shared["_all_teams"]
     all_team_names_sorted = sorted(all_teams.keys())
-    team_identities = load_team_identity(TEAMS_DIR)
+    team_identities = shared["_team_identities"]
 
     # ── Dynasty Info ──
     with ui.row().classes("w-full gap-4"):

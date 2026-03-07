@@ -18,10 +18,6 @@ from nicegui_app.state import UserState
 from nicegui_app.helpers import fmt_vb_score
 from nicegui_app.components import metric_card, stat_table, notify_error, notify_info, notify_success
 from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_games
-from nicegui_app.pages.game_simulator import render_game_simulator
-from nicegui_app.pages.season_simulator import render_season_simulator
-from nicegui_app.pages.dq_mode import render_dq_setup, render_dq_play
-from nicegui_app.pages.dynasty_mode import render_dynasty_mode
 
 
 def render_play_section_sync(state: UserState, shared: dict):
@@ -39,6 +35,7 @@ async def _deferred_play_load(state: UserState, shared: dict):
         if state.mode in ("season", "dynasty"):
             await _render_season_play(state, shared)
         elif state.mode == "dq":
+            from nicegui_app.pages.dq_mode import render_dq_play
             await render_dq_play(state, shared)
     except Exception as exc:
         ui.label(f"Error: {exc}").classes("text-red-500")
@@ -49,6 +46,7 @@ async def render_play_section(state: UserState, shared: dict, *, play_tab: str |
     if state.mode in ("season", "dynasty"):
         await _render_season_play(state, shared)
     elif state.mode == "dq":
+        from nicegui_app.pages.dq_mode import render_dq_play
         await render_dq_play(state, shared)
     else:
         _render_mode_selection(state, shared, play_tab=play_tab)
@@ -93,12 +91,16 @@ def _render_mode_selection(state: UserState, shared: dict, *, play_tab: str | No
         with panel_container:
             try:
                 if tab_key == "season":
+                    from nicegui_app.pages.season_simulator import render_season_simulator
                     render_season_simulator(state, shared)
                 elif tab_key == "dynasty":
+                    from nicegui_app.pages.dynasty_mode import render_dynasty_mode
                     render_dynasty_mode(state, shared)
                 elif tab_key == "quick":
+                    from nicegui_app.pages.game_simulator import render_game_simulator
                     render_game_simulator(state, shared)
                 elif tab_key == "dq":
+                    from nicegui_app.pages.dq_mode import render_dq_setup
                     render_dq_setup(state, shared)
             except Exception as e:
                 ui.label(f"Error loading: {e}").classes("text-red-500")

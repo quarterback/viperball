@@ -345,7 +345,7 @@ def index():
     else:
         with content_container:
             from nicegui_app.pages.home import render_home_sync
-            render_home_sync(state, shared, lambda n: _switch_to(n))
+            render_home_sync(state, shared, lambda n, **kw: _switch_to(n, **kw))
 
 
 async def _render_section(name: str, state: UserState, shared: dict, switch_fn, *, play_tab: str | None = None):
