@@ -768,21 +768,25 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
 
 @router.get("/college/{session_id}/players", response_class=HTMLResponse)
-def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
+def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = "", team: str = ""):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
     # Aggregate player stats from completed games
     player_agg = {}
+    all_teams = set()
     for game in season.schedule:
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
         ps = fr.get("player_stats", {})
         for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            all_teams.add(t_name)
             conf = season.team_conferences.get(t_name, "")
             if conference and conf != conference:
+                continue
+            if team and t_name != team:
                 continue
             for p in ps.get(side, []):
                 key = f"{t_name}|{p['name']}"
@@ -800,6 +804,15 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
                         "keeper_bells": 0, "laterals_thrown": 0,
                         "kick_return_yards": 0, "punt_return_yards": 0,
                         "kick_return_tds": 0, "punt_return_tds": 0,
+                        "rush_carries": 0, "rushing_tds": 0,
+                        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+                        "kick_pass_interceptions": 0, "kick_pass_receptions": 0,
+                        "kick_pass_ints": 0,
+                        "kick_returns": 0, "punt_returns": 0,
+                        "muffs": 0, "st_tackles": 0,
+                        "keeper_tackles": 0, "kick_deflections": 0,
+                        "coverage_snaps": 0, "blocks": 0, "pancakes": 0,
+                        "wpa": 0.0, "plays_involved": 0,
                     }
                 agg = player_agg[key]
                 agg["games_played"] += 1
@@ -817,31 +830,68 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
                     "keeper_bells", "laterals_thrown",
                     "kick_return_yards", "punt_return_yards",
                     "kick_return_tds", "punt_return_tds",
+                    "rush_carries", "rushing_tds",
+                    "lateral_receptions", "lateral_assists", "lateral_tds",
+                    "kick_pass_interceptions", "kick_pass_receptions",
+                    "kick_pass_ints",
+                    "kick_returns", "punt_returns",
+                    "muffs", "st_tackles",
+                    "keeper_tackles", "kick_deflections",
+                    "coverage_snaps", "blocks", "pancakes",
+                    "plays_involved",
                 ]:
                     agg[stat] += p.get(stat, 0)
+                agg["wpa"] += p.get("wpa", 0.0)
 
     players = list(player_agg.values())
     for r in players:
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
         r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
         r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
+        r["kp_pct"] = round(r["kick_passes_completed"] / max(1, r["kick_passes_thrown"]) * 100, 1)
+        r["kick_return_avg"] = round(r["kick_return_yards"] / max(1, r["kick_returns"]), 1)
+        r["punt_return_avg"] = round(r["punt_return_yards"] / max(1, r["punt_returns"]), 1)
+        r["wpa_per_play"] = round(r["wpa"] / max(1, r["plays_involved"]), 2)
+        r["wpa"] = round(r["wpa"], 2)
 
     # Sort
     valid_sorts = {
+        # Offense
         "yards": "yards", "tds": "tds", "touches": "touches",
-        "tackles": "tackles", "sacks": "sacks", "kick_pct": "kick_pct",
-        "ypc": "yards_per_touch", "fumbles": "fumbles",
-        "kick_pass_yards": "kick_pass_yards",
+        "ypc": "yards_per_touch", "rush_carries": "rush_carries",
+        "rushing_tds": "rushing_tds", "fumbles": "fumbles",
+        # Lateral
+        "laterals": "laterals_thrown", "lateral_rec": "lateral_receptions",
+        "lateral_tds": "lateral_tds",
+        # Kick Pass
+        "kick_pass_yards": "kick_pass_yards", "kp_tds": "kick_pass_tds",
+        "kp_pct": "kp_pct", "kp_ints": "kick_pass_interceptions",
+        "kp_rec": "kick_pass_receptions",
+        # Kicking
+        "kick_pct": "kick_pct",
+        # Defense
+        "tackles": "tackles", "tfl": "tfl", "sacks": "sacks",
+        "hurries": "hurries", "def_ints": "kick_pass_ints",
+        # Special Teams
+        "kr_yds": "kick_return_yards", "pr_yds": "punt_return_yards",
+        "st_tackles": "st_tackles",
+        # Keeper
+        "bells": "keeper_bells", "deflections": "kick_deflections",
+        # Line Play
+        "blocks": "blocks", "pancakes": "pancakes",
+        # Impact
+        "wpa": "wpa",
     }
     sort_key = valid_sorts.get(sort, "yards")
     players.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
     conferences = sorted(season.conferences.keys())
+    teams = sorted(all_teams)
 
     return templates.TemplateResponse("college/players.html", _ctx(
         request, section="college", session_id=session_id,
-        players=players[:200], sort=sort, conference=conference,
-        conferences=conferences,
+        players=players, sort=sort, conference=conference,
+        conferences=conferences, team=team, teams=teams,
         season_name=getattr(season, "name", "Season"),
     ))
 

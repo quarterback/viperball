@@ -740,6 +740,17 @@ class ProLeagueSeason:
                     "dk_made": 0,
                     "dk_attempted": 0,
                     "total_yards": 0,
+                    "tfl": 0,
+                    "sacks": 0,
+                    "hurries": 0,
+                    "kick_pass_ints": 0,
+                    "kick_return_yards": 0,
+                    "kick_returns": 0,
+                    "punt_return_yards": 0,
+                    "punt_returns": 0,
+                    "keeper_bells": 0,
+                    "blocks": 0,
+                    "pancakes": 0,
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
@@ -768,6 +779,17 @@ class ProLeagueSeason:
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))
             acc["dk_attempted"] += ps.get("dk_att", ps.get("dk_attempted", ps.get("game_dk_attempted", 0)))
+            acc["tfl"] += ps.get("tfl", ps.get("game_tfl", 0))
+            acc["sacks"] += ps.get("sacks", ps.get("game_sacks", 0))
+            acc["hurries"] += ps.get("hurries", ps.get("game_hurries", 0))
+            acc["kick_pass_ints"] += ps.get("kick_pass_ints", ps.get("game_kick_pass_ints", 0))
+            acc["kick_return_yards"] += ps.get("kick_return_yards", ps.get("game_kick_return_yards", 0))
+            acc["kick_returns"] += ps.get("kick_returns", ps.get("game_kick_returns", 0))
+            acc["punt_return_yards"] += ps.get("punt_return_yards", ps.get("game_punt_return_yards", 0))
+            acc["punt_returns"] += ps.get("punt_returns", ps.get("game_punt_returns", 0))
+            acc["keeper_bells"] += ps.get("keeper_bells", ps.get("game_keeper_bells", 0))
+            acc["blocks"] += ps.get("blocks", ps.get("game_blocks", 0))
+            acc["pancakes"] += ps.get("pancakes", ps.get("game_pancakes", 0))
             acc["total_yards"] = acc["rushing_yards"] + acc["kick_pass_yards"] + acc["lateral_yards"]
 
     def get_stat_leaders(self, category: str = "all") -> dict:
@@ -818,6 +840,56 @@ class ProLeagueSeason:
             "total_yards": p["total_yards"], "rushing": p["rushing_yards"],
             "kick_pass": p["kick_pass_yards"], "games": p["games"],
         } for p in total if p["total_yards"] > 0]
+
+        # Defense
+        defense = sorted(all_players, key=lambda p: -p["tackles"])[:20]
+        leaders["defense"] = [{
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
+            "value": p["tackles"],
+            "tackles": p["tackles"], "tfl": p["tfl"], "sacks": p["sacks"],
+            "hurries": p["hurries"], "ints": p["kick_pass_ints"],
+            "games": p["games"],
+        } for p in defense if p["tackles"] > 0]
+
+        sack_leaders = sorted(all_players, key=lambda p: -p["sacks"])[:20]
+        leaders["sacks"] = [{
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
+            "value": p["sacks"],
+            "sacks": p["sacks"], "tfl": p["tfl"], "hurries": p["hurries"],
+            "games": p["games"],
+        } for p in sack_leaders if p["sacks"] > 0]
+
+        # Special Teams
+        kr = sorted(all_players, key=lambda p: -p["kick_return_yards"])[:20]
+        leaders["kick_returns"] = [{
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
+            "value": p["kick_return_yards"],
+            "yards": p["kick_return_yards"], "returns": p["kick_returns"],
+            "avg": round(p["kick_return_yards"] / max(1, p["kick_returns"]), 1),
+            "games": p["games"],
+        } for p in kr if p["kick_return_yards"] > 0]
+
+        # Laterals
+        lat = sorted(all_players, key=lambda p: -p["lateral_yards"])[:20]
+        leaders["laterals"] = [{
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
+            "value": p["lateral_yards"],
+            "yards": p["lateral_yards"], "touches": p["laterals"],
+            "games": p["games"],
+        } for p in lat if p["lateral_yards"] > 0]
+
+        # Keeper
+        bells = sorted(all_players, key=lambda p: -p["keeper_bells"])[:20]
+        leaders["keeper"] = [{
+            "name": p["name"], "team": p["team_name"], "team_key": p["team_key"],
+            "position": p["position"],
+            "value": p["keeper_bells"],
+            "bells": p["keeper_bells"], "games": p["games"],
+        } for p in bells if p["keeper_bells"] > 0]
 
         return leaders
 

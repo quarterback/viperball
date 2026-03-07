@@ -92,8 +92,8 @@
       </td>
       <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('home_key', '') }}">{{ g.get('home_name', g.get('home_team', g.get('home', '?'))) }}</a></td>
       <td>
-        {% if g.get('matchup_key') %}
-        <a href="/stats/wvl/{{ session_id }}/game/{{ selected_tier }}/{{ wk }}/{{ g.matchup_key }}">Box</a>
+        {% if g.get('matchup_key') or g.get('matchup') %}
+        <a href="/stats/wvl/{{ session_id }}/game/{{ selected_tier }}/{{ wk }}/{{ g.get('matchup_key', g.get('matchup', '')) }}">Box</a>
         {% endif %}
       </td>
     </tr>

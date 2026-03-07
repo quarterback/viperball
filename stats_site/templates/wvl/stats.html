@@ -62,6 +62,16 @@
         <th class="num">TD</th><th class="num">DK</th><th class="num">TOT YDS</th>
         {% elif cat_name == 'total_yards' %}
         <th class="num">TOT</th><th class="num">RUSH</th><th class="num">KP</th>
+        {% elif cat_name == 'defense' %}
+        <th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th><th class="num">HUR</th><th class="num">INT</th>
+        {% elif cat_name == 'sacks' %}
+        <th class="num">SCK</th><th class="num">TFL</th><th class="num">HUR</th>
+        {% elif cat_name == 'kick_returns' %}
+        <th class="num">YDS</th><th class="num">RET</th><th class="num">AVG</th>
+        {% elif cat_name == 'laterals' %}
+        <th class="num">YDS</th><th class="num">TCH</th>
+        {% elif cat_name == 'keeper' %}
+        <th class="num">BELLS</th>
         {% else %}
         <th class="num">Value</th>
         {% endif %}
@@ -92,6 +102,25 @@
       <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('total_yards', 0) }}</td>
       <td class="num">{{ p.get('rushing', 0) }}</td>
       <td class="num">{{ p.get('kick_pass', 0) }}</td>
+      {% elif cat_name == 'defense' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
+      <td class="num">{{ p.get('tfl', 0) }}</td>
+      <td class="num">{{ p.get('sacks', 0) }}</td>
+      <td class="num">{{ p.get('hurries', 0) }}</td>
+      <td class="num">{{ p.get('ints', 0) }}</td>
+      {% elif cat_name == 'sacks' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('sacks', 0) }}</td>
+      <td class="num">{{ p.get('tfl', 0) }}</td>
+      <td class="num">{{ p.get('hurries', 0) }}</td>
+      {% elif cat_name == 'kick_returns' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+      <td class="num">{{ p.get('returns', 0) }}</td>
+      <td class="num">{{ '%.1f'|format(p.get('avg', 0)) }}</td>
+      {% elif cat_name == 'laterals' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
+      <td class="num">{{ p.get('touches', 0) }}</td>
+      {% elif cat_name == 'keeper' %}
+      <td class="num {% if loop.index <= 3 %}stat-elite{% elif loop.index <= 10 %}stat-good{% endif %}">{{ p.get('bells', 0) }}</td>
       {% else %}
       <td class="num {% if loop.index <= 3 %}stat-elite{% endif %}">{{ p.get('value', p.get('stat_value', '?')) }}</td>
       {% endif %}

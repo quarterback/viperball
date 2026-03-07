@@ -701,6 +701,12 @@
    DRIVE SUMMARY
    ══════════════════════════════════════════════════════════ #}
 {% set drives = box.get('drive_summary', []) %}
+{% if not drives and box.get('_fast_sim') %}
+<div class="empty" style="margin:24px 0;padding:16px;border:1px solid var(--border);border-radius:6px;text-align:center;">
+  This game was simulated with <strong>Fast Sim</strong>. Team stats and player stats are available above.<br>
+  To get play-by-play and drive summaries, enable <strong>"Full Engine (Box Scores)"</strong> before simulating.
+</div>
+{% endif %}
 {% if drives %}
 <h2>Drive Summary</h2>
 <table>
