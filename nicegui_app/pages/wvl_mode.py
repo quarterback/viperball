@@ -463,16 +463,16 @@ def _render_main(container):
     containers = {}
 
     with container:
-        with ui.element("div").classes("w-full").style(
+        with ui.element("div").classes("w-full vb-hero-banner").style(
             "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); padding: 20px 28px; border-radius: 8px;"
         ):
-            with ui.row().classes("w-full items-center justify-between"):
+            with ui.row().classes("w-full items-center justify-between vb-hero-top"):
                 with ui.column().classes("gap-0"):
                     ui.label(club_name).classes("text-2xl font-bold text-white")
                     ui.label(f"{tier_name} | Year {dynasty.current_year} | Owner: {dynasty.owner.name}").classes(
                         "text-sm text-indigo-200"
                     )
-                with ui.row().classes("items-center gap-4"):
+                with ui.row().classes("items-center gap-4 vb-hero-stats"):
                     summary = dynasty.get_owner_team_summary()
                     with ui.column().classes("items-center gap-0"):
                         ui.label(f"₯{dynasty.owner.bankroll:.1f}M").classes("text-xl font-bold text-green-300")
@@ -494,7 +494,7 @@ def _render_main(container):
                         ui.label(fb_str).classes("text-xl font-bold text-cyan-300")
                         ui.label("Fanbase").classes("text-[10px] text-indigo-300 uppercase")
 
-        with ui.tabs().classes("w-full mt-2") as tabs:
+        with ui.tabs().classes("w-full mt-2").props("dense mobile-arrows outside-arrows") as tabs:
             tab_dash = ui.tab("Dashboard", icon="dashboard")
             tab_roster = ui.tab("My Team", icon="groups")
             tab_schedule = ui.tab("Schedule", icon="calendar_month")
@@ -1014,7 +1014,7 @@ def _fill_roster(containers, dynasty):
                         for pos, cnt in sorted(pos_counts.items(), key=lambda x: -x[1]):
                             ui.badge(f"{pos}: {cnt}").props("outline")
 
-        with ui.tabs().classes("w-full") as roster_tabs:
+        with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as roster_tabs:
             tab_full = ui.tab("Full Roster")
             tab_fa = ui.tab("Free Agents")
             tab_inj = ui.tab("Injuries")
@@ -2050,7 +2050,7 @@ def _render_stat_leaders(leaders, season, dynasty):
 
         tbl.on("player_click", _on_click)
 
-    with ui.tabs().classes("w-full") as st:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as st:
         tab_r = ui.tab("Rushing")
         tab_k = ui.tab("Kick-Pass")
         tab_s = ui.tab("Scoring")

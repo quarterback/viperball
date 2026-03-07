@@ -600,7 +600,7 @@ async def render_pro_leagues_section(state, shared):
         _refresh_container("betting", _render_betting, season, dq_mgr)
         _log.info("_refresh_all_tabs complete")
 
-    with ui.tabs().classes("w-full") as tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as tabs:
         tab_dash = ui.tab("Dashboard", icon="dashboard")
         tab_betting = ui.tab("Betting", icon="casino")
         tab_stand = ui.tab("Standings", icon="leaderboard")
@@ -1787,7 +1787,7 @@ def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
             with ui.element("div").classes("w-full px-4 md:px-8 py-6").style("max-width: 1200px; margin: 0 auto;"):
                 _render_quarterly_scoring(box)
 
-                with ui.tabs().classes("w-full") as bs_tabs:
+                with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as bs_tabs:
                     tab_team = ui.tab("Team Stats")
                     tab_offense = ui.tab("Offense")
                     tab_defense = ui.tab("Defense")
@@ -2125,7 +2125,7 @@ def _render_stats(season: ProLeagueSeason):
         ui.label("No stats available yet. Simulate some weeks first.").classes("text-sm text-slate-500")
         return
 
-    with ui.tabs().classes("w-full") as stat_tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as stat_tabs:
         tab_rush = ui.tab("Rushing")
         tab_kp = ui.tab("Kick Pass")
         tab_score = ui.tab("Scoring")
@@ -2266,7 +2266,7 @@ def _render_teams(season: ProLeagueSeason):
             ui.label(f"{detail['division']} Division | {detail['record']} | "
                      f"Style: {detail['offense_style']} / {detail['defense_style']}").classes("text-sm text-slate-500 mb-3")
 
-            with ui.tabs().classes("w-full") as team_tabs:
+            with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as team_tabs:
                 tab_roster = ui.tab("Roster")
                 tab_tstats = ui.tab("Season Stats")
                 tab_tsched = ui.tab("Schedule")
