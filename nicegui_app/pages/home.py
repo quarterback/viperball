@@ -54,6 +54,7 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "icon": "sports_football",
             "color": "indigo",
             "nav": "Play",
+            "play_tab": "season",
             "desc": "Run a full CVL season with conferences, playoffs, and bowl games. Coach one or more teams through a 12-week season.",
             "tags": ["12 weeks", "Playoffs", "Bowl Games"],
         },
@@ -62,6 +63,7 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "icon": "school",
             "color": "teal",
             "nav": "Play",
+            "play_tab": "dynasty",
             "desc": "Multi-season career mode. Build a program across multiple years with recruiting, player development, awards, and historical record books.",
             "tags": ["Multi-season", "Recruiting", "Record Books"],
         },
@@ -70,6 +72,7 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "icon": "bolt",
             "color": "amber",
             "nav": "Play",
+            "play_tab": "quick",
             "desc": "Pick two teams and play a single exhibition game. Choose offensive styles, weather, and see full box scores.",
             "tags": ["Exhibition", "Custom Styles", "Box Score"],
         },
@@ -102,6 +105,7 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "icon": "casino",
             "color": "emerald",
             "nav": "Play",
+            "play_tab": "dq",
             "desc": "Fantasy betting game with salary caps and parlays. Build lineups, place bets, and compete against the house.",
             "tags": ["Fantasy", "Betting", "$5M Cap"],
         },
@@ -113,9 +117,11 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         "grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"
     ):
         for m in _MODES:
+            play_tab = m.get("play_tab")
+
             with ui.card().classes(
                 "p-5 cursor-pointer hover:shadow-lg transition-shadow"
-            ).on("click", lambda nav=m["nav"]: switch_fn(nav)):
+            ).on("click", lambda nav=m["nav"], pt=play_tab: switch_fn(nav, play_tab=pt)):
                 with ui.row().classes("items-center gap-3 mb-3"):
                     ui.icon(m["icon"]).classes(f"text-3xl text-{m['color']}-500")
                     ui.label(m["label"]).classes("text-xl font-bold text-slate-800")

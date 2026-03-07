@@ -39,9 +39,14 @@ def render_season_simulator(state: UserState, shared: dict):
     ui.label("Season Simulator").classes("text-2xl font-bold text-slate-800")
     ui.label("Simulate a full round-robin season with standings, metrics, and playoffs").classes("text-sm text-gray-500 mb-4")
 
-    all_teams = load_teams_from_directory(TEAMS_DIR)
+    # Cache heavy disk I/O in shared dict so it's only loaded once per session
+    if "_all_teams" not in shared:
+        shared["_all_teams"] = load_teams_from_directory(TEAMS_DIR)
+    if "_team_identities" not in shared:
+        shared["_team_identities"] = load_team_identity(TEAMS_DIR)
+    all_teams = shared["_all_teams"]
     all_team_names = sorted(all_teams.keys())
-    team_identities = load_team_identity(TEAMS_DIR)
+    team_identities = shared["_team_identities"]
 
     if len(all_team_names) < 2:
         ui.label("Not enough teams loaded to run a season.").classes("text-yellow-600")
