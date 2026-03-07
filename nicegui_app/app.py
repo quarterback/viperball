@@ -132,23 +132,19 @@ def _load_shared_data() -> dict:
 
 
 # ─── Navigation Structure ───────────────────────────────────────
-# Core tabs visible in the nav bar at all times
-NAV_CORE = [
+# All primary tabs — visible in the nav bar
+NAV_TABS = [
     ("Home", "home"),
     ("Play", "sports_football"),
+    ("Pro Leagues", "stadium"),
+    ("WVL", "emoji_events"),
+    ("International", "public"),
     ("League", "leaderboard"),
     ("My Team", "groups"),
     ("Export", "download"),
 ]
 
-# Game modes — shown as a dropdown under a "Modes" button
-NAV_MODES = [
-    ("Pro Leagues", "stadium"),
-    ("WVL", "emoji_events"),
-    ("International", "public"),
-]
-
-# Dev tools — hidden behind a gear icon
+# Dev tools — hidden behind a gear icon (not real user-facing features)
 NAV_DEV = [
     ("Debug", "bug_report"),
     ("Inspector", "science"),
@@ -232,9 +228,9 @@ def index():
                 ui.label("Viperball").classes("text-lg font-extrabold text-indigo-600")
                 ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1")
 
-            # ── Core nav buttons (always visible) ────────────────
+            # ── All nav buttons (flat, equal) ────────────────────
             with ui.row().classes("desktop-nav items-center gap-1"):
-                for name, icon_name in NAV_CORE:
+                for name, icon_name in NAV_TABS:
                     btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
                     btn.props("flat dense no-caps size=sm")
                     if name == initial_section:
@@ -242,17 +238,6 @@ def index():
                     else:
                         btn.classes("text-slate-500")
                     nav_buttons[name] = btn
-
-                # ── Modes dropdown ───────────────────────────────
-                with ui.button("Modes", icon="sports_esports").props(
-                    "flat dense no-caps size=sm"
-                ).classes("text-slate-500") as modes_btn:
-                    nav_buttons["_modes"] = modes_btn
-                    with ui.menu().classes("bg-white shadow-lg"):
-                        for name, icon_name in NAV_MODES:
-                            mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
-                            mi.classes("text-slate-700")
-                            nav_buttons[name] = mi
 
                 # ── Separator + gear icon for dev tools ──────────
                 ui.separator().props("vertical").classes("mx-1 h-6")
@@ -269,7 +254,7 @@ def index():
             # ── Mobile hamburger menu ────────────────────────────
             with ui.button(icon="menu").props("flat dense").classes("mobile-menu-btn text-slate-600"):
                 with ui.menu().classes("bg-white shadow-lg"):
-                    for name, icon_name in NAV_CORE + NAV_MODES:
+                    for name, icon_name in NAV_TABS:
                         mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
                         mi.classes("text-slate-700")
                         nav_buttons.setdefault(name, mi)

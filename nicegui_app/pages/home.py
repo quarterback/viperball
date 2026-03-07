@@ -47,90 +47,74 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "text-base text-slate-400 mt-1"
         )
 
-    # ── Mode cards ───────────────────────────────────────────────
-    with ui.row().classes("w-full gap-6 flex-wrap justify-center mt-4"):
-        # New Season
-        with ui.card().classes(
-            "p-6 w-80 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Play")):
-            with ui.row().classes("items-center gap-3 mb-3"):
-                ui.icon("sports_football").classes("text-3xl text-indigo-500")
-                ui.label("New Season").classes("text-xl font-bold text-slate-800")
-            ui.label(
-                "Run a full CVL season with conferences, playoffs, and bowl games. "
-                "Coach one or more teams through a 12-week season."
-            ).classes("text-sm text-slate-500 leading-relaxed")
-            with ui.row().classes("mt-4 gap-2"):
-                ui.badge("12 weeks").props("outline color=indigo")
-                ui.badge("Playoffs").props("outline color=indigo")
-                ui.badge("Bowl Games").props("outline color=indigo")
+    # ── All game modes — equal grid ─────────────────────────────
+    _MODES = [
+        {
+            "label": "College Season",
+            "icon": "sports_football",
+            "color": "indigo",
+            "nav": "Play",
+            "desc": "Run a full CVL season with conferences, playoffs, and bowl games. Coach one or more teams through a 12-week season.",
+            "tags": ["12 weeks", "Playoffs", "Bowl Games"],
+        },
+        {
+            "label": "Quick Game",
+            "icon": "bolt",
+            "color": "amber",
+            "nav": "Play",
+            "desc": "Pick two teams and play a single exhibition game. Choose offensive styles, weather, and see full box scores.",
+            "tags": ["Exhibition", "Custom Styles", "Box Score"],
+        },
+        {
+            "label": "Pro Leagues",
+            "icon": "stadium",
+            "color": "purple",
+            "nav": "Pro Leagues",
+            "desc": "NVL spectator mode — watch full pro seasons unfold, browse stats and standings, and bet through DraftyQueenz.",
+            "tags": ["NVL", "Spectator", "Betting"],
+        },
+        {
+            "label": "WVL Owner Mode",
+            "icon": "emoji_events",
+            "color": "rose",
+            "nav": "WVL",
+            "desc": "Women's Viperball League franchise management. Multi-tier system with promotion, relegation, drafts, and finances.",
+            "tags": ["Franchise", "Dynasty", "Multi-tier"],
+        },
+        {
+            "label": "International",
+            "icon": "public",
+            "color": "sky",
+            "nav": "International",
+            "desc": "FIV international tournament — 5-nation competition with confederation play, knockouts, and national team rosters.",
+            "tags": ["FIV", "5 Nations", "Tournament"],
+        },
+        {
+            "label": "DraftyQueenz",
+            "icon": "casino",
+            "color": "emerald",
+            "nav": "Play",
+            "desc": "Fantasy betting game with salary caps and parlays. Build lineups, place bets, and compete against the house.",
+            "tags": ["Fantasy", "Betting", "$5M Cap"],
+        },
+    ]
 
-        # Quick Game
-        with ui.card().classes(
-            "p-6 w-80 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Play")):
-            with ui.row().classes("items-center gap-3 mb-3"):
-                ui.icon("bolt").classes("text-3xl text-amber-500")
-                ui.label("Quick Game").classes("text-xl font-bold text-slate-800")
-            ui.label(
-                "Pick two teams and play a single exhibition game. "
-                "Choose offensive styles, weather, and see full box scores."
-            ).classes("text-sm text-slate-500 leading-relaxed")
-            with ui.row().classes("mt-4 gap-2"):
-                ui.badge("Exhibition").props("outline color=amber")
-                ui.badge("Custom Styles").props("outline color=amber")
-                ui.badge("Box Score").props("outline color=amber")
-
-        # DraftyQueenz
-        with ui.card().classes(
-            "p-6 w-80 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Play")):
-            with ui.row().classes("items-center gap-3 mb-3"):
-                ui.icon("casino").classes("text-3xl text-emerald-500")
-                ui.label("DraftyQueenz").classes("text-xl font-bold text-slate-800")
-            ui.label(
-                "Fantasy betting game with salary caps and parlays. "
-                "Build lineups, place bets, and compete against the house."
-            ).classes("text-sm text-slate-500 leading-relaxed")
-            with ui.row().classes("mt-4 gap-2"):
-                ui.badge("Fantasy").props("outline color=green")
-                ui.badge("Betting").props("outline color=green")
-                ui.badge("$5M Cap").props("outline color=green")
-
-    # ── Secondary modes ──────────────────────────────────────────
-    with ui.row().classes("w-full gap-6 flex-wrap justify-center mt-6"):
-        # Pro Leagues
-        with ui.card().classes(
-            "p-5 w-60 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Pro Leagues")):
-            with ui.row().classes("items-center gap-2 mb-2"):
-                ui.icon("stadium").classes("text-2xl text-purple-500")
-                ui.label("Pro Leagues").classes("text-lg font-bold text-slate-800")
-            ui.label(
-                "NVL spectator mode — watch pro seasons, browse stats, place bets."
-            ).classes("text-sm text-slate-500")
-
-        # WVL
-        with ui.card().classes(
-            "p-5 w-60 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("WVL")):
-            with ui.row().classes("items-center gap-2 mb-2"):
-                ui.icon("emoji_events").classes("text-2xl text-rose-500")
-                ui.label("WVL Owner Mode").classes("text-lg font-bold text-slate-800")
-            ui.label(
-                "Multi-tier franchise management with promotion, relegation, and drafts."
-            ).classes("text-sm text-slate-500")
-
-        # International
-        with ui.card().classes(
-            "p-5 w-60 cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("International")):
-            with ui.row().classes("items-center gap-2 mb-2"):
-                ui.icon("public").classes("text-2xl text-sky-500")
-                ui.label("International").classes("text-lg font-bold text-slate-800")
-            ui.label(
-                "FIV tournament — 5-nation international competition."
-            ).classes("text-sm text-slate-500")
+    with ui.element("div").classes(
+        "w-full grid gap-5 mt-4"
+    ).style(
+        "grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"
+    ):
+        for m in _MODES:
+            with ui.card().classes(
+                "p-5 cursor-pointer hover:shadow-lg transition-shadow"
+            ).on("click", lambda nav=m["nav"]: switch_fn(nav)):
+                with ui.row().classes("items-center gap-3 mb-3"):
+                    ui.icon(m["icon"]).classes(f"text-3xl text-{m['color']}-500")
+                    ui.label(m["label"]).classes("text-xl font-bold text-slate-800")
+                ui.label(m["desc"]).classes("text-sm text-slate-500 leading-relaxed")
+                with ui.row().classes("mt-4 gap-2 flex-wrap"):
+                    for tag in m["tags"]:
+                        ui.badge(tag).props(f"outline color={m['color']}")
 
     # ── Footer stats ─────────────────────────────────────────────
     with ui.row().classes("w-full justify-center mt-10 gap-6"):
