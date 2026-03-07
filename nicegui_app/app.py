@@ -1,6 +1,10 @@
 """Main NiceGUI application for Viperball Sandbox.
 
-SaaS-style layout with top navigation bar and all sections visible.
+Redesigned IA with:
+- Home landing page (session creation / dashboard)
+- Grouped navigation: core tabs visible, dev tools behind gear icon
+- Session context bar when a session is active
+- Flat navigation with clear information hierarchy
 
 Uses app.storage.user (cookie-based) for state, so no async
 client.connected() is needed. The page renders synchronously.
@@ -80,6 +84,12 @@ APP_CSS = """
     .drive-downs { color: #d97706; font-weight: 700; }
     .drive-punt { color: #94a3b8; }
 
+    /* Session context bar */
+    .session-bar {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        z-index: 1999;
+    }
+
     @media (max-width: 768px) {
         .desktop-nav { display: none !important; }
         .mobile-menu-btn { display: flex !important; }
@@ -121,14 +131,25 @@ def _load_shared_data() -> dict:
     }
 
 
-NAV_SECTIONS = [
+# ─── Navigation Structure ───────────────────────────────────────
+# Core tabs visible in the nav bar at all times
+NAV_CORE = [
+    ("Home", "home"),
     ("Play", "sports_football"),
-    ("Pro Leagues", "stadium"),
-    ("WVL", "emoji_events"),
-    ("International", "public"),
     ("League", "leaderboard"),
     ("My Team", "groups"),
     ("Export", "download"),
+]
+
+# Game modes — shown as a dropdown under a "Modes" button
+NAV_MODES = [
+    ("Pro Leagues", "stadium"),
+    ("WVL", "emoji_events"),
+    ("International", "public"),
+]
+
+# Dev tools — hidden behind a gear icon
+NAV_DEV = [
     ("Debug", "bug_report"),
     ("Inspector", "science"),
 ]
@@ -139,13 +160,9 @@ def index():
     ui.add_head_html(APP_CSS)
 
     # ─── P5.js ambient layers ───
-    # Container divs (rendered via innerHTML — fine for non-script elements)
     ui.html('<div id="vb-ambient-bg"></div>')
     ui.html('<div id="vb-page-transition"></div>')
 
-    # Load sketch JS files dynamically after the page renders.
-    # ui.html() strips <script> tags (innerHTML doesn't execute them),
-    # so we use ui.run_javascript() with createElement('script') instead.
     _P5_INIT_JS = """
     function _vbLoadSketch(src) {
         var s = document.createElement('script');
@@ -165,17 +182,20 @@ def index():
     pending_pro = app.storage.user.get("pro_league_pending_nav")
     if pending_pro:
         app.storage.user["pro_league_pending_nav"] = None
-    initial_section = "Pro Leagues" if pending_pro else "Play"
+    initial_section = "Pro Leagues" if pending_pro else "Home"
     active_nav = {"current": initial_section}
+
+    nav_buttons: dict = {}
 
     async def _switch_to(name: str):
         if active_nav["current"] == name:
             return
         active_nav["current"] = name
 
-        # Trigger P5.js page transition animation (fire-and-forget)
+        # Trigger P5.js page transition animation
         ui.run_javascript("if (window.vbTransition) window.vbTransition();")
 
+        # Update button styling
         for btn_name, btn in nav_buttons.items():
             if btn_name == name:
                 btn.classes(remove="text-slate-500", add="text-indigo-600 font-semibold")
@@ -185,42 +205,7 @@ def index():
         content_container.clear()
         with content_container:
             try:
-                if name == "Play":
-                    from nicegui_app.pages.play import render_play_section
-                    await render_play_section(state, shared)
-                elif name == "Pro Leagues":
-                    try:
-                        from nicegui_app.pages.pro_leagues import render_pro_leagues_section
-                        await render_pro_leagues_section(state, shared)
-                    except ImportError:
-                        ui.label("Pro Leagues module not yet available.").classes("text-gray-400 italic")
-                elif name == "WVL":
-                    try:
-                        from nicegui_app.pages.wvl_mode import render_wvl_section
-                        await render_wvl_section(state, shared)
-                    except ImportError:
-                        ui.label("WVL module not yet available.").classes("text-gray-400 italic")
-                elif name == "International":
-                    try:
-                        from nicegui_app.pages.international import render_international_section
-                        await render_international_section(state, shared)
-                    except ImportError:
-                        ui.label("International module not yet available.").classes("text-gray-400 italic")
-                elif name == "League":
-                    from nicegui_app.pages.league import render_league_section
-                    await render_league_section(state, shared)
-                elif name == "My Team":
-                    from nicegui_app.pages.my_team import render_my_team_section
-                    await render_my_team_section(state, shared)
-                elif name == "Export":
-                    from nicegui_app.pages.export import render_export_section
-                    await render_export_section(state, shared)
-                elif name == "Debug":
-                    from nicegui_app.pages.debug_tools import render_debug_tools
-                    render_debug_tools(state, shared)
-                elif name == "Inspector":
-                    from nicegui_app.pages.play_inspector import render_play_inspector
-                    render_play_inspector(state, shared)
+                await _render_section(name, state, shared, _switch_to)
             except Exception as exc:
                 import logging
                 logging.getLogger("viperball").error(f"Error loading {name}: {exc}", exc_info=True)
@@ -237,15 +222,19 @@ def index():
         ui.notify("Session ended", type="info")
         ui.navigate.to("/")
 
+    # ─── Header ──────────────────────────────────────────────────
     with ui.header().classes("bg-white shadow-sm px-4 py-2 items-center").style("z-index: 2000;"):
         with ui.row().classes("w-full items-center gap-1"):
-            ui.label("Viperball").classes("text-lg font-extrabold text-indigo-600")
-            ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1 mr-6")
+            # Brand — clicking it goes Home
+            with ui.row().classes("items-center cursor-pointer gap-0 mr-4").on(
+                "click", lambda: _switch_to("Home")
+            ):
+                ui.label("Viperball").classes("text-lg font-extrabold text-indigo-600")
+                ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1")
 
-            nav_buttons = {}
-
+            # ── Core nav buttons (always visible) ────────────────
             with ui.row().classes("desktop-nav items-center gap-1"):
-                for name, icon_name in NAV_SECTIONS:
+                for name, icon_name in NAV_CORE:
                     btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
                     btn.props("flat dense no-caps size=sm")
                     if name == initial_section:
@@ -254,15 +243,45 @@ def index():
                         btn.classes("text-slate-500")
                     nav_buttons[name] = btn
 
+                # ── Modes dropdown ───────────────────────────────
+                with ui.button("Modes", icon="sports_esports").props(
+                    "flat dense no-caps size=sm"
+                ).classes("text-slate-500") as modes_btn:
+                    nav_buttons["_modes"] = modes_btn
+                    with ui.menu().classes("bg-white shadow-lg"):
+                        for name, icon_name in NAV_MODES:
+                            mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
+                            mi.classes("text-slate-700")
+                            nav_buttons[name] = mi
+
+                # ── Separator + gear icon for dev tools ──────────
+                ui.separator().props("vertical").classes("mx-1 h-6")
+                with ui.button(icon="settings").props(
+                    "flat dense size=sm round"
+                ).classes("text-slate-400") as gear_btn:
+                    nav_buttons["_gear"] = gear_btn
+                    with ui.menu().classes("bg-white shadow-lg"):
+                        for name, icon_name in NAV_DEV:
+                            mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
+                            mi.classes("text-slate-700")
+                            nav_buttons[name] = mi
+
+            # ── Mobile hamburger menu ────────────────────────────
             with ui.button(icon="menu").props("flat dense").classes("mobile-menu-btn text-slate-600"):
                 with ui.menu().classes("bg-white shadow-lg"):
-                    for name, icon_name in NAV_SECTIONS:
+                    for name, icon_name in NAV_CORE + NAV_MODES:
                         mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
                         mi.classes("text-slate-700")
+                        nav_buttons.setdefault(name, mi)
+                    ui.separator()
+                    for name, icon_name in NAV_DEV:
+                        mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
+                        mi.classes("text-slate-500 text-sm")
                         nav_buttons.setdefault(name, mi)
 
             ui.space()
 
+            # ── Session indicator (right side) ───────────────────
             if state.session_id:
                 mode_label = state.mode.title() if state.mode else ""
                 ui.label(mode_label).classes("text-xs text-indigo-500 font-medium mr-2")
@@ -270,9 +289,49 @@ def index():
                     "flat dense size=sm color=red no-caps"
                 )
 
-    # Nav glow container (script loaded by _P5_INIT_JS timer above)
+    # ─── Session Context Bar ─────────────────────────────────────
+    # Persistent strip below the header showing session state
+    if state.session_id and state.mode in ("season", "dq"):
+        with ui.row().classes(
+            "session-bar w-full px-4 py-1.5 items-center gap-4"
+        ):
+            ui.icon("sports_football").classes("text-indigo-300 text-sm")
+            # We show basic info synchronously, details load via timer
+            mode_text = "Season" if state.mode == "season" else "DraftyQueenz"
+            session_label = ui.label(f"{mode_text} Active").classes(
+                "text-xs text-indigo-200 font-medium"
+            )
+            if state.human_teams:
+                team_display = shared.get("team_names", {}).get(
+                    state.human_teams[0], state.human_teams[0]
+                )
+                ui.label(f"Team: {team_display}").classes("text-xs text-indigo-300")
+            ui.space()
+
+            # Load live details (week, phase) asynchronously
+            detail_label = ui.label("").classes("text-xs text-indigo-300")
+
+            async def _load_context():
+                try:
+                    status = await run.io_bound(
+                        api_client.get_season_status, state.session_id
+                    )
+                    week = status.get("current_week", 0)
+                    total = status.get("total_weeks", 10)
+                    phase = status.get("phase", "").replace("_", " ").title()
+                    name = status.get("name", "")
+                    if name:
+                        session_label.set_text(name)
+                    detail_label.set_text(f"Week {week}/{total}  |  {phase}")
+                except Exception:
+                    pass
+
+            ui.timer(0.2, _load_context, once=True)
+
+    # Nav glow container
     ui.html('<div id="vb-nav-glow"></div>')
 
+    # ─── Main content area ───────────────────────────────────────
     content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 
     if initial_section == "Pro Leagues":
@@ -290,5 +349,48 @@ def index():
         ui.timer(0.1, _init_pro, once=True)
     else:
         with content_container:
-            from nicegui_app.pages.play import render_play_section_sync
-            render_play_section_sync(state, shared)
+            from nicegui_app.pages.home import render_home_sync
+            render_home_sync(state, shared, lambda n: _switch_to(n))
+
+
+async def _render_section(name: str, state: UserState, shared: dict, switch_fn):
+    """Route to the correct page module for a given section name."""
+    if name == "Home":
+        from nicegui_app.pages.home import render_home_section
+        await render_home_section(state, shared, switch_fn)
+    elif name == "Play":
+        from nicegui_app.pages.play import render_play_section
+        await render_play_section(state, shared)
+    elif name == "Pro Leagues":
+        try:
+            from nicegui_app.pages.pro_leagues import render_pro_leagues_section
+            await render_pro_leagues_section(state, shared)
+        except ImportError:
+            ui.label("Pro Leagues module not yet available.").classes("text-gray-400 italic")
+    elif name == "WVL":
+        try:
+            from nicegui_app.pages.wvl_mode import render_wvl_section
+            await render_wvl_section(state, shared)
+        except ImportError:
+            ui.label("WVL module not yet available.").classes("text-gray-400 italic")
+    elif name == "International":
+        try:
+            from nicegui_app.pages.international import render_international_section
+            await render_international_section(state, shared)
+        except ImportError:
+            ui.label("International module not yet available.").classes("text-gray-400 italic")
+    elif name == "League":
+        from nicegui_app.pages.league import render_league_section
+        await render_league_section(state, shared)
+    elif name == "My Team":
+        from nicegui_app.pages.my_team import render_my_team_section
+        await render_my_team_section(state, shared)
+    elif name == "Export":
+        from nicegui_app.pages.export import render_export_section
+        await render_export_section(state, shared)
+    elif name == "Debug":
+        from nicegui_app.pages.debug_tools import render_debug_tools
+        render_debug_tools(state, shared)
+    elif name == "Inspector":
+        from nicegui_app.pages.play_inspector import render_play_inspector
+        render_play_inspector(state, shared)

@@ -1,231 +1,115 @@
 # Viperball UI Architecture Redesign
 
-## Problem Statement
+## Status: Phase 1 Implemented
 
-The current Streamlit UI has grown organically and drifted from the original IA spec. The result is a disorganized experience where `section_play.py` alone is 2,268 lines handling session creation, dynasty management, game simulation, recruiting, betting, and more — all in one file behind one tab.
-
----
-
-## Current Architecture (What's Wrong)
-
-```
-app.py
-├── Sidebar
-│   ├── Brand / session status
-│   ├── End Session button
-│   └── Settings radio (Debug Tools, Play Inspector)  ← dev tools mixed with nav
-│
-├── Tab: Play (2,268 lines — god module)
-│   ├── Session creation (dynasty vs season)
-│   ├── Conference/schedule setup
-│   ├── Game simulation
-│   ├── Season simulation
-│   ├── Playoff brackets
-│   ├── Offseason flows (recruiting, transfers, development)
-│   ├── DraftyQueenz betting
-│   └── Injury management
-│
-├── Tab: League (1,270 lines)
-│   ├── Standings
-│   ├── Schedule
-│   ├── Stats leaders
-│   ├── Polls
-│   └── Conference views
-│
-├── Tab: My Team (777 lines)
-│   ├── Dashboard
-│   ├── Roster
-│   └── Schedule
-│
-└── Tab: Export (460 lines)
-    └── Various export options
-```
-
-**Key issues:**
-- `section_play.py` mixes 7+ concerns in one file
-- No home/onboarding screen — cold start dumps users into empty tabs
-- Sidebar conflates session mgmt + dev tools + navigation
-- No search or command bar
-- No contextual panels (everything inline)
-- Dynasty vs Season creates confusing dual-path UX in the same tab
+The NiceGUI app (`nicegui_app/`) has been restructured with visible IA and UI improvements.
 
 ---
 
-## Proposed Architecture
+## What Changed (Phase 1)
 
-### Navigation Structure
+### 1. New Home Landing Page (`nicegui_app/pages/home.py`)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  VIPERBALL SANDBOX                                    [⚙️] [🔍] │
-├─────────────────────────────────────────────────────────────────┤
-│  [Home]     [League]     [My Team]     [Play]     [Export]      │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Before:** App opened directly to the Play tab showing mode selection sub-tabs (New Season / Quick Game / DraftyQueenz) — no context, no onboarding.
 
-### New Tab: Home (replaces cold-start problem)
+**After:** App opens to a Home page with:
+- Hero branding section
+- Three primary mode cards (New Season, Quick Game, DraftyQueenz) with descriptions and badges
+- Three secondary mode cards (Pro Leagues, WVL Owner Mode, International)
+- Footer with team/conference counts
+- When a session IS active: dashboard with quick-action cards, recent results, and season metrics
 
-When no session is active, Home is the landing page:
+### 2. Reorganized Navigation
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   VIPERBALL SANDBOX                                             │
-│   Collegiate Viperball League Simulator                         │
-│                                                                 │
-│   ┌────────────────────┐  ┌────────────────────┐                │
-│   │  NEW DYNASTY        │  │  QUICK SEASON       │               │
-│   │  Multi-year career  │  │  Single season sim  │               │
-│   │  with recruiting,   │  │  with any team(s)   │               │
-│   │  transfers, awards  │  │                     │               │
-│   │  [Start →]          │  │  [Start →]          │               │
-│   └────────────────────┘  └────────────────────┘                │
-│                                                                 │
-│   ┌────────────────────┐                                        │
-│   │  EXHIBITION GAME    │                                       │
-│   │  Pick two teams,    │                                       │
-│   │  play one game      │                                       │
-│   │  [Play →]           │                                       │
-│   └────────────────────┘                                        │
-│                                                                 │
-│   187 teams · 16 conferences · CVL Engine v2.5                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Before:** 9 flat nav buttons — Play, Pro Leagues, WVL, International, League, My Team, Export, Debug, Inspector — all treated equally, cluttering the nav bar.
 
-When a session IS active, Home shows a dashboard summary.
-
-### File Structure Redesign
+**After:** Navigation grouped by purpose:
 
 ```
-ui/
-├── app.py                          # ~80 lines: config, nav, routing
-├── api_client.py                   # API layer (unchanged)
-├── helpers.py                      # Shared utilities (unchanged)
-├── components/                     # Reusable UI components
-│   ├── __init__.py
-│   ├── scoreboard.py               # Game score cards
-│   ├── player_card.py              # Player detail display
-│   ├── team_card.py                # Team summary display
-│   ├── injury_report.py            # Injury tables (extracted from section_play)
-│   ├── game_detail_panel.py        # Box score / play-by-play viewer
-│   └── search_bar.py               # Command bar / search
-│
-├── pages/                          # One file per top-level tab
-│   ├── __init__.py
-│   ├── home.py                     # NEW: Landing + session creation
-│   ├── league.py                   # Standings, schedule, leaders
-│   ├── my_team.py                  # Dashboard, roster, schedule
-│   ├── play.py                     # Sim week, sim season, quick game
-│   └── export.py                   # Export templates + custom
-│
-├── flows/                          # Multi-step wizards (extracted from section_play)
-│   ├── __init__.py
-│   ├── dynasty_setup.py            # Dynasty creation wizard
-│   ├── season_setup.py             # Season creation wizard
-│   ├── offseason.py                # Recruiting, transfers, development
-│   ├── playoffs.py                 # Bracket + championship flow
-│   └── game_sim.py                 # Single game simulation + results
-│
-└── settings/                       # Moved out of main nav
-    ├── __init__.py
-    ├── debug_tools.py              # Debug panel
-    └── play_inspector.py           # Play inspector
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Viperball Sandbox    [Home] [Play] [League] [My Team] [Export]  [Modes ▼]  [⚙]  │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### What Changes
+- **Core tabs** (always visible): Home, Play, League, My Team, Export
+- **Modes dropdown**: Pro Leagues, WVL, International — secondary game modes
+- **Gear icon**: Debug, Inspector — dev tools hidden from main nav
+- **Brand click**: Returns to Home
 
-| Area | Before | After |
-|------|--------|-------|
-| **Session creation** | Buried inside Play tab, 500+ lines | `flows/dynasty_setup.py` and `flows/season_setup.py`, accessed from Home |
-| **Game simulation** | Inside Play tab | `flows/game_sim.py`, triggered from Play tab |
-| **Offseason** | Inside Play tab | `flows/offseason.py`, triggered at season end |
-| **Playoffs** | Inside Play tab | `flows/playoffs.py`, triggered when season ends |
-| **Injury reports** | Duplicated in section_play | `components/injury_report.py`, reused everywhere |
-| **DraftyQueenz** | Embedded in section_play | Stays in `page_modules/draftyqueenz_ui.py`, imported into game_sim flow |
-| **Debug/Inspector** | Sidebar settings radio | `settings/` folder, accessed via gear icon |
-| **Home screen** | Doesn't exist | `pages/home.py` — landing page + active session dashboard |
+### 3. Session Context Bar
 
-### Sidebar Redesign
+**Before:** Only a tiny mode label ("Season") and End button in the far-right header corner. No persistent session context.
 
-The sidebar becomes simpler — just context, not navigation:
+**After:** When a session is active, a dark gradient context bar appears below the header showing:
+- Active session name
+- Your team name
+- Current week / total weeks
+- Season phase (Portal, Regular, Playoffs, etc.)
 
-```
-┌─────────────────────────────┐
-│  VIPERBALL SANDBOX          │
-│  CVL Simulator              │
-│  ─────────────────────────  │
-│                             │
-│  ACTIVE SESSION             │
-│  Dynasty: My Dynasty (2027) │
-│  Team: Boston University    │
-│  Record: 7-0 (1st)         │
-│  Week: 8 of 12             │
-│                             │
-│  ─────────────────────────  │
-│  [End Session]              │
-│                             │
-│  ─────────────────────────  │
-│  v2.5 · 187 teams           │
-└─────────────────────────────┘
-```
+This bar is always visible across all tabs so you always know where you are.
 
-No navigation in the sidebar. Navigation lives in the top tabs.
-No dev tools in the sidebar. Those move behind a gear icon.
+### 4. Clickable Brand
 
-### Play Tab Simplified
+The "Viperball Sandbox" logo in the header is now clickable and navigates to the Home page. Standard SaaS pattern.
 
-After the split, the Play tab becomes ~300 lines instead of 2,268:
+---
+
+## Architecture: Before vs After
+
+### Before (9 flat tabs, no hierarchy)
 
 ```
-Play Tab
-├── If no session → redirect to Home
-├── If season in progress:
-│   ├── Show current week matchups
-│   ├── [Simulate Week] button → calls flows/game_sim.py
-│   ├── [Simulate to Playoffs] → calls flows/playoffs.py
-│   └── Results display
-├── If offseason:
-│   └── Redirect to flows/offseason.py
-└── If season complete:
-    └── Show season summary + [Start Next Season]
+Header: [Play] [Pro Leagues] [WVL] [International] [League] [My Team] [Export] [Debug] [Inspector]
+                                                                              ↑ dev tools mixed in
+Content: Play tab does everything — mode selection + simulation + setup
+```
+
+### After (grouped navigation, clear hierarchy)
+
+```
+Header: [Home] [Play] [League] [My Team] [Export]    [Modes ▼]    [⚙]
+                                                      ├─ Pro Leagues
+Session Bar: "Season 2027 | Team: Boston U | Week 8/12 | Regular"
+                                                      ├─ WVL
+Content: Home = landing/dashboard, Play = simulation only         ├─ International
+                                                      [⚙] ├─ Debug
+                                                           └─ Inspector
 ```
 
 ---
 
-## Implementation Phases
+## File Changes
 
-### Phase 1: Extract and Split (no visible UI changes)
-1. Extract injury report code into `components/injury_report.py`
-2. Extract game simulation into `flows/game_sim.py`
-3. Extract dynasty setup into `flows/dynasty_setup.py`
-4. Extract season setup into `flows/season_setup.py`
-5. Extract offseason into `flows/offseason.py`
-6. Extract playoffs into `flows/playoffs.py`
-7. Verify `section_play.py` is now ~300 lines, all imports
+| File | Change |
+|------|--------|
+| `nicegui_app/app.py` | Rewritten — grouped nav, session context bar, Home routing |
+| `nicegui_app/pages/home.py` | **NEW** — landing page + active session dashboard |
 
-### Phase 2: Add Home Page
-1. Create `pages/home.py` with session creation cards
-2. Move session creation logic out of Play tab
-3. Route to Home when no session is active
+---
 
-### Phase 3: Sidebar + Settings Cleanup
-1. Strip nav from sidebar, keep only session context
-2. Move debug tools behind gear icon
-3. Add settings modal/page
+## Future Phases
 
-### Phase 4: Search Bar (stretch)
-1. Add `components/search_bar.py`
-2. Wire up team/player/game search via API
-3. Keyboard shortcut (`/`) to focus
+### Phase 2: Play Tab Cleanup
+- Extract setup flows into separate modules
+- Play tab becomes pure simulation controls when a session exists
+- Play tab redirects to Home when no session exists
+
+### Phase 3: Component Extraction
+- Extract reusable components (injury report, player card, scoreboard)
+- Break up giant page files (pro_leagues 2,356 lines, wvl_mode 3,123 lines)
+
+### Phase 4: Search / Command Bar
+- Add search bar to header
+- Search teams, players, games across the active session
+- Keyboard shortcut (`/`) to focus
 
 ---
 
 ## Design Principles
 
-1. **One file, one concern** — no file over 400 lines
-2. **Flat navigation** — 5 top-level tabs, no nesting
-3. **Context in sidebar, actions in main area** — sidebar shows state, doesn't drive navigation
-4. **Flows are temporary** — setup wizards and offseason sequences are modal flows, not permanent tabs
-5. **Components are reusable** — scoreboard, player card, injury table used across multiple pages
-6. **Dev tools are hidden** — debug and inspector behind a gear icon, not alongside core UI
+1. **Home is home** — clear landing page, always one click away
+2. **Core tabs visible, extras hidden** — 5 tabs in the bar, modes and dev tools tucked away
+3. **Session context always visible** — dark bar shows where you are in the season
+4. **One file, one concern** — target no file over 500 lines (future phases)
+5. **Cards over tabs for entry points** — visual mode selection, not text sub-tabs
+6. **Dev tools are dev tools** — behind a gear icon, not alongside core navigation
