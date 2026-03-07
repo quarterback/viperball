@@ -58,6 +58,14 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
             "tags": ["12 weeks", "Playoffs", "Bowl Games"],
         },
         {
+            "label": "College Dynasty",
+            "icon": "school",
+            "color": "teal",
+            "nav": "Play",
+            "desc": "Multi-season career mode. Build a program across multiple years with recruiting, player development, awards, and historical record books.",
+            "tags": ["Multi-season", "Recruiting", "Record Books"],
+        },
+        {
             "label": "Quick Game",
             "icon": "bolt",
             "color": "amber",
@@ -130,6 +138,14 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
     try:
         status = await run.io_bound(api_client.get_season_status, state.session_id)
     except api_client.APIError:
+        # Dynasty in setup/offseason phase — no active season yet
+        if mode == "dynasty":
+            try:
+                dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
+                await _render_dynasty_dashboard(state, shared, switch_fn, dyn_status)
+                return
+            except api_client.APIError:
+                pass
         _render_landing(state, shared, switch_fn)
         return
 
@@ -213,3 +229,32 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
                         ui.label(f"{away} {aws}").classes("text-sm text-slate-600")
     except api_client.APIError:
         pass
+
+
+async def _render_dynasty_dashboard(state: UserState, shared: dict, switch_fn, dyn_status: dict):
+    """Dashboard for dynasty in setup/offseason phase (no active season)."""
+    dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
+    current_year = dyn_status.get("current_year", "?")
+    coach_info = dyn_status.get("coach", {})
+    coach = coach_info.get("name", "")
+    team = coach_info.get("team", "")
+    seasons_played = dyn_status.get("seasons_played", 0)
+
+    ui.label(dynasty_name).classes("text-2xl font-bold text-slate-800")
+
+    with ui.row().classes("w-full gap-3 flex-wrap mb-6"):
+        metric_card("Year", str(current_year))
+        metric_card("Seasons", str(seasons_played))
+        metric_card("Coach", coach)
+        metric_card("Team", team)
+
+    with ui.row().classes("w-full gap-4 flex-wrap"):
+        with ui.card().classes(
+            "p-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-shadow"
+        ).on("click", lambda: switch_fn("Play")):
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("play_arrow").classes("text-2xl text-teal-500")
+                ui.label("Start Next Season").classes("text-lg font-bold text-slate-700")
+            ui.label("Configure and begin the next season of your dynasty.").classes(
+                "text-sm text-slate-500 mt-1"
+            )

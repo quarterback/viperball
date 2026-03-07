@@ -21,11 +21,12 @@ from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_gam
 from nicegui_app.pages.game_simulator import render_game_simulator
 from nicegui_app.pages.season_simulator import render_season_simulator
 from nicegui_app.pages.dq_mode import render_dq_setup, render_dq_play
+from nicegui_app.pages.dynasty_mode import render_dynasty_mode
 
 
 def render_play_section_sync(state: UserState, shared: dict):
     """Synchronous entry point — used for initial page render in NiceGUI 3.x."""
-    if state.mode in ("season", "dq"):
+    if state.mode in ("season", "dynasty", "dq"):
         ui.label("Loading session...").classes("text-slate-400")
         ui.timer(0.1, lambda: _deferred_play_load(state, shared), once=True)
     else:
@@ -35,7 +36,7 @@ def render_play_section_sync(state: UserState, shared: dict):
 async def _deferred_play_load(state: UserState, shared: dict):
     """Load active session content asynchronously after page render."""
     try:
-        if state.mode == "season":
+        if state.mode in ("season", "dynasty"):
             await _render_season_play(state, shared)
         elif state.mode == "dq":
             await render_dq_play(state, shared)
@@ -45,7 +46,7 @@ async def _deferred_play_load(state: UserState, shared: dict):
 
 async def render_play_section(state: UserState, shared: dict):
     """Async entry point — used when switching tabs via nav buttons."""
-    if state.mode == "season":
+    if state.mode in ("season", "dynasty"):
         await _render_season_play(state, shared)
     elif state.mode == "dq":
         await render_dq_play(state, shared)
@@ -60,6 +61,7 @@ def _render_mode_selection(state: UserState, shared: dict):
 
     with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as mode_tabs:
         season_tab = ui.tab("New Season")
+        dynasty_tab = ui.tab("Dynasty")
         quick_tab = ui.tab("Quick Game")
         dq_tab = ui.tab("DraftyQueenz")
 
@@ -69,6 +71,12 @@ def _render_mode_selection(state: UserState, shared: dict):
                 render_season_simulator(state, shared)
             except Exception as e:
                 ui.label(f"Error loading season setup: {e}").classes("text-red-500")
+
+        with ui.tab_panel(dynasty_tab):
+            try:
+                render_dynasty_mode(state, shared)
+            except Exception as e:
+                ui.label(f"Error loading dynasty setup: {e}").classes("text-red-500")
 
         with ui.tab_panel(quick_tab):
             try:
@@ -414,6 +422,62 @@ async def _fetch_bowls(session_id: str) -> dict:
         return {}
 
 
+async def _render_dynasty_start_season(state: UserState, shared: dict):
+    """Show dynasty start-season UI when dynasty exists but no active season."""
+    try:
+        dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
+    except api_client.APIError:
+        state.clear_session()
+        notify_info("Dynasty session expired. Please create or load a dynasty.")
+        _render_mode_selection(state, shared)
+        return
+
+    dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
+    current_year = dyn_status.get("current_year", "?")
+    coach_info = dyn_status.get("coach", {})
+    coach_team = coach_info.get("team", "")
+    seasons_played = dyn_status.get("seasons_played", 0)
+
+    ui.label(f"{dynasty_name}").classes("text-2xl font-bold text-slate-800")
+
+    with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
+        metric_card("Year", str(current_year))
+        metric_card("Seasons Played", str(seasons_played))
+        metric_card("Team", coach_team)
+
+    ui.label("Start Next Season").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label("Configure your season settings and begin play.").classes("text-sm text-gray-500 mb-4")
+
+    with ui.row().classes("gap-4 flex-wrap"):
+        games_per = ui.number("Games per Team", value=12, min=6, max=16).classes("w-40")
+        playoff_sz = ui.select(
+            {4: "4 teams", 8: "8 teams", 16: "16 teams"}, value=8, label="Playoff Size",
+        ).classes("w-40")
+        bowl_ct = ui.number("Bowl Games", value=4, min=0, max=8).classes("w-32")
+
+    starting_spinner = ui.spinner(size="lg").classes("hidden")
+
+    async def _start():
+        starting_spinner.classes(remove="hidden")
+        try:
+            await run.io_bound(
+                api_client.dynasty_start_season,
+                state.session_id,
+                games_per_team=int(games_per.value),
+                playoff_size=int(playoff_sz.value),
+                bowl_count=int(bowl_ct.value),
+            )
+            state.season_phase = "regular"
+            notify_success(f"Year {current_year} season started!")
+            ui.navigate.to("/")
+        except api_client.APIError as e:
+            notify_error(f"Failed to start season: {e.detail}")
+        finally:
+            starting_spinner.classes(add="hidden")
+
+    ui.button("Start Season", on_click=_start, icon="sports_football").props("color=primary size=lg")
+
+
 async def _render_season_play(state: UserState, shared: dict):
     """Render the active season simulation UI."""
     if not state.session_id:
@@ -423,6 +487,10 @@ async def _render_season_play(state: UserState, shared: dict):
     try:
         status = await run.io_bound(api_client.get_season_status, state.session_id)
     except api_client.APIError:
+        # Dynasty in setup/offseason — no active season yet, show dynasty start UI
+        if state.mode == "dynasty":
+            await _render_dynasty_start_season(state, shared)
+            return
         state.clear_session()
         notify_info("Previous session expired. Please start a new one.")
         _render_mode_selection(state, shared)
@@ -578,6 +646,20 @@ async def _render_season_play(state: UserState, shared: dict):
 
             with ui.card().classes("w-full bg-green-50 p-3 rounded mt-3"):
                 ui.label("Season Complete! Check the League tab for full standings and awards.").classes("text-sm text-green-600")
+
+            # Dynasty: advance to next year
+            if state.mode == "dynasty":
+                async def _advance_dynasty():
+                    try:
+                        await run.io_bound(api_client.dynasty_advance, state.session_id)
+                        notify_success("Advanced to next dynasty year!")
+                        ui.navigate.to("/")
+                    except api_client.APIError as e:
+                        notify_error(f"Advance failed: {e.detail}")
+
+                ui.button(
+                    "Advance to Next Year", on_click=_advance_dynasty, icon="fast_forward",
+                ).props("color=teal size=lg").classes("mt-2")
 
         try:
             schedule = await run.io_bound(api_client.get_schedule, state.session_id)

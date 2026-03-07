@@ -381,6 +381,18 @@ def get_dynasty_status(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/dynasty/status")
 
 
+def list_saved_dynasties() -> dict:
+    return _get("/dynasties")
+
+
+def load_saved_dynasty(session_id: str, save_key: str) -> dict:
+    return _post(f"/sessions/{session_id}/dynasty/load?save_key={save_key}")
+
+
+def delete_saved_dynasty(save_key: str) -> dict:
+    return _delete(f"/dynasties/{save_key}")
+
+
 def get_dynasty_team_histories(session_id: str) -> dict:
     return _get(f"/sessions/{session_id}/dynasty/team-histories")
 

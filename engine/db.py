@@ -881,6 +881,166 @@ def delete_wvl_season(user_id: str = "default"):
 
 
 # ═══════════════════════════════════════════════════════════════
+# DYNASTY SERIALIZATION
+# ═══════════════════════════════════════════════════════════════
+
+def serialize_dynasty(dynasty) -> dict:
+    """Serialize a Dynasty to a JSON-safe dict for database storage.
+
+    Follows the same pattern as Dynasty.save() but captures additional
+    fields (prestige, histories, rivalries) that the file-based save skips.
+    Does NOT serialize Season objects (too large) — only metadata/summaries.
+    """
+    from dataclasses import asdict
+
+    data = {
+        "dynasty_name": dynasty.dynasty_name,
+        "coach": asdict(dynasty.coach),
+        "current_year": dynasty.current_year,
+        "conferences": {name: asdict(conf) for name, conf in dynasty.conferences.items()},
+        "team_histories": {name: asdict(h) for name, h in dynasty.team_histories.items()},
+        "awards_history": {str(year): asdict(a) for year, a in dynasty.awards_history.items()},
+        "record_book": asdict(dynasty.record_book),
+        "team_prestige": dict(dynasty.team_prestige) if dynasty.team_prestige else {},
+        "rivalries": dynasty.rivalries if dynasty.rivalries else {},
+        "rivalry_ledger": dynasty.rivalry_ledger if dynasty.rivalry_ledger else {},
+        "player_stats": {
+            name: asdict(ps) for name, ps in dynasty.player_stats.items()
+        } if dynasty.player_stats else {},
+        "honors_history": {str(k): v for k, v in dynasty.honors_history.items()} if dynasty.honors_history else {},
+        "injury_history": {str(k): v for k, v in dynasty.injury_history.items()} if dynasty.injury_history else {},
+        "development_history": {str(k): v for k, v in dynasty.development_history.items()} if dynasty.development_history else {},
+        "recruiting_history": {str(k): v for k, v in dynasty.recruiting_history.items()} if dynasty.recruiting_history else {},
+        "portal_history": {str(k): v for k, v in dynasty.portal_history.items()} if dynasty.portal_history else {},
+        "nil_history": {str(k): v for k, v in dynasty.nil_history.items()} if dynasty.nil_history else {},
+        "coaching_history": {str(k): v for k, v in dynasty.coaching_history.items()} if dynasty.coaching_history else {},
+    }
+
+    # Coaching staffs — CoachCard objects need .to_dict()
+    if dynasty._coaching_staffs:
+        try:
+            from engine.coaching import CoachCard
+            staffs = {}
+            for team_name, staff in dynasty._coaching_staffs.items():
+                staffs[team_name] = {
+                    role: (card.to_dict() if isinstance(card, CoachCard) else card)
+                    for role, card in staff.items()
+                }
+            data["coaching_staffs"] = staffs
+        except Exception:
+            data["coaching_staffs"] = {}
+    else:
+        data["coaching_staffs"] = {}
+
+    return data
+
+
+def deserialize_dynasty(data: dict):
+    """Reconstruct a Dynasty from a serialized dict."""
+    from engine.dynasty import Dynasty, Coach, Conference, TeamHistory, SeasonAwards, RecordBook, PlayerCareerStats
+
+    dynasty = Dynasty(
+        dynasty_name=data["dynasty_name"],
+        coach=Coach(**data["coach"]),
+        current_year=data["current_year"],
+    )
+
+    # Conferences
+    for name, conf_data in data.get("conferences", {}).items():
+        dynasty.conferences[name] = Conference(**conf_data)
+
+    # Team histories
+    for name, h_data in data.get("team_histories", {}).items():
+        # Convert string year keys back to int in season_records
+        if "season_records" in h_data:
+            h_data["season_records"] = {int(k): v for k, v in h_data["season_records"].items()}
+        dynasty.team_histories[name] = TeamHistory(**h_data)
+
+    # Awards history
+    for year_str, a_data in data.get("awards_history", {}).items():
+        dynasty.awards_history[int(year_str)] = SeasonAwards(**a_data)
+
+    # Record book
+    if "record_book" in data:
+        dynasty.record_book = RecordBook(**data["record_book"])
+
+    # Simple dict fields
+    dynasty.team_prestige = data.get("team_prestige", {})
+    dynasty.rivalries = data.get("rivalries", {})
+    dynasty.rivalry_ledger = data.get("rivalry_ledger", {})
+
+    # Int-keyed history dicts
+    dynasty.honors_history = {int(k): v for k, v in data.get("honors_history", {}).items()}
+    dynasty.injury_history = {int(k): v for k, v in data.get("injury_history", {}).items()}
+    dynasty.development_history = {int(k): v for k, v in data.get("development_history", {}).items()}
+    dynasty.recruiting_history = {int(k): v for k, v in data.get("recruiting_history", {}).items()}
+    dynasty.portal_history = {int(k): v for k, v in data.get("portal_history", {}).items()}
+    dynasty.nil_history = {int(k): v for k, v in data.get("nil_history", {}).items()}
+    dynasty.coaching_history = {int(k): v for k, v in data.get("coaching_history", {}).items()}
+
+    # Player career stats
+    for name, ps_data in data.get("player_stats", {}).items():
+        dynasty.player_stats[name] = PlayerCareerStats(**ps_data)
+
+    # Coaching staffs
+    if data.get("coaching_staffs"):
+        try:
+            from engine.coaching import CoachCard
+            for team_name, staff_data in data["coaching_staffs"].items():
+                dynasty._coaching_staffs[team_name] = {
+                    role: CoachCard.from_dict(card_data)
+                    for role, card_data in staff_data.items()
+                }
+        except Exception:
+            pass
+
+    # Coach season_records int keys
+    if dynasty.coach.season_records:
+        dynasty.coach.season_records = {int(k): v for k, v in dynasty.coach.season_records.items()}
+
+    # Conference championship_history int keys
+    for conf in dynasty.conferences.values():
+        if conf.championship_history:
+            conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
+
+    return dynasty
+
+
+# ═══════════════════════════════════════════════════════════════
+# HIGH-LEVEL SAVE/LOAD FOR DYNASTY
+# ═══════════════════════════════════════════════════════════════
+
+def save_dynasty(dynasty, save_key: str = "current", user_id: str = "default"):
+    """Save a dynasty to the database."""
+    data = serialize_dynasty(dynasty)
+    save_blob("dynasty", save_key, data,
+              label=dynasty.dynasty_name, user_id=user_id)
+    _log.info(f"Saved dynasty '{dynasty.dynasty_name}' (key={save_key}) for user={user_id}")
+
+
+def load_dynasty(save_key: str = "current", user_id: str = "default"):
+    """Load a dynasty from the database. Returns the Dynasty or None."""
+    data = load_blob("dynasty", save_key, user_id=user_id)
+    if data is None:
+        return None
+    try:
+        return deserialize_dynasty(data)
+    except Exception as e:
+        _log.warning(f"Failed to deserialize dynasty: {e}")
+        return None
+
+
+def list_dynasties(user_id: str = "default") -> list[dict]:
+    """List saved dynasties (metadata only)."""
+    return list_saves("dynasty", user_id=user_id)
+
+
+def delete_dynasty(save_key: str, user_id: str = "default"):
+    """Delete a saved dynasty."""
+    delete_blob("dynasty", save_key, user_id=user_id)
+
+
+# ═══════════════════════════════════════════════════════════════
 # AUTO-INITIALIZE on import
 # ═══════════════════════════════════════════════════════════════
 
