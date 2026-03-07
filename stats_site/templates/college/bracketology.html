@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Bracketology — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Bracketology
+</div></div>
+{% endblock %}
+
+{% block content %}
+<style>
+.bracket { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0 16px; -webkit-overflow-scrolling: touch; }
+.bracket-round { min-width: 220px; flex-shrink: 0; }
+.bracket-round-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
+.matchup { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg-alt); }
+.matchup.championship { border-color: var(--yellow); }
+.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size: 11px; }
+.matchup-team + .matchup-team { border-top: 1px solid var(--border); }
+.matchup-seed { color: var(--fg-dim); font-size: 10px; width: 18px; text-align: right; flex-shrink: 0; }
+.matchup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup-tbd { color: var(--fg-dim); font-style: italic; }
+.bubble-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+.bubble-section { border: 1px solid var(--border); background: var(--bg-alt); padding: 12px; }
+.bubble-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; }
+.bubble-section.last-in h3 { color: var(--green, #4caf50); }
+.bubble-section.first-out h3 { color: var(--red, #ef5350); }
+.bubble-team { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 11px; border-bottom: 1px solid var(--border); }
+.bubble-team:last-child { border-bottom: none; }
+.bubble-team .meta { color: var(--fg-dim); font-size: 10px; }
+.bid-auto { color: var(--yellow); font-size: 9px; text-transform: uppercase; font-weight: bold; }
+.bid-atlarge { color: var(--accent); font-size: 9px; text-transform: uppercase; font-weight: bold; }
+@media (max-width: 768px) {
+  .bracket { gap: 12px; }
+  .bracket-round { min-width: 180px; }
+  .bubble-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="page-header">
+  <h1>BRACKETOLOGY</h1>
+  <div class="subtitle">{{ season_name }} — {{ num_teams }}-Team Projected Field</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/bracketology" class="active">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+</div>
+
+{% if field %}
+
+{# ── Projected Bracket ── #}
+<h2>Projected Bracket</h2>
+<div class="bracket">
+  {% for round in bracket %}
+  <div class="bracket-round">
+    <div class="bracket-round-label">{{ round.round_label }}</div>
+    {% for m in round.matchups %}
+    <div class="matchup {% if round.week == 1000 %}championship{% endif %}">
+      <div class="matchup-team">
+        <span class="matchup-seed">{{ m.home_seed if m.home_seed else '' }}</span>
+        <span class="matchup-name {% if m.home_team in ['TBD'] or m.home_team.startswith('Winner') %}matchup-tbd{% endif %}">
+          {% if m.home_team not in ['TBD'] and not m.home_team.startswith('Winner') %}
+            <a href="/stats/college/{{ session_id }}/team/{{ m.home_team }}" style="color:inherit">{{ m.home_team }}</a>
+          {% else %}
+            {{ m.home_team }}
+          {% endif %}
+        </span>
+      </div>
+      <div class="matchup-team">
+        <span class="matchup-seed">{{ m.away_seed if m.away_seed else '' }}</span>
+        <span class="matchup-name {% if m.away_team in ['TBD'] or m.away_team.startswith('Winner') %}matchup-tbd{% endif %}">
+          {% if m.away_team not in ['TBD'] and not m.away_team.startswith('Winner') %}
+            <a href="/stats/college/{{ session_id }}/team/{{ m.away_team }}" style="color:inherit">{{ m.away_team }}</a>
+          {% else %}
+            {{ m.away_team }}
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{# ── Projected Field Table ── #}
+<h2>Projected Field</h2>
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr>
+      <th class="num">Seed</th>
+      <th>Team</th>
+      <th>Record</th>
+      <th>Conference</th>
+      <th>Bid</th>
+      <th class="num">Power Index</th>
+      <th class="num">QW</th>
+      <th class="num">SOS</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in field %}
+    <tr>
+      <td class="num">{{ t.seed }}</td>
+      <td><a href="/stats/college/{{ session_id }}/team/{{ t.team_name }}">{{ t.team_name }}</a></td>
+      <td>{{ t.record }}</td>
+      <td>{{ t.conference }}</td>
+      <td>
+        {% if t.bid_type == 'auto' %}
+          <span class="bid-auto">Auto</span>
+        {% else %}
+          <span class="bid-atlarge">At-Large</span>
+        {% endif %}
+      </td>
+      <td class="num">{{ t.power_index }}</td>
+      <td class="num">{{ t.quality_wins }}</td>
+      <td class="num">#{{ t.sos_rank }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{# ── Bubble Watch ── #}
+{% if bubble_in or bubble_out %}
+<h2>Bubble Watch</h2>
+<div class="bubble-grid">
+  <div class="bubble-section last-in">
+    <h3>Last Four In</h3>
+    {% for t in bubble_in %}
+    <div class="bubble-team">
+      <span>
+        <a href="/stats/college/{{ session_id }}/team/{{ t.team_name }}">{{ t.team_name }}</a>
+        <span class="meta">{{ t.record }} · {{ t.conference }}</span>
+      </span>
+      <span class="meta">PI {{ t.power_index }} · QW {{ t.quality_wins }} · SOS #{{ t.sos_rank }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="bubble-section first-out">
+    <h3>First Four Out</h3>
+    {% for t in bubble_out %}
+    <div class="bubble-team">
+      <span>
+        <a href="/stats/college/{{ session_id }}/team/{{ t.team_name }}">{{ t.team_name }}</a>
+        <span class="meta">{{ t.record }} · {{ t.conference }}</span>
+      </span>
+      <span class="meta">PI {{ t.power_index }} · QW {{ t.quality_wins }} · SOS #{{ t.sos_rank }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty">No games have been played yet — check back after Week 1.</div>
+{% endif %}
+
+{% endblock %}

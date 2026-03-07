@@ -1983,6 +1983,179 @@ class Season:
         """Get whether a team earned an 'auto' or 'at-large' bid"""
         return getattr(self, '_playoff_bid_types', {}).get(team_name, "")
 
+    def get_bracketology(self, num_teams: int = 8) -> dict:
+        """Generate projected playoff bracket without simulating games.
+
+        Returns a dict with field, bracket matchups, and bubble teams.
+        """
+        # Get projected field (reuses conference champion + at-large logic)
+        playoff_teams = self.get_playoff_teams(num_teams)
+        seeds = [t.team_name for t in playoff_teams]
+        effective = len(seeds)
+
+        # Compute SOS ranks for all teams
+        sos_list = []
+        for team_name, record in self.standings.items():
+            if record.games_played > 0:
+                sos_list.append((team_name, self._calculate_sos(team_name)))
+        sos_list.sort(key=lambda x: x[1], reverse=True)
+        sos_rank_map = {name: i + 1 for i, (name, _) in enumerate(sos_list)}
+
+        # Build field list
+        field = []
+        for i, team_name in enumerate(seeds):
+            rec = self.standings[team_name]
+            field.append({
+                "seed": i + 1,
+                "team_name": team_name,
+                "record": f"{rec.wins}-{rec.losses}",
+                "conference": self.team_conferences.get(team_name, ""),
+                "bid_type": self.get_playoff_bid_type(team_name),
+                "power_index": round(self.calculate_power_index(team_name), 2),
+                "quality_wins": self._count_quality_wins(team_name, self._get_current_rankings()),
+                "sos_rank": sos_rank_map.get(team_name, 0),
+            })
+
+        # Build projected bracket matchups (no simulation)
+        bracket = self._build_bracket_matchups(seeds, effective)
+
+        # Bubble teams
+        power_ranked = self.get_all_power_rankings()
+        field_set = set(seeds)
+        bubble_in = field[-4:] if len(field) >= 4 else field[:]
+        bubble_out = []
+        for team_name, pi, qw in power_ranked:
+            if team_name not in field_set:
+                rec = self.standings[team_name]
+                bubble_out.append({
+                    "team_name": team_name,
+                    "record": f"{rec.wins}-{rec.losses}",
+                    "conference": self.team_conferences.get(team_name, ""),
+                    "power_index": round(pi, 2),
+                    "quality_wins": qw,
+                    "sos_rank": sos_rank_map.get(team_name, 0),
+                })
+                if len(bubble_out) >= 4:
+                    break
+
+        return {
+            "field": field,
+            "bracket": bracket,
+            "bubble_in": bubble_in,
+            "bubble_out": bubble_out,
+            "num_teams": effective,
+        }
+
+    def _build_bracket_matchups(self, seeds: list, num_teams: int) -> list:
+        """Build bracket matchup structure without simulating games."""
+        rounds = []
+
+        if num_teams <= 4:
+            rounds.append({
+                "round_label": "Semifinals", "week": 999,
+                "matchups": [
+                    {"home_seed": 1, "home_team": seeds[0], "away_seed": num_teams, "away_team": seeds[num_teams - 1]},
+                    {"home_seed": 2, "home_team": seeds[1], "away_seed": num_teams - 1, "away_team": seeds[num_teams - 2]},
+                ] if num_teams >= 4 else [
+                    {"home_seed": 1, "home_team": seeds[0], "away_seed": 2, "away_team": seeds[1]},
+                ],
+            })
+            rounds.append({
+                "round_label": "National Championship", "week": 1000,
+                "matchups": [{"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"}],
+            })
+
+        elif num_teams == 8:
+            rounds.append({
+                "round_label": "Quarterfinals", "week": 998,
+                "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 8 - i, "away_team": seeds[7 - i]} for i in range(4)],
+            })
+            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+            rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+
+        elif num_teams == 12:
+            rounds.append({
+                "round_label": "First Round", "week": 997,
+                "matchups": [{"home_seed": 5 + i, "home_team": seeds[4 + i], "away_seed": 12 - i, "away_team": seeds[11 - i]} for i in range(4)],
+            })
+            rounds.append({
+                "round_label": "Quarterfinals", "week": 998,
+                "matchups": [
+                    {"home_seed": 1, "home_team": seeds[0], "away_seed": None, "away_team": "Winner 5/12"},
+                    {"home_seed": 2, "home_team": seeds[1], "away_seed": None, "away_team": "Winner 6/11"},
+                    {"home_seed": 3, "home_team": seeds[2], "away_seed": None, "away_team": "Winner 7/10"},
+                    {"home_seed": 4, "home_team": seeds[3], "away_seed": None, "away_team": "Winner 8/9"},
+                ],
+            })
+            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+            rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+
+        elif num_teams == 16:
+            rounds.append({
+                "round_label": "Round of 16", "week": 997,
+                "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 16 - i, "away_team": seeds[15 - i]} for i in range(8)],
+            })
+            rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
+            ]})
+            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
+            ]})
+            rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+
+        elif num_teams == 24:
+            rounds.append({
+                "round_label": "First Round", "week": 996,
+                "matchups": [{"home_seed": 9 + i, "home_team": seeds[8 + i], "away_seed": 24 - i, "away_team": seeds[23 - i]} for i in range(8)],
+            })
+            rounds.append({
+                "round_label": "Round of 16", "week": 997,
+                "matchups": [
+                    {"home_seed": i + 1, "home_team": seeds[i], "away_seed": None, "away_team": f"Winner {9 + (7 - i)}/{24 - (7 - i)}"} for i in range(8)
+                ],
+            })
+            rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
+            ]})
+            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
+            ]})
+            rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+
+        elif num_teams == 32:
+            rounds.append({
+                "round_label": "Round of 32", "week": 996,
+                "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 32 - i, "away_team": seeds[31 - i]} for i in range(16)],
+            })
+            rounds.append({"round_label": "Round of 16", "week": 997, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(8)
+            ]})
+            rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
+            ]})
+            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
+            ]})
+            rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
+                {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
+            ]})
+
+        return rounds
+
     def get_latest_poll(self) -> Optional[WeeklyPoll]:
         return self.weekly_polls[-1] if self.weekly_polls else None
 
