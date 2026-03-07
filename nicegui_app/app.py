@@ -93,13 +93,23 @@ APP_CSS = """
     @media (max-width: 768px) {
         .desktop-nav { display: none !important; }
         .mobile-menu-btn { display: flex !important; }
-        .q-tab { min-width: 0 !important; padding: 0 8px !important; font-size: 0.75rem !important; }
+        .q-tab { min-width: 0 !important; padding: 0 6px !important; font-size: 0.7rem !important; }
+        .q-tab .q-tab__label { display: none !important; }
+        .q-tab .q-tab__icon { font-size: 1.3rem !important; }
         .q-table td, .q-table th { padding: 4px 6px !important; font-size: 0.75rem !important; }
+        .q-card { padding: 10px !important; }
+        .q-card .min-w-\[180px\] { min-width: 120px !important; }
+        .nicegui-content { padding: 8px !important; }
+        .vb-hero-banner { padding: 14px 16px !important; }
+        .vb-hero-banner .vb-hero-top { flex-direction: column !important; gap: 12px !important; }
+        .vb-hero-banner .vb-hero-stats { gap: 12px !important; flex-wrap: wrap; justify-content: center; }
+        .vb-hero-banner .text-2xl { font-size: 1.25rem !important; }
     }
     @media (min-width: 769px) {
         .mobile-menu-btn { display: none !important; }
     }
-    .q-tabs--scrollable .q-tabs__content { flex-wrap: nowrap !important; }
+    .q-tabs__content { flex-wrap: nowrap !important; }
+    .q-tabs { overflow: hidden !important; }
 </style>
 """
 

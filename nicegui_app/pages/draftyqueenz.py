@@ -155,7 +155,7 @@ async def render_dq_pre_sim(state, session_id: str, next_week: int, key_prefix: 
 
     ui.label(f"DraftyQueenz -- Week {next_week}").classes("text-lg font-bold mt-2")
 
-    with ui.tabs().classes("w-full") as dq_tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as dq_tabs:
         pred_tab = ui.tab("Predictions")
         fantasy_tab = ui.tab("Fantasy")
         donate_tab = ui.tab("Donate")

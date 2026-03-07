@@ -58,7 +58,7 @@ def _render_mode_selection(state: UserState, shared: dict):
     ui.label("Play").classes("text-2xl font-bold text-slate-800")
     ui.label("Start a new season or play a quick exhibition game").classes("text-sm text-gray-500 mb-4")
 
-    with ui.tabs().classes("w-full") as mode_tabs:
+    with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as mode_tabs:
         season_tab = ui.tab("New Season")
         quick_tab = ui.tab("Quick Game")
         dq_tab = ui.tab("DraftyQueenz")

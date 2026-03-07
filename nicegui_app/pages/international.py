@@ -1139,7 +1139,7 @@ def _show_fiv_box_score_dialog(match_data: dict):
                                         with ui.element("td").classes("text-center py-2 px-3 font-bold text-slate-900"):
                                             ui.label(fmt_vb_score(total))
 
-                with ui.tabs().classes("w-full") as bs_tabs:
+                with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as bs_tabs:
                     tab_team = ui.tab("Team Stats")
                     tab_offense = ui.tab("Offense")
                     tab_defense = ui.tab("Defense")
