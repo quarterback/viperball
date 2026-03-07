@@ -27,12 +27,63 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__
 TEAMS_DIR = os.path.join(DATA_DIR, "teams")
 
 
+def _render_saved_dynasties(state: UserState, shared: dict):
+    """Show saved dynasties that can be resumed."""
+    try:
+        resp = api_client.list_saved_dynasties()
+        dynasties = resp.get("dynasties", [])
+    except api_client.APIError:
+        dynasties = []
+
+    if not dynasties:
+        return
+
+    ui.label("Saved Dynasties").classes("text-lg font-semibold text-slate-700 mt-2")
+
+    for d in dynasties:
+        save_key = d.get("save_key", "")
+        label = d.get("label", "Dynasty")
+        updated = d.get("updated_at", "")
+
+        with ui.card().classes("w-full p-3 mb-2"):
+            with ui.row().classes("w-full items-center justify-between"):
+                with ui.column().classes("gap-0"):
+                    ui.label(label).classes("font-bold text-slate-700")
+                    ui.label(f"Key: {save_key}").classes("text-xs text-slate-400")
+                with ui.row().classes("gap-2"):
+                    async def _load(sk=save_key):
+                        if not state.session_id:
+                            try:
+                                resp = await run.io_bound(api_client.create_session)
+                                state.session_id = resp["session_id"]
+                            except api_client.APIError as e:
+                                notify_error(f"Failed to create session: {e.detail}")
+                                return
+                        try:
+                            await run.io_bound(
+                                api_client.load_saved_dynasty, state.session_id, sk,
+                            )
+                            state.mode = "dynasty"
+                            notify_success(f"Loaded dynasty: {label}")
+                            ui.navigate.to("/")
+                        except api_client.APIError as e:
+                            notify_error(f"Failed to load dynasty: {e.detail}")
+
+                    ui.button("Resume", on_click=_load, icon="play_arrow").props("color=primary size=sm")
+
+
 def render_dynasty_mode(state: UserState, shared: dict):
-    """Render the dynasty creation UI."""
+    """Render the dynasty creation UI with load-from-database support."""
     teams = shared["teams"]
 
-    ui.label("Create New Dynasty").classes("text-2xl font-bold text-slate-800")
+    ui.label("College Dynasty").classes("text-2xl font-bold text-slate-800")
     ui.label("Multi-season career mode with historical tracking, awards, and record books").classes("text-sm text-gray-500 mb-4")
+
+    # ── Load Saved Dynasty ──
+    _render_saved_dynasties(state, shared)
+
+    ui.separator().classes("my-4")
+    ui.label("Create New Dynasty").classes("text-xl font-bold text-slate-700")
 
     all_teams = load_teams_from_directory(TEAMS_DIR)
     all_team_names_sorted = sorted(all_teams.keys())

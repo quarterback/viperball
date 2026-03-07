@@ -62,6 +62,10 @@ from engine.db import (
     load_pro_league as db_load_pro_league,
     save_season_archive, load_season_archive, list_season_archives,
     delete_season_archive,
+    save_dynasty as db_save_dynasty,
+    load_dynasty as db_load_dynasty,
+    list_dynasties as db_list_dynasties,
+    delete_dynasty as db_delete_dynasty,
 )
 
 
@@ -1581,6 +1585,9 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     session["season"] = None
     session["program_archetype"] = req.program_archetype
 
+    # Persist dynasty to database
+    db_save_dynasty(dynasty, save_key=session_id)
+
     return _serialize_dynasty_status(session)
 
 
@@ -1872,6 +1879,9 @@ def dynasty_advance(session_id: str):
     session["season"] = None
     session["injury_tracker"] = None
 
+    # Persist dynasty after advancing
+    db_save_dynasty(dynasty, save_key=session_id)
+
     return {
         "dynasty": _serialize_dynasty_status(session),
         "offseason_phase": "nil",
@@ -1889,6 +1899,34 @@ def dynasty_status(session_id: str):
     session = _get_session(session_id)
     _require_dynasty(session)
     return _serialize_dynasty_status(session)
+
+
+@app.get("/dynasties")
+def list_dynasties_endpoint():
+    """List all saved dynasties."""
+    return {"dynasties": db_list_dynasties()}
+
+
+@app.post("/sessions/{session_id}/dynasty/load")
+def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
+    """Load a saved dynasty into the given session."""
+    session = _get_session(session_id)
+    dynasty = db_load_dynasty(save_key=save_key)
+    if dynasty is None:
+        raise HTTPException(status_code=404, detail=f"No saved dynasty with key '{save_key}'")
+    session["dynasty"] = dynasty
+    session["phase"] = "setup"
+    session["season"] = None
+    session["injury_tracker"] = None
+    session["human_teams"] = [dynasty.coach.team_name]
+    return _serialize_dynasty_status(session)
+
+
+@app.delete("/dynasties/{save_key}")
+def delete_dynasty_endpoint(save_key: str):
+    """Delete a saved dynasty."""
+    db_delete_dynasty(save_key=save_key)
+    return {"deleted": save_key}
 
 
 @app.get("/sessions/{session_id}/dynasty/team-histories")
@@ -2486,6 +2524,9 @@ def offseason_complete(session_id: str):
 
     session.pop("offseason", None)
     session["phase"] = "setup"
+
+    # Persist dynasty after offseason completes
+    db_save_dynasty(dynasty, save_key=session_id)
 
     return _serialize_dynasty_status(session)
 
