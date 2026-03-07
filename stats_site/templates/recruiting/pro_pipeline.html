@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Pro Pipeline — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/recruiting/">Recruiting</a><span class="sep">/</span>Pro Pipeline
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>PRO PIPELINE</h1>
+  <div class="subtitle">CVL &rarr; WVL Draft Pipeline &middot; Future intake classes</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/">Overview</a>
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline" class="active">Pro Pipeline</a>
+</div>
+
+{# ── Pipeline Flow ── #}
+<div style="margin:16px 0;padding:12px;border:1px solid var(--border);background:var(--bg-alt);">
+  <div style="color:var(--fg-bright);font-size:13px;margin-bottom:8px;">PIPELINE FLOW</div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="padding:4px 8px;border:1px solid var(--border);">HS 9th</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--border);">HS 10th</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--border);">HS 11th</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--yellow);">HS 12th</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--accent);color:var(--accent);">CVL Recruit</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--border);">FR &rarr; SO &rarr; JR &rarr; SR</span>
+    <span style="color:var(--fg-dim)">&rarr;</span>
+    <span style="padding:4px 8px;border:1px solid var(--green);color:var(--green);">WVL Free Agent</span>
+  </div>
+</div>
+
+{# ── Upcoming Intake Classes ── #}
+{% if intake_classes %}
+<h2>Upcoming Intake Preview</h2>
+<p style="color:var(--fg-dim);margin-bottom:12px;">Pre-generated future recruiting classes. Import into any WVL dynasty year.</p>
+
+{% for label, prospects in intake_classes.items() %}
+<h3>{{ label|replace("_", " ")|title }} &middot; {{ prospects|length }} prospects</h3>
+
+{# Summary row #}
+{% set five_star = [] %}
+{% set four_star = [] %}
+{% for p in prospects %}
+  {% if p.stars >= 5 %}{% if five_star.append(p) %}{% endif %}{% endif %}
+  {% if p.stars == 4 %}{% if four_star.append(p) %}{% endif %}{% endif %}
+{% endfor %}
+<div style="color:var(--fg-dim);margin-bottom:8px;">
+  {{ five_star|length }} five-star &middot; {{ four_star|length }} four-star
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">Stars</th>
+      <th>Hometown</th><th>High School</th>
+      <th>Region</th>
+      <th class="num">OVR</th><th class="num">POT</th><th>Dev</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in prospects[:50] %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ p.first_name }} {{ p.last_name }}</td>
+    <td>{{ p.position }}</td>
+    <td class="num {% if p.stars >= 5 %}stat-elite{% elif p.stars >= 4 %}stat-good{% elif p.stars <= 2 %}stat-bad{% endif %}">
+      {{ "&#9733;" * p.stars }}{{ "&#9734;" * (5 - p.stars) }}
+    </td>
+    <td>{{ p.hometown }}</td>
+    <td>{{ p.high_school }}</td>
+    <td>{{ p.region }}</td>
+    <td class="num {% if p.true_overall >= 85 %}stat-elite{% elif p.true_overall >= 75 %}stat-good{% endif %}">{{ p.true_overall }}</td>
+    <td class="num">{{ p.true_potential }}</td>
+    <td>{{ p.true_development }}</td>
+  </tr>
+  {% endfor %}
+  {% if prospects|length > 50 %}
+  <tr><td colspan="10" style="color:var(--fg-dim);text-align:center;">... and {{ prospects|length - 50 }} more</td></tr>
+  {% endif %}
+  </tbody>
+</table>
+{% endfor %}
+
+{% else %}
+<div class="notice">No intake preview data. Generate future classes from dynasty mode to see the pipeline.</div>
+{% endif %}
+
+{# ── Recent Graduates → WVL ── #}
+{% if graduates %}
+<h2>Recent Graduates &rarr; WVL Eligible</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th>
+      <th>College</th><th>Conf</th>
+      <th class="num">SPD</th><th class="num">PWR</th><th class="num">AWR</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in graduates %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ p.full_name }}</td>
+    <td>{{ p.position }}</td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 75 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ "&#9733;" * p.potential }}</td>
+    <td>{{ p.college_team }}</td>
+    <td>{{ conf_abbrev(p.conference) }}</td>
+    <td class="num">{{ p.speed }}</td>
+    <td class="num">{{ p.power }}</td>
+    <td class="num">{{ p.awareness }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

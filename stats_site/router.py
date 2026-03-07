@@ -2892,3 +2892,245 @@ def _aggregate_archive_team_stats(schedule: list, team_name: str) -> dict | None
         "penalties": penalties,
         "penalty_yards": penalty_yards,
     }
+
+
+# ── RECRUITING ──────────────────────────────────────────────────────────
+
+def _get_recruiting_pipeline():
+    """Get the active HS recruiting pipeline, if any dynasty has one."""
+    try:
+        from api.main import sessions
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
+                return dynasty._hs_pipeline, dynasty, sid
+        return None, None, None
+    except Exception:
+        return None, None, None
+
+
+def _get_dynasty_for_classes():
+    """Find a dynasty session with teams for class export viewing."""
+    try:
+        from api.main import sessions
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            season = sess.get("season")
+            if dynasty and season and hasattr(season, "teams") and season.teams:
+                return dynasty, season, sid
+        return None, None, None
+    except Exception:
+        return None, None, None
+
+
+@router.get("/recruiting/", response_class=HTMLResponse)
+def recruiting_index(request: Request):
+    pipeline, dynasty, sid = _get_recruiting_pipeline()
+
+    pipeline_summary = None
+    top_prospects = []
+    if pipeline:
+        pipeline_summary = pipeline.pipeline_summary()
+        raw_top = pipeline.get_top_prospects(n=25)
+        for p in raw_top:
+            top_prospects.append({
+                "name": p.recruit.full_name,
+                "position": p.recruit.position,
+                "scouted_stars": p.scouted_stars,
+                "grade": p.grade,
+                "hometown": p.recruit.hometown,
+                "high_school": p.recruit.high_school,
+                "position_rank": p.position_rank,
+                "regional_rank": p.regional_rank,
+                "is_alpha": p.is_alpha,
+            })
+
+    # Find sessions with dynasty data for draft classes
+    draft_sessions = []
+    try:
+        from api.main import sessions
+        for s_id, sess in sessions.items():
+            d = sess.get("dynasty")
+            s = sess.get("season")
+            if d and s and hasattr(s, "teams"):
+                draft_sessions.append({
+                    "session_id": s_id,
+                    "dynasty_name": d.dynasty_name,
+                    "team_count": len(s.teams),
+                })
+    except Exception:
+        pass
+
+    return templates.TemplateResponse("recruiting/index.html", _ctx(
+        request,
+        section="recruiting",
+        pipeline_summary=pipeline_summary,
+        top_prospects=top_prospects,
+        draft_sessions=draft_sessions,
+    ))
+
+
+@router.get("/recruiting/hs-rankings", response_class=HTMLResponse)
+def recruiting_hs_rankings(request: Request):
+    from engine.recruiting import POSITIONS
+
+    grade = request.query_params.get("grade", "12th")
+    position = request.query_params.get("position", "")
+
+    pipeline, dynasty, sid = _get_recruiting_pipeline()
+
+    board = []
+    visible_attrs = []
+    if pipeline:
+        raw_board = pipeline.get_rankings_board(grade=grade, top_n=100)
+        if position:
+            raw_board = [p for p in raw_board if p["position"] == position]
+        board = raw_board
+        # Determine which attributes are visible for this grade
+        if board:
+            visible_attrs = sorted(board[0].get("visible_attributes", {}).keys())
+
+    return templates.TemplateResponse("recruiting/hs_rankings.html", _ctx(
+        request,
+        section="recruiting",
+        grade=grade,
+        position=position,
+        positions=POSITIONS,
+        board=board,
+        visible_attrs=visible_attrs,
+    ))
+
+
+@router.get("/recruiting/draft-classes", response_class=HTMLResponse)
+def recruiting_draft_classes(request: Request):
+    from engine.player_card import player_to_card
+
+    active_class = request.query_params.get("class_year", "Senior")
+    session_id = request.query_params.get("session", "")
+    class_years = ["Freshman", "Sophomore", "Junior", "Senior"]
+
+    dynasty, season, sid = _get_dynasty_for_classes()
+    if session_id:
+        # Try to load specific session
+        try:
+            from api.main import sessions
+            sess = sessions.get(session_id, {})
+            dynasty = sess.get("dynasty", dynasty)
+            season = sess.get("season", season)
+            sid = session_id
+        except Exception:
+            pass
+
+    players = []
+    class_counts = {}
+    if dynasty and season and hasattr(season, "teams"):
+        for class_year in class_years:
+            count = 0
+            for team_name, team in season.teams.items():
+                conf = dynasty.get_team_conference(team_name) if dynasty else ""
+                prestige = dynasty.team_prestige.get(team_name, 50) if dynasty else 50
+                for player in team.players:
+                    py = getattr(player, "year", "")
+                    if py == class_year or (class_year == "Senior" and py == "Graduate"):
+                        count += 1
+                        if class_year == active_class:
+                            card = player_to_card(player, team_name)
+                            players.append({
+                                "full_name": card.full_name,
+                                "player": card.full_name,
+                                "position": card.position,
+                                "overall": card.overall,
+                                "potential": card.potential,
+                                "development": card.development,
+                                "team": team_name,
+                                "conference": conf,
+                                "prestige": prestige,
+                                "speed": card.speed,
+                                "stamina": card.stamina,
+                                "agility": card.agility,
+                                "power": card.power,
+                                "awareness": card.awareness,
+                                "hands": card.hands,
+                                "kicking": card.kicking,
+                                "tackling": card.tackling,
+                                "hometown": f"{card.hometown_city}, {card.hometown_state}",
+                            })
+            class_counts[class_year] = count
+
+        # Sort by overall descending
+        players.sort(key=lambda p: -p["overall"])
+
+    return templates.TemplateResponse("recruiting/draft_classes.html", _ctx(
+        request,
+        section="recruiting",
+        active_class=active_class,
+        class_years=class_years,
+        players=players,
+        class_counts=class_counts,
+        session_id=sid or "",
+    ))
+
+
+@router.get("/recruiting/pro-pipeline", response_class=HTMLResponse)
+def recruiting_pro_pipeline(request: Request):
+    pipeline, dynasty, sid = _get_recruiting_pipeline()
+
+    # Build intake preview from pipeline's upcoming 12th graders
+    intake_classes = {}
+    graduates = []
+
+    if pipeline:
+        # Each grade represents a future intake year
+        for grade in ["12th", "11th", "10th", "9th"]:
+            prospects = pipeline.classes.get(grade, [])
+            intake_label = {
+                "12th": "intake_1",
+                "11th": "intake_2",
+                "10th": "intake_3",
+                "9th": "intake_4",
+            }[grade]
+            intake_classes[intake_label] = [
+                {
+                    "first_name": p.recruit.first_name,
+                    "last_name": p.recruit.last_name,
+                    "position": p.recruit.position,
+                    "stars": p.scouted_stars,
+                    "true_overall": p.recruit.true_overall,
+                    "true_potential": p.recruit.true_potential,
+                    "true_development": p.recruit.true_development,
+                    "hometown": p.recruit.hometown,
+                    "high_school": p.recruit.high_school,
+                    "region": p.recruit.region,
+                }
+                for p in prospects
+            ]
+
+    # Get graduates from dynasty if available
+    dynasty_d, season, s_sid = _get_dynasty_for_classes()
+    if dynasty_d and season and hasattr(season, "teams"):
+        from engine.player_card import player_to_card
+        for team_name, team in season.teams.items():
+            conf = dynasty_d.get_team_conference(team_name)
+            for player in team.players:
+                py = getattr(player, "year", "")
+                if py in ("Senior", "Graduate"):
+                    card = player_to_card(player, team_name)
+                    graduates.append({
+                        "full_name": card.full_name,
+                        "position": card.position,
+                        "overall": card.overall,
+                        "potential": card.potential,
+                        "college_team": team_name,
+                        "conference": conf,
+                        "speed": card.speed,
+                        "power": card.power,
+                        "awareness": card.awareness,
+                    })
+        graduates.sort(key=lambda p: -p["overall"])
+
+    return templates.TemplateResponse("recruiting/pro_pipeline.html", _ctx(
+        request,
+        section="recruiting",
+        intake_classes=intake_classes,
+        graduates=graduates,
+    ))

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Draft Classes — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/recruiting/">Recruiting</a><span class="sep">/</span>Draft Classes
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>CVL DRAFT CLASSES</h1>
+  <div class="subtitle">Graduating classes available for WVL import &middot; Year-agnostic format</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/">Overview</a>
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes" class="active">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
+</div>
+
+{# ── Class Year Tabs ── #}
+<div class="tabs" style="margin-top:8px;">
+  {% for cy in class_years %}
+  <a href="/stats/recruiting/draft-classes?class_year={{ cy }}" {% if cy == active_class %}class="active"{% endif %}>{{ cy }}</a>
+  {% endfor %}
+</div>
+
+{# ── Class Summary ── #}
+{% if class_counts %}
+<div class="grid-4" style="margin:12px 0;">
+  {% for cy, count in class_counts.items() %}
+  <div class="metric-card">
+    <div class="metric-label">{{ cy }}</div>
+    <div class="metric-value">{{ count }} players</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Player Table ── #}
+{% if players %}
+<h2>{{ active_class }} Class &middot; {{ players|length }} Players</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th><th>Dev</th>
+      <th>Team</th><th>Conf</th><th class="num">Prestige</th>
+      <th class="num">SPD</th><th class="num">STM</th><th class="num">AGI</th>
+      <th class="num">PWR</th><th class="num">AWR</th><th class="num">HND</th>
+      <th class="num">KCK</th><th class="num">TCK</th>
+      <th>Hometown</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in players %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ p.full_name or p.player }}</td>
+    <td>{{ p.position }}</td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 75 %}stat-good{% elif p.overall < 60 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ "&#9733;" * p.potential }}</td>
+    <td>{{ p.development }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team }}</a></td>
+    <td>{{ conf_abbrev(p.conference) }}</td>
+    <td class="num {% if p.prestige >= 80 %}stat-elite{% elif p.prestige >= 60 %}stat-good{% endif %}">{{ p.prestige }}</td>
+    <td class="num">{{ p.speed }}</td>
+    <td class="num">{{ p.stamina }}</td>
+    <td class="num">{{ p.agility }}</td>
+    <td class="num">{{ p.power }}</td>
+    <td class="num">{{ p.awareness }}</td>
+    <td class="num">{{ p.hands }}</td>
+    <td class="num">{{ p.kicking }}</td>
+    <td class="num">{{ p.tackling }}</td>
+    <td>{{ p.hometown }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice">No dynasty classes available. Complete a CVL dynasty season to generate draft classes.</div>
+{% endif %}
+
+<div style="margin-top:16px;color:var(--fg-dim);font-size:11px;">
+  <p>Draft classes are year-agnostic — they can be imported into any WVL dynasty year.</p>
+  <p>Seniors become immediately eligible for WVL free agency upon export.</p>
+</div>
+{% endblock %}

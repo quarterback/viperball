@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Recruiting — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Recruiting
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>RECRUITING HUB</h1>
+  <div class="subtitle">High School Pipeline &middot; CVL Draft Classes &middot; WVL Pro Pipeline</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/" class="active">Overview</a>
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
+</div>
+
+{# ── Pipeline Summary ── #}
+{% if pipeline_summary %}
+<h2>High School Pipeline Overview</h2>
+<div class="grid-4">
+  {% for grade, stats in pipeline_summary.items() %}
+  <div class="metric-card">
+    <div class="metric-label">{{ grade }} Grade</div>
+    <div class="metric-value">{{ stats.count }} prospects</div>
+    <div class="metric-detail">
+      {% if stats.count > 0 %}
+      {{ stats.five_star }} &#9733;&#9733;&#9733;&#9733;&#9733; &middot;
+      {{ stats.four_star }} &#9733;&#9733;&#9733;&#9733; &middot;
+      {{ stats.alpha_count }} alpha &middot;
+      {{ stats.sleeper_count }} sleeper
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="notice">No recruiting pipeline active. Start a dynasty to generate the HS pipeline.</div>
+{% endif %}
+
+{# ── Top 25 Overall ── #}
+{% if top_prospects %}
+<h2>National Top 25</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">Stars</th><th>Grade</th>
+      <th>Hometown</th><th>High School</th>
+      <th class="num">Pos Rk</th><th class="num">Reg Rk</th>
+      <th>Flag</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in top_prospects %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ p.name }}</td>
+    <td>{{ p.position }}</td>
+    <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}">
+      {{ "&#9733;" * p.scouted_stars }}
+    </td>
+    <td>{{ p.grade }}</td>
+    <td>{{ p.hometown }}</td>
+    <td>{{ p.high_school }}</td>
+    <td class="num">{{ p.position_rank }}</td>
+    <td class="num">{{ p.regional_rank }}</td>
+    <td>{% if p.is_alpha %}<span class="tag" style="background:var(--yellow);color:#000">ALPHA</span>{% endif %}
+        {% if p.get("flag") %}<span class="tag" style="background:var(--green);color:#000">{{ p.flag }}</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Draft Class Sessions ── #}
+{% if draft_sessions %}
+<h2>Available Draft Classes</h2>
+<table>
+  <thead>
+    <tr><th>Session</th><th>Dynasty</th><th class="num">Teams</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+  {% for ds in draft_sessions %}
+  <tr>
+    <td>{{ ds.session_id }}</td>
+    <td>{{ ds.dynasty_name }}</td>
+    <td class="num">{{ ds.team_count }}</td>
+    <td><a href="/stats/recruiting/draft-classes/{{ ds.session_id }}">View Classes</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

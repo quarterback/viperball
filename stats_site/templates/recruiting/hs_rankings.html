@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}HS Rankings — {{ grade }} Grade — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/recruiting/">Recruiting</a><span class="sep">/</span>HS Rankings
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>HIGH SCHOOL RANKINGS</h1>
+  <div class="subtitle">{{ grade }} Grade &middot; {{ board|length }} prospects{% if position %} &middot; {{ position }}{% endif %}{% if region %} &middot; {{ region }}{% endif %}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/">Overview</a>
+  <a href="/stats/recruiting/hs-rankings" class="active">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
+</div>
+
+{# ── Grade Tabs ── #}
+<div class="tabs" style="margin-top:8px;">
+  {% for g in ["12th", "11th", "10th", "9th"] %}
+  <a href="/stats/recruiting/hs-rankings?grade={{ g }}" {% if g == grade %}class="active"{% endif %}>{{ g }} Grade</a>
+  {% endfor %}
+</div>
+
+{# ── Filters ── #}
+<div style="margin:12px 0;display:flex;gap:12px;flex-wrap:wrap;">
+  <span style="color:var(--fg-dim)">Position:</span>
+  <a href="/stats/recruiting/hs-rankings?grade={{ grade }}">All</a>
+  {% for pos in positions %}
+  <a href="/stats/recruiting/hs-rankings?grade={{ grade }}&position={{ pos }}" {% if pos == position %}style="color:var(--fg-bright);text-decoration:underline"{% endif %}>{{ pos }}</a>
+  {% endfor %}
+</div>
+
+{# ── Rankings Board ── #}
+{% if board %}
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num">Stars</th>
+      <th>Hometown</th><th>High School</th>
+      <th class="num">Pos Rk</th><th class="num">Reg Rk</th>
+      {% for attr in visible_attrs %}
+      <th class="num" title="{{ attr }}">{{ attr[:3]|upper }}</th>
+      {% endfor %}
+      <th>Flag</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in board %}
+  <tr>
+    <td class="num rank">{{ p.rank }}</td>
+    <td {% if p.is_alpha %}style="color:var(--yellow);font-weight:bold"{% endif %}>{{ p.name }}</td>
+    <td>{{ p.position }}</td>
+    <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% elif p.scouted_stars <= 2 %}stat-bad{% endif %}">
+      {{ "&#9733;" * p.scouted_stars }}{{ "&#9734;" * (5 - p.scouted_stars) }}
+    </td>
+    <td>{{ p.hometown }}</td>
+    <td>{{ p.high_school }}</td>
+    <td class="num">{{ p.position_rank }}</td>
+    <td class="num">{{ p.regional_rank }}</td>
+    {% for attr in visible_attrs %}
+    <td class="num {% if p.visible_attributes.get(attr, 0) >= 90 %}stat-elite{% elif p.visible_attributes.get(attr, 0) >= 80 %}stat-good{% elif p.visible_attributes.get(attr, 0) < 60 %}stat-bad{% endif %}">
+      {{ p.visible_attributes.get(attr, "—") }}
+    </td>
+    {% endfor %}
+    <td>
+      {% if p.get("flag") == "BREAKOUT" %}<span class="tag" style="background:var(--green);color:#000">BREAKOUT</span>{% endif %}
+      {% if p.is_alpha %}<span class="tag" style="background:var(--yellow);color:#000">ALPHA</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice">No pipeline data available. Start a dynasty to generate HS recruiting classes.</div>
+{% endif %}
+
+{# ── Legend ── #}
+<div style="margin-top:16px;color:var(--fg-dim);font-size:11px;">
+  <p>&#9733; = scouted star rating (may not reflect true talent, especially for younger grades)</p>
+  <p>Attribute values include scouting noise — younger grades have less accurate evaluations.</p>
+  <p><span style="color:var(--yellow)">ALPHA</span> = scouted 4-5&#9733; or verified elite talent &middot;
+     <span style="color:var(--green)">BREAKOUT</span> = talent emerging beyond initial evaluation</p>
+</div>
+{% endblock %}
