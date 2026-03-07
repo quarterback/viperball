@@ -462,8 +462,8 @@ async def _render_season_play(state: UserState, shared: dict):
             with ui.row().classes("gap-3 items-center"):
                 week_btn = ui.button(week_label, icon="play_arrow").props("color=primary")
                 rest_btn = ui.button("Sim Rest of Season", icon="fast_forward").props("color=secondary outlined")
-                engine_switch = ui.switch("Full Engine", value=state.full_engine).props("dense").tooltip(
-                    "Full engine: detailed play-by-play & box scores (slower). Off = fast sim."
+                engine_switch = ui.switch("Full Engine (Box Scores)", value=state.full_engine).props("dense").tooltip(
+                    "Generate detailed play-by-play & drive summaries for all games. Off = fast sim (stats only, no play-by-play)."
                 )
 
                 def _toggle_engine(e):

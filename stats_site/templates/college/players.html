@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-header">
   <h1>PLAYER STATS</h1>
-  <div class="subtitle">{{ season_name }} &middot; {{ players|length }} players{% if conference %} &middot; {{ conference }}{% endif %}</div>
+  <div class="subtitle">{{ season_name }} &middot; {{ players|length }} players{% if conference %} &middot; {{ conference }}{% endif %}{% if team %} &middot; {{ team }}{% endif %}</div>
 </div>
 
 <div class="tabs">
@@ -25,20 +25,61 @@
   <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
 </div>
 
-{# ── Sort + Filter Controls ── #}
-<div style="margin-bottom: 12px; font-size: 11px;">
-  <strong>Sort:</strong>
-  {% set sorts = [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('ypc', 'YPC'), ('tackles', 'Tackles'), ('sacks', 'Sacks'), ('kick_pct', 'Kick%'), ('kick_pass_yards', 'KP Yds'), ('fumbles', 'Fumbles')] %}
-  {% for key, label in sorts %}
-  {% if not loop.first %}&middot;{% endif %}
-  <a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+{# ── Sort Controls ── #}
+{% macro sort_link(key, label) %}
+{% if not loop.first %}&middot;{% endif %}
+<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+{% endmacro %}
+
+<div style="margin-bottom:6px;font-size:11px;">
+  <strong style="color:var(--fg-dim)">Offense:</strong>
+  {% set sorts = [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('rush_carries', 'Carries'), ('rushing_tds', 'Rush TD'), ('ypc', 'YPC'), ('fumbles', 'Fumbles')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+</div>
+<div style="margin-bottom:6px;font-size:11px;">
+  <strong style="color:var(--fg-dim)">Lateral:</strong>
+  {% set sorts = [('laterals', 'Thrown'), ('lateral_rec', 'Rec'), ('lateral_tds', 'TDs')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+  &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Kick Pass:</strong>
+  {% set sorts = [('kick_pass_yards', 'KP Yds'), ('kp_tds', 'KP TD'), ('kp_pct', 'KP%'), ('kp_ints', 'KP INT'), ('kp_rec', 'KP Rec')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+  &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Kicking:</strong>
+  <a href="/stats/college/{{ session_id }}/players?sort=kick_pct{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == 'kick_pct' %}style="color:var(--accent);font-weight:bold"{% endif %}>Kick%</a>
+</div>
+<div style="margin-bottom:6px;font-size:11px;">
+  <strong style="color:var(--fg-dim)">Defense:</strong>
+  {% set sorts = [('tackles', 'Tackles'), ('tfl', 'TFL'), ('sacks', 'Sacks'), ('hurries', 'Hurries'), ('def_ints', 'INTs')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+  &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Special Teams:</strong>
+  {% set sorts = [('kr_yds', 'KR Yds'), ('pr_yds', 'PR Yds'), ('st_tackles', 'ST Tkl')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+</div>
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong style="color:var(--fg-dim)">Keeper:</strong>
+  {% set sorts = [('bells', 'Bells'), ('deflections', 'Deflections')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+  &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Line:</strong>
+  {% set sorts = [('blocks', 'Blocks'), ('pancakes', 'Pancakes')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+  &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Impact:</strong>
+  <a href="/stats/college/{{ session_id }}/players?sort=wpa{% if conference %}&conference={{ conference }}{% endif %}{% if team %}&team={{ team }}{% endif %}" {% if sort == 'wpa' %}style="color:var(--accent);font-weight:bold"{% endif %}>WPA</a>
+</div>
+
+{# ── Conference Filter ── #}
+<div style="margin-bottom:6px;font-size:11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}{% if team %}&team={{ team }}{% endif %}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}&conference={{ c }}{% if team %}&team={{ team }}{% endif %}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
   {% endfor %}
 </div>
-<div style="margin-bottom: 12px; font-size: 11px;">
-  <strong>Conference:</strong>
-  <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
-  {% for c in conferences %}
-  &middot; <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
+
+{# ── Team Filter ── #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Team:</strong>
+  <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}{% if conference %}&conference={{ conference }}{% endif %}" {% if not team %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for t in teams %}
+  &middot; <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}{% if conference %}&conference={{ conference }}{% endif %}&team={{ t }}" {% if team == t %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ t[:18] }}</a>
   {% endfor %}
 </div>
 
@@ -50,19 +91,24 @@
       <th>Team</th>
       <th>Pos</th>
       <th class="num">GP</th>
-      <th class="num">TCH</th>
-      <th class="num">YDS</th>
-      <th class="num">Y/T</th>
-      <th class="num">TD</th>
-      <th class="num">FUM</th>
-      <th class="num">LAT</th>
-      <th class="num">KA</th>
-      <th class="num">KM</th>
-      <th class="num">K%</th>
-      <th class="num">TKL</th>
-      <th class="num">TFL</th>
-      <th class="num">SCK</th>
-      <th class="num">RTN</th>
+      <th class="num" {% if sort == 'touches' %}style="color:var(--accent)"{% endif %}>TCH</th>
+      <th class="num" {% if sort == 'yards' %}style="color:var(--accent)"{% endif %}>YDS</th>
+      <th class="num" {% if sort == 'ypc' %}style="color:var(--accent)"{% endif %}>Y/T</th>
+      <th class="num" {% if sort == 'tds' %}style="color:var(--accent)"{% endif %}>TD</th>
+      <th class="num" {% if sort == 'rushing_tds' %}style="color:var(--accent)"{% endif %}>RTD</th>
+      <th class="num" {% if sort == 'fumbles' %}style="color:var(--accent)"{% endif %}>FUM</th>
+      <th class="num" {% if sort == 'laterals' %}style="color:var(--accent)"{% endif %}>LAT</th>
+      <th class="num" {% if sort in ('kick_pct',) %}style="color:var(--accent)"{% endif %}>K%</th>
+      <th class="num" {% if sort in ('kick_pass_yards', 'kp_pct') %}style="color:var(--accent)"{% endif %}>KP</th>
+      <th class="num" {% if sort == 'tackles' %}style="color:var(--accent)"{% endif %}>TKL</th>
+      <th class="num" {% if sort == 'tfl' %}style="color:var(--accent)"{% endif %}>TFL</th>
+      <th class="num" {% if sort == 'sacks' %}style="color:var(--accent)"{% endif %}>SCK</th>
+      <th class="num" {% if sort == 'hurries' %}style="color:var(--accent)"{% endif %}>HUR</th>
+      <th class="num" {% if sort in ('kr_yds', 'pr_yds') %}style="color:var(--accent)"{% endif %}>RTN</th>
+      <th class="num" {% if sort == 'bells' %}style="color:var(--accent)"{% endif %}>BEL</th>
+      <th class="num" {% if sort == 'blocks' %}style="color:var(--accent)"{% endif %}>BLK</th>
+      <th class="num" {% if sort == 'pancakes' %}style="color:var(--accent)"{% endif %}>PAN</th>
+      <th class="num" {% if sort == 'wpa' %}style="color:var(--accent)"{% endif %}>WPA</th>
     </tr>
   </thead>
   <tbody>
@@ -77,17 +123,24 @@
     <td class="num {% if p.yards >= 500 %}stat-elite{% elif p.yards >= 200 %}stat-good{% endif %}">{{ p.yards }}</td>
     <td class="num">{{ p.yards_per_touch }}</td>
     <td class="num {% if p.tds >= 5 %}stat-elite{% elif p.tds >= 2 %}stat-good{% endif %}">{{ p.tds }}</td>
+    <td class="num">{{ p.rushing_tds }}</td>
     <td class="num {% if p.fumbles > 3 %}stat-bad{% endif %}">{{ p.fumbles }}</td>
     <td class="num">{{ p.laterals_thrown }}</td>
-    <td class="num">{{ p.kick_att }}</td>
-    <td class="num">{{ p.kick_made }}</td>
     <td class="num {% if p.kick_pct >= 80 %}stat-elite{% elif p.kick_pct >= 60 %}stat-good{% elif p.kick_att > 0 and p.kick_pct < 40 %}stat-bad{% endif %}">
       {% if p.kick_att > 0 %}{{ p.kick_pct }}%{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">
+      {% if p.kick_passes_thrown > 0 %}{{ p.kick_passes_completed }}/{{ p.kick_passes_thrown }}{% elif p.kick_pass_receptions > 0 %}{{ p.kick_pass_receptions }}r{% else %}&mdash;{% endif %}
     </td>
     <td class="num">{{ p.tackles }}</td>
     <td class="num">{{ p.tfl }}</td>
     <td class="num {% if p.sacks >= 5 %}stat-elite{% endif %}">{{ p.sacks }}</td>
+    <td class="num">{{ p.hurries }}</td>
     <td class="num">{{ p.total_return_yards }}</td>
+    <td class="num">{{ p.keeper_bells }}</td>
+    <td class="num">{{ p.blocks }}</td>
+    <td class="num">{{ p.pancakes }}</td>
+    <td class="num {% if p.wpa >= 2 %}stat-elite{% elif p.wpa >= 0.5 %}stat-good{% elif p.wpa < -1 %}stat-bad{% endif %}">{{ p.wpa }}</td>
   </tr>
   {% endfor %}
   </tbody>

@@ -626,7 +626,6 @@ def _fill_dashboard(containers, dynasty):
                 )
 
             elif phase == "in_season":
-                _engine_opts = {"use_fast_sim": True}
 
                 async def _sim_week():
                     d = _get_dynasty()
@@ -636,7 +635,7 @@ def _fill_dashboard(containers, dynasty):
                     # Apply depth-chart starter overrides before each sim
                     if hasattr(d, 'inject_forced_starters'):
                         d.inject_forced_starters(s)
-                    results = s.sim_week_all_tiers(use_fast_sim=_engine_opts["use_fast_sim"])
+                    results = s.sim_week_all_tiers(use_fast_sim=not state.full_engine)
 
                     owner_tier = d.tier_assignments.get(d.owner.club_key, 1)
                     ts = s.tier_seasons.get(owner_tier)
@@ -675,7 +674,7 @@ def _fill_dashboard(containers, dynasty):
                     ):
                         if hasattr(d, 'inject_forced_starters'):
                             d.inject_forced_starters(s)
-                        s.sim_week_all_tiers(use_fast_sim=True)
+                        s.sim_week_all_tiers(use_fast_sim=not state.full_engine)
 
                     _set_phase("playoffs")
                     s.start_playoffs_all()
@@ -689,11 +688,14 @@ def _fill_dashboard(containers, dynasty):
 
                 ui.button("Sim Week", icon="skip_next", on_click=_sim_week).classes("bg-green-600 text-white")
                 ui.button("Sim Rest of Season", icon="fast_forward", on_click=_sim_rest).classes("bg-blue-600 text-white")
-                ui.toggle(
-                    {True: "Fast Sim", False: "Full Engine"},
-                    value=True,
-                    on_change=lambda e: _engine_opts.update({"use_fast_sim": e.value}),
-                ).props("dense no-caps").classes("ml-2")
+                engine_switch = ui.switch("Full Engine (Box Scores)", value=state.full_engine).props("dense").tooltip(
+                    "Generate detailed play-by-play & drive summaries for all games. Off = fast sim (stats only, no play-by-play)."
+                )
+
+                def _toggle_engine(e):
+                    state.full_engine = e.value
+
+                engine_switch.on_value_change(_toggle_engine)
 
             elif phase == "playoffs":
                 async def _advance_playoffs():

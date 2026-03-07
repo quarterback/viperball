@@ -818,8 +818,8 @@ def _render_advance(state, next_week: int, refresh_fn):
             advance_btn = ui.button(
                 f"Simulate Week {next_week}", on_click=_advance, icon="fast_forward",
             ).props("color=amber text-color=black size=lg").classes("flex-grow font-bold")
-            engine_switch = ui.switch("Full Engine", value=state.full_engine).props("dense").tooltip(
-                "Full engine: detailed play-by-play & box scores (slower)"
+            engine_switch = ui.switch("Full Engine (Box Scores)", value=state.full_engine).props("dense").tooltip(
+                "Generate detailed play-by-play & drive summaries for all games. Off = fast sim (stats only, no play-by-play)."
             )
 
             def _toggle_engine(e):
