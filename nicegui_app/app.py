@@ -114,7 +114,14 @@ APP_CSS = """
 """
 
 
+_shared_cache: dict | None = None
+
+
 def _load_shared_data() -> dict:
+    global _shared_cache
+    if _shared_cache is not None:
+        return _shared_cache
+
     try:
         teams = get_available_teams()
     except Exception:
@@ -127,7 +134,7 @@ def _load_shared_data() -> dict:
     st_schemes = {k: {"label": v.get("label", k), "description": v.get("description", "")}
                   for k, v in ST_SCHEMES.items()}
 
-    return {
+    _shared_cache = {
         "teams": teams,
         "styles": styles,
         "team_names": {t["key"]: t["name"] for t in teams},
@@ -139,6 +146,7 @@ def _load_shared_data() -> dict:
         "OFFENSE_TOOLTIPS": OFFENSE_TOOLTIPS,
         "DEFENSE_TOOLTIPS": DEFENSE_TOOLTIPS,
     }
+    return _shared_cache
 
 
 # ─── Navigation Structure ───────────────────────────────────────

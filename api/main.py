@@ -72,19 +72,26 @@ from engine.db import (
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as StarletteRequest
 from starlette.responses import RedirectResponse as StarletteRedirect
 
 
-class DomainRedirectMiddleware(BaseHTTPMiddleware):
+# Pure ASGI middleware instead of BaseHTTPMiddleware — avoids interfering
+# with WebSocket upgrade requests (known Starlette BaseHTTPMiddleware issue).
+class DomainRedirectMiddleware:
     """Redirect viperball.xyz root to the stats site."""
 
-    async def dispatch(self, request: StarletteRequest, call_next):
-        host = request.headers.get("host", "").split(":")[0]
-        if host == "viperball.xyz" and request.url.path == "/":
-            return StarletteRedirect("/stats/", status_code=302)
-        return await call_next(request)
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            host = headers.get(b"host", b"").decode().split(":")[0]
+            if host == "viperball.xyz" and scope["path"] == "/":
+                response = StarletteRedirect("/stats/", status_code=302)
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
 
 
 app.add_middleware(DomainRedirectMiddleware)
