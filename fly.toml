@@ -35,5 +35,5 @@ primary_region = 'ams'
   path = "/api/health"
 
 [[vm]]
-  size = "performance-cpu-16x"
+  size = "performance-16x"
   memory = "106gb"
