@@ -9,7 +9,7 @@ primary_region = 'ams'
   dockerfile = "Dockerfile"
 
 [deploy]
-  strategy = "rolling"
+  strategy = "immediate"
 
 [http_service]
   internal_port = 8080
