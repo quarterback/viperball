@@ -2253,16 +2253,16 @@ def _require_offseason(session: dict) -> dict:
     return offseason
 
 
-def _serialize_portal_entry(entry: PortalEntry) -> dict:
-    from engine.transfer_portal import PortalEntry
+def _serialize_portal_entry(entry: "PortalEntry") -> dict:
+    from engine.transfer_portal import PortalEntry  # noqa: F811
     d = entry.get_summary()
     d["position_full"] = d.get("position", "")
     d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
     return d
 
 
-def _serialize_recruit(recruit: Recruit) -> dict:
-    from engine.recruiting import Recruit
+def _serialize_recruit(recruit: "Recruit") -> dict:
+    from engine.recruiting import Recruit  # noqa: F811
     d = recruit.get_visible_attrs()
     d["position_full"] = d.get("position", "")
     d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
@@ -3060,7 +3060,7 @@ class DQDonateRequest(BaseModel):
     target_team: str = ""
 
 
-def _require_dq(session: dict) -> DraftyQueenzManager:
+def _require_dq(session: dict) -> "DraftyQueenzManager":
     from engine.draftyqueenz import DraftyQueenzManager
     mgr = session.get("dq_manager")
     if mgr is None:
@@ -3661,7 +3661,7 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
     }
 
 
-def _get_league_config(league: str) -> ProLeagueConfig:
+def _get_league_config(league: str) -> "ProLeagueConfig":
     from engine.pro_league import ProLeagueConfig
     config = _get_league_configs().get(league.lower())
     if not config:
@@ -3669,7 +3669,7 @@ def _get_league_config(league: str) -> ProLeagueConfig:
     return config
 
 
-def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
+def _get_pro_session(league: str, session_id: str) -> "ProLeagueSeason":
     from engine.db import load_pro_league as db_load_pro_league
     from engine.pro_league import ProLeagueSeason
     key = f"{league.lower()}_{session_id}"

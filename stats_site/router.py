@@ -69,7 +69,7 @@ def _get_api():
         _get_session, _require_season,
         _serialize_standings, _serialize_game, _serialize_team_record,
         _serialize_player, _serialize_poll,
-        LEAGUE_CONFIGS,
+        _get_league_configs,
     )
     return {
         "sessions": sessions,
@@ -82,7 +82,7 @@ def _get_api():
         "serialize_team_record": _serialize_team_record,
         "serialize_player": _serialize_player,
         "serialize_poll": _serialize_poll,
-        "league_configs": LEAGUE_CONFIGS,
+        "league_configs": _get_league_configs(),
     }
 
 
