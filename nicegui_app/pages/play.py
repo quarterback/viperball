@@ -468,12 +468,15 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
     coach_info = dyn_status.get("coach", {})
     coach_team = coach_info.get("team", "")
     seasons_played = dyn_status.get("seasons_played", 0)
+    history_years = dyn_status.get("history_years", 0)
 
     ui.label(f"{dynasty_name}").classes("text-2xl font-bold text-slate-800")
 
     with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
         metric_card("Year", str(current_year))
-        metric_card("Seasons Played", str(seasons_played))
+        metric_card("Seasons Coached", str(seasons_played))
+        if history_years > 0:
+            metric_card("Program History", f"{history_years} yrs")
         metric_card("Team", coach_team)
 
     ui.label("Start Next Season").classes("text-xl font-bold text-slate-700 mt-2")

@@ -302,13 +302,17 @@ def render_dynasty_mode(state: UserState, shared: dict):
             notify_error("Please select a team")
             return
 
-        if not state.session_id:
-            try:
-                resp = await run.io_bound(api_client.create_session)
-                state.session_id = resp["session_id"]
-            except api_client.APIError as e:
-                notify_error(f"Failed to create session: {e.detail}")
-                return
+        # Always create a fresh session for a new dynasty so stale cookie
+        # session IDs (e.g. after server restart) don't cause silent failures.
+        try:
+            resp = await run.io_bound(api_client.create_session)
+            state.session_id = resp["session_id"]
+        except api_client.APIError as e:
+            notify_error(f"Failed to create session: {e.detail}")
+            return
+        except Exception as e:
+            notify_error(f"Failed to create session: {e}")
+            return
 
         creating_spinner.classes(remove="hidden")
 
@@ -319,9 +323,9 @@ def render_dynasty_mode(state: UserState, shared: dict):
                 dynasty_name=dynasty_name.value,
                 coach_name=coach_name.value,
                 coach_team=selected_team,
-                starting_year=int(start_year.value),
-                num_conferences=int(num_conferences.value),
-                history_years=int(history_years.value),
+                starting_year=int(start_year.value or 2026),
+                num_conferences=int(num_conferences.value or 10),
+                history_years=int(history_years.value or 0),
                 program_archetype=arch_select.value,
             )
             state.mode = "dynasty"
@@ -332,5 +336,8 @@ def render_dynasty_mode(state: UserState, shared: dict):
         except api_client.APIError as e:
             creating_spinner.classes(add="hidden")
             notify_error(f"Failed to create dynasty: {e.detail}")
+        except Exception as e:
+            creating_spinner.classes(add="hidden")
+            notify_error(f"Failed to create dynasty: {e}")
 
     ui.button("Create Dynasty", on_click=_create_dynasty, icon="emoji_events").props("color=primary size=lg")

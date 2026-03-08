@@ -419,6 +419,15 @@ def _serialize_dynasty_status(session: dict) -> dict:
             "champion": rec.get("champion", False),
         }
 
+    # Count history years from team season_records (years before current_year
+    # that exist in any team's history but aren't in dynasty.seasons)
+    history_years = 0
+    if dynasty.team_histories:
+        sample_team = next(iter(dynasty.team_histories.values()))
+        history_years = sum(
+            1 for yr in sample_team.season_records if yr < dynasty.current_year and yr not in dynasty.seasons
+        )
+
     return {
         "dynasty_name": dynasty.dynasty_name,
         "current_year": dynasty.current_year,
@@ -436,6 +445,7 @@ def _serialize_dynasty_status(session: dict) -> dict:
         },
         "team_count": team_count,
         "seasons_played": seasons_played,
+        "history_years": history_years,
         "phase": session.get("phase", "setup"),
         "conferences": conf_dict,
     }
