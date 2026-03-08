@@ -22,16 +22,6 @@ from nicegui import ui  # noqa: E402
 logger.info("Registering UI routes...")
 import nicegui_app.app  # noqa: E402, F401 — registers @ui.page routes
 
-# Mount NiceGUI onto the FastAPI app (no host/port — uvicorn handles that)
-logger.info("Mounting NiceGUI onto FastAPI...")
-ui.run_with(
-    fastapi_app,
-    title="Viperball Sandbox",
-    storage_secret="viperball-sandbox-secret",
-    reconnect_timeout=43200.0,
-)
-logger.info("Viperball ready.")
-
 
 @fastapi_app.on_event("startup")
 async def _prewarm_shared_data():
@@ -45,6 +35,17 @@ async def _prewarm_shared_data():
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _load_shared_data)
     logger.info("Shared data cache pre-warmed.")
+
+
+# Mount NiceGUI onto the FastAPI app (no host/port — uvicorn handles that)
+logger.info("Mounting NiceGUI onto FastAPI...")
+ui.run_with(
+    fastapi_app,
+    title="Viperball Sandbox",
+    storage_secret="viperball-sandbox-secret",
+    reconnect_timeout=43200.0,
+)
+logger.info("Viperball ready.")
 
 
 if __name__ == "__main__":
