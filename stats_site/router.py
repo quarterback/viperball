@@ -432,7 +432,7 @@ def college_polls(request: Request, session_id: str, week: int = 0):
 
 
 @router.get("/college/{session_id}/team/{team_name}", response_class=HTMLResponse)
-def college_team(request: Request, session_id: str, team_name: str):
+def college_team(request: Request, session_id: str, team_name: str, sort: str = "yards"):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
@@ -662,12 +662,75 @@ def college_team(request: Request, session_id: str, team_name: str):
         r["kp_pct"] = round(r["kick_passes_completed"] / max(1, r["kick_passes_thrown"]) * 100, 1)
         r["wpa"] = round(r["wpa"], 2)
 
+    # Build merged roster: player info + season stats, then sort
+    sorted_roster = []
+    for p_ser in players:
+        ps = player_season_stats.get(p_ser["name"], {})
+        entry = {**p_ser, **ps}
+        entry.setdefault("games_played", 0)
+        entry.setdefault("yards", 0)
+        entry.setdefault("touches", 0)
+        entry.setdefault("yards_per_touch", 0)
+        entry.setdefault("tds", 0)
+        entry.setdefault("rushing_tds", 0)
+        entry.setdefault("fumbles", 0)
+        entry.setdefault("laterals_thrown", 0)
+        entry.setdefault("kick_att", 0)
+        entry.setdefault("kick_made", 0)
+        entry.setdefault("kick_pct", 0)
+        entry.setdefault("kick_passes_thrown", 0)
+        entry.setdefault("kick_passes_completed", 0)
+        entry.setdefault("kick_pass_receptions", 0)
+        entry.setdefault("tackles", 0)
+        entry.setdefault("tfl", 0)
+        entry.setdefault("sacks", 0)
+        entry.setdefault("hurries", 0)
+        entry.setdefault("total_return_yards", 0)
+        entry.setdefault("keeper_bells", 0)
+        entry.setdefault("blocks", 0)
+        entry.setdefault("pancakes", 0)
+        entry.setdefault("wpa", 0)
+        entry.setdefault("kick_pass_yards", 0)
+        entry.setdefault("kick_pass_tds", 0)
+        entry.setdefault("kick_pass_interceptions", 0)
+        entry.setdefault("kick_pass_ints", 0)
+        entry.setdefault("kick_return_yards", 0)
+        entry.setdefault("punt_return_yards", 0)
+        entry.setdefault("lateral_receptions", 0)
+        entry.setdefault("lateral_tds", 0)
+        entry.setdefault("rush_carries", 0)
+        entry.setdefault("st_tackles", 0)
+        entry.setdefault("kick_deflections", 0)
+        entry.setdefault("kp_pct", 0)
+        sorted_roster.append(entry)
+
+    roster_sorts = {
+        "yards": "yards", "tds": "tds", "touches": "touches",
+        "ypc": "yards_per_touch", "rush_carries": "rush_carries",
+        "rushing_tds": "rushing_tds", "fumbles": "fumbles",
+        "laterals": "laterals_thrown", "lateral_rec": "lateral_receptions",
+        "lateral_tds": "lateral_tds",
+        "kick_pass_yards": "kick_pass_yards", "kp_tds": "kick_pass_tds",
+        "kp_pct": "kp_pct", "kp_ints": "kick_pass_interceptions",
+        "kp_rec": "kick_pass_receptions",
+        "kick_pct": "kick_pct",
+        "tackles": "tackles", "tfl": "tfl", "sacks": "sacks",
+        "hurries": "hurries", "def_ints": "kick_pass_ints",
+        "kr_yds": "kick_return_yards", "pr_yds": "punt_return_yards",
+        "st_tackles": "st_tackles",
+        "bells": "keeper_bells", "deflections": "kick_deflections",
+        "blocks": "blocks", "pancakes": "pancakes",
+        "wpa": "wpa",
+    }
+    sort_key = roster_sorts.get(sort, "yards")
+    sorted_roster.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
         team_stats=team_season_stats,
-        player_season_stats=player_season_stats,
+        sorted_roster=sorted_roster, sort=sort,
     ))
 
 
