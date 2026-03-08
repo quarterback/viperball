@@ -25,9 +25,6 @@ from ui import api_client
 from nicegui_app.state import UserState
 from nicegui_app.helpers import OFFENSE_TOOLTIPS, DEFENSE_TOOLTIPS
 
-from engine import get_available_teams, OFFENSE_STYLES
-from engine.game_engine import DEFENSE_STYLES, ST_SCHEMES
-
 # ─── Serve P5.js sketch files via NiceGUI's static file support ───
 _sketches_dir = Path(__file__).parent / "sketches"
 if _sketches_dir.is_dir():
@@ -121,6 +118,9 @@ def _load_shared_data() -> dict:
     global _shared_cache
     if _shared_cache is not None:
         return _shared_cache
+
+    from engine import get_available_teams, OFFENSE_STYLES
+    from engine.game_engine import DEFENSE_STYLES, ST_SCHEMES
 
     try:
         teams = get_available_teams()
