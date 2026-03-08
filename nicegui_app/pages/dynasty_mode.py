@@ -27,55 +27,57 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__
 TEAMS_DIR = os.path.join(DATA_DIR, "teams")
 
 
-def _render_saved_dynasties(state: UserState, shared: dict):
-    """Show saved dynasties that can be resumed."""
+async def _render_saved_dynasties(state: UserState, container):
+    """Load saved dynasties asynchronously and render resume cards."""
     try:
-        resp = api_client.list_saved_dynasties()
+        resp = await run.io_bound(api_client.list_saved_dynasties)
         dynasties = resp.get("dynasties", [])
     except api_client.APIError:
+        dynasties = []
+    except Exception:
         dynasties = []
 
     if not dynasties:
         return
 
-    ui.label("Saved Dynasties").classes("text-lg font-semibold text-slate-700 mt-2")
+    with container:
+        ui.label("Saved Dynasties").classes("text-lg font-semibold text-slate-700 mt-2")
 
-    for d in dynasties:
-        save_key = d.get("save_key", "")
-        label = d.get("label", "Dynasty")
-        updated = d.get("updated_at", "")
+        for d in dynasties:
+            save_key = d.get("save_key", "")
+            label = d.get("label", "Dynasty")
 
-        with ui.card().classes("w-full p-3 mb-2"):
-            with ui.row().classes("w-full items-center justify-between"):
-                with ui.column().classes("gap-0"):
-                    ui.label(label).classes("font-bold text-slate-700")
-                    ui.label(f"Key: {save_key}").classes("text-xs text-slate-400")
-                with ui.row().classes("gap-2"):
-                    async def _load(sk=save_key):
-                        # Always create a fresh session so stale cookie
-                        # session IDs don't cause load failures.
-                        try:
-                            resp = await run.io_bound(api_client.create_session)
-                            state.session_id = resp["session_id"]
-                        except api_client.APIError as e:
-                            notify_error(f"Failed to create session: {e.detail}")
-                            return
-                        except Exception as e:
-                            notify_error(f"Failed to create session: {e}")
-                            return
-                        try:
-                            await run.io_bound(
-                                api_client.load_saved_dynasty, state.session_id, sk,
-                            )
-                            state.mode = "dynasty"
-                            notify_success(f"Loaded dynasty: {label}")
-                            ui.navigate.to("/")
-                        except api_client.APIError as e:
-                            notify_error(f"Failed to load dynasty: {e.detail}")
-                        except Exception as e:
-                            notify_error(f"Failed to load dynasty: {e}")
+            with ui.card().classes("w-full p-3 mb-2"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    with ui.column().classes("gap-0"):
+                        ui.label(label).classes("font-bold text-slate-700")
+                        ui.label(f"Key: {save_key}").classes("text-xs text-slate-400")
+                    with ui.row().classes("gap-2"):
+                        async def _load(sk=save_key, lbl=label):
+                            # Always create a fresh session so stale cookie
+                            # session IDs don't cause load failures.
+                            try:
+                                resp = await run.io_bound(api_client.create_session)
+                                state.session_id = resp["session_id"]
+                            except api_client.APIError as e:
+                                notify_error(f"Failed to create session: {e.detail}")
+                                return
+                            except Exception as e:
+                                notify_error(f"Failed to create session: {e}")
+                                return
+                            try:
+                                await run.io_bound(
+                                    api_client.load_saved_dynasty, state.session_id, sk,
+                                )
+                                state.mode = "dynasty"
+                                notify_success(f"Loaded dynasty: {lbl}")
+                                ui.navigate.to("/")
+                            except api_client.APIError as e:
+                                notify_error(f"Failed to load dynasty: {e.detail}")
+                            except Exception as e:
+                                notify_error(f"Failed to load dynasty: {e}")
 
-                    ui.button("Resume", on_click=_load, icon="play_arrow").props("color=primary size=sm")
+                        ui.button("Resume", on_click=_load, icon="play_arrow").props("color=primary size=sm")
 
 
 def render_dynasty_mode(state: UserState, shared: dict):
@@ -85,8 +87,9 @@ def render_dynasty_mode(state: UserState, shared: dict):
     ui.label("College Dynasty").classes("text-2xl font-bold text-slate-800")
     ui.label("Multi-season career mode with historical tracking, awards, and record books").classes("text-sm text-gray-500 mb-4")
 
-    # ── Load Saved Dynasty ──
-    _render_saved_dynasties(state, shared)
+    # ── Load Saved Dynasty (async to avoid deadlocking the shared event loop) ──
+    saved_container = ui.column().classes("w-full")
+    ui.timer(0.1, lambda: _render_saved_dynasties(state, saved_container), once=True)
 
     ui.separator().classes("my-4")
     ui.label("Create New Dynasty").classes("text-xl font-bold text-slate-700")
