@@ -245,12 +245,15 @@ async def _render_dynasty_dashboard(state: UserState, shared: dict, switch_fn, d
     coach = coach_info.get("name", "")
     team = coach_info.get("team", "")
     seasons_played = dyn_status.get("seasons_played", 0)
+    history_years = dyn_status.get("history_years", 0)
 
     ui.label(dynasty_name).classes("text-2xl font-bold text-slate-800")
 
     with ui.row().classes("w-full gap-3 flex-wrap mb-6"):
         metric_card("Year", str(current_year))
-        metric_card("Seasons", str(seasons_played))
+        metric_card("Seasons Coached", str(seasons_played))
+        if history_years > 0:
+            metric_card("Program History", f"{history_years} yrs")
         metric_card("Coach", coach)
         metric_card("Team", team)
 
