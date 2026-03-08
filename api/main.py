@@ -8,6 +8,9 @@ import os
 import uuid
 import time
 import random
+import asyncio
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from dataclasses import asdict
 from fastapi import FastAPI, HTTPException, Query
@@ -85,7 +88,15 @@ TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "te
 
 sessions: Dict[str, dict] = {}
 pro_sessions: dict = {}
+_pro_session_accessed: Dict[str, float] = {}
 wvl_sessions: Dict[str, dict] = {}  # session_id → {"season": WVLMultiTierSeason, "dynasty": WVLDynasty}
+
+SESSION_TTL_SECONDS = 4 * 3600   # 4 hours
+SESSION_CLEANUP_INTERVAL = 600   # check every 10 minutes
+MAX_SESSIONS = 50                # hard cap per session type
+
+_sim_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="sim")
+logger = logging.getLogger("viperball.api")
 
 _league_configs: dict | None = None
 
@@ -101,8 +112,49 @@ def _get_league_configs() -> dict:
 @app.get("/api/health")
 def health_check():
     """Health check endpoint for Fly.io deployment monitoring."""
+    import resource
     team_count = len(get_available_teams())
-    return {"status": "ok", "teams": team_count}
+    mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return {
+        "status": "ok",
+        "teams": team_count,
+        "sessions": len(sessions),
+        "pro_sessions": len(pro_sessions),
+        "wvl_sessions": len(wvl_sessions),
+        "memory_mb": round(mem_kb / 1024, 1),
+    }
+
+
+async def _session_cleanup_loop():
+    """Periodically evict sessions that have not been accessed within the TTL."""
+    while True:
+        await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+        now = time.time()
+        # CVL sessions
+        expired = [sid for sid, s in sessions.items()
+                   if now - s.get("last_accessed", s.get("created_at", 0)) > SESSION_TTL_SECONDS]
+        for sid in expired:
+            del sessions[sid]
+        # Pro sessions
+        expired_pro = [key for key, ts in _pro_session_accessed.items()
+                       if now - ts > SESSION_TTL_SECONDS]
+        for key in expired_pro:
+            pro_sessions.pop(key, None)
+            _pro_session_accessed.pop(key, None)
+        # WVL sessions
+        expired_wvl = [sid for sid, s in wvl_sessions.items()
+                       if now - s.get("last_accessed", s.get("created_at", 0)) > SESSION_TTL_SECONDS]
+        for sid in expired_wvl:
+            del wvl_sessions[sid]
+        total = len(expired) + len(expired_pro) + len(expired_wvl)
+        if total:
+            logger.info("Session cleanup: evicted %d cvl, %d pro, %d wvl",
+                        len(expired), len(expired_pro), len(expired_wvl))
+
+
+@app.on_event("startup")
+async def _start_session_cleanup():
+    asyncio.create_task(_session_cleanup_loop())
 
 
 class SimulateRequest(BaseModel):
@@ -246,6 +298,7 @@ def _load_team(key: str):
 def _get_session(session_id: str) -> dict:
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="Session not found")
+    sessions[session_id]["last_accessed"] = time.time()
     return sessions[session_id]
 
 
@@ -610,24 +663,30 @@ def bowl_tiers():
 
 
 @app.post("/simulate")
-def simulate(req: SimulateRequest):
+async def simulate(req: SimulateRequest):
     home_team = _load_team(req.home)
     away_team = _load_team(req.away)
     engine = ViperballEngine(home_team, away_team, seed=req.seed, style_overrides=req.styles, weather=req.weather)
-    result = engine.simulate_game()
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(_sim_executor, engine.simulate_game)
     return result
 
 
 @app.post("/simulate_many")
-def simulate_many(req: SimulateManyRequest):
-    results = []
-    for i in range(req.count):
-        home_team = _load_team(req.home)
-        away_team = _load_team(req.away)
-        game_seed = (req.seed + i) if req.seed is not None else None
-        engine = ViperballEngine(home_team, away_team, seed=game_seed, style_overrides=req.styles, weather=req.weather)
-        result = engine.simulate_game()
-        results.append(result)
+async def simulate_many(req: SimulateManyRequest):
+    def _do_sim():
+        results = []
+        for i in range(req.count):
+            home_team = _load_team(req.home)
+            away_team = _load_team(req.away)
+            game_seed = (req.seed + i) if req.seed is not None else None
+            engine = ViperballEngine(home_team, away_team, seed=game_seed, style_overrides=req.styles, weather=req.weather)
+            result = engine.simulate_game()
+            results.append(result)
+        return results
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(_sim_executor, _do_sim)
 
     home_scores = [r["final_score"]["home"]["score"] for r in results]
     away_scores = [r["final_score"]["away"]["score"] for r in results]
@@ -689,6 +748,12 @@ def debug_play(req: DebugPlayRequest):
 
 @app.post("/sessions")
 def create_session():
+    # Evict oldest session if at capacity
+    if len(sessions) >= MAX_SESSIONS:
+        oldest_sid = min(sessions, key=lambda s: sessions[s].get("last_accessed", sessions[s].get("created_at", 0)))
+        del sessions[oldest_sid]
+        logger.info("Evicted oldest session %s (cap=%d)", oldest_sid, MAX_SESSIONS)
+
     session_id = str(uuid.uuid4())
     now = time.time()
     sessions[session_id] = {
@@ -699,6 +764,7 @@ def create_session():
         "phase": "setup",
         "config": {},
         "created_at": now,
+        "last_accessed": now,
     }
     return {"session_id": session_id, "created_at": now}
 
@@ -850,7 +916,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
 
 
 @app.post("/sessions/{session_id}/season/simulate-week")
-def simulate_week(session_id: str, req: SimulateWeekRequest):
+async def simulate_week(session_id: str, req: SimulateWeekRequest):
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -860,8 +926,12 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
     week = req.week
     dq_mgr = session.get("dq_manager")
     dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
-    games = season.simulate_week(week=week, dq_team_boosts=dq_boosts,
-                                  use_fast_sim=req.fast_sim)
+
+    loop = asyncio.get_event_loop()
+    games = await loop.run_in_executor(
+        _sim_executor,
+        lambda: season.simulate_week(week=week, dq_team_boosts=dq_boosts, use_fast_sim=req.fast_sim),
+    )
 
     if not games:
         return {"week": week, "games": [], "message": "No games to simulate"}
@@ -882,14 +952,18 @@ def simulate_week(session_id: str, req: SimulateWeekRequest):
 
 
 @app.post("/sessions/{session_id}/season/simulate-through")
-def simulate_through(session_id: str, req: SimulateThroughRequest):
+async def simulate_through(session_id: str, req: SimulateThroughRequest):
     session = _get_session(session_id)
     season = _require_season(session)
 
     if session["phase"] not in ("regular",):
         raise HTTPException(status_code=400, detail=f"Cannot simulate in phase '{session['phase']}'")
 
-    all_games = season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim)
+    loop = asyncio.get_event_loop()
+    all_games = await loop.run_in_executor(
+        _sim_executor,
+        lambda: season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim),
+    )
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -908,21 +982,25 @@ class SimulateRestRequest(BaseModel):
 
 
 @app.post("/sessions/{session_id}/season/simulate-rest")
-def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRestRequest()):
+async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRestRequest()):
     session = _get_session(session_id)
     season = _require_season(session)
 
     if session["phase"] not in ("regular",):
         raise HTTPException(status_code=400, detail=f"Cannot simulate rest in phase '{session['phase']}'")
 
-    games_before = sum(1 for g in season.schedule if g.completed)
-    season.simulate_season(generate_polls=True, use_fast_sim=req.fast_sim)
-    games_after = sum(1 for g in season.schedule if g.completed)
+    def _do_sim():
+        games_before = sum(1 for g in season.schedule if g.completed)
+        season.simulate_season(generate_polls=True, use_fast_sim=req.fast_sim)
+        return sum(1 for g in season.schedule if g.completed) - games_before
+
+    loop = asyncio.get_event_loop()
+    games_simulated = await loop.run_in_executor(_sim_executor, _do_sim)
 
     session["phase"] = "playoffs_pending"
 
     return {
-        "games_simulated": games_after - games_before,
+        "games_simulated": games_simulated,
         "total_games": len(season.schedule),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
@@ -931,7 +1009,7 @@ def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRestReques
 
 
 @app.post("/sessions/{session_id}/season/playoffs")
-def run_playoffs(session_id: str):
+async def run_playoffs(session_id: str):
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -943,7 +1021,11 @@ def run_playoffs(session_id: str):
     if effective_size < 4:
         raise HTTPException(status_code=400, detail="Not enough teams for playoffs")
 
-    season.simulate_playoff(num_teams=effective_size)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        _sim_executor,
+        lambda: season.simulate_playoff(num_teams=effective_size),
+    )
 
     bowl_count = session["config"].get("bowl_count", 4)
     if bowl_count > 0:
@@ -960,7 +1042,7 @@ def run_playoffs(session_id: str):
 
 
 @app.post("/sessions/{session_id}/season/bowls")
-def run_bowls(session_id: str):
+async def run_bowls(session_id: str):
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -969,7 +1051,12 @@ def run_bowls(session_id: str):
 
     bowl_count = session["config"].get("bowl_count", 4)
     playoff_size = session["config"].get("playoff_size", 8)
-    season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size)
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        _sim_executor,
+        lambda: season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size),
+    )
 
     session["phase"] = "complete"
 
@@ -3593,6 +3680,7 @@ def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
             pro_sessions[key] = season
         else:
             raise HTTPException(status_code=404, detail=f"Pro league session '{key}' not found")
+    _pro_session_accessed[key] = time.time()
     return pro_sessions[key]
 
 
@@ -3638,9 +3726,10 @@ def pro_league_schedule(league: str, session_id: str):
 
 
 @app.post("/api/pro/{league}/{session_id}/sim-week")
-def pro_league_sim_week(league: str, session_id: str):
+async def pro_league_sim_week(league: str, session_id: str):
     season = _get_pro_session(league, session_id)
-    result = season.sim_week()
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(_sim_executor, season.sim_week)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     _auto_save_pro(league, session_id)
@@ -3648,9 +3737,10 @@ def pro_league_sim_week(league: str, session_id: str):
 
 
 @app.post("/api/pro/{league}/{session_id}/sim-all")
-def pro_league_sim_all(league: str, session_id: str):
+async def pro_league_sim_all(league: str, session_id: str):
     season = _get_pro_session(league, session_id)
-    result = season.sim_all()
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(_sim_executor, season.sim_all)
     _auto_save_pro(league, session_id)
     return result
 
@@ -3665,12 +3755,13 @@ def pro_league_box_score(league: str, session_id: str, week: int, matchup: str):
 
 
 @app.post("/api/pro/{league}/{session_id}/playoffs")
-def pro_league_playoffs(league: str, session_id: str):
+async def pro_league_playoffs(league: str, session_id: str):
     season = _get_pro_session(league, session_id)
+    loop = asyncio.get_event_loop()
     if season.phase == "regular_season":
-        result = season.start_playoffs()
+        result = await loop.run_in_executor(_sim_executor, season.start_playoffs)
     else:
-        result = season.advance_playoffs()
+        result = await loop.run_in_executor(_sim_executor, season.advance_playoffs)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     _auto_save_pro(league, session_id)
@@ -3831,7 +3922,7 @@ def fiv_rankings():
 
 
 @app.post("/api/fiv/continental/{conf}/sim-all")
-def fiv_sim_continental(conf: str):
+async def fiv_sim_continental(conf: str):
     """Sim remaining games in a continental championship."""
     global _fiv_active_cycle, _fiv_active_cycle_data
 
@@ -3846,7 +3937,12 @@ def fiv_sim_continental(conf: str):
 
     from engine.fiv import run_continental_championship
     cc = _fiv_active_cycle.confederations_data[conf]
-    run_continental_championship(cc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        _sim_executor,
+        lambda: run_continental_championship(cc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings),
+    )
 
     _fiv_active_cycle.phase = "continental"
     save_fiv_cycle(_fiv_active_cycle)
@@ -3862,14 +3958,15 @@ def fiv_sim_continental(conf: str):
 
 
 @app.post("/api/fiv/continental/sim-all")
-def fiv_sim_all_continental():
+async def fiv_sim_all_continental():
     """Sim all 5 continental championships."""
     global _fiv_active_cycle, _fiv_active_cycle_data
 
     if _fiv_active_cycle is None:
         raise HTTPException(status_code=404, detail="No active FIV cycle")
 
-    run_continental_phase(_fiv_active_cycle)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(_sim_executor, lambda: run_continental_phase(_fiv_active_cycle))
     # Persist rankings after continental phase so Rankings tab works
     if _fiv_active_cycle.rankings:
         save_fiv_rankings(_fiv_active_cycle.rankings)
@@ -3918,14 +4015,15 @@ def fiv_continental_game(conf: str, match_id: str):
 
 
 @app.post("/api/fiv/playoff/sim-all")
-def fiv_sim_playoff():
+async def fiv_sim_playoff():
     """Sim the cross-confederation playoff."""
     global _fiv_active_cycle, _fiv_active_cycle_data
 
     if _fiv_active_cycle is None:
         raise HTTPException(status_code=404, detail="No active FIV cycle")
 
-    run_playoff_phase(_fiv_active_cycle)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(_sim_executor, lambda: run_playoff_phase(_fiv_active_cycle))
     # Persist rankings after playoff phase
     if _fiv_active_cycle.rankings:
         save_fiv_rankings(_fiv_active_cycle.rankings)
@@ -3975,7 +4073,7 @@ def fiv_world_cup_draw():
 
 
 @app.post("/api/fiv/worldcup/sim-stage")
-def fiv_sim_world_cup_stage():
+async def fiv_sim_world_cup_stage():
     """Sim the entire current World Cup stage (groups or knockout)."""
     global _fiv_active_cycle, _fiv_active_cycle_data
 
@@ -3988,11 +4086,18 @@ def fiv_sim_world_cup_stage():
 
     from engine.fiv import run_world_cup_group_stage, run_world_cup_knockout
 
+    loop = asyncio.get_event_loop()
     if wc.phase in ("draw", "not_started"):
-        run_world_cup_group_stage(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+        await loop.run_in_executor(
+            _sim_executor,
+            lambda: run_world_cup_group_stage(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings),
+        )
         _fiv_active_cycle.phase = "wc_groups"
     elif wc.phase == "groups":
-        run_world_cup_knockout(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings)
+        await loop.run_in_executor(
+            _sim_executor,
+            lambda: run_world_cup_knockout(wc, _fiv_active_cycle.national_teams, _fiv_active_cycle.rankings),
+        )
         _fiv_active_cycle.phase = "completed"
         if _fiv_active_cycle.rankings:
             _fiv_active_cycle.rankings.history.append({
@@ -4000,6 +4105,9 @@ def fiv_sim_world_cup_stage():
                 "snapshot": _fiv_active_cycle.rankings.snapshot(),
                 "champion": wc.champion,
             })
+            # Cap history to prevent unbounded growth
+            if len(_fiv_active_cycle.rankings.history) > 20:
+                _fiv_active_cycle.rankings.history = _fiv_active_cycle.rankings.history[-20:]
             save_fiv_rankings(_fiv_active_cycle.rankings)
 
     save_fiv_cycle(_fiv_active_cycle)
