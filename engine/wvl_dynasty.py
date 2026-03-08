@@ -383,6 +383,28 @@ class WVLDynasty:
             owner_strategy(tp, op)
 
         # 3. Free Agency
+        # Auto-consume CVL graduates from bridge DB if no explicit import
+        if import_data is None and import_path is None:
+            try:
+                from engine.db import load_graduating_pools, consume_graduating_pool
+                pools = load_graduating_pools(user_id="default")
+                if pools:
+                    # Merge all unconsumed pools into one import
+                    bridge_players = []
+                    for pool in pools:
+                        bridge_players.extend(pool.get("players", []))
+                        consume_graduating_pool(
+                            save_key=pool["save_key"], user_id="default",
+                        )
+                    if bridge_players:
+                        import_data = bridge_players
+                        summary["bridge_import"] = {
+                            "pools_consumed": len(pools),
+                            "players_imported": len(bridge_players),
+                        }
+            except Exception:
+                pass  # Bridge DB unavailable — fall through to synthetic
+
         if import_data:
             fa_pool = build_free_agent_pool_from_data(import_data)
         elif import_path:

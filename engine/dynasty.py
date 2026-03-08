@@ -753,6 +753,9 @@ class Dynasty:
             if redshirt_events:
                 self.development_history[f"{year}_redshirts"] = redshirt_events
 
+        # Publish graduates to CVL→WVL bridge (before roster maintenance removes them)
+        self._publish_graduates_to_bridge(season, year)
+
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))
 
@@ -763,6 +766,41 @@ class Dynasty:
 
         # Advance year
         self.current_year += 1
+
+    def _publish_graduates_to_bridge(self, season: Season, year: int) -> int:
+        """Auto-publish graduating seniors to the CVL→WVL bridge DB.
+
+        Called from advance_season() BEFORE roster maintenance removes them.
+        Silently does nothing if the DB is unavailable.
+
+        Returns number of graduates published (0 if bridge unavailable).
+        """
+        try:
+            from engine.player_card import player_to_card
+            from engine.db import save_graduating_pool
+
+            graduates = []
+            for team_name, team in season.teams.items():
+                for player in team.players:
+                    py = getattr(player, "year", "")
+                    if py in ("Senior", "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        d["graduating_from"] = team_name
+                        d["conference"] = self.get_team_conference(team_name)
+                        d["college_prestige"] = self.team_prestige.get(team_name, 50)
+                        graduates.append(d)
+
+            if graduates:
+                save_graduating_pool(
+                    dynasty_name=self.dynasty_name,
+                    player_cards=graduates,
+                    year=year,
+                )
+            return len(graduates)
+        except Exception:
+            # Bridge DB not available — silently skip
+            return 0
 
     def run_offseason(
         self,
@@ -1182,6 +1220,16 @@ class Dynasty:
                 new_9th_seed=year, size=pool_size, rng=rng,
             )
         result["hs_pipeline"] = self._hs_pipeline.pipeline_summary()
+
+        # Publish HS pipeline to bridge DB for WVL preview access
+        try:
+            from engine.db import save_hs_pipeline
+            save_hs_pipeline(
+                dynasty_name=self.dynasty_name,
+                pipeline_data=self._hs_pipeline.to_dict(),
+            )
+        except Exception:
+            pass  # Bridge DB unavailable — skip
 
         return result
 

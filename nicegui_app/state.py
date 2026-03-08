@@ -134,6 +134,24 @@ class UserState:
         self._store["dq_current_week"] = value
 
     @property
+    def wvl_active(self) -> bool:
+        """True when WVL owner mode is running alongside CVL dynasty mode."""
+        return self._store.get("wvl_active", False)
+
+    @wvl_active.setter
+    def wvl_active(self, value: bool):
+        self._store["wvl_active"] = value
+
+    @property
+    def wvl_session_id(self) -> Optional[str]:
+        """Session ID for the concurrent WVL dynasty (when dual-mode)."""
+        return self._store.get("wvl_session_id")
+
+    @wvl_session_id.setter
+    def wvl_session_id(self, value: Optional[str]):
+        self._store["wvl_session_id"] = value
+
+    @property
     def full_engine(self) -> bool:
         """When True, use full game engine instead of fast sim for CPU games."""
         return self._store.get("full_engine", True)
@@ -157,6 +175,8 @@ class UserState:
         self.dyn_playoff_size = 8
         self.dyn_bowl_count = 4
         self.dq_current_week = 0
+        self.wvl_active = False
+        self.wvl_session_id = None
         self.last_result = None
         self.last_seed = 0
         self.batch_results = None
