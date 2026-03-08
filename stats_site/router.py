@@ -317,6 +317,19 @@ def college_season(request: Request, session_id: str):
     total_weeks = season.get_total_weeks()
     current_week = season.get_last_completed_week()
 
+    # Recent results (last completed week) with box score indices
+    recent_games = []
+    if current_week:
+        week_counters = {}
+        for g in season.schedule:
+            w = g.week
+            idx = week_counters.get(w, 0)
+            if g.week == current_week:
+                sg = api["serialize_game"](g)
+                sg["week_game_idx"] = idx
+                recent_games.append(sg)
+            week_counters[w] = idx + 1
+
     return templates.TemplateResponse("college/season.html", _ctx(
         request,
         section="college",
@@ -330,6 +343,7 @@ def college_season(request: Request, session_id: str):
         total_weeks=total_weeks,
         current_week=current_week,
         champion=season.champion,
+        recent_games=recent_games,
     ))
 
 
@@ -595,32 +609,57 @@ def college_team(request: Request, session_id: str, team_name: str):
                 player_season_stats[key] = {
                     "name": p["name"], "tag": p.get("tag", ""),
                     "games_played": 0, "touches": 0, "yards": 0,
-                    "tds": 0, "fumbles": 0, "tackles": 0, "tfl": 0,
-                    "sacks": 0, "hurries": 0, "wpa": 0.0,
-                    "laterals_thrown": 0, "kick_att": 0, "kick_made": 0,
-                    "kick_pass_yards": 0, "kick_passes_thrown": 0,
-                    "kick_passes_completed": 0, "kick_pass_tds": 0,
-                    "keeper_bells": 0, "blocks": 0, "pancakes": 0,
-                    "rushing_yards": 0, "rush_carries": 0, "rushing_tds": 0,
+                    "rushing_yards": 0, "lateral_yards": 0, "tds": 0,
+                    "fumbles": 0, "kick_att": 0, "kick_made": 0,
+                    "pk_att": 0, "pk_made": 0, "dk_att": 0, "dk_made": 0,
+                    "tackles": 0, "tfl": 0, "sacks": 0, "hurries": 0,
+                    "kick_pass_yards": 0, "kick_pass_tds": 0,
+                    "kick_passes_thrown": 0, "kick_passes_completed": 0,
+                    "keeper_bells": 0, "laterals_thrown": 0,
                     "kick_return_yards": 0, "punt_return_yards": 0,
-                    "plays_involved": 0,
+                    "kick_return_tds": 0, "punt_return_tds": 0,
+                    "rush_carries": 0, "rushing_tds": 0,
+                    "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+                    "kick_pass_interceptions": 0, "kick_pass_receptions": 0,
+                    "kick_pass_ints": 0,
+                    "kick_returns": 0, "punt_returns": 0,
+                    "muffs": 0, "st_tackles": 0,
+                    "keeper_tackles": 0, "kick_deflections": 0,
+                    "coverage_snaps": 0, "blocks": 0, "pancakes": 0,
+                    "wpa": 0.0, "plays_involved": 0,
                 }
             agg = player_season_stats[key]
             agg["games_played"] += 1
             if not agg["tag"]:
                 agg["tag"] = p.get("tag", "")
             for stat in [
-                "touches", "yards", "tds", "fumbles", "tackles", "tfl",
-                "sacks", "hurries", "laterals_thrown", "kick_att", "kick_made",
-                "kick_pass_yards", "kick_passes_thrown", "kick_passes_completed",
-                "kick_pass_tds", "keeper_bells", "blocks", "pancakes",
-                "rushing_yards", "rush_carries", "rushing_tds",
-                "kick_return_yards", "punt_return_yards", "plays_involved",
+                "touches", "yards", "rushing_yards", "lateral_yards",
+                "tds", "fumbles", "kick_att", "kick_made",
+                "pk_att", "pk_made", "dk_att", "dk_made",
+                "tackles", "tfl", "sacks", "hurries",
+                "kick_pass_yards", "kick_pass_tds",
+                "kick_passes_thrown", "kick_passes_completed",
+                "keeper_bells", "laterals_thrown",
+                "kick_return_yards", "punt_return_yards",
+                "kick_return_tds", "punt_return_tds",
+                "rush_carries", "rushing_tds",
+                "lateral_receptions", "lateral_assists", "lateral_tds",
+                "kick_pass_interceptions", "kick_pass_receptions",
+                "kick_pass_ints",
+                "kick_returns", "punt_returns",
+                "muffs", "st_tackles",
+                "keeper_tackles", "kick_deflections",
+                "coverage_snaps", "blocks", "pancakes",
+                "plays_involved",
             ]:
                 agg[stat] += p.get(stat, 0)
             agg["wpa"] += p.get("wpa", 0.0)
 
     for r in player_season_stats.values():
+        r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
+        r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
+        r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
+        r["kp_pct"] = round(r["kick_passes_completed"] / max(1, r["kick_passes_thrown"]) * 100, 1)
         r["wpa"] = round(r["wpa"], 2)
 
     return templates.TemplateResponse("college/team.html", _ctx(
