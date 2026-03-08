@@ -260,35 +260,74 @@
 </table>
 </div>
 
+</div>
+
 {# ── Roster ── #}
 <div>
 <h2>Roster ({{ players|length }})</h2>
 <table>
   <thead>
     <tr>
-      <th class="num">#</th><th>Name</th><th>Pos</th><th>Yr</th>
-      <th class="num">OVR</th><th class="num">SPD</th><th class="num">PWR</th>
-      <th class="num">AGI</th><th class="num">KCK</th><th class="num">LAT</th>
+      <th class="num">#</th>
+      <th>Name</th>
+      <th>Pos</th>
+      <th>Yr</th>
+      <th class="num">GP</th>
+      <th class="num">TCH</th>
+      <th class="num">YDS</th>
+      <th class="num">Y/T</th>
+      <th class="num">TD</th>
+      <th class="num">RTD</th>
+      <th class="num">FUM</th>
+      <th class="num">LAT</th>
+      <th class="num">K%</th>
+      <th class="num">KP</th>
+      <th class="num">TKL</th>
+      <th class="num">TFL</th>
+      <th class="num">SCK</th>
+      <th class="num">HUR</th>
+      <th class="num">RTN</th>
+      <th class="num">BEL</th>
+      <th class="num">BLK</th>
+      <th class="num">PAN</th>
+      <th class="num">WPA</th>
     </tr>
   </thead>
   <tbody>
   {% for p in players|sort(attribute='overall', reverse=true) %}
+  {% set ps = player_season_stats.get(p.name, {}) %}
   <tr>
     <td class="num">{{ p.number }}</td>
     <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
     <td>{{ p.year_abbr }}</td>
-    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
-    <td class="num">{{ p.speed }}</td>
-    <td class="num">{{ p.power }}</td>
-    <td class="num">{{ p.agility }}</td>
-    <td class="num">{{ p.kicking }}</td>
-    <td class="num">{{ p.lateral_skill }}</td>
+    <td class="num">{{ ps.get('games_played', 0) }}</td>
+    <td class="num">{{ ps.get('touches', 0) }}</td>
+    <td class="num {% if ps.get('yards', 0) >= 500 %}stat-elite{% elif ps.get('yards', 0) >= 200 %}stat-good{% endif %}">{{ ps.get('yards', 0) }}</td>
+    <td class="num">{{ ps.get('yards_per_touch', 0) }}</td>
+    <td class="num {% if ps.get('tds', 0) >= 5 %}stat-elite{% elif ps.get('tds', 0) >= 2 %}stat-good{% endif %}">{{ ps.get('tds', 0) }}</td>
+    <td class="num">{{ ps.get('rushing_tds', 0) }}</td>
+    <td class="num {% if ps.get('fumbles', 0) > 3 %}stat-bad{% endif %}">{{ ps.get('fumbles', 0) }}</td>
+    <td class="num">{{ ps.get('laterals_thrown', 0) }}</td>
+    <td class="num {% if ps.get('kick_pct', 0) >= 80 %}stat-elite{% elif ps.get('kick_pct', 0) >= 60 %}stat-good{% elif ps.get('kick_att', 0) > 0 and ps.get('kick_pct', 0) < 40 %}stat-bad{% endif %}">
+      {% if ps.get('kick_att', 0) > 0 %}{{ ps.get('kick_pct', 0) }}%{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">
+      {% if ps.get('kick_passes_thrown', 0) > 0 %}{{ ps.get('kick_passes_completed', 0) }}/{{ ps.get('kick_passes_thrown', 0) }}{% elif ps.get('kick_pass_receptions', 0) > 0 %}{{ ps.get('kick_pass_receptions', 0) }}r{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num">{{ ps.get('tackles', 0) }}</td>
+    <td class="num">{{ ps.get('tfl', 0) }}</td>
+    <td class="num {% if ps.get('sacks', 0) >= 5 %}stat-elite{% endif %}">{{ ps.get('sacks', 0) }}</td>
+    <td class="num">{{ ps.get('hurries', 0) }}</td>
+    <td class="num">{{ ps.get('total_return_yards', 0) }}</td>
+    <td class="num">{{ ps.get('keeper_bells', 0) }}</td>
+    <td class="num">{{ ps.get('blocks', 0) }}</td>
+    <td class="num">{{ ps.get('pancakes', 0) }}</td>
+    <td class="num {% if ps.get('wpa', 0) >= 2 %}stat-elite{% elif ps.get('wpa', 0) >= 0.5 %}stat-good{% elif ps.get('wpa', 0) < -1 %}stat-bad{% endif %}">{{ ps.get('wpa', 0) }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
 
-</div>
 {% endblock %}
