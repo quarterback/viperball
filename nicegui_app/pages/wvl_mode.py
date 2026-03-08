@@ -122,6 +122,7 @@ def _extract_args(e) -> dict:
 
 def _register_wvl_season(dynasty, season, year=None):
     try:
+        import time as _time
         from api.main import wvl_sessions
         effective_year = year if year is not None else dynasty.current_year - 1
         session_id = f"wvl_{dynasty.dynasty_name}_{effective_year}"
@@ -132,6 +133,7 @@ def _register_wvl_season(dynasty, season, year=None):
             "dynasty_name": dynasty.dynasty_name,
             "year": effective_year,
             "club_key": dynasty.owner.club_key,
+            "last_accessed": _time.time(),
         }
     except Exception:
         pass
