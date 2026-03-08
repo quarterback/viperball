@@ -152,6 +152,9 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
                 return
             except api_client.APIError:
                 pass
+        # Session is stale (e.g. server restarted) — clear it so
+        # subsequent navigation doesn't keep trying the expired session.
+        state.clear_session()
         _render_landing(state, shared, switch_fn)
         return
 
