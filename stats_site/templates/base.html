@@ -259,6 +259,24 @@ td.rank {
   color: var(--fg-dim);
   font-style: italic;
 }
+.notice {
+  padding: 20px;
+  text-align: center;
+  color: var(--fg-dim);
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  margin: 16px 0;
+}
+
+/* Metric cards */
+.metric-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  padding: 12px;
+}
+.metric-card .metric-label { font-size: 11px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-card .metric-value { font-size: 16px; font-weight: bold; color: var(--fg-bright); margin: 4px 0; }
+.metric-card .metric-detail { font-size: 10px; color: var(--fg-dim); }
 
 /* Footer */
 .footer {
@@ -309,6 +327,7 @@ td.rank {
       <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
       <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>WVL</a>
       <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>International</a>
+      <a href="/stats/recruiting/" {% if section == 'recruiting' %}class="active"{% endif %}>Recruiting</a>
       <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>Archives</a>
       <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>Search</a>
     </nav>

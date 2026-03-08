@@ -195,6 +195,155 @@ def delete_all_for_user(user_id: str = "default"):
 
 
 # ═══════════════════════════════════════════════════════════════
+# CVL → WVL BRIDGE
+# ═══════════════════════════════════════════════════════════════
+
+_BRIDGE_TYPE = "cvl_wvl_bridge"
+
+
+def save_graduating_pool(
+    dynasty_name: str,
+    player_cards: list,
+    year: int,
+    user_id: str = "default",
+) -> str:
+    """Write CVL graduates to bridge table for automatic WVL import.
+
+    Args:
+        dynasty_name: Name of the source CVL dynasty.
+        player_cards: List of PlayerCard.to_dict() dicts.
+        year: Dynasty calendar year the class graduated.
+        user_id: User who owns the dynasty.
+
+    Returns:
+        The save_key used (for later consumption/deletion).
+    """
+    save_key = f"{dynasty_name}_graduates_{year}"
+    save_blob(
+        _BRIDGE_TYPE,
+        save_key,
+        {
+            "source_dynasty": dynasty_name,
+            "source_year": year,
+            "player_count": len(player_cards),
+            "players": player_cards,
+            "consumed": False,
+        },
+        label=f"CVL graduates {dynasty_name} Y{year}",
+        user_id=user_id,
+    )
+    _log.info(f"Bridge: published {len(player_cards)} graduates from {dynasty_name} Y{year}")
+    return save_key
+
+
+def load_graduating_pools(
+    user_id: str = "default",
+    dynasty_name: str | None = None,
+    unconsumed_only: bool = True,
+) -> list[dict]:
+    """Read available CVL graduate pools from the bridge.
+
+    Args:
+        user_id: User who owns the dynasty.
+        dynasty_name: Optional filter by source dynasty name.
+        unconsumed_only: If True, only return pools not yet imported by WVL.
+
+    Returns:
+        List of dicts with keys: save_key, source_dynasty, source_year,
+        player_count, players, consumed.  Sorted oldest-first.
+    """
+    metas = list_saves(save_type=_BRIDGE_TYPE, user_id=user_id)
+    result = []
+    for meta in reversed(metas):  # oldest first
+        data = load_blob(_BRIDGE_TYPE, meta["save_key"], user_id=user_id)
+        if data is None:
+            continue
+        if dynasty_name and data.get("source_dynasty") != dynasty_name:
+            continue
+        if unconsumed_only and data.get("consumed", False):
+            continue
+        data["save_key"] = meta["save_key"]
+        result.append(data)
+    return result
+
+
+def consume_graduating_pool(
+    save_key: str,
+    user_id: str = "default",
+) -> bool:
+    """Mark a graduate pool as consumed by WVL import.
+
+    Does NOT delete the data — it remains available for re-import if needed.
+    Sets consumed=True so it won't appear in unconsumed_only queries.
+
+    Returns True if the pool was found and marked.
+    """
+    data = load_blob(_BRIDGE_TYPE, save_key, user_id=user_id)
+    if data is None:
+        return False
+    data["consumed"] = True
+    save_blob(
+        _BRIDGE_TYPE,
+        save_key,
+        data,
+        label=data.get("label", ""),
+        user_id=user_id,
+    )
+    _log.info(f"Bridge: consumed pool {save_key}")
+    return True
+
+
+def save_hs_pipeline(
+    dynasty_name: str,
+    pipeline_data: dict,
+    user_id: str = "default",
+) -> str:
+    """Write HS recruiting pipeline to bridge for WVL preview access.
+
+    Args:
+        dynasty_name: Name of the source CVL dynasty.
+        pipeline_data: HSRecruitingPipeline.to_dict() output.
+        user_id: User who owns the dynasty.
+
+    Returns:
+        The save_key used.
+    """
+    save_key = f"{dynasty_name}_hs_pipeline"
+    save_blob(
+        _BRIDGE_TYPE,
+        save_key,
+        {
+            "source_dynasty": dynasty_name,
+            "type": "hs_pipeline",
+            "pipeline": pipeline_data,
+        },
+        label=f"HS Pipeline {dynasty_name}",
+        user_id=user_id,
+    )
+    return save_key
+
+
+def load_hs_pipeline(
+    user_id: str = "default",
+    dynasty_name: str | None = None,
+) -> dict | None:
+    """Load the most recent HS pipeline data from the bridge.
+
+    Returns the pipeline dict, or None if not found.
+    """
+    metas = list_saves(save_type=_BRIDGE_TYPE, user_id=user_id)
+    for meta in metas:  # newest first (sorted by updated_at DESC)
+        if "_hs_pipeline" not in meta["save_key"]:
+            continue
+        if dynasty_name and dynasty_name not in meta["save_key"]:
+            continue
+        data = load_blob(_BRIDGE_TYPE, meta["save_key"], user_id=user_id)
+        if data and data.get("type") == "hs_pipeline":
+            return data.get("pipeline")
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════
 # PRO LEAGUE SERIALIZATION
 # ═══════════════════════════════════════════════════════════════
 

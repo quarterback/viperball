@@ -492,6 +492,122 @@ def export_dynasty_full(dynasty: "Dynasty", output_dir: str) -> dict:
     return exported
 
 
+def export_dynasty_classes_csv(dynasty: "Dynasty", season, filepath: str) -> str:
+    """
+    Export all CVL roster classes (Freshman through Senior) to CSV.
+
+    Year-agnostic — omits calendar year so the file can be imported into
+    any WVL dynasty regardless of what year it is in.
+
+    Columns: class_year, team, conference, prestige, player, position,
+             overall, potential, development, speed, stamina, agility,
+             power, awareness, hands, kicking, kick_power, kick_accuracy,
+             lateral_skill, tackling, height, weight, hometown, high_school
+    """
+    _ensure_dir(filepath)
+    fieldnames = [
+        "class_year", "team", "conference", "prestige",
+        "player", "position", "overall", "potential", "development",
+        "speed", "stamina", "agility", "power", "awareness", "hands",
+        "kicking", "kick_power", "kick_accuracy", "lateral_skill", "tackling",
+        "height", "weight", "hometown", "high_school",
+    ]
+
+    from engine.player_card import player_to_card
+
+    rows = []
+    for class_year in ("Freshman", "Sophomore", "Junior", "Senior"):
+        for team_name, team in season.teams.items():
+            conf = ""
+            prestige = 50
+            if dynasty:
+                conf = dynasty.get_team_conference(team_name)
+                prestige = dynasty.team_prestige.get(team_name, 50)
+            for player in team.players:
+                py = getattr(player, "year", "")
+                if py == class_year or (class_year == "Senior" and py == "Graduate"):
+                    card = player_to_card(player, team_name)
+                    rows.append({
+                        "class_year": class_year,
+                        "team": team_name,
+                        "conference": conf,
+                        "prestige": prestige,
+                        "player": card.full_name,
+                        "position": card.position,
+                        "overall": card.overall,
+                        "potential": card.potential,
+                        "development": card.development,
+                        "speed": card.speed,
+                        "stamina": card.stamina,
+                        "agility": card.agility,
+                        "power": card.power,
+                        "awareness": card.awareness,
+                        "hands": card.hands,
+                        "kicking": card.kicking,
+                        "kick_power": card.kick_power,
+                        "kick_accuracy": card.kick_accuracy,
+                        "lateral_skill": card.lateral_skill,
+                        "tackling": card.tackling,
+                        "height": card.height,
+                        "weight": card.weight,
+                        "hometown": f"{card.hometown_city}, {card.hometown_state}",
+                        "high_school": card.high_school,
+                    })
+
+    rows.sort(key=lambda r: (-{"Senior": 4, "Junior": 3, "Sophomore": 2, "Freshman": 1}.get(r["class_year"], 0), -r["overall"]))
+
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return filepath
+
+
+def export_hs_pipeline_csv(pipeline, filepath: str) -> str:
+    """
+    Export high school recruiting pipeline to CSV.
+
+    Columns: grade, rank, name, position, scouted_stars, hometown,
+             high_school, region, height, weight, position_rank,
+             regional_rank, is_alpha, is_sleeper, breakout
+    """
+    _ensure_dir(filepath)
+    fieldnames = [
+        "grade", "rank", "name", "position", "scouted_stars",
+        "hometown", "high_school", "region", "height", "weight",
+        "position_rank", "regional_rank", "is_alpha", "is_sleeper", "breakout",
+    ]
+
+    rows = []
+    for grade in ("12th", "11th", "10th", "9th"):
+        for p in pipeline.classes.get(grade, []):
+            rows.append({
+                "grade": p.grade,
+                "rank": p.national_rank,
+                "name": p.recruit.full_name,
+                "position": p.recruit.position,
+                "scouted_stars": p.scouted_stars,
+                "hometown": p.recruit.hometown,
+                "high_school": p.recruit.high_school,
+                "region": p.recruit.region,
+                "height": p.recruit.height,
+                "weight": p.recruit.weight,
+                "position_rank": p.position_rank,
+                "regional_rank": p.regional_rank,
+                "is_alpha": int(p.is_alpha),
+                "is_sleeper": int(p.is_sleeper),
+                "breakout": int(p.breakout),
+            })
+
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return filepath
+
+
 def export_season_full(season: "Season", output_dir: str) -> dict:
     """
     Export all single-season stats to a directory.

@@ -1016,3 +1016,414 @@ def run_full_recruiting_cycle(
         "boards": boards,
         "class_rankings": rankings,
     }
+
+
+# ──────────────────────────────────────────────
+# HIGH SCHOOL RECRUITING PIPELINE
+# ──────────────────────────────────────────────
+
+_HS_GRADES = ["9th", "10th", "11th", "12th"]
+
+# Star visibility by grade — younger players have less reliable scouting
+_SCOUTING_NOISE_BY_GRADE: Dict[str, int] = {
+    "9th": 8,   # huge uncertainty
+    "10th": 5,
+    "11th": 3,
+    "12th": 1,  # nearly accurate
+}
+
+# What fraction of true attributes are visible per grade
+_ATTRS_VISIBLE_BY_GRADE: Dict[str, int] = {
+    "9th": 2,    # only top-2 attrs visible
+    "10th": 4,   # top-4
+    "11th": 7,   # top-7
+    "12th": 11,  # all 11
+}
+
+# Chance of a star "miss" (underrated or overrated) by grade
+_STAR_MISS_CHANCE: Dict[str, float] = {
+    "9th": 0.40,   # 40% chance star rating is off by 1-2
+    "10th": 0.30,
+    "11th": 0.15,
+    "12th": 0.05,
+}
+
+
+@dataclass
+class HSProspect:
+    """A high school prospect tracked across multiple years.
+
+    Unlike a Recruit (which exists for one recruiting cycle), an HSProspect
+    persists across 4 HS years. Their scouted_stars and visible attributes
+    become more accurate as they age from 9th to 12th grade.
+    """
+    recruit: Recruit
+    grade: str                   # "9th", "10th", "11th", "12th"
+    scouted_stars: int           # what evaluators *think* stars are (may differ from true)
+    national_rank: int = 0       # rank within national class
+    position_rank: int = 0       # rank within position group
+    regional_rank: int = 0       # rank within region
+    watched_by: List[str] = field(default_factory=list)   # team names tracking this player
+    development_notes: List[str] = field(default_factory=list)
+    breakout: bool = False       # flagged as potential breakout (sleeper)
+
+    @property
+    def is_alpha(self) -> bool:
+        """An 'alpha' prospect: scouted as 4-5 star OR true overall 80+."""
+        return self.scouted_stars >= 4 or self.recruit.true_overall >= 80
+
+    @property
+    def is_sleeper(self) -> bool:
+        """Underrated: scouted low but true talent is much higher."""
+        return (self.scouted_stars <= 2 and self.recruit.true_overall >= 75) or self.breakout
+
+    def to_dict(self) -> dict:
+        d = self.recruit.to_dict()
+        d["grade"] = self.grade
+        d["scouted_stars"] = self.scouted_stars
+        d["national_rank"] = self.national_rank
+        d["position_rank"] = self.position_rank
+        d["regional_rank"] = self.regional_rank
+        d["watched_by"] = list(self.watched_by)
+        d["is_alpha"] = self.is_alpha
+        d["is_sleeper"] = self.is_sleeper
+        d["development_notes"] = list(self.development_notes)
+        d["breakout"] = self.breakout
+        return d
+
+
+def _apply_scouting_noise(true_stars: int, grade: str, rng: random.Random) -> int:
+    """Determine what evaluators think the star rating is for this grade level."""
+    miss_chance = _STAR_MISS_CHANCE.get(grade, 0.05)
+    if rng.random() < miss_chance:
+        # Misrate: shift by ±1 or ±2
+        shift = rng.choice([-2, -1, 1, 2])
+        # Overrating is slightly more common for younger players
+        if grade in ("9th", "10th") and rng.random() < 0.3:
+            shift = abs(shift)  # bias toward overrating
+        return max(1, min(5, true_stars + shift))
+    return true_stars
+
+
+def _apply_hs_development(
+    prospect: HSProspect,
+    rng: random.Random,
+) -> List[str]:
+    """Simulate one year of HS development — attributes may shift.
+
+    Returns list of development note strings.
+    """
+    recruit = prospect.recruit
+    notes: List[str] = []
+    dev_trait = recruit.true_development
+
+    # Base improvement chance by development trait
+    improve_chance = {
+        "quick": 0.70,
+        "normal": 0.50,
+        "slow": 0.30,
+        "late_bloomer": 0.25 if prospect.grade in ("9th", "10th") else 0.65,
+    }.get(dev_trait, 0.50)
+
+    # How much attributes can change (younger = more volatile)
+    max_gain = {"9th": 5, "10th": 4, "11th": 3, "12th": 2}.get(prospect.grade, 2)
+    max_loss = {"9th": 3, "10th": 2, "11th": 1, "12th": 0}.get(prospect.grade, 1)
+
+    attrs = [
+        "true_speed", "true_stamina", "true_agility", "true_power",
+        "true_awareness", "true_hands", "true_kicking", "true_kick_power",
+        "true_kick_accuracy", "true_lateral_skill", "true_tackling",
+    ]
+
+    improved_any = False
+    for attr in attrs:
+        current = getattr(recruit, attr)
+        if rng.random() < improve_chance:
+            gain = rng.randint(1, max_gain)
+            new_val = min(99, current + gain)
+            setattr(recruit, attr, new_val)
+            if gain >= 3:
+                improved_any = True
+        elif rng.random() < 0.10 and max_loss > 0:
+            # Small regression chance (injury, laziness, etc.)
+            loss = rng.randint(1, max_loss)
+            setattr(recruit, attr, max(40, current - loss))
+
+    if improved_any:
+        notes.append(f"Notable improvement during {prospect.grade} grade year")
+
+    # Breakout detection: late_bloomer or slow developer suddenly jumps
+    if dev_trait in ("late_bloomer", "slow") and prospect.grade in ("11th", "12th"):
+        if recruit.true_overall >= 78 and prospect.scouted_stars <= 3:
+            prospect.breakout = True
+            notes.append("BREAKOUT: True talent emerging — potential hidden gem")
+
+    # Potential can shift slightly for younger players
+    if prospect.grade in ("9th", "10th") and rng.random() < 0.15:
+        shift = rng.choice([-1, 1])
+        recruit.true_potential = max(1, min(5, recruit.true_potential + shift))
+        if shift > 0:
+            notes.append("Potential ceiling raised")
+
+    return notes
+
+
+def generate_hs_class(
+    grade: str,
+    size: int = 300,
+    rng: Optional[random.Random] = None,
+    seed: Optional[int] = None,
+) -> List[HSProspect]:
+    """Generate a high school class at a specific grade level.
+
+    Args:
+        grade: "9th", "10th", "11th", or "12th".
+        size: Number of prospects in the class.
+        rng: Seeded Random for reproducibility.
+        seed: Alternative to rng — creates Random(seed).
+
+    Returns:
+        List of HSProspect objects sorted by scouted_stars descending.
+    """
+    if rng is None:
+        rng = random.Random(seed if seed is not None else hash(grade))
+
+    prospects: List[HSProspect] = []
+    for i in range(size):
+        rid = f"HS-{grade}-{i:04d}"
+        recruit = generate_single_recruit(recruit_id=rid, rng=rng)
+        scouted = _apply_scouting_noise(recruit.stars, grade, rng)
+        prospect = HSProspect(recruit=recruit, grade=grade, scouted_stars=scouted)
+        prospects.append(prospect)
+
+    # Rank nationally, by position, and by region
+    _rank_hs_class(prospects)
+
+    return prospects
+
+
+def _rank_hs_class(prospects: List[HSProspect]) -> None:
+    """Assign national, position, and regional ranks based on scouted_stars.
+
+    Modifies prospects in-place and sorts by national rank.
+    """
+    # National ranking: scouted_stars desc, then recruit.overall_estimate desc
+    prospects.sort(key=lambda p: (-p.scouted_stars, -p.recruit.overall_estimate))
+    for i, p in enumerate(prospects):
+        p.national_rank = i + 1
+
+    # Position ranking
+    by_pos: Dict[str, List[HSProspect]] = {}
+    for p in prospects:
+        by_pos.setdefault(p.recruit.position, []).append(p)
+    for pos_list in by_pos.values():
+        pos_list.sort(key=lambda p: (-p.scouted_stars, -p.recruit.overall_estimate))
+        for i, p in enumerate(pos_list):
+            p.position_rank = i + 1
+
+    # Regional ranking
+    by_region: Dict[str, List[HSProspect]] = {}
+    for p in prospects:
+        by_region.setdefault(p.recruit.region, []).append(p)
+    for region_list in by_region.values():
+        region_list.sort(key=lambda p: (-p.scouted_stars, -p.recruit.overall_estimate))
+        for i, p in enumerate(region_list):
+            p.regional_rank = i + 1
+
+
+@dataclass
+class HSRecruitingPipeline:
+    """Four-year high school recruiting pipeline.
+
+    Pre-generates classes for 9th through 12th grade so dynasty mode
+    can display upcoming talent and track prospects over time.  Each
+    offseason, classes advance one grade (9th→10th→...→12th→eligible)
+    and a new 9th grade class is generated.
+    """
+    classes: Dict[str, List[HSProspect]] = field(default_factory=dict)
+
+    def generate_initial_pipeline(
+        self,
+        base_seed: int = 0,
+        size_per_class: int = 300,
+    ) -> None:
+        """Generate all four HS grade classes from scratch."""
+        for i, grade in enumerate(_HS_GRADES):
+            rng = random.Random(base_seed + i * 1000)
+            self.classes[grade] = generate_hs_class(
+                grade=grade, size=size_per_class, rng=rng,
+            )
+
+    def advance_year(
+        self,
+        new_9th_seed: int = 0,
+        size: int = 300,
+        rng: Optional[random.Random] = None,
+    ) -> List[HSProspect]:
+        """Advance all classes by one year.
+
+        - 12th graders graduate → returned as the eligible recruiting class
+        - 11th → 12th, 10th → 11th, 9th → 10th (with development applied)
+        - A fresh 9th grade class is generated
+
+        Returns:
+            The graduated 12th-grade class (ready for college recruiting).
+        """
+        if rng is None:
+            rng = random.Random(new_9th_seed)
+
+        # Graduate 12th graders
+        graduates = self.classes.pop("12th", [])
+
+        # Advance each class
+        grade_progression = [("11th", "12th"), ("10th", "11th"), ("9th", "10th")]
+        for old_grade, new_grade in grade_progression:
+            prospects = self.classes.pop(old_grade, [])
+            for p in prospects:
+                p.grade = new_grade
+                # Apply development and update scouted stars
+                notes = _apply_hs_development(p, rng)
+                p.development_notes.extend(notes)
+                # Re-scout: star accuracy improves with grade
+                p.scouted_stars = _apply_scouting_noise(
+                    p.recruit.stars, new_grade, rng,
+                )
+            _rank_hs_class(prospects)
+            self.classes[new_grade] = prospects
+
+        # Generate fresh 9th graders
+        self.classes["9th"] = generate_hs_class(
+            grade="9th", size=size, rng=random.Random(new_9th_seed),
+        )
+
+        return graduates
+
+    def get_top_prospects(
+        self,
+        n: int = 25,
+        grade: Optional[str] = None,
+        position: Optional[str] = None,
+        region: Optional[str] = None,
+    ) -> List[HSProspect]:
+        """Get top-ranked prospects with optional filters.
+
+        Args:
+            n: Number of prospects to return.
+            grade: Filter to a specific grade ("9th", "10th", etc.).
+            position: Filter to a specific position.
+            region: Filter to a specific region.
+
+        Returns:
+            Top N prospects matching filters, sorted by scouted stars/rank.
+        """
+        candidates: List[HSProspect] = []
+        grades = [grade] if grade else _HS_GRADES
+        for g in grades:
+            candidates.extend(self.classes.get(g, []))
+
+        if position:
+            candidates = [p for p in candidates if p.recruit.position == position]
+        if region:
+            candidates = [p for p in candidates if p.recruit.region == region]
+
+        candidates.sort(key=lambda p: (-p.scouted_stars, -p.recruit.overall_estimate))
+        return candidates[:n]
+
+    def get_alpha_prospects(self, grade: Optional[str] = None) -> List[HSProspect]:
+        """Get all alpha-rated prospects (4-5 star or 80+ true overall)."""
+        return [
+            p for p in self.get_top_prospects(n=9999, grade=grade)
+            if p.is_alpha
+        ]
+
+    def get_sleepers(self, grade: Optional[str] = None) -> List[HSProspect]:
+        """Get potential sleeper prospects (underrated talent)."""
+        candidates: List[HSProspect] = []
+        grades = [grade] if grade else _HS_GRADES
+        for g in grades:
+            candidates.extend(self.classes.get(g, []))
+        return [p for p in candidates if p.is_sleeper]
+
+    def get_rankings_board(self, grade: str, top_n: int = 50) -> List[dict]:
+        """Get a rankings board for display — like a top-50 list.
+
+        Returns list of dicts with visible scouting information appropriate
+        for the grade level (more hidden for younger players).
+        """
+        prospects = self.get_top_prospects(n=top_n, grade=grade)
+        noise = _SCOUTING_NOISE_BY_GRADE.get(grade, 3)
+        n_visible = _ATTRS_VISIBLE_BY_GRADE.get(grade, 11)
+        board: List[dict] = []
+
+        for p in prospects:
+            entry: dict = {
+                "rank": p.national_rank,
+                "name": p.recruit.full_name,
+                "position": p.recruit.position,
+                "scouted_stars": p.scouted_stars,
+                "grade": p.grade,
+                "hometown": p.recruit.hometown,
+                "high_school": p.recruit.high_school,
+                "region": p.recruit.region,
+                "height": p.recruit.height,
+                "weight": p.recruit.weight,
+                "position_rank": p.position_rank,
+                "regional_rank": p.regional_rank,
+                "is_alpha": p.is_alpha,
+            }
+            # Show limited attributes based on grade level
+            all_attrs = {
+                "speed": p.recruit.true_speed,
+                "stamina": p.recruit.true_stamina,
+                "agility": p.recruit.true_agility,
+                "power": p.recruit.true_power,
+                "awareness": p.recruit.true_awareness,
+                "hands": p.recruit.true_hands,
+                "kicking": p.recruit.true_kicking,
+                "kick_power": p.recruit.true_kick_power,
+                "kick_accuracy": p.recruit.true_kick_accuracy,
+                "lateral_skill": p.recruit.true_lateral_skill,
+                "tackling": p.recruit.true_tackling,
+            }
+            sorted_attrs = sorted(all_attrs.items(), key=lambda x: x[1], reverse=True)
+            visible: Dict[str, int] = {}
+            for attr_name, true_val in sorted_attrs[:n_visible]:
+                # Add grade-appropriate noise
+                noisy = true_val + random.randint(-noise, noise)
+                visible[attr_name] = max(40, min(99, noisy))
+            entry["visible_attributes"] = visible
+
+            if p.breakout:
+                entry["flag"] = "BREAKOUT"
+            board.append(entry)
+
+        return board
+
+    def to_dict(self) -> dict:
+        return {
+            grade: [p.to_dict() for p in prospects]
+            for grade, prospects in self.classes.items()
+        }
+
+    def pipeline_summary(self) -> dict:
+        """Summary stats for each grade in the pipeline."""
+        summary: dict = {}
+        for grade in _HS_GRADES:
+            prospects = self.classes.get(grade, [])
+            if not prospects:
+                summary[grade] = {"count": 0}
+                continue
+            avg_stars = sum(p.scouted_stars for p in prospects) / len(prospects)
+            five_stars = sum(1 for p in prospects if p.scouted_stars == 5)
+            four_stars = sum(1 for p in prospects if p.scouted_stars == 4)
+            alphas = sum(1 for p in prospects if p.is_alpha)
+            sleepers = sum(1 for p in prospects if p.is_sleeper)
+            summary[grade] = {
+                "count": len(prospects),
+                "avg_scouted_stars": round(avg_stars, 2),
+                "five_star": five_stars,
+                "four_star": four_stars,
+                "alpha_count": alphas,
+                "sleeper_count": sleepers,
+            }
+        return summary

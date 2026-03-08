@@ -468,10 +468,28 @@ async def render_export_section(state, shared):
 
                 ui.separator()
                 ui.label("WVL Export").classes("text-xl font-semibold mt-2")
+
+                # Show bridge status
+                try:
+                    from engine.db import load_graduating_pools
+                    bridge_pools = load_graduating_pools(user_id="default")
+                    if bridge_pools:
+                        total_players = sum(p.get("player_count", 0) for p in bridge_pools)
+                        ui.label(
+                            f"CVL→WVL Bridge: {len(bridge_pools)} class(es) "
+                            f"({total_players} players) queued for automatic WVL import."
+                        ).classes("text-sm text-green-400 mb-2")
+                    else:
+                        ui.label(
+                            "CVL→WVL Bridge: Graduates are auto-published when you advance "
+                            "a dynasty season. WVL will auto-import them during offseason."
+                        ).classes("text-sm text-blue-400 mb-2")
+                except Exception:
+                    pass
+
                 ui.label(
-                    "Export your graduating seniors so they can be imported as free agents "
-                    "in a WVL dynasty. The export is cached in your session — just switch "
-                    "to WVL mode and it will be auto-detected."
+                    "Graduates are now auto-published to the CVL→WVL bridge when you "
+                    "advance a season. You can also manually export below for backup."
                 ).classes("text-sm text-gray-500 mb-2")
 
                 async def _export_graduates():

@@ -287,6 +287,9 @@ class Dynasty:
     _coaching_staffs: Dict[str, dict] = field(default_factory=dict, repr=False)
     coaching_history: Dict[int, dict] = field(default_factory=dict)
 
+    # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
+    _hs_pipeline: Optional[object] = field(default=None, repr=False)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
 
@@ -750,6 +753,9 @@ class Dynasty:
             if redshirt_events:
                 self.development_history[f"{year}_redshirts"] = redshirt_events
 
+        # Publish graduates to CVL→WVL bridge (before roster maintenance removes them)
+        self._publish_graduates_to_bridge(season, year)
+
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))
 
@@ -760,6 +766,41 @@ class Dynasty:
 
         # Advance year
         self.current_year += 1
+
+    def _publish_graduates_to_bridge(self, season: Season, year: int) -> int:
+        """Auto-publish graduating seniors to the CVL→WVL bridge DB.
+
+        Called from advance_season() BEFORE roster maintenance removes them.
+        Silently does nothing if the DB is unavailable.
+
+        Returns number of graduates published (0 if bridge unavailable).
+        """
+        try:
+            from engine.player_card import player_to_card
+            from engine.db import save_graduating_pool
+
+            graduates = []
+            for team_name, team in season.teams.items():
+                for player in team.players:
+                    py = getattr(player, "year", "")
+                    if py in ("Senior", "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        d["graduating_from"] = team_name
+                        d["conference"] = self.get_team_conference(team_name)
+                        d["college_prestige"] = self.team_prestige.get(team_name, 50)
+                        graduates.append(d)
+
+            if graduates:
+                save_graduating_pool(
+                    dynasty_name=self.dynasty_name,
+                    player_cards=graduates,
+                    year=year,
+                )
+            return len(graduates)
+        except Exception:
+            # Bridge DB not available — silently skip
+            return 0
 
     def run_offseason(
         self,
@@ -1166,6 +1207,29 @@ class Dynasty:
             "pool_size": pool_size,
         }
         result["recruiting"] = self.recruiting_history[year]
+
+        # ── 7. HS Recruiting Pipeline ──
+        from engine.recruiting import HSRecruitingPipeline
+        if self._hs_pipeline is None:
+            self._hs_pipeline = HSRecruitingPipeline()
+            self._hs_pipeline.generate_initial_pipeline(
+                base_seed=year, size_per_class=pool_size,
+            )
+        else:
+            self._hs_pipeline.advance_year(
+                new_9th_seed=year, size=pool_size, rng=rng,
+            )
+        result["hs_pipeline"] = self._hs_pipeline.pipeline_summary()
+
+        # Publish HS pipeline to bridge DB for WVL preview access
+        try:
+            from engine.db import save_hs_pipeline
+            save_hs_pipeline(
+                dynasty_name=self.dynasty_name,
+                pipeline_data=self._hs_pipeline.to_dict(),
+            )
+        except Exception:
+            pass  # Bridge DB unavailable — skip
 
         return result
 
@@ -1721,6 +1785,161 @@ class Dynasty:
             json.dump(graduates, f, indent=2)
 
         return len(graduates)
+
+    def export_dynasty_classes(
+        self,
+        season: Season,
+        filepath: str,
+        years: Optional[List[str]] = None,
+    ) -> dict:
+        """Export CVL roster classes as a year-agnostic JSON bundle for WVL import.
+
+        Unlike export_graduating_class() which only exports seniors tied to a
+        specific season, this produces a portable bundle containing full roster
+        data organised by class year (Freshman/Sophomore/Junior/Senior).  The
+        export intentionally omits the dynasty calendar year so it can be
+        imported into any WVL dynasty regardless of what year that dynasty is in.
+
+        Args:
+            season: Completed Season with team rosters.
+            filepath: Where to write the JSON export.
+            years: Optional filter — e.g. ["Senior", "Junior"] to export only
+                   those classes.  Defaults to all four class years.
+
+        Returns:
+            Summary dict with counts per class year and total.
+        """
+        from engine.player_card import player_to_card
+
+        valid_years = years or ["Freshman", "Sophomore", "Junior", "Senior"]
+        bundle: dict = {
+            "format": "viperball_dynasty_class_export",
+            "format_version": 1,
+            "classes": {},
+            "metadata": {
+                "dynasty_name": self.dynasty_name,
+                "source_league": "CVL",
+                "total_teams": len(season.teams),
+            },
+        }
+
+        counts: Dict[str, int] = {}
+        for class_year in valid_years:
+            players_in_class: list = []
+            for team_name, team in season.teams.items():
+                conf = self.get_team_conference(team_name)
+                prestige = self.team_prestige.get(team_name, 50)
+                for player in team.players:
+                    py = getattr(player, 'year', '')
+                    if py == class_year or (class_year == "Senior" and py == "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        # Strip dynasty-specific calendar year data
+                        d.pop("age", None)
+                        d.pop("pro_team", None)
+                        d.pop("pro_status", None)
+                        d.pop("contract_years", None)
+                        d.pop("contract_salary", None)
+                        # Add portable college metadata
+                        d["college_team"] = team_name
+                        d["conference"] = conf
+                        d["college_prestige"] = prestige
+                        d["class_year"] = class_year
+                        players_in_class.append(d)
+            # Sort by overall descending within each class
+            players_in_class.sort(
+                key=lambda p: p.get("ratings", {}).get("overall", 0),
+                reverse=True,
+            )
+            bundle["classes"][class_year] = players_in_class
+            counts[class_year] = len(players_in_class)
+
+        bundle["metadata"]["counts"] = counts
+        bundle["metadata"]["total_players"] = sum(counts.values())
+
+        import os
+        os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+        with open(filepath, "w") as f:
+            json.dump(bundle, f, indent=2)
+
+        return counts
+
+    def export_multi_year_classes(
+        self,
+        filepath: str,
+        year_count: int = 4,
+        pool_size: int = 300,
+        rng: Optional[random.Random] = None,
+    ) -> dict:
+        """Export multiple future recruit classes for WVL intake preview.
+
+        Generates year_count upcoming recruiting classes using the same
+        engine as dynasty recruiting but labels them as relative intake
+        years (intake_1, intake_2, ...) rather than absolute calendar years.
+        This lets a WVL dynasty import them and assign them to whatever
+        future seasons it wants.
+
+        Args:
+            filepath: Where to write the JSON export.
+            year_count: Number of future classes to generate (default 4).
+            pool_size: Recruits per class.
+            rng: Seeded Random for reproducibility.
+
+        Returns:
+            Summary dict with counts per intake year.
+        """
+        if rng is None:
+            rng = random.Random(self.current_year + 42)
+
+        bundle: dict = {
+            "format": "viperball_future_classes_export",
+            "format_version": 1,
+            "intake_classes": {},
+            "metadata": {
+                "dynasty_name": self.dynasty_name,
+                "source_league": "CVL",
+                "classes_generated": year_count,
+            },
+        }
+
+        counts: Dict[str, int] = {}
+        for i in range(1, year_count + 1):
+            label = f"intake_{i}"
+            seed = rng.randint(0, 999_999)
+            pool = generate_recruit_class(
+                year=seed, size=pool_size, rng=random.Random(seed),
+            )
+            players: list = []
+            for recruit in pool:
+                d = recruit.to_dict()
+                # Add the true attributes so WVL import has full data
+                d["true_attributes"] = {
+                    "speed": recruit.true_speed,
+                    "stamina": recruit.true_stamina,
+                    "agility": recruit.true_agility,
+                    "power": recruit.true_power,
+                    "awareness": recruit.true_awareness,
+                    "hands": recruit.true_hands,
+                    "kicking": recruit.true_kicking,
+                    "kick_power": recruit.true_kick_power,
+                    "kick_accuracy": recruit.true_kick_accuracy,
+                    "lateral_skill": recruit.true_lateral_skill,
+                    "tackling": recruit.true_tackling,
+                }
+                d["intake_year"] = label
+                players.append(d)
+            bundle["intake_classes"][label] = players
+            counts[label] = len(players)
+
+        bundle["metadata"]["counts"] = counts
+        bundle["metadata"]["total_players"] = sum(counts.values())
+
+        import os
+        os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+        with open(filepath, "w") as f:
+            json.dump(bundle, f, indent=2)
+
+        return counts
 
 
 def create_dynasty(
