@@ -580,11 +580,55 @@ def college_team(request: Request, session_id: str, team_name: str):
             "avg_viper_eff": round(sum(viper_eff_vals) / max(1, len(viper_eff_vals)), 3) if viper_eff_vals else None,
         }
 
+    # ── Aggregate per-player season stats ──
+    player_season_stats = {}
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        if game.home_team != team_name and game.away_team != team_name:
+            continue
+        side = "home" if game.home_team == team_name else "away"
+        ps = game.full_result.get("player_stats", {})
+        for p in ps.get(side, []):
+            key = p["name"]
+            if key not in player_season_stats:
+                player_season_stats[key] = {
+                    "name": p["name"], "tag": p.get("tag", ""),
+                    "games_played": 0, "touches": 0, "yards": 0,
+                    "tds": 0, "fumbles": 0, "tackles": 0, "tfl": 0,
+                    "sacks": 0, "hurries": 0, "wpa": 0.0,
+                    "laterals_thrown": 0, "kick_att": 0, "kick_made": 0,
+                    "kick_pass_yards": 0, "kick_passes_thrown": 0,
+                    "kick_passes_completed": 0, "kick_pass_tds": 0,
+                    "keeper_bells": 0, "blocks": 0, "pancakes": 0,
+                    "rushing_yards": 0, "rush_carries": 0, "rushing_tds": 0,
+                    "kick_return_yards": 0, "punt_return_yards": 0,
+                    "plays_involved": 0,
+                }
+            agg = player_season_stats[key]
+            agg["games_played"] += 1
+            if not agg["tag"]:
+                agg["tag"] = p.get("tag", "")
+            for stat in [
+                "touches", "yards", "tds", "fumbles", "tackles", "tfl",
+                "sacks", "hurries", "laterals_thrown", "kick_att", "kick_made",
+                "kick_pass_yards", "kick_passes_thrown", "kick_passes_completed",
+                "kick_pass_tds", "keeper_bells", "blocks", "pancakes",
+                "rushing_yards", "rush_carries", "rushing_tds",
+                "kick_return_yards", "punt_return_yards", "plays_involved",
+            ]:
+                agg[stat] += p.get(stat, 0)
+            agg["wpa"] += p.get("wpa", 0.0)
+
+    for r in player_season_stats.values():
+        r["wpa"] = round(r["wpa"], 2)
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
         team_stats=team_season_stats,
+        player_season_stats=player_season_stats,
     ))
 
 
@@ -768,25 +812,21 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
 
 @router.get("/college/{session_id}/players", response_class=HTMLResponse)
-def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = "", team: str = ""):
+def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
     # Aggregate player stats from completed games
     player_agg = {}
-    all_teams = set()
     for game in season.schedule:
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
         ps = fr.get("player_stats", {})
         for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
-            all_teams.add(t_name)
             conf = season.team_conferences.get(t_name, "")
             if conference and conf != conference:
-                continue
-            if team and t_name != team:
                 continue
             for p in ps.get(side, []):
                 key = f"{t_name}|{p['name']}"
@@ -886,12 +926,11 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     players.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
     conferences = sorted(season.conferences.keys())
-    teams = sorted(all_teams)
 
     return templates.TemplateResponse("college/players.html", _ctx(
         request, section="college", session_id=session_id,
         players=players, sort=sort, conference=conference,
-        conferences=conferences, team=team, teams=teams,
+        conferences=conferences,
         season_name=getattr(season, "name", "Season"),
     ))
 
