@@ -460,7 +460,7 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
     except api_client.APIError:
         state.clear_session()
         notify_info("Dynasty session expired. Please create or load a dynasty.")
-        _render_mode_selection(state, shared)
+        _render_mode_selection(state, shared, play_tab="dynasty")
         return
 
     dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
@@ -525,9 +525,10 @@ async def _render_season_play(state: UserState, shared: dict):
         if state.mode == "dynasty":
             await _render_dynasty_start_season(state, shared)
             return
+        old_mode = state.mode
         state.clear_session()
         notify_info("Previous session expired. Please start a new one.")
-        _render_mode_selection(state, shared)
+        _render_mode_selection(state, shared, play_tab=old_mode)
         return
 
     season_name = status.get("name", "Season")

@@ -52,13 +52,17 @@ def _render_saved_dynasties(state: UserState, shared: dict):
                     ui.label(f"Key: {save_key}").classes("text-xs text-slate-400")
                 with ui.row().classes("gap-2"):
                     async def _load(sk=save_key):
-                        if not state.session_id:
-                            try:
-                                resp = await run.io_bound(api_client.create_session)
-                                state.session_id = resp["session_id"]
-                            except api_client.APIError as e:
-                                notify_error(f"Failed to create session: {e.detail}")
-                                return
+                        # Always create a fresh session so stale cookie
+                        # session IDs don't cause load failures.
+                        try:
+                            resp = await run.io_bound(api_client.create_session)
+                            state.session_id = resp["session_id"]
+                        except api_client.APIError as e:
+                            notify_error(f"Failed to create session: {e.detail}")
+                            return
+                        except Exception as e:
+                            notify_error(f"Failed to create session: {e}")
+                            return
                         try:
                             await run.io_bound(
                                 api_client.load_saved_dynasty, state.session_id, sk,
@@ -68,6 +72,8 @@ def _render_saved_dynasties(state: UserState, shared: dict):
                             ui.navigate.to("/")
                         except api_client.APIError as e:
                             notify_error(f"Failed to load dynasty: {e.detail}")
+                        except Exception as e:
+                            notify_error(f"Failed to load dynasty: {e}")
 
                     ui.button("Resume", on_click=_load, icon="play_arrow").props("color=primary size=sm")
 
