@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# --- Core engine imports (loaded eagerly via engine/__init__.py) ---
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES
 from engine.season import (
     Season, TeamRecord, Game, WeeklyPoll, PollRanking,
@@ -26,47 +27,15 @@ from engine.season import (
     fast_generate_history,
 )
 from engine.dynasty import create_dynasty, Dynasty
-from engine.conference_names import generate_conference_names
-from engine.geography import get_geographic_conference_defaults
-from engine.injuries import InjuryTracker
-from engine.awards import compute_season_awards
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
-from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, ST_SCHEMES
-from scripts.generate_rosters import PROGRAM_ARCHETYPES
 from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, Player, assign_archetype, ST_SCHEMES
-from engine.nil_system import (
-    NILProgram, NILDeal, auto_nil_program, generate_nil_budget,
-    assess_retention_risks, estimate_market_tier, compute_team_prestige,
-)
-from engine.recruiting import (
-    generate_recruit_class, RecruitingBoard, Recruit,
-    run_full_recruiting_cycle, auto_recruit_team, simulate_recruit_decisions,
-    scout_recruit,
-)
-from engine.transfer_portal import (
-    TransferPortal, PortalEntry, populate_portal,
-    auto_portal_offers, generate_quick_portal,
-    estimate_prestige_from_roster,
-)
-from engine.pro_league import ProLeagueSeason, ProLeagueConfig, NVL_CONFIG, ALL_LEAGUE_CONFIGS
-from engine.draftyqueenz import (
-    DraftyQueenzManager, DONATION_TYPES, BOOSTER_TIERS,
-    STARTING_BANKROLL, SALARY_CAP, FANTASY_ENTRY_FEE,
-    MIN_BET, MAX_BET, MIN_DONATION, PARLAY_MULTIPLIERS,
-    POSITION_NAMES, SLOT_LABELS,
-    format_moneyline,
-)
-from engine.db import (
-    save_pro_league as db_save_pro_league,
-    load_pro_league as db_load_pro_league,
-    save_season_archive, load_season_archive, list_season_archives,
-    delete_season_archive,
-    save_dynasty as db_save_dynasty,
-    load_dynasty as db_load_dynasty,
-    list_dynasties as db_list_dynasties,
-    delete_dynasty as db_delete_dynasty,
-)
+
+# --- Deferred imports (loaded on first use to speed up startup) ---
+# engine.pro_league, engine.draftyqueenz, engine.recruiting,
+# engine.transfer_portal, engine.nil_system, engine.injuries,
+# engine.awards, engine.db, engine.conference_names, engine.geography,
+# scripts.generate_rosters — all imported inside endpoint functions.
 
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
@@ -115,10 +84,18 @@ app.mount("/stats", _stats_app)
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
 sessions: Dict[str, dict] = {}
-pro_sessions: Dict[str, ProLeagueSeason] = {}
+pro_sessions: dict = {}
 wvl_sessions: Dict[str, dict] = {}  # session_id → {"season": WVLMultiTierSeason, "dynasty": WVLDynasty}
 
-LEAGUE_CONFIGS: Dict[str, ProLeagueConfig] = dict(ALL_LEAGUE_CONFIGS)
+_league_configs: dict | None = None
+
+
+def _get_league_configs() -> dict:
+    global _league_configs
+    if _league_configs is None:
+        from engine.pro_league import ALL_LEAGUE_CONFIGS
+        _league_configs = dict(ALL_LEAGUE_CONFIGS)
+    return _league_configs
 
 
 @app.get("/api/health")
@@ -527,6 +504,7 @@ def list_weather():
 
 @app.get("/conference-defaults")
 def conference_defaults():
+    from engine.geography import get_geographic_conference_defaults
     teams = load_teams_from_directory(TEAMS_DIR)
     team_names = list(teams.keys())
     defaults = get_geographic_conference_defaults(TEAMS_DIR, team_names, 10)
@@ -540,6 +518,7 @@ def non_conference_opponents(
     num_conferences: int = Query(10, description="Number of conferences if no explicit dict"),
 ):
     """Get available non-conference opponents for a team, grouped by prestige tier."""
+    from engine.geography import get_geographic_conference_defaults
     all_teams = load_teams_from_directory(TEAMS_DIR)
     team_names = sorted(all_teams.keys())
 
@@ -602,6 +581,7 @@ def non_conference_slots_endpoint(
 @app.get("/program-archetypes")
 def program_archetypes():
     """List all available program archetypes with descriptions."""
+    from scripts.generate_rosters import PROGRAM_ARCHETYPES
     return {
         "archetypes": {
             key: {
@@ -741,6 +721,9 @@ def get_session(session_id: str):
 
 @app.post("/sessions/{session_id}/season")
 def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
+    from engine.injuries import InjuryTracker
+    from engine.draftyqueenz import DraftyQueenzManager
+    from engine.transfer_portal import estimate_prestige_from_roster, generate_quick_portal
     session = _get_session(session_id)
 
     teams, team_states = load_teams_with_states(
@@ -1386,6 +1369,7 @@ def bowl_results(session_id: str):
 
 @app.get("/sessions/{session_id}/season/awards")
 def season_awards(session_id: str):
+    from engine.awards import compute_season_awards
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -1406,6 +1390,7 @@ def season_awards(session_id: str):
 
 def _build_college_archive(session: dict, session_id: str) -> dict:
     """Build a self-contained archive snapshot of a college season."""
+    from engine.awards import compute_season_awards
     season = _require_season(session)
 
     standings = _serialize_standings(season)
@@ -1518,6 +1503,7 @@ def _build_fiv_archive() -> dict:
 @app.post("/archives/college/{session_id}")
 def archive_college_season(session_id: str):
     """Archive a college season to persistent storage."""
+    from engine.db import save_season_archive
     session = _get_session(session_id)
     snapshot = _build_college_archive(session, session_id)
     archive_key = f"college_{session_id}_{int(time.time())}"
@@ -1528,6 +1514,7 @@ def archive_college_season(session_id: str):
 @app.post("/archives/fiv")
 def archive_fiv_cycle():
     """Archive the current FIV cycle to persistent storage."""
+    from engine.db import save_season_archive
     snapshot = _build_fiv_archive()
     archive_key = f"fiv_cycle_{snapshot['cycle_number']}_{int(time.time())}"
     save_season_archive(archive_key, snapshot)
@@ -1537,6 +1524,7 @@ def archive_fiv_cycle():
 @app.get("/archives")
 def list_archives():
     """List all archived seasons."""
+    from engine.db import list_season_archives
     archives = list_season_archives()
     return {"archives": archives}
 
@@ -1544,6 +1532,7 @@ def list_archives():
 @app.get("/archives/{archive_key}")
 def get_archive(archive_key: str):
     """Load a specific archived season."""
+    from engine.db import load_season_archive
     data = load_season_archive(archive_key)
     if data is None:
         raise HTTPException(status_code=404, detail="Archive not found")
@@ -1553,12 +1542,15 @@ def get_archive(archive_key: str):
 @app.delete("/archives/{archive_key}")
 def remove_archive(archive_key: str):
     """Delete an archived season."""
+    from engine.db import delete_season_archive
     delete_season_archive(archive_key)
     return {"message": "Archive deleted"}
 
 
 @app.post("/sessions/{session_id}/dynasty")
 def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
+    from engine.geography import get_geographic_conference_defaults
+    from engine.db import save_dynasty as db_save_dynasty
     session = _get_session(session_id)
 
     teams = load_teams_from_directory(TEAMS_DIR, fresh=True)
@@ -1653,6 +1645,8 @@ def dynasty_non_conference_opponents(
 
 @app.post("/sessions/{session_id}/dynasty/start-season")
 def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
+    from engine.injuries import InjuryTracker
+    from engine.draftyqueenz import DraftyQueenzManager
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
 
@@ -1746,6 +1740,10 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
 @app.post("/sessions/{session_id}/dynasty/advance")
 def dynasty_advance(session_id: str):
+    from engine.nil_system import NILProgram, auto_nil_program, generate_nil_budget, assess_retention_risks, estimate_market_tier, compute_team_prestige
+    from engine.transfer_portal import TransferPortal, populate_portal
+    from engine.recruiting import generate_recruit_class, RecruitingBoard
+    from engine.db import save_dynasty as db_save_dynasty
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
     season = _require_season(session)
@@ -1911,12 +1909,14 @@ def dynasty_status(session_id: str):
 @app.get("/dynasties")
 def list_dynasties_endpoint():
     """List all saved dynasties."""
+    from engine.db import list_dynasties as db_list_dynasties
     return {"dynasties": db_list_dynasties()}
 
 
 @app.post("/sessions/{session_id}/dynasty/load")
 def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
     """Load a saved dynasty into the given session."""
+    from engine.db import load_dynasty as db_load_dynasty
     session = _get_session(session_id)
     dynasty = db_load_dynasty(save_key=save_key)
     if dynasty is None:
@@ -1932,6 +1932,7 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
 @app.delete("/dynasties/{save_key}")
 def delete_dynasty_endpoint(save_key: str):
     """Delete a saved dynasty."""
+    from engine.db import delete_dynasty as db_delete_dynasty
     db_delete_dynasty(save_key=save_key)
     return {"deleted": save_key}
 
@@ -2156,6 +2157,7 @@ def _require_offseason(session: dict) -> dict:
 
 
 def _serialize_portal_entry(entry: PortalEntry) -> dict:
+    from engine.transfer_portal import PortalEntry
     d = entry.get_summary()
     d["position_full"] = d.get("position", "")
     d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
@@ -2163,6 +2165,7 @@ def _serialize_portal_entry(entry: PortalEntry) -> dict:
 
 
 def _serialize_recruit(recruit: Recruit) -> dict:
+    from engine.recruiting import Recruit
     d = recruit.get_visible_attrs()
     d["position_full"] = d.get("position", "")
     d["position"] = POSITION_TAGS.get(d["position_full"], d["position_full"][:2].upper() if d["position_full"] else "??")
@@ -2313,6 +2316,7 @@ def offseason_portal_commit(session_id: str, req: PortalCommitRequest):
 
 @app.post("/sessions/{session_id}/offseason/portal/resolve")
 def offseason_portal_resolve(session_id: str):
+    from engine.transfer_portal import auto_portal_offers
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
     offseason = _require_offseason(session)
@@ -2431,6 +2435,7 @@ def offseason_recruiting_offer(session_id: str, req: RecruitOfferRequest):
 
 @app.post("/sessions/{session_id}/offseason/recruiting/resolve")
 def offseason_recruiting_resolve(session_id: str):
+    from engine.recruiting import auto_recruit_team, simulate_recruit_decisions
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
     offseason = _require_offseason(session)
@@ -2525,6 +2530,7 @@ def offseason_recruiting_resolve(session_id: str):
 
 @app.post("/sessions/{session_id}/offseason/complete")
 def offseason_complete(session_id: str):
+    from engine.db import save_dynasty as db_save_dynasty
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
     _require_offseason(session)
@@ -2543,6 +2549,7 @@ def season_portal_generate(
     session_id: str,
     req: SeasonPortalGenerateRequest = SeasonPortalGenerateRequest(),
 ):
+    from engine.transfer_portal import estimate_prestige_from_roster, generate_quick_portal
     size = req.size
     human_team = req.human_team
     session = _get_session(session_id)
@@ -2769,6 +2776,7 @@ def season_coaching_staff_get(session_id: str, team: Optional[str] = Query(None)
 @app.post("/sessions/{session_id}/season/coaching-staff/generate-pool")
 def season_coaching_pool_generate(session_id: str):
     """Generate a pool of available coaches the human can pick from."""
+    from engine.transfer_portal import estimate_prestige_from_roster
     session = _get_session(session_id)
     season = _require_season(session)
 
@@ -2956,6 +2964,7 @@ class DQDonateRequest(BaseModel):
 
 
 def _require_dq(session: dict) -> DraftyQueenzManager:
+    from engine.draftyqueenz import DraftyQueenzManager
     mgr = session.get("dq_manager")
     if mgr is None:
         raise HTTPException(status_code=400, detail="DraftyQueenz not active for this session")
@@ -3046,6 +3055,7 @@ def dq_get_contest(session_id: str, week: int):
 
 @app.get("/sessions/{session_id}/dq/odds/{week}")
 def dq_get_odds(session_id: str, week: int):
+    from engine.draftyqueenz import format_moneyline
     session = _get_session(session_id)
     mgr = _require_dq(session)
     season = _require_season(session)
@@ -3146,6 +3156,7 @@ def dq_place_parlay(session_id: str, week: int, req: DQParlayRequest):
 
 @app.post("/sessions/{session_id}/dq/fantasy/enter/{week}")
 def dq_enter_fantasy(session_id: str, week: int):
+    from engine.draftyqueenz import FANTASY_ENTRY_FEE
     session = _get_session(session_id)
     mgr = _require_dq(session)
     contest = mgr.weekly_contests.get(week)
@@ -3164,6 +3175,7 @@ def dq_enter_fantasy(session_id: str, week: int):
 
 @app.get("/sessions/{session_id}/dq/fantasy/pool/{week}")
 def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None):
+    from engine.draftyqueenz import POSITION_NAMES, SALARY_CAP
     session = _get_session(session_id)
     mgr = _require_dq(session)
     contest = mgr.weekly_contests.get(week)
@@ -3203,6 +3215,7 @@ def dq_fantasy_pool(session_id: str, week: int, position: Optional[str] = None):
 
 @app.post("/sessions/{session_id}/dq/fantasy/set-slot/{week}")
 def dq_set_roster_slot(session_id: str, week: int, req: DQRosterSlotRequest):
+    from engine.draftyqueenz import SALARY_CAP
     session = _get_session(session_id)
     mgr = _require_dq(session)
     contest = mgr.weekly_contests.get(week)
@@ -3231,6 +3244,7 @@ def dq_set_roster_slot(session_id: str, week: int, req: DQRosterSlotRequest):
 
 @app.delete("/sessions/{session_id}/dq/fantasy/clear-slot/{week}/{slot}")
 def dq_clear_roster_slot(session_id: str, week: int, slot: str):
+    from engine.draftyqueenz import SALARY_CAP
     session = _get_session(session_id)
     mgr = _require_dq(session)
     contest = mgr.weekly_contests.get(week)
@@ -3244,6 +3258,7 @@ def dq_clear_roster_slot(session_id: str, week: int, slot: str):
 
 @app.get("/sessions/{session_id}/dq/fantasy/roster/{week}")
 def dq_get_roster(session_id: str, week: int):
+    from engine.draftyqueenz import SALARY_CAP
     session = _get_session(session_id)
     mgr = _require_dq(session)
     contest = mgr.weekly_contests.get(week)
@@ -3327,6 +3342,7 @@ def dq_donate(session_id: str, req: DQDonateRequest):
 
 @app.get("/sessions/{session_id}/dq/portfolio")
 def dq_portfolio(session_id: str):
+    from engine.draftyqueenz import DONATION_TYPES
     session = _get_session(session_id)
     mgr = _require_dq(session)
     tier_name, tier_desc = mgr.booster_tier
@@ -3451,6 +3467,9 @@ class DQCreateRequest(BaseModel):
 @app.post("/sessions/{session_id}/dq/create-season")
 def dq_create_season(session_id: str, req: DQCreateRequest):
     """Create a season specifically for DQ standalone mode (no human teams)."""
+    from engine.geography import get_geographic_conference_defaults
+    from engine.injuries import InjuryTracker
+    from engine.draftyqueenz import DraftyQueenzManager
     session = _get_session(session_id)
 
     teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
@@ -3546,13 +3565,16 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
 
 
 def _get_league_config(league: str) -> ProLeagueConfig:
-    config = LEAGUE_CONFIGS.get(league.lower())
+    from engine.pro_league import ProLeagueConfig
+    config = _get_league_configs().get(league.lower())
     if not config:
-        raise HTTPException(status_code=404, detail=f"League '{league}' not found. Available: {list(LEAGUE_CONFIGS.keys())}")
+        raise HTTPException(status_code=404, detail=f"League '{league}' not found. Available: {list(_get_league_configs().keys())}")
     return config
 
 
 def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
+    from engine.db import load_pro_league as db_load_pro_league
+    from engine.pro_league import ProLeagueSeason
     key = f"{league.lower()}_{session_id}"
     if key not in pro_sessions:
         # Try restoring from database
@@ -3566,6 +3588,7 @@ def _get_pro_session(league: str, session_id: str) -> ProLeagueSeason:
 
 def _auto_save_pro(league: str, session_id: str):
     """Save pro league state to database after mutations."""
+    from engine.db import save_pro_league as db_save_pro_league
     key = f"{league.lower()}_{session_id}"
     season = pro_sessions.get(key)
     if season:

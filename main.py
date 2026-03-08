@@ -32,6 +32,21 @@ ui.run_with(
 )
 logger.info("Viperball ready.")
 
+
+@fastapi_app.on_event("startup")
+async def _prewarm_shared_data():
+    """Pre-warm the shared data cache in a background thread.
+
+    Loads team data and style dicts so the first page render is instant
+    instead of blocking on 188 JSON file reads.
+    """
+    import asyncio
+    from nicegui_app.app import _load_shared_data
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_shared_data)
+    logger.info("Shared data cache pre-warmed.")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
