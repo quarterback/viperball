@@ -70,7 +70,7 @@
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
     </td>
     <td>
-      {% if g.completed and g.has_full_result %}
+      {% if g.completed %}
       <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}">Box</a>
       {% endif %}
     </td>

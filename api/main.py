@@ -752,12 +752,31 @@ def debug_play(req: DebugPlayRequest):
     return result
 
 
+def _persist_box_scores(session_id: str, games):
+    """Save full_result data for completed games to the database.
+
+    Called after simulation endpoints so box scores survive server restarts.
+    Runs synchronously (SQLite writes are fast) and is safe to call with
+    games that have no full_result — they are skipped.
+    """
+    try:
+        from engine.db import save_box_scores_bulk
+        save_box_scores_bulk(session_id, games)
+    except Exception:
+        logger.debug("Box score persistence skipped (db unavailable)", exc_info=True)
+
+
 @app.post("/sessions")
 def create_session():
     # Evict oldest session if at capacity
     if len(sessions) >= MAX_SESSIONS:
         oldest_sid = min(sessions, key=lambda s: sessions[s].get("last_accessed", sessions[s].get("created_at", 0)))
         del sessions[oldest_sid]
+        try:
+            from engine.db import delete_box_scores_for_session
+            delete_box_scores_for_session(oldest_sid)
+        except Exception:
+            pass
         logger.info("Evicted oldest session %s (cap=%d)", oldest_sid, MAX_SESSIONS)
 
     session_id = str(uuid.uuid4())
@@ -780,6 +799,12 @@ def delete_session(session_id: str):
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="Session not found")
     del sessions[session_id]
+    # Clean up persisted box scores for this session
+    try:
+        from engine.db import delete_box_scores_for_session
+        delete_box_scores_for_session(session_id)
+    except Exception:
+        pass
     return {"deleted": True}
 
 
@@ -944,6 +969,8 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
 
     actual_week = games[0].week
 
+    _persist_box_scores(session_id, games)
+
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
 
@@ -970,6 +997,8 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
         _sim_executor,
         lambda: season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim),
     )
+
+    _persist_box_scores(session_id, all_games)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -1003,6 +1032,8 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
     loop = asyncio.get_event_loop()
     games_simulated = await loop.run_in_executor(_sim_executor, _do_sim)
 
+    _persist_box_scores(session_id, season.schedule)
+
     session["phase"] = "playoffs_pending"
 
     return {
@@ -1032,6 +1063,8 @@ async def run_playoffs(session_id: str):
         _sim_executor,
         lambda: season.simulate_playoff(num_teams=effective_size),
     )
+
+    _persist_box_scores(session_id, season.playoff_bracket)
 
     bowl_count = session["config"].get("bowl_count", 4)
     if bowl_count > 0:
@@ -1063,6 +1096,8 @@ async def run_bowls(session_id: str):
         _sim_executor,
         lambda: season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size),
     )
+
+    _persist_box_scores(session_id, [bg.game for bg in season.bowl_games])
 
     session["phase"] = "complete"
 

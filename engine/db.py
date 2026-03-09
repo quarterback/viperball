@@ -1196,6 +1196,91 @@ def delete_dynasty(save_key: str, user_id: str = "default"):
 
 
 # ═══════════════════════════════════════════════════════════════
+# BOX SCORES — persist full game results for the stats site
+# ═══════════════════════════════════════════════════════════════
+
+_BOX_SCORE_TYPE = "box_score"
+
+
+def _box_key(session_id: str, week: int, home_team: str, away_team: str) -> str:
+    """Deterministic save_key for a single box score."""
+    return f"{session_id}__w{week}__{away_team}_at_{home_team}"
+
+
+def save_box_score(
+    session_id: str,
+    week: int,
+    home_team: str,
+    away_team: str,
+    full_result: dict,
+    user_id: str = "default",
+):
+    """Persist a single game's full_result to the database."""
+    key = _box_key(session_id, week, home_team, away_team)
+    label = f"W{week} {away_team} @ {home_team}"
+    save_blob(_BOX_SCORE_TYPE, key, full_result, label=label, user_id=user_id)
+
+
+def load_box_score(
+    session_id: str,
+    week: int,
+    home_team: str,
+    away_team: str,
+    user_id: str = "default",
+) -> Optional[dict]:
+    """Load a single box score from the database. Returns None if not found."""
+    key = _box_key(session_id, week, home_team, away_team)
+    return load_blob(_BOX_SCORE_TYPE, key, user_id=user_id)
+
+
+def delete_box_scores_for_session(session_id: str, user_id: str = "default"):
+    """Delete all box scores belonging to a session."""
+    conn = _connect()
+    try:
+        conn.execute(
+            "DELETE FROM saves WHERE user_id=? AND save_type=? AND save_key LIKE ?",
+            (user_id, _BOX_SCORE_TYPE, f"{session_id}__%"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def save_box_scores_bulk(
+    session_id: str,
+    games: list,
+    user_id: str = "default",
+):
+    """Save box scores for a list of completed Game objects in one transaction."""
+    now = time.time()
+    conn = _connect()
+    try:
+        rows = []
+        for game in games:
+            fr = getattr(game, "full_result", None)
+            if not fr or not getattr(game, "completed", False):
+                continue
+            key = _box_key(session_id, game.week, game.home_team, game.away_team)
+            label = f"W{game.week} {game.away_team} @ {game.home_team}"
+            blob = json.dumps(fr, default=str)
+            rows.append((user_id, _BOX_SCORE_TYPE, key, label, blob, now, now))
+        if rows:
+            conn.executemany(
+                """
+                INSERT INTO saves (user_id, save_type, save_key, label, data, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, save_type, save_key)
+                DO UPDATE SET data=excluded.data, label=excluded.label, updated_at=excluded.updated_at
+                """,
+                rows,
+            )
+            conn.commit()
+            _log.debug(f"Bulk-saved {len(rows)} box scores for session {session_id}")
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
 # AUTO-INITIALIZE on import
 # ═══════════════════════════════════════════════════════════════
 

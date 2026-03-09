@@ -121,7 +121,7 @@
       </a>
     </td>
     <td>
-      {% if completed and g.get('has_full_result') %}
+      {% if completed %}
       <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.get('week_game_idx', 0) }}">Box</a>
       {% endif %}
     </td>
