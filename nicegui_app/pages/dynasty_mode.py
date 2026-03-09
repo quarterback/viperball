@@ -207,11 +207,14 @@ def render_dynasty_mode(state: UserState, shared: dict):
 
     total_teams = len(all_team_names_sorted)
     max_conf = max(1, total_teams // 9)
+    conf_max = min(max_conf, 20)
+    conf_options = {i: str(i) for i in range(1, conf_max + 1)}
+    conf_default = min(16, conf_max)
 
     ui.label(f"Number of Conferences ({total_teams} teams available)").classes("text-sm text-slate-600")
-    num_conferences = ui.slider(
-        min=1, max=min(max_conf, 12), value=min(max_conf, 10), step=1,
-    ).classes("w-96")
+    num_conferences = ui.select(
+        conf_options, value=conf_default, label="Conferences",
+    ).classes("w-40")
 
     teams_per_label = ui.label("").classes("text-sm text-gray-500")
 

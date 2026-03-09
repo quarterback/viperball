@@ -68,7 +68,7 @@ def generate_conference_names(
     Returns:
         List of generated conference name strings.
     """
-    count = max(1, min(16, count))
+    count = max(1, min(20, count))
     exclude_set = set(exclude or [])
 
     rng = random.Random(seed)
