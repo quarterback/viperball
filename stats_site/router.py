@@ -766,6 +766,17 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     game = week_games[game_idx]
     game_data = api["serialize_game"](game, include_full_result=True)
 
+    # If the in-memory full_result is gone (e.g. server restart), try the DB.
+    if not game_data.get("full_result") and game_data.get("completed"):
+        try:
+            from engine.db import load_box_score
+            db_fr = load_box_score(session_id, week, game.home_team, game.away_team)
+            if db_fr:
+                game_data["full_result"] = db_fr
+                game_data["has_full_result"] = True
+        except Exception:
+            pass
+
     # Inject fast_sim metrics as viperball_metrics so templates can find them
     # (mirrors the fix in pro_league.get_box_score)
     fr = game_data.get("full_result")
