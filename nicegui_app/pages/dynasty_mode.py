@@ -300,6 +300,20 @@ def render_dynasty_mode(state: UserState, shared: dict):
         history_years_label.set_text(f"{v} year{'s' if v != 1 else ''}")
     history_years.on_value_change(lambda _: _update_history_label())
 
+    # ── Season Settings ──
+    ui.separator().classes("my-4")
+    ui.label("Season Settings").classes("text-lg font-semibold text-slate-700")
+    ui.label("These settings apply to every season in your dynasty.").classes("text-sm text-gray-500")
+
+    with ui.row().classes("gap-4 flex-wrap"):
+        season_games_per = ui.number("Games per Team", value=12, min=6, max=16).classes("w-40")
+        season_playoff_options = {p: f"{p} teams" for p in [4, 8, 12, 16, 24, 32] if p <= total_teams}
+        season_playoff_default = 8 if 8 in season_playoff_options else next(iter(season_playoff_options))
+        season_playoff_sz = ui.select(
+            season_playoff_options, value=season_playoff_default, label="Playoff Size",
+        ).classes("w-40")
+        season_bowl_ct = ui.number("Bowl Games", value=4, min=0, max=8).classes("w-32")
+
     # ── Create Dynasty Button ──
     ui.separator().classes("my-4")
 
@@ -336,6 +350,9 @@ def render_dynasty_mode(state: UserState, shared: dict):
                 num_conferences=int(num_conferences.value or 10),
                 history_years=int(history_years.value or 0),
                 program_archetype=arch_select.value,
+                games_per_team=int(season_games_per.value),
+                playoff_size=int(season_playoff_sz.value),
+                bowl_count=int(season_bowl_ct.value),
             )
             state.mode = "dynasty"
             state.dynasty_teams = [selected_team]

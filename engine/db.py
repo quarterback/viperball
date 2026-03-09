@@ -1051,6 +1051,9 @@ def serialize_dynasty(dynasty) -> dict:
         "awards_history": {str(year): asdict(a) for year, a in dynasty.awards_history.items()},
         "record_book": asdict(dynasty.record_book),
         "team_prestige": dict(dynasty.team_prestige) if dynasty.team_prestige else {},
+        "games_per_team": dynasty.games_per_team,
+        "playoff_size": dynasty.playoff_size,
+        "bowl_count": dynasty.bowl_count,
         "rivalries": dynasty.rivalries if dynasty.rivalries else {},
         "rivalry_ledger": dynasty.rivalry_ledger if dynasty.rivalry_ledger else {},
         "player_stats": {
@@ -1115,6 +1118,9 @@ def deserialize_dynasty(data: dict):
 
     # Simple dict fields
     dynasty.team_prestige = data.get("team_prestige", {})
+    dynasty.games_per_team = data.get("games_per_team", 12)
+    dynasty.playoff_size = data.get("playoff_size", 8)
+    dynasty.bowl_count = data.get("bowl_count", 4)
     dynasty.rivalries = data.get("rivalries", {})
     dynasty.rivalry_ledger = data.get("rivalry_ledger", {})
 

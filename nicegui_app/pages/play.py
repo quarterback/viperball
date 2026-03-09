@@ -480,14 +480,15 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
         metric_card("Team", coach_team)
 
     ui.label("Start Next Season").classes("text-xl font-bold text-slate-700 mt-2")
-    ui.label("Configure your season settings and begin play.").classes("text-sm text-gray-500 mb-4")
+
+    dyn_games = dyn_status.get("games_per_team", 12)
+    dyn_playoff = dyn_status.get("playoff_size", 8)
+    dyn_bowls = dyn_status.get("bowl_count", 4)
 
     with ui.row().classes("gap-4 flex-wrap"):
-        games_per = ui.number("Games per Team", value=12, min=6, max=16).classes("w-40")
-        playoff_sz = ui.select(
-            {4: "4 teams", 8: "8 teams", 16: "16 teams"}, value=8, label="Playoff Size",
-        ).classes("w-40")
-        bowl_ct = ui.number("Bowl Games", value=4, min=0, max=8).classes("w-32")
+        metric_card("Games per Team", str(dyn_games))
+        metric_card("Playoff Size", f"{dyn_playoff} teams")
+        metric_card("Bowl Games", str(dyn_bowls))
 
     starting_spinner = ui.spinner(size="lg").classes("hidden")
 
@@ -497,9 +498,6 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
             await run.io_bound(
                 api_client.dynasty_start_season,
                 state.session_id,
-                games_per_team=int(games_per.value),
-                playoff_size=int(playoff_sz.value),
-                bowl_count=int(bowl_ct.value),
             )
             state.season_phase = "regular"
             notify_success(f"Year {current_year} season started!")
