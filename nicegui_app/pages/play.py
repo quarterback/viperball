@@ -482,10 +482,14 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
     ui.label("Start Next Season").classes("text-xl font-bold text-slate-700 mt-2")
     ui.label("Configure your season settings and begin play.").classes("text-sm text-gray-500 mb-4")
 
+    total_teams = dyn_status.get("team_count", 32)
+    playoff_options = {p: f"{p} teams" for p in [4, 8, 12, 16, 24, 32] if p <= total_teams}
+    default_playoff = 8 if 8 in playoff_options else next(iter(playoff_options))
+
     with ui.row().classes("gap-4 flex-wrap"):
         games_per = ui.number("Games per Team", value=12, min=6, max=16).classes("w-40")
         playoff_sz = ui.select(
-            {4: "4 teams", 8: "8 teams", 16: "16 teams"}, value=8, label="Playoff Size",
+            playoff_options, value=default_playoff, label="Playoff Size",
         ).classes("w-40")
         bowl_ct = ui.number("Bowl Games", value=4, min=0, max=8).classes("w-32")
 
