@@ -329,7 +329,9 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
                    coach_team: str, starting_year: int = 2026,
                    num_conferences: int = 10, history_years: int = 0,
                    program_archetype: Optional[str] = None,
-                   rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None) -> dict:
+                   rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
+                   games_per_team: int = 12, playoff_size: int = 8,
+                   bowl_count: int = 4) -> dict:
     body = {
         "dynasty_name": dynasty_name,
         "coach_name": coach_name,
@@ -337,6 +339,9 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
         "starting_year": starting_year,
         "num_conferences": num_conferences,
         "history_years": history_years,
+        "games_per_team": games_per_team,
+        "playoff_size": playoff_size,
+        "bowl_count": bowl_count,
     }
     if program_archetype:
         body["program_archetype"] = program_archetype

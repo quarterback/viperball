@@ -207,6 +207,9 @@ class CreateDynastyRequest(BaseModel):
     history_years: int = 0
     program_archetype: Optional[str] = None  # archetype for coach's team
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+    games_per_team: int = 12
+    playoff_size: int = 8
+    bowl_count: int = 4
 
 
 class SimulateWeekRequest(BaseModel):
@@ -478,6 +481,9 @@ def _serialize_dynasty_status(session: dict) -> dict:
         "history_years": history_years,
         "phase": session.get("phase", "setup"),
         "conferences": conf_dict,
+        "games_per_team": dynasty.games_per_team,
+        "playoff_size": dynasty.playoff_size,
+        "bowl_count": dynasty.bowl_count,
     }
 
 
@@ -1661,6 +1667,9 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         coach_name=req.coach_name,
         coach_team=req.coach_team,
         starting_year=req.starting_year,
+        games_per_team=req.games_per_team,
+        playoff_size=req.playoff_size,
+        bowl_count=req.bowl_count,
     )
 
     conferences = get_geographic_conference_defaults(TEAMS_DIR, team_names, req.num_conferences)
@@ -1671,8 +1680,8 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty.simulate_history(
             num_years=req.history_years,
             teams_dir=TEAMS_DIR,
-            games_per_team=12,
-            playoff_size=8,
+            games_per_team=req.games_per_team,
+            playoff_size=req.playoff_size,
         )
 
     session["dynasty"] = dynasty
@@ -1750,6 +1759,11 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     if session["phase"] not in ("setup", "finalize"):
         raise HTTPException(status_code=400, detail=f"Cannot start season in phase '{session['phase']}'")
 
+    # Use dynasty-level season settings (set at creation)
+    games_per_team = dynasty.games_per_team
+    playoff_size = dynasty.playoff_size
+    bowl_count = dynasty.bowl_count
+
     # Build archetype map: human team gets the user's chosen archetype,
     # falling back to the archetype stored when the dynasty was created
     arch = req.program_archetype or session.get("program_archetype")
@@ -1801,7 +1815,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         teams,
         style_configs,
         conferences=conf_dict,
-        games_per_team=req.games_per_team,
+        games_per_team=games_per_team,
         team_states=team_states,
         pinned_matchups=pinned,
         rivalries=rivalries_dict,
@@ -1813,9 +1827,9 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     season.human_teams = list(session.get("human_teams", []))
     session["phase"] = "regular"
     session["config"] = {
-        "playoff_size": req.playoff_size,
-        "bowl_count": req.bowl_count,
-        "games_per_team": req.games_per_team,
+        "playoff_size": playoff_size,
+        "bowl_count": bowl_count,
+        "games_per_team": games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
     session["injury_tracker"].seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)

@@ -280,6 +280,11 @@ class Dynasty:
     rivalries: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
     rivalry_ledger: Dict[str, Dict] = field(default_factory=dict)
 
+    # Season configuration (set at dynasty creation, reused every season)
+    games_per_team: int = 12
+    playoff_size: int = 8
+    bowl_count: int = 4
+
     # Team NIL programs for current year (not serialised, rebuilt each offseason)
     _nil_programs: Dict[str, NILProgram] = field(default_factory=dict, repr=False)
 
@@ -1946,7 +1951,10 @@ def create_dynasty(
     dynasty_name: str,
     coach_name: str,
     coach_team: str,
-    starting_year: int = 2026
+    starting_year: int = 2026,
+    games_per_team: int = 12,
+    playoff_size: int = 8,
+    bowl_count: int = 4,
 ) -> Dynasty:
     """
     Create a new dynasty
@@ -1966,4 +1974,7 @@ def create_dynasty(
         dynasty_name=dynasty_name,
         coach=coach,
         current_year=starting_year,
+        games_per_team=games_per_team,
+        playoff_size=playoff_size,
+        bowl_count=bowl_count,
     )
