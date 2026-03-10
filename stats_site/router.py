@@ -113,6 +113,15 @@ def _get_archives():
         return None, None
 
 
+def _get_saved_pro_leagues():
+    """Get list of saved pro leagues from the database (not in memory)."""
+    try:
+        from engine.db import list_pro_league_saves
+        return list_pro_league_saves()
+    except Exception:
+        return []
+
+
 def _get_fiv_rankings():
     """Get FIV rankings."""
     try:
@@ -287,6 +296,9 @@ def stats_home(request: Request):
         except Exception:
             pass
 
+    # Load saved pro leagues from DB (may include leagues no longer in memory)
+    saved_pro_leagues = _get_saved_pro_leagues()
+
     return templates.TemplateResponse("home.html", _ctx(
         request,
         section="home",
@@ -296,7 +308,27 @@ def stats_home(request: Request):
         fiv_data=fiv_data,
         fiv_rankings=fiv_rankings,
         archives=archives,
+        saved_pro_leagues=saved_pro_leagues,
     ))
+
+
+# ── DELETE SAVED DATA ────────────────────────────────────────────────────
+
+@router.delete("/api/saved-league/{save_key}")
+def delete_saved_league(save_key: str):
+    """Delete a saved pro league from the database."""
+    from engine.db import delete_blob
+    delete_blob("pro_league", save_key)
+    delete_blob("dq_manager", save_key)
+    return {"ok": True}
+
+
+@router.delete("/api/saved-archive/{save_key}")
+def delete_saved_archive(save_key: str):
+    """Delete a saved season archive from the database."""
+    from engine.db import delete_season_archive
+    delete_season_archive(save_key)
+    return {"ok": True}
 
 
 # ── COLLEGE ──────────────────────────────────────────────────────────────
