@@ -116,11 +116,21 @@ def _get_archives():
 def _get_all_saved_data():
     """Get list of all saved data from the database (leagues, dynasties, etc.)."""
     try:
+        from datetime import datetime, timezone
         from engine.db import list_saves
         saves = list_saves()
-        # Filter out internal/auxiliary types users don't care about
         skip_types = {"dq_manager", "user_prefs", "box_score", "bridge"}
-        return [s for s in saves if s["save_type"] not in skip_types]
+        result = []
+        for s in saves:
+            if s["save_type"] in skip_types:
+                continue
+            # Convert unix timestamp to ISO string for template rendering
+            if isinstance(s.get("updated_at"), (int, float)):
+                s["updated_at"] = datetime.fromtimestamp(
+                    s["updated_at"], tz=timezone.utc
+                ).isoformat()
+            result.append(s)
+        return result
     except Exception:
         return []
 
