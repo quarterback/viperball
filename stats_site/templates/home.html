@@ -117,54 +117,43 @@
 </div>
 {% endif %}
 
-{% if saved_pro_leagues %}
-<div id="saved-leagues-section">
-<h2 style="margin-top: 24px;">Saved Pro Leagues</h2>
-<p style="font-size: 11px; color: var(--fg-dim); margin-bottom: 8px;">These leagues are saved in the database. Delete ones you no longer need.</p>
+{% if all_saved %}
+<div id="saved-data-section">
+<h2 style="margin-top: 24px;">Saved Data</h2>
+<p style="font-size: 11px; color: var(--fg-dim); margin-bottom: 8px;">All saved leagues, dynasties, and seasons in the database. Delete ones you no longer need.</p>
 <table>
   <thead>
-    <tr><th>League</th><th>Saved</th><th>Size</th><th></th></tr>
+    <tr><th>Name</th><th>Type</th><th>Saved</th><th>Size</th><th></th></tr>
   </thead>
   <tbody>
-  {% for s in saved_pro_leagues %}
-  <tr data-save-key="{{ s.save_key }}">
-    <td>{{ s.label }}</td>
+  {% for s in all_saved %}
+  <tr>
+    <td>
+      {% if s.save_type == 'season_archive' %}
+        <a href="/stats/archives/{{ s.save_key }}/">{{ s.label }}</a>
+      {% else %}
+        {{ s.label }}
+      {% endif %}
+    </td>
+    <td>
+      {% if s.save_type == 'pro_league' %}<span class="tag tag-conf">Pro</span>
+      {% elif s.save_type == 'dynasty' %}<span class="tag">Dynasty</span>
+      {% elif s.save_type == 'college' %}<span class="tag">CVL</span>
+      {% elif s.save_type == 'wvl_season' %}<span class="tag">WVL</span>
+      {% elif s.save_type == 'season_archive' %}<span class="tag tag-conf">Archive</span>
+      {% elif s.save_type == 'league_archive' %}<span class="tag">League Archive</span>
+      {% else %}<span class="tag">{{ s.save_type }}</span>
+      {% endif %}
+    </td>
     <td>{{ s.updated_at[:16] | replace('T', ' ') }}</td>
     <td class="num">{{ "%.0f"|format(s.data_size / 1024) }} KB</td>
     <td>
-      <button class="btn-delete" onclick="deleteSaved(this, 'league', '{{ s.save_key }}', '{{ s.label }}')" title="Delete this saved league">&times;</button>
+      <button class="btn-delete" onclick="deleteSaved(this, '{{ s.save_type }}', '{{ s.save_key }}', '{{ s.label }}')" title="Delete this save">&times;</button>
     </td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
-</div>
-{% endif %}
-
-{% if archives %}
-<div id="archives-section">
-<h2 style="margin-top: 24px;">Archived Seasons</h2>
-<table>
-  <thead>
-    <tr><th>Season</th><th>Type</th><th>Champion</th><th></th></tr>
-  </thead>
-  <tbody>
-  {% for a in archives %}
-  <tr data-save-key="{{ a.save_key }}">
-    <td><a href="/stats/archives/{{ a.save_key }}/">{{ a.label }}</a></td>
-    <td>
-      {% if 'fiv' in a.save_key %}<span class="tag tag-conf">FIV</span>
-      {% else %}<span class="tag">CVL</span>{% endif %}
-    </td>
-    <td>&mdash;</td>
-    <td>
-      <button class="btn-delete" onclick="deleteSaved(this, 'archive', '{{ a.save_key }}', '{{ a.label }}')" title="Delete this archive">&times;</button>
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-<div style="margin-top: 4px; font-size: 11px;"><a href="/stats/archives/">All archives &rarr;</a></div>
 </div>
 {% endif %}
 
@@ -187,18 +176,16 @@
 </style>
 
 <script>
-function deleteSaved(btn, type, saveKey, label) {
+function deleteSaved(btn, saveType, saveKey, label) {
   if (!confirm('Delete "' + label + '"? This cannot be undone.')) return;
-  var endpoint = type === 'league' ? '/stats/api/saved-league/' : '/stats/api/saved-archive/';
-  var sectionId = type === 'league' ? 'saved-leagues-section' : 'archives-section';
   btn.disabled = true;
   btn.textContent = '...';
-  fetch(endpoint + encodeURIComponent(saveKey), { method: 'DELETE' })
+  fetch('/stats/api/saved/' + encodeURIComponent(saveType) + '/' + encodeURIComponent(saveKey), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error('Delete failed'); return r.json(); })
     .then(function() {
       var row = btn.closest('tr');
       row.remove();
-      var section = document.getElementById(sectionId);
+      var section = document.getElementById('saved-data-section');
       if (section && section.querySelector('tbody').children.length === 0) {
         section.remove();
       }
