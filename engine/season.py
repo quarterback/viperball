@@ -1960,10 +1960,10 @@ class Season:
             at_large = []
             for team_name, pi, qw in power_ranked:
                 if team_name not in auto_bid_teams:
-                    at_large.append(team_name)
-                    self._playoff_bid_types[team_name] = "at-large"
                     if len(at_large) >= at_large_spots:
                         break
+                    at_large.append(team_name)
+                    self._playoff_bid_types[team_name] = "at-large"
 
             all_playoff_names = list(auto_bid_teams) + at_large
 
