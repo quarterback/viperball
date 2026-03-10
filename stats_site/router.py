@@ -113,6 +113,18 @@ def _get_archives():
         return None, None
 
 
+def _get_all_saved_data():
+    """Get list of all saved data from the database (leagues, dynasties, etc.)."""
+    try:
+        from engine.db import list_saves
+        saves = list_saves()
+        # Filter out internal/auxiliary types users don't care about
+        skip_types = {"dq_manager", "user_prefs", "box_score", "bridge"}
+        return [s for s in saves if s["save_type"] not in skip_types]
+    except Exception:
+        return []
+
+
 def _get_fiv_rankings():
     """Get FIV rankings."""
     try:
@@ -287,6 +299,9 @@ def stats_home(request: Request):
         except Exception:
             pass
 
+    # Load all saved data from DB (may include leagues no longer in memory)
+    all_saved = _get_all_saved_data()
+
     return templates.TemplateResponse("home.html", _ctx(
         request,
         section="home",
@@ -296,7 +311,27 @@ def stats_home(request: Request):
         fiv_data=fiv_data,
         fiv_rankings=fiv_rankings,
         archives=archives,
+        all_saved=all_saved,
     ))
+
+
+# ── DELETE SAVED DATA ────────────────────────────────────────────────────
+
+@router.delete("/api/saved/{save_type}/{save_key}")
+def delete_saved_data(save_type: str, save_key: str):
+    """Delete a saved item from the database."""
+    from engine.db import delete_blob
+    allowed_types = {
+        "pro_league", "dynasty", "wvl_season",
+        "season_archive", "league_archive", "college",
+    }
+    if save_type not in allowed_types:
+        raise HTTPException(400, f"Cannot delete save type: {save_type}")
+    delete_blob(save_type, save_key)
+    # Also clean up associated DQ manager for pro leagues
+    if save_type == "pro_league":
+        delete_blob("dq_manager", save_key)
+    return {"ok": True}
 
 
 # ── COLLEGE ──────────────────────────────────────────────────────────────
