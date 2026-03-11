@@ -4516,13 +4516,22 @@ class ViperballEngine:
         return calculate_ep(fp, 1)
 
     def select_kick_decision(self) -> PlayType:
-        """Coaching decision chart — priority: TD > snap kick > FG > punt > TOD.
+        """Coaching decision chart — drive-first philosophy.
 
-        A turnover on downs is the **worst** outcome.  The coaching AI
-        will always prefer kicking (snap kick for 5 pts, FG for 3) over
-        risking a TOD.  Punting is preferred over TOD when no kick is
-        available.  The only time we "go for it" is when the conversion
-        looks probable (short ytg) or we're in the red zone chasing 9.
+        V3 redesign: 4th down is for DRIVING, not kicking.  The offense
+        should maximise the drive — burn clock, gain field position, and
+        chase 9-point touchdowns.  Kicking on 4th is only justified when:
+          (a) it's a gimme (close range, elite kicker, very high %),
+          (b) it's late game / before the half and points are urgent,
+          (c) the kicker has a green-light trait (snapkick_specialist,
+              fg_aggressive), OR
+          (d) the offense is truly stalling (high ytg, no momentum).
+
+        5th down is the "setup shot" — the basketball corner-3 equivalent.
+        This is where kick decisions naturally belong after using 4th down
+        to improve field position.
+
+        6th down remains last-chance: kick > punt > go for it.
         """
         fp = self.state.field_position
         down = self.state.down
@@ -4556,16 +4565,63 @@ class ViperballEngine:
         dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
         dk_comfort *= snap_kick_agg
 
-        # ── Down 4: THE decisive down ──
-        # With Finnish baseball retention, snap kicks on 4th down are free
-        # shots.  If you miss, you keep the ball on 5th down.  If you make
-        # it, 5 points.  Only attempt when in snap kick range and kicker
-        # is decent.  Short ytg → go for the first down instead.
+        # ── Situational awareness ──
+        score_diff = self._get_score_diff()
+        quarter = self.state.quarter
+        time_left = self.state.time_remaining
+
+        # "Clock pressure" — situations where taking points now is smart:
+        #   - End of 2nd quarter (before the half), limited time left
+        #   - Late in Q4 when trailing by a small margin
+        #   - Late in Q4 when leading and you want to extend
+        clock_pressure = False
+        if quarter == 2 and time_left <= 180:
+            clock_pressure = True  # Before the half, get points
+        elif quarter == 4 and time_left <= 180:
+            clock_pressure = True  # Late game, points are critical
+        elif quarter >= 3 and score_diff > 9:
+            clock_pressure = True  # Comfortable lead, take safe points
+
+        # "Green light" — kicker/coach traits that authorize early kicks
+        off_mods = self._coaching_mods()
+        trait_fx = off_mods.get("hidden_trait_effects", {})
+        # dk_ev_multiplier > 1.0 means snapkick_specialist trait is active;
+        # take_points_bias < 1.0 means fg_aggressive trait (coach prefers going
+        # for it, but paradoxically is also willing to pull the trigger on kicks
+        # when the opportunity is right — they have the green light).
+        has_green_light = (
+            trait_fx.get("dk_ev_multiplier", 1.0) > 1.0
+            or trait_fx.get("take_points_bias", 1.0) < 0.85
+        )
+
+        # ── Down 4: DRIVE-FIRST — keep the ball moving ──
+        # The default on 4th is to go for it.  You still have 5th and
+        # 6th down.  Use 4th to advance field position for a better
+        # kick on 5th, or keep chasing the 9-point touchdown.
         if down == 4:
-            if dk_success >= 0.35 and fg_distance <= dk_comfort:
-                if ytg <= 4:
-                    return None
+            # Gimme kick: very close range, high success, long ytg
+            # (no point running into a wall when points are free)
+            if dk_success >= 0.65 and fg_distance <= 25 and ytg >= 10:
                 return PlayType.DROP_KICK
+
+            # Clock pressure: before the half or late game, take points
+            if clock_pressure and dk_success >= 0.40 and fg_distance <= dk_comfort:
+                if ytg >= 6:
+                    return PlayType.DROP_KICK
+
+            # Green light kicker: coach trusts them, but still needs
+            # decent conditions — not a blank check
+            if has_green_light and dk_success >= 0.50 and fg_distance <= dk_comfort:
+                if ytg >= 8:
+                    return PlayType.DROP_KICK
+
+            # Offense stalling: very long ytg and in range — might as
+            # well take the 5-pointer instead of grinding 15+ yards
+            kick_mode_agg = self._current_style().get("kick_mode_aggression", 0.5)
+            if kick_mode_agg >= 0.60 and ytg >= 16 and dk_success >= 0.45:
+                return PlayType.DROP_KICK
+
+            # Default: keep driving
             return None
 
         # ── Determine best available kick ──
@@ -4583,7 +4639,10 @@ class ViperballEngine:
                 best_kick = PlayType.PLACE_KICK
                 best_kick_ev = fg_ev
 
-        # ── Down 5: decision depends on kick mode ──
+        # ── Down 5: THE SETUP SHOT ──
+        # This is the natural kick down.  4th down should have advanced
+        # field position; now the kicker steps up.  Think corner-3 in
+        # basketball — you worked the ball around and now take the shot.
         if down == 5:
             if self.state.kick_mode:
                 # Kick mode active: always attempt snap kick on 5th
@@ -4593,22 +4652,25 @@ class ViperballEngine:
                     return PlayType.PLACE_KICK
                 return None  # Out of range, go for it as last resort
 
-            # Non-kick-mode: original decision logic
+            # Non-kick-mode: use the go-for-it matrix
             go_threshold = self._go_for_it_threshold(fp, 5)
             kicker_adj = (75 - kicker_skill) // 5
             go_threshold = max(1, go_threshold + kicker_adj)
 
-            # V2.2: Aggression lowers go-for-it threshold (more aggressive = go more often)
-            off_mods = self._coaching_mods()
+            # Aggression lowers go-for-it threshold (more aggressive = go more often)
             pf = off_mods.get("personality_factors", {})
-            trait_fx = off_mods.get("hidden_trait_effects", {})
             agg = pf.get("aggression", 1.0)
             go_threshold = max(1, int(go_threshold / agg))
 
-            # V2.2: Red zone gambler trait
+            # Red zone gambler trait
             if fp >= 80:
                 rz_mult = trait_fx.get("go_for_it_redzone_multiplier", 1.0)
                 go_threshold = max(1, int(go_threshold / rz_mult))
+
+            # Clock pressure on 5th: more willing to kick
+            if clock_pressure and best_kick:
+                go_threshold = max(1, go_threshold - 2)
+
             if ytg <= 2:
                 return None
             if ytg <= go_threshold:
@@ -4635,84 +4697,6 @@ class ViperballEngine:
             return PlayType.PUNT
 
         return None
-
-    def _fourth_down_decision(self, fp, ytg, kicker_skill, dk_success, pk_success):
-        """4th Down Movement: decide advancement vs. kick mode.
-
-        Factors:
-        - Field position: Inside opponent's 45 favors kick mode
-        - Yards to go: ytg > 10 favors kick mode, ytg < 5 favors advancement
-        - Kicker skill: Elite kicker = more willing to kick from further
-        - Game situation: Trailing late = advancement, leading = kick mode
-        - Team style: boot_raid favors kick mode, power favors advancement
-        """
-        fg_distance = (100 - fp) + 10
-        style = self._current_style()
-        kick_mode_agg = style.get("kick_mode_aggression", 0.5)
-
-        # Can't kick if out of range (beyond ~55 yards)
-        if fg_distance > 55 or dk_success < 0.15:
-            return None  # Go for advancement — kick not viable
-
-        # Red zone (fp >= 85): always go for TD
-        if fp >= 85:
-            return None
-
-        # Score factors
-        score_diff = self._get_score_diff()
-        urgency = 0.0
-        if self.state.quarter >= 3 and score_diff < -9:
-            urgency = -0.3  # Need TDs, not 5-pointers
-        elif score_diff > 9:
-            urgency = 0.2  # Comfortable lead, take the points
-
-        # Base probability of entering kick mode
-        kick_prob = 0.0
-
-        # YTG factor: the more yards to go, the more likely to kick
-        if ytg <= 3:
-            kick_prob += 0.05
-        elif ytg <= 6:
-            kick_prob += 0.15
-        elif ytg <= 10:
-            kick_prob += 0.30
-        elif ytg <= 15:
-            kick_prob += 0.50
-        else:
-            kick_prob += 0.65
-
-        # Field position factor: closer to goal = more tempting to kick
-        if fp >= 65:
-            kick_prob += 0.20  # Prime snap kick range
-        elif fp >= 55:
-            kick_prob += 0.10
-
-        # Kicker quality
-        kick_prob += (kicker_skill - 75) * 0.005
-
-        # Style and urgency
-        kick_prob += kick_mode_agg - 0.5  # Centered at 0
-        kick_prob += urgency
-
-        # V2.3: INT awareness — when leading in 2H, going for it risks
-        # a turnover that gifts the opponent a bonus possession. Bias
-        # toward kicking (safe points) proportional to lead size.
-        if self.state.quarter >= 3 and score_diff > 0:
-            int_kick_bias = min(0.20, score_diff / 50.0)  # up to +0.20 at 10+ pts
-            kick_prob += int_kick_bias
-
-        # V2.7: Lead management kick mode bias
-        # Slow Drip coaches push toward kick mode; Avalanche coaches resist it.
-        lm_kick = self._lead_management_modifiers()
-        if lm_kick:
-            kick_prob += lm_kick.get("kick_mode_aggression_shift", 0.0)
-
-        kick_prob = max(0.05, min(0.85, kick_prob))
-
-        if random.random() < kick_prob:
-            self.state.kick_mode = True
-            return PlayType.DROP_KICK
-        return None  # Go for advancement
 
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":
