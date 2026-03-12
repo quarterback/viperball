@@ -406,135 +406,105 @@ def gen_team(school):
 
 
 NEW_SCHOOLS = [
-    {"id": "nyu", "name": "New York University", "abbrev": "NYU", "mascot": "Violets", "city": "New York", "state": "NY", "colors": ["Purple", "White"], "conference": "Empire Athletic", "tier": 75},
-    {"id": "emory", "name": "Emory University", "abbrev": "EMRY", "mascot": "Eagles", "city": "Atlanta", "state": "GA", "colors": ["Blue", "Gold"], "conference": "Heritage Conference", "tier": 74},
-    {"id": "brandeis", "name": "Brandeis University", "abbrev": "BRND", "mascot": "Judges", "city": "Waltham", "state": "MA", "colors": ["Blue", "White"], "conference": "Founders League", "tier": 73},
-    {"id": "vassar", "name": "Vassar College", "abbrev": "VSSR", "mascot": "Brewers", "city": "Poughkeepsie", "state": "NY", "colors": ["Burgundy", "Grey"], "conference": "Founders League", "tier": 71},
-    {"id": "swarthmore", "name": "Swarthmore College", "abbrev": "SWAT", "mascot": "Garnet", "city": "Swarthmore", "state": "PA", "colors": ["Garnet", "White"], "conference": "Centennial Conference", "tier": 73},
-    {"id": "haverford", "name": "Haverford College", "abbrev": "HAVR", "mascot": "Fords", "city": "Haverford", "state": "PA", "colors": ["Scarlet", "Black"], "conference": "Centennial Conference", "tier": 71},
-    {"id": "babson", "name": "Babson College", "abbrev": "BABS", "mascot": "Beavers", "city": "Wellesley", "state": "MA", "colors": ["Green", "White"], "conference": "Founders League", "tier": 70},
-    {"id": "claremont_mckenna", "name": "Claremont McKenna College", "abbrev": "CMC", "mascot": "Stags", "city": "Claremont", "state": "CA", "colors": ["Cardinal", "Gold"], "conference": "Pioneer League", "tier": 72},
-    {"id": "hunter", "name": "Hunter College", "abbrev": "HUNT", "mascot": "Hawks", "city": "New York", "state": "NY", "colors": ["Purple", "Gold"], "conference": "Empire Athletic", "tier": 68},
-    {"id": "baruch", "name": "Baruch College", "abbrev": "BARC", "mascot": "Bearcats", "city": "New York", "state": "NY", "colors": ["Blue", "White", "Black"], "conference": "Empire Athletic", "tier": 67},
-    {"id": "john_jay", "name": "John Jay College", "abbrev": "JJAY", "mascot": "Bloodhounds", "city": "New York", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Empire Athletic", "tier": 66},
-    {"id": "suffolk", "name": "Suffolk University", "abbrev": "SFLK", "mascot": "Rams", "city": "Boston", "state": "MA", "colors": ["Blue", "Gold"], "conference": "Atlantic Collegiate", "tier": 67},
-    {"id": "umass_boston", "name": "UMass Boston", "abbrev": "UMB", "mascot": "Beacons", "city": "Boston", "state": "MA", "colors": ["Blue", "White"], "conference": "Atlantic Collegiate", "tier": 68},
-    {"id": "uc_santa_cruz", "name": "UC Santa Cruz", "abbrev": "UCSC", "mascot": "Banana Slugs", "city": "Santa Cruz", "state": "CA", "colors": ["Blue", "Gold"], "conference": "Pioneer League", "tier": 69},
-    {"id": "ut_dallas", "name": "UT Dallas", "abbrev": "UTD", "mascot": "Comets", "city": "Richardson", "state": "TX", "colors": ["Orange", "Green", "White"], "conference": "Independence Conference", "tier": 70},
-    {"id": "uchicago", "name": "University of Chicago", "abbrev": "UCHI", "mascot": "Maroons", "city": "Chicago", "state": "IL", "colors": ["Maroon", "White"], "conference": "Heritage Conference", "tier": 76},
-    {"id": "uc_santa_barbara", "name": "UC Santa Barbara", "abbrev": "UCSB", "mascot": "Gauchos", "city": "Santa Barbara", "state": "CA", "colors": ["Blue", "Gold"], "conference": "Pioneer League", "tier": 74},
-    {"id": "whittier", "name": "Whittier College", "abbrev": "WHIT", "mascot": "Poets", "city": "Whittier", "state": "CA", "colors": ["Purple", "Gold"], "conference": "Pioneer League", "tier": 68},
-    {"id": "occidental", "name": "Occidental College", "abbrev": "OXY", "mascot": "Tigers", "city": "Los Angeles", "state": "CA", "colors": ["Orange", "Black"], "conference": "Pioneer League", "tier": 70},
-    {"id": "smith", "name": "Smith College", "abbrev": "SMTH", "mascot": "Pioneers", "city": "Northampton", "state": "MA", "colors": ["Blue", "Yellow"], "conference": "Founders League", "tier": 72},
-    {"id": "wellesley", "name": "Wellesley College", "abbrev": "WELL", "mascot": "Blue", "city": "Wellesley", "state": "MA", "colors": ["Blue", "White"], "conference": "Founders League", "tier": 73},
-    {"id": "bryn_mawr", "name": "Bryn Mawr College", "abbrev": "BRYN", "mascot": "Owls", "city": "Bryn Mawr", "state": "PA", "colors": ["Yellow", "White"], "conference": "Centennial Conference", "tier": 71},
-    {"id": "penn_state", "name": "Penn State University", "abbrev": "PSU", "mascot": "Nittany Lions", "city": "University Park", "state": "PA", "colors": ["Blue", "White"], "conference": "Liberty Athletic", "tier": 67},
-    {"id": "mount_holyoke", "name": "Mount Holyoke College", "abbrev": "MHC", "mascot": "Lyons", "city": "South Hadley", "state": "MA", "colors": ["Blue", "White"], "conference": "Founders League", "tier": 71},
-    {"id": "academy_of_art", "name": "Academy of Art University", "abbrev": "AAU", "mascot": "Urban Knights", "city": "San Francisco", "state": "CA", "colors": ["Red", "Black"], "conference": "Pioneer League", "tier": 66},
-    {"id": "point_loma", "name": "Point Loma Nazarene University", "abbrev": "PLNU", "mascot": "Sea Lions", "city": "San Diego", "state": "CA", "colors": ["Green", "Gold"], "conference": "Pioneer League", "tier": 69},
-    {"id": "biola", "name": "Biola University", "abbrev": "BIOL", "mascot": "Eagles", "city": "La Mirada", "state": "CA", "colors": ["Red", "White"], "conference": "Pioneer League", "tier": 70},
-    {"id": "ubc", "name": "University of British Columbia", "abbrev": "UBC", "mascot": "Thunderbirds", "city": "Vancouver", "state": "BC", "colors": ["Blue", "Gold"], "conference": "Independence Conference", "tier": 75},
-    # ── Geographic Expansion: Gulf States Conference (new) ──
-    {"id": "north_florida", "name": "University of North Florida", "abbrev": "UNF", "mascot": "Ospreys", "city": "Jacksonville", "state": "FL", "colors": ["Blue", "Gray"], "conference": "Gulf States", "tier": 70},
-    {"id": "fgcu", "name": "Florida Gulf Coast University", "abbrev": "FGCU", "mascot": "Eagles", "city": "Fort Myers", "state": "FL", "colors": ["Green", "Blue"], "conference": "Gulf States", "tier": 69},
-    {"id": "stetson", "name": "Stetson University", "abbrev": "STET", "mascot": "Hatters", "city": "DeLand", "state": "FL", "colors": ["Green", "White"], "conference": "Gulf States", "tier": 71},
-    {"id": "jacksonville", "name": "Jacksonville University", "abbrev": "JU", "mascot": "Dolphins", "city": "Jacksonville", "state": "FL", "colors": ["Green", "White"], "conference": "Gulf States", "tier": 68},
-    {"id": "samford", "name": "Samford University", "abbrev": "SAM", "mascot": "Bulldogs", "city": "Birmingham", "state": "AL", "colors": ["Red", "Blue"], "conference": "Gulf States", "tier": 72},
-    {"id": "south_alabama", "name": "University of South Alabama", "abbrev": "USA", "mascot": "Jaguars", "city": "Mobile", "state": "AL", "colors": ["Red", "Blue", "White"], "conference": "Gulf States", "tier": 70},
-    {"id": "uab", "name": "University of Alabama at Birmingham", "abbrev": "UAB", "mascot": "Blazers", "city": "Birmingham", "state": "AL", "colors": ["Green", "Gold"], "conference": "Gulf States", "tier": 73},
-    {"id": "loyola_new_orleans", "name": "Loyola University New Orleans", "abbrev": "LYNO", "mascot": "Wolf Pack", "city": "New Orleans", "state": "LA", "colors": ["Maroon", "Gold"], "conference": "Gulf States", "tier": 69},
-    {"id": "new_orleans", "name": "University of New Orleans", "abbrev": "UNO", "mascot": "Privateers", "city": "New Orleans", "state": "LA", "colors": ["Silver", "Blue"], "conference": "Gulf States", "tier": 68},
-    {"id": "tulane", "name": "Tulane University", "abbrev": "TULN", "mascot": "Green Wave", "city": "New Orleans", "state": "LA", "colors": ["Olive Green", "Sky Blue"], "conference": "Gulf States", "tier": 74},
-    {"id": "southern_miss", "name": "University of Southern Mississippi", "abbrev": "USM", "mascot": "Golden Eagles", "city": "Hattiesburg", "state": "MS", "colors": ["Black", "Gold"], "conference": "Gulf States", "tier": 71},
-    {"id": "georgia_state", "name": "Georgia State University", "abbrev": "GSU", "mascot": "Panthers", "city": "Atlanta", "state": "GA", "colors": ["Blue", "White", "Red"], "conference": "Gulf States", "tier": 72},
-    {"id": "kennesaw_state", "name": "Kennesaw State University", "abbrev": "KSU", "mascot": "Owls", "city": "Kennesaw", "state": "GA", "colors": ["Black", "Gold"], "conference": "Gulf States", "tier": 70},
-    # ── Geographic Expansion: filling remaining gaps ──
-    {"id": "st_thomas", "name": "University of St. Thomas", "abbrev": "STMN", "mascot": "Tommies", "city": "St. Paul", "state": "MN", "colors": ["Purple", "Gray"], "conference": "Great Lakes Union", "tier": 71},
-    {"id": "oakland", "name": "Oakland University", "abbrev": "OAK", "mascot": "Golden Grizzlies", "city": "Rochester", "state": "MI", "colors": ["Black", "Gold"], "conference": "Great Lakes Union", "tier": 69},
-    {"id": "unlv", "name": "University of Nevada Las Vegas", "abbrev": "UNLV", "mascot": "Rebels", "city": "Las Vegas", "state": "NV", "colors": ["Scarlet", "Gray"], "conference": "Sun Country", "tier": 73},
-    {"id": "marshall", "name": "Marshall University", "abbrev": "MRSH", "mascot": "Thundering Herd", "city": "Huntington", "state": "WV", "colors": ["Green", "White"], "conference": "Moonshine League", "tier": 72},
-    {"id": "delaware", "name": "University of Delaware", "abbrev": "DEL", "mascot": "Fightin' Blue Hens", "city": "Newark", "state": "DE", "colors": ["Blue", "Gold"], "conference": "Capital Athletic", "tier": 73},
-    {"id": "portland_state", "name": "Portland State University", "abbrev": "PSU", "mascot": "Vikings", "city": "Portland", "state": "OR", "colors": ["Green", "White"], "conference": "Pacific Rim", "tier": 69},
-    {"id": "hawaii", "name": "University of Hawaii", "abbrev": "HAW", "mascot": "Rainbow Warriors", "city": "Honolulu", "state": "HI", "colors": ["Green", "White", "Black"], "conference": "Pacific Rim", "tier": 72},
-    # ── Geographic Expansion: individual additions ──
-    {"id": "linfield", "name": "Linfield University", "abbrev": "LINF", "mascot": "Wildcats", "city": "McMinnville", "state": "OR", "colors": ["Cardinal", "Purple"], "conference": "Pacific Rim", "tier": 71},
-    {"id": "carroll_college", "name": "Carroll College", "abbrev": "CROL", "mascot": "Fighting Saints", "city": "Helena", "state": "MT", "colors": ["Purple", "Gold"], "conference": "Skyline Conference", "tier": 70},
-    # ── D3 Midwest Conference (full 2026-27 membership) ──
-    {"id": "beloit", "name": "Beloit College", "abbrev": "BELT", "mascot": "Buccaneers", "city": "Beloit", "state": "WI", "colors": ["Blue", "Gold"], "conference": "Midwest Conference", "tier": 69},
-    {"id": "cornell_college", "name": "Cornell College", "abbrev": "CORN", "mascot": "Rams", "city": "Mount Vernon", "state": "IA", "colors": ["Purple", "White"], "conference": "Midwest Conference", "tier": 70},
-    {"id": "grinnell", "name": "Grinnell College", "abbrev": "GRIN", "mascot": "Pioneers", "city": "Grinnell", "state": "IA", "colors": ["Scarlet", "Black"], "conference": "Midwest Conference", "tier": 72},
-    {"id": "illinois_college", "name": "Illinois College", "abbrev": "ILCO", "mascot": "Blueboys", "city": "Jacksonville", "state": "IL", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 68},
-    {"id": "knox", "name": "Knox College", "abbrev": "KNOX", "mascot": "Prairie Fire", "city": "Galesburg", "state": "IL", "colors": ["Purple", "Gold"], "conference": "Midwest Conference", "tier": 69},
-    {"id": "lake_forest", "name": "Lake Forest College", "abbrev": "LFC", "mascot": "Foresters", "city": "Lake Forest", "state": "IL", "colors": ["Black", "Red"], "conference": "Midwest Conference", "tier": 68},
-    {"id": "lawrence", "name": "Lawrence University", "abbrev": "LAWR", "mascot": "Vikings", "city": "Appleton", "state": "WI", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 70},
-    {"id": "monmouth_il", "name": "Monmouth College", "abbrev": "MNTH", "mascot": "Fighting Scots", "city": "Monmouth", "state": "IL", "colors": ["Scarlet", "White"], "conference": "Midwest Conference", "tier": 69},
-    {"id": "ripon", "name": "Ripon College", "abbrev": "RIPN", "mascot": "Red Hawks", "city": "Ripon", "state": "WI", "colors": ["Crimson", "White"], "conference": "Midwest Conference", "tier": 68},
-    {"id": "luther", "name": "Luther College", "abbrev": "LTHR", "mascot": "Norse", "city": "Decorah", "state": "IA", "colors": ["Blue", "White"], "conference": "Midwest Conference", "tier": 70},
-    # ── Wyoming replacement ──
-    {"id": "eastern_wyoming", "name": "Eastern Wyoming College", "abbrev": "EWC", "mascot": "Lancers", "city": "Torrington", "state": "WY", "colors": ["Blue", "White"], "conference": "Skyline Conference", "tier": 58},
-    # ── Northern Shield (Canadian + Alaska) ──
-    {"id": "alaska_anchorage", "name": "University of Alaska Anchorage", "abbrev": "UAA", "mascot": "Seawolves", "city": "Anchorage", "state": "AK", "colors": ["Green", "Gold"], "conference": "Northern Shield", "tier": 66},
-    {"id": "sfu", "name": "Simon Fraser University", "abbrev": "SFU", "mascot": "Clan", "city": "Burnaby", "state": "BC", "colors": ["Red", "White"], "conference": "Northern Shield", "tier": 68},
-    {"id": "uvic", "name": "University of Victoria", "abbrev": "UVIC", "mascot": "Vikes", "city": "Victoria", "state": "BC", "colors": ["Blue", "Gold", "Red"], "conference": "Northern Shield", "tier": 65},
-    {"id": "ufv", "name": "University of the Fraser Valley", "abbrev": "UFV", "mascot": "Cascades", "city": "Abbotsford", "state": "BC", "colors": ["Green", "White"], "conference": "Northern Shield", "tier": 63},
-    # ── Interstate Athletic Association (HBCUs) ──
-    {"id": "florida_am", "name": "Florida A&M University", "abbrev": "FAMU", "mascot": "Rattlers", "city": "Tallahassee", "state": "FL", "colors": ["Orange", "Green"], "conference": "Interstate Athletic Association", "tier": 74},
-    {"id": "bethune_cookman", "name": "Bethune-Cookman University", "abbrev": "BCU", "mascot": "Wildcats", "city": "Daytona Beach", "state": "FL", "colors": ["Maroon", "Gold"], "conference": "Interstate Athletic Association", "tier": 72},
-    {"id": "talladega", "name": "Talladega College", "abbrev": "TALC", "mascot": "Tornadoes", "city": "Talladega", "state": "AL", "colors": ["Crimson", "Blue"], "conference": "Interstate Athletic Association", "tier": 64},
-    {"id": "spelman", "name": "Spelman College", "abbrev": "SPEL", "mascot": "Jaguars", "city": "Atlanta", "state": "GA", "colors": ["Blue", "White"], "conference": "Interstate Athletic Association", "tier": 66},
-    {"id": "alabama_state", "name": "Alabama State University", "abbrev": "ALST", "mascot": "Hornets", "city": "Montgomery", "state": "AL", "colors": ["Black", "Gold"], "conference": "Interstate Athletic Association", "tier": 72},
-    {"id": "mississippi_valley_state", "name": "Mississippi Valley State University", "abbrev": "MVSU", "mascot": "Delta Devils", "city": "Itta Bena", "state": "MS", "colors": ["Green", "White"], "conference": "Interstate Athletic Association", "tier": 64},
-    {"id": "texas_southern", "name": "Texas Southern University", "abbrev": "TXSO", "mascot": "Tigers", "city": "Houston", "state": "TX", "colors": ["Maroon", "Gray"], "conference": "Interstate Athletic Association", "tier": 72},
-    {"id": "kentucky_state", "name": "Kentucky State University", "abbrev": "KYSU", "mascot": "Thorobreds", "city": "Frankfort", "state": "KY", "colors": ["Green", "Gold"], "conference": "Interstate Athletic Association", "tier": 66},
-    {"id": "delaware_state", "name": "Delaware State University", "abbrev": "DSU", "mascot": "Hornets", "city": "Dover", "state": "DE", "colors": ["Red", "Blue"], "conference": "Interstate Athletic Association", "tier": 68},
-    {"id": "west_virginia_state", "name": "West Virginia State University", "abbrev": "WVSU", "mascot": "Yellow Jackets", "city": "Institute", "state": "WV", "colors": ["Yellow", "Black"], "conference": "Interstate Athletic Association", "tier": 66},
-    # ── Gulf States / Southeast additions ──
-    {"id": "augusta", "name": "Augusta University", "abbrev": "AUG", "mascot": "Jaguars", "city": "Augusta", "state": "GA", "colors": ["Blue", "White"], "conference": "Gulf States", "tier": 68},
-    {"id": "birmingham_southern", "name": "Birmingham-Southern College", "abbrev": "BSC", "mascot": "Panthers", "city": "Birmingham", "state": "AL", "colors": ["Black", "Gold"], "conference": "Gulf States", "tier": 66},
-    {"id": "agnes_scott", "name": "Agnes Scott College", "abbrev": "ASC", "mascot": "Scotties", "city": "Decatur", "state": "GA", "colors": ["Purple", "White"], "conference": "Southern Athletic", "tier": 62},
-    {"id": "mississippi_women", "name": "Mississippi University for Women", "abbrev": "MUW", "mascot": "Owls", "city": "Columbus", "state": "MS", "colors": ["Blue", "White"], "conference": "Southern Athletic", "tier": 60},
-    {"id": "sweet_briar", "name": "Sweet Briar College", "abbrev": "SBC", "mascot": "Vixens", "city": "Sweet Briar", "state": "VA", "colors": ["Pink", "Green"], "conference": "Moonshine League", "tier": 60},
-    # ── Geographic fill-ins ──
-    {"id": "texas_am_cc", "name": "Texas A&M University-Corpus Christi", "abbrev": "AMCC", "mascot": "Islanders", "city": "Corpus Christi", "state": "TX", "colors": ["Blue", "Green"], "conference": "Sun Country", "tier": 71},
-    {"id": "chaminade", "name": "Chaminade University", "abbrev": "CHAM", "mascot": "Silverswords", "city": "Honolulu", "state": "HI", "colors": ["Blue", "White"], "conference": "Pacific Rim", "tier": 65},
-    {"id": "nebraska_omaha", "name": "University of Nebraska Omaha", "abbrev": "UNO", "mascot": "Mavericks", "city": "Omaha", "state": "NE", "colors": ["Crimson", "Black"], "conference": "Gateway League", "tier": 72},
-    {"id": "oregon_state", "name": "Oregon State University", "abbrev": "ORST", "mascot": "Beavers", "city": "Corvallis", "state": "OR", "colors": ["Orange", "Black"], "conference": "Pacific Rim", "tier": 78},
-    {"id": "washington_state", "name": "Washington State University", "abbrev": "WSU", "mascot": "Cougars", "city": "Pullman", "state": "WA", "colors": ["Crimson", "Gray"], "conference": "Pacific Rim", "tier": 77},
-    {"id": "minnesota", "name": "University of Minnesota", "abbrev": "MINN", "mascot": "Golden Gophers", "city": "Minneapolis", "state": "MN", "colors": ["Maroon", "Gold"], "conference": "Great Lakes Union", "tier": 80},
-    {"id": "wayne_state", "name": "Wayne State University", "abbrev": "WAYS", "mascot": "Warriors", "city": "Detroit", "state": "MI", "colors": ["Green", "Gold"], "conference": "Continental Athletic Association", "tier": 67},
-    # ── Swaps: Maine→Bowdoin, Suffolk→Holy Cross ──
-    {"id": "bowdoin", "name": "Bowdoin College", "abbrev": "BOWD", "mascot": "Polar Bears", "city": "Brunswick", "state": "ME", "colors": ["Black", "White"], "conference": "Yankee Eight", "tier": 73},
-    {"id": "holy_cross", "name": "College of the Holy Cross", "abbrev": "HC", "mascot": "Crusaders", "city": "Worcester", "state": "MA", "colors": ["Purple", "White"], "conference": "Collegiate Commonwealth", "tier": 75},
-    # ── Hockey/ECAC schools → Yankee Eleven ──
-    {"id": "cornell", "name": "Cornell University", "abbrev": "COR", "mascot": "Big Red", "city": "Ithaca", "state": "NY", "colors": ["Carnelian", "White"], "conference": "Yankee Eleven", "tier": 78},
-    {"id": "colgate", "name": "Colgate University", "abbrev": "COLG", "mascot": "Raiders", "city": "Hamilton", "state": "NY", "colors": ["Maroon", "White"], "conference": "Yankee Eleven", "tier": 74},
-    {"id": "rutgers", "name": "Rutgers University", "abbrev": "RUTG", "mascot": "Scarlet Knights", "city": "New Brunswick", "state": "NJ", "colors": ["Scarlet", "White"], "conference": "Yankee Eleven", "tier": 72},
-    {"id": "rpi", "name": "Rensselaer Polytechnic Institute", "abbrev": "RPI", "mascot": "Engineers", "city": "Troy", "state": "NY", "colors": ["Cherry", "White"], "conference": "Yankee Eleven", "tier": 73},
-    {"id": "niagara", "name": "Niagara University", "abbrev": "NIAG", "mascot": "Purple Eagles", "city": "Lewiston", "state": "NY", "colors": ["Purple", "White"], "conference": "Yankee Eleven", "tier": 70},
-    {"id": "canisius", "name": "Canisius University", "abbrev": "CANI", "mascot": "Golden Griffins", "city": "Buffalo", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Yankee Eleven", "tier": 69},
-    # ── Border NY schools → Northern Shield ──
-    {"id": "clarkson", "name": "Clarkson University", "abbrev": "CLRK", "mascot": "Golden Knights", "city": "Potsdam", "state": "NY", "colors": ["Green", "Gold"], "conference": "Northern Shield", "tier": 72},
-    {"id": "st_lawrence", "name": "St. Lawrence University", "abbrev": "SLU", "mascot": "Saints", "city": "Canton", "state": "NY", "colors": ["Scarlet", "Brown"], "conference": "Northern Shield", "tier": 71},
-    # ── Canadian additions → Northern Shield ──
-    {"id": "alberta", "name": "University of Alberta", "abbrev": "ALTA", "mascot": "Golden Bears", "city": "Edmonton", "state": "AB", "colors": ["Green", "Gold"], "conference": "Northern Shield", "tier": 70},
-    {"id": "calgary", "name": "University of Calgary", "abbrev": "CALG", "mascot": "Dinos", "city": "Calgary", "state": "AB", "colors": ["Red", "Gold"], "conference": "Northern Shield", "tier": 69},
-    {"id": "saskatchewan", "name": "University of Saskatchewan", "abbrev": "SASK", "mascot": "Huskies", "city": "Saskatoon", "state": "SK", "colors": ["Green", "White"], "conference": "Northern Shield", "tier": 68},
-    # ── NYC addition ──
-    {"id": "liu", "name": "Long Island University", "abbrev": "LIU", "mascot": "Sharks", "city": "Brooklyn", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Metropolitan Athletic Union", "tier": 67},
-    # ── UAA-style schools ──
-    {"id": "johns_hopkins", "name": "Johns Hopkins University", "abbrev": "JHU", "mascot": "Blue Jays", "city": "Baltimore", "state": "MD", "colors": ["Blue", "Black"], "conference": "Potomac Athletic Conference", "tier": 76},
-    {"id": "wash_u", "name": "Washington University in St. Louis", "abbrev": "WUSTL", "mascot": "Bears", "city": "St. Louis", "state": "MO", "colors": ["Red", "Green"], "conference": "Big Inland", "tier": 76},
-    # ── Additional NY hockey / UAA / tech schools ──
-    {"id": "ithaca", "name": "Ithaca College", "abbrev": "ITHA", "mascot": "Bombers", "city": "Ithaca", "state": "NY", "colors": ["Blue", "Gold"], "conference": "Yankee Fourteen", "tier": 71},
-    {"id": "plattsburgh", "name": "SUNY Plattsburgh", "abbrev": "PLAT", "mascot": "Cardinals", "city": "Plattsburgh", "state": "NY", "colors": ["Red", "White"], "conference": "Northern Shield", "tier": 68},
-    {"id": "oswego", "name": "SUNY Oswego", "abbrev": "OSWE", "mascot": "Lakers", "city": "Oswego", "state": "NY", "colors": ["Green", "Gold"], "conference": "Yankee Fourteen", "tier": 67},
-    {"id": "rochester", "name": "University of Rochester", "abbrev": "ROCH", "mascot": "Yellowjackets", "city": "Rochester", "state": "NY", "colors": ["Dandelion", "Blue"], "conference": "Yankee Fourteen", "tier": 75},
-    {"id": "carnegie_mellon", "name": "Carnegie Mellon University", "abbrev": "CMU", "mascot": "Tartans", "city": "Pittsburgh", "state": "PA", "colors": ["Cardinal", "Gray"], "conference": "Potomac Athletic Conference", "tier": 75},
-    {"id": "caltech", "name": "California Institute of Technology", "abbrev": "CALT", "mascot": "Beavers", "city": "Pasadena", "state": "CA", "colors": ["Orange", "White"], "conference": "Outlands Coast Conference", "tier": 60},
-    # ── Fictional military academies ──
-    {"id": "marine_corps", "name": "United States Marine Corps Academy", "abbrev": "USMC", "mascot": "Bulldogs", "city": "Milton", "state": "FL", "colors": ["Scarlet", "Gold"], "conference": "Southern Sun Conference", "tier": 78},
-    {"id": "space_force", "name": "United States Space Force Academy", "abbrev": "USSF", "mascot": "Guardians", "city": "Fallon", "state": "NV", "colors": ["Dark Blue", "Silver"], "conference": "Pioneer Athletic Association", "tier": 76},
-    {"id": "coast_guard", "name": "United States Coast Guard Academy", "abbrev": "USCG", "mascot": "Bears", "city": "New London", "state": "CT", "colors": ["Blue", "White", "Orange"], "conference": "Collegiate Commonwealth", "tier": 74},
+    # ══════════════════════════════════════════════════════════════════
+    # BIG TEN (12 new teams — renamed from Giant 14)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "illinois", "name": "University of Illinois", "abbrev": "ILL", "mascot": "Fighting Illini", "city": "Champaign", "state": "IL", "colors": ["Orange", "Blue"], "conference": "Big Ten", "tier": 85},
+    {"id": "indiana", "name": "Indiana University", "abbrev": "IND", "mascot": "Hoosiers", "city": "Bloomington", "state": "IN", "colors": ["Crimson", "Cream"], "conference": "Big Ten", "tier": 83},
+    {"id": "iowa", "name": "University of Iowa", "abbrev": "IOWA", "mascot": "Hawkeyes", "city": "Iowa City", "state": "IA", "colors": ["Black", "Gold"], "conference": "Big Ten", "tier": 86},
+    {"id": "michigan", "name": "University of Michigan", "abbrev": "MICH", "mascot": "Wolverines", "city": "Ann Arbor", "state": "MI", "colors": ["Maize", "Blue"], "conference": "Big Ten", "tier": 93},
+    {"id": "michigan_state", "name": "Michigan State University", "abbrev": "MSU", "mascot": "Spartans", "city": "East Lansing", "state": "MI", "colors": ["Green", "White"], "conference": "Big Ten", "tier": 87},
+    {"id": "nebraska", "name": "University of Nebraska", "abbrev": "NEB", "mascot": "Cornhuskers", "city": "Lincoln", "state": "NE", "colors": ["Scarlet", "Cream"], "conference": "Big Ten", "tier": 88},
+    {"id": "northwestern", "name": "Northwestern University", "abbrev": "NW", "mascot": "Wildcats", "city": "Evanston", "state": "IL", "colors": ["Purple", "White"], "conference": "Big Ten", "tier": 82},
+    {"id": "notre_dame", "name": "University of Notre Dame", "abbrev": "ND", "mascot": "Fighting Irish", "city": "Notre Dame", "state": "IN", "colors": ["Navy", "Gold"], "conference": "Big Ten", "tier": 94},
+    {"id": "ohio_state", "name": "Ohio State University", "abbrev": "OSU", "mascot": "Buckeyes", "city": "Columbus", "state": "OH", "colors": ["Scarlet", "Gray"], "conference": "Big Ten", "tier": 95},
+    {"id": "purdue", "name": "Purdue University", "abbrev": "PUR", "mascot": "Boilermakers", "city": "West Lafayette", "state": "IN", "colors": ["Old Gold", "Black"], "conference": "Big Ten", "tier": 84},
+    {"id": "wisconsin", "name": "University of Wisconsin", "abbrev": "WIS", "mascot": "Badgers", "city": "Madison", "state": "WI", "colors": ["Cardinal", "White"], "conference": "Big Ten", "tier": 88},
+    # ══════════════════════════════════════════════════════════════════
+    # ACC (15 new teams — renamed from Potomac Athletic)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "boston_college", "name": "Boston College", "abbrev": "BC", "mascot": "Eagles", "city": "Chestnut Hill", "state": "MA", "colors": ["Maroon", "Gold"], "conference": "ACC", "tier": 83},
+    {"id": "clemson", "name": "Clemson University", "abbrev": "CLEM", "mascot": "Tigers", "city": "Clemson", "state": "SC", "colors": ["Orange", "Purple"], "conference": "ACC", "tier": 92},
+    {"id": "duke", "name": "Duke University", "abbrev": "DUKE", "mascot": "Blue Devils", "city": "Durham", "state": "NC", "colors": ["Royal Blue", "White"], "conference": "ACC", "tier": 82},
+    {"id": "florida_state", "name": "Florida State University", "abbrev": "FSU", "mascot": "Seminoles", "city": "Tallahassee", "state": "FL", "colors": ["Garnet", "Gold"], "conference": "ACC", "tier": 90},
+    {"id": "georgia_tech", "name": "Georgia Tech", "abbrev": "GT", "mascot": "Yellow Jackets", "city": "Atlanta", "state": "GA", "colors": ["Old Gold", "White"], "conference": "ACC", "tier": 84},
+    {"id": "louisville", "name": "University of Louisville", "abbrev": "LOU", "mascot": "Cardinals", "city": "Louisville", "state": "KY", "colors": ["Cardinal", "Black"], "conference": "ACC", "tier": 85},
+    {"id": "maryland", "name": "University of Maryland", "abbrev": "UMD", "mascot": "Terrapins", "city": "College Park", "state": "MD", "colors": ["Red", "White", "Black", "Gold"], "conference": "ACC", "tier": 84},
+    {"id": "miami", "name": "University of Miami", "abbrev": "MIA", "mascot": "Hurricanes", "city": "Coral Gables", "state": "FL", "colors": ["Orange", "Green", "White"], "conference": "ACC", "tier": 90},
+    {"id": "nc_state", "name": "North Carolina State University", "abbrev": "NCST", "mascot": "Wolfpack", "city": "Raleigh", "state": "NC", "colors": ["Red", "White"], "conference": "ACC", "tier": 84},
+    {"id": "north_carolina", "name": "University of North Carolina", "abbrev": "UNC", "mascot": "Tar Heels", "city": "Chapel Hill", "state": "NC", "colors": ["Carolina Blue", "White"], "conference": "ACC", "tier": 86},
+    {"id": "pitt", "name": "University of Pittsburgh", "abbrev": "PITT", "mascot": "Panthers", "city": "Pittsburgh", "state": "PA", "colors": ["Royal Blue", "Gold"], "conference": "ACC", "tier": 83},
+    {"id": "syracuse", "name": "Syracuse University", "abbrev": "SYR", "mascot": "Orange", "city": "Syracuse", "state": "NY", "colors": ["Orange", "Blue"], "conference": "ACC", "tier": 83},
+    {"id": "virginia", "name": "University of Virginia", "abbrev": "UVA", "mascot": "Cavaliers", "city": "Charlottesville", "state": "VA", "colors": ["Orange", "Navy"], "conference": "ACC", "tier": 84},
+    {"id": "virginia_tech", "name": "Virginia Tech", "abbrev": "VT", "mascot": "Hokies", "city": "Blacksburg", "state": "VA", "colors": ["Maroon", "Orange"], "conference": "ACC", "tier": 86},
+    {"id": "wake_forest", "name": "Wake Forest University", "abbrev": "WAKE", "mascot": "Demon Deacons", "city": "Winston-Salem", "state": "NC", "colors": ["Old Gold", "Black"], "conference": "ACC", "tier": 80},
+    # ══════════════════════════════════════════════════════════════════
+    # SEC (16 new teams — renamed from Southern Sun)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "alabama", "name": "University of Alabama", "abbrev": "BAMA", "mascot": "Crimson Tide", "city": "Tuscaloosa", "state": "AL", "colors": ["Crimson", "White"], "conference": "SEC", "tier": 95},
+    {"id": "arkansas", "name": "University of Arkansas", "abbrev": "ARK", "mascot": "Razorbacks", "city": "Fayetteville", "state": "AR", "colors": ["Cardinal", "White"], "conference": "SEC", "tier": 85},
+    {"id": "auburn", "name": "Auburn University", "abbrev": "AUB", "mascot": "Tigers", "city": "Auburn", "state": "AL", "colors": ["Burnt Orange", "Navy"], "conference": "SEC", "tier": 89},
+    {"id": "florida", "name": "University of Florida", "abbrev": "UF", "mascot": "Gators", "city": "Gainesville", "state": "FL", "colors": ["Orange", "Blue"], "conference": "SEC", "tier": 91},
+    {"id": "georgia", "name": "University of Georgia", "abbrev": "UGA", "mascot": "Bulldogs", "city": "Athens", "state": "GA", "colors": ["Red", "Black"], "conference": "SEC", "tier": 94},
+    {"id": "kentucky", "name": "University of Kentucky", "abbrev": "UK", "mascot": "Wildcats", "city": "Lexington", "state": "KY", "colors": ["Blue", "White"], "conference": "SEC", "tier": 83},
+    {"id": "lsu", "name": "Louisiana State University", "abbrev": "LSU", "mascot": "Tigers", "city": "Baton Rouge", "state": "LA", "colors": ["Purple", "Gold"], "conference": "SEC", "tier": 92},
+    {"id": "mississippi_state", "name": "Mississippi State University", "abbrev": "MSST", "mascot": "Bulldogs", "city": "Starkville", "state": "MS", "colors": ["Maroon", "White"], "conference": "SEC", "tier": 83},
+    {"id": "missouri", "name": "University of Missouri", "abbrev": "MIZ", "mascot": "Tigers", "city": "Columbia", "state": "MO", "colors": ["Black", "Gold"], "conference": "SEC", "tier": 84},
+    {"id": "oklahoma", "name": "University of Oklahoma", "abbrev": "OU", "mascot": "Sooners", "city": "Norman", "state": "OK", "colors": ["Crimson", "Cream"], "conference": "SEC", "tier": 93},
+    {"id": "ole_miss", "name": "University of Mississippi", "abbrev": "MISS", "mascot": "Rebels", "city": "Oxford", "state": "MS", "colors": ["Red", "Blue"], "conference": "SEC", "tier": 85},
+    {"id": "south_carolina", "name": "University of South Carolina", "abbrev": "SC", "mascot": "Gamecocks", "city": "Columbia", "state": "SC", "colors": ["Garnet", "Black"], "conference": "SEC", "tier": 84},
+    {"id": "tennessee", "name": "University of Tennessee", "abbrev": "TENN", "mascot": "Volunteers", "city": "Knoxville", "state": "TN", "colors": ["Orange", "White"], "conference": "SEC", "tier": 90},
+    {"id": "texas", "name": "University of Texas", "abbrev": "TEX", "mascot": "Longhorns", "city": "Austin", "state": "TX", "colors": ["Burnt Orange", "White"], "conference": "SEC", "tier": 94},
+    {"id": "texas_am", "name": "Texas A&M University", "abbrev": "TAMU", "mascot": "Aggies", "city": "College Station", "state": "TX", "colors": ["Maroon", "White"], "conference": "SEC", "tier": 88},
+    {"id": "vanderbilt", "name": "Vanderbilt University", "abbrev": "VAN", "mascot": "Commodores", "city": "Nashville", "state": "TN", "colors": ["Black", "Gold"], "conference": "SEC", "tier": 76},
+    # ══════════════════════════════════════════════════════════════════
+    # MOONSHINE LEAGUE / Big 12 (16 new teams — keeps Moonshine name)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "arizona", "name": "University of Arizona", "abbrev": "ARIZ", "mascot": "Wildcats", "city": "Tucson", "state": "AZ", "colors": ["Cardinal", "Navy"], "conference": "Moonshine League", "tier": 85},
+    {"id": "arizona_state", "name": "Arizona State University", "abbrev": "ASU", "mascot": "Sun Devils", "city": "Tempe", "state": "AZ", "colors": ["Maroon", "Gold"], "conference": "Moonshine League", "tier": 86},
+    {"id": "baylor", "name": "Baylor University", "abbrev": "BAY", "mascot": "Bears", "city": "Waco", "state": "TX", "colors": ["Green", "Gold"], "conference": "Moonshine League", "tier": 85},
+    {"id": "byu", "name": "Brigham Young University", "abbrev": "BYU", "mascot": "Cougars", "city": "Provo", "state": "UT", "colors": ["Royal Blue", "White"], "conference": "Moonshine League", "tier": 84},
+    {"id": "cincinnati", "name": "University of Cincinnati", "abbrev": "CIN", "mascot": "Bearcats", "city": "Cincinnati", "state": "OH", "colors": ["Red", "Black"], "conference": "Moonshine League", "tier": 83},
+    {"id": "colorado", "name": "University of Colorado", "abbrev": "CU", "mascot": "Buffaloes", "city": "Boulder", "state": "CO", "colors": ["Silver", "Gold", "Black"], "conference": "Moonshine League", "tier": 84},
+    {"id": "houston", "name": "University of Houston", "abbrev": "UH", "mascot": "Cougars", "city": "Houston", "state": "TX", "colors": ["Scarlet", "White"], "conference": "Moonshine League", "tier": 83},
+    {"id": "iowa_state", "name": "Iowa State University", "abbrev": "ISU", "mascot": "Cyclones", "city": "Ames", "state": "IA", "colors": ["Cardinal", "Gold"], "conference": "Moonshine League", "tier": 84},
+    {"id": "kansas", "name": "University of Kansas", "abbrev": "KU", "mascot": "Jayhawks", "city": "Lawrence", "state": "KS", "colors": ["Crimson", "Blue"], "conference": "Moonshine League", "tier": 82},
+    {"id": "kansas_state", "name": "Kansas State University", "abbrev": "KST", "mascot": "Wildcats", "city": "Manhattan", "state": "KS", "colors": ["Purple", "White"], "conference": "Moonshine League", "tier": 85},
+    {"id": "oklahoma_state", "name": "Oklahoma State University", "abbrev": "OKST", "mascot": "Cowboys", "city": "Stillwater", "state": "OK", "colors": ["Orange", "Black"], "conference": "Moonshine League", "tier": 85},
+    {"id": "tcu", "name": "Texas Christian University", "abbrev": "TCU", "mascot": "Horned Frogs", "city": "Fort Worth", "state": "TX", "colors": ["Purple", "White"], "conference": "Moonshine League", "tier": 85},
+    {"id": "texas_tech", "name": "Texas Tech University", "abbrev": "TTU", "mascot": "Red Raiders", "city": "Lubbock", "state": "TX", "colors": ["Scarlet", "Black"], "conference": "Moonshine League", "tier": 84},
+    {"id": "ucf", "name": "University of Central Florida", "abbrev": "UCF", "mascot": "Knights", "city": "Orlando", "state": "FL", "colors": ["Black", "Gold"], "conference": "Moonshine League", "tier": 83},
+    {"id": "utah", "name": "University of Utah", "abbrev": "UTAH", "mascot": "Utes", "city": "Salt Lake City", "state": "UT", "colors": ["Crimson", "White"], "conference": "Moonshine League", "tier": 85},
+    {"id": "west_virginia", "name": "West Virginia University", "abbrev": "WVU", "mascot": "Mountaineers", "city": "Morgantown", "state": "WV", "colors": ["Old Gold", "Blue"], "conference": "Moonshine League", "tier": 84},
+    # ══════════════════════════════════════════════════════════════════
+    # PAC-12 (6 new teams — new 17th conference)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "cal", "name": "University of California, Berkeley", "abbrev": "CAL", "mascot": "Golden Bears", "city": "Berkeley", "state": "CA", "colors": ["Blue", "Gold"], "conference": "Pac-12", "tier": 84},
+    {"id": "oregon", "name": "University of Oregon", "abbrev": "ORE", "mascot": "Ducks", "city": "Eugene", "state": "OR", "colors": ["Green", "Yellow"], "conference": "Pac-12", "tier": 91},
+    {"id": "stanford", "name": "Stanford University", "abbrev": "STAN", "mascot": "Cardinal", "city": "Stanford", "state": "CA", "colors": ["Cardinal", "White"], "conference": "Pac-12", "tier": 86},
+    {"id": "ucla", "name": "University of California, Los Angeles", "abbrev": "UCLA", "mascot": "Bruins", "city": "Los Angeles", "state": "CA", "colors": ["True Blue", "Gold"], "conference": "Pac-12", "tier": 88},
+    {"id": "usc", "name": "University of Southern California", "abbrev": "USC", "mascot": "Trojans", "city": "Los Angeles", "state": "CA", "colors": ["Cardinal", "Gold"], "conference": "Pac-12", "tier": 93},
+    {"id": "washington", "name": "University of Washington", "abbrev": "UW", "mascot": "Huskies", "city": "Seattle", "state": "WA", "colors": ["Purple", "Gold"], "conference": "Pac-12", "tier": 88},
+    # ══════════════════════════════════════════════════════════════════
+    # SERVICE ACADEMIES (3 new)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "army", "name": "United States Military Academy", "abbrev": "ARMY", "mascot": "Black Knights", "city": "West Point", "state": "NY", "colors": ["Black", "Gold"], "conference": "Pioneer Athletic Association", "tier": 78},
+    {"id": "navy", "name": "United States Naval Academy", "abbrev": "NAVY", "mascot": "Midshipmen", "city": "Annapolis", "state": "MD", "colors": ["Navy", "Gold"], "conference": "Yankee Fourteen", "tier": 78},
+    {"id": "merchant_marine", "name": "United States Merchant Marine Academy", "abbrev": "USMM", "mascot": "Mariners", "city": "Kings Point", "state": "NY", "colors": ["Blue", "Gray"], "conference": "Yankee Fourteen", "tier": 72},
+    # ══════════════════════════════════════════════════════════════════
+    # IVY LEAGUE & NESCAC (6 new)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "harvard", "name": "Harvard University", "abbrev": "HARV", "mascot": "Crimson", "city": "Cambridge", "state": "MA", "colors": ["Crimson", "Black", "White"], "conference": "Collegiate Commonwealth", "tier": 82},
+    {"id": "yale", "name": "Yale University", "abbrev": "YALE", "mascot": "Bulldogs", "city": "New Haven", "state": "CT", "colors": ["Yale Blue", "White"], "conference": "Yankee Fourteen", "tier": 80},
+    {"id": "columbia", "name": "Columbia University", "abbrev": "CLMB", "mascot": "Lions", "city": "New York", "state": "NY", "colors": ["Columbia Blue", "White"], "conference": "Galactic League", "tier": 78},
+    {"id": "princeton", "name": "Princeton University", "abbrev": "PRIN", "mascot": "Tigers", "city": "Princeton", "state": "NJ", "colors": ["Orange", "Black"], "conference": "Yankee Fourteen", "tier": 80},
+    {"id": "penn", "name": "University of Pennsylvania", "abbrev": "PENN", "mascot": "Quakers", "city": "Philadelphia", "state": "PA", "colors": ["Red", "Blue"], "conference": "Collegiate Commonwealth", "tier": 79},
+    {"id": "middlebury", "name": "Middlebury College", "abbrev": "MIDD", "mascot": "Panthers", "city": "Middlebury", "state": "VT", "colors": ["Blue", "White"], "conference": "Northern Shield", "tier": 76},
+    # ══════════════════════════════════════════════════════════════════
+    # OTHER (2 new)
+    # ══════════════════════════════════════════════════════════════════
+    {"id": "greenville", "name": "Greenville University", "abbrev": "GRNV", "mascot": "Panthers", "city": "Greenville", "state": "IL", "colors": ["Maroon", "White"], "conference": "Prairie Athletic Union", "tier": 58},
+    {"id": "smu", "name": "Southern Methodist University", "abbrev": "SMU", "mascot": "Mustangs", "city": "Dallas", "state": "TX", "colors": ["Red", "Blue"], "conference": "Border Conference", "tier": 83},
 ]
 
 if __name__ == "__main__":
