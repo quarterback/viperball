@@ -7005,7 +7005,7 @@ class ViperballEngine:
                 ytg = self.state.yards_to_go
                 talent_edge = (power - 1.0) * 2.0  # map power to edge
                 buffer = 3.0 + min(3.0, max(-3.0, talent_edge * 3.0))
-                urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
+                urgency = {4: 1.0, 5: 1.20, 6: 1.10}.get(self.state.down, 1.10)
                 center = ytg + buffer * urgency + play_shift
 
         else:
@@ -7018,7 +7018,7 @@ class ViperballEngine:
                 def_norm = max(0.0, (def_skill - 50) / 49.0)
                 talent_edge = off_norm - def_norm
                 buffer = 3.0 + talent_edge * 3.0
-                urgency = {4: 1.0, 5: 0.82, 6: 0.65}.get(self.state.down, 0.65)
+                urgency = {4: 1.0, 5: 1.20, 6: 1.10}.get(self.state.down, 1.10)
                 center = ytg + buffer * urgency
             else:
                 center = 5.0 + 2.5 * (2.0 / (1.0 + math.exp(-delta / 12.0)) - 1.0)
@@ -7333,7 +7333,7 @@ class ViperballEngine:
         # ── Late-down conversion urgency ──
         if self.state.down >= 4:
             off_talent = max(0.0, (off_skill - 50) / 49.0)
-            urgency = {4: 0.40, 5: 0.28, 6: 0.18}.get(self.state.down, 0.18)
+            urgency = {4: 0.40, 5: 0.55, 6: 0.50}.get(self.state.down, 0.50)
             base_prob = min(0.94, base_prob + urgency * (0.6 + off_talent * 0.4))
 
         # ── Composure modifier ──
@@ -8112,11 +8112,11 @@ class ViperballEngine:
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
-            int_chance = 0.03 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance = 0.05 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
             int_chance *= _gm_int_red
             # V4: Pursuit quality scales INT/fumble chance
             int_chance *= _lat_pursuit_mod
-            int_chance = max(0.015, min(0.06, int_chance))
+            int_chance = max(0.025, min(0.10, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
                 int_spot = self.state.field_position + random.randint(0, 3)
@@ -8307,7 +8307,7 @@ class ViperballEngine:
         # Late-down urgency: lateral chains get modest boost
         if self.state.down >= 4:
             ytg = self.state.yards_to_go
-            urgency_boost = {4: 1.5, 5: 1.0, 6: 0.5}.get(self.state.down, 0.5)
+            urgency_boost = {4: 1.5, 5: 1.5, 6: 1.2}.get(self.state.down, 1.2)
             base_yards += urgency_boost
 
         yards_gained = int(base_yards + lateral_bonus)
@@ -8471,8 +8471,9 @@ class ViperballEngine:
         # Late-down targeting: bias distance toward yards_to_go
         if self.state.down >= 4:
             ytg = self.state.yards_to_go
-            target = max(5, min(kick_distance + 5, ytg))
-            kick_distance = int(kick_distance * 0.5 + target * 0.5)
+            target = max(5, min(kick_distance + 8, ytg + 3))
+            blend = {4: 0.45, 5: 0.35, 6: 0.30}.get(self.state.down, 0.30)
+            kick_distance = int(kick_distance * blend + target * (1 - blend))
             kick_distance = max(3, kick_distance)
 
         # ── H2H contest-based completion probability ──
@@ -8693,10 +8694,10 @@ class ViperballEngine:
                             break
 
                     # Lateral INT check
-                    int_rate = 0.03 * (1 + (avg_def_aware - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+                    int_rate = 0.05 * (1 + (avg_def_aware - 70) / 100) * (1 - (thrower_skill - 70) / 200)
                     # V4: Pursuit quality scales INT chance
                     int_rate *= _kl_pursuit_mod
-                    int_rate = max(0.015, min(0.06, int_rate))
+                    int_rate = max(0.025, min(0.10, int_rate))
                     if random.random() < int_rate:
                         chain_intercepted = True
                         int_spot = min(99, catch_spot + chain_yards)
@@ -9033,10 +9034,10 @@ class ViperballEngine:
         # defender's attributes vs the kicker.  Quick Kicks are safe; Bombs are
         # 50/50 balls in the air.
         sf_int_bases = {
-            KickPassSubFamily.QUICK_KICK: 0.05,
-            KickPassSubFamily.TERRITORY: 0.10,
-            KickPassSubFamily.BOMB: 0.16,
-            KickPassSubFamily.KICK_LATERAL: 0.05,
+            KickPassSubFamily.QUICK_KICK: 0.09,
+            KickPassSubFamily.TERRITORY: 0.16,
+            KickPassSubFamily.BOMB: 0.22,
+            KickPassSubFamily.KICK_LATERAL: 0.09,
         }
         int_chance = sf_int_bases[subfamily]
 
@@ -9060,7 +9061,7 @@ class ViperballEngine:
            (self.state.possession == "away" and self.home_turnover_machine):
             int_chance += 0.02
 
-        int_chance = max(0.02, min(0.25, int_chance))
+        int_chance = max(0.04, min(0.30, int_chance))
 
         if random.random() < int_chance:
             kicker.game_kick_pass_interceptions += 1
