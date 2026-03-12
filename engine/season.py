@@ -2031,6 +2031,9 @@ class Season:
         seeds = [t.team_name for t in playoff_teams]
         effective = len(seeds)
 
+        if effective < 2:
+            return {"field": [], "bracket": [], "bubble_in": [], "bubble_out": [], "num_teams": 0}
+
         # Compute SOS ranks for all teams
         sos_list = []
         for team_name, record in self.standings.items():

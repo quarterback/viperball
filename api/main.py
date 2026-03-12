@@ -828,6 +828,7 @@ def get_session(session_id: str):
 
 @app.post("/sessions/{session_id}/season")
 def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
+    from engine.geography import get_geographic_conference_defaults
     from engine.injuries import InjuryTracker
     from engine.draftyqueenz import DraftyQueenzManager
     from engine.transfer_portal import estimate_prestige_from_roster, generate_quick_portal
