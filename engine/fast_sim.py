@@ -363,14 +363,14 @@ def _generate_team_stats(scoring: Dict, team, opp_def_str: float,
     kp_ints = 0
     failed = kp_attempted - kp_completed
     if failed > 0:
-        int_rate = 0.10 * rng.uniform(0.6, 1.5)
+        int_rate = 0.16 * rng.uniform(0.6, 1.5)
         kp_ints = sum(1 for _ in range(failed) if rng.random() < int_rate)
 
     lateral_chains = max(0, round(rng.gauss(8, 3) * off_mods["lateral"]))
     lateral_fumble_rate = 0.25 * rng.uniform(0.6, 1.4)
     fumbles_from_laterals = sum(1 for _ in range(lateral_chains) if rng.random() < lateral_fumble_rate)
     successful_laterals = lateral_chains - fumbles_from_laterals
-    lateral_ints = max(0, round(rng.gauss(0.5, 0.5)))
+    lateral_ints = max(0, round(rng.gauss(1.0, 0.7)))
 
     rush_fumbles = max(0, round(rng.gauss(0.8, 0.6)))
     total_fumbles = fumbles_from_laterals + rush_fumbles

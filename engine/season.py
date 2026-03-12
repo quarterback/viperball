@@ -1710,7 +1710,7 @@ class Season:
         return {name: i + 1 for i, (name, _) in enumerate(ranked)}
 
     def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
-        """Count wins against teams ranked in top 25"""
+        """Count wins against teams ranked in top 50"""
         quality = 0
         for game in self.schedule:
             if not game.completed:
@@ -1721,12 +1721,15 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 25:
+            if opp in rankings and rankings[opp] <= 50:
                 quality += 1
         return quality
 
     def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents"""
+        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents.
+
+        Expanded to top-50 so teams outside the top 25 still contribute to resume quality.
+        """
         score = 0.0
         for game in self.schedule:
             if not game.completed:
@@ -1737,7 +1740,7 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 25:
+            if opp in rankings and rankings[opp] <= 50:
                 rank = rankings[opp]
                 if rank <= 5:
                     score += 5.0
@@ -1747,12 +1750,16 @@ class Season:
                     score += 2.5
                 elif rank <= 20:
                     score += 1.5
-                else:
+                elif rank <= 25:
                     score += 1.0
+                elif rank <= 35:
+                    score += 0.6
+                else:
+                    score += 0.3
         return score
 
     def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Losses to top-10 teams penalized less; losses to unranked teams penalized more"""
+        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily"""
         penalty = 0.0
         for game in self.schedule:
             if not game.completed:
@@ -1771,10 +1778,12 @@ class Season:
                     penalty += 1.0
                 elif rank <= 25:
                     penalty += 2.0
-                else:
+                elif rank <= 50:
                     penalty += 3.0
+                else:
+                    penalty += 4.0
             else:
-                penalty += 3.5
+                penalty += 4.5
         return penalty
 
     def _non_conference_record(self, team_name: str) -> Tuple[int, int]:
@@ -1813,12 +1822,12 @@ class Season:
         """Calculate comprehensive Power Index for a team.
 
         Components (100-point scale):
-        - Win percentage:       30 pts
-        - Strength of schedule: 20 pts
-        - Quality wins:         20 pts (weighted by opponent rank)
+        - Win percentage:       40 pts  (primary driver — winning matters most)
+        - Strength of schedule: 15 pts
+        - Quality wins:         20 pts  (weighted by opponent rank, expanded to top-50)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
-        - Conference strength:  10 pts
+        - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
         - Point differential:   10 pts
         """
         record = self.standings.get(team_name)
@@ -1827,10 +1836,10 @@ class Season:
 
         rankings = self._get_current_rankings()
 
-        win_component = record.win_percentage * 30.0
+        win_component = record.win_percentage * 40.0
 
         sos = self._calculate_sos(team_name)
-        sos_component = sos * 20.0
+        sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
         qw_component = min(20.0, qw_score * 4.0)
@@ -1843,7 +1852,7 @@ class Season:
 
         conf = self.team_conferences.get(team_name, "")
         conf_str = self._conference_strength(conf) if conf else 0.5
-        conf_component = conf_str * 10.0
+        conf_component = conf_str * 5.0
 
         ppg = record.points_for / max(1, record.games_played)
         ppg_against = record.points_against / max(1, record.games_played)
@@ -1937,22 +1946,48 @@ class Season:
             reverse=True
         )
 
-    def get_playoff_teams(self, num_teams: int = 4) -> List[TeamRecord]:
-        """Select playoff teams: conference champions get auto-bids, remaining spots filled by power index.
+    def _count_bad_losses(self, team_name: str, rankings: Dict[str, int]) -> int:
+        """Count losses to teams ranked outside the top 50 (or unranked)."""
+        bad = 0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            if game.home_team == team_name and (game.home_score or 0) < (game.away_score or 0):
+                opp = game.away_team
+            elif game.away_team == team_name and (game.away_score or 0) < (game.home_score or 0):
+                opp = game.home_team
+            else:
+                continue
+            opp_rank = rankings.get(opp, 999)
+            if opp_rank > 50:
+                bad += 1
+        return bad
 
-        Each conference champion gets an automatic bid. Remaining spots go to the
-        highest-rated teams by power index (at-large bids). Teams are then seeded
-        by power index regardless of bid type.
+    def get_playoff_teams(self, num_teams: int = 4) -> List[TeamRecord]:
+        """Select playoff teams: qualified conference champions get auto-bids, remaining spots
+        filled by power index with a bad-loss gate for at-large teams.
+
+        Auto-bid requirements: conference champion must be at or above .500.
+        Champions below .500 forfeit their auto-bid; that slot converts to at-large.
+
+        At-large gate: teams with 3+ losses to opponents ranked outside the top 50
+        are ineligible for at-large selection (too many bad losses).
         """
         champions = self.get_conference_champions()
         num_conferences = len(champions)
+        rankings = self._get_current_rankings()
 
-        auto_bid_teams = set(champions.values())
+        # Separate qualified and disqualified auto-bids
+        auto_bid_teams = set()
         self._playoff_bid_types = {}
 
         if num_conferences > 0 and num_teams >= num_conferences:
             for conf, champ in champions.items():
-                self._playoff_bid_types[champ] = "auto"
+                rec = self.standings.get(champ)
+                if rec and rec.win_percentage >= 0.5:
+                    auto_bid_teams.add(champ)
+                    self._playoff_bid_types[champ] = "auto"
+                # else: sub-.500 champion forfeits auto-bid → slot becomes at-large
 
             at_large_spots = num_teams - len(auto_bid_teams)
 
@@ -1962,6 +1997,9 @@ class Season:
                 if team_name not in auto_bid_teams:
                     if len(at_large) >= at_large_spots:
                         break
+                    bad_losses = self._count_bad_losses(team_name, rankings)
+                    if bad_losses >= 3:
+                        continue  # Too many bad losses — skip
                     at_large.append(team_name)
                     self._playoff_bid_types[team_name] = "at-large"
 
