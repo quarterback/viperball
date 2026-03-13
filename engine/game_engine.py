@@ -57,7 +57,8 @@ V2_ENGINE_CONFIG = {
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
     # 5.5 (original) → high-scoring, ~900 combined yards.
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
-    "base_yards_multiplier": 4.2,
+    # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
+    "base_yards_multiplier": 2.3,
 }
 
 
@@ -4698,6 +4699,96 @@ class ViperballEngine:
 
         return None
 
+    # ── V2.9: Late-Down Defensive Intensity Ramp ──
+    # On downs 4-6, the defense gets dice-roll chances to squelch the
+    # play regardless of offensive execution.  Better defenses (higher
+    # tackling, awareness, speed) get more dice rolls and higher clamp
+    # probabilities.  This models defenses dialing up pressure when they
+    # smell a stop — and makes late-down conversions genuinely uncertain.
+    #
+    # Base clamp chances (at avg 75 defense):
+    #   4th down: ~20%    5th down: ~35%    6th down: ~50%
+    # Elite defense (90+) can push these ~10-12% higher.
+    # Weak defense (60-) drops them ~8-10% lower.
+
+    def _late_down_defensive_clamp(self, yards: float) -> float:
+        """Apply defensive intensity ramp on downs 4-6.
+
+        Returns modified yards.  On early downs (1-3) this is a no-op.
+        On late downs, a dice roll can squelch the play — reducing yards
+        to a stuff or short gain.  Stronger defenses get more frequent
+        and more punishing clamp rolls.
+        """
+        down = self.state.down
+        if down < 4:
+            return yards
+
+        # Compute defensive quality from the unit on the field.
+        # Blend of tackling, awareness, and speed across non-injured defenders.
+        def_team = self.get_defensive_team()
+        injured = self._injured_in_game(def_team)
+        defenders = [p for p in def_team.players
+                     if p.position in ("Keeper", "Defensive Line")
+                     and p.name not in injured]
+        if not defenders:
+            defenders = [p for p in def_team.players if p.name not in injured][:6]
+        if not defenders:
+            defenders = def_team.players[:5]
+
+        # Average defensive intensity rating (0-100 scale)
+        def_ratings = []
+        for d in defenders:
+            r = (d.tackling * 0.40 + getattr(d, 'awareness', 75) * 0.35
+                 + d.speed * 0.25)
+            r *= self.player_fatigue_modifier(d)
+            def_ratings.append(r)
+        avg_def = sum(def_ratings) / len(def_ratings)
+
+        # Average offensive talent on the field
+        off_team = self.get_offensive_team()
+        off_injured = self._injured_in_game(off_team)
+        attackers = [p for p in off_team.players if p.name not in off_injured][:11]
+        if not attackers:
+            attackers = off_team.players[:5]
+        off_ratings = []
+        for a in attackers:
+            r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
+                 + a.power * 0.20 + getattr(a, 'awareness', 75) * 0.25)
+            r *= self.player_fatigue_modifier(a)
+            off_ratings.append(r)
+        avg_off = sum(off_ratings) / len(off_ratings)
+
+        # Matchup gap: positive = defense is better, negative = offense dominates.
+        # Big gaps are decisive: OVR 90 vs OVR 50 → defense almost always
+        # wins the clamp roll.  Small gaps (88 vs 87, 88 vs 79) are more
+        # randomized — the talent delta isn't enough to override the dice.
+        #
+        # gap_norm: 0 = even, +0.4 = huge defensive edge, -0.4 = huge off edge
+        gap_norm = (avg_def - avg_off) / 100.0
+
+        # Exponential scaling: small gaps stay near 1.0, big gaps diverge fast
+        # gap_norm=0 → scale=1.0, gap_norm=+0.15 → ~1.35, gap_norm=-0.15 → ~0.65
+        # gap_norm=+0.40 → ~2.2 (capped), gap_norm=-0.40 → ~0.15 (floored)
+        matchup_scale = max(0.15, min(2.2, math.exp(gap_norm * 5.0)))
+
+        # Base clamp probability per down, scaled by matchup
+        if down == 4:
+            clamp_prob = min(0.45, 0.20 * matchup_scale)
+            yard_range = (-0.10, 0.25)
+        elif down == 5:
+            clamp_prob = min(0.60, 0.35 * matchup_scale)
+            yard_range = (-0.15, 0.20)
+        else:  # down >= 6
+            # 6th down: coin-flip baseline, matchup can push above 50%
+            clamp_prob = min(0.70, 0.50 * matchup_scale)
+            yard_range = (-0.20, 0.15)
+
+        if random.random() < clamp_prob:
+            # Defense squelches — yards reduced to stuff or minimal gain
+            return max(-2.0, round(yards * random.uniform(*yard_range), 1))
+
+        return yards
+
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":
             return self.state.home_score - self.state.away_score
@@ -7176,25 +7267,28 @@ class ViperballEngine:
             if effective_mult < min_mult:
                 center = pre_modifier_center * min_mult
 
-        # ── V2.1: Yardage polarization ──
+        # ── V2.1 / V2.9: Yardage polarization ──
         # Bimodal distribution: occasional busts and explosives,
-        # but offenses nickel-and-dime consistently with 6 downs / 20 yards.
+        # but offenses must grind consistently across 6 downs / 20 yards.
+        # V2.9: Tightened explosive rates & multipliers to push more drives
+        # into 4th-6th down territory — previous values made 1st-down
+        # conversions too easy (avg 13+ yards/carry, 15+ yards/kick-pass).
         variance *= 1.2
         mode_roll = random.random()
         if self.state.down >= 4:
             # Late downs: minimal bust, offense is locked in
-            if mode_roll < 0.03:
+            if mode_roll < 0.04:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.28:
-                yards = random.gauss(center * 1.6, variance * 1.0)
+            elif mode_roll < 0.085:
+                yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
         else:
-            # Early downs: 4% bust rate per user spec
-            if mode_roll < 0.04:
+            # Early downs: 7% bust, 4.5% explosive at 1.33x
+            if mode_roll < 0.07:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.30:
-                yards = random.gauss(center * 1.8, variance * 1.1)
+            elif mode_roll < 0.115:
+                yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
 
@@ -7691,6 +7785,8 @@ class ViperballEngine:
                     fumble=True,
                 )
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         new_position = min(100, self.state.field_position + yards_gained)
 
         desc_parts = []
@@ -7963,6 +8059,8 @@ class ViperballEngine:
                     fumble=True,
                 )
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         # Normal outcome resolution
         new_position = min(100, fp + yards_gained)
 
@@ -8338,6 +8436,8 @@ class ViperballEngine:
         # Breakaway check on lateral chains
         yards_gained = self._breakaway_check(yards_gained, team)
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         new_position = min(100, self.state.field_position + yards_gained)
 
         for p in players_involved:
@@ -8454,19 +8554,22 @@ class ViperballEngine:
         kp_accuracy = kicker.kick_accuracy
 
         if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
-            base_dist = random.randint(5, 8)
-            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 3
-            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 2
-            kick_distance = max(3, int(base_dist + power_bonus + acc_bonus))
+            # V2.9: Reduced base (was 5-8)
+            base_dist = random.randint(3, 6)
+            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 2
+            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 1.5
+            kick_distance = max(2, int(base_dist + power_bonus + acc_bonus))
         elif subfamily == KickPassSubFamily.TERRITORY:
-            base_dist = random.randint(10, 16)
-            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 5
-            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 3
-            kick_distance = max(7, int(base_dist + power_bonus + acc_bonus))
+            # V2.9: Reduced base (was 10-16) and bonuses
+            base_dist = random.randint(7, 12)
+            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 3.5
+            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 2
+            kick_distance = max(5, int(base_dist + power_bonus + acc_bonus))
         else:  # BOMB
-            base_dist = random.randint(22, 30)
-            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 12
-            kick_distance = max(18, int(base_dist + power_bonus))
+            # V2.9: Reduced base (was 22-30) and power bonus
+            base_dist = random.randint(18, 25)
+            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 8
+            kick_distance = max(14, int(base_dist + power_bonus))
 
         # Late-down targeting: bias distance toward yards_to_go
         if self.state.down >= 4:
@@ -8751,6 +8854,8 @@ class ViperballEngine:
 
                 # Chain completed without turnover — resolve as a completion
                 total_yards = kick_distance + chain_yards
+                # V2.9: Late-down defensive intensity clamp
+                total_yards = self._late_down_defensive_clamp(total_yards)
                 new_position = min(100, self.state.field_position + total_yards)
                 chain_desc = f"{kicker_tag} kick lateral: {' → '.join(chain_tags)}"
 
@@ -8806,24 +8911,27 @@ class ViperballEngine:
 
             if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
                 # Quick Kick: high YAC, elusive receivers shine
+                # V2.9: Reduced YAC floor (was 3-8 + skill*3-8)
                 recv_yac_skill = max(0.0, (receiver.speed * 0.50 + _recv_agility * 0.50 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                yac = random.randint(3, 8) + int(recv_yac_skill * random.randint(3, 8))
+                yac = random.randint(1, 5) + int(recv_yac_skill * random.randint(2, 6))
             elif subfamily == KickPassSubFamily.TERRITORY:
                 # Territory: moderate YAC, balanced attributes
+                # V2.9: Reduced YAC floor (was 2-5 + skill*1-5)
                 recv_yac_skill = max(0.0, (receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                yac = random.randint(2, 5) + int(recv_yac_skill * random.randint(1, 5))
+                yac = random.randint(1, 3) + int(recv_yac_skill * random.randint(1, 4))
             else:  # BOMB
                 # Bomb: binary — either caught at the spot or house call
+                # V2.9: Reduced caught-in-stride rate (was 35%) and YAC ceiling
                 recv_yac_skill = max(0.0, (receiver.speed * 0.70 + _recv_agility * 0.30 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                if random.random() < 0.35:
+                if random.random() < 0.22:
                     # Caught in stride — open field
-                    yac = random.randint(10, 20) + int(recv_yac_skill * random.randint(5, 15))
+                    yac = random.randint(6, 14) + int(recv_yac_skill * random.randint(3, 10))
                 else:
                     # Caught at the spot, minimal YAC
-                    yac = random.randint(0, 4) + int(recv_yac_skill * random.randint(0, 3))
+                    yac = random.randint(0, 3) + int(recv_yac_skill * random.randint(0, 2))
 
             # ── East Coast: yac_bonus — +6% YAC on Quick Kicks ──
             if style_name == "east_coast" and (subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL):
@@ -8944,6 +9052,8 @@ class ViperballEngine:
             # catch-and-run plays can produce 70+ yard house calls
             yards_gained = self._breakaway_check(yards_gained, team, family=family)
 
+            # V2.9: Late-down defensive intensity clamp
+            yards_gained = self._late_down_defensive_clamp(yards_gained)
             new_position = min(100, self.state.field_position + yards_gained)
 
             is_td = new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team)
