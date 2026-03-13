@@ -57,7 +57,8 @@ V2_ENGINE_CONFIG = {
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
     # 5.5 (original) → high-scoring, ~900 combined yards.
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
-    "base_yards_multiplier": 4.2,
+    # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
+    "base_yards_multiplier": 2.3,
 }
 
 
@@ -7176,25 +7177,28 @@ class ViperballEngine:
             if effective_mult < min_mult:
                 center = pre_modifier_center * min_mult
 
-        # ── V2.1: Yardage polarization ──
+        # ── V2.1 / V2.9: Yardage polarization ──
         # Bimodal distribution: occasional busts and explosives,
-        # but offenses nickel-and-dime consistently with 6 downs / 20 yards.
+        # but offenses must grind consistently across 6 downs / 20 yards.
+        # V2.9: Tightened explosive rates & multipliers to push more drives
+        # into 4th-6th down territory — previous values made 1st-down
+        # conversions too easy (avg 13+ yards/carry, 15+ yards/kick-pass).
         variance *= 1.2
         mode_roll = random.random()
         if self.state.down >= 4:
             # Late downs: minimal bust, offense is locked in
-            if mode_roll < 0.03:
+            if mode_roll < 0.04:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.28:
-                yards = random.gauss(center * 1.6, variance * 1.0)
+            elif mode_roll < 0.13:
+                yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
         else:
-            # Early downs: 4% bust rate per user spec
-            if mode_roll < 0.04:
+            # Early downs: 7% bust, 9% explosive at 1.33x
+            if mode_roll < 0.07:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.30:
-                yards = random.gauss(center * 1.8, variance * 1.1)
+            elif mode_roll < 0.16:
+                yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
 
@@ -8454,19 +8458,22 @@ class ViperballEngine:
         kp_accuracy = kicker.kick_accuracy
 
         if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
-            base_dist = random.randint(5, 8)
-            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 3
-            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 2
-            kick_distance = max(3, int(base_dist + power_bonus + acc_bonus))
+            # V2.9: Reduced base (was 5-8)
+            base_dist = random.randint(3, 6)
+            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 2
+            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 1.5
+            kick_distance = max(2, int(base_dist + power_bonus + acc_bonus))
         elif subfamily == KickPassSubFamily.TERRITORY:
-            base_dist = random.randint(10, 16)
-            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 5
-            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 3
-            kick_distance = max(7, int(base_dist + power_bonus + acc_bonus))
+            # V2.9: Reduced base (was 10-16) and bonuses
+            base_dist = random.randint(7, 12)
+            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 3.5
+            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 2
+            kick_distance = max(5, int(base_dist + power_bonus + acc_bonus))
         else:  # BOMB
-            base_dist = random.randint(22, 30)
-            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 12
-            kick_distance = max(18, int(base_dist + power_bonus))
+            # V2.9: Reduced base (was 22-30) and power bonus
+            base_dist = random.randint(18, 25)
+            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 8
+            kick_distance = max(14, int(base_dist + power_bonus))
 
         # Late-down targeting: bias distance toward yards_to_go
         if self.state.down >= 4:
@@ -8805,24 +8812,27 @@ class ViperballEngine:
 
             if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
                 # Quick Kick: high YAC, elusive receivers shine
+                # V2.9: Reduced YAC floor (was 3-8 + skill*3-8)
                 recv_yac_skill = max(0.0, (receiver.speed * 0.50 + _recv_agility * 0.50 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                yac = random.randint(3, 8) + int(recv_yac_skill * random.randint(3, 8))
+                yac = random.randint(1, 5) + int(recv_yac_skill * random.randint(2, 6))
             elif subfamily == KickPassSubFamily.TERRITORY:
                 # Territory: moderate YAC, balanced attributes
+                # V2.9: Reduced YAC floor (was 2-5 + skill*1-5)
                 recv_yac_skill = max(0.0, (receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                yac = random.randint(2, 5) + int(recv_yac_skill * random.randint(1, 5))
+                yac = random.randint(1, 3) + int(recv_yac_skill * random.randint(1, 4))
             else:  # BOMB
                 # Bomb: binary — either caught at the spot or house call
+                # V2.9: Reduced caught-in-stride rate (was 35%) and YAC ceiling
                 recv_yac_skill = max(0.0, (receiver.speed * 0.70 + _recv_agility * 0.30 - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
-                if random.random() < 0.35:
+                if random.random() < 0.22:
                     # Caught in stride — open field
-                    yac = random.randint(10, 20) + int(recv_yac_skill * random.randint(5, 15))
+                    yac = random.randint(6, 14) + int(recv_yac_skill * random.randint(3, 10))
                 else:
                     # Caught at the spot, minimal YAC
-                    yac = random.randint(0, 4) + int(recv_yac_skill * random.randint(0, 3))
+                    yac = random.randint(0, 3) + int(recv_yac_skill * random.randint(0, 2))
 
             # ── East Coast: yac_bonus — +6% YAC on Quick Kicks ──
             if style_name == "east_coast" and (subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL):
