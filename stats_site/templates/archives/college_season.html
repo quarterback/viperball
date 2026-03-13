@@ -11,7 +11,7 @@
 <div class="page-header">
   <h1>{{ archive.label }} <span class="tag">ARCHIVED</span></h1>
   <div class="subtitle">
-    {{ archive.standings|length }} teams &middot; {{ archive.games_played }}/{{ archive.total_games }} games played
+    {{ (archive.standings or [])|length }} teams &middot; {{ archive.games_played|default(0) }}/{{ archive.total_games|default(0) }} games played
     {% if archive.champion %} &middot; <span class="stat-elite">Champion: {{ archive.champion }}</span>{% endif %}
   </div>
 </div>
