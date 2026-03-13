@@ -30,10 +30,10 @@
 
 {% if record %}
 <div class="grid-4">
-  <div class="metric"><div class="label">Team Rating</div><div class="value {% if record.avg_team_rating >= 80 %}accent{% endif %}">{{ record.avg_team_rating }}</div></div>
-  <div class="metric"><div class="label">Points/Drive</div><div class="value">{{ record.avg_ppd }}</div></div>
-  <div class="metric"><div class="label">Point Diff</div><div class="value {% if record.point_differential > 0 %}stat-good{% else %}stat-bad{% endif %}">{{ record.point_differential }}</div></div>
-  <div class="metric"><div class="label">Conversion %</div><div class="value">{{ record.avg_conversion_pct }}</div></div>
+  <div class="metric"><div class="label">Team Rating</div><div class="value {% if record.avg_team_rating and record.avg_team_rating >= 80 %}accent{% endif %}">{{ record.avg_team_rating|default(0) }}</div></div>
+  <div class="metric"><div class="label">Points/Drive</div><div class="value">{{ record.avg_ppd|default(0) }}</div></div>
+  <div class="metric"><div class="label">Point Diff</div><div class="value {% if record.point_differential and record.point_differential > 0 %}stat-good{% elif record.point_differential and record.point_differential < 0 %}stat-bad{% endif %}">{{ record.point_differential|default(0) }}</div></div>
+  <div class="metric"><div class="label">Conversion %</div><div class="value">{{ record.avg_conversion_pct|default(0) }}</div></div>
 </div>
 {% endif %}
 

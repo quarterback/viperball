@@ -113,13 +113,22 @@ def _get_archives():
         return None, None
 
 
+def _get_archive_meta():
+    """Get lightweight archive metadata loader (avoids loading full 50MB blobs)."""
+    try:
+        from engine.db import load_season_archive_meta
+        return load_season_archive_meta
+    except Exception:
+        return None
+
+
 def _get_all_saved_data():
     """Get list of all saved data from the database (leagues, dynasties, etc.)."""
     try:
         from datetime import datetime, timezone
         from engine.db import list_saves
         saves = list_saves()
-        skip_types = {"dq_manager", "user_prefs", "box_score", "bridge"}
+        skip_types = {"dq_manager", "user_prefs", "box_score", "bridge", "season_archive_meta"}
         result = []
         for s in saves:
             if s["save_type"] in skip_types:
@@ -338,9 +347,11 @@ def delete_saved_data(save_type: str, save_key: str):
     if save_type not in allowed_types:
         raise HTTPException(400, f"Cannot delete save type: {save_type}")
     delete_blob(save_type, save_key)
-    # Also clean up associated DQ manager for pro leagues
+    # Also clean up associated metadata
     if save_type == "pro_league":
         delete_blob("dq_manager", save_key)
+    elif save_type == "season_archive":
+        delete_blob("season_archive_meta", save_key)
     return {"ok": True}
 
 
@@ -2875,22 +2886,38 @@ def intl_team(request: Request, nation_code: str):
 def archives_index(request: Request):
     """List all archived seasons."""
     archives = []
-    list_fn, load_fn = _get_archives()
+    list_fn, _ = _get_archives()
+    meta_fn = _get_archive_meta()
     if list_fn:
         try:
-            for meta in list_fn():
-                # Load just the header fields from each archive
-                data = load_fn(meta["save_key"]) if load_fn else None
-                archives.append({
-                    "key": meta["save_key"],
-                    "label": meta.get("label", meta["save_key"]),
-                    "type": data.get("type", "college") if data else "college",
-                    "champion": data.get("champion") if data else None,
-                    "team_count": data.get("team_count", 0) if data else 0,
-                    "games_played": data.get("games_played", 0) if data else 0,
-                    "total_games": data.get("total_games", 0) if data else 0,
-                    "created_at": meta.get("created_at", 0),
-                })
+            for save_row in list_fn():
+                key = save_row["save_key"]
+                label = save_row.get("label", key)
+                # Use lightweight meta blob instead of loading full 50MB archive
+                summary = meta_fn(key) if meta_fn else None
+                if summary:
+                    archives.append({
+                        "key": key,
+                        "label": label,
+                        "type": summary.get("type", "college"),
+                        "champion": summary.get("champion"),
+                        "team_count": summary.get("team_count", 0),
+                        "games_played": summary.get("games_played", 0),
+                        "total_games": summary.get("total_games", 0),
+                        "created_at": save_row.get("created_at", 0),
+                    })
+                else:
+                    # Fallback for archives saved before meta was added
+                    archives.append({
+                        "key": key,
+                        "label": label,
+                        "type": "college",
+                        "champion": None,
+                        "team_count": 0,
+                        "games_played": 0,
+                        "total_games": 0,
+                        "created_at": save_row.get("created_at", 0),
+                    })
         except Exception:
             pass
 

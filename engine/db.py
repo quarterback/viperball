@@ -833,8 +833,24 @@ def load_all_league_archives(user_id: str = "default") -> dict[str, dict]:
 # ═══════════════════════════════════════════════════════════════
 
 def save_season_archive(archive_key: str, snapshot: dict, user_id: str = "default"):
-    """Save a completed season snapshot (college or FIV) to the database."""
+    """Save a completed season snapshot (college or FIV) to the database.
+
+    Also saves a lightweight summary blob (season_archive_meta) so the
+    archive index page can display champion / team-count / games-played
+    without loading the full 50+ MB snapshot.
+    """
     save_blob("season_archive", archive_key, snapshot,
+              label=snapshot.get("label", archive_key), user_id=user_id)
+    # Save lightweight summary for fast listing
+    meta = {
+        "type": snapshot.get("type", "college"),
+        "label": snapshot.get("label", archive_key),
+        "champion": snapshot.get("champion"),
+        "team_count": snapshot.get("team_count", 0),
+        "games_played": snapshot.get("games_played", 0),
+        "total_games": snapshot.get("total_games", 0),
+    }
+    save_blob("season_archive_meta", archive_key, meta,
               label=snapshot.get("label", archive_key), user_id=user_id)
     _log.info(f"Saved season archive '{archive_key}' for user={user_id}")
 
@@ -842,6 +858,11 @@ def save_season_archive(archive_key: str, snapshot: dict, user_id: str = "defaul
 def load_season_archive(archive_key: str, user_id: str = "default") -> Optional[dict]:
     """Load a season archive snapshot."""
     return load_blob("season_archive", archive_key, user_id=user_id)
+
+
+def load_season_archive_meta(archive_key: str, user_id: str = "default") -> Optional[dict]:
+    """Load lightweight archive summary (champion, team_count, etc.)."""
+    return load_blob("season_archive_meta", archive_key, user_id=user_id)
 
 
 def list_season_archives(user_id: str = "default") -> list[dict]:
@@ -852,6 +873,7 @@ def list_season_archives(user_id: str = "default") -> list[dict]:
 def delete_season_archive(archive_key: str, user_id: str = "default"):
     """Delete a season archive."""
     delete_blob("season_archive", archive_key, user_id=user_id)
+    delete_blob("season_archive_meta", archive_key, user_id=user_id)
 
 
 # ═══════════════════════════════════════════════════════════════
