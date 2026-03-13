@@ -7189,15 +7189,15 @@ class ViperballEngine:
             # Late downs: minimal bust, offense is locked in
             if mode_roll < 0.04:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.13:
+            elif mode_roll < 0.085:
                 yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
         else:
-            # Early downs: 7% bust, 9% explosive at 1.33x
+            # Early downs: 7% bust, 4.5% explosive at 1.33x
             if mode_roll < 0.07:
                 yards = random.gauss(center * 0.4, variance * 0.7)
-            elif mode_roll < 0.16:
+            elif mode_roll < 0.115:
                 yards = random.gauss(center * 1.33, variance * 1.0)
             else:
                 yards = random.gauss(center, variance)
