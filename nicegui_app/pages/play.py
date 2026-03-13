@@ -529,6 +529,11 @@ async def _render_season_play(state: UserState, shared: dict):
         _render_mode_selection(state, shared, play_tab=old_mode)
         return
 
+    # After dynasty advance, phase is "offseason" and season is gone — show start UI
+    if state.mode == "dynasty" and status.get("phase") == "offseason":
+        await _render_dynasty_start_season(state, shared)
+        return
+
     season_name = status.get("name", "Season")
     ui.label(f"{season_name}").classes("text-2xl font-bold text-slate-800")
 

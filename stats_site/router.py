@@ -805,6 +805,13 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     season = api["require_season"](sess)
 
     week_games = [g for g in season.schedule if g.week == week]
+
+    # Also search playoff bracket and bowl games for postseason weeks
+    if not week_games:
+        playoff_games = [g for g in (season.playoff_bracket or []) if g.week == week]
+        bowl_game_list = [bg.game for bg in (season.bowl_games or []) if bg.game.week == week]
+        week_games = playoff_games or bowl_game_list
+
     if game_idx < 0 or game_idx >= len(week_games):
         raise HTTPException(404, "Game not found")
 
@@ -1276,9 +1283,13 @@ def college_playoffs(request: Request, session_id: str):
     # Build bracket rounds
     bracket = season.playoff_bracket or []
     rounds = {}
+    week_counters = {}
     for g in bracket:
         sg = api["serialize_game"](g, include_full_result=False)
         wk = sg.get("week", 0)
+        idx = week_counters.get(wk, 0)
+        sg["week_game_idx"] = idx
+        week_counters[wk] = idx + 1
         rounds.setdefault(wk, []).append(sg)
 
     # Determine total teams for label resolution
