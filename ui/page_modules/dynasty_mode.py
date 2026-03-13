@@ -236,7 +236,7 @@ def render_dynasty_mode(shared):
 
             dyn_rec = get_recommended_bowl_count(total_teams, playoff_format)
             dyn_max_bowls = max(0, (total_teams - playoff_format) // 2)
-            dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, dyn_max_bowls), value=min(dyn_rec, min(12, dyn_max_bowls)),
+            dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(16, dyn_max_bowls), value=min(dyn_rec, min(16, dyn_max_bowls)),
                                         key=f"dyn_bowls_{dynasty.current_year}")
 
             teams_dir_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "teams")

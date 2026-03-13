@@ -185,7 +185,7 @@ def render_season_simulator(shared):
             playoff_size = st.radio("Playoff Format", playoff_options, index=0, key="playoff_size", horizontal=True)
 
         rec_bowls = get_recommended_bowl_count(len(selected_teams), playoff_size)
-        bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, (len(selected_teams) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
+        bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(16, (len(selected_teams) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
 
         run_season = st.button("Simulate Season", type="primary", use_container_width=True, key="run_season")
 

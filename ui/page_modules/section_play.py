@@ -1076,7 +1076,7 @@ def _render_new_season(shared):
         playoff_size = st.radio("Playoff Format", playoff_options, index=0, key="playoff_size", horizontal=True)
 
     rec_bowls = get_recommended_bowl_count(len(all_team_names), playoff_size)
-    bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, (len(all_team_names) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
+    bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(16, (len(all_team_names) - playoff_size) // 2), value=rec_bowls, key="season_bowl_count")
 
     # Non-conference scheduling for human-controlled teams
     season_pinned = []
@@ -1610,7 +1610,7 @@ def _render_dynasty_play(shared):
 
         dyn_rec = get_recommended_bowl_count(total_teams, playoff_format)
         dyn_max_bowls = max(0, (total_teams - playoff_format) // 2)
-        dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(12, dyn_max_bowls), value=min(dyn_rec, min(12, dyn_max_bowls)),
+        dyn_bowl_count = st.slider("Number of Bowl Games", min_value=0, max_value=min(16, dyn_max_bowls), value=min(dyn_rec, min(16, dyn_max_bowls)),
                                     key=f"dyn_bowls_{current_year}")
 
         teams_dir_path = _teams_dir()

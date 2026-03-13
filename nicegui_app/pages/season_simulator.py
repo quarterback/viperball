@@ -271,7 +271,7 @@ def render_season_simulator(state: UserState, shared: dict):
 
     with ui.column().classes("w-full mt-2"):
         ui.label("Number of Bowl Games").classes("text-sm text-slate-600")
-        max_bowls = min(12, (total_teams - int(playoff_options[0])) // 2)
+        max_bowls = min(16, (total_teams - int(playoff_options[0])) // 2)
         bowl_count = ui.slider(min=0, max=max(max_bowls, 1), value=min(4, max(max_bowls, 0))).classes("w-96")
         bowl_label = ui.label("4 bowls").classes("text-sm font-semibold text-slate-700")
 

@@ -584,65 +584,51 @@ class Game:
     full_result: Optional[Dict] = None
 
 
-BOWL_WORD_BANKS = {
-    "concepts": [
-        "Horizon", "Keystone", "Summit", "Meridian", "Pioneer", "Union",
-        "Heritage", "Legacy", "Vanguard", "Frontier", "Catalyst", "Apex",
-        "Commonwealth", "Founders", "Iron", "Copper", "Granite", "Harbor",
-        "Prairie", "Lakes", "River", "Delta", "Corridor", "Heartland",
+BOWL_NAMES_BY_TIER = {
+    1: [  # Premier
+        "Rose Bowl", "Sugar Bowl", "Orange Bowl", "Cotton Bowl Classic",
+        "Fiesta Bowl", "Peach Bowl",
     ],
-    "places": [
-        "Great Lakes", "Rust Belt", "Yankee", "Prairie", "Crossroads",
-        "Motor City", "Steel City", "River Valley", "Lakefront", "Capital",
-        "Heartland", "Coastal", "Inland", "Metro", "Tri-State", "Border",
-        "Plains", "Peninsula",
+    2: [  # Major
+        "Citrus Bowl", "Alamo Bowl", "Holiday Bowl", "Sun Bowl",
+        "Gator Bowl", "Music City Bowl", "Liberty Bowl", "Las Vegas Bowl",
+        "Texas Bowl", "Duke's Mayo Bowl",
     ],
-    "descriptors_premier": ["Classic", "Crown", "Showcase", "Championship"],
-    "descriptors_major": ["Challenge", "Cup", "Series", "Trophy"],
-    "descriptors_standard": ["Invitational", "Shield", "Clash"],
-    "objects": [
-        "Lantern", "Anchor", "Rail", "Forge", "Mill", "Beacon", "Bridge",
-        "Line", "Yard", "Depot", "Gridiron", "Banner", "Torch", "Spire",
+    3: [  # Standard
+        "Pop-Tarts Bowl", "Cheez-It Bowl", "Pinstripe Bowl", "Fenway Bowl",
+        "Potato Bowl", "Gasparilla Bowl", "Cure Bowl", "Boca Raton Bowl",
+        "Camellia Bowl", "Myrtle Beach Bowl", "Independence Bowl",
+        "Birmingham Bowl", "Military Bowl", "Quick Lane Bowl",
+        "Hawaii Bowl", "First Responder Bowl", "Armed Forces Bowl",
+        "Guaranteed Rate Bowl", "LA Bowl", "Frisco Bowl",
     ],
 }
 
 
 def generate_bowl_names(count: int, tiers: Optional[List[int]] = None) -> List[str]:
-    """Generate unique random bowl names using word banks, with tier-appropriate descriptors."""
-    banks = BOWL_WORD_BANKS
+    """Select bowl names from real bowl game pools, shuffled per tier."""
     used = set()
     names = []
+    # Build per-tier shuffled pools
+    pools = {}
+    for t in (1, 2, 3):
+        pool = list(BOWL_NAMES_BY_TIER[t])
+        random.shuffle(pool)
+        pools[t] = pool
 
     for i in range(count):
         tier = tiers[i] if tiers and i < len(tiers) else 3
-        if tier == 1:
-            descriptors = banks["descriptors_premier"]
-        elif tier == 2:
-            descriptors = banks["descriptors_major"]
-        else:
-            descriptors = banks["descriptors_standard"]
-
-        if tier <= 2:
-            patterns = ["region_desc", "concept_desc"]
-        else:
-            patterns = ["region_desc", "concept_object", "place", "concept"]
-
-        for _ in range(50):
-            pattern = random.choice(patterns)
-            if pattern == "region_desc":
-                name = f"{random.choice(banks['places'])} {random.choice(descriptors)}"
-            elif pattern == "concept_desc":
-                name = f"{random.choice(banks['concepts'])} {random.choice(descriptors)}"
-            elif pattern == "concept_object":
-                name = f"{random.choice(banks['concepts'])} {random.choice(banks['objects'])} Bowl"
-            elif pattern == "place":
-                name = f"{random.choice(banks['places'])} Bowl"
-            else:
-                name = f"{random.choice(banks['concepts'])} Bowl"
-
-            if name not in used:
-                used.add(name)
-                names.append(name)
+        # Try the target tier first, then fall back to other tiers
+        for try_tier in [tier] + [t for t in (1, 2, 3) if t != tier]:
+            pool = pools[try_tier]
+            picked = False
+            for name in pool:
+                if name not in used:
+                    used.add(name)
+                    names.append(name)
+                    picked = True
+                    break
+            if picked:
                 break
         else:
             names.append(f"Bowl Game {i + 1}")
@@ -661,10 +647,11 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
         return 0
     table = {
         (24, 4): 4, (24, 8): 2, (24, 12): 1, (24, 16): 0,
-        (40, 4): 6, (40, 8): 4, (40, 12): 3, (40, 16): 2,
-        (60, 4): 8, (60, 8): 6, (60, 12): 5, (60, 16): 4,
-        (80, 4): 10, (80, 8): 8, (80, 12): 6, (80, 16): 5,
-        (100, 4): 12, (100, 8): 10, (100, 12): 8, (100, 16): 6,
+        (40, 4): 6, (40, 8): 4, (40, 12): 3, (40, 16): 2, (40, 32): 1,
+        (60, 4): 8, (60, 8): 6, (60, 12): 5, (60, 16): 4, (60, 32): 3,
+        (80, 4): 10, (80, 8): 8, (80, 12): 6, (80, 16): 5, (80, 32): 4,
+        (100, 4): 12, (100, 8): 10, (100, 12): 8, (100, 16): 6, (100, 32): 5,
+        (130, 4): 16, (130, 8): 14, (130, 12): 12, (130, 16): 10, (130, 32): 8,
     }
     best = 2
     for (sz, ps), bc in sorted(table.items()):

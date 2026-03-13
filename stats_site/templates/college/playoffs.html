@@ -67,26 +67,28 @@
   <div class="bracket-round">
     <div class="bracket-round-label">{{ round_labels.get(week, 'Round') }}</div>
     {% for g in games %}
+    {% set completed = g.get('completed', false) %}
+    <a href="{% if completed %}/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.get('week_game_idx', 0) }}{% else %}#{% endif %}" style="text-decoration:none;color:inherit{% if not completed %};pointer-events:none{% endif %}">
     <div class="matchup {% if week == 1000 %}championship{% endif %}">
       {% set home = g.get('home_team', '') %}
       {% set away = g.get('away_team', '') %}
       {% set hs = g.get('home_score') %}
       {% set aws = g.get('away_score') %}
-      {% set completed = g.get('completed', false) %}
       {% set h_won = completed and hs is not none and aws is not none and hs > aws %}
       {% set a_won = completed and hs is not none and aws is not none and aws > hs %}
 
       <div class="matchup-team {% if h_won %}matchup-winner{% elif completed %}matchup-loser{% endif %}">
         <span class="matchup-seed">{{ seed_map.get(home, '') }}</span>
-        <span class="matchup-name"><a href="/stats/college/{{ session_id }}/team/{{ home }}" style="color:inherit">{{ home }}</a></span>
+        <span class="matchup-name">{{ home }}</span>
         <span class="matchup-score">{% if completed %}{{ hs }}{% else %}&mdash;{% endif %}</span>
       </div>
       <div class="matchup-team {% if a_won %}matchup-winner{% elif completed %}matchup-loser{% endif %}">
         <span class="matchup-seed">{{ seed_map.get(away, '') }}</span>
-        <span class="matchup-name"><a href="/stats/college/{{ session_id }}/team/{{ away }}" style="color:inherit">{{ away }}</a></span>
+        <span class="matchup-name">{{ away }}</span>
         <span class="matchup-score">{% if completed %}{{ aws }}{% else %}&mdash;{% endif %}</span>
       </div>
     </div>
+    </a>
     {% endfor %}
   </div>
   {% endfor %}
@@ -156,6 +158,7 @@
 {% for b in tier_bowls %}
   {% set g = b.game %}
   {% set completed = g.get('completed', false) %}
+  <a href="{% if completed %}/stats/college/{{ session_id }}/game/{{ g.week }}/0{% else %}#{% endif %}" style="text-decoration:none;color:inherit{% if not completed %};pointer-events:none{% endif %}">
   <div class="bowl-card">
     <div class="bowl-name">{{ b.name }}</div>
     <div class="bowl-matchup">
@@ -164,6 +167,7 @@
       <span class="{% if completed and g.home_score > g.away_score %}matchup-winner{% elif completed %}matchup-loser{% endif %}">{{ g.home_team }} {% if completed %}{{ g.home_score }}{% endif %}</span>
     </div>
   </div>
+  </a>
 {% endfor %}
 </div>
 {% endif %}
