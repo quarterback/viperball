@@ -4699,6 +4699,96 @@ class ViperballEngine:
 
         return None
 
+    # ── V2.9: Late-Down Defensive Intensity Ramp ──
+    # On downs 4-6, the defense gets dice-roll chances to squelch the
+    # play regardless of offensive execution.  Better defenses (higher
+    # tackling, awareness, speed) get more dice rolls and higher clamp
+    # probabilities.  This models defenses dialing up pressure when they
+    # smell a stop — and makes late-down conversions genuinely uncertain.
+    #
+    # Base clamp chances (at avg 75 defense):
+    #   4th down: ~20%    5th down: ~35%    6th down: ~50%
+    # Elite defense (90+) can push these ~10-12% higher.
+    # Weak defense (60-) drops them ~8-10% lower.
+
+    def _late_down_defensive_clamp(self, yards: float) -> float:
+        """Apply defensive intensity ramp on downs 4-6.
+
+        Returns modified yards.  On early downs (1-3) this is a no-op.
+        On late downs, a dice roll can squelch the play — reducing yards
+        to a stuff or short gain.  Stronger defenses get more frequent
+        and more punishing clamp rolls.
+        """
+        down = self.state.down
+        if down < 4:
+            return yards
+
+        # Compute defensive quality from the unit on the field.
+        # Blend of tackling, awareness, and speed across non-injured defenders.
+        def_team = self.get_defensive_team()
+        injured = self._injured_in_game(def_team)
+        defenders = [p for p in def_team.players
+                     if p.position in ("Keeper", "Defensive Line")
+                     and p.name not in injured]
+        if not defenders:
+            defenders = [p for p in def_team.players if p.name not in injured][:6]
+        if not defenders:
+            defenders = def_team.players[:5]
+
+        # Average defensive intensity rating (0-100 scale)
+        def_ratings = []
+        for d in defenders:
+            r = (d.tackling * 0.40 + getattr(d, 'awareness', 75) * 0.35
+                 + d.speed * 0.25)
+            r *= self.player_fatigue_modifier(d)
+            def_ratings.append(r)
+        avg_def = sum(def_ratings) / len(def_ratings)
+
+        # Average offensive talent on the field
+        off_team = self.get_offensive_team()
+        off_injured = self._injured_in_game(off_team)
+        attackers = [p for p in off_team.players if p.name not in off_injured][:11]
+        if not attackers:
+            attackers = off_team.players[:5]
+        off_ratings = []
+        for a in attackers:
+            r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
+                 + a.power * 0.20 + getattr(a, 'awareness', 75) * 0.25)
+            r *= self.player_fatigue_modifier(a)
+            off_ratings.append(r)
+        avg_off = sum(off_ratings) / len(off_ratings)
+
+        # Matchup gap: positive = defense is better, negative = offense dominates.
+        # Big gaps are decisive: OVR 90 vs OVR 50 → defense almost always
+        # wins the clamp roll.  Small gaps (88 vs 87, 88 vs 79) are more
+        # randomized — the talent delta isn't enough to override the dice.
+        #
+        # gap_norm: 0 = even, +0.4 = huge defensive edge, -0.4 = huge off edge
+        gap_norm = (avg_def - avg_off) / 100.0
+
+        # Exponential scaling: small gaps stay near 1.0, big gaps diverge fast
+        # gap_norm=0 → scale=1.0, gap_norm=+0.15 → ~1.35, gap_norm=-0.15 → ~0.65
+        # gap_norm=+0.40 → ~2.2 (capped), gap_norm=-0.40 → ~0.15 (floored)
+        matchup_scale = max(0.15, min(2.2, math.exp(gap_norm * 5.0)))
+
+        # Base clamp probability per down, scaled by matchup
+        if down == 4:
+            clamp_prob = min(0.45, 0.20 * matchup_scale)
+            yard_range = (-0.10, 0.25)
+        elif down == 5:
+            clamp_prob = min(0.60, 0.35 * matchup_scale)
+            yard_range = (-0.15, 0.20)
+        else:  # down >= 6
+            # 6th down: coin-flip baseline, matchup can push above 50%
+            clamp_prob = min(0.70, 0.50 * matchup_scale)
+            yard_range = (-0.20, 0.15)
+
+        if random.random() < clamp_prob:
+            # Defense squelches — yards reduced to stuff or minimal gain
+            return max(-2.0, round(yards * random.uniform(*yard_range), 1))
+
+        return yards
+
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":
             return self.state.home_score - self.state.away_score
@@ -7695,6 +7785,8 @@ class ViperballEngine:
                     fumble=True,
                 )
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         new_position = min(100, self.state.field_position + yards_gained)
 
         desc_parts = []
@@ -7967,6 +8059,8 @@ class ViperballEngine:
                     fumble=True,
                 )
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         # Normal outcome resolution
         new_position = min(100, fp + yards_gained)
 
@@ -8342,6 +8436,8 @@ class ViperballEngine:
         # Breakaway check on lateral chains
         yards_gained = self._breakaway_check(yards_gained, team)
 
+        # V2.9: Late-down defensive intensity clamp
+        yards_gained = self._late_down_defensive_clamp(yards_gained)
         new_position = min(100, self.state.field_position + yards_gained)
 
         for p in players_involved:
@@ -8757,6 +8853,8 @@ class ViperballEngine:
 
                 # Chain completed without turnover — resolve as a completion
                 total_yards = kick_distance + chain_yards
+                # V2.9: Late-down defensive intensity clamp
+                total_yards = self._late_down_defensive_clamp(total_yards)
                 new_position = min(100, self.state.field_position + total_yards)
                 chain_desc = f"{kicker_tag} kick lateral: {' → '.join(chain_tags)}"
 
@@ -8953,6 +9051,8 @@ class ViperballEngine:
             # catch-and-run plays can produce 70+ yard house calls
             yards_gained = self._breakaway_check(yards_gained, team, family=family)
 
+            # V2.9: Late-down defensive intensity clamp
+            yards_gained = self._late_down_defensive_clamp(yards_gained)
             new_position = min(100, self.state.field_position + yards_gained)
 
             is_td = new_position >= 100 or self._red_zone_td_check(new_position, yards_gained, team)
