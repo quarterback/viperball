@@ -542,6 +542,15 @@ async def _render_postseason(session_id, user_team):
         bracket_resp = {}
         bracket = []
 
+    try:
+        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
+    except api_client.APIError:
+        bowls_resp = {}
+
+    if bowls_resp.get("bowl_results"):
+        render_bowl_games(bowls_resp, user_team)
+        ui.separator().classes("my-4")
+
     if bracket:
         playoff_team_set = set()
         for g in bracket:
@@ -561,15 +570,6 @@ async def _render_postseason(session_id, user_team):
         render_playoff_bracket(bracket_resp, user_team)
     else:
         ui.label("No playoffs ran this season.").classes("text-sm text-gray-500")
-
-    try:
-        bowls_resp = await run.io_bound(api_client.get_bowl_results, session_id)
-    except api_client.APIError:
-        bowls_resp = {}
-
-    if bowls_resp.get("bowl_results"):
-        ui.separator().classes("my-4")
-        render_bowl_games(bowls_resp, user_team)
 
 
 # ---------------------------------------------------------------------------

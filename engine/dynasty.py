@@ -97,6 +97,8 @@ class TeamHistory:
     total_losses: int = 0
     total_championships: int = 0
     total_playoff_appearances: int = 0
+    total_bowl_appearances: int = 0
+    total_bowl_wins: int = 0
 
     # Points
     total_points_for: float = 0.0
@@ -506,6 +508,26 @@ class Dynasty:
             conf_champs = season.get_conference_champions() if self.conferences else {}
             is_conf_champ = team_name in set(conf_champs.values())
 
+            # Bowl game tracking
+            bowl_team = False
+            bowl_win = False
+            bowl_name = None
+            for bg in getattr(season, 'bowl_games', []):
+                g = bg.game
+                if team_name in (g.home_team, g.away_team):
+                    bowl_team = True
+                    bowl_name = bg.name
+                    if g.completed and g.home_score is not None and g.away_score is not None:
+                        if (g.home_score > g.away_score and team_name == g.home_team) or \
+                           (g.away_score > g.home_score and team_name == g.away_team):
+                            bowl_win = True
+                    break
+
+            if bowl_team:
+                history.total_bowl_appearances += 1
+            if bowl_win:
+                history.total_bowl_wins += 1
+
             # Store season record
             history.season_records[year] = {
                 "wins": record.wins,
@@ -516,6 +538,9 @@ class Dynasty:
                 "champion": (team_name == season.champion),
                 "playoff": (team_name in playoff_teams),
                 "conference_champion": is_conf_champ,
+                "bowl": bowl_team,
+                "bowl_win": bowl_win,
+                "bowl_name": bowl_name,
             }
 
             # Check if best season ever for this team

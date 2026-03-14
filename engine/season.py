@@ -2322,11 +2322,14 @@ class Season:
 
     def simulate_bowls(self, bowl_count: int = 0, playoff_size: int = 4,
                        bowl_names: Optional[List[str]] = None, verbose: bool = False):
-        """Simulate bowl games for non-playoff teams.
+        """Simulate bowl games for non-playoff-bound teams.
+
+        Bowl games run before playoffs. The top ``playoff_size`` teams are
+        excluded from bowl eligibility since they will compete in the playoff.
 
         Args:
             bowl_count: Number of bowls (0 = auto-recommend based on league/playoff size)
-            playoff_size: Number of teams in playoff (to exclude from bowls)
+            playoff_size: Number of teams headed to the playoff (excluded from bowls)
             bowl_names: Custom bowl names (optional, uses defaults if not provided)
             verbose: Whether to log verbose output
         """

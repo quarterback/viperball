@@ -200,13 +200,14 @@ def render_season_simulator(shared):
                 season.simulate_season(generate_polls=True)
 
             num_playoff = playoff_size
-            if num_playoff > 0 and len(selected_teams) >= num_playoff:
-                with st.spinner("Running playoffs..."):
-                    season.simulate_playoff(num_teams=min(num_playoff, len(selected_teams)))
 
             if bowl_count > 0:
                 with st.spinner("Running bowl games..."):
                     season.simulate_bowls(bowl_count=bowl_count, playoff_size=num_playoff)
+
+            if num_playoff > 0 and len(selected_teams) >= num_playoff:
+                with st.spinner("Running playoffs..."):
+                    season.simulate_playoff(num_teams=min(num_playoff, len(selected_teams)))
 
             st.session_state["last_season"] = season
 

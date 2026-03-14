@@ -973,7 +973,8 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
     _persist_box_scores(session_id, games)
 
     if season.is_regular_season_complete():
-        session["phase"] = "playoffs_pending"
+        bowl_count = session["config"].get("bowl_count", 4)
+        session["phase"] = "bowls_pending" if bowl_count > 0 else "playoffs_pending"
 
     return {
         "week": actual_week,
@@ -1002,7 +1003,8 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
     _persist_box_scores(session_id, all_games)
 
     if season.is_regular_season_complete():
-        session["phase"] = "playoffs_pending"
+        bowl_count = session["config"].get("bowl_count", 4)
+        session["phase"] = "bowls_pending" if bowl_count > 0 else "playoffs_pending"
 
     return {
         "games": [_serialize_game(g) for g in all_games],
@@ -1035,7 +1037,8 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
 
     _persist_box_scores(session_id, season.schedule)
 
-    session["phase"] = "playoffs_pending"
+    bowl_count = session["config"].get("bowl_count", 4)
+    session["phase"] = "bowls_pending" if bowl_count > 0 else "playoffs_pending"
 
     return {
         "games_simulated": games_simulated,
@@ -1044,6 +1047,42 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
         "status": _serialize_season_status(session),
         "engine": "fast_sim" if req.fast_sim else "full",
     }
+
+
+@app.post("/sessions/{session_id}/season/bowls")
+async def run_bowls(session_id: str):
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    if session["phase"] not in ("bowls_pending",):
+        raise HTTPException(status_code=400, detail=f"Cannot run bowls in phase '{session['phase']}'")
+
+    bowl_count = session["config"].get("bowl_count", 4)
+    playoff_size = session["config"].get("playoff_size", 8)
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        _sim_executor,
+        lambda: season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size),
+    )
+
+    _persist_box_scores(session_id, [bg.game for bg in season.bowl_games])
+
+    session["phase"] = "playoffs_pending"
+
+    bowl_results = []
+    for bg in season.bowl_games:
+        bowl_results.append({
+            "name": bg.name,
+            "tier": bg.tier,
+            "game": _serialize_game(bg.game),
+            "team_1_seed": bg.team_1_seed,
+            "team_2_seed": bg.team_2_seed,
+            "team_1_record": bg.team_1_record,
+            "team_2_record": bg.team_2_record,
+        })
+
+    return {"bowl_results": bowl_results, "phase": session["phase"]}
 
 
 @app.post("/sessions/{session_id}/season/playoffs")
@@ -1067,11 +1106,7 @@ async def run_playoffs(session_id: str):
 
     _persist_box_scores(session_id, season.playoff_bracket)
 
-    bowl_count = session["config"].get("bowl_count", 4)
-    if bowl_count > 0:
-        session["phase"] = "bowls_pending"
-    else:
-        session["phase"] = "complete"
+    session["phase"] = "complete"
 
     bracket = [_serialize_game(g) for g in season.playoff_bracket]
     return {
@@ -1079,42 +1114,6 @@ async def run_playoffs(session_id: str):
         "bracket": bracket,
         "phase": session["phase"],
     }
-
-
-@app.post("/sessions/{session_id}/season/bowls")
-async def run_bowls(session_id: str):
-    session = _get_session(session_id)
-    season = _require_season(session)
-
-    if session["phase"] not in ("bowls_pending",):
-        raise HTTPException(status_code=400, detail=f"Cannot run bowls in phase '{session['phase']}'")
-
-    bowl_count = session["config"].get("bowl_count", 4)
-    playoff_size = session["config"].get("playoff_size", 8)
-
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(
-        _sim_executor,
-        lambda: season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size),
-    )
-
-    _persist_box_scores(session_id, [bg.game for bg in season.bowl_games])
-
-    session["phase"] = "complete"
-
-    bowl_results = []
-    for bg in season.bowl_games:
-        bowl_results.append({
-            "name": bg.name,
-            "tier": bg.tier,
-            "game": _serialize_game(bg.game),
-            "team_1_seed": bg.team_1_seed,
-            "team_2_seed": bg.team_2_seed,
-            "team_1_record": bg.team_1_record,
-            "team_2_record": bg.team_2_record,
-        })
-
-    return {"bowl_results": bowl_results, "phase": session["phase"]}
 
 
 @app.get("/sessions/{session_id}/season/status")
@@ -2097,6 +2096,8 @@ def dynasty_team_histories(session_id: str):
             "total_losses": history.total_losses,
             "total_championships": history.total_championships,
             "total_playoff_appearances": history.total_playoff_appearances,
+            "total_bowl_appearances": getattr(history, 'total_bowl_appearances', 0),
+            "total_bowl_wins": getattr(history, 'total_bowl_wins', 0),
             "total_points_for": round(history.total_points_for, 1),
             "total_points_against": round(history.total_points_against, 1),
             "win_percentage": round(history.win_percentage, 4),
