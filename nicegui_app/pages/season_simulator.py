@@ -279,6 +279,17 @@ def render_season_simulator(state: UserState, shared: dict):
             bowl_label.set_text(f"{int(bowl_count.value)} bowls")
         bowl_count.on_value_change(lambda _: _update_bowl_label())
 
+        def _update_bowl_max():
+            ps = int(playoff_format.value)
+            new_max = max(1, min(16, (total_teams - ps) // 2))
+            bowl_count._props["max"] = new_max
+            if int(bowl_count.value) > new_max:
+                bowl_count.value = new_max
+            bowl_count.update()
+            _update_bowl_label()
+
+        playoff_format.on_value_change(lambda _: _update_bowl_max())
+
     # ── League History ──
     ui.separator().classes("my-4")
     ui.label("League History").classes("text-lg font-semibold text-slate-700")

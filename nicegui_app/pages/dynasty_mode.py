@@ -315,7 +315,18 @@ def render_dynasty_mode(state: UserState, shared: dict):
         season_playoff_sz = ui.select(
             season_playoff_options, value=season_playoff_default, label="Playoff Size",
         ).classes("w-40")
-        season_bowl_ct = ui.number("Bowl Games", value=4, min=0, max=8).classes("w-32")
+        initial_max_bowls = min(16, max(0, (total_teams - season_playoff_default) // 2))
+        season_bowl_ct = ui.number("Bowl Games", value=min(4, initial_max_bowls), min=0, max=initial_max_bowls).classes("w-32")
+
+        def _update_bowl_max():
+            ps = int(season_playoff_sz.value)
+            new_max = min(16, max(0, (total_teams - ps) // 2))
+            season_bowl_ct.max = new_max
+            if season_bowl_ct.value > new_max:
+                season_bowl_ct.value = new_max
+            season_bowl_ct.update()
+
+        season_playoff_sz.on_value_change(lambda _: _update_bowl_max())
 
     # ── Create Dynasty Button ──
     ui.separator().classes("my-4")
