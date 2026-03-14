@@ -148,7 +148,7 @@
     <td>{{ s.updated_at[:16] | replace('T', ' ') }}</td>
     <td class="num">{{ "%.0f"|format(s.data_size / 1024) }} KB</td>
     <td>
-      <button class="btn-delete" onclick="deleteSaved(this, '{{ s.save_type }}', '{{ s.save_key }}', '{{ s.label }}')" title="Delete this save">&times;</button>
+      <button class="btn-delete" data-type="{{ s.save_type }}" data-key="{{ s.save_key }}" data-label="{{ s.label }}" onclick="deleteSaved(this)" title="Delete this save">&times;</button>
     </td>
   </tr>
   {% endfor %}
@@ -176,7 +176,10 @@
 </style>
 
 <script>
-function deleteSaved(btn, saveType, saveKey, label) {
+function deleteSaved(btn) {
+  var saveType = btn.dataset.type;
+  var saveKey = btn.dataset.key;
+  var label = btn.dataset.label;
   if (!confirm('Delete "' + label + '"? This cannot be undone.')) return;
   btn.disabled = true;
   btn.textContent = '...';

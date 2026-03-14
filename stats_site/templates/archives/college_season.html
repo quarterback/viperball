@@ -11,7 +11,7 @@
 <div class="page-header">
   <h1>{{ archive.label }} <span class="tag">ARCHIVED</span></h1>
   <div class="subtitle">
-    {{ archive.standings|length }} teams &middot; {{ archive.games_played }}/{{ archive.total_games }} games played
+    {{ (archive.standings or [])|length }} teams &middot; {{ archive.games_played|default(0) }}/{{ archive.total_games|default(0) }} games played
     {% if archive.champion %} &middot; <span class="stat-elite">Champion: {{ archive.champion }}</span>{% endif %}
   </div>
 </div>
@@ -42,7 +42,7 @@
         <td class="num rank">{{ r.rank }}</td>
         <td><a href="/stats/archives/{{ archive_key }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
         <td class="record">{{ r.record }}</td>
-        <td>{{ r.conference[:12] }}</td>
+        <td>{{ (r.conference or '')[:12] }}</td>
         <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
       </tr>
       {% endfor %}
@@ -71,7 +71,7 @@
         <td class="num">{{ s.points_for }}</td>
         <td class="num">{{ s.points_against }}</td>
         <td class="num">{{ s.avg_ppd }}</td>
-        <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
+        <td class="num {% if s.avg_team_rating and s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating and s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating|default(0) }}</td>
       </tr>
       {% endfor %}
       </tbody>
