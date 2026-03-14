@@ -316,13 +316,14 @@ def render_dynasty_mode(shared):
                     season.simulate_season(generate_polls=True)
 
                 playoff_count = min(playoff_format, len(all_dynasty_teams))
-                if playoff_count >= 4:
-                    with st.spinner("Running playoffs..."):
-                        season.simulate_playoff(num_teams=playoff_count)
 
                 if dyn_bowl_count > 0:
                     with st.spinner("Running bowl games..."):
                         season.simulate_bowls(bowl_count=dyn_bowl_count, playoff_size=playoff_count)
+
+                if playoff_count >= 4:
+                    with st.spinner("Running playoffs..."):
+                        season.simulate_playoff(num_teams=playoff_count)
 
                 player_cards = {}
                 for t_name, t_obj in season.teams.items():

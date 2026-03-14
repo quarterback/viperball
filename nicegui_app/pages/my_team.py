@@ -1176,6 +1176,10 @@ async def _render_history(session_id: str):
                 metric_card("Championships", str(team_hist.get("total_championships", 0)))
             with ui.column():
                 metric_card("Playoff Appearances", str(team_hist.get("total_playoff_appearances", 0)))
+            with ui.column():
+                metric_card("Bowl Appearances", str(team_hist.get("total_bowl_appearances", 0)))
+            with ui.column():
+                metric_card("Bowl Wins", str(team_hist.get("total_bowl_wins", 0)))
 
         champ_years = team_hist.get("championship_years", [])
         if champ_years:

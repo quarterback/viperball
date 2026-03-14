@@ -620,10 +620,33 @@ async def _render_season_play(state: UserState, shared: dict):
             week_btn.on_click(_sim_week)
             rest_btn.on_click(_sim_rest)
 
+        elif phase == "bowls_pending":
+            bowl_btn = ui.button("Run Bowl Games", icon="stadium").props("color=primary")
+
+            async def _run_bowls():
+                bowl_btn.disable()
+                bowl_btn.text = "Running bowls..."
+                try:
+                    await run.io_bound(api_client.run_bowls, state.session_id)
+                    notify_success("Bowl games complete!")
+                    try:
+                        _season_actions.refresh()
+                    except RuntimeError:
+                        pass
+                except api_client.APIError as e:
+                    notify_error(f"Bowls failed: {e.detail}")
+                    bowl_btn.enable()
+                    bowl_btn.text = "Run Bowl Games"
+
+            bowl_btn.on_click(_run_bowls)
+
         elif phase == "playoffs_pending":
-            bracket_data = await _fetch_bracket(state.session_id)
-            if bracket_data.get("bracket"):
-                render_playoff_bracket(bracket_data, user_team=state.human_teams[0] if state.human_teams else None)
+            user_t = state.human_teams[0] if state.human_teams else None
+
+            bowls_data = await _fetch_bowls(state.session_id)
+            if bowls_data.get("bowl_results"):
+                render_bowl_games(bowls_data, user_team=user_t)
+                ui.separator().classes("my-3")
 
             playoff_btn = ui.button("Run Playoffs", icon="emoji_events").props("color=primary")
 
@@ -644,43 +667,16 @@ async def _render_season_play(state: UserState, shared: dict):
 
             playoff_btn.on_click(_run_playoffs)
 
-        elif phase == "bowls_pending":
-            bracket_data = await _fetch_bracket(state.session_id)
-            user_t = state.human_teams[0] if state.human_teams else None
-            render_playoff_bracket(bracket_data, user_team=user_t)
-
-            bowls_data = await _fetch_bowls(state.session_id)
-            if bowls_data.get("bowl_results"):
-                render_bowl_games(bowls_data, user_team=user_t, show_results=False)
-
-            bowl_btn = ui.button("Run Bowl Games", icon="stadium").props("color=primary")
-
-            async def _run_bowls():
-                bowl_btn.disable()
-                bowl_btn.text = "Running bowls..."
-                try:
-                    await run.io_bound(api_client.run_bowls, state.session_id)
-                    notify_success("Bowl games complete!")
-                    try:
-                        _season_actions.refresh()
-                    except RuntimeError:
-                        pass
-                except api_client.APIError as e:
-                    notify_error(f"Bowls failed: {e.detail}")
-                    bowl_btn.enable()
-                    bowl_btn.text = "Run Bowl Games"
-
-            bowl_btn.on_click(_run_bowls)
-
         elif phase in ("playoffs_complete", "bowls_complete", "complete"):
             user_t = state.human_teams[0] if state.human_teams else None
-            bracket_data = await _fetch_bracket(state.session_id)
-            render_playoff_bracket(bracket_data, user_team=user_t)
 
             bowls_data = await _fetch_bowls(state.session_id)
             if bowls_data.get("bowl_results"):
-                ui.separator().classes("my-3")
                 render_bowl_games(bowls_data, user_team=user_t)
+                ui.separator().classes("my-3")
+
+            bracket_data = await _fetch_bracket(state.session_id)
+            render_playoff_bracket(bracket_data, user_team=user_t)
 
             with ui.card().classes("w-full bg-green-50 p-3 rounded mt-3"):
                 ui.label("Season Complete! Check the League tab for full standings and awards.").classes("text-sm text-green-600")
