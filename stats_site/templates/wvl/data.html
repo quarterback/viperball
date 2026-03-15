@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dynasty Data — WVL — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Data
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>WVL &mdash; DYNASTY DATA</h1>
+  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
+  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/wvl/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
+  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/wvl/{{ session_id }}/economy">Economy</a>
+  <a href="/stats/wvl/{{ session_id }}/coaching">Coaching</a>
+  <a href="/stats/wvl/{{ session_id }}/data" class="active">Data</a>
+</div>
+
+<div style="margin-top: 24px;">
+
+  <div class="card" style="padding: 20px; margin-bottom: 20px;">
+    <h2 style="margin-top: 0;">Download Dynasty Save</h2>
+    <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
+      Download your dynasty progress as a JSON file. This captures coaching staff, team histories,
+      awards, record book, prestige, rivalries, and all other dynasty metadata.
+      Use this to back up your progress or transfer it between sessions.
+    </p>
+    <p style="font-size: 12px; color: var(--fg-dim); margin-bottom: 16px;">
+      Dynasty: <strong>{{ dynasty_name }}</strong> &middot;
+      Year: <strong>{{ year }}</strong> &middot;
+      Teams: <strong>{{ team_count }}</strong>
+    </p>
+    <a href="/stats/wvl/{{ session_id }}/data/download"
+       style="display: inline-block; background: var(--accent); color: var(--bg); border: none; padding: 8px 20px; font-family: inherit; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; text-decoration: none;">
+      Download Save File
+    </a>
+  </div>
+
+  <div class="card" style="padding: 20px;">
+    <h2 style="margin-top: 0;">Upload Dynasty Save</h2>
+    <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
+      Restore a previously downloaded dynasty save file. This will replace the current
+      dynasty data for this session.
+    </p>
+    <form id="upload-form" style="display: flex; align-items: center; gap: 12px;">
+      <input type="file" id="dynasty-file" accept=".json"
+             style="font-family: inherit; font-size: 12px; color: var(--fg);" />
+      <button type="submit"
+              style="background: var(--surface); color: var(--fg); border: 1px solid var(--border); padding: 8px 20px; font-family: inherit; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">
+        Upload
+      </button>
+    </form>
+    <div id="upload-status" style="margin-top: 8px; font-size: 12px;"></div>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('upload-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('dynasty-file');
+  const status = document.getElementById('upload-status');
+
+  if (!fileInput.files.length) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Please select a file.';
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  status.style.color = 'var(--fg-dim)';
+  status.textContent = 'Uploading...';
+
+  try {
+    const resp = await fetch('/stats/wvl/{{ session_id }}/data/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      status.style.color = 'var(--green)';
+      status.textContent = data.message || 'Dynasty loaded successfully. Refresh to see updated data.';
+    } else {
+      status.style.color = 'var(--red)';
+      status.textContent = data.detail || 'Upload failed.';
+    }
+  } catch (err) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Network error: ' + err.message;
+  }
+});
+</script>
+{% endblock %}

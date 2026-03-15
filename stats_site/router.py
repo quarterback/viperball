@@ -1469,6 +1469,75 @@ def college_draftyqueenz(request: Request, session_id: str):
     ))
 
 
+# ── DYNASTY DATA ─────────────────────────────────────────────────────────
+
+@router.get("/college/{session_id}/data", response_class=HTMLResponse)
+def college_data(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this session")
+
+    return templates.TemplateResponse("college/data.html", _ctx(
+        request, section="college", session_id=session_id,
+        dynasty_name=dynasty.dynasty_name,
+        year=dynasty.current_year,
+        team_count=len(dynasty.team_histories),
+        conf_count=len(dynasty.conferences),
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/{session_id}/data/download")
+def college_data_download(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import Response
+    from engine.db import serialize_dynasty
+
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this session")
+
+    data = serialize_dynasty(dynasty)
+    content = _json.dumps(data, indent=2)
+    filename = f"{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/college/{session_id}/data/upload")
+async def college_data_upload(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import JSONResponse
+    from engine.db import deserialize_dynasty
+
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    if not sess.get("dynasty"):
+        raise HTTPException(404, "No dynasty active in this session")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        data = _json.loads(contents)
+        dynasty = deserialize_dynasty(data)
+        sess["dynasty"] = dynasty
+        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
+    except Exception as e:
+        raise HTTPException(400, f"Failed to load dynasty file: {e}")
+
+
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
 
 @router.get("/pro/", response_class=HTMLResponse)
@@ -2502,6 +2571,69 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
     ))
+
+
+# ── WVL DYNASTY DATA ─────────────────────────────────────────────────────
+
+@router.get("/wvl/{session_id}/data", response_class=HTMLResponse)
+def wvl_data(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    return templates.TemplateResponse("wvl/data.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        dynasty_name=dynasty.dynasty_name,
+        year=dynasty.current_year,
+        team_count=len(dynasty.team_histories),
+    ))
+
+
+@router.get("/wvl/{session_id}/data/download")
+def wvl_data_download(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import Response
+    from engine.db import serialize_dynasty
+
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    serialized = serialize_dynasty(dynasty)
+    content = _json.dumps(serialized, indent=2)
+    filename = f"WVL_{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/wvl/{session_id}/data/upload")
+async def wvl_data_upload(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import JSONResponse
+    from engine.db import deserialize_dynasty
+
+    data = _get_wvl_session(session_id)
+    if not data.get("dynasty"):
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        parsed = _json.loads(contents)
+        dynasty = deserialize_dynasty(parsed)
+        data["dynasty"] = dynasty
+        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
+    except Exception as e:
+        raise HTTPException(400, f"Failed to load dynasty file: {e}")
 
 
 # ── INTERNATIONAL (FIV) ─────────────────────────────────────────────────
