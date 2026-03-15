@@ -33,7 +33,7 @@
   <strong>Week:</strong>
   <a href="/stats/college/{{ session_id }}/schedule" {% if selected_week == 0 %}class="active" style="color:var(--accent)"{% endif %}>All</a>
   {% for w in weeks %}
-  &middot; <a href="/stats/college/{{ session_id }}/schedule?week={{ w }}" {% if selected_week == w %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ w }}</a>
+  &middot; <a href="/stats/college/{{ session_id }}/schedule?week={{ w }}" {% if selected_week == w %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ week_labels.get(w, w) }}</a>
   {% endfor %}
 </div>
 
@@ -52,8 +52,10 @@
   </thead>
   <tbody>
   {% for g in games %}
-  <tr>
-    <td class="num">{{ g.week }}</td>
+  <tr {% if g.game_type == 'playoff' %}style="background:rgba(234,179,8,0.08)"{% elif g.game_type == 'bowl' %}style="background:rgba(56,189,248,0.08)"{% endif %}>
+    <td class="num">
+      {% if g.game_type == 'playoff' %}{{ g.round_label }}{% elif g.game_type == 'bowl' %}{{ g.bowl_name }}{% else %}{{ g.week }}{% endif %}
+    </td>
     <td>
       <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
     </td>
@@ -68,6 +70,8 @@
       <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
     </td>
     <td>
+      {% if g.game_type == 'playoff' %}<span class="tag" style="background:var(--yellow);color:#000;font-size:9px;padding:1px 5px;border-radius:3px;">PLAYOFF</span>{% endif %}
+      {% if g.game_type == 'bowl' %}<span class="tag" style="background:var(--accent);color:#000;font-size:9px;padding:1px 5px;border-radius:3px;">BOWL</span>{% endif %}
       {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
     </td>

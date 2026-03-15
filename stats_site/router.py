@@ -446,27 +446,67 @@ def college_schedule(request: Request, session_id: str, week: int = 0):
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    games = season.schedule
-    weeks = sorted(set(g.week for g in games))
+    games = list(season.schedule)
+
+    # Collect postseason games
+    playoff_games = list(season.playoff_bracket or [])
+    bowl_game_list = list(season.bowl_games or [])
+
+    # Build a set of bowl game objects for labeling
+    bowl_game_map = {}
+    for bg in bowl_game_list:
+        bowl_game_map[id(bg.game)] = bg.name
+
+    # Combine all games
+    all_games = games + playoff_games + [bg.game for bg in bowl_game_list]
+    weeks = sorted(set(g.week for g in all_games))
+
+    # Playoff round labels
+    round_labels = {
+        995: "Play-In Round", 996: "Round of 32", 997: "Round of 16",
+        998: "Quarterfinals", 999: "Semifinals", 1000: "Championship",
+    }
 
     if week > 0:
-        filtered = [g for g in games if g.week == week]
+        filtered = [g for g in all_games if g.week == week]
     else:
-        filtered = games
+        filtered = all_games
 
     serialized = [api["serialize_game"](g) for g in filtered]
 
-    # Add per-week game index for box score links
+    # Add per-week game index for box score links + postseason labels
     week_counters = {}
-    for g in serialized:
+    for i, g in enumerate(serialized):
         w = g["week"]
         idx = week_counters.get(w, 0)
         g["week_game_idx"] = idx
         week_counters[w] = idx + 1
+        # Add postseason metadata
+        orig = filtered[i]
+        bowl_name = bowl_game_map.get(id(orig))
+        if bowl_name:
+            g["bowl_name"] = bowl_name
+            g["game_type"] = "bowl"
+        elif w >= 995:
+            g["game_type"] = "playoff"
+            g["round_label"] = round_labels.get(w, f"Playoff Wk {w}")
+        else:
+            g["game_type"] = "regular"
+
+    # Build week labels for the filter
+    week_labels = {}
+    for w in weeks:
+        if w in round_labels:
+            week_labels[w] = round_labels[w]
+        elif any(id(bg.game) in bowl_game_map for bg in bowl_game_list if bg.game.week == w):
+            week_labels[w] = f"Bowls (Wk {w})"
+        else:
+            week_labels[w] = str(w)
 
     return templates.TemplateResponse("college/schedule.html", _ctx(
         request, section="college", session_id=session_id,
-        games=serialized, weeks=weeks, selected_week=week,
+        games=serialized, weeks=weeks, week_labels=week_labels,
+        selected_week=week,
         season_name=getattr(season, "name", "Season"),
     ))
 
