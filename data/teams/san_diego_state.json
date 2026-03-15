@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "uci",
-    "school_name": "UC Irvine",
-    "abbreviation": "UCI",
-    "mascot": "Anteaters",
+    "school_id": "san_diego_state",
+    "school_name": "San Diego State",
+    "abbreviation": "SDSU",
+    "mascot": "Aztecs",
     "conference": "Outlands Coast Conference",
-    "city": "Irvine",
+    "city": "San Diego",
     "state": "CA",
     "colors": [
-      "Blue",
-      "Gold"
+      "Scarlet",
+      "Black"
     ]
   },
   "identity": {
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 4,
       "contract_buyout": 799864,
       "year_signed": 2026,
-      "team_name": "UC Irvine",
+      "team_name": "San Diego State",
       "career_wins": 147,
       "career_losses": 69,
       "championships": 4,
@@ -1271,7 +1271,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 279389,
       "year_signed": 2026,
-      "team_name": "UC Irvine",
+      "team_name": "San Diego State",
       "career_wins": 147,
       "career_losses": 45,
       "championships": 4,
@@ -1326,7 +1326,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 260094,
       "year_signed": 2026,
-      "team_name": "UC Irvine",
+      "team_name": "San Diego State",
       "career_wins": 124,
       "career_losses": 92,
       "championships": 3,
@@ -1381,7 +1381,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 373185,
       "year_signed": 2026,
-      "team_name": "UC Irvine",
+      "team_name": "San Diego State",
       "career_wins": 100,
       "career_losses": 104,
       "championships": 3,

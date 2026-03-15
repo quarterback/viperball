@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "long_beach_state",
-    "school_name": "Long Beach State",
-    "abbreviation": "LBSU",
-    "mascot": "Beach",
-    "conference": "Outlands Coast Conference",
-    "city": "Long Beach",
-    "state": "CA",
+    "school_id": "nevada",
+    "school_name": "University of Nevada",
+    "abbreviation": "NEV",
+    "mascot": "Wolf Pack",
+    "conference": "Pac-16",
+    "city": "Reno",
+    "state": "NV",
     "colors": [
-      "Black",
-      "Gold"
+      "Silver",
+      "Blue"
     ]
   },
   "identity": {
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 483061,
       "year_signed": 2026,
-      "team_name": "Long Beach State",
+      "team_name": "University of Nevada",
       "career_wins": 89,
       "career_losses": 19,
       "championships": 1,
@@ -1274,7 +1274,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 599962,
       "year_signed": 2026,
-      "team_name": "Long Beach State",
+      "team_name": "University of Nevada",
       "career_wins": 211,
       "career_losses": 41,
       "championships": 3,
@@ -1330,7 +1330,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 363646,
       "year_signed": 2026,
-      "team_name": "Long Beach State",
+      "team_name": "University of Nevada",
       "career_wins": 82,
       "career_losses": 62,
       "championships": 3,
@@ -1385,7 +1385,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 194561,
       "year_signed": 2026,
-      "team_name": "Long Beach State",
+      "team_name": "University of Nevada",
       "career_wins": 63,
       "career_losses": 81,
       "championships": 1,

@@ -1,10 +1,10 @@
 ======================================================================
 COLLEGIATE VIPERBALL LEAGUE (CVL)
-Conference Directory — 199 Teams, 17 Conferences
+Conference Directory — 199 Teams, 18 Conferences
 ======================================================================
 
 ----------------------------------------------------------------------
-ACC (15 teams)
+ACC (12 teams)
 ----------------------------------------------------------------------
     1. Boston College (BC) — Eagles — Chestnut Hill, MA
     2. Clemson University (CLEM) — Tigers — Clemson, SC
@@ -12,18 +12,15 @@ ACC (15 teams)
     4. Florida State University (FSU) — Seminoles — Tallahassee, FL
     5. Georgia Tech (GT) — Yellow Jackets — Atlanta, GA
     6. North Carolina State University (NCST) — Wolfpack — Raleigh, NC
-    7. Syracuse University (SYR) — Orange — Syracuse, NY
-    8. University of Louisville (LOU) — Cardinals — Louisville, KY
-    9. University of Maryland (UMD) — Terrapins — College Park, MD
-   10. University of Miami (MIA) — Hurricanes — Coral Gables, FL
-   11. University of North Carolina (UNC) — Tar Heels — Chapel Hill, NC
-   12. University of Pittsburgh (PITT) — Panthers — Pittsburgh, PA
-   13. University of Virginia (UVA) — Cavaliers — Charlottesville, VA
-   14. Virginia Tech (VT) — Hokies — Blacksburg, VA
-   15. Wake Forest University (WAKE) — Demon Deacons — Winston-Salem, NC
+    7. University of Maryland (UMD) — Terrapins — College Park, MD
+    8. University of Miami (MIA) — Hurricanes — Coral Gables, FL
+    9. University of North Carolina (UNC) — Tar Heels — Chapel Hill, NC
+   10. University of Virginia (UVA) — Cavaliers — Charlottesville, VA
+   11. Virginia Tech (VT) — Hokies — Blacksburg, VA
+   12. Wake Forest University (WAKE) — Demon Deacons — Winston-Salem, NC
 
 ----------------------------------------------------------------------
-BIG 12 (13 teams)
+BIG 12 (12 teams)
 ----------------------------------------------------------------------
     1. Baylor University (BAY) — Bears — Waco, TX
     2. BYU (BYU) — Cougars — Provo, UT
@@ -36,20 +33,22 @@ BIG 12 (13 teams)
     9. University of Cincinnati (CIN) — Bearcats — Cincinnati, OH
    10. University of Houston (UH) — Cougars — Houston, TX
    11. University of Kansas (KU) — Jayhawks — Lawrence, KS
-   12. University of Utah (UTAH) — Utes — Salt Lake City, UT
-   13. West Virginia University (WVU) — Mountaineers — Morgantown, WV
+   12. West Virginia University (WVU) — Mountaineers — Morgantown, WV
 
 ----------------------------------------------------------------------
-BIG PACIFIC (8 teams)
+BIG EAST (11 teams)
 ----------------------------------------------------------------------
-    1. Linfield University (LINF) — Wildcats — McMinnville, OR
-    2. Portland State University (PSU) — Vikings — Portland, OR
-    3. Santa Clara University (SCU) — Broncos — Santa Clara, CA
-    4. UC Santa Barbara (UCSB) — Gauchos — Santa Barbara, CA
-    5. University of Hawaii (HAW) — Rainbow Warriors — Honolulu, HI
-    6. University of Portland (UP) — Pilots — Portland, OR
-    7. University of San Francisco (USF) — Dons — San Francisco, CA
-    8. University of the Pacific (UOP) — Tigers — Stockton, CA
+    1. Creighton University (CU) — Bluejays — Omaha, NE
+    2. Georgetown University (GTWN) — Hoyas — Washington, DC
+    3. Marquette University (MU) — Golden Eagles — Milwaukee, WI
+    4. Providence College (PC) — Friars — Providence, RI
+    5. Seton Hall University (SHU) — Pirates — South Orange, NJ
+    6. St. John's University (SJU) — Red Storm — Queens, NY
+    7. Syracuse University (SYR) — Orange — Syracuse, NY
+    8. University of Louisville (LOU) — Cardinals — Louisville, KY
+    9. University of Pittsburgh (PITT) — Panthers — Pittsburgh, PA
+   10. Villanova University (NOVA) — Wildcats — Villanova, PA
+   11. Xavier University (XU) — Musketeers — Cincinnati, OH
 
 ----------------------------------------------------------------------
 BIG TEN (12 teams)
@@ -70,20 +69,20 @@ BIG TEN (12 teams)
 ----------------------------------------------------------------------
 BORDER CONFERENCE (11 teams)
 ----------------------------------------------------------------------
-    1. Seattle University (SU) — Redhawks — Seattle, WA
-    2. SMU (SMU) — Mustangs — Dallas, TX
-    3. Texas State University (TXST) — Bobcats — San Marcos, TX
-    4. UALR (UALR) — Trojans — Little Rock, AR
-    5. UNLV (UNLV) — Rebels — Las Vegas, NV
-    6. UNO (UNO) — Privateers — New Orleans, LA
-    7. University of North Texas (UNT) — Mean Green — Denton, TX
-    8. UT Arlington (UTA) — Mavericks — Arlington, TX
-    9. UT Dallas (UTD) — Comets — Richardson, TX
+    1. Rice University (RICE) — Owls — Houston, TX
+    2. Seattle University (SU) — Redhawks — Seattle, WA
+    3. SMU (SMU) — Mustangs — Dallas, TX
+    4. Texas State University (TXST) — Bobcats — San Marcos, TX
+    5. Tulane University (TLNE) — Green Wave — New Orleans, LA
+    6. UALR (UALR) — Trojans — Little Rock, AR
+    7. UNLV (UNLV) — Rebels — Las Vegas, NV
+    8. UNO (UNO) — Privateers — New Orleans, LA
+    9. University of North Texas (UNT) — Mean Green — Denton, TX
    10. UTEP (UTEP) — Miners — El Paso, TX
    11. UTSA (UTSA) — Roadrunners — San Antonio, TX
 
 ----------------------------------------------------------------------
-COLLEGIATE COMMONWEALTH (12 teams)
+COLLEGIATE COMMONWEALTH (11 teams)
 ----------------------------------------------------------------------
     1. Boston University (BU) — Terriers — Boston, MA
     2. Brandeis University (BRND) — Judges — Waltham, MA
@@ -91,22 +90,19 @@ COLLEGIATE COMMONWEALTH (12 teams)
     4. College of the Holy Cross (HC) — Crusaders — Worcester, MA
     5. Harvard University (HARV) — Crimson — Cambridge, MA
     6. Haverford College (HAVR) — Fords — Haverford, PA
-    7. Providence College (PC) — Friars — Providence, RI
-    8. Quinnipiac University (QU) — Bobcats — Hamden, CT
-    9. Swarthmore College (SWAT) — Garnet — Swarthmore, PA
-   10. United States Coast Guard Academy (USCG) — Bears — New London, CT
-   11. University of Pennsylvania (PENN) — Quakers — Philadelphia, PA
-   12. Wellesley College (WELL) — Blue — Wellesley, MA
+    7. Quinnipiac University (QU) — Bobcats — Hamden, CT
+    8. Swarthmore College (SWAT) — Garnet — Swarthmore, PA
+    9. United States Coast Guard Academy (USCG) — Bears — New London, CT
+   10. University of Pennsylvania (PENN) — Quakers — Philadelphia, PA
+   11. Wellesley College (WELL) — Blue — Wellesley, MA
 
 ----------------------------------------------------------------------
-GALACTIC LEAGUE (6 teams)
+GALACTIC LEAGUE (4 teams)
 ----------------------------------------------------------------------
     1. Columbia University (CLMB) — Lions — New York, NY
     2. New York University (NYU) — Violets — New York, NY
-    3. Seton Hall University (SHU) — Pirates — South Orange, NJ
-    4. St. John's University (SJU) — Red Storm — Queens, NY
-    5. United States Space Force Academy (USSF) — Guardians — Fallon, NV
-    6. University of South Dakota (USD) — Coyotes — Vermillion, SD
+    3. United States Space Force Academy (USSF) — Guardians — Fallon, NV
+    4. University of South Dakota (USD) — Coyotes — Vermillion, SD
 
 ----------------------------------------------------------------------
 INTERSTATE ATHLETIC ASSOCIATION (8 teams)
@@ -121,23 +117,21 @@ INTERSTATE ATHLETIC ASSOCIATION (8 teams)
     8. Texas Southern University (TXSO) — Tigers — Houston, TX
 
 ----------------------------------------------------------------------
-MIDWEST STATES INTERSCHOLASTIC ASSOCIATION (15 teams)
+MIDWEST STATES INTERSCHOLASTIC ASSOCIATION (13 teams)
 ----------------------------------------------------------------------
     1. Belmont University (BEL) — Bruins — Nashville, TN
     2. Bradley University (BU) — Braves — Peoria, IL
-    3. Creighton University (CU) — Bluejays — Omaha, NE
-    4. Drake University (DU) — Bulldogs — Des Moines, IA
-    5. Indiana State University (ISU) — Sycamores — Terre Haute, IN
-    6. Lipscomb University (LIP) — Bisons — Nashville, TN
-    7. Marquette University (MU) — Golden Eagles — Milwaukee, WI
-    8. Missouri State University (MSU) — Bears — Springfield, MO
-    9. Saint Louis University (SLU) — Billikens — St. Louis, MO
-   10. Southern Illinois University (SIU) — Salukis — Carbondale, IL
-   11. Nebraska Omaha (UNO) — Mavericks — Omaha, NE
-   12. University of Northern Iowa (UNI) — Panthers — Cedar Falls, IA
-   13. Valparaiso University (VALPO) — Beacons — Valparaiso, IN
-   14. Washington University in St. Louis (WUSTL) — Bears — St. Louis, MO
-   15. Wichita State University (WSU) — Shockers — Wichita, KS
+    3. Drake University (DU) — Bulldogs — Des Moines, IA
+    4. Indiana State University (ISU) — Sycamores — Terre Haute, IN
+    5. Lipscomb University (LIP) — Bisons — Nashville, TN
+    6. Missouri State University (MSU) — Bears — Springfield, MO
+    7. Saint Louis University (SLU) — Billikens — St. Louis, MO
+    8. Southern Illinois University (SIU) — Salukis — Carbondale, IL
+    9. Nebraska Omaha (UNO) — Mavericks — Omaha, NE
+   10. University of Northern Iowa (UNI) — Panthers — Cedar Falls, IA
+   11. Valparaiso University (VALPO) — Beacons — Valparaiso, IN
+   12. Washington University in St. Louis (WUSTL) — Bears — St. Louis, MO
+   13. Wichita State University (WSU) — Shockers — Wichita, KS
 
 ----------------------------------------------------------------------
 MOONSHINE LEAGUE (10 teams)
@@ -154,21 +148,18 @@ MOONSHINE LEAGUE (10 teams)
    10. Weber State University (WSU) — Wildcats — Ogden, UT
 
 ----------------------------------------------------------------------
-NATIONAL COLLEGIATE LEAGUE (13 teams)
+NATIONAL COLLEGIATE LEAGUE (10 teams)
 ----------------------------------------------------------------------
     1. Carnegie Mellon University (CMU) — Tartans — Pittsburgh, PA
     2. Davidson College (DAV) — Wildcats — Davidson, NC
     3. Duquesne University (DUQ) — Dukes — Pittsburgh, PA
     4. Emory University (EMRY) — Eagles — Atlanta, GA
     5. Florida Gulf Coast University (FGCU) — Eagles — Fort Myers, FL
-    6. Georgetown University (GTWN) — Hoyas — Washington, DC
-    7. Johns Hopkins University (JHU) — Blue Jays — Baltimore, MD
-    8. United States Marine Corps Academy (USMC) — Bulldogs — Milton, FL
-    9. University of Dayton (UD) — Flyers — Dayton, OH
-   10. University of Delaware (DEL) — Fightin' Blue Hens — Newark, DE
-   11. University of North Florida (UNF) — Ospreys — Jacksonville, FL
-   12. Villanova University (NOVA) — Wildcats — Villanova, PA
-   13. Xavier University (XU) — Musketeers — Cincinnati, OH
+    6. Johns Hopkins University (JHU) — Blue Jays — Baltimore, MD
+    7. United States Marine Corps Academy (USMC) — Bulldogs — Milton, FL
+    8. University of Dayton (UD) — Flyers — Dayton, OH
+    9. University of Delaware (DEL) — Fightin' Blue Hens — Newark, DE
+   10. University of North Florida (UNF) — Ospreys — Jacksonville, FL
 
 ----------------------------------------------------------------------
 NORTHERN SHIELD (7 teams)
@@ -182,38 +173,38 @@ NORTHERN SHIELD (7 teams)
     7. University of Calgary (CALG) — Dinos — Calgary, AB
 
 ----------------------------------------------------------------------
-OUTLANDS COAST CONFERENCE (12 teams)
+OUTLANDS COAST CONFERENCE (11 teams)
 ----------------------------------------------------------------------
     1. California Institute of Technology (CALT) — Beavers — Pasadena, CA
-    2. Cal State Fullerton (CSUF) — Titans — Fullerton, CA
-    3. Long Beach State (LBSU) — Beach — Long Beach, CA
-    4. Claremont McKenna College (CMC) — Stags — Claremont, CA
-    5. East Texas A&M University (ETAMU) — Lions — Commerce, TX
-    6. Loyola Marymount University (LMU) — Lions — Los Angeles, CA
-    7. Northwest Missouri State University (NWMSU) — Bearcats — Maryville, MO
-    8. Pepperdine University (PU) — Waves — Malibu, CA
-    9. UC Santa Cruz (UCSC) — Banana Slugs — Santa Cruz, CA
-   10. UC Irvine (UCI) — Anteaters — Irvine, CA
-   11. UC Riverside (UCR) — Highlanders — Riverside, CA
-   12. University of San Diego (USD) — Toreros — San Diego, CA
+    2. Claremont McKenna College (CMC) — Stags — Claremont, CA
+    3. East Texas A&M University (ETAMU) — Lions — Commerce, TX
+    4. Fresno State (FRES) — Bulldogs — Fresno, CA
+    5. Loyola Marymount University (LMU) — Lions — Los Angeles, CA
+    6. Northwest Missouri State University (NWMSU) — Bearcats — Maryville, MO
+    7. Pepperdine University (PU) — Waves — Malibu, CA
+    8. San Diego State (SDSU) — Aztecs — San Diego, CA
+    9. San Jose State (SJSU) — Spartans — San Jose, CA
+   10. UC Santa Cruz (UCSC) — Banana Slugs — Santa Cruz, CA
+   11. University of San Diego (USD) — Toreros — San Diego, CA
 
 ----------------------------------------------------------------------
-PAC-12 (14 teams)
+PAC-16 (15 teams)
 ----------------------------------------------------------------------
     1. Arizona State University (ASU) — Sun Devils — Tempe, AZ
     2. University of Arizona (ARIZ) — Wildcats — Tucson, AZ
     3. California (CAL) — Golden Bears — Berkeley, CA
     4. University of Colorado (CU) — Buffaloes — Boulder, CO
-    5. Gonzaga University (GU) — Bulldogs — Spokane, WA
-    6. University of Idaho (IDHO) — Vandals — Moscow, ID
+    5. University of Idaho (IDHO) — Vandals — Moscow, ID
+    6. University of Nevada (NEV) — Wolf Pack — Reno, NV
     7. University of Oregon (ORE) — Ducks — Eugene, OR
     8. Oregon State University (ORST) — Beavers — Corvallis, OR
     9. Stanford University (STAN) — Cardinal — Stanford, CA
    10. UCLA (UCLA) — Bruins — Los Angeles, CA
    11. USC (USC) — Trojans — Los Angeles, CA
-   12. University of Washington (UW) — Huskies — Seattle, WA
-   13. Washington State University (WSU) — Cougars — Pullman, WA
-   14. University of Wyoming (WYO) — Cowboys — Laramie, WY
+   12. University of Utah (UTAH) — Utes — Salt Lake City, UT
+   13. University of Washington (UW) — Huskies — Seattle, WA
+   14. Washington State University (WSU) — Cougars — Pullman, WA
+   15. University of Wyoming (WYO) — Cowboys — Laramie, WY
 
 ----------------------------------------------------------------------
 PRAIRIE ATHLETIC UNION (11 teams)
@@ -251,6 +242,19 @@ SEC (16 teams)
    16. Vanderbilt University (VAN) — Commodores — Nashville, TN
 
 ----------------------------------------------------------------------
+WEST COAST CONFERENCE (9 teams)
+----------------------------------------------------------------------
+    1. Gonzaga University (GU) — Bulldogs — Spokane, WA
+    2. Linfield University (LINF) — Wildcats — McMinnville, OR
+    3. Portland State University (PSU) — Vikings — Portland, OR
+    4. Santa Clara University (SCU) — Broncos — Santa Clara, CA
+    5. Saint Mary's (SMC) — Gaels — Moraga, CA
+    6. University of Hawaii (HAW) — Rainbow Warriors — Honolulu, HI
+    7. University of Portland (UP) — Pilots — Portland, OR
+    8. University of San Francisco (USF) — Dons — San Francisco, CA
+    9. University of the Pacific (UOP) — Tigers — Stockton, CA
+
+----------------------------------------------------------------------
 YANKEE FOURTEEN (16 teams)
 ----------------------------------------------------------------------
     1. Bowdoin College (BOWD) — Polar Bears — Brunswick, ME
@@ -271,5 +275,5 @@ YANKEE FOURTEEN (16 teams)
    16. Yale University (YALE) — Bulldogs — New Haven, CT
 
 ======================================================================
-TOTAL: 199 teams across 17 conferences
+TOTAL: 199 teams across 18 conferences
 ======================================================================

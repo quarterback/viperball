@@ -4,7 +4,7 @@
     "school_name": "Santa Clara University",
     "abbreviation": "SCU",
     "mascot": "Broncos",
-    "conference": "Big Pacific",
+    "conference": "West Coast Conference",
     "city": "Santa Clara",
     "state": "CA",
     "colors": [
@@ -101,12 +101,12 @@
         "weight": 189,
         "year": "Senior",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "speed_flanker",
         "potential": 4,

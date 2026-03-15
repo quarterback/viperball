@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "ut_arlington",
-    "school_name": "UT Arlington",
-    "abbreviation": "UTA",
-    "mascot": "Mavericks",
+    "school_id": "rice",
+    "school_name": "Rice University",
+    "abbreviation": "RICE",
+    "mascot": "Owls",
     "conference": "Border Conference",
-    "city": "Arlington",
+    "city": "Houston",
     "state": "TX",
     "colors": [
       "Blue",
-      "Orange"
+      "Gray"
     ]
   },
   "identity": {
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 878215,
       "year_signed": 2026,
-      "team_name": "UT Arlington",
+      "team_name": "Rice University",
       "career_wins": 192,
       "career_losses": 132,
       "championships": 4,
@@ -1271,7 +1271,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 340532,
       "year_signed": 2026,
-      "team_name": "UT Arlington",
+      "team_name": "Rice University",
       "career_wins": 70,
       "career_losses": 98,
       "championships": 1,
@@ -1326,7 +1326,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 381459,
       "year_signed": 2026,
-      "team_name": "UT Arlington",
+      "team_name": "Rice University",
       "career_wins": 157,
       "career_losses": 35,
       "championships": 3,
@@ -1381,7 +1381,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 484323,
       "year_signed": 2026,
-      "team_name": "UT Arlington",
+      "team_name": "Rice University",
       "career_wins": 136,
       "career_losses": 68,
       "championships": 4,

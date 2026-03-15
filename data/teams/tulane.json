@@ -1,17 +1,16 @@
 {
   "team_info": {
-    "school_id": "ut_dallas",
-    "school": "University of Texas at Dallas",
-    "abbreviation": "UTD",
-    "mascot": "Comets",
+    "school_id": "tulane",
+    "abbreviation": "TLNE",
+    "mascot": "Green Wave",
     "conference": "Border Conference",
-    "city": "Richardson",
-    "state": "TX",
+    "city": "New Orleans",
+    "state": "LA",
     "colors": [
-      "Orange",
-      "Green"
+      "Olive Green",
+      "Sky Blue"
     ],
-    "school_name": "UT Dallas"
+    "school_name": "Tulane University"
   },
   "identity": {
     "style": "balanced",
@@ -51,7 +50,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 456291,
       "year_signed": 2026,
-      "team_name": "UT Dallas",
+      "team_name": "Tulane University",
       "career_wins": 69,
       "career_losses": 15,
       "championships": 0,
@@ -104,7 +103,7 @@
       "contract_years_remaining": 4,
       "contract_buyout": 403824,
       "year_signed": 2026,
-      "team_name": "UT Dallas",
+      "team_name": "Tulane University",
       "career_wins": 86,
       "career_losses": 46,
       "championships": 1,
@@ -157,7 +156,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 261021,
       "year_signed": 2026,
-      "team_name": "UT Dallas",
+      "team_name": "Tulane University",
       "career_wins": 90,
       "career_losses": 30,
       "championships": 0,
@@ -212,7 +211,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 104072,
       "year_signed": 2026,
-      "team_name": "UT Dallas",
+      "team_name": "Tulane University",
       "career_wins": 69,
       "career_losses": 99,
       "championships": 1,
