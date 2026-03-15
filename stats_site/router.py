@@ -1104,11 +1104,61 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
     cross_links = _find_cross_league_links(player_name, exclude_college_session=session_id)
 
+    # ── Collect awards for this player ──
+    player_awards = []
+
+    # Weekly awards
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("player_name") == player_name and wa.get("team_name") == team_name:
+            player_awards.append({
+                "award": wa["award"],
+                "detail": f"Week {wa['week']}",
+                "stat_line": wa.get("stat_line", ""),
+                "level": "weekly",
+            })
+
+    # End-of-season awards (only if regular season complete)
+    regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
+    if regular_season_done:
+        try:
+            from engine.awards import compute_season_awards
+            honors = compute_season_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            for a in honors.individual_awards:
+                if a.player_name == player_name and a.team_name == team_name:
+                    player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "national"})
+            for tier_label, tier_obj in [
+                ("All-CVL First Team", honors.all_american_first),
+                ("All-CVL Second Team", honors.all_american_second),
+                ("All-CVL Third Team", honors.all_american_third),
+                ("All-CVL Honorable Mention", honors.honorable_mention),
+                ("All-Freshman Team", honors.all_freshman),
+            ]:
+                if tier_obj:
+                    for slot in tier_obj.slots:
+                        if slot.player_name == player_name and slot.team_name == team_name:
+                            player_awards.append({"award": tier_label, "detail": "Season", "stat_line": "", "level": "national"})
+            for conf_name, conf_awards_list in honors.conference_awards.items():
+                for a in conf_awards_list:
+                    if a.player_name == player_name and a.team_name == team_name:
+                        player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "conference"})
+            for conf_name, conf_teams_dict in honors.all_conference_teams.items():
+                for tier_key, tier_obj in conf_teams_dict.items():
+                    tier_label = f"All-{conf_name} {tier_obj.team_level.replace('_', ' ').title()}"
+                    for slot in tier_obj.slots:
+                        if slot.player_name == player_name and slot.team_name == team_name:
+                            player_awards.append({"award": tier_label, "detail": "Season", "stat_line": "", "level": "conference"})
+        except Exception:
+            pass
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
         record=team_record, prestige=prestige, cross_links=cross_links,
+        player_awards=player_awards,
     ))
 
 

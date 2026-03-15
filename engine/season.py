@@ -856,6 +856,7 @@ class Season:
     team_states: Dict[str, str] = field(default_factory=dict)
 
     weekly_polls: List[WeeklyPoll] = field(default_factory=list)
+    weekly_awards: List[Dict] = field(default_factory=list)
 
     playoff_bracket: List[Game] = field(default_factory=list)
     playoff_seeds: Dict[str, int] = field(default_factory=dict)  # team_name -> seed number
@@ -1574,6 +1575,92 @@ class Season:
                 opponent_bonus_data=home_bonus,
             )
 
+    def _compute_weekly_awards(self, week: int, week_games: List[Game]):
+        """Compute Player of the Week awards after a week's games."""
+        # Collect all player performances this week
+        performances = []  # (player_name, team_name, position, score, stat_line)
+        for game in week_games:
+            if not game.completed or not getattr(game, "full_result", None):
+                continue
+            fr = game.full_result
+            ps = fr.get("player_stats", {})
+            for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+                for p in ps.get(side, []):
+                    name = p.get("name", "")
+                    if not name:
+                        continue
+                    pos = p.get("position", "")
+                    pos_lower = pos.lower()
+                    # Score based on actual game performance
+                    yards = p.get("yards", 0)
+                    tds = p.get("tds", 0)
+                    kp_yds = p.get("kick_pass_yards", 0)
+                    kp_tds = p.get("kick_pass_tds", 0)
+                    tackles = p.get("tackles", 0)
+                    sacks = p.get("sacks", 0)
+                    tfl = p.get("tfl", 0)
+                    wpa = p.get("wpa", 0.0)
+                    # Offensive score
+                    off_score = yards * 0.3 + tds * 25 + kp_yds * 0.25 + kp_tds * 20 + wpa * 15
+                    # Defensive score
+                    def_score = tackles * 3 + sacks * 15 + tfl * 8 + wpa * 15
+                    # Use whichever is higher (position-agnostic)
+                    if any(k in pos_lower for k in ["line", "safety", "keeper", "wedge"]):
+                        score = def_score
+                        stat_parts = [f"{tackles} TKL"]
+                        if sacks:
+                            stat_parts.append(f"{sacks} sacks")
+                        if tfl:
+                            stat_parts.append(f"{tfl} TFL")
+                    else:
+                        score = off_score
+                        stat_parts = [f"{yards} yds"]
+                        if tds:
+                            stat_parts.append(f"{tds} TD")
+                        if kp_yds:
+                            stat_parts.append(f"{kp_yds} KP yds")
+                        if kp_tds:
+                            stat_parts.append(f"{kp_tds} KP TD")
+                    stat_line = ", ".join(stat_parts)
+                    performances.append((name, team_name, pos, score, stat_line))
+
+        if not performances:
+            return
+
+        # National Player of the Week - best overall
+        performances.sort(key=lambda x: x[3], reverse=True)
+        best = performances[0]
+        self.weekly_awards.append({
+            "week": week,
+            "award": "National Player of the Week",
+            "player_name": best[0],
+            "team_name": best[1],
+            "position": best[2],
+            "stat_line": best[4],
+        })
+
+        # Conference Players of the Week
+        conf_best = {}
+        for name, team_name, pos, score, stat_line in performances:
+            conf = self.team_conferences.get(team_name, "")
+            if not conf:
+                continue
+            if conf not in conf_best or score > conf_best[conf][3]:
+                conf_best[conf] = (name, team_name, pos, score, stat_line)
+
+        for conf, (name, team_name, pos, _, stat_line) in conf_best.items():
+            # Don't duplicate if same as national winner
+            if name == best[0] and team_name == best[1]:
+                continue
+            self.weekly_awards.append({
+                "week": week,
+                "award": f"{conf} Player of the Week",
+                "player_name": name,
+                "team_name": team_name,
+                "position": pos,
+                "stat_line": stat_line,
+            })
+
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
                       generate_polls: bool = True, rng=None,
                       dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
@@ -1606,6 +1693,9 @@ class Season:
         for game in week_games:
             self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts,
                                use_fast_sim=use_fast_sim)
+
+        if week_games:
+            self._compute_weekly_awards(week, week_games)
 
         if generate_polls and week_games:
             self._generate_weekly_poll(week)

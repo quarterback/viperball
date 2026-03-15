@@ -97,6 +97,23 @@
 </table>
 {% endif %}
 
+{# Season Awards & Weekly Honors #}
+{% if player_awards %}
+<h2>Season Honors ({{ player_awards|length }})</h2>
+<table>
+  <thead><tr><th>Award</th><th>Detail</th><th>Stats</th></tr></thead>
+  <tbody>
+  {% for a in player_awards %}
+  <tr>
+    <td style="font-weight:bold;{% if a.level == 'national' %}color:var(--yellow){% elif a.level == 'conference' %}color:var(--green){% else %}color:var(--fg){% endif %}">{{ a.award }}</td>
+    <td>{{ a.detail }}</td>
+    <td style="color:var(--fg-dim);font-size:11px">{{ a.stat_line }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 </div>
 
 {# ── Right column: Season Stats + Game Log ── #}
