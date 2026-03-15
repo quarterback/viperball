@@ -800,7 +800,7 @@ def render_dynasty_mode(shared):
                                     best_vp = label
                                 elif n == "Best Lateral Specialist":
                                     best_lat = label
-                                elif n == "Best Defensive Player":
+                                elif n == "Minerva Award":
                                     best_def = label
                                 elif n == "Best Kicker":
                                     best_kick = label

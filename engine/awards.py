@@ -21,7 +21,7 @@ INDIVIDUAL TROPHIES
 
   Best Lateral Specialist   – Outstanding lateral specialist.
 
-  Best Defensive Player     – Outstanding defensive player (Lineman or Safety/Keeper).
+  Minerva Award             – Best defensive player from a top-tier defense nationally.
 
   Best Kicker               – Outstanding kicker.
 
@@ -884,30 +884,54 @@ def _select_individual_awards(
         _add(best_lat[0], best_lat[1], "Best Lateral Specialist",
              f"Nation's outstanding lateral specialist ({best_lat[1]})")
 
-    # ── Best Defensive Player (lineman or safety) ──────
-    # Minimum .500 team record required
-    cand_l = _best("lineman", _defensive_score, min_win_pct=_MIN_WIN_PCT_POSITIONAL)
-    cand_s = _best("safety", _defensive_score, min_win_pct=_MIN_WIN_PCT_POSITIONAL)
-    if cand_l and cand_s:
-        ml = _team_perf_mult(cand_l[1], standings)
-        ms = _team_perf_mult(cand_s[1], standings)
-        pstats_l = _get_stats(cand_l[1], cand_l[0].name)
-        pstats_s = _get_stats(cand_s[1], cand_s[0].name)
-        if pstats_l and pstats_s:
-            score_l = _stat_score_defense(pstats_l, ml)
-            score_s = _stat_score_defense(pstats_s, ms)
-            wpa_l = pstats_l.get("wpa", 0.0)
-            wpa_s = pstats_s.get("wpa", 0.0)
-            pair = cand_l if _wpa_tiebreak(score_l, wpa_l, score_s, wpa_s) else cand_s
-        else:
-            score_l = _defensive_score(cand_l[0], ml)
-            score_s = _defensive_score(cand_s[0], ms)
-            pair = cand_l if score_l >= score_s else cand_s
-    else:
-        pair = cand_l or cand_s
-    if pair:
-        _add(pair[0], pair[1], "Best Defensive Player",
-             f"Nation's outstanding defensive player ({pair[1]})")
+    # ── Minerva Award (best defensive player from a top defense) ──────
+    # Rank teams by defensive quality, take top quartile, find best player among them
+    _minerva_eligible = set()
+    _team_def_scores = {}
+    for t_name in teams:
+        rec = standings.get(t_name)
+        if rec and rec.games_played > 0:
+            # Defensive quality: low points against + high stop rate + turnovers forced
+            ppg_against = rec.points_against / rec.games_played
+            stop = getattr(rec, 'stop_rate', 0)
+            to_forced = getattr(rec, 'avg_turnovers_forced', 0)
+            # Lower ppg_against is better, so invert it; higher stop/TO is better
+            _team_def_scores[t_name] = -ppg_against * 2 + stop * 0.5 + to_forced * 5
+    if _team_def_scores:
+        sorted_def = sorted(_team_def_scores, key=_team_def_scores.get, reverse=True)
+        cutoff = max(1, len(sorted_def) // 4)  # top 25%
+        _minerva_eligible = set(sorted_def[:cutoff])
+
+    if _minerva_eligible:
+        # Build a filtered teams dict with only top-defense teams
+        minerva_teams = {t: teams[t] for t in _minerva_eligible if t in teams}
+        best_minerva = None
+        best_minerva_score = -1.0
+        best_minerva_wpa = -999.0
+        for t_name, t in minerva_teams.items():
+            if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POSITIONAL:
+                continue
+            mult = _team_perf_mult(t_name, standings)
+            for p in t.players:
+                uid = f"{t_name}::{p.name}"
+                if uid in seen:
+                    continue
+                if _pos_group(p.position) not in ("lineman", "safety"):
+                    continue
+                pstats = _get_stats(t_name, p.name)
+                if pstats and pstats.get("games", 0) > 0:
+                    s = _stat_score_defense(pstats, mult)
+                    wpa = pstats.get("wpa", 0.0)
+                else:
+                    s = _defensive_score(p, mult)
+                    wpa = 0.0
+                if _wpa_tiebreak(s, wpa, best_minerva_score, best_minerva_wpa):
+                    best_minerva_score = s
+                    best_minerva_wpa = wpa
+                    best_minerva = (p, t_name)
+        if best_minerva:
+            _add(best_minerva[0], best_minerva[1], "Minerva Award",
+                 f"Best defensive player from a top defense ({best_minerva[1]})")
 
     # ── Best Kicker (any position) ───────────────────
     # Minimum .500 team record required
