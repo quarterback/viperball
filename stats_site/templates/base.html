@@ -124,6 +124,57 @@
   --border: #eee8d5;
   --row-hover: #eee8d5;
 }
+/* jmbi — muted earthy pastels on dark gray (xcolors.net classic) */
+[data-theme="jmbi"] {
+  --bg: #1e1e1e;
+  --bg-alt: #282828;
+  --fg: #efe2e0;
+  --fg-dim: #709289;
+  --fg-bright: #f9f1ed;
+  --accent: #f9d25b;
+  --accent-dim: #e0ba69;
+  --green: #8da691;
+  --red: #c25431;
+  --yellow: #eedd99;
+  --blue: #5a7260;
+  --cyan: #709289;
+  --border: #383838;
+  --row-hover: #2e2e2e;
+}
+/* Navy & Ivory — deep navy bg with warm ivory text (xcolors.net classic) */
+[data-theme="navy-ivory"] {
+  --bg: #021b21;
+  --bg-alt: #032c36;
+  --fg: #e8dfd6;
+  --fg-dim: #61778d;
+  --fg-bright: #f6f6c9;
+  --accent: #44b5b1;
+  --accent-dim: #065f73;
+  --green: #7cbf9e;
+  --red: #c2454e;
+  --yellow: #beb090;
+  --blue: #61778d;
+  --cyan: #9ed9d8;
+  --border: #065f73;
+  --row-hover: #032c36;
+}
+/* Arizona — warm desert tones, terracotta and sage (r/unixporn inspired) */
+[data-theme="arizona"] {
+  --bg: #1a1410;
+  --bg-alt: #241e18;
+  --fg: #c2a383;
+  --fg-dim: #7a6550;
+  --fg-bright: #e8d5b7;
+  --accent: #c45a3c;
+  --accent-dim: #a0422e;
+  --green: #6e8b57;
+  --red: #b04a3a;
+  --yellow: #c4a24e;
+  --blue: #5a7a8a;
+  --cyan: #6a9a8a;
+  --border: #352d25;
+  --row-hover: #2a2218;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: "Berkeley Mono", "IBM Plex Mono", "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
@@ -500,6 +551,9 @@ td.rank {
       <div class="theme-menu" id="theme-menu">
         <button data-theme="bloomberg"><span class="theme-swatch" style="background:#ff6600"></span>Bloomberg</button>
         <button data-theme="light"><span class="theme-swatch" style="background:#b45309"></span>Light</button>
+        <button data-theme="jmbi"><span class="theme-swatch" style="background:#f9d25b"></span>jmbi</button>
+        <button data-theme="navy-ivory"><span class="theme-swatch" style="background:#44b5b1"></span>Navy & Ivory</button>
+        <button data-theme="arizona"><span class="theme-swatch" style="background:#c45a3c"></span>Arizona</button>
         <button data-theme="ocean"><span class="theme-swatch" style="background:#d26937"></span>Ocean Dark</button>
         <button data-theme="ocean-light"><span class="theme-swatch" style="background:#d26937"></span>Ocean Light</button>
         <button data-theme="solarized"><span class="theme-swatch" style="background:#cb4b16"></span>Solarized Dark</button>
