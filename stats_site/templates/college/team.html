@@ -190,8 +190,8 @@
     <div class="value">{{ team_stats.delta_drives }}</div>
   </div>
   <div class="metric">
-    <div class="label">Compelled Eff.</div>
-    <div class="value">{% if team_stats.compelled_eff is not none %}{{ team_stats.delta_scores }}/{{ team_stats.delta_drives }} ({{ team_stats.compelled_eff }}%){% else %}&mdash;{% endif %}</div>
+    <div class="label">Kill Rate</div>
+    <div class="value">{% if team_stats.kill_rate is not none %}{{ team_stats.delta_scores }}/{{ team_stats.delta_drives }} ({{ team_stats.kill_rate }}%){% else %}&mdash;{% endif %}</div>
   </div>
 </div>
 
