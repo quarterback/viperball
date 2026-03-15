@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}{{ coach.full_name }} — {{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a><span class="sep">/</span>{{ coach.full_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ coach.full_name }}</h1>
+  <div class="subtitle">
+    <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
+    &middot; <span class="tag tag-pos">{{ role_label }}</span>
+    {% if coach.classification_label %}&middot; {{ coach.classification_label }}{% endif %}
+    {% if coach.sub_archetype_label %}&middot; <em>{{ coach.sub_archetype_label }}</em>{% endif %}
+    &middot; Age {{ coach.age }}
+    &middot; {{ season_record }}
+  </div>
+</div>
+
+<div class="grid-2">
+
+{# ── Left column: Info + Attributes ── #}
+<div>
+
+<h2>Coach Info</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:140px">Role</td><td>{{ role_label }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Age</td><td>{{ coach.age }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Classification</td><td>{{ coach.classification_label }}{% if coach.sub_archetype_label %} ({{ coach.sub_archetype_label }}){% endif %}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Composure</td><td>{{ coach.composure_label }}</td></tr>
+  {% if coach.hc_affinity and coach.hc_affinity != 'balanced' %}
+  <tr><td style="color:var(--fg-dim)">HC Affinity</td><td>{{ coach.hc_affinity_label }}</td></tr>
+  {% endif %}
+  {% if coach.alma_mater %}
+  <tr><td style="color:var(--fg-dim)">Alma Mater</td><td>{{ coach.alma_mater }}</td></tr>
+  {% endif %}
+  <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if coach.visible_score >= 80 %}stat-elite{% elif coach.visible_score >= 65 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ '%.0f'|format(coach.visible_score) }}</td></tr>
+  {% if coach.philosophy %}
+  <tr><td style="color:var(--fg-dim)">Philosophy</td><td>{{ coach.philosophy }}</td></tr>
+  {% endif %}
+  {% if coach.coaching_style %}
+  <tr><td style="color:var(--fg-dim)">Style</td><td>{{ coach.coaching_style }}</td></tr>
+  {% endif %}
+  {% if coach.personality %}
+  <tr><td style="color:var(--fg-dim)">Personality</td><td>{{ coach.personality }}</td></tr>
+  {% endif %}
+  {% if coach.background %}
+  <tr><td style="color:var(--fg-dim)">Background</td><td style="font-size:11px">{{ coach.background }}</td></tr>
+  {% endif %}
+  </tbody>
+</table>
+
+<h2>Attributes</h2>
+<table>
+  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set attrs = [
+    ('Leadership', coach.leadership), ('Composure', coach.composure),
+    ('Rotations', coach.rotations), ('Development', coach.development),
+    ('Recruiting', coach.recruiting),
+  ] %}
+  {% for name, val in attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# Personality Sliders #}
+{% if sliders %}
+<h2>Tendencies</h2>
+<table>
+  <thead><tr><th>Trait</th><th class="num">Value</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set slider_labels = {
+    'aggression': 'Aggression', 'risk_tolerance': 'Risk Tolerance',
+    'chaos_appetite': 'Chaos Appetite', 'tempo_preference': 'Tempo Preference',
+    'composure_tendency': 'Composure', 'adaptability': 'Adaptability',
+    'stubbornness': 'Stubbornness', 'player_trust': 'Player Trust',
+    'variance_tolerance': 'Variance Tolerance',
+  } %}
+  {% for key, label in slider_labels.items() %}
+  {% if key in sliders %}
+  {% set val = sliders[key] %}
+  <tr>
+    <td>{{ label }}</td>
+    <td class="num">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:var(--fg-dim);height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Awards #}
+{% if coach_awards %}
+<h2>Honors ({{ coach_awards|length }})</h2>
+<table>
+  <thead><tr><th>Award</th><th>Detail</th><th>Stats</th></tr></thead>
+  <tbody>
+  {% for a in coach_awards %}
+  <tr>
+    <td style="font-weight:bold;{% if 'National' in a.award %}color:var(--yellow){% elif 'Season' in a.detail %}color:var(--green){% endif %}">{{ a.award }}</td>
+    <td>{{ a.detail }}</td>
+    <td style="color:var(--fg-dim);font-size:11px">{{ a.stat_line }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+
+{# ── Right column: Record + Career History + Coaching Tree ── #}
+<div>
+
+<h2>Career Record</h2>
+<div class="grid-4" style="margin-bottom:12px">
+  <div class="metric"><div class="label">Wins</div><div class="value accent">{{ coach.career_wins }}</div></div>
+  <div class="metric"><div class="label">Losses</div><div class="value">{{ coach.career_losses }}</div></div>
+  <div class="metric"><div class="label">Win %</div><div class="value {% if coach.win_percentage >= 0.600 %}stat-elite{% elif coach.win_percentage >= 0.500 %}stat-good{% endif %}">{{ '%.3f'|format(coach.win_percentage) }}</div></div>
+  <div class="metric"><div class="label">Championships</div><div class="value {% if coach.championships > 0 %}stat-elite{% endif %}">{{ coach.championships }}</div></div>
+</div>
+<div class="grid-4" style="margin-bottom:12px">
+  <div class="metric"><div class="label">Seasons</div><div class="value">{{ coach.seasons_coached }}</div></div>
+  <div class="metric"><div class="label">Conf. Titles</div><div class="value">{{ coach.conference_titles }}</div></div>
+  <div class="metric"><div class="label">Playoff Apps</div><div class="value">{{ coach.playoff_appearances }}</div></div>
+  <div class="metric"><div class="label">Playoff Wins</div><div class="value">{{ coach.playoff_wins }}</div></div>
+</div>
+
+{# Current Season #}
+<h2>This Season</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:140px">Team</td><td><a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a></td></tr>
+  <tr><td style="color:var(--fg-dim)">Record</td><td style="font-weight:bold">{{ season_record }}</td></tr>
+  {% if coach.contract_salary %}
+  <tr><td style="color:var(--fg-dim)">Salary</td><td>${{ '{:,}'.format(coach.contract_salary) }}</td></tr>
+  {% endif %}
+  {% if coach.contract_years_remaining %}
+  <tr><td style="color:var(--fg-dim)">Contract</td><td>{{ coach.contract_years_remaining }} year{{ 's' if coach.contract_years_remaining != 1 else '' }} remaining</td></tr>
+  {% endif %}
+  </tbody>
+</table>
+
+{# Career History #}
+{% if career_history %}
+<h2>Career History</h2>
+<table>
+  <thead>
+    <tr><th>Years</th><th>Team</th><th>Role</th><th class="num">W</th><th class="num">L</th><th class="num">Champs</th></tr>
+  </thead>
+  <tbody>
+  {% for stop in career_history %}
+  <tr>
+    <td>{{ stop.year_start }}{% if stop.year_end %}-{{ stop.year_end }}{% else %}-present{% endif %}</td>
+    <td>{{ stop.team_name }}</td>
+    <td><span class="tag">{{ {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(stop.role, stop.role) }}</span></td>
+    <td class="num">{{ stop.wins }}</td>
+    <td class="num">{{ stop.losses }}</td>
+    <td class="num {% if stop.championships > 0 %}stat-elite{% endif %}">{{ stop.championships }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Coaching Tree #}
+{% if coaching_tree %}
+<h2>Coaching Tree</h2>
+<table>
+  <thead><tr><th>Coach</th><th>Role</th><th>Team</th></tr></thead>
+  <tbody>
+  {% for mentor in coaching_tree %}
+  <tr>
+    <td>{{ mentor.get('name', mentor.get('coach_name', '?')) }}</td>
+    <td>{{ mentor.get('role', '?') }}</td>
+    <td>{{ mentor.get('team', mentor.get('team_name', '?')) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+</div>
+{% endblock %}

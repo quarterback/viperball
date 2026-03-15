@@ -260,6 +260,37 @@
 
 </div>
 
+{# ── Coaching Staff ── #}
+{% if coaching_staff %}
+<div>
+<h2>Coaching Staff</h2>
+<table>
+  <thead>
+    <tr><th>Role</th><th>Name</th><th class="num">OVR</th><th>Style</th><th>Composure</th><th class="num">W-L</th><th class="num">Win%</th></tr>
+  </thead>
+  <tbody>
+  {% for c in coaching_staff %}
+  <tr>
+    <td><span class="tag {% if c.role == 'head_coach' %}stat-elite{% endif %}">{{ c.role_label }}</span></td>
+    <td><a href="/stats/college/{{ session_id }}/coach/{{ team_name }}/{{ c.role }}">{{ c.name }}</a></td>
+    <td class="num {% if c.overall >= 80 %}stat-elite{% elif c.overall >= 65 %}stat-good{% endif %}">{{ '%.0f'|format(c.overall) }}</td>
+    <td style="font-size:11px;">{{ c.classification_label }}</td>
+    <td style="font-size:11px;">{{ c.composure_label }}</td>
+    <td class="num" style="font-size:11px;">{{ c.career_wins }}-{{ c.career_losses }}</td>
+    <td class="num">{{ '%.3f'|format(c.win_pct) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if coaching_staff[0].philosophy %}
+<div style="margin-top:6px;font-size:11px;color:var(--fg-dim);">
+  <strong>Philosophy:</strong> {{ coaching_staff[0].philosophy }}
+  {% if coaching_staff[0].coaching_style %} &mdash; <em>{{ coaching_staff[0].coaching_style }}</em>{% endif %}
+</div>
+{% endif %}
+</div>
+{% endif %}
+
 {# ── Awards ── #}
 {% if team_awards %}
 <div>

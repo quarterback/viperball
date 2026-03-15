@@ -897,6 +897,31 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         except Exception:
             pass
 
+    # ── Coaching staff for this team ──
+    coaching_staff = []
+    staff_dict = (season.coaching_staffs or {}).get(team_name, {})
+    if staff_dict:
+        from engine.coaching import CoachCard
+        for role in ["head_coach", "oc", "dc", "stc"]:
+            card = staff_dict.get(role)
+            if not card:
+                continue
+            if isinstance(card, dict):
+                card = CoachCard.from_dict(card)
+            role_label = {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, role)
+            coaching_staff.append({
+                "role": role, "role_label": role_label,
+                "name": card.full_name,
+                "overall": round(card.visible_score, 1),
+                "classification_label": card.classification_label,
+                "composure_label": card.composure_label,
+                "career_wins": card.career_wins, "career_losses": card.career_losses,
+                "win_pct": round(card.win_percentage, 3),
+                "championships": card.championships,
+                "philosophy": card.philosophy,
+                "coaching_style": card.coaching_style,
+            })
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -904,6 +929,86 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         team_stats=team_season_stats,
         sorted_roster=sorted_roster, sort=sort,
         team_awards=team_awards,
+        coaching_staff=coaching_staff,
+    ))
+
+
+@router.get("/college/{session_id}/coach/{team_name}/{coach_role}", response_class=HTMLResponse)
+def college_coach(request: Request, session_id: str, team_name: str, coach_role: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    if team_name not in season.teams:
+        raise HTTPException(404, f"Team '{team_name}' not found")
+
+    staff_dict = (season.coaching_staffs or {}).get(team_name, {})
+    card = staff_dict.get(coach_role)
+    if not card:
+        raise HTTPException(404, f"No coach found for role '{coach_role}' at {team_name}")
+
+    from engine.coaching import CoachCard
+    if isinstance(card, dict):
+        card = CoachCard.from_dict(card)
+
+    role_label = {"head_coach": "Head Coach", "oc": "Offensive Coordinator",
+                  "dc": "Defensive Coordinator", "stc": "Special Teams Coordinator"}.get(coach_role, coach_role)
+
+    # Career history
+    career_history = []
+    for stop in (card.career_history or []):
+        if isinstance(stop, dict):
+            career_history.append(stop)
+        else:
+            career_history.append(stop.to_dict())
+
+    # Coaching tree
+    coaching_tree = list(card.coaching_tree or [])
+
+    # Team record this season
+    record = season.standings.get(team_name)
+    season_record = record.record_str if record else "0-0"
+
+    # Collect awards for this coach
+    coach_awards = []
+    coach_display = card.full_name
+    coach_display_paren = f"{card.full_name} ({team_name})"
+    # Weekly awards
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("position") == "Coach" and wa.get("team_name") == team_name:
+            coach_awards.append({
+                "award": wa["award"], "detail": f"Week {wa['week']}",
+                "stat_line": wa.get("stat_line", ""),
+            })
+    # End-of-season awards
+    regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
+    if regular_season_done:
+        try:
+            from engine.awards import compute_season_awards
+            honors = compute_season_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            # National Coach of the Year
+            if honors.coach_of_year and (team_name in honors.coach_of_year):
+                coach_awards.append({"award": "National Coach of the Year", "detail": "Season", "stat_line": season_record})
+            # Conference awards
+            for conf_name, conf_awards_list in honors.conference_awards.items():
+                for a in conf_awards_list:
+                    if a.position == "Coach" and a.team_name == team_name:
+                        coach_awards.append({"award": a.award_name, "detail": "Season", "stat_line": season_record})
+        except Exception:
+            pass
+
+    # Personality sliders for display
+    sliders = card.personality_sliders or {}
+
+    return templates.TemplateResponse("college/coach.html", _ctx(
+        request, section="college", session_id=session_id,
+        coach=card, team_name=team_name, role=coach_role, role_label=role_label,
+        career_history=career_history, coaching_tree=coaching_tree,
+        season_record=season_record, coach_awards=coach_awards,
+        sliders=sliders,
     ))
 
 
