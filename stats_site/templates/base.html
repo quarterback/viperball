@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="bloomberg">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Viperball Stats{% endblock %}</title>
 <style>
-:root {
+/* Bloomberg (default dark) */
+:root, [data-theme="bloomberg"] {
   --bg: #0a0a0a;
   --bg-alt: #111;
   --fg: #c8c8c8;
@@ -20,6 +21,159 @@
   --cyan: #33cccc;
   --border: #222;
   --row-hover: #1a1a1a;
+}
+/* Light */
+[data-theme="light"] {
+  --bg: #f5f5f0;
+  --bg-alt: #eaeae5;
+  --fg: #3c3c3c;
+  --fg-dim: #888;
+  --fg-bright: #1a1a1a;
+  --accent: #b45309;
+  --accent-dim: #92400e;
+  --green: #16a34a;
+  --red: #dc2626;
+  --yellow: #a16207;
+  --blue: #2563eb;
+  --cyan: #0891b2;
+  --border: #d4d4cc;
+  --row-hover: #e8e8e0;
+}
+/* Ocean Dark — based on the Atlantis/ocean terminal palette */
+[data-theme="ocean"] {
+  --bg: #0c1014;
+  --bg-alt: #11151c;
+  --fg: #99d1ce;
+  --fg-dim: #245361;
+  --fg-bright: #d3ebe9;
+  --accent: #d26937;
+  --accent-dim: #c23127;
+  --green: #2aa889;
+  --red: #c23127;
+  --yellow: #edb443;
+  --blue: #195466;
+  --cyan: #33859e;
+  --border: #091f2e;
+  --row-hover: #0a3749;
+}
+/* Ocean Light — light variant of the ocean palette */
+[data-theme="ocean-light"] {
+  --bg: #d3ebe9;
+  --bg-alt: #c4dbd9;
+  --fg: #0c1014;
+  --fg-dim: #245361;
+  --fg-bright: #091f2e;
+  --accent: #d26937;
+  --accent-dim: #c23127;
+  --green: #2aa889;
+  --red: #c23127;
+  --yellow: #a16207;
+  --blue: #195466;
+  --cyan: #33859e;
+  --border: #99d1ce;
+  --row-hover: #b8dad7;
+}
+/* Amber — retro CRT terminal */
+[data-theme="amber"] {
+  --bg: #0a0800;
+  --bg-alt: #141000;
+  --fg: #cc9a00;
+  --fg-dim: #665000;
+  --fg-bright: #ffbf00;
+  --accent: #ffbf00;
+  --accent-dim: #cc9a00;
+  --green: #ccaa00;
+  --red: #ff6600;
+  --yellow: #ffbf00;
+  --blue: #cc9a00;
+  --cyan: #cc9a00;
+  --border: #332800;
+  --row-hover: #1a1400;
+}
+/* Solarized Dark */
+[data-theme="solarized"] {
+  --bg: #002b36;
+  --bg-alt: #073642;
+  --fg: #839496;
+  --fg-dim: #586e75;
+  --fg-bright: #eee8d5;
+  --accent: #cb4b16;
+  --accent-dim: #dc322f;
+  --green: #859900;
+  --red: #dc322f;
+  --yellow: #b58900;
+  --blue: #268bd2;
+  --cyan: #2aa198;
+  --border: #073642;
+  --row-hover: #073642;
+}
+/* Solarized Light */
+[data-theme="solarized-light"] {
+  --bg: #fdf6e3;
+  --bg-alt: #eee8d5;
+  --fg: #657b83;
+  --fg-dim: #93a1a1;
+  --fg-bright: #073642;
+  --accent: #cb4b16;
+  --accent-dim: #dc322f;
+  --green: #859900;
+  --red: #dc322f;
+  --yellow: #b58900;
+  --blue: #268bd2;
+  --cyan: #2aa198;
+  --border: #eee8d5;
+  --row-hover: #eee8d5;
+}
+/* jmbi — muted earthy pastels on dark gray (xcolors.net classic) */
+[data-theme="jmbi"] {
+  --bg: #1e1e1e;
+  --bg-alt: #282828;
+  --fg: #efe2e0;
+  --fg-dim: #709289;
+  --fg-bright: #f9f1ed;
+  --accent: #f9d25b;
+  --accent-dim: #e0ba69;
+  --green: #8da691;
+  --red: #c25431;
+  --yellow: #eedd99;
+  --blue: #5a7260;
+  --cyan: #709289;
+  --border: #383838;
+  --row-hover: #2e2e2e;
+}
+/* Navy & Ivory — deep navy bg with warm ivory text (xcolors.net classic) */
+[data-theme="navy-ivory"] {
+  --bg: #021b21;
+  --bg-alt: #032c36;
+  --fg: #e8dfd6;
+  --fg-dim: #61778d;
+  --fg-bright: #f6f6c9;
+  --accent: #44b5b1;
+  --accent-dim: #065f73;
+  --green: #7cbf9e;
+  --red: #c2454e;
+  --yellow: #beb090;
+  --blue: #61778d;
+  --cyan: #9ed9d8;
+  --border: #065f73;
+  --row-hover: #032c36;
+}
+/* Arizona — warm desert tones, terracotta and sage (r/unixporn inspired) */
+[data-theme="arizona"] {
+  --bg: #1a1410;
+  --bg-alt: #241e18;
+  --fg: #c2a383;
+  --fg-dim: #7a6550;
+  --fg-bright: #e8d5b7;
+  --accent: #c45a3c;
+  --accent-dim: #a0422e;
+  --green: #6e8b57;
+  --red: #b04a3a;
+  --yellow: #c4a24e;
+  --blue: #5a7a8a;
+  --cyan: #6a9a8a;
+  --border: #352d25;
+  --row-hover: #2a2218;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -132,8 +286,6 @@ thead th {
   letter-spacing: 0.5px;
   border-bottom: 2px solid var(--border);
   white-space: nowrap;
-  position: sticky;
-  top: 32px;
   background: var(--bg);
 }
 thead th.num { text-align: right; }
@@ -296,7 +448,6 @@ td.rank {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   table { font-size: 10px; }
   thead th, tbody td { padding: 2px 4px; }
-  thead th { position: static; }
   .topbar nav a { font-size: 10px; padding: 2px 4px; }
   .box-score-header { flex-direction: column; gap: 8px; }
   .box-team .name { font-size: 12px; }
@@ -312,10 +463,71 @@ td.rank {
   .page-header h1 { font-size: 14px; }
   .container { padding: 0 8px; }
   body { font-size: 11px; }
+  .theme-btn { font-size: 9px; padding: 2px 6px; }
+  .theme-menu { right: 0; left: auto; }
 }
 /* Horizontal scroll wrapper for wide tables on small screens */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Theme switcher */
+.theme-switcher {
+  margin-left: auto;
+  position: relative;
+}
+.theme-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.theme-btn:hover { color: var(--fg-bright); border-color: var(--fg-dim); }
+.theme-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  min-width: 150px;
+  z-index: 200;
+}
+.theme-menu.open { display: block; }
+.theme-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.theme-menu button:hover { background: var(--row-hover); color: var(--fg-bright); }
+.theme-menu button.active { color: var(--accent); }
+.theme-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
 </style>
+<script>
+(function(){
+  var saved = localStorage.getItem('vb-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+</script>
 </head>
 <body>
 <div class="topbar">
@@ -331,6 +543,21 @@ td.rank {
       <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>Archives</a>
       <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>Search</a>
     </nav>
+    <div class="theme-switcher">
+      <button class="theme-btn" onclick="document.querySelector('.theme-menu').classList.toggle('open')" aria-label="Change theme">Theme</button>
+      <div class="theme-menu" id="theme-menu">
+        <button data-theme="bloomberg"><span class="theme-swatch" style="background:#ff6600"></span>Bloomberg</button>
+        <button data-theme="light"><span class="theme-swatch" style="background:#b45309"></span>Light</button>
+        <button data-theme="jmbi"><span class="theme-swatch" style="background:#f9d25b"></span>jmbi</button>
+        <button data-theme="navy-ivory"><span class="theme-swatch" style="background:#44b5b1"></span>Navy & Ivory</button>
+        <button data-theme="arizona"><span class="theme-swatch" style="background:#c45a3c"></span>Arizona</button>
+        <button data-theme="ocean"><span class="theme-swatch" style="background:#d26937"></span>Ocean Dark</button>
+        <button data-theme="ocean-light"><span class="theme-swatch" style="background:#d26937"></span>Ocean Light</button>
+        <button data-theme="solarized"><span class="theme-swatch" style="background:#cb4b16"></span>Solarized Dark</button>
+        <button data-theme="solarized-light"><span class="theme-swatch" style="background:#cb4b16"></span>Solarized Light</button>
+        <button data-theme="amber"><span class="theme-swatch" style="background:#ffbf00"></span>Amber CRT</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -345,5 +572,27 @@ td.rank {
     VIPERBALL STATS &middot; Data refreshes with each simulation
   </div>
 </div>
+<script>
+(function(){
+  var menu = document.getElementById('theme-menu');
+  var current = document.documentElement.getAttribute('data-theme') || 'bloomberg';
+  // Mark active theme
+  menu.querySelectorAll('button').forEach(function(btn){
+    if (btn.getAttribute('data-theme') === current) btn.classList.add('active');
+    btn.addEventListener('click', function(){
+      var theme = this.getAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('vb-theme', theme);
+      menu.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      this.classList.add('active');
+      menu.classList.remove('open');
+    });
+  });
+  // Close menu on outside click
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('.theme-switcher')) menu.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>
