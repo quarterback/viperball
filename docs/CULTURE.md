@@ -1,338 +1,317 @@
-# The Viperball House Style
-
-A guide for writing about viperball — for journalists, commentators, match-day programmes, and language models generating coverage of the Collegiate Viperball League and its international variants.
-
----
-
-## What This Document Is For
-
-If you are writing about viperball, or if you are a language model asked to produce viperball content, this is your style bible. It teaches you three things: what the sport is, how it moves, and how it should sound on the page.
-
-Viperball coverage has a problem. Too much of it reads like a spreadsheet narrated by someone who has never stood on a sideline. Stat lines with no sinew. Box scores with no breath. The sport deserves better. It plays like a collision between rugby union, Australian Rules, Gaelic football, and Canadian gridiron — physical, territorial, inventive, and occasionally beautiful — and it should read that way too.
-
-This guide borrows its voice from the sports it descends from. The physicality of rugby writing. The tactical sweep of AFL coverage. The pastoral violence of GAA match reports. The cult energy of CFL journalism. The deep narrative architecture of American football longform. And underneath all of it, soccer's instinct for flow — the understanding that a match is a single continuous thing, not a sequence of isolated plays.
-
-If your viperball writing could be mistaken for a database query with line breaks, start over.
+# VIPERBALL: CANONICAL STYLE & SYNTHESIS GUIDE
+### For writers, broadcasters, and LLM content generation
 
 ---
 
-## Part One: The Sport Itself
+## PART ONE: THE MENTAL MODEL
 
-An LLM cannot write about a sport it does not understand. This section teaches you viperball through the lens of how it should be described — rules and voice together.
+Before you write a word, get this right: **Viperball is not a sport being explained. It is a sport being covered.**
 
-### The Pitch
+You are not a Kickstarter backer describing a concept. You are a journalist on the beat. You watched the game. You know the players. You understand what a mess rate means. Write accordingly.
 
-Viperball is a full-contact field sport played eleven-a-side on a 100-yard field with 10-yard end zones. There is no forward pass. The ball moves by foot, by hand (laterally or backward), and by boot. Teams have six downs to gain twenty yards. Scoring comes through six separate channels, and final scores routinely include half-points.
+The closest real-world analogue for how to *cover* this sport is the intersection of:
+- **Rugby union journalism** — physical, territorial, direct. Drives have phases. Momentum matters. Field position is a character in every story.
+- **AFL match reports** — fluid, no stops for analysis, the sport never stops moving and neither does the prose.
+- **Gaelic football match coverage** — quick, muscular sentences. Points and goals tracked separately. Kickers are stars.
+- **CFL and Canadian football writing** — the rouge exists, the field is big, field position is destiny, kicks are tactical weapons.
+- **College football narrative** — the identity of the program, the crowd, the moment, the stakes.
+- **Soccer match reports** — economy of language, focus on the decisive moment, who controlled the half, who was better for long stretches.
 
-It is not "American football without the forward pass." That framing erases half the sport. Viperball has its own kicking game, its own chain-passing game, its own positions, its own rhythms. The closest single-sentence comparison: imagine rugby's lateral game married to gridiron's down-and-distance structure, with Aussie Rules' kicking artistry and Gaelic football's territorial warfare layered on top. Then stop comparing and describe the thing itself.
+All of these together, in the hands of a writer who assumes you already watch the game.
 
-### The Field
+---
 
-Standard dimensions: 100 yards goal-line to goal-line, 53⅓ yards wide, 10-yard end zones at each end. Goalposts sit on the end line, 18 feet 6 inches apart, with a crossbar at 10 feet. The field is marked every five yards. It looks like a football field because it is one.
+## PART TWO: THE SPORT (WHAT YOU ACTUALLY NEED TO KNOW)
 
-Write about the field the way rugby writers do — as terrain. "Gonzaga started the drive from their own four-yard line, ninety-six yards of sodden grass between them and the try line." The field is not neutral. It has a deep end and a shallow end, and which end you are on matters enormously.
+### The Field and the Clock
+100-yard field. Four quarters of 10 minutes each. Running clock with stoppages in the final three minutes of each half. 36 players per side, playing both ways — fatigue is a genuine tactical factor late in games.
 
-### Downs and Distance
+### Downs and Possession
+**Six downs to gain 20 yards.** This is not a typo. Six downs, not four. Twenty yards, not ten. This changes everything about how drives feel — they are longer, more grinding, more like rugby phases than American football series. A team can be stuck on 4th-and-12 and still have two more shots at it.
 
-Six downs to gain twenty yards. This is longer and more forgiving than American football's four-for-ten, and it changes everything about how drives feel. Viperball drives are expeditions. A team can use its first two downs to probe, its third to take a shot, and still have three downs left to grind out the yardage. The arithmetic of risk is different.
+When a team gains 20 yards, the chains reset. Fail to convert after six downs and possession transfers at the spot. There are no punts forced by the down count — punting is always a tactical choice, not a default.
 
-When writing: never say "fourth and long" — the phrase belongs to another sport. Say "fifth and nine" or "facing sixth down." A team on sixth-and-twelve is in genuine trouble. A team on third-and-fourteen has time. The down count carries less panic and more strategy than in gridiron, and your prose should reflect that patience.
+### The Ball Moves Like Rugby
+**There is no forward pass.** Full stop. The ball advances by running, kicking, or lateraling — and a lateral can go to any player behind the carrier at the moment of release. This is the structural fact that shapes everything else in the sport.
 
-If a team fails to convert on sixth down, possession turns over on downs. This is relatively rare — the extra downs and longer distance create a cadence where most drives either score or end in a deliberate kick. Turning the ball over on downs is a minor humiliation, worth noting.
+The kick pass is the primary aerial weapon: the Zeroback drops the ball and kicks it forward to a lead runner. Think of it as a chip over the top in soccer — tactical, directional, a real offensive tool. Short kick passes complete around 65-70% of the time. Medium-range ones are more like 50%. Bombs are low-percentage gambles.
 
-### Scoring: The Six Channels
+### The Three Pillars of Offense
+Every offense in Viperball runs on the same triangle:
 
-This is the heart of viperball's identity. Six ways to score, each with its own weight and its own drama.
+**Running → Kick Pass → Snap Kick**
 
-**Touchdown — 9 points.** The ball crosses the goal line in a player's hands, carried or received via lateral. There is no conversion attempt afterward. Nine points, full stop. A touchdown in viperball is worth nearly double a gridiron touchdown (after extra point), which makes every one feel enormous. Write touchdowns with weight. "She crossed the line untouched and the nine went up on the board — Creighton's first visit to the end zone all afternoon, and suddenly the margin was single digits."
+You run to set up the kick pass. You kick pass to stretch the field and reach scoring range. When you're in range, you go for the snap kick. Everything flows between those three pillars. A team that's clicking has all three working. A team in trouble is locked out of one of them.
 
-**Snap kick — 5 points.** A drop kick through the uprights, attempted from open play on any down. The kicker drops the ball, lets it bounce once, and strikes it on the half-volley. This is viperball's signature scoring play — its three-pointer, its penalty goal, its mark. Snap kicks can be attempted from anywhere on the field, though the practical range is roughly 25–52 yards. A good kicking Zeroback will attempt five to eight per match; a great one converts at 65% or better.
+### Scoring — The Full Hierarchy
+These are exact values and they matter for every sentence you write:
 
-Write snap kicks with reverence. The drop, the bounce, the strike, the flight. "Torres measured the wind, dropped it onto the right hash, and swung through — forty-four yards, dead centre, her fifth of the afternoon." Snap kicks are aesthetically beautiful and tactically pivotal. They deserve sentences, not bullet points.
+| Score | Points | When it happens |
+|---|---|---|
+| **Touchdown** | 9 | Ball carried or lateraled across the goal line |
+| **Snap Kick** | 5 | Drop kick through the uprights, any down, any distance |
+| **Field Goal** | 3 | Place kick through the uprights from scrimmage |
+| **Safety** | 2 | Ball carrier tackled in their own end zone |
+| **Pindown** | 1 | Kicked ball reaches the end zone without being returned (CFL rouge) |
+| **Bell / Strike** | ½ | Recovering a loose ball — fumble, muffed kick, blocked punt |
 
-**Place kick — 3 points.** A traditional set-piece field goal from a tee or held ball. Attempted after the whistle, not from live play. Worth three points. Place kicks are the safe option — lower reward than a snap kick but higher percentage, because the ball is stationary and the kicker can take her time. Write them as the pragmatic choice. "They settled for three. The place kick was never in doubt from twenty-two yards, but three is not five, and on this afternoon three was not going to be enough."
+**Snap kicks are the premium play.** Five points, available on any down, no tee required. A Zeroback who can snap kick from 55 yards is a weapon. The snap kick hunt is to Viperball what the three-point shot is to basketball — the shot that makes everything else easier.
 
-**Safety — 2 points.** The defence tackles the ball carrier in her own end zone. Rare, dramatic, often the product of a catastrophic breakdown. Write safeties as moments of defensive supremacy. "The sack came from the blind side and she went down at the two — no, behind the line. Safety. Two points and possession, and the stadium knew the game had turned."
+**Final scores include halves.** A 47½ to 44 result is normal. That ½ point came from someone recovering a loose ball in the third quarter. It might be the margin. Write it as naturally as you'd write 47-44 in any other sport.
 
-**Pindown — 1 point.** Borrowed from the CFL rouge. When a kick — punt, missed field goal, missed snap kick — enters the end zone and the receiving team fails to return it out, the kicking team earns one point. Pindowns are viperball's territorial currency. They reward good punting, deep kicks, and relentless field position. A team that earns five pindowns in a match has scored five free points from kicking alone.
-
-Write pindowns with the quiet satisfaction of a bowler beating the bat. "The punt died at the three-yard line. Martinez let it bounce, watched it trickle into the end zone, and elected to kneel. Pindown. One more point on the board, her fourth of the afternoon, and Gonzaga's offence starting yet another drive with their backs to the wall."
-
-**Bell — 0.5 points.** Awarded for recovering a loose ball — a fumbled lateral, a blocked kick, a muffed punt. Half a point plus possession. Bells accumulate. In a messy match with eight or ten turnovers, the bell count alone can account for four or five points. Final scores in viperball routinely include halves: 47½–38, 52–41½.
-
-Write bells as hustle plays. The dive, the pile, the referee's signal. "The lateral went to ground at the thirty-five and bodies converged. When the pile unstacked, it was Washington's ball — bell, half a point, and the momentum that comes with ripping the ball from someone else's hands."
-
-### Why the Scoring Matters for Writers
-
-The six-channel system means viperball does not have barren stretches. Points come from everywhere. A team can score a place kick (3), earn a pindown on the ensuing kickoff (1), force a fumble and recover the bell (0.5), then drive for a snap kick (5) — nine and a half points in two minutes without a single touchdown. The scoreboard is always moving.
-
-This means your writing should always be moving too. Do not save your energy for touchdowns. A snap kick from forty-seven yards in a crosswind is a lead item. A sequence of three pindowns that quietly shifted a six-point match is the paragraph that explains the result. Write the whole sport, not just the end zone.
-
-A "defensive struggle" in viperball ends 34–28 or 28–25, not 13–10. A shootout ends 72–63. Calibrate your language to viperball's scale. "Held to thirty-one points" is a compliment to the defence.
+**No conversions after touchdowns.** Nine points, nothing after. This means a one-possession game under two minutes is genuinely tense — a snap kick closes the gap faster than a field goal can extend it.
 
 ### The Lateral Chain
+Laterals can happen at any time, from any player, to any teammate behind them. A single play can chain through four or five pairs of hands. Each additional lateral compounds the fumble risk.
 
-There is no forward pass in viperball. The ball moves forward only by running or by kicking. But it can move sideways and backward freely, through lateral passes — hand-to-hand or tossed — and this is where the sport's unique rhythm lives.
+**The lateral is a spice, not the main course.** Game-to-game offense is running and kick passing. The lateral chain is the circus play, the highlight moment, the thing that makes crowds hold their breath. Don't treat it as routine.
 
-A lateral chain is a sequence of laterals on a single play. The Zeroback takes the snap, pitches to a Wingback, who flips to the Viper cutting against the grain, who shovels it to the Halfback hitting the edge. Three laterals, four touches, and either twenty-two yards or a ball on the ground with ten players diving for it. Every lateral carries compounding fumble risk. The more hands touch the ball, the more likely something breaks.
+When the defense recovers a loose ball from a botched lateral, a fumble, or a muffed kick, that's a **Bell** — half a point plus possession. Bells matter. A team that forces three Bells in a game has changed the result.
 
-Write lateral chains the way rugby writers describe passing movements — as collaborative acts with rhythm and danger. "The chain went left: Zeroback to Wingback, Wingback to Viper, the Viper holding it for a half-second longer than comfortable before releasing to the Flanker on the touchline. Four pairs of hands, twenty-six yards, and the defence scrambling sideways like they were chasing a ball in a pinball machine." Do not reduce a chain to "lateral for 22 yards." That tells the reader nothing.
+### The Bonus Possession (Interception Rule)
+When a team throws an interception — kick pass or lateral — the intercepting team finishes out the original drive (including any return touchdown), and then gets the ball back again. The bonus possession starts from the intercepted team's own 25-yard line.
 
-Chain Gang and Lateral Spread teams build their entire identity around lateral chains. A Chain Gang offence will run fifteen-plus chains per match, stringing four or five laterals together on a single play. When it works, it is jazz — improvisational, fluid, and thrilling. When it breaks down, the ball is live on the ground, and the bell is up for grabs.
+Think of it like a safety without the kickoff: the team that turned it over concedes whatever happens on the return, and then hands the ball right back. The intercepting team doesn't punt away their advantage — they get to keep attacking.
 
-### The Kick Pass
+This means interceptions are catastrophic in a way they aren't in most sports. A pick-six in football ends at six points. In Viperball, the defense scores nine, then lines up at the 25 to start another drive. One turnover can produce two consecutive scoring drives without the other team touching the ball.
 
-The absence of the forward pass does not mean the absence of an aerial game. Viperball teams kick the ball to teammates downfield — punt-style kicks aimed at a target running a route. These are kick passes, and they function as the sport's equivalent of the long ball in soccer or the cross-field punt in Aussie Rules.
+Two cancellation conditions exist: if the intercepting team throws their own interception during the bonus drive, both bonuses cancel. Bonuses don't carry across halves.
 
-Kick passes are high-risk, high-reward. Completion rates hover around 50–60% for good teams. A completed kick pass in stride, with the receiver gathering and gaining yards after the catch, is one of the most exciting plays in the sport. Write them with the language of flight and precision: "She put boot to ball from her own forty and dropped it into the arms of the Flanker at a full sprint — thirty-seven yards through the air, and another fifteen on the ground before anyone brought her down."
+**When writing about interceptions, write about the sequence, not just the play.** In the play-by-play, "Lateral Intercepted" followed by "BONUS POSSESSION" are one event — treat them as the single most narratively important sequence in the game unless the data says otherwise. The pick is the beginning of the story, not the end.
 
-### Positions: Who Does What
+### The Delta Yards System
+When a team scores, they receive a field position penalty on their next kickoff proportional to their lead. The bigger the lead, the worse the starting field position they hand the opponent. A team up 30 points might be giving the other side possession at their own 45-yard line to start every drive.
 
-**Zeroback (ZB):** The conductor. Takes every snap. Can run, kick, lateral, or attempt a snap kick. She is not a quarterback — never call her one. The closest comparison is a rugby fly-half crossed with an Aussie Rules on-baller: someone who does everything, decides everything, and touches the ball on every play. Four archetypes exist: the Kicking ZB (sniper — lives to reach range and drop kick), the Running ZB (workhorse — carries twenty times a match), the Distributor ZB (chain maestro — feeds laterals), and the Dual-Threat (does everything at a B+ level).
+From a coaching standpoint, this is called **lead management**. The leading team's **kill rate** is the percentage of these advantaged possessions they hold scoreless. Their **mess rate** is the gap between what the trailing team scored on those drives versus what they'd normally score. Managing the Delta is a real coaching skill, tracked in box scores like a pitching stat.
 
-**Viper (VP):** The position the sport is named after. Lines up anywhere — wing, slot, backfield, in motion. Creates chaos through alignment uncertainty. The defence never knows where she will be or what she will do. When she gets the ball, she is electric in space. When she does not, she is pulling defenders out of position and creating lanes for everyone else. The Viper is the most unique position in any football code. Always mention her.
-
-**Flankers — Wingbacks (WB) and Halfbacks (HB):** The workhorses who carry the ball on power runs, sweeps, and dives. They are also lateral chain targets. In a Chain Gang offence, the Wingback is often the second or third link in the chain — receiving a lateral at full sprint and either turning upfield or flipping it onward.
-
-**Shiftback (SB):** A hybrid fullback/utility back who blocks, carries in short yardage, and serves as a safety valve in the lateral game.
-
-**Offensive Line (5):** Five linemen who block. They do not receive laterals. They make everything possible and receive almost no credit. Write about them occasionally — viperball is a physical sport and the line of scrimmage is where that physicality lives.
-
-**Keeper (KP):** The last defender. Patrols the deep field, fields missed kicks and punts, decides whether to return or concede a pindown. Also the primary kick returner. A fast Keeper with open space can turn a missed snap kick into an eighty-yard return touchdown. Write the Keeper as a goalkeeper-meets-fullback: the last line, the one who makes the decision that concedes a point or ignites a counter-attack.
-
-**Defensive positions:** Line Anchors (3), Edge Defenders (2), Spotbacks (2), Cornerbacks (2), Lastback (1), and the Keeper. The defence matters enormously in viperball. A dominant defensive line that pressures the kicking game — forcing hurried snap kicks, blocking attempts, collapsing the lateral pocket — can suffocate an offence entirely.
+**How to translate Delta numbers into narrative tone:**
+- Large negative Delta (e.g. -71): the winning team was managing a lead all game. Write it as a game of attrition and field position.
+- Large positive Delta (e.g. +38): the team was chasing all game. Write it as a comeback attempt, successful or not.
+- High mess rate: the trailing team was converting their Delta advantages. Write the game as a thriller even if the final score looks comfortable.
+- Kill rate 0%: the leading team gave up points on every advantaged drive despite the structural edge. That's a story — they won in spite of their lead management, not because of it.
 
 ---
 
-## Part Two: How It Should Sound
+## PART THREE: POSITIONS — WHAT THEY DO AND HOW TO WRITE ABOUT THEM
 
-### The Voice
+**Zeroback (ZB)** — The field general. Takes the snap, reads the defense, distributes the ball, and handles all kicking: snap kicks, field goals, punts. The Zeroback doesn't have a quarterback's arm — they have a kicker's leg and a point guard's vision. Four archetypes: Kicking ZB (snap kick specialist), Running ZB (genuine carry threat), Distributor ZB (chain maestro), Dual-Threat ZB (does everything). A Zeroback who goes 8-of-12 kick passing with two snap kicks in a night had a *game*.
 
-Viperball writing should feel like the best football writing from across the codes — literate, physical, tactically aware, and alive to atmosphere. Here are the traditions to draw from:
+**Viper (VP)** — The playmaker, the athlete the sport is named after. Wears a distinctly colored jersey — exempt from standard alignment rules, can line up anywhere. Takes jet sweeps, receives laterals, finishes chains. When the defense cheats toward the Viper, everything else opens up. Four archetypes: Receiving Viper (chain finisher), Power Viper (short-yardage weapon), Decoy Viper (creates space), Hybrid Viper (does anything, predictable in nothing).
 
-**From rugby union and league:** The sense of forward momentum as a collective act. The respect for physicality and contact. The way a good rugby writer makes you feel the gain-line being crossed, the defensive wall holding, the offload out of the tackle. Viperball has this same density of contact. Drives grind. Tackles matter. Write them.
+**Flankers (WB/HB — Wingbacks and Halfbacks)** — The workhorses. Carry the ball on dives, sweeps, and powers. The Halfback is the box carrier — power runs between the tackles. The Wingback is the perimeter threat — sweeps, pitches, edges. Four archetypes: Speed Flanker (breakaway threat), Power Flanker (grinder), Elusive Flanker (juke moves), Reliable Flanker (consistent, doesn't fumble). When a Flanker has a big night, credit the scheme that opened it.
 
-**From Australian Rules:** The sweep and scale of the ground. The kicking as art form. AFL writers treat a sixty-metre goal as a thing of beauty — the drop punt, the flight, the crowd noise. Viperball snap kicks deserve the same treatment. Also from AFL: the sense that the game can turn on a single contested mark or a turnover in the corridor. Viperball has that same volatility.
-
-**From Gaelic football:** The pastoral-meets-violent energy. GAA coverage carries the weight of place and community — the parish, the county, the weather. Viperball is a collegiate sport with 187 teams across the United States. The campus, the crowd, the rivalry, the weather — these are part of the story. Let them in.
-
-**From the CFL:** The cult energy, the gleeful weirdness, the sense that the sport does things differently and is proud of it. The rouge exists in both sports. The wider field thinking exists in both. CFL writers embrace the chaos. So should you.
-
-**From American football:** The narrative architecture. The season-long arcs. The tactical breakdowns that make you smarter. The way a great football feature opens on a single play and zooms out to reveal a season, a career, a programme. Viperball has this depth. Use it.
-
-**From soccer:** The understanding that a match is one continuous thing with a shape — not a series of discrete events. Soccer writing flows. It tracks tempo, momentum, territorial dominance. A good soccer match report tells you who controlled the middle third, when the game tilted, and where the pressure came from. Viperball matches have this same shape. Write the match, not just the plays.
-
-### What Good Viperball Prose Sounds Like
-
-**Not this:**
-> Creighton defeated Marquette 37-26. Creighton scored 3 touchdowns, 2 drop kicks, and 3 place kicks. Marquette scored 2 touchdowns, 1 drop kick, and 3 place kicks. Creighton had 540 total yards on 92 plays.
-
-**This:**
-> Creighton put Marquette away in the first quarter and spent the remaining three reminding them it was over. The Bluejays scored twelve unanswered points before the Golden Eagles had completed a single drive — a place kick from Mensah, a lateral chain touchdown that went through four pairs of hands without touching the ground, and another place kick from sixty-seven yards that had distance to spare. By the time Marquette's offence found its rhythm, the deficit was already two scores and the crowd at the Al McGuire Center had gone quiet. The final: Creighton 37, Marquette 26, and it was not that close.
-
-**Not this:**
-> Gonzaga won 6-3 in a low-scoring game. Gonzaga made 2 place kicks. Marquette made 1 place kick. No touchdowns were scored. No drop kicks were made.
-
-**This:**
-> On a grey afternoon in Spokane, Gonzaga and Marquette played a match that belonged to another century — three place kicks between them, not a single visit to the end zone, and one hundred and twenty-two plays that produced five hundred and seventy-five yards of territorial trench warfare. Connor Walsh's boot decided it. His fifty-nine-yard place kick in the first quarter and his thirteen-yarder early in the fourth were the only points Gonzaga needed. Kevin O'Donnell pulled one back from twenty-three for Marquette in the third, but by then the Zags' defence had settled into a shape that Marquette could not unlock. Final: Gonzaga 6, Marquette 3. The kind of match that does not make highlight reels but lives in the memory of everyone who was there.
-
-### Rhythm and Cadence
-
-Viperball writing needs two gears.
-
-**The long sentence** — for drives, for tactical description, for the accumulating momentum of a sequence. "They started from their own nine-yard line after a pindown punt that died at the three, used all six downs to claw past the twenty, then did it again, grinding north through a defence that was bending but would not break, until Okafor found a crease off the left side on fifth-and-two and crossed the first-down marker with his knee an inch from the turf."
-
-**The short sentence** — for impact, for scoring plays, for the moment everything changes. "Snap kick. Good. Forty-four yards. Ballgame."
-
-Alternate between them. Long sentence to build tension. Short sentence to release it. This is the rhythm of the sport itself — the slow accumulation of a drive, then the sudden explosion of a score.
-
-### Atmosphere and Place
-
-Viperball is a college sport. The atmosphere matters. When it is relevant, write the setting:
-
-- The weather. Always. Rain changes the game completely — more fumbles, fewer kicks, the ground game ascendant. Snow and sleet are worse. Wind kills the kicking game. A snap kick from forty-four yards in the rain means something entirely different from the same kick in sunshine. Say so.
-- The crowd. Student sections. Rivalry games. The noise when a blocked snap kick bounces loose.
-- The campus. The time of year. November in Spokane is not September in Tucson.
-
-Do not manufacture atmosphere where there is none. But when the setting is part of the story, let it into the prose.
+**Keeper (KP)** — Unique to Viperball. The deepest defensive player, responsible for fielding missed kicks and punts, deciding whether to return or take the pindown, and tipping incoming snap kick attempts. A tipped snap kick is a live ball — the Keeper's team recovers it, that's a Bell. Three archetypes: Return Keeper (speed demon), Sure-Hands Keeper (never muffs), Tackle Keeper (closing speed, last-ditch stops). The Keeper archetype signals defensive philosophy.
 
 ---
 
-## Part Three: Vocabulary and Usage
+## PART FOUR: OFFENSIVE AND DEFENSIVE SCHEMES
 
-### Terms of the Sport
+### Offensive Schemes
+**Lateral Spread** — Ball moves sideways constantly. Multiple receivers, chains as the primary scoring mechanism. High upside, high Bell rate both ways.
 
-These are not suggestions. They are the correct terms.
+**Ghost Formation** — Misdirection built on the Viper. Counter plays, jet sweeps, constant motion. The defense guesses wrong when it's working; stalls spectacularly when it isn't.
 
-| The term | Not this | Notes |
-|----------|----------|-------|
-| **Zeroback** | Quarterback, QB | Never. The position is fundamentally different. |
-| **Snap kick** | Drop kick, drop goal | "Snap kick" is the viperball term. "Drop kick" describes the technique; "snap kick" is the play. |
-| **Kick pass** | Pass, throw, aerial | There is no forward pass. "Kick pass" describes a kicked ball aimed at a teammate downfield. |
-| **Place kick** | Field goal | "Field goal" is acceptable in casual usage but "place kick" is preferred. |
-| **Pindown** | Rouge, single | "Pindown" is the viperball term. "Rouge" may be used in historical or CFL-comparative context. |
-| **Bell** | Fumble recovery, turnover | A bell is 0.5 points plus possession. "Fumble recovery" misses the scoring component. |
-| **Lateral chain** | Lateral, pitch sequence | A "chain" specifically means multiple laterals on one play. A single lateral is just a lateral. |
-| **Target** or **chain target** | Receiver, wideout | Nobody is "receiving" a throw. Targets catch kick passes or receive laterals. |
-| **Flanker** | Wide receiver, winger | Flanker covers Wingbacks and Halfbacks in the offensive backfield. |
-| **Went to the boot** | Punted, kicked it away | The preferred phrase for a deliberate territorial punt. |
-| **Earned the pindown** | Pinned them deep | Emphasises the scoring aspect — a pindown is a point, not just field position. |
-| **Came up with the bell** | Recovered the fumble | Emphasises the scoring aspect. |
-| **Split the uprights** | Made the kick | Vivid. Preferred for both snap kicks and place kicks. |
+**Stampede** — Run at you, run through you. High-volume carries, power runs, grind the clock and the defense. The snap kick is the end result of a long march.
 
-### Describing Action
+**Slick N Slide** — Speed option, sweeps, run to the perimeter, make the defense chase. Forces coverage of the full field width.
 
-**Snap kicks:** Write the whole sequence. The drop, the bounce, the strike, the flight, the result. "She dropped it onto the left hash, timed the bounce, and struck it clean — forty-one yards, just inside the right upright. Five points." Not: "41-yard snap kick, good."
+**Boot Raid** — Advance methodically to scoring range (roughly the 55-85 zone), then shift to snap kicks and field goals. The kicker is the closer.
 
-**Lateral chains:** Name the links. Track the ball through hands. "The chain started with a flat pitch to the Wingback, who turned it to the Viper on the switch, who held — held — and released to the Flanker hitting the edge. Three laterals, twenty-six yards, and the defence caught flat-footed on the far side." Not: "Lateral chain for 26 yards."
+**Ball Control** — Conservative, mistake-free, clock-eating. Dives and powers, no lateral risk, kick it when in range. Lowest fumble rates, lowest drama, wins ugly.
 
-**Pindowns:** Describe the punt, the bounce, the decision, the consequence. "Rodriguez's punt hung for four seconds, came down at the eleven, and rolled dead at the three. Pindown. One point, and the Lions starting yet another drive in their own shadow." Not: "Punt, pindown."
+**Chain Gang** — Maximum lateral chains, amplified in close games. Highest Bells both ways. Feast or famine, and spectacular either way.
 
-**Bells:** Describe the chaos. The fumble, the pile, the recovery, the signal. "The lateral went off the Wingback's fingertips and the ball was live at the forty. Four bodies hit the turf in the same half-second. When the referee pulled them apart, it was St. Mary's ball — bell, half a point, and a steal in the open field." Not: "Fumble, bell."
+**Triple Threat** — Old-school single-wing misdirection. Direct snaps, counter draws, three players who can all carry. Defense can't lock onto one threat.
 
-**Touchdowns:** Write them with weight. Nine points is enormous. "She took the pitch on the left side, cut back against the grain, broke one tackle at the fifteen, and crossed the line standing up. Nine points. The deficit halved in a single play." Not: "Touchdown, 9 points."
+**Balanced** — Reads the defense, takes what's given. No tendency to solve. The hardest to game-plan against.
 
-### Describing Schemes
+### Defensive Schemes
+**Fortress** — Physical, gap-discipline run defense. Stops the dive and the power. Can be vulnerable to the perimeter.
 
-Every CVL team runs a named offensive identity. These are not gimmicks — they are philosophies, and they shape how a match unfolds. Know them. Name them when relevant.
+**Lockdown** — Focuses on kick pass coverage. Limits big aerial plays. Forces the offense to earn it on the ground.
 
-**Ground & Pound** — Power running. Slow tempo. All six downs used to grind twenty yards, again and again. Write it like a heavyweight fight: "They did not try to be clever. They ran it. Twenty-eight times they ran it, for a hundred and forty-one yards, and by the fourth quarter the defence was arm-tackling."
+**Blitz Pack** — Aggressive pressure on the Zeroback. High sack rate, high risk. One broken block and it's a 50-yard run.
 
-**Boot Raid** — Kick-heavy offence. The goal is to reach "the launch pad" — the opponent's 40-to-45-yard line — and fire snap kicks. Write it like an artillery battery: "Chen reached the launch pad six times. She converted four of them. Twenty points from her boot alone."
+**Chaos** — Forces turnovers by crowding lateral chains. High Bell rate forced. Disruptive but can give up yards in chunks.
 
-**Chain Gang** — Maximum laterals. Four or five links per play. High risk, high reward, high chaos. Write it like jazz: "The ball touched five pairs of hands on a single play. It should not have worked. It did."
+**Spread Buster** — Wide alignments, defending the perimeter. Stops sweeps and speed options. Susceptible to the interior run.
 
-**Lateral Spread** — Controlled chains of two or three laterals, stretching the defence horizontally. More disciplined than Chain Gang, less explosive, more sustainable.
+**Stacked Box** — Eight in the box. Every run play hits a wall. Forces the kick pass to beat you.
 
-**Ghost Formation** — Viper misdirection. Pre-snap motion on every play. The defence never knows where the playmaker is. Write it like a magic act: "The Viper lined up on the right, motioned left, and by the time the snap came she was behind the Zeroback. Three defenders had followed her across the formation. The Flanker was alone on the right side with fifteen yards of grass in every direction."
+**Shadow** — Man-to-man on the Viper at all times. Take her out of the game. Zone behind it.
 
-**Rouge Hunt** — Defence-first. Punt early, pin deep, score pindowns and bells and safeties. The offence exists to serve the defence. The punter is the most important offensive player. Write it like a chess match: "They were content to trade territory all afternoon. Five pindowns, two bells, a safety. Fifteen points without a single snap kick or touchdown."
-
-**Ball Control** — Conservative, mistake-free. Take available points. Win 28–24. Write it as a clinic: "They played their game and dared you to beat them. You could not."
-
-**Triple Threat** — Single-wing misdirection. Direct snaps to multiple players. Nobody knows who has the ball. Write it as vintage football resurrected: "It looked like something from 1925, and it worked."
-
-**Balanced** — No strong tendency. Adaptive. Takes what the defence gives. Write it as competence without identity: "They were comfortable everywhere and dominant nowhere."
-
-### The Five Match Archetypes
-
-Recognise which match you are covering and frame accordingly.
-
-**The Shootout** (70+ combined points): Both offences humming. Snap kicks falling. Lateral chains connecting. Write it as a duel between Zerobacks. "They traded haymakers for sixty minutes and neither blinked."
-
-**The Defensive Grind** (sub-40 combined): Drives stalling. Turnovers deciding the match. Write the defensive stars. Name the Edge Defender who had three sacks. Name the Keeper who made the last-ditch tackle. "Every yard was contested. Every point was earned."
-
-**The Kicking Duel** (high snap kick volume, few touchdowns): Both teams content to trade kicks from range. Write the kickers — their accuracy, their range, their composure. "The boot decided it."
-
-**The Chaos Match** (high turnovers, constant momentum swings): Neither team can hold the ball. Bells piling up. Lead changes on every drive. Write the disorder. "The ball had a mind of its own. Seven lead changes. Twelve bells. Nobody in the stadium knew who was winning, including the teams."
-
-**The Upset:** A heavy favourite goes down. Write the moment. "There was a play in the third quarter — a forty-nine-yard snap kick by a Zeroback nobody had heard of, in a stadium that had come expecting a coronation — and when it split the uprights, you could see the favourite's body language change. They knew."
+**Adaptation** — Reads tendencies and adjusts mid-game. Gets stronger as the game progresses. A repetitive offense is feeding this defense information.
 
 ---
 
-## Part Four: Writing From Box Scores
+## PART FIVE: THE PRE-WRITE EVALUATION
 
-This section is specifically for language models generating match coverage from statistical data.
+**Before generating any narrative, answer these questions from the box score and play-by-play. This establishes the hierarchy of the article.**
 
-### Reading the Box Score
+### Question 1: The Final Margin — Was the score honest?
+State it plainly first. Was this a blowout, a thriller, a defensive slog, a high-scoring track meet? A 25-6 final where both offenses were bad is a different article than a 25-6 final where one team dominated from the first drive. Commit to a characterization before writing a sentence.
 
-A viperball box score has six sections. Each tells you something different.
+### Question 2: The Defining Sequence — What was the hinge?
+Look for: rapid point swings, a sequence of turnovers in a short time window, a massive fourth-quarter drive, or — critically — any interception followed by a bonus possession. That last one is automatically a candidate for the hinge of the game. One interception in Viperball can generate two consecutive scoring drives. If the play-by-play shows "Lateral Intercepted" or "Kick Pass Intercepted" followed by "BONUS POSSESSION," treat that sequence as the story until the data tells you otherwise.
 
-1. **Scoring summary by quarter:** Tells you the shape of the match. Were points front-loaded? Was there a comeback? Did one team dominate a quarter?
+### Question 3: The Dominant Strategy — How did the winner win?
+- Through the air (Snap Kicks and Kick Passes)? → Write about range and aerial execution.
+- Through the trenches (Ground & Pound)? → Write about carries, yards per carry, drive length.
+- Through field position (Pindowns and punt game)? → Write about the kicking duel, territorial control.
+- Through turnovers (Bells and INTs)? → Write about the chaos, the scramble, the loose ball that changed everything.
 
-2. **Scoring breakdown by channel:** Tells you *how* teams scored. A team with three touchdowns and no snap kicks played a different match than a team with zero touchdowns and five snap kicks.
+### Question 4: The Statistical Anomaly — What number jumps off the page?
+The thing that's genuinely surprising. 0-for-9 on fourth down. Eight Bells in a game. A Zeroback who attempted 19 kick passes and completed seven. A kicker who went 4-for-6 on place kicks and that was the entire offense. Lead with what's unusual. That's where the story lives.
 
-3. **Team statistics (yards, plays, Y/P, laterals, fumbles):** Tells you who controlled the ball. High play counts mean tempo dominance. High yards-per-play means explosive offence. High fumble counts mean chaos.
-
-4. **Lateral game (chains, efficiency):** Tells you the offensive philosophy in action. Fifteen-plus chains = Chain Gang. Sub-50% efficiency = the laterals were a liability.
-
-5. **Kicking (snap kicks, place kicks, punts):** Tells you the kicking philosophy. Six snap kick attempts = Boot Raid. Eight punts = Rouge Hunt.
-
-6. **Key plays with timestamps:** Tells you the turning points. But you must reconstruct the narrative — the timestamps tell you *when*, not *why*.
-
-### The Three-Second Test
-
-Glance at the offensive scheme in the header and check the section that matters most:
-- Ground & Pound → rushing stats
-- Boot Raid → kick passing + snap kick line
-- Chain Gang → lateral chains and efficiency
-- Rouge Hunt → punt count + pindown total
-
-If the numbers match the identity, the team executed. If they do not, something happened — weather, injury, a defensive adjustment — and that mismatch is the story.
-
-### Turning Stats Into Prose
-
-**Do not simply narrate the stat line.** Instead, use the stats to reconstruct what happened, then write what happened.
-
-Ask yourself:
-- **Who won, and how?** Check scoring channels. Did they win with the boot or with the ground game?
-- **What was the shape of the match?** Check quarterly scoring. Was it close throughout, or did one team pull away?
-- **Was there a turning point?** Check key plays. A snap kick from long range, a blocked kick, a lateral chain touchdown in the fourth quarter — find the moment.
-- **What was the weather?** If conditions are listed, they are part of the story.
-- **What do the small scores tell you?** Check pindowns and bells. In a match decided by three points, the pindown count might be the entire explanation.
-
-Then write the match as a match. Open with the decisive moment or the result. Build outward from there. Weave in the statistics as evidence, not as the story itself.
-
-### Constructing a Match Report
-
-**The opening line** should establish the result and its character. Not the score alone — the *feel*.
-
-- "Gonzaga ground Marquette into the Spokane dirt and won without ever reaching the end zone."
-- "Creighton scored twelve points before Marquette touched the ball and never looked back."
-- "It took four quarters, two overtimes, and a forty-seven-yard snap kick in the rain, but Pacific finally beat Portland."
-
-**The first paragraph** expands on the opening — the score, the star, the decisive play, and the context (weather, rivalry, stakes).
-
-**The middle paragraphs** tell the story of the match in roughly chronological order. Use quarterly scoring to structure this. Name the key plays. Describe them — do not list them. Weave in statistics as evidence.
-
-**The penultimate paragraph** covers what the stats reveal: territorial dominance (pindowns), hustle (bells), kicking accuracy, lateral efficiency, defensive pressure. This is where the box score earns its place in the article — not as the skeleton, but as the supporting evidence.
-
-**The closing line** zooms out. What does this result mean for the standings, the season, the programme?
-
-### Match Report Lengths
-
-**Quick recap (3–5 sentences):** Score, star performer, decisive moment, context. "Piedmont beat Agnes Scott 57–42 behind Danielle Torres's five-from-seven snap kick performance. Torres's forty-nine-yarder in the fourth pushed the lead to three scores and ended the contest. The win moves Piedmont to 6–2 in league play."
-
-**Standard match report (200–400 words):** Opening, chronological narrative, statistical evidence, closing context. This is the bread and butter of viperball coverage.
-
-**Feature/longform (800+ words):** Opens on a single moment. Zooms out to the match. Zooms out further to the season or the career or the programme. Returns to the moment. This is where viperball writing can be genuinely great — the sport's complexity and emotional range reward longer treatment.
+### Question 5: The Delta Translation — What does the lead management story say?
+- What was each team's kill rate when leading?
+- What was the mess rate?
+- Large Delta numbers mean one team spent the game either protecting or chasing. Name that explicitly in the article.
 
 ---
 
-## Part Five: What Not to Do
+## PART SIX: WRITING THE ARTICLE
 
-These are the mistakes that make viperball coverage feel thin, wrong, or borrowed from another sport.
+### The Lede
+The first paragraph must synthesize the Phase 1 answers. It must never start with chronological events.
 
-1. **Do not call it "football without passing."** The kick pass exists. Forty-plus kick pass attempts per team per match. The game has plenty of balls in the air.
+**Formula:** [Character of the Contest] + [The Defining Anomaly or Strategy] + [The Score]
 
-2. **Do not call the Zeroback a quarterback.** She is closer to a rugby fly-half or an AFL on-baller. She runs, kicks, laterals, and reads. Calling her a QB flattens the position into something it is not.
+**Example:** "It wasn't pretty, and it certainly wasn't fluid, but the Vipers ground out a 34-22 win by abandoning the aerial game entirely and turning the midfield into a trench war — relentless multi-phase drives, hoarding possession, punishing the Cobras until they ran out of answers."
 
-3. **Do not ignore pindowns and bells.** They are legitimate scoring channels, actively pursued by smart teams. In a close match, they are often the margin. Writing that only tracks touchdowns and snap kicks is writing that misses the sport.
+**Example (blowout):** "Arizona State won 25.5 to 6 and it wasn't close. Neither offense played well. The Sun Devils just played less badly, and Joanna Pellegrini kicked four field goals in 100-degree heat."
 
-4. **Do not treat lateral chains as gimmicks.** They are as fundamental as the running game. Chain Gang teams run laterals on 30–40% of plays. Treat them the way you would treat the passing game in gridiron coverage — as core strategy.
+The score and its honest character go in the first paragraph. Always.
 
-5. **Do not forget the Viper.** The most unique position in any football code. If your match report does not mention what the Viper did — or what her presence created for others — you have missed a dimension.
+### Structure by Theme, Not Time
+Skip the first quarter unless the game was decided there. Build the article around what mattered, in order of importance:
 
-6. **Do not assume high scores mean poor defence.** The sport has six scoring channels and six downs. A defence that holds the opponent to forty-five points is having a good day. Thirty-five is dominant.
+**Section 1 — The Hinge:** The sequence that made the result inevitable. Describe it as a sequence, not a play. The interception, the return, the bonus possession, the next drive — that's one story. Write it that way.
 
-7. **Do not forget the weather.** Rain, snow, sleet, and wind transform viperball more than any other football code. A snap kick from forty-four in the rain is a fundamentally different act than the same kick in sunshine. Always note conditions when they are not clear.
+**Section 2 — The Tactical Battle:** How was it won? Use the box score to explain the *how*, not just the *what*. "The Vipers ran for 327 yards" is a stat. "Coast Guard's Lockdown scheme was designed to take away the kick pass, and it worked — but it left the edges open, and Beata Villa ran through them all night" is analysis.
 
-8. **Do not write stat-sheet prose.** "Team A had 540 yards on 92 plays" is not a sentence worth publishing. "Creighton controlled the ball for ninety-two plays, piling up five hundred and forty yards of total offence — nearly a hundred more than Marquette managed on twelve fewer snaps" tells the reader something.
+**Section 3 — The Texture:** Apply the vernacular. Describe the physical reality of the game using the cross-sport language below.
 
-9. **Do not list key plays as bullet points.** A play is a thing that happened in a match, to real people (or fictional ones), with stakes and consequences. Describe it. "Mensah's sixty-seven-yard place kick in the first quarter — a booming strike that cleared the crossbar with ten yards to spare — set the tone for everything that followed." Not: "Q1 04:29 — Mensah PLACE KICK, 67 yards, GOOD."
+### The Lexicon
 
-10. **Do not write in a monotone.** Vary your sentence length. Vary your rhythm. Build tension with long sentences. Release it with short ones. The sport has dynamics. Your prose should too.
+**The Run Game (Rugby / Gridiron)**
+"A grueling multi-phase march." "Battering the defensive anchors." "Heavy-legged gains on third and long." "Grinding out the 20 yards." "Starving the opposition of possession." "The Flanker took the dive and kept her feet."
+
+**The Kick Pass (AFL / Soccer)**
+"Launched a towering bomb for the Viper to chase." "Weighted the kick perfectly into space." "A contested grab in traffic." "Won the aerial battle at the 35." "Chipped it over the top — the Flanker ran under it and was gone."
+
+**The Snap Kick (Gaelic / AFL)**
+"Found a pocket of space and pulled the trigger." "A sublime strike on the run." "Bisected the posts from 45." "Slotted it through without breaking stride." "She didn't hesitate — gathered the bounce and put it through."
+
+**The Lateral Chain (Rugby / Soccer)**
+"Recycling possession." "Shifting the point of attack." "A sweeping four-man chain across the backline." "Flicking it wide to the Flanker." "Keeping the ball alive through contact." "Orchestrating the build-up down the left channel."
+
+**Turnovers and Bells (Rugby / Gridiron)**
+"Pounced on the spilled ball." "Won the scrap at the breakdown." "A punishing hit that jarred the ball loose." "Scavenging for Bells in the trenches." "The chain fell apart — the defense was already there."
+
+**The Interception Sequence**
+"Stepped in front of the lateral, took it the other way — and then got the ball back on top of it." "One turnover, two scoring drives, a game that was over before the offense could react." "The pick was just the beginning."
+
+### The Drive as a Unit
+A drive is a story with a beginning, middle, and end. Don't just describe the final play — describe what built to it.
+
+> Portland had been grinding for six minutes: three runs, a kick pass to the flat, a penalty, another run. By the time they reached the 70-yard line, Wright State's defense was stretched and the snap kick window was open. Pellegrini put it through from 40.
+
+That's a drive. "Pellegrini hit a 40-yard field goal" is a box score.
+
+### Game Type Tone Guide
+
+| Game Type | Lean toward... |
+|---|---|
+| Mud fight (rain, lots of Bells, low scoring) | Rugby / Gridiron — trenches, spilled ball, relentless defensive pressure, scrappy Bell accumulation |
+| Track meet (high scoring, snap kicks, lateral chains) | Soccer / AFL — fluid build-up play, end-to-end transition, stretching the backline, open-field distribution |
+| Field position war (lots of punts and pindowns) | CFL — the kicking duel, pinning them deep, punishing territorial game, suffocating the return game |
+| Turnover fest | Chaos — the scramble, the loose ball, Bells in the trenches, nobody's hands were clean |
+
+### The Tone Spectrum
+
+| Context | Channel the energy of... |
+|---|---|
+| Play-by-play | Rugby union commentary — direct, physical, urgent |
+| Match recap | The Athletic — assumes you watch, doesn't condescend |
+| Tactical analysis | Soccer tactical writing — spatial, systemic, about the shape of the game |
+| Stats / box score | Baseball sabermetrics — precise, nerdy, no hand-holding |
+| Season narrative | Friday Night Lights — community, identity, stakes |
+| Hype / preview | CFL radio — energy, rivalries, the big kick on the line |
 
 ---
 
-## Part Six: A Note on the Sport's Identity
+## PART SEVEN: WHAT NOT TO DO
 
-Viperball is a women's collegiate sport with 187 teams across the Collegiate Viperball League. It has its own history, its own culture, its own heroes, and its own arguments about strategy and greatness. It is not a novelty. It is not a minor-league version of men's football. It is not a thought experiment that forgot to stop.
+**Never explain the rules mid-action.** "She lines up the snap kick from 48 — GOOD. Five points." Not: "She attempts a snap kick, which in Viperball is worth five points and can be taken on any down."
 
-The athletes are elite. The strategy is deep. The scoring system produces results that reward intelligence, versatility, courage, and precision. The games are dramatic in ways that are unique to the sport — the tension of a snap kick attempt, the chaos of a lateral chain, the slow suffocation of a Rouge Hunt, the quiet accumulation of pindowns that wins a match nobody thought was close.
+**Never write "in this sport" or "unique to Viperball."** You are covering it, not pitching it.
 
-Write about it with the same specificity, authority, and respect you would bring to any sport you love. Find the moments that matter. Describe them well. Let the reader feel what it is like to watch a match, not just know the score.
+**Never treat the women's game as a qualifier.** This is varsity athletics. Full stop.
+
+**Never compare Viperball to football to justify it.** It doesn't need justification. It needs coverage.
+
+**Never overemphasize laterals.** They're the circus play. The game is running and kick passing. Treat laterals as the highlight, not the system.
+
+**Never let the box score write the recap.** Stats are evidence, not narrative. "She had 180 yards and zero touchdowns" is setup for a story, not the story itself.
+
+**Never write timeline prose.** "In the first quarter, X happened. Then in the second quarter, Y happened." Build the article around what mattered, not when it happened.
+
+**Never make a blowout sound close.** Commit to the character of the game. If it was a 25-6 slugfest where both offenses were bad, say so in the lede.
+
+**Never treat an interception as a single play.** It's a sequence: the pick, any return score, the bonus possession, and what happened on it. Write all of it.
 
 ---
 
-*Collegiate Viperball League — House Style Guide v2.0*
+## PART EIGHT: THE VOCABULARY TEST
+
+If you swapped "Viperball" for "rugby" or "AFL" in your writing and it still read naturally, you're doing it right.
+
+If it reads like a Wikipedia article or a funding pitch, start over.
+
+---
+
+## PART NINE: REFERENCE EXAMPLES
+
+### Full recap (correct)
+> Jessie Ryan got into open space in the fourth quarter and nobody was catching her. Forty-four yards on a speed option, and Saint Louis was up two scores with Hayes about to take a knee.
+>
+> It was that kind of night for the Billikens. Ryan finished with 166 yards and two touchdowns. Samantha Rivers added 95 and two more. Between them they scored four of Saint Louis' five without the kick pass doing much — Hayes threw for 150 yards at 33% completion. The Billikens were never in trouble on the ground, so they never needed to be brilliant through the air.
+>
+> NKU's Eaby Leach was brilliant anyway. She had to be. Three drop kicks in the rain, two touchdown connections, 251 kick-pass yards — and still down two at the final whistle.
+
+### Blowout lede (correct)
+> Arizona State won 25.5 to 6 and it wasn't close. Neither offense played well. The Sun Devils just played less badly, and Joanna Pellegrini kicked four field goals in 100-degree heat while Coast Guard's Addisyn Bruhn went 7-for-19 with a lateral pick that handed ASU a bonus possession in the third quarter and whatever hope the Bears had left.
+
+### Interception sequence (correct)
+> The game ended in the third quarter. Coast Guard was down nine, Bruhn tried to run a lateral chain on the perimeter, and the second pitch was tipped and taken — ASU went 33 yards the other way, then lined up for a bonus possession at the 20. They punted it away without scoring. It didn't matter. The snap kick was already on the board and Coast Guard had no offense left to answer with.
+
+### Tactical analysis (correct)
+> Saint Louis' Lockdown scheme was designed to force Northern Kentucky horizontal, and it worked — Leach threw for 251 yards but completed barely 45% and spent three possessions getting sacked by Elin Engen, who had four on the night. When NKU stayed patient and let Leach operate with time, they moved the ball. When the Billikens got pressure, the offense collapsed.
+
+### Drive narrative (correct)
+> Portland had been grinding for six minutes: three runs, a kick pass to the flat, a penalty, another run. By the time they reached the 70-yard line, Wright State's defense was stretched and the snap kick window was open. Pellegrini put it through from 40.
+
+### Box score line (correct)
+> Villa: 14 touches, 149 yards, 11.7 per carry. That's a Viper doing what Vipers are supposed to do — making two defenders wrong at the same time.
+
+---
+
+## PART TEN: STATS AND WHAT THEY MEAN
+
+| Stat | What it tells you |
+|---|---|
+| Yards/Carry | 8+ is dominant. 5 is solid. Below 4 means the defense is winning at the line. |
+| KP Completion % | 65%+ is efficient. 50% is workable. Below 40% is a rough night or a defense in the Zeroback's face. |
+| Snap Kick attempts | 2+ means the offense was consistently in range. 0 means they never got there or never got open looks. |
+| Delta Yards | Negative = team was leading and paying in field position. Positive = chasing. Large negative = attrition game. |
+| Kill Rate | Percentage of opponent's Delta-advantaged drives held scoreless. 50% is average. 70%+ is lead management excellence. |
+| Mess Rate | The gap between kill rate and the trailing team's actual conversion rate. High mess rate = the comeback pressure was real. |
+| Stop Rate | Percentage of opponent drives ended without a score. 40%+ is a defense that was present. Below 30% is a defense that was losing. |
+| Viper Efficiency | Composite offensive efficiency. 10+ is a great night. Below 6 is a rough one. |
+| Lateral Efficiency | Percentage of chains that succeeded. 70%+ is good. Below 50% is a team losing the ball with its own offense. |
+| Bonus Possessions | Any number above 0 means an interception happened. Check the play-by-play for the full sequence — it's the most important event in the game until proven otherwise. |
+
+---
+
+*When in doubt: commit to the character of the game first. Then tell the reader what mattered.*
