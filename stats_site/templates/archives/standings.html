@@ -64,8 +64,8 @@
   <tr>
     <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/archives/{{ archive_key }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
-    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
-    <td class="record"><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span></td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span>{% if s.ties %}-<span class="t">{{ s.ties }}</span>{% endif %}</td>
+    <td class="record"><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span>{% if s.conf_ties %}-<span class="t">{{ s.conf_ties }}</span>{% endif %}</td>
     <td class="num">{{ s.points_for }}</td>
     <td class="num">{{ s.points_against }}</td>
   </tr>

@@ -3225,11 +3225,12 @@ def dq_get_odds(session_id: str, week: int):
         ctx: dict = {"name": team_name}
         rec = standings_map.get(team_name)
         if rec:
-            ctx["record"] = f"{rec.wins}-{rec.losses}"
+            ctx["record"] = rec.record_str
             ctx["wins"] = rec.wins
             ctx["losses"] = rec.losses
+            ctx["ties"] = getattr(rec, "ties", 0)
             ctx["conf"] = getattr(rec, "conference", "") or ""
-            ctx["conf_record"] = f"{getattr(rec, 'conf_wins', 0)}-{getattr(rec, 'conf_losses', 0)}"
+            ctx["conf_record"] = rec.conf_record_str
             ctx["avg_opi"] = round(getattr(rec, "avg_opi", 0), 1)
         else:
             ctx["record"] = "0-0"

@@ -538,12 +538,48 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         game_idx_map[(w, g.home_team, g.away_team)] = idx
         week_counters_all[w] = idx + 1
 
+    # Also index playoff and bowl games for box score links
+    for g in (season.playoff_bracket or []):
+        w = g.week
+        idx = week_counters_all.get(w, 0)
+        game_idx_map[(w, g.home_team, g.away_team)] = idx
+        week_counters_all[w] = idx + 1
+    # Build a bowl name lookup by (week, home, away) for display
+    bowl_name_map = {}
+    for bg in (season.bowl_games or []):
+        g = bg.game
+        w = g.week
+        idx = week_counters_all.get(w, 0)
+        game_idx_map[(w, g.home_team, g.away_team)] = idx
+        week_counters_all[w] = idx + 1
+        bowl_name_map[(w, g.home_team, g.away_team)] = bg.name
+
     team_games = []
     for g in season.schedule:
         if g.home_team != team_name and g.away_team != team_name:
             continue
         sg = api["serialize_game"](g)
         sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        team_games.append(sg)
+
+    # Add playoff games
+    for g in (season.playoff_bracket or []):
+        if g.home_team != team_name and g.away_team != team_name:
+            continue
+        sg = api["serialize_game"](g)
+        sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        sg["is_playoff"] = True
+        team_games.append(sg)
+
+    # Add bowl games
+    for bg in (season.bowl_games or []):
+        g = bg.game
+        if g.home_team != team_name and g.away_team != team_name:
+            continue
+        sg = api["serialize_game"](g)
+        sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        sg["is_bowl"] = True
+        sg["bowl_name"] = bg.name
         team_games.append(sg)
 
     dynasty = sess.get("dynasty")
@@ -809,12 +845,56 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     sort_key = roster_sorts.get(sort, "yards")
     sorted_roster.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
+    # ── Collect awards for this team ──
+    team_awards = []
+    try:
+        from engine.awards import compute_season_awards
+        honors = compute_season_awards(
+            season, year=2025,
+            conferences=season.conferences if hasattr(season, 'conferences') else None,
+        )
+        # Individual national awards
+        for a in honors.individual_awards:
+            if a.team_name == team_name:
+                team_awards.append({"award": a.award_name, "player": a.player_name,
+                                    "position": a.position, "level": "National"})
+        # All-CVL teams
+        for tier_label, tier_obj in [
+            ("All-CVL First Team", honors.all_american_first),
+            ("All-CVL Second Team", honors.all_american_second),
+            ("All-CVL Third Team", honors.all_american_third),
+            ("All-CVL Honorable Mention", honors.honorable_mention),
+            ("All-Freshman Team", honors.all_freshman),
+        ]:
+            if tier_obj:
+                for slot in tier_obj.slots:
+                    if slot.team_name == team_name:
+                        team_awards.append({"award": tier_label, "player": slot.player_name,
+                                            "position": slot.position, "level": "National"})
+        # Conference awards
+        for conf_name, conf_awards_list in honors.conference_awards.items():
+            for a in conf_awards_list:
+                if a.team_name == team_name:
+                    team_awards.append({"award": a.award_name, "player": a.player_name,
+                                        "position": a.position, "level": "Conference"})
+        # All-Conference teams
+        for conf_name, conf_teams_dict in honors.all_conference_teams.items():
+            for tier_key, tier_obj in conf_teams_dict.items():
+                tier_label = f"All-{conf_name} {tier_obj.team_level.replace('_', ' ').title()}"
+                for slot in tier_obj.slots:
+                    if slot.team_name == team_name:
+                        team_awards.append({"award": tier_label, "player": slot.player_name,
+                                            "position": slot.position, "level": "Conference"})
+    except Exception:
+        pass
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
         team_stats=team_season_stats,
         sorted_roster=sorted_roster, sort=sort,
+        team_awards=team_awards,
     ))
 
 
@@ -827,10 +907,18 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     week_games = [g for g in season.schedule if g.week == week]
 
     # Also search playoff bracket and bowl games for postseason weeks
+    bowl_name = None
+    is_playoff = False
     if not week_games:
         playoff_games = [g for g in (season.playoff_bracket or []) if g.week == week]
-        bowl_game_list = [bg.game for bg in (season.bowl_games or []) if bg.game.week == week]
-        week_games = playoff_games or bowl_game_list
+        bowl_game_list = [(bg.game, bg.name) for bg in (season.bowl_games or []) if bg.game.week == week]
+        if playoff_games:
+            week_games = playoff_games
+            is_playoff = True
+        elif bowl_game_list:
+            week_games = [bg[0] for bg in bowl_game_list]
+            if game_idx < len(bowl_game_list):
+                bowl_name = bowl_game_list[game_idx][1]
 
     if game_idx < 0 or game_idx >= len(week_games):
         raise HTTPException(404, "Game not found")
@@ -869,6 +957,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
+        bowl_name=bowl_name, is_playoff=is_playoff,
     ))
 
 

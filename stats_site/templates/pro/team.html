@@ -144,11 +144,11 @@
       {% if g.get('completed') and g.get('score') %}
         {% if g.get('matchup_key') %}
         <a href="/stats/pro/{{ league }}/{{ session_id }}/game/{{ g.week }}/{{ g.matchup_key }}" style="text-decoration:none;">
-          <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+          <span class="{% if g.get('won') == true %}w{% elif g.get('won') is none %}t{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') == true else ('T' if g.get('won') is none else 'L') }}</span>
           {{ g.score }}
         </a>
         {% else %}
-        <span class="{% if g.get('won') %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') else 'L' }}</span>
+        <span class="{% if g.get('won') == true %}w{% elif g.get('won') is none %}t{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.get('won') == true else ('T' if g.get('won') is none else 'L') }}</span>
         {{ g.score }}
         {% endif %}
       {% elif g.get('result') %}{{ g.result }}

@@ -57,11 +57,11 @@
     <td>
       <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
     </td>
-    <td class="num {% if g.completed and g.away_score is not none and g.away_score > g.home_score %}score-win{% elif g.completed %}score-loss{% endif %}">
+    <td class="num {% if g.completed and g.away_score is not none and g.away_score > g.home_score %}score-win{% elif g.completed and g.away_score == g.home_score %}score-tie{% elif g.completed %}score-loss{% endif %}">
       {% if g.completed %}{{ g.away_score }}{% else %}&mdash;{% endif %}
     </td>
     <td style="color:var(--fg-dim)">@</td>
-    <td class="num {% if g.completed and g.home_score is not none and g.home_score > g.away_score %}score-win{% elif g.completed %}score-loss{% endif %}">
+    <td class="num {% if g.completed and g.home_score is not none and g.home_score > g.away_score %}score-win{% elif g.completed and g.home_score == g.away_score %}score-tie{% elif g.completed %}score-loss{% endif %}">
       {% if g.completed %}{{ g.home_score }}{% else %}&mdash;{% endif %}
     </td>
     <td>

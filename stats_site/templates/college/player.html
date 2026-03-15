@@ -270,7 +270,8 @@
     <td style="color:var(--fg-dim)">{{ 'vs' if g.is_home else '@' }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ g.opponent }}">{{ g.opponent[:20] }}</a></td>
     <td>
-      <span class="{% if g.won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.won else 'L' }}</span>
+      {% set tied = g.team_score == g.opp_score %}
+      <span class="{% if g.won %}w{% elif tied %}t{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if g.won else ('T' if tied else 'L') }}</span>
       {{ g.team_score }}-{{ g.opp_score }}
     </td>
     <td class="num">{{ g.get('touches', 0) }}</td>

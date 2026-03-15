@@ -617,13 +617,57 @@ def _select_slots(
 # NAMED INDIVIDUAL TROPHIES
 # ──────────────────────────────────────────────
 
+def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score any offensive player using season stats (for MVP / OPOY selection)."""
+    games = max(1, stats.get("games", 1))
+    yds = stats.get("yards", 0)
+    tds = stats.get("tds", 0)
+    kp_yds = stats.get("kick_pass_yards", 0)
+    kp_tds = stats.get("kick_pass_tds", 0)
+    lat_yds = stats.get("lateral_yards", 0)
+    raw = (yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15 + tds * 18 + kp_tds * 14) / games
+    return round(raw * team_perf_mult, 2)
+
+
+def _stat_score_lateral(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score lateral specialist using season stats."""
+    games = max(1, stats.get("games", 1))
+    lat_yds = stats.get("lateral_yards", 0)
+    lat_thrown = stats.get("laterals_thrown", 0)
+    yds = stats.get("yards", 0)
+    raw = (lat_yds * 0.6 + lat_thrown * 5 + yds * 0.1) / games
+    return round(raw * team_perf_mult, 2)
+
+
+def _stat_score_kicker(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score kicker using season stats."""
+    games = max(1, stats.get("games", 1))
+    kick_made = stats.get("kick_made", 0)
+    kick_att = max(1, stats.get("kick_att", 1))
+    pct = kick_made / kick_att
+    raw = (kick_made * 8 + pct * 30) / games
+    return round(raw * team_perf_mult, 2)
+
+
+def _stat_score_defense(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score any defensive player using season stats."""
+    games = max(1, stats.get("games", 1))
+    tackles = stats.get("tackles", 0)
+    sacks = stats.get("sacks", 0)
+    tfl = stats.get("tfl", 0)
+    raw = (tackles * 2.2 + sacks * 11 + tfl * 5.5) / games
+    return round(raw * team_perf_mult, 2)
+
+
 def _select_individual_awards(
     teams: Dict[str, Team],
     standings: dict,
+    player_stats_agg: Optional[Dict] = None,
 ) -> List[AwardWinner]:
 
     awards: List[AwardWinner] = []
     seen: set = set()
+    use_stats = bool(player_stats_agg)
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
@@ -637,9 +681,16 @@ def _select_individual_awards(
             reason=reason,
         ))
 
+    def _get_stats(team_name, player_name):
+        if use_stats:
+            team_stats = player_stats_agg.get(team_name, {})
+            return team_stats.get(player_name)
+        return None
+
     def _best(group, score_fn, exclude_set=None):
         return _best_in_position(teams, standings, group, score_fn,
-                                  exclude_set if exclude_set is not None else seen)
+                                  exclude_set if exclude_set is not None else seen,
+                                  player_stats_agg=player_stats_agg)
 
     # ── CVL MVP (national POY — any position) ──────────────────
     best_poy = None
@@ -649,7 +700,15 @@ def _select_individual_awards(
         for p in t.players:
             if f"{t_name}::{p.name}" in seen:
                 continue
-            s = _national_poy_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                if group in ("lineman", "safety"):
+                    s = _stat_score_defense(pstats, mult)
+                else:
+                    s = _stat_score_any_offense(pstats, mult)
+            else:
+                s = _national_poy_score(p, mult)
             if s > best_poy_score:
                 best_poy_score = s
                 best_poy = (p, t_name)
@@ -681,7 +740,11 @@ def _select_individual_awards(
                 continue
             if _pos_group(p.position) not in {"zeroback", "viper", "back"}:
                 continue
-            s = _lateral_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                s = _stat_score_lateral(pstats, mult)
+            else:
+                s = _lateral_score(p, mult)
             if s > best_lat_score:
                 best_lat_score = s
                 best_lat = (p, t_name)
@@ -695,7 +758,16 @@ def _select_individual_awards(
     if cand_l and cand_s:
         ml = _team_perf_mult(cand_l[1], standings)
         ms = _team_perf_mult(cand_s[1], standings)
-        pair = cand_l if _defensive_score(cand_l[0], ml) >= _defensive_score(cand_s[0], ms) else cand_s
+        # Use stats if available for comparison
+        pstats_l = _get_stats(cand_l[1], cand_l[0].name)
+        pstats_s = _get_stats(cand_s[1], cand_s[0].name)
+        if pstats_l and pstats_s:
+            score_l = _stat_score_defense(pstats_l, ml)
+            score_s = _stat_score_defense(pstats_s, ms)
+        else:
+            score_l = _defensive_score(cand_l[0], ml)
+            score_s = _defensive_score(cand_s[0], ms)
+        pair = cand_l if score_l >= score_s else cand_s
     else:
         pair = cand_l or cand_s
     if pair:
@@ -711,7 +783,11 @@ def _select_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            s = _kicker_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0 and pstats.get("kick_att", 0) > 0:
+                s = _stat_score_kicker(pstats, mult)
+            else:
+                s = _kicker_score(p, mult)
             if s > best_k_score:
                 best_k_score = s
                 best_k = (p, t_name)
@@ -731,7 +807,12 @@ def _select_individual_awards(
                 continue
             if _pos_group(p.position) not in off_groups:
                 continue
-            s = _player_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                s = _stat_score_for_group(pstats, group, mult)
+            else:
+                s = _player_score(p, mult)
             if s > best_off_score:
                 best_off_score = s
                 best_off = (p, t_name)
@@ -751,7 +832,12 @@ def _select_individual_awards(
                 continue
             if _pos_group(p.position) not in def_groups:
                 continue
-            s = _defensive_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                s = _stat_score_for_group(pstats, group, mult)
+            else:
+                s = _defensive_score(p, mult)
             if s > best_def_score:
                 best_def_score = s
                 best_def = (p, t_name)
@@ -810,6 +896,7 @@ def _select_conference_individual_awards(
     standings: dict,
     prev_season_wins: Dict[str, int] = None,
     coaching_staffs: Optional[Dict] = None,
+    player_stats_agg: Optional[Dict] = None,
 ) -> List[AwardWinner]:
     """Select conference-level individual awards mirroring national trophies."""
     conf_team_objs = {t: all_teams[t] for t in conf_teams if t in all_teams}
@@ -818,6 +905,7 @@ def _select_conference_individual_awards(
 
     awards: List[AwardWinner] = []
     seen: set = set()
+    use_stats = bool(player_stats_agg)
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
@@ -831,6 +919,12 @@ def _select_conference_individual_awards(
             reason=reason,
         ))
 
+    def _get_stats(team_name, player_name):
+        if use_stats:
+            team_stats = player_stats_agg.get(team_name, {})
+            return team_stats.get(player_name)
+        return None
+
     # Conference MVP
     best_poy = None
     best_poy_score = -1.0
@@ -839,7 +933,15 @@ def _select_conference_individual_awards(
         for p in t.players:
             if f"{t_name}::{p.name}" in seen:
                 continue
-            s = _national_poy_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                if group in ("lineman", "safety"):
+                    s = _stat_score_defense(pstats, mult)
+                else:
+                    s = _stat_score_any_offense(pstats, mult)
+            else:
+                s = _national_poy_score(p, mult)
             if s > best_poy_score:
                 best_poy_score = s
                 best_poy = (p, t_name)
@@ -859,7 +961,12 @@ def _select_conference_individual_awards(
                 continue
             if _pos_group(p.position) not in off_groups:
                 continue
-            s = _player_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                s = _stat_score_for_group(pstats, group, mult)
+            else:
+                s = _player_score(p, mult)
             if s > best_off_score:
                 best_off_score = s
                 best_off = (p, t_name)
@@ -879,7 +986,12 @@ def _select_conference_individual_awards(
                 continue
             if _pos_group(p.position) not in def_groups:
                 continue
-            s = _defensive_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                s = _stat_score_for_group(pstats, group, mult)
+            else:
+                s = _defensive_score(p, mult)
             if s > best_def_score:
                 best_def_score = s
                 best_def = (p, t_name)
@@ -898,7 +1010,15 @@ def _select_conference_individual_awards(
                 continue
             if getattr(p, "year", "") != "Freshman":
                 continue
-            s = _player_score(p, mult)
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                group = _pos_group(p.position)
+                if group in ("lineman", "safety"):
+                    s = _stat_score_for_group(pstats, group, mult)
+                else:
+                    s = _stat_score_for_group(pstats, group, mult)
+            else:
+                s = _player_score(p, mult)
             if s > best_fresh_score:
                 best_fresh_score = s
                 best_fresh = (p, t_name)
@@ -1012,7 +1132,8 @@ def compute_season_awards(
     player_stats_agg = _aggregate_player_season_stats(season)
 
     # ── Named individual trophies ──────────────────────────────────────────
-    honors.individual_awards = _select_individual_awards(teams, standings)
+    honors.individual_awards = _select_individual_awards(teams, standings,
+                                                          player_stats_agg=player_stats_agg)
 
     # ── All-CVL (1st, 2nd, 3rd, Honorable Mention) ────────────────────────
     aa_seen: set = set()
@@ -1052,6 +1173,7 @@ def compute_season_awards(
             honors.conference_awards[conf_name] = _select_conference_individual_awards(
                 conf_name, conf_teams, teams, standings, prev_season_wins,
                 coaching_staffs=coaching_staffs,
+                player_stats_agg=player_stats_agg,
             )
 
     # ── Team-level awards ─────────────────────────────────────────────────

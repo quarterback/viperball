@@ -12,7 +12,7 @@
   <h1>{{ team.name }} {{ team.mascot }}</h1>
   <div class="subtitle">
     {{ team.abbreviation }}
-    {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span> ({{ record.conference }}){% endif %}
+    {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span>{% if record.ties %}-<span class="t">{{ record.ties }}</span>{% endif %}</span> ({{ record.conference }}){% endif %}
     {% if prestige %} &middot; Prestige: {{ prestige }}{% endif %}
   </div>
 </div>
@@ -22,7 +22,7 @@
 <div class="grid-4" style="margin-bottom: 16px;">
   <div class="metric">
     <div class="label">Record</div>
-    <div class="value"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></div>
+    <div class="value"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span>{% if record.ties %}-<span class="t">{{ record.ties }}</span>{% endif %}</div>
   </div>
   <div class="metric">
     <div class="label">Points Per Drive</div>
@@ -231,14 +231,15 @@
   {% set is_home = (g.home_team == team_name) %}
   {% set opponent = g.away_team if is_home else g.home_team %}
   {% set won = g.completed and ((is_home and g.home_score > g.away_score) or (not is_home and g.away_score > g.home_score)) %}
+  {% set tied = g.completed and g.home_score == g.away_score %}
   <tr>
-    <td class="num">{{ g.week }}</td>
+    <td class="num">{% if g.get('bowl_name') %}Bowl{% elif g.get('is_playoff') %}PO{% else %}{{ g.week }}{% endif %}</td>
     <td style="color:var(--fg-dim)">{{ 'vs' if is_home else '@' }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ opponent }}">{{ opponent }}</a></td>
     <td>
       {% if g.completed %}
       <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}" style="text-decoration:none;">
-        <span class="{% if won %}w{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else 'L' }}</span>
+        <span class="{% if won %}w{% elif tied %}t{% else %}l{% endif %}" style="font-weight:bold">{{ 'W' if won else ('T' if tied else 'L') }}</span>
         {% if is_home %}{{ g.home_score }}-{{ g.away_score }}{% else %}{{ g.away_score }}-{{ g.home_score }}{% endif %}
       </a>
       {% else %}
@@ -246,6 +247,8 @@
       {% endif %}
     </td>
     <td>
+      {% if g.get('bowl_name') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ g.bowl_name }}</span>{% endif %}
+      {% if g.get('is_playoff') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">PLAYOFF</span>{% endif %}
       {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
     </td>
@@ -256,6 +259,30 @@
 </div>
 
 </div>
+
+{# ── Awards ── #}
+{% if team_awards %}
+<div>
+<h2>Awards</h2>
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Award</th><th>Player</th><th>Position</th><th>Level</th></tr>
+  </thead>
+  <tbody>
+  {% for a in team_awards %}
+  <tr>
+    <td>{{ a.award }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ a.player }}">{{ a.player }}</a></td>
+    <td>{{ a.position }}</td>
+    <td><span class="tag {% if a.level == 'National' %}tag-rivalry{% else %}tag-conf{% endif %}">{{ a.level }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endif %}
 
 {# ── Roster ── #}
 <div>

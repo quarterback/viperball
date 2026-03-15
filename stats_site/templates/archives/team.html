@@ -85,6 +85,7 @@
   {% set team_score = g.home_score if is_home else g.away_score %}
   {% set opp_score = g.away_score if is_home else g.home_score %}
   {% set won = team_score is not none and opp_score is not none and team_score > opp_score %}
+  {% set tied = team_score is not none and opp_score is not none and team_score == opp_score %}
   <tr>
     <td class="num">{{ g.week }}</td>
     <td>
@@ -98,7 +99,7 @@
     </td>
     <td>
       {% if g.completed %}
-        <span class="{% if won %}w{% else %}l{% endif %}">{{ 'W' if won else 'L' }}</span>
+        <span class="{% if won %}w{% elif tied %}t{% else %}l{% endif %}">{{ 'W' if won else ('T' if tied else 'L') }}</span>
       {% endif %}
     </td>
     <td>
