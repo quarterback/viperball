@@ -178,6 +178,7 @@ class TeamRecord:
     team_name: str
     wins: int = 0
     losses: int = 0
+    ties: int = 0
     points_for: float = 0.0
     points_against: float = 0.0
     conference: str = ""
@@ -210,6 +211,7 @@ class TeamRecord:
 
     conf_wins: int = 0
     conf_losses: int = 0
+    conf_ties: int = 0
 
     offense_style: str = "balanced"
     defense_style: str = "swarm"
@@ -246,7 +248,7 @@ class TeamRecord:
     bonus_poss_yards: int = 0
     opponent_bonus_poss_scores: int = 0
 
-    def add_game_result(self, won: bool, points_for: float, points_against: float,
+    def add_game_result(self, won: Optional[bool], points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
                         defensive_ints: int = 0,
                         rushing_yards_allowed: int = 0,
@@ -255,7 +257,11 @@ class TeamRecord:
                         opponent_dye_data: Optional[Dict] = None,
                         bonus_data: Optional[Dict] = None,
                         opponent_bonus_data: Optional[Dict] = None):
-        if won:
+        if won is None:
+            self.ties += 1
+            if is_conference_game:
+                self.conf_ties += 1
+        elif won:
             self.wins += 1
             if is_conference_game:
                 self.conf_wins += 1
@@ -460,18 +466,30 @@ class TeamRecord:
 
     @property
     def win_percentage(self) -> float:
-        total_games = self.wins + self.losses
-        return self.wins / total_games if total_games > 0 else 0.0
+        total_games = self.wins + self.losses + self.ties
+        return (self.wins + 0.5 * self.ties) / total_games if total_games > 0 else 0.0
 
     @property
     def conf_win_percentage(self) -> float:
-        total = self.conf_wins + self.conf_losses
-        return self.conf_wins / total if total > 0 else 0.0
+        total = self.conf_wins + self.conf_losses + self.conf_ties
+        return (self.conf_wins + 0.5 * self.conf_ties) / total if total > 0 else 0.0
 
     @property
     def point_differential(self) -> float:
-        total_games = self.wins + self.losses
+        total_games = self.wins + self.losses + self.ties
         return (self.points_for - self.points_against) / total_games if total_games > 0 else 0.0
+
+    @property
+    def record_str(self) -> str:
+        if self.ties:
+            return f"{self.wins}-{self.losses}-{self.ties}"
+        return f"{self.wins}-{self.losses}"
+
+    @property
+    def conf_record_str(self) -> str:
+        if self.conf_ties:
+            return f"{self.conf_wins}-{self.conf_losses}-{self.conf_ties}"
+        return f"{self.conf_wins}-{self.conf_losses}"
 
     def _check_no_fly_zone(self):
         """V2.4: Check if team has earned No-Fly Zone defensive prestige.
@@ -838,6 +856,7 @@ class Season:
     team_states: Dict[str, str] = field(default_factory=dict)
 
     weekly_polls: List[WeeklyPoll] = field(default_factory=list)
+    weekly_awards: List[Dict] = field(default_factory=list)
 
     playoff_bracket: List[Game] = field(default_factory=list)
     playoff_seeds: Dict[str, int] = field(default_factory=dict)  # team_name -> seed number
@@ -1489,8 +1508,9 @@ class Season:
                           home_metrics: Dict, away_metrics: Dict,
                           fcs_side: Optional[str]):
         """Update standings for both teams after a game."""
-        home_won = game.home_score > game.away_score
-        away_won = game.away_score > game.home_score
+        is_tie = game.home_score == game.away_score
+        home_won = None if is_tie else (game.home_score > game.away_score)
+        away_won = None if is_tie else (game.away_score > game.home_score)
 
         away_stats = result.get("final_score", {}).get("away", {}).get("stats", {})
         home_stats = result.get("final_score", {}).get("home", {}).get("stats", {})
@@ -1555,6 +1575,160 @@ class Season:
                 opponent_bonus_data=home_bonus,
             )
 
+    def _compute_weekly_awards(self, week: int, week_games: List[Game]):
+        """Compute Player of the Week awards after a week's games."""
+        # Collect all player performances this week
+        performances = []  # (player_name, team_name, position, score, stat_line)
+        for game in week_games:
+            if not game.completed or not getattr(game, "full_result", None):
+                continue
+            fr = game.full_result
+            ps = fr.get("player_stats", {})
+            for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+                for p in ps.get(side, []):
+                    name = p.get("name", "")
+                    if not name:
+                        continue
+                    pos = p.get("position", "")
+                    pos_lower = pos.lower()
+                    # Score based on actual game performance
+                    yards = p.get("yards", 0)
+                    tds = p.get("tds", 0)
+                    kp_yds = p.get("kick_pass_yards", 0)
+                    kp_tds = p.get("kick_pass_tds", 0)
+                    tackles = p.get("tackles", 0)
+                    sacks = p.get("sacks", 0)
+                    tfl = p.get("tfl", 0)
+                    wpa = p.get("wpa", 0.0)
+                    # Offensive score
+                    off_score = yards * 0.3 + tds * 25 + kp_yds * 0.25 + kp_tds * 20 + wpa * 15
+                    # Defensive score
+                    def_score = tackles * 3 + sacks * 15 + tfl * 8 + wpa * 15
+                    # Use whichever is higher (position-agnostic)
+                    if any(k in pos_lower for k in ["line", "safety", "keeper", "wedge"]):
+                        score = def_score
+                        stat_parts = [f"{tackles} TKL"]
+                        if sacks:
+                            stat_parts.append(f"{sacks} sacks")
+                        if tfl:
+                            stat_parts.append(f"{tfl} TFL")
+                    else:
+                        score = off_score
+                        stat_parts = [f"{yards} yds"]
+                        if tds:
+                            stat_parts.append(f"{tds} TD")
+                        if kp_yds:
+                            stat_parts.append(f"{kp_yds} KP yds")
+                        if kp_tds:
+                            stat_parts.append(f"{kp_tds} KP TD")
+                    stat_line = ", ".join(stat_parts)
+                    performances.append((name, team_name, pos, score, stat_line))
+
+        if not performances:
+            return
+
+        # National Player of the Week - best overall
+        performances.sort(key=lambda x: x[3], reverse=True)
+        best = performances[0]
+        self.weekly_awards.append({
+            "week": week,
+            "award": "National Player of the Week",
+            "player_name": best[0],
+            "team_name": best[1],
+            "position": best[2],
+            "stat_line": best[4],
+        })
+
+        # Conference Players of the Week
+        conf_best = {}
+        for name, team_name, pos, score, stat_line in performances:
+            conf = self.team_conferences.get(team_name, "")
+            if not conf:
+                continue
+            if conf not in conf_best or score > conf_best[conf][3]:
+                conf_best[conf] = (name, team_name, pos, score, stat_line)
+
+        for conf, (name, team_name, pos, _, stat_line) in conf_best.items():
+            # Don't duplicate if same as national winner
+            if name == best[0] and team_name == best[1]:
+                continue
+            self.weekly_awards.append({
+                "week": week,
+                "award": f"{conf} Player of the Week",
+                "player_name": name,
+                "team_name": team_name,
+                "position": pos,
+                "stat_line": stat_line,
+            })
+
+        # ── Coach of the Week ──
+        # Score winning coaches by margin of victory + upset bonus
+        coach_performances = []  # (coach_display, team_name, score, stat_line)
+        for game in week_games:
+            if not game.completed:
+                continue
+            if game.home_score == game.away_score:
+                continue  # ties — no coach of the week for ties
+            if game.home_score > game.away_score:
+                win_team, lose_team = game.home_team, game.away_team
+                margin = game.home_score - game.away_score
+            else:
+                win_team, lose_team = game.away_team, game.home_team
+                margin = game.away_score - game.home_score
+            # Get prestige for upset bonus
+            win_prestige = getattr(self.teams.get(win_team), "prestige", 50) if win_team in self.teams else 50
+            lose_prestige = getattr(self.teams.get(lose_team), "prestige", 50) if lose_team in self.teams else 50
+            upset_bonus = max(0, (lose_prestige - win_prestige) * 0.5)
+            coach_score = margin + upset_bonus
+            # Look up head coach name
+            coach_display = win_team
+            staff = self.coaching_staffs.get(win_team, {})
+            hc = staff.get("head_coach")
+            if hc:
+                first = getattr(hc, "first_name", "") or ""
+                last = getattr(hc, "last_name", "") or ""
+                cname = f"{first} {last}".strip()
+                if cname:
+                    coach_display = f"{cname} ({win_team})"
+            # Build stat line
+            rec = self.standings.get(win_team)
+            rec_str = rec.record_str if rec else ""
+            stat_line = f"W by {margin:.1f}" if margin != int(margin) else f"W by {int(margin)}"
+            if rec_str:
+                stat_line += f", {rec_str}"
+            coach_performances.append((coach_display, win_team, coach_score, stat_line))
+
+        if coach_performances:
+            coach_performances.sort(key=lambda x: x[2], reverse=True)
+            best_coach = coach_performances[0]
+            self.weekly_awards.append({
+                "week": week,
+                "award": "National Coach of the Week",
+                "player_name": best_coach[0],
+                "team_name": best_coach[1],
+                "position": "Coach",
+                "stat_line": best_coach[3],
+            })
+            # Conference Coach of the Week
+            conf_best_coach = {}
+            for coach_display, team_name, score, stat_line in coach_performances:
+                conf = self.team_conferences.get(team_name, "")
+                if not conf:
+                    continue
+                if conf not in conf_best_coach or score > conf_best_coach[conf][2]:
+                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line)
+            for conf, (coach_display, team_name, _, stat_line) in conf_best_coach.items():
+                if coach_display == best_coach[0] and team_name == best_coach[1]:
+                    continue
+                self.weekly_awards.append({
+                    "week": week,
+                    "award": f"{conf} Coach of the Week",
+                    "player_name": coach_display,
+                    "team_name": team_name,
+                    "position": "Coach",
+                    "stat_line": stat_line,
+                })
+
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
                       generate_polls: bool = True, rng=None,
                       dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
@@ -1587,6 +1761,9 @@ class Season:
         for game in week_games:
             self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts,
                                use_fast_sim=use_fast_sim)
+
+        if week_games:
+            self._compute_weekly_awards(week, week_games)
 
         if generate_polls and week_games:
             self._generate_weekly_poll(week)
@@ -1774,24 +1951,31 @@ class Season:
                 penalty += 4.5
         return penalty
 
-    def _non_conference_record(self, team_name: str) -> Tuple[int, int]:
-        """Get non-conference wins and losses"""
+    def _non_conference_record(self, team_name: str) -> Tuple[int, int, int]:
+        """Get non-conference wins, losses, and ties"""
         nc_wins = 0
         nc_losses = 0
+        nc_ties = 0
         for game in self.schedule:
             if not game.completed or game.is_conference_game:
                 continue
             if game.home_team == team_name:
-                if (game.home_score or 0) > (game.away_score or 0):
+                hs, aws = (game.home_score or 0), (game.away_score or 0)
+                if hs > aws:
                     nc_wins += 1
-                else:
+                elif aws > hs:
                     nc_losses += 1
+                else:
+                    nc_ties += 1
             elif game.away_team == team_name:
-                if (game.away_score or 0) > (game.home_score or 0):
+                hs, aws = (game.home_score or 0), (game.away_score or 0)
+                if aws > hs:
                     nc_wins += 1
-                else:
+                elif hs > aws:
                     nc_losses += 1
-        return nc_wins, nc_losses
+                else:
+                    nc_ties += 1
+        return nc_wins, nc_losses, nc_ties
 
     def _conference_strength(self, conference: str) -> float:
         """Calculate conference strength based on non-conference performance of all members"""
@@ -1801,9 +1985,9 @@ class Season:
         total_nc_wins = 0
         total_nc_games = 0
         for team in conf_teams:
-            nc_w, nc_l = self._non_conference_record(team)
+            nc_w, nc_l, nc_t = self._non_conference_record(team)
             total_nc_wins += nc_w
-            total_nc_games += nc_w + nc_l
+            total_nc_games += nc_w + nc_l + nc_t
         return total_nc_wins / total_nc_games if total_nc_games > 0 else 0.5
 
     def calculate_power_index(self, team_name: str) -> float:
@@ -1834,8 +2018,8 @@ class Season:
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
-        nc_w, nc_l = self._non_conference_record(team_name)
-        nc_total = nc_w + nc_l
+        nc_w, nc_l, nc_t = self._non_conference_record(team_name)
+        nc_total = nc_w + nc_l + nc_t
         nc_component = (nc_w / nc_total * 10.0) if nc_total > 0 else 5.0
 
         conf = self.team_conferences.get(team_name, "")
@@ -1902,7 +2086,7 @@ class Season:
             rankings.append(PollRanking(
                 rank=i,
                 team_name=team_name,
-                record=f"{record.wins}-{record.losses}",
+                record=record.record_str,
                 conference=record.conference,
                 poll_score=round(pi, 2),
                 prev_rank=prev_ranks.get(team_name),
@@ -2037,7 +2221,7 @@ class Season:
             field.append({
                 "seed": i + 1,
                 "team_name": team_name,
-                "record": f"{rec.wins}-{rec.losses}",
+                "record": rec.record_str,
                 "conference": self.team_conferences.get(team_name, ""),
                 "bid_type": self.get_playoff_bid_type(team_name),
                 "power_index": round(self.calculate_power_index(team_name), 2),
@@ -2058,7 +2242,7 @@ class Season:
                 rec = self.standings[team_name]
                 bubble_out.append({
                     "team_name": team_name,
-                    "record": f"{rec.wins}-{rec.losses}",
+                    "record": rec.record_str,
                     "conference": self.team_conferences.get(team_name, ""),
                     "power_index": round(pi, 2),
                     "quality_wins": qw,
@@ -2347,7 +2531,7 @@ class Season:
 
         non_playoff = [t for t in standings if t.team_name not in playoff_team_names]
 
-        total_games = max((t.wins + t.losses) for t in standings) if standings else 0
+        total_games = max((t.wins + t.losses + t.ties) for t in standings) if standings else 0
         threshold = total_games / 2 if total_games > 0 else 0
 
         eligible = [t for t in non_playoff if t.wins >= threshold]
@@ -2422,8 +2606,8 @@ class Season:
                 game=game,
                 team_1_seed=a_seed,
                 team_2_seed=b_seed,
-                team_1_record=f"{team_a.wins}-{team_a.losses}",
-                team_2_record=f"{team_b.wins}-{team_b.losses}",
+                team_1_record=team_a.record_str,
+                team_2_record=team_b.record_str,
             )
             self.bowl_games.append(bowl)
 

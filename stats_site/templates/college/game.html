@@ -3,7 +3,7 @@
 
 {% block breadcrumb %}
 <div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/schedule?week={{ week }}">Week {{ week }}</a><span class="sep">/</span>Box Score
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span>{% if bowl_name %}{{ bowl_name }}{% elif is_playoff %}<a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>{% else %}<a href="/stats/college/{{ session_id }}/schedule?week={{ week }}">Week {{ week }}</a>{% endif %}<span class="sep">/</span>Box Score
 </div></div>
 {% endblock %}
 
@@ -14,18 +14,20 @@
   <div class="box-team">
     <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.away_team }}">{{ game.away_team }}</a></div>
     <div class="record">Away</div>
-    <div class="box-score-final {% if game.away_score > game.home_score %}score-win{% else %}score-loss{% endif %}">{{ game.away_score }}</div>
+    <div class="box-score-final {% if game.away_score > game.home_score %}score-win{% elif game.away_score == game.home_score %}score-tie{% else %}score-loss{% endif %}">{{ game.away_score }}</div>
   </div>
   <div class="box-score-vs">
     <div>FINAL</div>
-    <div>Week {{ week }}</div>
+    <div>{% if bowl_name %}{{ bowl_name }}{% elif is_playoff %}Playoff{% else %}Week {{ week }}{% endif %}</div>
+    {% if bowl_name %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">BOWL</span>{% endif %}
+    {% if is_playoff %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">PLAYOFF</span>{% endif %}
     {% if game.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
     {% if game.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
   </div>
   <div class="box-team">
     <div class="name"><a href="/stats/college/{{ session_id }}/team/{{ game.home_team }}">{{ game.home_team }}</a></div>
     <div class="record">Home</div>
-    <div class="box-score-final {% if game.home_score > game.away_score %}score-win{% else %}score-loss{% endif %}">{{ game.home_score }}</div>
+    <div class="box-score-final {% if game.home_score > game.away_score %}score-win{% elif game.home_score == game.away_score %}score-tie{% else %}score-loss{% endif %}">{{ game.home_score }}</div>
   </div>
 </div>
 

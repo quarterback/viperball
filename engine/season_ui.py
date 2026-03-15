@@ -71,7 +71,7 @@ def display_team_dashboard(record: TeamRecord, rank: Optional[int] = None):
     print(f"{'=' * 70}")
 
     # Record and styles
-    print(f"{'Record:':<25} {record.wins}-{record.losses} ({record.win_percentage*100:.1f}%)")
+    print(f"{'Record:':<25} {record.record_str} ({record.win_percentage*100:.1f}%)")
     print(f"{'Offense:':<25} {format_offense_style(record.offense_style)}")
     print(f"{'Defense:':<25} {format_defense_style(record.defense_style)}")
     print(f"{'Points For/Game:':<25} {record.points_for / max(1, record.games_played):.1f}")
@@ -144,7 +144,7 @@ def display_standings(season: Season, show_metrics: bool = True):
         rank = f"{i}."
         team = record.team_name[:19]
         styles = f"{format_offense_style(record.offense_style)[:12]}/{format_defense_style(record.defense_style)[:10]}"
-        wl = f"{record.wins}-{record.losses}"
+        wl = record.record_str
         pf = f"{record.points_for / max(1, record.games_played):.1f}"
         pa = f"{record.points_against / max(1, record.games_played):.1f}"
         diff = f"{record.point_differential:+.1f}"
@@ -226,7 +226,7 @@ def display_season_summary(season: Season):
     if season.champion:
         champion_record = season.standings[season.champion]
         print(f"\n{'🏆 CHAMPION: ' + season.champion.upper() + ' 🏆':^100}")
-        print(f"{'Final Record: ' + str(champion_record.wins) + '-' + str(champion_record.losses):^100}")
+        print(f"{'Final Record: ' + champion_record.record_str:^100}")
         print(f"{'Offense: ' + format_offense_style(champion_record.offense_style) + ' / Defense: ' + format_defense_style(champion_record.defense_style):^100}")
 
     # Season awards
@@ -237,7 +237,7 @@ def display_season_summary(season: Season):
 
     # Best record
     best_record = standings[0]
-    print(f"  🥇 Best Record: {best_record.team_name} ({best_record.wins}-{best_record.losses})")
+    print(f"  🥇 Best Record: {best_record.team_name} ({best_record.record_str})")
 
     # Highest scoring
     highest_scoring = max(standings, key=lambda r: r.points_for / max(1, r.games_played))

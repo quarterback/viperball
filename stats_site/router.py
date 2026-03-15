@@ -538,12 +538,48 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         game_idx_map[(w, g.home_team, g.away_team)] = idx
         week_counters_all[w] = idx + 1
 
+    # Also index playoff and bowl games for box score links
+    for g in (season.playoff_bracket or []):
+        w = g.week
+        idx = week_counters_all.get(w, 0)
+        game_idx_map[(w, g.home_team, g.away_team)] = idx
+        week_counters_all[w] = idx + 1
+    # Build a bowl name lookup by (week, home, away) for display
+    bowl_name_map = {}
+    for bg in (season.bowl_games or []):
+        g = bg.game
+        w = g.week
+        idx = week_counters_all.get(w, 0)
+        game_idx_map[(w, g.home_team, g.away_team)] = idx
+        week_counters_all[w] = idx + 1
+        bowl_name_map[(w, g.home_team, g.away_team)] = bg.name
+
     team_games = []
     for g in season.schedule:
         if g.home_team != team_name and g.away_team != team_name:
             continue
         sg = api["serialize_game"](g)
         sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        team_games.append(sg)
+
+    # Add playoff games
+    for g in (season.playoff_bracket or []):
+        if g.home_team != team_name and g.away_team != team_name:
+            continue
+        sg = api["serialize_game"](g)
+        sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        sg["is_playoff"] = True
+        team_games.append(sg)
+
+    # Add bowl games
+    for bg in (season.bowl_games or []):
+        g = bg.game
+        if g.home_team != team_name and g.away_team != team_name:
+            continue
+        sg = api["serialize_game"](g)
+        sg["week_game_idx"] = game_idx_map.get((g.week, g.home_team, g.away_team), 0)
+        sg["is_bowl"] = True
+        sg["bowl_name"] = bg.name
         team_games.append(sg)
 
     dynasty = sess.get("dynasty")
@@ -809,12 +845,170 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     sort_key = roster_sorts.get(sort, "yards")
     sorted_roster.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
+    # ── Collect awards for this team ──
+    team_awards = []
+    # Weekly awards (player & coach of the week) — show as they happen
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("team_name") == team_name:
+            team_awards.append({
+                "award": wa["award"], "player": wa["player_name"],
+                "position": wa.get("position", ""), "level": f"Week {wa['week']}",
+            })
+    regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
+    if regular_season_done:
+        try:
+            from engine.awards import compute_season_awards
+            honors = compute_season_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            # Individual national awards
+            for a in honors.individual_awards:
+                if a.team_name == team_name:
+                    team_awards.append({"award": a.award_name, "player": a.player_name,
+                                        "position": a.position, "level": "National"})
+            # All-CVL teams
+            for tier_label, tier_obj in [
+                ("All-CVL First Team", honors.all_american_first),
+                ("All-CVL Second Team", honors.all_american_second),
+                ("All-CVL Third Team", honors.all_american_third),
+                ("All-CVL Honorable Mention", honors.honorable_mention),
+                ("All-Freshman Team", honors.all_freshman),
+            ]:
+                if tier_obj:
+                    for slot in tier_obj.slots:
+                        if slot.team_name == team_name:
+                            team_awards.append({"award": tier_label, "player": slot.player_name,
+                                                "position": slot.position, "level": "National"})
+            # Conference awards
+            for conf_name, conf_awards_list in honors.conference_awards.items():
+                for a in conf_awards_list:
+                    if a.team_name == team_name:
+                        team_awards.append({"award": a.award_name, "player": a.player_name,
+                                            "position": a.position, "level": "Conference"})
+            # All-Conference teams
+            for conf_name, conf_teams_dict in honors.all_conference_teams.items():
+                for tier_key, tier_obj in conf_teams_dict.items():
+                    tier_label = f"All-{conf_name} {tier_obj.team_level.replace('_', ' ').title()}"
+                    for slot in tier_obj.slots:
+                        if slot.team_name == team_name:
+                            team_awards.append({"award": tier_label, "player": slot.player_name,
+                                                "position": slot.position, "level": "Conference"})
+        except Exception:
+            pass
+
+    # ── Coaching staff for this team ──
+    coaching_staff = []
+    staff_dict = (season.coaching_staffs or {}).get(team_name, {})
+    if staff_dict:
+        from engine.coaching import CoachCard
+        for role in ["head_coach", "oc", "dc", "stc"]:
+            card = staff_dict.get(role)
+            if not card:
+                continue
+            if isinstance(card, dict):
+                card = CoachCard.from_dict(card)
+            role_label = {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, role)
+            coaching_staff.append({
+                "role": role, "role_label": role_label,
+                "name": card.full_name,
+                "overall": round(card.visible_score, 1),
+                "classification_label": card.classification_label,
+                "composure_label": card.composure_label,
+                "career_wins": card.career_wins, "career_losses": card.career_losses,
+                "win_pct": round(card.win_percentage, 3),
+                "championships": card.championships,
+                "philosophy": card.philosophy,
+                "coaching_style": card.coaching_style,
+            })
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
         record=team_record, games=team_games, prestige=prestige,
         team_stats=team_season_stats,
         sorted_roster=sorted_roster, sort=sort,
+        team_awards=team_awards,
+        coaching_staff=coaching_staff,
+    ))
+
+
+@router.get("/college/{session_id}/coach/{team_name}/{coach_role}", response_class=HTMLResponse)
+def college_coach(request: Request, session_id: str, team_name: str, coach_role: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    if team_name not in season.teams:
+        raise HTTPException(404, f"Team '{team_name}' not found")
+
+    staff_dict = (season.coaching_staffs or {}).get(team_name, {})
+    card = staff_dict.get(coach_role)
+    if not card:
+        raise HTTPException(404, f"No coach found for role '{coach_role}' at {team_name}")
+
+    from engine.coaching import CoachCard
+    if isinstance(card, dict):
+        card = CoachCard.from_dict(card)
+
+    role_label = {"head_coach": "Head Coach", "oc": "Offensive Coordinator",
+                  "dc": "Defensive Coordinator", "stc": "Special Teams Coordinator"}.get(coach_role, coach_role)
+
+    # Career history
+    career_history = []
+    for stop in (card.career_history or []):
+        if isinstance(stop, dict):
+            career_history.append(stop)
+        else:
+            career_history.append(stop.to_dict())
+
+    # Coaching tree
+    coaching_tree = list(card.coaching_tree or [])
+
+    # Team record this season
+    record = season.standings.get(team_name)
+    season_record = record.record_str if record else "0-0"
+
+    # Collect awards for this coach
+    coach_awards = []
+    coach_display = card.full_name
+    coach_display_paren = f"{card.full_name} ({team_name})"
+    # Weekly awards
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("position") == "Coach" and wa.get("team_name") == team_name:
+            coach_awards.append({
+                "award": wa["award"], "detail": f"Week {wa['week']}",
+                "stat_line": wa.get("stat_line", ""),
+            })
+    # End-of-season awards
+    regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
+    if regular_season_done:
+        try:
+            from engine.awards import compute_season_awards
+            honors = compute_season_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            # National Coach of the Year
+            if honors.coach_of_year and (team_name in honors.coach_of_year):
+                coach_awards.append({"award": "National Coach of the Year", "detail": "Season", "stat_line": season_record})
+            # Conference awards
+            for conf_name, conf_awards_list in honors.conference_awards.items():
+                for a in conf_awards_list:
+                    if a.position == "Coach" and a.team_name == team_name:
+                        coach_awards.append({"award": a.award_name, "detail": "Season", "stat_line": season_record})
+        except Exception:
+            pass
+
+    # Personality sliders for display
+    sliders = card.personality_sliders or {}
+
+    return templates.TemplateResponse("college/coach.html", _ctx(
+        request, section="college", session_id=session_id,
+        coach=card, team_name=team_name, role=coach_role, role_label=role_label,
+        career_history=career_history, coaching_tree=coaching_tree,
+        season_record=season_record, coach_awards=coach_awards,
+        sliders=sliders,
     ))
 
 
@@ -827,10 +1021,18 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     week_games = [g for g in season.schedule if g.week == week]
 
     # Also search playoff bracket and bowl games for postseason weeks
+    bowl_name = None
+    is_playoff = False
     if not week_games:
         playoff_games = [g for g in (season.playoff_bracket or []) if g.week == week]
-        bowl_game_list = [bg.game for bg in (season.bowl_games or []) if bg.game.week == week]
-        week_games = playoff_games or bowl_game_list
+        bowl_game_list = [(bg.game, bg.name) for bg in (season.bowl_games or []) if bg.game.week == week]
+        if playoff_games:
+            week_games = playoff_games
+            is_playoff = True
+        elif bowl_game_list:
+            week_games = [bg[0] for bg in bowl_game_list]
+            if game_idx < len(bowl_game_list):
+                bowl_name = bowl_game_list[game_idx][1]
 
     if game_idx < 0 or game_idx >= len(week_games):
         raise HTTPException(404, "Game not found")
@@ -869,6 +1071,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
+        bowl_name=bowl_name, is_playoff=is_playoff,
     ))
 
 
@@ -1013,11 +1216,61 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
     cross_links = _find_cross_league_links(player_name, exclude_college_session=session_id)
 
+    # ── Collect awards for this player ──
+    player_awards = []
+
+    # Weekly awards
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("player_name") == player_name and wa.get("team_name") == team_name:
+            player_awards.append({
+                "award": wa["award"],
+                "detail": f"Week {wa['week']}",
+                "stat_line": wa.get("stat_line", ""),
+                "level": "weekly",
+            })
+
+    # End-of-season awards (only if regular season complete)
+    regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
+    if regular_season_done:
+        try:
+            from engine.awards import compute_season_awards
+            honors = compute_season_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            for a in honors.individual_awards:
+                if a.player_name == player_name and a.team_name == team_name:
+                    player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "national"})
+            for tier_label, tier_obj in [
+                ("All-CVL First Team", honors.all_american_first),
+                ("All-CVL Second Team", honors.all_american_second),
+                ("All-CVL Third Team", honors.all_american_third),
+                ("All-CVL Honorable Mention", honors.honorable_mention),
+                ("All-Freshman Team", honors.all_freshman),
+            ]:
+                if tier_obj:
+                    for slot in tier_obj.slots:
+                        if slot.player_name == player_name and slot.team_name == team_name:
+                            player_awards.append({"award": tier_label, "detail": "Season", "stat_line": "", "level": "national"})
+            for conf_name, conf_awards_list in honors.conference_awards.items():
+                for a in conf_awards_list:
+                    if a.player_name == player_name and a.team_name == team_name:
+                        player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "conference"})
+            for conf_name, conf_teams_dict in honors.all_conference_teams.items():
+                for tier_key, tier_obj in conf_teams_dict.items():
+                    tier_label = f"All-{conf_name} {tier_obj.team_level.replace('_', ' ').title()}"
+                    for slot in tier_obj.slots:
+                        if slot.player_name == player_name and slot.team_name == team_name:
+                            player_awards.append({"award": tier_label, "detail": "Season", "stat_line": "", "level": "conference"})
+        except Exception:
+            pass
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
         record=team_record, prestige=prestige, cross_links=cross_links,
+        player_awards=player_awards,
     ))
 
 
