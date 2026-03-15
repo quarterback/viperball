@@ -25,8 +25,8 @@ INDIVIDUAL TROPHIES
 
   Best Kicker               – Outstanding kicker.
 
-  Offensive Player of the Year  – Offensive standout not yet recognised above.
-  Defensive Player of the Year  – Defensive standout not yet recognised above.
+  Venus Award                   – Offensive Player of the Year.
+  Bellona Award                  – Defensive Player of the Year.
 
 TEAM-LEVEL HONOURS
   Coach of the Year         – Best coaching performance relative to expectations.
@@ -966,8 +966,8 @@ def _select_individual_awards(
                 best_off_wpa = wpa
                 best_off = (p, t_name)
     if best_off:
-        _add(best_off[0], best_off[1], "Offensive Player of the Year",
-             f"Dominant offensive force ({best_off[1]})")
+        _add(best_off[0], best_off[1], "Venus Award",
+             f"Offensive Player of the Year ({best_off[1]})")
 
     # ── Defensive Player of the Year ──────────────────────────────────────
     # Minimum .600 team record required
@@ -998,8 +998,8 @@ def _select_individual_awards(
                 best_def_wpa = wpa
                 best_def = (p, t_name)
     if best_def:
-        _add(best_def[0], best_def[1], "Defensive Player of the Year",
-             f"Dominant defensive force ({best_def[1]})")
+        _add(best_def[0], best_def[1], "Bellona Award",
+             f"Defensive Player of the Year ({best_def[1]})")
 
     return awards
 
