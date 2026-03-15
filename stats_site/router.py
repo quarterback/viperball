@@ -506,6 +506,15 @@ def college_polls(request: Request, session_id: str, week: int = 0):
     ))
 
 
+def _all_college_games(season) -> list:
+    """Return all completed games: regular season + playoff + bowl."""
+    games = list(season.schedule)
+    games.extend(season.playoff_bracket or [])
+    for bg in (season.bowl_games or []):
+        games.append(bg.game)
+    return games
+
+
 @router.get("/college/{session_id}/team/{team_name}", response_class=HTMLResponse)
 def college_team(request: Request, session_id: str, team_name: str, sort: str = "yards"):
     api = _get_api()
@@ -545,7 +554,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     # ── Aggregate team season stats from completed games ──
     team_season_stats = None
     completed_games_with_stats = []
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -671,7 +680,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
     # ── Aggregate per-player season stats ──
     player_season_stats = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -923,7 +932,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -1018,9 +1027,9 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    # Aggregate player stats from completed games
+    # Aggregate player stats from completed games (including postseason)
     player_agg = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
@@ -1142,9 +1151,9 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    # Aggregate team stats from completed games
+    # Aggregate team stats from completed games (including postseason)
     team_agg = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
@@ -1316,9 +1325,9 @@ def college_playoffs(request: Request, session_id: str):
             all_teams.add(g.away_team)
         total_teams = max(total_teams, len(all_teams))
 
-    # Derive seeds from first-round matchup order
-    seed_map = {}
-    if bracket:
+    # Use stored playoff seeds if available, otherwise derive from first-round order
+    seed_map = getattr(season, 'playoff_seeds', None) or {}
+    if not seed_map and bracket:
         first_wk = min(g.week for g in bracket)
         seed_counter = 1
         for g in sorted(bracket, key=lambda x: x.week):
@@ -1458,6 +1467,75 @@ def college_draftyqueenz(request: Request, session_id: str):
         has_dq=True,
         season_name=getattr(season, "name", "Season"),
     ))
+
+
+# ── DYNASTY DATA ─────────────────────────────────────────────────────────
+
+@router.get("/college/{session_id}/data", response_class=HTMLResponse)
+def college_data(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this session")
+
+    return templates.TemplateResponse("college/data.html", _ctx(
+        request, section="college", session_id=session_id,
+        dynasty_name=dynasty.dynasty_name,
+        year=dynasty.current_year,
+        team_count=len(dynasty.team_histories),
+        conf_count=len(dynasty.conferences),
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/{session_id}/data/download")
+def college_data_download(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import Response
+    from engine.db import serialize_dynasty
+
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this session")
+
+    data = serialize_dynasty(dynasty)
+    content = _json.dumps(data, indent=2)
+    filename = f"{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/college/{session_id}/data/upload")
+async def college_data_upload(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import JSONResponse
+    from engine.db import deserialize_dynasty
+
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    if not sess.get("dynasty"):
+        raise HTTPException(404, "No dynasty active in this session")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        data = _json.loads(contents)
+        dynasty = deserialize_dynasty(data)
+        sess["dynasty"] = dynasty
+        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
+    except Exception as e:
+        raise HTTPException(400, f"Failed to load dynasty file: {e}")
 
 
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
@@ -2493,6 +2571,69 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
     ))
+
+
+# ── WVL DYNASTY DATA ─────────────────────────────────────────────────────
+
+@router.get("/wvl/{session_id}/data", response_class=HTMLResponse)
+def wvl_data(request: Request, session_id: str):
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    return templates.TemplateResponse("wvl/data.html", _ctx(
+        request, section="wvl", session_id=session_id,
+        dynasty_name=dynasty.dynasty_name,
+        year=dynasty.current_year,
+        team_count=len(dynasty.team_histories),
+    ))
+
+
+@router.get("/wvl/{session_id}/data/download")
+def wvl_data_download(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import Response
+    from engine.db import serialize_dynasty
+
+    data = _get_wvl_session(session_id)
+    dynasty = data.get("dynasty")
+    if not dynasty:
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    serialized = serialize_dynasty(dynasty)
+    content = _json.dumps(serialized, indent=2)
+    filename = f"WVL_{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/wvl/{session_id}/data/upload")
+async def wvl_data_upload(request: Request, session_id: str):
+    import json as _json
+    from fastapi.responses import JSONResponse
+    from engine.db import deserialize_dynasty
+
+    data = _get_wvl_session(session_id)
+    if not data.get("dynasty"):
+        raise HTTPException(404, "No dynasty active in this WVL session")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        parsed = _json.loads(contents)
+        dynasty = deserialize_dynasty(parsed)
+        data["dynasty"] = dynasty
+        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
+    except Exception as e:
+        raise HTTPException(400, f"Failed to load dynasty file: {e}")
 
 
 # ── INTERNATIONAL (FIV) ─────────────────────────────────────────────────

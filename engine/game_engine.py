@@ -3816,7 +3816,7 @@ class ViperballEngine:
                         players_involved=[],
                         yards_gained=0,
                         result="bonus_possession",
-                        description=f"BONUS POSSESSION — {bonus_team_name} gets the ball back after the interception",
+                        description=f"BONUS POSSESSION — {bonus_team_name} gets an extra drive after the interception",
                         fatigue=round(stamina, 1),
                     )
                     self.play_log.append(bonus_play)
@@ -4265,8 +4265,9 @@ class ViperballEngine:
                             self._away_momentum_plays = mom_plays
 
                 # ── Defensive Bonus Possession (pesäpallo-inspired) ──
-                # Interceptions (only) grant the intercepted team a bonus
-                # possession after the intercepting team's next drive.
+                # Interceptions (only) grant the intercepting team a bonus
+                # possession after their current drive ends, giving them
+                # back-to-back drives as a reward for the turnover.
                 # If this drive ends in an INT and there was already a
                 # bonus pending, the INT-back cancels it.
                 is_interception = play.result in ("lateral_intercepted", "kick_pass_intercepted", "int_return_td")
@@ -4281,9 +4282,10 @@ class ViperballEngine:
                         self.state.bonus_possession_team = ""
                     else:
                         # Fresh INT (no pending bonus) — grant bonus
-                        # possession to the team that threw it (drive_team
-                        # is the offense that got intercepted)
-                        self.state.bonus_possession_team = drive_team
+                        # possession to the team that made the interception
+                        # (the defense), not the team that threw it.
+                        intercepting_team = "away" if drive_team == "home" else "home"
+                        self.state.bonus_possession_team = intercepting_team
 
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
