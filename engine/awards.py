@@ -414,6 +414,10 @@ def _format_stat_line(stats: dict, group: str) -> str:
         tds = stats.get("tds", 0)
         parts.append(f"{yds} yds, {tds} TD")
 
+    wpa = stats.get("wpa", 0.0)
+    if wpa:
+        parts.append(f"{wpa:+.1f} WPA")
+
     return " | ".join(parts)
 
 
@@ -442,6 +446,9 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
     else:
         d["yards"] = stats.get("yards", 0)
         d["tds"] = stats.get("tds", 0)
+    wpa = stats.get("wpa", 0.0)
+    if wpa:
+        d["wpa"] = round(wpa, 1)
     return d
 
 
@@ -717,6 +724,13 @@ def _select_individual_awards(
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
+        stat_line = ""
+        stats_dict = None
+        pstats = _get_stats(team_name, player.name)
+        if pstats and pstats.get("games", 0) > 0:
+            group = _pos_group(player.position)
+            stat_line = _format_stat_line(pstats, group)
+            stats_dict = _build_season_stats_dict(pstats, group)
         awards.append(AwardWinner(
             award_name=award_name,
             player_name=player.name,
@@ -724,7 +738,8 @@ def _select_individual_awards(
             position=player.position,
             year_in_school=getattr(player, "year", ""),
             overall_rating=player.overall,
-            reason=reason,
+            reason=stat_line if stat_line else reason,
+            season_stats=stats_dict,
         ))
 
     def _get_stats(team_name, player_name):
@@ -986,6 +1001,13 @@ def _select_conference_individual_awards(
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
+        stat_line = ""
+        stats_dict = None
+        pstats = _get_stats(team_name, player.name)
+        if pstats and pstats.get("games", 0) > 0:
+            group = _pos_group(player.position)
+            stat_line = _format_stat_line(pstats, group)
+            stats_dict = _build_season_stats_dict(pstats, group)
         awards.append(AwardWinner(
             award_name=award_name,
             player_name=player.name,
@@ -993,7 +1015,8 @@ def _select_conference_individual_awards(
             position=player.position,
             year_in_school=getattr(player, "year", ""),
             overall_rating=player.overall,
-            reason=reason,
+            reason=stat_line if stat_line else reason,
+            season_stats=stats_dict,
         ))
 
     def _get_stats(team_name, player_name):
