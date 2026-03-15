@@ -665,7 +665,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "adjusted_yards": adjusted_yards,
             "delta_drives": delta_drives,
             "delta_scores": delta_scores_total,
-            "compelled_eff": round(delta_scores_total / max(1, delta_drives) * 100, 1) if delta_drives > 0 else None,
+            "kill_rate": round(delta_scores_total / max(1, delta_drives) * 100, 1) if delta_drives > 0 else None,
             "bonus_possessions": bonus_poss,
             "bonus_scores": bonus_scores,
             "bonus_yards": bonus_yards,
@@ -1251,7 +1251,7 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             att = t[f"down_{d}_att"]
             conv = t[f"down_{d}_conv"]
             t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
-        t["compelled_eff"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
+        t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         # Get W-L from standings
         rec = season.standings.get(t["team"])
         if rec:
@@ -1727,7 +1727,7 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
             att = t[f"down_{d}_att"]
             conv = t[f"down_{d}_conv"]
             t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
-        t["compelled_eff"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
+        t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         rec = season.standings.get(t["team_key"])
         if rec:
             t["wins"] = rec.wins
