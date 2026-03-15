@@ -1661,6 +1661,74 @@ class Season:
                 "stat_line": stat_line,
             })
 
+        # ── Coach of the Week ──
+        # Score winning coaches by margin of victory + upset bonus
+        coach_performances = []  # (coach_display, team_name, score, stat_line)
+        for game in week_games:
+            if not game.completed:
+                continue
+            if game.home_score == game.away_score:
+                continue  # ties — no coach of the week for ties
+            if game.home_score > game.away_score:
+                win_team, lose_team = game.home_team, game.away_team
+                margin = game.home_score - game.away_score
+            else:
+                win_team, lose_team = game.away_team, game.home_team
+                margin = game.away_score - game.home_score
+            # Get prestige for upset bonus
+            win_prestige = getattr(self.teams.get(win_team), "prestige", 50) if win_team in self.teams else 50
+            lose_prestige = getattr(self.teams.get(lose_team), "prestige", 50) if lose_team in self.teams else 50
+            upset_bonus = max(0, (lose_prestige - win_prestige) * 0.5)
+            coach_score = margin + upset_bonus
+            # Look up head coach name
+            coach_display = win_team
+            staff = self.coaching_staffs.get(win_team, {})
+            hc = staff.get("head_coach")
+            if hc:
+                first = getattr(hc, "first_name", "") or ""
+                last = getattr(hc, "last_name", "") or ""
+                cname = f"{first} {last}".strip()
+                if cname:
+                    coach_display = f"{cname} ({win_team})"
+            # Build stat line
+            rec = self.standings.get(win_team)
+            rec_str = rec.record_str if rec else ""
+            stat_line = f"W by {margin:.1f}" if margin != int(margin) else f"W by {int(margin)}"
+            if rec_str:
+                stat_line += f", {rec_str}"
+            coach_performances.append((coach_display, win_team, coach_score, stat_line))
+
+        if coach_performances:
+            coach_performances.sort(key=lambda x: x[2], reverse=True)
+            best_coach = coach_performances[0]
+            self.weekly_awards.append({
+                "week": week,
+                "award": "National Coach of the Week",
+                "player_name": best_coach[0],
+                "team_name": best_coach[1],
+                "position": "Coach",
+                "stat_line": best_coach[3],
+            })
+            # Conference Coach of the Week
+            conf_best_coach = {}
+            for coach_display, team_name, score, stat_line in coach_performances:
+                conf = self.team_conferences.get(team_name, "")
+                if not conf:
+                    continue
+                if conf not in conf_best_coach or score > conf_best_coach[conf][2]:
+                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line)
+            for conf, (coach_display, team_name, _, stat_line) in conf_best_coach.items():
+                if coach_display == best_coach[0] and team_name == best_coach[1]:
+                    continue
+                self.weekly_awards.append({
+                    "week": week,
+                    "award": f"{conf} Coach of the Week",
+                    "player_name": coach_display,
+                    "team_name": team_name,
+                    "position": "Coach",
+                    "stat_line": stat_line,
+                })
+
     def simulate_week(self, week: Optional[int] = None, verbose: bool = False,
                       generate_polls: bool = True, rng=None,
                       dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,

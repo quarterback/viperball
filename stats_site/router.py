@@ -845,8 +845,15 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     sort_key = roster_sorts.get(sort, "yards")
     sorted_roster.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
-    # ── Collect awards for this team (only after regular season is complete) ──
+    # ── Collect awards for this team ──
     team_awards = []
+    # Weekly awards (player & coach of the week) — show as they happen
+    for wa in getattr(season, 'weekly_awards', []):
+        if wa.get("team_name") == team_name:
+            team_awards.append({
+                "award": wa["award"], "player": wa["player_name"],
+                "position": wa.get("position", ""), "level": f"Week {wa['week']}",
+            })
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:

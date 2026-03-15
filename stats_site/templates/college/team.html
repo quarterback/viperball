@@ -273,9 +273,9 @@
   {% for a in team_awards %}
   <tr>
     <td>{{ a.award }}</td>
-    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ a.player }}">{{ a.player }}</a></td>
+    <td>{% if a.position == 'Coach' %}{{ a.player }}{% else %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ a.player }}">{{ a.player }}</a>{% endif %}</td>
     <td>{{ a.position }}</td>
-    <td><span class="tag {% if a.level == 'National' %}tag-rivalry{% else %}tag-conf{% endif %}">{{ a.level }}</span></td>
+    <td><span class="tag {% if a.level == 'National' %}tag-rivalry{% elif a.level == 'Conference' %}tag-conf{% else %}tag-pos{% endif %}">{{ a.level }}</span></td>
   </tr>
   {% endfor %}
   </tbody>

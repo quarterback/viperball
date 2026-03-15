@@ -1026,11 +1026,11 @@ def _select_conference_individual_awards(
         _add(best_fresh[0], best_fresh[1], f"{conference_name} Freshman of the Year",
              f"{conference_name} Top Freshman ({best_fresh[1]})")
 
-    # Conference Coach of the Year
+    # Conference Coach of the Year — based solely on team results (win%)
     conf_standings = {t: standings[t] for t in conf_teams if t in standings}
     if conf_standings:
         coy_scores = {
-            t_name: r.win_percentage * 0.7 + r.avg_opi * 0.003
+            t_name: r.win_percentage
             for t_name, r in conf_standings.items()
         }
         coy_team = max(coy_scores, key=coy_scores.get)
@@ -1078,9 +1078,9 @@ def _select_team_awards(
     """Returns (coach_of_year_display, most_improved_team)."""
     sorted_std = sorted(standings.values(), key=lambda r: r.win_percentage, reverse=True)
 
-    # Coach of Year: best win% with a surprise factor component
+    # Coach of Year: based solely on team results (win%)
     coy_scores = {
-        r.team_name: r.win_percentage * 0.7 + r.avg_opi * 0.003
+        r.team_name: r.win_percentage
         for r in standings.values()
     }
     coy_team = max(coy_scores, key=coy_scores.get) if coy_scores else ""
