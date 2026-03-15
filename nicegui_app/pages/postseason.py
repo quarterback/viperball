@@ -14,15 +14,15 @@ from engine.season import BOWL_TIERS
 
 ROUND_LABELS = {
     995: "Play-In Round",
-    996: "Round of 32",
-    997: "Round of 16",
+    996: "First Round",
+    997: "Octofinals",
     998: "Quarterfinals",
-    999: "Semifinals",
+    999: "National Semifinals",
     1000: "CVL National Championship",
 }
 
 ROUND_LABELS_SMALL = {
-    999: "Semifinals",
+    999: "National Semifinals",
     1000: "CVL National Championship",
 }
 
@@ -31,18 +31,18 @@ def _round_label_for(week: int, total_teams: int) -> str:
     if total_teams <= 4:
         return ROUND_LABELS_SMALL.get(week, f"Round (wk {week})")
     if total_teams <= 8:
-        labels = {998: "Quarterfinals", 999: "Semifinals", 1000: "CVL National Championship"}
+        labels = {998: "Quarterfinals", 999: "National Semifinals", 1000: "CVL National Championship"}
         return labels.get(week, f"Round (wk {week})")
     if total_teams <= 12:
-        labels = {997: "First Round", 998: "Quarterfinals", 999: "Semifinals", 1000: "CVL National Championship"}
+        labels = {997: "First Round", 998: "Quarterfinals", 999: "National Semifinals", 1000: "CVL National Championship"}
         return labels.get(week, f"Round (wk {week})")
     if total_teams <= 16:
-        labels = {997: "Round of 16", 998: "Quarterfinals", 999: "Semifinals", 1000: "CVL National Championship"}
+        labels = {997: "Octofinals", 998: "Quarterfinals", 999: "National Semifinals", 1000: "CVL National Championship"}
         return labels.get(week, f"Round (wk {week})")
     if total_teams <= 24:
-        labels = {996: "First Round", 997: "Round of 16", 998: "Quarterfinals", 999: "Semifinals", 1000: "CVL National Championship"}
+        labels = {996: "First Round", 997: "Octofinals", 998: "Quarterfinals", 999: "National Semifinals", 1000: "CVL National Championship"}
         return labels.get(week, f"Round (wk {week})")
-    labels = {996: "Round of 32", 997: "Round of 16", 998: "Quarterfinals", 999: "Semifinals", 1000: "CVL National Championship"}
+    labels = {996: "First Round", 997: "Octofinals", 998: "Quarterfinals", 999: "National Semifinals", 1000: "CVL National Championship"}
     return labels.get(week, f"Round (wk {week})")
 
 
