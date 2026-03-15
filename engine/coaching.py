@@ -545,6 +545,9 @@ class CoachCard:
     playoff_appearances: int = 0         # career playoff berths
     playoff_wins: int = 0               # career individual playoff game wins
     championship_appearances: int = 0    # career finals reached
+    # Awards earned (championships, etc.)
+    career_awards: List[dict] = field(default_factory=list)
+
     # coaching_tree: every HC this coach worked under as an assistant
     # Each entry: {"coach_name", "coach_id", "team_name", "year_start", "year_end"}
     coaching_tree: List[dict] = field(default_factory=list)
