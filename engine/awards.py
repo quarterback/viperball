@@ -153,6 +153,7 @@ class SeasonHonors:
 
     # Team-level awards
     coach_of_year: str = ""
+    coach_of_year_team: str = ""
     most_improved: str = ""
 
     # Conference-level individual awards: conf_name -> list of AwardWinner
@@ -224,6 +225,7 @@ class SeasonHonors:
             "all_conference_teams": ac,
             "conference_awards": ca,
             "coach_of_year": self.coach_of_year,
+            "coach_of_year_team": self.coach_of_year_team,
             "most_improved": self.most_improved,
         }
 
@@ -414,6 +416,10 @@ def _format_stat_line(stats: dict, group: str) -> str:
         tds = stats.get("tds", 0)
         parts.append(f"{yds} yds, {tds} TD")
 
+    wpa = stats.get("wpa", 0.0)
+    if wpa:
+        parts.append(f"{wpa:+.1f} WPA")
+
     return " | ".join(parts)
 
 
@@ -442,6 +448,9 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
     else:
         d["yards"] = stats.get("yards", 0)
         d["tds"] = stats.get("tds", 0)
+    wpa = stats.get("wpa", 0.0)
+    if wpa:
+        d["wpa"] = round(wpa, 1)
     return d
 
 
@@ -717,6 +726,13 @@ def _select_individual_awards(
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
+        stat_line = ""
+        stats_dict = None
+        pstats = _get_stats(team_name, player.name)
+        if pstats and pstats.get("games", 0) > 0:
+            group = _pos_group(player.position)
+            stat_line = _format_stat_line(pstats, group)
+            stats_dict = _build_season_stats_dict(pstats, group)
         awards.append(AwardWinner(
             award_name=award_name,
             player_name=player.name,
@@ -724,7 +740,8 @@ def _select_individual_awards(
             position=player.position,
             year_in_school=getattr(player, "year", ""),
             overall_rating=player.overall,
-            reason=reason,
+            reason=stat_line if stat_line else reason,
+            season_stats=stats_dict,
         ))
 
     def _get_stats(team_name, player_name):
@@ -986,6 +1003,13 @@ def _select_conference_individual_awards(
 
     def _add(player, team_name, award_name, reason):
         seen.add(f"{team_name}::{player.name}")
+        stat_line = ""
+        stats_dict = None
+        pstats = _get_stats(team_name, player.name)
+        if pstats and pstats.get("games", 0) > 0:
+            group = _pos_group(player.position)
+            stat_line = _format_stat_line(pstats, group)
+            stats_dict = _build_season_stats_dict(pstats, group)
         awards.append(AwardWinner(
             award_name=award_name,
             player_name=player.name,
@@ -993,7 +1017,8 @@ def _select_conference_individual_awards(
             position=player.position,
             year_in_school=getattr(player, "year", ""),
             overall_rating=player.overall,
-            reason=reason,
+            reason=stat_line if stat_line else reason,
+            season_stats=stats_dict,
         ))
 
     def _get_stats(team_name, player_name):
@@ -1177,8 +1202,8 @@ def _select_team_awards(
     prev_season_wins: Dict[str, int] = None,
     coaching_staffs: Optional[Dict] = None,
     season: Optional["Season"] = None,
-) -> Tuple[str, str]:
-    """Returns (coach_of_year_display, most_improved_team)."""
+) -> Tuple[str, str, str]:
+    """Returns (coach_of_year_display, coy_team_name, most_improved_team)."""
     sorted_std = sorted(standings.values(), key=lambda r: r.win_percentage, reverse=True)
 
     # Coach of Year: weighted by results, improvement, and conference title
@@ -1229,7 +1254,7 @@ def _select_team_awards(
     else:
         most_imp = sorted_std[1].team_name if len(sorted_std) > 1 else (sorted_std[0].team_name if sorted_std else "")
 
-    return coy, most_imp
+    return coy, coy_team, most_imp
 
 
 # ──────────────────────────────────────────────
@@ -1308,10 +1333,11 @@ def compute_season_awards(
             )
 
     # ── Team-level awards ─────────────────────────────────────────────────
-    coy, most_imp = _select_team_awards(standings, prev_season_wins,
-                                         coaching_staffs=coaching_staffs,
-                                         season=season)
+    coy, coy_team, most_imp = _select_team_awards(standings, prev_season_wins,
+                                                    coaching_staffs=coaching_staffs,
+                                                    season=season)
     honors.coach_of_year = coy
+    honors.coach_of_year_team = coy_team
     honors.most_improved = most_imp
 
     return honors
