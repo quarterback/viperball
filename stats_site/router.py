@@ -1035,6 +1035,7 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
                     player_agg[key] = {
                         "name": p["name"], "team": t_name, "conference": conf,
                         "tag": p.get("tag", ""), "archetype": p.get("archetype", ""),
+                        "position": p.get("position", ""),
                         "games_played": 0, "touches": 0, "yards": 0,
                         "rushing_yards": 0, "lateral_yards": 0, "tds": 0,
                         "fumbles": 0, "kick_att": 0, "kick_made": 0,
@@ -1061,6 +1062,8 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
                     agg["tag"] = p.get("tag", "")
                 if not agg["archetype"] or agg["archetype"] == "—":
                     agg["archetype"] = p.get("archetype", "")
+                if not agg["position"]:
+                    agg["position"] = p.get("position", "")
                 for stat in [
                     "touches", "yards", "rushing_yards", "lateral_yards",
                     "tds", "fumbles", "kick_att", "kick_made",
@@ -1084,6 +1087,8 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
                     agg[stat] += p.get(stat, 0)
                 agg["wpa"] += p.get("wpa", 0.0)
 
+    from engine.viperball_metrics import calculate_war, calculate_zbr, calculate_vpr
+
     players = list(player_agg.values())
     for r in players:
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
@@ -1094,6 +1099,10 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         r["punt_return_avg"] = round(r["punt_return_yards"] / max(1, r["punt_returns"]), 1)
         r["wpa_per_play"] = round(r["wpa"] / max(1, r["plays_involved"]), 2)
         r["wpa"] = round(r["wpa"], 2)
+        # Sabermetrics
+        r["war"] = calculate_war(r, r.get("position", ""))
+        r["zbr"] = calculate_zbr(r)
+        r["vpr"] = calculate_vpr(r)
 
     # Sort
     valid_sorts = {
@@ -1122,6 +1131,8 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         "blocks": "blocks", "pancakes": "pancakes",
         # Impact
         "wpa": "wpa",
+        # Analytics
+        "war": "war", "zbr": "zbr", "vpr": "vpr",
     }
     sort_key = valid_sorts.get(sort, "yards")
     players.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
@@ -1129,6 +1140,87 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     conferences = sorted(season.conferences.keys())
 
     return templates.TemplateResponse("college/players.html", _ctx(
+        request, section="college", session_id=session_id,
+        players=players, sort=sort, conference=conference,
+        conferences=conferences,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/{session_id}/analytics", response_class=HTMLResponse)
+def college_analytics(request: Request, session_id: str, sort: str = "war", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    from engine.viperball_metrics import calculate_war, calculate_zbr, calculate_vpr
+
+    # Aggregate player stats from completed games (same as players route)
+    player_agg = {}
+    for game in season.schedule:
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        fr = game.full_result
+        ps = fr.get("player_stats", {})
+        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            conf = season.team_conferences.get(t_name, "")
+            if conference and conf != conference:
+                continue
+            for p in ps.get(side, []):
+                key = f"{t_name}|{p['name']}"
+                if key not in player_agg:
+                    player_agg[key] = {
+                        "name": p["name"], "team": t_name, "conference": conf,
+                        "tag": p.get("tag", ""), "position": p.get("position", ""),
+                        "archetype": p.get("archetype", ""),
+                        "games_played": 0, "touches": 0, "yards": 0,
+                        "rushing_yards": 0, "lateral_yards": 0, "tds": 0,
+                        "fumbles": 0, "laterals_thrown": 0, "lateral_assists": 0,
+                        "kick_return_yards": 0, "punt_return_yards": 0,
+                        "kick_pass_yards": 0,
+                        "wpa": 0.0, "plays_involved": 0,
+                    }
+                agg = player_agg[key]
+                agg["games_played"] += 1
+                if not agg["tag"]:
+                    agg["tag"] = p.get("tag", "")
+                if not agg["position"]:
+                    agg["position"] = p.get("position", "")
+                if not agg["archetype"] or agg["archetype"] == "—":
+                    agg["archetype"] = p.get("archetype", "")
+                for stat in [
+                    "touches", "yards", "rushing_yards", "lateral_yards",
+                    "tds", "fumbles", "laterals_thrown", "lateral_assists",
+                    "kick_return_yards", "punt_return_yards", "kick_pass_yards",
+                    "plays_involved",
+                ]:
+                    agg[stat] += p.get(stat, 0)
+                agg["wpa"] += p.get("wpa", 0.0)
+
+    players = list(player_agg.values())
+    for r in players:
+        r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
+        r["all_purpose_yards"] = r["rushing_yards"] + r["kick_return_yards"] + r["punt_return_yards"] + r["kick_pass_yards"]
+        r["wpa"] = round(r["wpa"], 2)
+        r["wpa_per_play"] = round(r["wpa"] / max(1, r["plays_involved"]), 2)
+        r["war"] = calculate_war(r, r.get("position", ""))
+        r["zbr"] = calculate_zbr(r)
+        r["vpr"] = calculate_vpr(r)
+
+    # Filter to players with meaningful activity
+    players = [p for p in players if p["touches"] >= 5 or p["plays_involved"] >= 10]
+
+    valid_sorts = {
+        "war": "war", "zbr": "zbr", "vpr": "vpr",
+        "wpa": "wpa", "wpa_per_play": "wpa_per_play",
+        "yards": "yards", "ypc": "yards_per_touch", "tds": "tds",
+    }
+    sort_key = valid_sorts.get(sort, "war")
+    players.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    conferences = sorted(season.conferences.keys())
+
+    return templates.TemplateResponse("college/analytics.html", _ctx(
         request, section="college", session_id=session_id,
         players=players, sort=sort, conference=conference,
         conferences=conferences,

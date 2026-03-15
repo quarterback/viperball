@@ -20,6 +20,7 @@
   <a href="/stats/college/{{ session_id }}/polls">Polls</a>
   <a href="/stats/college/{{ session_id }}/players" class="active">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
   <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
@@ -63,7 +64,8 @@
   {% set sorts = [('blocks', 'Blocks'), ('pancakes', 'Pancakes')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
   &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Impact:</strong>
-  <a href="/stats/college/{{ session_id }}/players?sort=wpa{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'wpa' %}style="color:var(--accent);font-weight:bold"{% endif %}>WPA</a>
+  {% set sorts = [('wpa', 'WPA'), ('war', 'WAR'), ('zbr', 'ZBR'), ('vpr', 'VPR')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
 </div>
 
 {# ── Conference Filter ── #}
