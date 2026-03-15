@@ -353,6 +353,34 @@
   {{ stat_row('Pindowns', 'pindowns') }}
   {% endif %}
 
+  {# ── Special Teams Returns ── #}
+  {% if as_.get('kick_returns') or hs.get('kick_returns') or as_.get('punt_returns') or hs.get('punt_returns') %}
+  {{ section_header('SPECIAL TEAMS') }}
+  {% if as_.get('kick_returns') or hs.get('kick_returns') %}
+  <tr>
+    <td class="num">{{ as_.get('kick_returns', 0) }} for {{ as_.get('kick_return_yards', 0) }} yds</td>
+    <td>Kick Returns</td>
+    <td class="num">{{ hs.get('kick_returns', 0) }} for {{ hs.get('kick_return_yards', 0) }} yds</td>
+  </tr>
+  {% if as_.get('kick_return_tds') or hs.get('kick_return_tds') %}
+  {{ stat_row('Kick Return TDs', 'kick_return_tds') }}
+  {% endif %}
+  {% endif %}
+  {% if as_.get('punt_returns') or hs.get('punt_returns') %}
+  <tr>
+    <td class="num">{{ as_.get('punt_returns', 0) }} for {{ as_.get('punt_return_yards', 0) }} yds</td>
+    <td>Punt Returns</td>
+    <td class="num">{{ hs.get('punt_returns', 0) }} for {{ hs.get('punt_return_yards', 0) }} yds</td>
+  </tr>
+  {% if as_.get('punt_return_tds') or hs.get('punt_return_tds') %}
+  {{ stat_row('Punt Return TDs', 'punt_return_tds') }}
+  {% endif %}
+  {% endif %}
+  {% if as_.get('muffs') or hs.get('muffs') %}
+  {{ stat_row('Muffs', 'muffs') }}
+  {% endif %}
+  {% endif %}
+
   {# ── Turnovers & Discipline ── #}
   {{ section_header('TURNOVERS & DISCIPLINE') }}
   {{ stat_row('Fumbles Lost', 'fumbles_lost') }}

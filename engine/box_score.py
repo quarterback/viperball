@@ -146,14 +146,39 @@ class BoxScoreGenerator:
         # Standard Statistics
         lines.append("## TEAM STATISTICS")
         lines.append("")
-        lines.append(f"| Statistic | {self.away['team']} | {self.home['team']} |")
-        lines.append(f"|-----------|" + "-" * (len(self.away['team']) + 2) + "|" + "-" * (len(self.home['team']) + 2) + "|")
+        hdr = f"| Statistic | {self.away['team']} | {self.home['team']} |"
+        sep = f"|-----------|" + "-" * (len(self.away['team']) + 2) + "|" + "-" * (len(self.home['team']) + 2) + "|"
+        lines.append(hdr)
+        lines.append(sep)
         lines.append(f"| Total Yards | {self.away_stats['total_yards']} | {self.home_stats['total_yards']} |")
         lines.append(f"| Total Plays | {self.away_stats['total_plays']} | {self.home_stats['total_plays']} |")
         lines.append(f"| Yards/Play | {self.away_stats['yards_per_play']} | {self.home_stats['yards_per_play']} |")
         lines.append(f"| Touchdowns | {self.away_stats.get('touchdowns', 0)} | {self.home_stats.get('touchdowns', 0)} |")
+
+        # Rushing
+        away_rc = self.away_stats.get('rushing_carries', 0)
+        home_rc = self.home_stats.get('rushing_carries', 0)
+        away_ry = self.away_stats.get('rushing_yards', 0)
+        home_ry = self.home_stats.get('rushing_yards', 0)
+        lines.append(f"| Rushing | {away_rc} car, {away_ry} yds | {home_rc} car, {home_ry} yds |")
+        lines.append(f"| Rushing TDs | {self.away_stats.get('rushing_touchdowns', 0)} | {self.home_stats.get('rushing_touchdowns', 0)} |")
+
+        # Kick Passing
+        away_kp_comp = self.away_stats.get('kick_passes_completed', 0)
+        away_kp_att = self.away_stats.get('kick_passes_attempted', 0)
+        home_kp_comp = self.home_stats.get('kick_passes_completed', 0)
+        home_kp_att = self.home_stats.get('kick_passes_attempted', 0)
+        lines.append(f"| Kick Passes | {away_kp_comp}/{away_kp_att} | {home_kp_comp}/{home_kp_att} |")
+        lines.append(f"| Kick Pass Yards | {self.away_stats.get('kick_pass_yards', 0)} | {self.home_stats.get('kick_pass_yards', 0)} |")
+        lines.append(f"| Kick Pass TDs | {self.away_stats.get('kick_pass_tds', 0)} | {self.home_stats.get('kick_pass_tds', 0)} |")
+        lines.append(f"| Kick Pass INTs | {self.away_stats.get('kick_pass_interceptions', 0)} | {self.home_stats.get('kick_pass_interceptions', 0)} |")
+
+        # Laterals
         lines.append(f"| Lateral Chains | {self.away_stats['lateral_chains']} | {self.home_stats['lateral_chains']} |")
         lines.append(f"| Successful Laterals | {self.away_stats['successful_laterals']} | {self.home_stats['successful_laterals']} |")
+        lines.append(f"| Lateral INTs | {self.away_stats.get('lateral_interceptions', 0)} | {self.home_stats.get('lateral_interceptions', 0)} |")
+
+        # Turnovers
         away_total_to = (self.away_stats.get('fumbles_lost', 0)
                          + self.away_stats.get('turnovers_on_downs', 0)
                          + self.away_stats.get('kick_pass_interceptions', 0)
@@ -165,20 +190,67 @@ class BoxScoreGenerator:
         lines.append(f"| **Total Turnovers** | **{away_total_to}** | **{home_total_to}** |")
         lines.append(f"| Fumbles Lost | {self.away_stats.get('fumbles_lost', 0)} | {self.home_stats.get('fumbles_lost', 0)} |")
         lines.append(f"| Turnovers on Downs | {self.away_stats.get('turnovers_on_downs', 0)} | {self.home_stats.get('turnovers_on_downs', 0)} |")
-        away_kp_comp = self.away_stats.get('kick_passes_completed', 0)
-        away_kp_att = self.away_stats.get('kick_passes_attempted', 0)
-        home_kp_comp = self.home_stats.get('kick_passes_completed', 0)
-        home_kp_att = self.home_stats.get('kick_passes_attempted', 0)
-        lines.append(f"| Kick Passes | {away_kp_comp}/{away_kp_att} | {home_kp_comp}/{home_kp_att} |")
-        lines.append(f"| Kick Pass Yards | {self.away_stats.get('kick_pass_yards', 0)} | {self.home_stats.get('kick_pass_yards', 0)} |")
-        lines.append(f"| Kick Pass TDs | {self.away_stats.get('kick_pass_tds', 0)} | {self.home_stats.get('kick_pass_tds', 0)} |")
-        lines.append(f"| Kick Pass INTs | {self.away_stats.get('kick_pass_interceptions', 0)} | {self.home_stats.get('kick_pass_interceptions', 0)} |")
-        lines.append(f"| Lateral INTs | {self.away_stats.get('lateral_interceptions', 0)} | {self.home_stats.get('lateral_interceptions', 0)} |")
-        lines.append(f"| Bonus Possessions | {self.away_stats.get('bonus_possessions', 0)} | {self.home_stats.get('bonus_possessions', 0)} |")
-        lines.append(f"| Bonus Poss. Yards | {self.away_stats.get('bonus_possession_yards', 0)} | {self.home_stats.get('bonus_possession_yards', 0)} |")
-        lines.append(f"| Bonus Poss. Scores | {self.away_stats.get('bonus_possession_scores', 0)} | {self.home_stats.get('bonus_possession_scores', 0)} |")
-        lines.append(f"| Drop Kicks Made | {self.away_stats['drop_kicks_made']} | {self.home_stats['drop_kicks_made']} |")
-        lines.append(f"| Place Kicks Made | {self.away_stats['place_kicks_made']} | {self.home_stats['place_kicks_made']} |")
+
+        # Kicking
+        lines.append(f"| Drop Kicks | {self.away_stats['drop_kicks_made']}/{self.away_stats.get('drop_kicks_attempted', 0)} | {self.home_stats['drop_kicks_made']}/{self.home_stats.get('drop_kicks_attempted', 0)} |")
+        lines.append(f"| Place Kicks | {self.away_stats['place_kicks_made']}/{self.away_stats.get('place_kicks_attempted', 0)} | {self.home_stats['place_kicks_made']}/{self.home_stats.get('place_kicks_attempted', 0)} |")
+        lines.append(f"| Punts | {self.away_stats.get('punts', 0)} | {self.home_stats.get('punts', 0)} |")
+
+        # Special Teams Returns
+        away_kr = self.away_stats.get('kick_returns', 0)
+        away_kr_yds = self.away_stats.get('kick_return_yards', 0)
+        home_kr = self.home_stats.get('kick_returns', 0)
+        home_kr_yds = self.home_stats.get('kick_return_yards', 0)
+        away_pr = self.away_stats.get('punt_returns', 0)
+        away_pr_yds = self.away_stats.get('punt_return_yards', 0)
+        home_pr = self.home_stats.get('punt_returns', 0)
+        home_pr_yds = self.home_stats.get('punt_return_yards', 0)
+        if away_kr or home_kr or away_pr or home_pr:
+            lines.append(f"| **--- SPECIAL TEAMS ---** | | |")
+            if away_kr or home_kr:
+                lines.append(f"| Kick Returns | {away_kr} for {away_kr_yds} yds | {home_kr} for {home_kr_yds} yds |")
+                away_kr_tds = self.away_stats.get('kick_return_tds', 0)
+                home_kr_tds = self.home_stats.get('kick_return_tds', 0)
+                if away_kr_tds or home_kr_tds:
+                    lines.append(f"| Kick Return TDs | {away_kr_tds} | {home_kr_tds} |")
+            if away_pr or home_pr:
+                lines.append(f"| Punt Returns | {away_pr} for {away_pr_yds} yds | {home_pr} for {home_pr_yds} yds |")
+                away_pr_tds = self.away_stats.get('punt_return_tds', 0)
+                home_pr_tds = self.home_stats.get('punt_return_tds', 0)
+                if away_pr_tds or home_pr_tds:
+                    lines.append(f"| Punt Return TDs | {away_pr_tds} | {home_pr_tds} |")
+            away_muffs = self.away_stats.get('muffs', 0)
+            home_muffs = self.home_stats.get('muffs', 0)
+            if away_muffs or home_muffs:
+                lines.append(f"| Muffs | {away_muffs} | {home_muffs} |")
+
+        # Penalties
+        away_pen = self.away_stats.get('penalties', 0)
+        home_pen = self.home_stats.get('penalties', 0)
+        if away_pen or home_pen:
+            lines.append(f"| Penalties | {away_pen} for {self.away_stats.get('penalty_yards', 0)} yds | {home_pen} for {self.home_stats.get('penalty_yards', 0)} yds |")
+
+        # Down Conversions
+        away_dc = self.away_stats.get('down_conversions', {})
+        home_dc = self.home_stats.get('down_conversions', {})
+        for d in [4, 5, 6]:
+            adc = away_dc.get(d, away_dc.get(str(d), {}))
+            hdc = home_dc.get(d, home_dc.get(str(d), {}))
+            a_att = adc.get('attempts', 0) if isinstance(adc, dict) else 0
+            h_att = hdc.get('attempts', 0) if isinstance(hdc, dict) else 0
+            if a_att or h_att:
+                a_conv = adc.get('converted', 0) if isinstance(adc, dict) else 0
+                h_conv = hdc.get('converted', 0) if isinstance(hdc, dict) else 0
+                lines.append(f"| {d}th Down Conv. | {a_conv}/{a_att} | {h_conv}/{h_att} |")
+
+        # Bonus Possessions
+        away_bp = self.away_stats.get('bonus_possessions', 0)
+        home_bp = self.home_stats.get('bonus_possessions', 0)
+        if away_bp or home_bp:
+            lines.append(f"| Bonus Possessions | {away_bp} | {home_bp} |")
+            lines.append(f"| Bonus Poss. Yards | {self.away_stats.get('bonus_possession_yards', 0)} | {self.home_stats.get('bonus_possession_yards', 0)} |")
+            lines.append(f"| Bonus Poss. Scores | {self.away_stats.get('bonus_possession_scores', 0)} | {self.home_stats.get('bonus_possession_scores', 0)} |")
+
         lines.append("")
         lines.append("---")
         lines.append("")

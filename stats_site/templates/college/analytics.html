@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Analytics — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Analytics
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>ANALYTICS</h1>
+  <div class="subtitle">{{ season_name }} &middot; Advanced Metrics{% if conference %} &middot; {{ conference }}{% endif %}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/analytics" class="active">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+</div>
+
+{# ── Sort Controls ── #}
+<div style="margin-bottom:6px;font-size:11px;">
+  <strong style="color:var(--fg-dim)">Sort:</strong>
+  {% set sorts = [('war', 'WAR'), ('zbr', 'ZBR'), ('vpr', 'VPR'), ('wpa', 'WPA'), ('wpa_per_play', 'WPA/Play'), ('yards', 'Yards'), ('ypc', 'Y/T'), ('tds', 'TDs')] %}
+  {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/analytics?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
+</div>
+
+{# ── Conference Filter ── #}
+<div style="margin-bottom:12px;font-size:11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/analytics?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/analytics?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
+  {% endfor %}
+</div>
+
+{# ── Leaderboard ── #}
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Name</th>
+      <th>Team</th>
+      <th>Pos</th>
+      <th class="num">GP</th>
+      <th class="num" {% if sort == 'war' %}style="color:var(--accent)"{% endif %}>WAR</th>
+      <th class="num" {% if sort == 'zbr' %}style="color:var(--accent)"{% endif %}>ZBR</th>
+      <th class="num" {% if sort == 'vpr' %}style="color:var(--accent)"{% endif %}>VPR</th>
+      <th class="num" {% if sort == 'wpa' %}style="color:var(--accent)"{% endif %}>WPA</th>
+      <th class="num" {% if sort == 'wpa_per_play' %}style="color:var(--accent)"{% endif %}>WPA/P</th>
+      <th class="num" {% if sort == 'yards' %}style="color:var(--accent)"{% endif %}>YDS</th>
+      <th class="num" {% if sort == 'ypc' %}style="color:var(--accent)"{% endif %}>Y/T</th>
+      <th class="num" {% if sort == 'tds' %}style="color:var(--accent)"{% endif %}>TD</th>
+      <th class="num">TCH</th>
+      <th class="num">FUM</th>
+      <th class="num">LAT</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in players %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ p.team }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team[:20] }}</a></td>
+    <td><span class="tag tag-pos">{{ p.tag }}</span></td>
+    <td class="num">{{ p.games_played }}</td>
+    <td class="num {% if p.war >= 3.0 %}stat-elite{% elif p.war >= 1.0 %}stat-good{% elif p.war < 0 %}stat-bad{% endif %}">{{ p.war }}</td>
+    <td class="num {% if p.zbr >= 100 %}stat-elite{% elif p.zbr >= 85 %}stat-good{% elif p.zbr > 0 and p.zbr < 40 %}stat-bad{% endif %}">
+      {% if p.zbr > 0 %}{{ p.zbr }}{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num {% if p.vpr >= 100 %}stat-elite{% elif p.vpr >= 85 %}stat-good{% elif p.vpr > 0 and p.vpr < 40 %}stat-bad{% endif %}">
+      {% if p.vpr > 0 %}{{ p.vpr }}{% else %}&mdash;{% endif %}
+    </td>
+    <td class="num {% if p.wpa >= 2 %}stat-elite{% elif p.wpa >= 0.5 %}stat-good{% elif p.wpa < -1 %}stat-bad{% endif %}">{{ p.wpa }}</td>
+    <td class="num {% if p.wpa_per_play >= 0.15 %}stat-elite{% elif p.wpa_per_play >= 0.05 %}stat-good{% elif p.wpa_per_play < -0.05 %}stat-bad{% endif %}">{{ p.wpa_per_play }}</td>
+    <td class="num">{{ p.yards }}</td>
+    <td class="num">{{ p.yards_per_touch }}</td>
+    <td class="num">{{ p.tds }}</td>
+    <td class="num">{{ p.touches }}</td>
+    <td class="num {% if p.fumbles > 3 %}stat-bad{% endif %}">{{ p.fumbles }}</td>
+    <td class="num">{{ p.laterals_thrown }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if not players %}
+<div class="empty">No player stats available yet. Play some games first.</div>
+{% endif %}
+
+{# ── Glossary ── #}
+<div style="margin-top:24px;border-top:2px solid var(--border);padding-top:16px;">
+<h2 style="font-size:14px;letter-spacing:1px;">METRIC GLOSSARY</h2>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:12px;">
+
+<div style="border:1px solid var(--border);padding:12px;">
+<h3 style="color:var(--accent);font-size:12px;margin:0 0 6px;">WAR &mdash; Wins Above Replacement</h3>
+<p style="font-size:11px;line-height:1.5;margin:0 0 6px;">
+Borrowed from baseball. Measures a player's total value in wins compared to a
+replacement-level player at the same position.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0 0 4px;">
+<strong>Formula:</strong> WAR = (YAR &times; 0.08 pts/yd) &div; 6 pts/win<br>
+YAR = (Y/T &minus; replacement level) &times; volume factor &times; touches<br>
+Volume factor uses log scaling to prevent high-volume domination.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0;">
+<strong>Replacement levels:</strong> ZB 3.8, Viper 4.2, HB 3.5, WB 3.6, SB 3.4, Keeper 2.0
+</p>
+</div>
+
+<div style="border:1px solid var(--border);padding:12px;">
+<h3 style="color:var(--accent);font-size:12px;margin:0 0 6px;">ZBR &mdash; Zeroback Rating</h3>
+<p style="font-size:11px;line-height:1.5;margin:0 0 6px;">
+The Viperball equivalent of NFL passer rating, built for the Zeroback position.
+Uses the classic 0&ndash;158.3 scale.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0 0 4px;">
+<strong>Four components</strong> (each 0&ndash;2.375, like NFL passer rating):<br>
+a) Yards Per Touch (efficiency)<br>
+b) Touchdown Rate (scoring)<br>
+c) Fumble Rate inverted (ball security)<br>
+d) Lateral Accuracy (completion%)
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0;">
+<strong>Scale:</strong> 158.3 = perfect &middot; ~100 = great &middot; ~85 = good &middot; ~65 = average &middot; &lt;40 = poor
+</p>
+</div>
+
+<div style="border:1px solid var(--border);padding:12px;">
+<h3 style="color:var(--accent);font-size:12px;margin:0 0 6px;">VPR &mdash; Viper Rating</h3>
+<p style="font-size:11px;line-height:1.5;margin:0 0 6px;">
+Position-specific composite for the Viper wild-card role. Same 0&ndash;158.3 scale
+as ZBR for direct comparison, but emphasizes explosiveness and all-purpose production.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0 0 4px;">
+<strong>Four components</strong> (each 0&ndash;2.375):<br>
+a) Yards Per Touch (lower threshold than ZBR &mdash; Vipers should be electric)<br>
+b) Touchdown Rate<br>
+c) Fumble Rate inverted<br>
+d) All-Purpose Efficiency (total yards per touch across all phases)
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0;">
+<strong>Key difference from ZBR:</strong> Uses all-purpose yards instead of lateral accuracy.
+</p>
+</div>
+
+<div style="border:1px solid var(--border);padding:12px;">
+<h3 style="color:var(--accent);font-size:12px;margin:0 0 6px;">WPA &mdash; Win Probability Added</h3>
+<p style="font-size:11px;line-height:1.5;margin:0 0 6px;">
+Measures how much each player's involvement shifted the team's probability of
+winning. Computed from Expected Points (EP) changes on each play, attributed
+to participants.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0 0 4px;">
+<strong>Formula:</strong> WPA = EP(after play) &minus; EP(before play)<br>
+EP is calculated from field position + down via lookup table.<br>
+Distributed among players involved in each play.
+</p>
+<p style="font-size:10px;color:var(--fg-dim);margin:0;">
+<strong>WPA/P</strong> (per play) normalizes for volume &mdash; shows efficiency independent of usage.
+</p>
+</div>
+
+</div>
+</div>
+
+{% endblock %}
