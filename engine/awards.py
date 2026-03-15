@@ -337,47 +337,41 @@ def _accumulate_player_stats(a: dict, p: dict):
 def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) -> float:
     """Score a player for All-League selection using season statistics.
 
-    Offensive players: weighted by yards, TDs, efficiency.
-    Defensive players: weighted by tackles, sacks, TFLs.
+    Pure stats — WPA is NOT included. WPA is used as a tiebreaker
+    externally when two candidates score within 5% of each other.
     """
     games = max(1, stats.get("games", 1))
-    wpa = stats.get("wpa", 0.0)
     if group in ("zeroback",):
-        # Zeroback: kick passing + rushing + lateral play + WPA
         kp_yds = stats.get("kick_pass_yards", 0)
         kp_tds = stats.get("kick_pass_tds", 0)
         rush_yds = stats.get("rushing_yards", 0)
         tds = stats.get("tds", 0)
         lat_yds = stats.get("lateral_yards", 0)
         raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
-               + tds * 15 + kp_tds * 12) / games + wpa * 8
+               + tds * 15 + kp_tds * 12) / games
     elif group == "viper":
-        # Viper: yards, laterals, TDs + WPA
         yds = stats.get("yards", 0)
         lat_yds = stats.get("lateral_yards", 0)
         tds = stats.get("tds", 0)
-        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games + wpa * 8
+        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games
     elif group == "back":
-        # Halfback/Wingback: rushing yards, YPC, TDs + WPA
         rush_yds = stats.get("rushing_yards", 0)
         carries = max(1, stats.get("rush_carries", 1))
         tds = stats.get("tds", 0)
         ypc = rush_yds / carries
-        raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games + wpa * 8
+        raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games
     elif group == "lineman":
-        # Defensive lineman: tackles, sacks, TFLs + WPA
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games + wpa * 8
+        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games
     elif group == "safety":
-        # Safety/Keeper: tackles, TFLs, sacks + WPA
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games + wpa * 8
+        raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games
     else:
-        raw = stats.get("yards", 0) / games + wpa * 8
+        raw = stats.get("yards", 0) / games
     return round(raw * team_perf_mult, 2)
 
 
@@ -520,8 +514,55 @@ def _team_perf_mult(team_name: str, standings: dict) -> float:
     record = standings.get(team_name)
     if record is None:
         return 1.0
-    mult = 0.88 + record.win_percentage * 0.15 + min(record.avg_opi / 100.0, 1.0) * 0.07
-    return round(min(1.10, max(0.88, mult)), 3)
+    # Aggressive curve: 2-win team ~0.65, 6-win ~0.95, 8-win ~1.05, 10-win ~1.15
+    wp = record.win_percentage
+    mult = 0.55 + wp * 0.55 + min(record.avg_opi / 100.0, 1.0) * 0.05
+    return round(min(1.15, max(0.55, mult)), 3)
+
+
+def _team_win_pct(team_name: str, standings: dict) -> float:
+    """Return a team's win percentage from standings."""
+    record = standings.get(team_name)
+    if record is None:
+        return 0.5
+    return record.win_percentage
+
+
+# Minimum team record thresholds
+_MIN_WIN_PCT_MVP = 0.500           # CVL MVP, conference MVP
+_MIN_WIN_PCT_POY = 0.600           # Player of the Year awards
+_MIN_WIN_PCT_POSITIONAL = 0.500    # Best Zeroback, Best Viper, etc.
+
+
+# ──────────────────────────────────────────────
+# WPA TIEBREAKER
+# ──────────────────────────────────────────────
+
+_WPA_TIEBREAK_THRESHOLD = 0.05  # 5% — WPA breaks ties within this margin
+
+
+def _wpa_tiebreak(
+    candidate_score: float,
+    candidate_wpa: float,
+    best_score: float,
+    best_wpa: float,
+) -> bool:
+    """Return True if the candidate should beat the current best.
+
+    If candidate has a clearly higher stat score (>5% gap), it wins outright.
+    If scores are within 5%, WPA breaks the tie.
+    """
+    if best_score <= 0:
+        return True
+    gap = (candidate_score - best_score) / max(1.0, abs(best_score))
+    if gap > _WPA_TIEBREAK_THRESHOLD:
+        # Candidate clearly better on stats alone
+        return True
+    if gap < -_WPA_TIEBREAK_THRESHOLD:
+        # Current best clearly better on stats alone
+        return False
+    # Within 5% — WPA breaks the tie
+    return candidate_wpa > best_wpa
 
 
 # ──────────────────────────────────────────────
@@ -536,11 +577,15 @@ def _best_in_position(
     exclude: set,
     freshman_only: bool = False,
     player_stats_agg: Optional[Dict] = None,
+    min_win_pct: float = 0.0,
 ) -> Optional[Tuple[Player, str]]:
     best_score = -1.0
+    best_wpa = -999.0
     best_pair = None
     use_stats = bool(player_stats_agg)
     for team_name, team in teams.items():
+        if min_win_pct > 0 and _team_win_pct(team_name, standings) < min_win_pct:
+            continue
         mult = _team_perf_mult(team_name, standings)
         team_stats = player_stats_agg.get(team_name, {}) if use_stats else {}
         for player in team.players:
@@ -556,10 +601,13 @@ def _best_in_position(
                 if pstats.get("games", 0) == 0:
                     continue
                 score = _stat_score_for_group(pstats, group_filter, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 score = score_fn(player, mult)
-            if score > best_score:
+                wpa = 0.0
+            if _wpa_tiebreak(score, wpa, best_score, best_wpa):
                 best_score = score
+                best_wpa = wpa
                 best_pair = (player, team_name)
     return best_pair
 
@@ -623,7 +671,8 @@ def _select_slots(
 # ──────────────────────────────────────────────
 
 def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score any offensive player using season stats + WPA (for MVP / OPOY)."""
+    """Score any offensive player using season stats (for MVP / OPOY).
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     yds = stats.get("yards", 0)
     tds = stats.get("tds", 0)
@@ -631,15 +680,14 @@ def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
     kp_tds = stats.get("kick_pass_tds", 0)
     lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
-    wpa = stats.get("wpa", 0.0)
-    raw = ((yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15
-            + tds * 18 + kp_tds * 14 - fumbles * 8) / games
-           + wpa * 10)
+    raw = (yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15
+           + tds * 18 + kp_tds * 14 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Zeroback — kick passing + rushing + lateral play + WPA."""
+    """Score a Zeroback — kick passing + rushing + lateral play.
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     kp_yds = stats.get("kick_pass_yards", 0)
     kp_tds = stats.get("kick_pass_tds", 0)
@@ -649,16 +697,15 @@ def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
     tds = stats.get("tds", 0)
     lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
-    wpa = stats.get("wpa", 0.0)
     kp_pct = kp_comp / kp_att
-    raw = ((kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
-            + tds * 15 + kp_tds * 12 + kp_pct * 20 - fumbles * 8) / games
-           + wpa * 10)
+    raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+           + tds * 15 + kp_tds * 12 + kp_pct * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_viper(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Viper — all-purpose yards, laterals, TDs + WPA."""
+    """Score a Viper — all-purpose yards, laterals, TDs.
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     yds = stats.get("yards", 0)
     lat_yds = stats.get("lateral_yards", 0)
@@ -666,40 +713,38 @@ def _stat_score_viper(stats: dict, team_perf_mult: float = 1.0) -> float:
     fumbles = stats.get("fumbles", 0)
     kr_yds = stats.get("kick_return_yards", 0)
     pr_yds = stats.get("punt_return_yards", 0)
-    wpa = stats.get("wpa", 0.0)
     all_purpose = yds + kr_yds + pr_yds
-    raw = ((all_purpose * 0.35 + lat_yds * 0.3 + tds * 20 - fumbles * 8) / games
-           + wpa * 10)
+    raw = (all_purpose * 0.35 + lat_yds * 0.3 + tds * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_lateral(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score lateral specialist — volume, accuracy, lateral yards + WPA."""
+    """Score lateral specialist — volume, accuracy, lateral yards.
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     lat_yds = stats.get("lateral_yards", 0)
     lat_thrown = stats.get("laterals_thrown", 0)
     lat_assists = stats.get("lateral_assists", 0)
     lat_pct = lat_assists / max(1, lat_thrown)
     yds = stats.get("yards", 0)
-    wpa = stats.get("wpa", 0.0)
-    raw = ((lat_yds * 0.5 + lat_thrown * 3 + lat_pct * 30 + yds * 0.1) / games
-           + wpa * 8)
+    raw = (lat_yds * 0.5 + lat_thrown * 3 + lat_pct * 30 + yds * 0.1) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_kicker(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score kicker — accuracy, volume + WPA."""
+    """Score kicker — accuracy, volume.
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     kick_made = stats.get("kick_made", 0)
     kick_att = max(1, stats.get("kick_att", 1))
     pct = kick_made / kick_att
-    wpa = stats.get("wpa", 0.0)
-    raw = (kick_made * 8 + pct * 30) / games + wpa * 6
+    raw = (kick_made * 8 + pct * 30) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_defense(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score defensive player — tackles, sacks, TFLs, hurries + WPA."""
+    """Score defensive player — tackles, sacks, TFLs, hurries.
+    Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     tackles = stats.get("tackles", 0)
     sacks = stats.get("sacks", 0)
@@ -707,10 +752,8 @@ def _stat_score_defense(stats: dict, team_perf_mult: float = 1.0) -> float:
     hurries = stats.get("hurries", 0)
     bells = stats.get("keeper_bells", 0)
     deflections = stats.get("kick_deflections", 0)
-    wpa = stats.get("wpa", 0.0)
-    raw = ((tackles * 2 + sacks * 12 + tfl * 6 + hurries * 3
-            + bells * 4 + deflections * 5) / games
-           + wpa * 8)
+    raw = (tackles * 2 + sacks * 12 + tfl * 6 + hurries * 3
+           + bells * 4 + deflections * 5) / games
     return round(raw * team_perf_mult, 2)
 
 
@@ -750,15 +793,49 @@ def _select_individual_awards(
             return team_stats.get(player_name)
         return None
 
-    def _best(group, score_fn, exclude_set=None):
+    def _best(group, score_fn, exclude_set=None, min_win_pct=0.0):
         return _best_in_position(teams, standings, group, score_fn,
                                   exclude_set if exclude_set is not None else seen,
-                                  player_stats_agg=player_stats_agg)
+                                  player_stats_agg=player_stats_agg,
+                                  min_win_pct=min_win_pct)
+
+    def _scan_best(position_groups, stat_score_fn, min_win_pct=0.0):
+        """Scan all players in given position groups using stat_score_fn.
+        Applies WPA tiebreaker and minimum team record threshold.
+        Returns (player, team_name) or None."""
+        best = None
+        best_score = -1.0
+        best_wpa = -999.0
+        for t_name, t in teams.items():
+            if min_win_pct > 0 and _team_win_pct(t_name, standings) < min_win_pct:
+                continue
+            mult = _team_perf_mult(t_name, standings)
+            for p in t.players:
+                uid = f"{t_name}::{p.name}"
+                if uid in seen:
+                    continue
+                if position_groups and _pos_group(p.position) not in position_groups:
+                    continue
+                pstats = _get_stats(t_name, p.name)
+                if pstats and pstats.get("games", 0) > 0:
+                    s = stat_score_fn(pstats, mult)
+                    wpa = pstats.get("wpa", 0.0)
+                else:
+                    continue  # require actual stats for major awards
+                if _wpa_tiebreak(s, wpa, best_score, best_wpa):
+                    best_score = s
+                    best_wpa = wpa
+                    best = (p, t_name)
+        return best
 
     # ── CVL MVP (national POY — any position) ──────────────────
+    # Minimum .500 team record required
     best_poy = None
     best_poy_score = -1.0
+    best_poy_wpa = -999.0
     for t_name, t in teams.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_MVP:
+            continue
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
             if f"{t_name}::{p.name}" in seen:
@@ -770,10 +847,13 @@ def _select_individual_awards(
                     s = _stat_score_defense(pstats, mult)
                 else:
                     s = _stat_score_any_offense(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _national_poy_score(p, mult)
-            if s > best_poy_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
+                best_poy_wpa = wpa
                 best_poy = (p, t_name)
     if best_poy:
         p, t = best_poy
@@ -781,86 +861,48 @@ def _select_individual_awards(
              f"Nation's outstanding collegiate viperball player ({t})")
 
     # ── Best Zeroback ─────────────────────────────
-    best_zb = None
-    best_zb_score = -1.0
-    for t_name, t in teams.items():
-        mult = _team_perf_mult(t_name, standings)
-        for p in t.players:
-            uid = f"{t_name}::{p.name}"
-            if uid in seen or _pos_group(p.position) != "zeroback":
-                continue
-            pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                s = _stat_score_zeroback(pstats, mult)
-            else:
-                s = _player_score(p, mult)
-            if s > best_zb_score:
-                best_zb_score = s
-                best_zb = (p, t_name)
+    # Minimum .500 team record required
+    best_zb = _scan_best({"zeroback"}, _stat_score_zeroback, _MIN_WIN_PCT_POSITIONAL)
     if best_zb:
         _add(best_zb[0], best_zb[1], "Best Zeroback",
              f"Nation's outstanding Zeroback ({best_zb[1]})")
 
     # ── Best Viper ────────────────────────────────
-    best_vp = None
-    best_vp_score = -1.0
-    for t_name, t in teams.items():
-        mult = _team_perf_mult(t_name, standings)
-        for p in t.players:
-            uid = f"{t_name}::{p.name}"
-            if uid in seen or _pos_group(p.position) != "viper":
-                continue
-            pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                s = _stat_score_viper(pstats, mult)
-            else:
-                s = _player_score(p, mult)
-            if s > best_vp_score:
-                best_vp_score = s
-                best_vp = (p, t_name)
+    # Minimum .500 team record required
+    best_vp = _scan_best({"viper"}, _stat_score_viper, _MIN_WIN_PCT_POSITIONAL)
+    if not best_vp:
+        # Fallback: find best viper without stat requirement
+        best_vp = _best("viper", _player_score, min_win_pct=_MIN_WIN_PCT_POSITIONAL)
     if best_vp:
         _add(best_vp[0], best_vp[1], "Best Viper",
              f"Nation's outstanding Viper ({best_vp[1]})")
 
     # ── Best Lateral Specialist ─────────────────
-    best_lat = None
-    best_lat_score = -1.0
-    for t_name, t in teams.items():
-        mult = _team_perf_mult(t_name, standings)
-        for p in t.players:
-            uid = f"{t_name}::{p.name}"
-            if uid in seen:
-                continue
-            if _pos_group(p.position) not in {"zeroback", "viper", "back"}:
-                continue
-            pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                s = _stat_score_lateral(pstats, mult)
-            else:
-                s = _lateral_score(p, mult)
-            if s > best_lat_score:
-                best_lat_score = s
-                best_lat = (p, t_name)
+    # Minimum .500 team record required
+    best_lat = _scan_best({"zeroback", "viper", "back"}, _stat_score_lateral, _MIN_WIN_PCT_POSITIONAL)
     if best_lat:
         _add(best_lat[0], best_lat[1], "Best Lateral Specialist",
              f"Nation's outstanding lateral specialist ({best_lat[1]})")
 
     # ── Best Defensive Player (lineman or safety) ──────
-    cand_l = _best("lineman", _defensive_score)
-    cand_s = _best("safety", _defensive_score)
+    # Minimum .500 team record required
+    cand_l = _best("lineman", _defensive_score, min_win_pct=_MIN_WIN_PCT_POSITIONAL)
+    cand_s = _best("safety", _defensive_score, min_win_pct=_MIN_WIN_PCT_POSITIONAL)
     if cand_l and cand_s:
         ml = _team_perf_mult(cand_l[1], standings)
         ms = _team_perf_mult(cand_s[1], standings)
-        # Use stats if available for comparison
         pstats_l = _get_stats(cand_l[1], cand_l[0].name)
         pstats_s = _get_stats(cand_s[1], cand_s[0].name)
         if pstats_l and pstats_s:
             score_l = _stat_score_defense(pstats_l, ml)
             score_s = _stat_score_defense(pstats_s, ms)
+            wpa_l = pstats_l.get("wpa", 0.0)
+            wpa_s = pstats_s.get("wpa", 0.0)
+            pair = cand_l if _wpa_tiebreak(score_l, wpa_l, score_s, wpa_s) else cand_s
         else:
             score_l = _defensive_score(cand_l[0], ml)
             score_s = _defensive_score(cand_s[0], ms)
-        pair = cand_l if score_l >= score_s else cand_s
+            pair = cand_l if score_l >= score_s else cand_s
     else:
         pair = cand_l or cand_s
     if pair:
@@ -868,9 +910,13 @@ def _select_individual_awards(
              f"Nation's outstanding defensive player ({pair[1]})")
 
     # ── Best Kicker (any position) ───────────────────
+    # Minimum .500 team record required
     best_k = None
     best_k_score = -1.0
+    best_k_wpa = -999.0
     for t_name, t in teams.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POSITIONAL:
+            continue
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
             uid = f"{t_name}::{p.name}"
@@ -879,20 +925,27 @@ def _select_individual_awards(
             pstats = _get_stats(t_name, p.name)
             if pstats and pstats.get("games", 0) > 0 and pstats.get("kick_att", 0) > 0:
                 s = _stat_score_kicker(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _kicker_score(p, mult)
-            if s > best_k_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_k_score, best_k_wpa):
                 best_k_score = s
+                best_k_wpa = wpa
                 best_k = (p, t_name)
     if best_k:
         _add(best_k[0], best_k[1], "Best Kicker",
              f"Nation's outstanding kicker ({best_k[1]})")
 
     # ── Offensive Player of the Year ──────────────────────────────────────
+    # Minimum .600 team record required
     off_groups = {"zeroback", "viper", "back"}
     best_off = None
     best_off_score = -1.0
+    best_off_wpa = -999.0
     for t_name, t in teams.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POY:
+            continue
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
             uid = f"{t_name}::{p.name}"
@@ -904,20 +957,27 @@ def _select_individual_awards(
             if pstats and pstats.get("games", 0) > 0:
                 group = _pos_group(p.position)
                 s = _stat_score_for_group(pstats, group, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _player_score(p, mult)
-            if s > best_off_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
+                best_off_wpa = wpa
                 best_off = (p, t_name)
     if best_off:
         _add(best_off[0], best_off[1], "Offensive Player of the Year",
              f"Dominant offensive force ({best_off[1]})")
 
     # ── Defensive Player of the Year ──────────────────────────────────────
+    # Minimum .600 team record required
     def_groups = {"lineman", "safety"}
     best_def = None
     best_def_score = -1.0
+    best_def_wpa = -999.0
     for t_name, t in teams.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POY:
+            continue
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
             uid = f"{t_name}::{p.name}"
@@ -929,10 +989,13 @@ def _select_individual_awards(
             if pstats and pstats.get("games", 0) > 0:
                 group = _pos_group(p.position)
                 s = _stat_score_for_group(pstats, group, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _defensive_score(p, mult)
-            if s > best_def_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
+                best_def_wpa = wpa
                 best_def = (p, t_name)
     if best_def:
         _add(best_def[0], best_def[1], "Defensive Player of the Year",
@@ -1027,10 +1090,13 @@ def _select_conference_individual_awards(
             return team_stats.get(player_name)
         return None
 
-    # Conference MVP
+    # Conference MVP — minimum .500 record required
     best_poy = None
     best_poy_score = -1.0
+    best_poy_wpa = -999.0
     for t_name, t in conf_team_objs.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_MVP:
+            continue
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
             if f"{t_name}::{p.name}" in seen:
@@ -1042,19 +1108,23 @@ def _select_conference_individual_awards(
                     s = _stat_score_defense(pstats, mult)
                 else:
                     s = _stat_score_any_offense(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _national_poy_score(p, mult)
-            if s > best_poy_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
+                best_poy_wpa = wpa
                 best_poy = (p, t_name)
     if best_poy:
         _add(best_poy[0], best_poy[1], f"{conference_name} MVP",
              f"{conference_name} Player of the Year ({best_poy[1]})")
 
-    # Conference Offensive Player of the Year
+    # Conference Offensive Player of the Year — no min record, team mult handles it
     off_groups = {"zeroback", "viper", "back"}
     best_off = None
     best_off_score = -1.0
+    best_off_wpa = -999.0
     for t_name, t in conf_team_objs.items():
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
@@ -1067,19 +1137,23 @@ def _select_conference_individual_awards(
             if pstats and pstats.get("games", 0) > 0:
                 group = _pos_group(p.position)
                 s = _stat_score_for_group(pstats, group, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _player_score(p, mult)
-            if s > best_off_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
+                best_off_wpa = wpa
                 best_off = (p, t_name)
     if best_off:
         _add(best_off[0], best_off[1], f"{conference_name} Offensive POY",
              f"{conference_name} Offensive Player of the Year ({best_off[1]})")
 
-    # Conference Defensive Player of the Year
+    # Conference Defensive Player of the Year — no min record, team mult handles it
     def_groups = {"lineman", "safety"}
     best_def = None
     best_def_score = -1.0
+    best_def_wpa = -999.0
     for t_name, t in conf_team_objs.items():
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
@@ -1092,18 +1166,22 @@ def _select_conference_individual_awards(
             if pstats and pstats.get("games", 0) > 0:
                 group = _pos_group(p.position)
                 s = _stat_score_for_group(pstats, group, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _defensive_score(p, mult)
-            if s > best_def_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
+                best_def_wpa = wpa
                 best_def = (p, t_name)
     if best_def:
         _add(best_def[0], best_def[1], f"{conference_name} Defensive POY",
              f"{conference_name} Defensive Player of the Year ({best_def[1]})")
 
-    # Conference Freshman of the Year
+    # Conference Freshman of the Year — no min record
     best_fresh = None
     best_fresh_score = -1.0
+    best_fresh_wpa = -999.0
     for t_name, t in conf_team_objs.items():
         mult = _team_perf_mult(t_name, standings)
         for p in t.players:
@@ -1115,14 +1193,14 @@ def _select_conference_individual_awards(
             pstats = _get_stats(t_name, p.name)
             if pstats and pstats.get("games", 0) > 0:
                 group = _pos_group(p.position)
-                if group in ("lineman", "safety"):
-                    s = _stat_score_for_group(pstats, group, mult)
-                else:
-                    s = _stat_score_for_group(pstats, group, mult)
+                s = _stat_score_for_group(pstats, group, mult)
+                wpa = pstats.get("wpa", 0.0)
             else:
                 s = _player_score(p, mult)
-            if s > best_fresh_score:
+                wpa = 0.0
+            if _wpa_tiebreak(s, wpa, best_fresh_score, best_fresh_wpa):
                 best_fresh_score = s
+                best_fresh_wpa = wpa
                 best_fresh = (p, t_name)
     if best_fresh:
         _add(best_fresh[0], best_fresh[1], f"{conference_name} Freshman of the Year",
