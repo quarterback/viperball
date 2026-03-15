@@ -134,18 +134,33 @@ MIDWEST STATES INTERSCHOLASTIC ASSOCIATION (13 teams)
    13. Wichita State University (WSU) — Shockers — Wichita, KS
 
 ----------------------------------------------------------------------
-MOONSHINE LEAGUE (10 teams)
+MOONSHINE LEAGUE (9 teams)
 ----------------------------------------------------------------------
     1. Boise State University (BSU) — Broncos — Boise, ID
-    2. Colorado College (CC) — Tigers — Colorado Springs, CO
-    3. Montana State University (MSU) — Bobcats — Bozeman, MT
-    4. United States Air Force Academy (AFA) — Falcons — Colorado Springs, CO
-    5. United States Military Academy (ARMY) — Black Knights — West Point, NY
-    6. University of Denver (DU) — Pioneers — Denver, CO
-    7. University of Montana (UM) — Grizzlies — Missoula, MT
-    8. University of Northern Colorado (UNC) — Bears — Greeley, CO
-    9. University of Wisconsin-River Falls (UWRF) — Falcons — River Falls, WI
-   10. Weber State University (WSU) — Wildcats — Ogden, UT
+    2. Montana State University (MSU) — Bobcats — Bozeman, MT
+    3. United States Air Force Academy (AFA) — Falcons — Colorado Springs, CO
+    4. United States Military Academy (ARMY) — Black Knights — West Point, NY
+    5. University of Denver (DU) — Pioneers — Denver, CO
+    6. University of Montana (UM) — Grizzlies — Missoula, MT
+    7. University of Northern Colorado (UNC) — Bears — Greeley, CO
+    8. University of Wisconsin-River Falls (UWRF) — Falcons — River Falls, WI
+    9. Weber State University (WSU) — Wildcats — Ogden, UT
+
+----------------------------------------------------------------------
+MOUNTAIN WEST (12 teams)
+----------------------------------------------------------------------
+    1. California Institute of Technology (CALT) — Beavers — Pasadena, CA
+    2. Claremont McKenna College (CMC) — Stags — Claremont, CA
+    3. Colorado State (CSU) — Rams — Fort Collins, CO
+    4. East Texas A&M University (ETAMU) — Lions — Commerce, TX
+    5. Fresno State (FRES) — Bulldogs — Fresno, CA
+    6. Loyola Marymount University (LMU) — Lions — Los Angeles, CA
+    7. Northwest Missouri State University (NWMSU) — Bearcats — Maryville, MO
+    8. Pepperdine University (PU) — Waves — Malibu, CA
+    9. San Diego State (SDSU) — Aztecs — San Diego, CA
+   10. San Jose State (SJSU) — Spartans — San Jose, CA
+   11. UC Santa Cruz (UCSC) — Banana Slugs — Santa Cruz, CA
+   12. University of San Diego (USD) — Toreros — San Diego, CA
 
 ----------------------------------------------------------------------
 NATIONAL COLLEGIATE LEAGUE (10 teams)
@@ -162,49 +177,34 @@ NATIONAL COLLEGIATE LEAGUE (10 teams)
    10. University of North Florida (UNF) — Ospreys — Jacksonville, FL
 
 ----------------------------------------------------------------------
-NORTHERN SHIELD (7 teams)
+NORTHERN SHIELD (6 teams)
 ----------------------------------------------------------------------
     1. Middlebury College (MIDD) — Panthers — Middlebury, VT
     2. Oswego State (OSWE) — Lakers — Oswego, NY
     3. SUNY Plattsburgh (PLAT) — Cardinals — Plattsburgh, NY
-    4. University of Alaska Anchorage (UAA) — Seawolves — Anchorage, AK
-    5. University of Alberta (ALTA) — Golden Bears — Edmonton, AB
-    6. University of British Columbia (UBC) — Thunderbirds — Vancouver, BC
-    7. University of Calgary (CALG) — Dinos — Calgary, AB
+    4. University of Alberta (ALTA) — Golden Bears — Edmonton, AB
+    5. University of British Columbia (UBC) — Thunderbirds — Vancouver, BC
+    6. University of Calgary (CALG) — Dinos — Calgary, AB
 
 ----------------------------------------------------------------------
-OUTLANDS COAST CONFERENCE (11 teams)
-----------------------------------------------------------------------
-    1. California Institute of Technology (CALT) — Beavers — Pasadena, CA
-    2. Claremont McKenna College (CMC) — Stags — Claremont, CA
-    3. East Texas A&M University (ETAMU) — Lions — Commerce, TX
-    4. Fresno State (FRES) — Bulldogs — Fresno, CA
-    5. Loyola Marymount University (LMU) — Lions — Los Angeles, CA
-    6. Northwest Missouri State University (NWMSU) — Bearcats — Maryville, MO
-    7. Pepperdine University (PU) — Waves — Malibu, CA
-    8. San Diego State (SDSU) — Aztecs — San Diego, CA
-    9. San Jose State (SJSU) — Spartans — San Jose, CA
-   10. UC Santa Cruz (UCSC) — Banana Slugs — Santa Cruz, CA
-   11. University of San Diego (USD) — Toreros — San Diego, CA
-
-----------------------------------------------------------------------
-PAC-16 (15 teams)
+PAC-16 (16 teams)
 ----------------------------------------------------------------------
     1. Arizona State University (ASU) — Sun Devils — Tempe, AZ
-    2. University of Arizona (ARIZ) — Wildcats — Tucson, AZ
-    3. California (CAL) — Golden Bears — Berkeley, CA
-    4. University of Colorado (CU) — Buffaloes — Boulder, CO
-    5. University of Idaho (IDHO) — Vandals — Moscow, ID
-    6. University of Nevada (NEV) — Wolf Pack — Reno, NV
-    7. University of Oregon (ORE) — Ducks — Eugene, OR
-    8. Oregon State University (ORST) — Beavers — Corvallis, OR
-    9. Stanford University (STAN) — Cardinal — Stanford, CA
-   10. UCLA (UCLA) — Bruins — Los Angeles, CA
-   11. USC (USC) — Trojans — Los Angeles, CA
-   12. University of Utah (UTAH) — Utes — Salt Lake City, UT
-   13. University of Washington (UW) — Huskies — Seattle, WA
-   14. Washington State University (WSU) — Cougars — Pullman, WA
-   15. University of Wyoming (WYO) — Cowboys — Laramie, WY
+    2. University of Alaska Anchorage (UAA) — Seawolves — Anchorage, AK
+    3. University of Arizona (ARIZ) — Wildcats — Tucson, AZ
+    4. California (CAL) — Golden Bears — Berkeley, CA
+    5. University of Colorado (CU) — Buffaloes — Boulder, CO
+    6. University of Idaho (IDHO) — Vandals — Moscow, ID
+    7. University of Nevada (NEV) — Wolf Pack — Reno, NV
+    8. University of Oregon (ORE) — Ducks — Eugene, OR
+    9. Oregon State University (ORST) — Beavers — Corvallis, OR
+   10. Stanford University (STAN) — Cardinal — Stanford, CA
+   11. UCLA (UCLA) — Bruins — Los Angeles, CA
+   12. USC (USC) — Trojans — Los Angeles, CA
+   13. University of Utah (UTAH) — Utes — Salt Lake City, UT
+   14. University of Washington (UW) — Huskies — Seattle, WA
+   15. Washington State University (WSU) — Cougars — Pullman, WA
+   16. University of Wyoming (WYO) — Cowboys — Laramie, WY
 
 ----------------------------------------------------------------------
 PRAIRIE ATHLETIC UNION (11 teams)
@@ -273,6 +273,11 @@ YANKEE FOURTEEN (16 teams)
    14. University of Rochester (ROCH) — Yellowjackets — Rochester, NY
    15. University of Vermont (UVM) — Catamounts — Burlington, VT
    16. Yale University (YALE) — Bulldogs — New Haven, CT
+
+======================================================================
+PROTECTED RIVALRIES (played every year as OOC games)
+======================================================================
+    * Colorado State (CSU) vs. University of Wyoming (WYO) — "Border War"
 
 ======================================================================
 TOTAL: 199 teams across 18 conferences

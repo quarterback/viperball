@@ -1,0 +1,11 @@
+{
+  "_comment": "Protected rivalries that are always scheduled as OOC games every season.",
+  "protected_rivalries": [
+    {
+      "team_a": "Colorado State",
+      "team_b": "University of Wyoming",
+      "name": "Border War",
+      "type": "non_conference"
+    }
+  ]
+}

@@ -399,10 +399,6 @@
       "name": "Boise State University"
     },
     {
-      "id": "colorado_college",
-      "name": "Colorado College"
-    },
-    {
       "id": "montana_state",
       "name": "Montana State University"
     },
@@ -491,10 +487,6 @@
       "name": "SUNY Plattsburgh"
     },
     {
-      "id": "alaska_anchorage",
-      "name": "University of Alaska Anchorage"
-    },
-    {
       "id": "alberta",
       "name": "University of Alberta"
     },
@@ -507,80 +499,14 @@
       "name": "University of Calgary"
     }
   ],
-  "Outlands Coast Conference": [
-    {
-      "id": "caltech",
-      "name": "California Institute of Technology"
-    },
-    {
-      "id": "claremont_mckenna",
-      "name": "Claremont McKenna College"
-    },
-    {
-      "id": "east_texas_am",
-      "name": "East Texas A&M University"
-    },
-    {
-      "id": "fresno_state",
-      "name": "Fresno State"
-    },
-    {
-      "id": "loyola_marymount",
-      "name": "Loyola Marymount University"
-    },
-    {
-      "id": "nw_missouri_state",
-      "name": "Northwest Missouri State University"
-    },
-    {
-      "id": "pepperdine",
-      "name": "Pepperdine University"
-    },
-    {
-      "id": "san_diego_state",
-      "name": "San Diego State"
-    },
-    {
-      "id": "san_jose_state",
-      "name": "San Jose State"
-    },
-    {
-      "id": "uc_santa_cruz",
-      "name": "UC Santa Cruz"
-    },
-    {
-      "id": "san_diego",
-      "name": "University of San Diego"
-    }
-  ],
   "Pac-16": [
     {
       "id": "arizona_state",
       "name": "Arizona State University"
     },
     {
-      "id": "arizona",
-      "name": "University of Arizona"
-    },
-    {
       "id": "cal",
       "name": "California"
-    },
-    {
-      "id": "colorado",
-      "name": "University of Colorado"
-    },
-    {
-      "id": "idaho",
-      "name": "University of Idaho"
-    },
-    {
-      "id": "nevada",
-      "name": "University of Nevada"
-    },
-    {
-      "id": "oregon",
-      "name": "University of Oregon"
     },
     {
       "id": "oregon_state",
@@ -599,6 +525,30 @@
       "name": "USC"
     },
     {
+      "id": "alaska_anchorage",
+      "name": "University of Alaska Anchorage"
+    },
+    {
+      "id": "arizona",
+      "name": "University of Arizona"
+    },
+    {
+      "id": "colorado",
+      "name": "University of Colorado"
+    },
+    {
+      "id": "idaho",
+      "name": "University of Idaho"
+    },
+    {
+      "id": "nevada",
+      "name": "University of Nevada"
+    },
+    {
+      "id": "oregon",
+      "name": "University of Oregon"
+    },
+    {
       "id": "utah",
       "name": "University of Utah"
     },
@@ -607,12 +557,12 @@
       "name": "University of Washington"
     },
     {
-      "id": "washington_state",
-      "name": "Washington State University"
-    },
-    {
       "id": "wyoming",
       "name": "University of Wyoming"
+    },
+    {
+      "id": "washington_state",
+      "name": "Washington State University"
     }
   ],
   "Prairie Athletic Union": [
@@ -829,6 +779,56 @@
     {
       "id": "yale",
       "name": "Yale University"
+    }
+  ],
+  "Mountain West": [
+    {
+      "id": "caltech",
+      "name": "California Institute of Technology"
+    },
+    {
+      "id": "claremont_mckenna",
+      "name": "Claremont McKenna College"
+    },
+    {
+      "id": "colorado_state",
+      "name": "Colorado State"
+    },
+    {
+      "id": "east_texas_am",
+      "name": "East Texas A&M University"
+    },
+    {
+      "id": "fresno_state",
+      "name": "Fresno State"
+    },
+    {
+      "id": "loyola_marymount",
+      "name": "Loyola Marymount University"
+    },
+    {
+      "id": "nw_missouri_state",
+      "name": "Northwest Missouri State University"
+    },
+    {
+      "id": "pepperdine",
+      "name": "Pepperdine University"
+    },
+    {
+      "id": "san_diego_state",
+      "name": "San Diego State"
+    },
+    {
+      "id": "san_jose_state",
+      "name": "San Jose State"
+    },
+    {
+      "id": "uc_santa_cruz",
+      "name": "UC Santa Cruz"
+    },
+    {
+      "id": "san_diego",
+      "name": "University of San Diego"
     }
   ]
 }

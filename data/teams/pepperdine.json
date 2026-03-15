@@ -4,7 +4,7 @@
     "school_name": "Pepperdine University",
     "abbreviation": "PU",
     "mascot": "Waves",
-    "conference": "Outlands Coast Conference",
+    "conference": "Mountain West",
     "city": "Malibu",
     "state": "CA",
     "colors": [
@@ -639,7 +639,7 @@
       },
       {
         "number": 53,
-        "name": "Stéphanie Lavoie",
+        "name": "St\u00e9phanie Lavoie",
         "position": "Back/Corner",
         "height": "6-0",
         "weight": 185,
