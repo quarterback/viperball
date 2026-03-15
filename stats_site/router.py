@@ -1753,9 +1753,13 @@ def college_awards(request: Request, session_id: str):
         traceback.print_exc()
         awards = {}
 
+    # Weekly awards (player/coach of the week)
+    weekly_awards = getattr(season, 'weekly_awards', []) or []
+
     return templates.TemplateResponse("college/awards.html", _ctx(
         request, section="college", session_id=session_id,
         awards=awards,
+        weekly_awards=weekly_awards,
         season_name=getattr(season, "name", "Season"),
     ))
 

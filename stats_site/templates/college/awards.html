@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>SEASON AWARDS</h1>
+  <h1>AWARDS</h1>
   <div class="subtitle">{{ season_name }}</div>
 </div>
 
@@ -28,23 +28,70 @@
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 
+{# ── Sub-tabs: Season Awards vs Weekly Honors ── #}
+<style>
+.award-subtabs { display: flex; gap: 0; margin-bottom: 16px; }
+.award-subtabs button {
+  background: none; border: none; color: var(--fg-dim); cursor: pointer;
+  padding: 6px 16px; font-size: 12px; font-family: inherit; text-transform: uppercase;
+  letter-spacing: 0.5px; border-bottom: 2px solid transparent;
+}
+.award-subtabs button:hover { color: var(--fg-bright); }
+.award-subtabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.award-panel { display: none; }
+.award-panel.active { display: block; }
+.stat-badge { display: inline-block; background: var(--bg-card, #1a1a2e); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; margin: 1px 2px; font-size: 10px; color: var(--fg-dim); white-space: nowrap; }
+.stat-badge.wpa { color: var(--green, #4ade80); border-color: var(--green, #4ade80); }
+.stat-badge.wpa-neg { color: var(--red, #f87171); border-color: var(--red, #f87171); }
+</style>
+
+<div class="award-subtabs">
+  <button class="active" onclick="showAwardTab('season')">Season Awards</button>
+  <button onclick="showAwardTab('weekly')">Weekly Honors{% if weekly_awards %} ({{ weekly_awards|length }}){% endif %}</button>
+</div>
+
+{# ════════════════════════════════════════════════════ #}
+{# ── SEASON AWARDS TAB ─────────────────────────────── #}
+{# ════════════════════════════════════════════════════ #}
+<div id="panel-season" class="award-panel active">
+
 {% if awards %}
 
+{# ── National Individual Awards ── #}
 {% if awards.get('individual_awards') %}
-<h2>Individual Awards</h2>
+<h2>National Individual Awards</h2>
 <div class="table-scroll">
 <table>
-  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Reason</th></tr></thead>
+  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Season Stats</th></tr></thead>
   <tbody>
   {% for a in awards.individual_awards %}
   <tr>
     <td style="color:var(--yellow);font-weight:bold">{{ a.get('award_name', '?') }}</td>
-    <td>{{ a.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ a.get('team_name', '') }}/{{ a.get('player_name', '') }}">{{ a.get('player_name', '?') }}</a></td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
     <td>{{ a.get('year_in_school', '') }}</td>
     <td class="num {% if a.get('overall_rating', 0) >= 90 %}stat-elite{% elif a.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ a.get('overall_rating', '') }}</td>
-    <td style="color:var(--fg-dim);font-size:10px">{{ a.get('reason', '') }}</td>
+    <td>
+      {% set ss = a.get('season_stats') %}
+      {% if ss %}
+        {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
+        {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('rush_carries') %}<span class="stat-badge">{{ ss.rush_carries }} car</span>{% endif %}
+        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards }} lat</span>{% endif %}
+        {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
+        {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
+        {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}
+        {% if ss.get('tfl') %}<span class="stat-badge">{{ ss.tfl }} TFL</span>{% endif %}
+        {% if ss.get('wpa') %}<span class="stat-badge {% if ss.wpa > 0 %}wpa{% else %}wpa-neg{% endif %}">{{ '%+.1f'|format(ss.wpa) }} WPA</span>{% endif %}
+      {% else %}
+        <span style="color:var(--fg-dim);font-size:10px">{{ a.get('reason', '') }}</span>
+      {% endif %}
+    </td>
   </tr>
   {% endfor %}
   </tbody>
@@ -52,13 +99,20 @@
 </div>
 {% endif %}
 
+{# ── Coach of the Year / Most Improved ── #}
 <div class="grid-2">
 {% if awards.get('coach_of_year') %}
 <div>
 <h2>Coach of the Year</h2>
 <div class="metric">
   <div class="label">Coach of the Year</div>
-  <div class="value accent">{{ awards.coach_of_year }}</div>
+  <div class="value accent">
+    {% if awards.get('coach_of_year_team') %}
+      <a href="/stats/college/{{ session_id }}/coach/{{ awards.coach_of_year_team }}/head_coach" style="color:var(--accent)">{{ awards.coach_of_year }}</a>
+    {% else %}
+      {{ awards.coach_of_year }}
+    {% endif %}
+  </div>
 </div>
 </div>
 {% endif %}
@@ -68,7 +122,7 @@
 <h2>Most Improved</h2>
 <div class="metric">
   <div class="label">Most Improved Team</div>
-  <div class="value accent">{{ awards.most_improved }}</div>
+  <div class="value accent"><a href="/stats/college/{{ session_id }}/team/{{ awards.most_improved }}" style="color:var(--accent)">{{ awards.most_improved }}</a></div>
 </div>
 </div>
 {% endif %}
@@ -80,15 +134,16 @@
 <h2>{{ tier_label }}</h2>
 <div class="table-scroll">
 <table>
-  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th></tr></thead>
+  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Stats</th></tr></thead>
   <tbody>
   {% for s in awards[tier_key].get('slots', []) %}
   <tr>
-    <td>{{ s.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ s.get('team_name', '') }}/{{ s.get('player_name', '') }}">{{ s.get('player_name', '?') }}</a></td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ s.get('team_name', '') }}">{{ s.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ s.get('position', '?') }}</span></td>
     <td>{{ s.get('year_in_school', '') }}</td>
     <td class="num {% if s.get('overall_rating', 0) >= 90 %}stat-elite{% elif s.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ s.get('overall_rating', '') }}</td>
+    <td style="color:var(--fg-dim);font-size:10px">{{ s.get('reason', '') }}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -104,15 +159,43 @@
 <h2>{{ conf_name }} — Individual Awards</h2>
 <div class="table-scroll">
 <table>
-  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th class="num">OVR</th></tr></thead>
+  <thead><tr><th>Award</th><th>Player</th><th>Team</th><th>Position</th><th class="num">OVR</th><th>Stats</th></tr></thead>
   <tbody>
   {% for a in conf_awards %}
   <tr>
     <td style="color:var(--yellow)">{{ a.get('award_name', '?') }}</td>
-    <td>{{ a.get('player_name', '?') }}</td>
+    <td>
+      {% if a.get('position') == 'Coach' %}
+        {% if a.get('team_name') %}
+          <a href="/stats/college/{{ session_id }}/coach/{{ a.get('team_name', '') }}/head_coach">{{ a.get('player_name', '?') }}</a>
+        {% else %}
+          {{ a.get('player_name', '?') }}
+        {% endif %}
+      {% else %}
+        <a href="/stats/college/{{ session_id }}/player/{{ a.get('team_name', '') }}/{{ a.get('player_name', '') }}">{{ a.get('player_name', '?') }}</a>
+      {% endif %}
+    </td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
-    <td class="num">{{ a.get('overall_rating', '') }}</td>
+    <td class="num {% if a.get('overall_rating', 0) >= 90 %}stat-elite{% elif a.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ a.get('overall_rating', '') if a.get('overall_rating') else '' }}</td>
+    <td>
+      {% set ss = a.get('season_stats') %}
+      {% if ss %}
+        {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
+        {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
+        {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
+        {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}
+        {% if ss.get('tfl') %}<span class="stat-badge">{{ ss.tfl }} TFL</span>{% endif %}
+        {% if ss.get('wpa') %}<span class="stat-badge {% if ss.wpa > 0 %}wpa{% else %}wpa-neg{% endif %}">{{ '%+.1f'|format(ss.wpa) }} WPA</span>{% endif %}
+      {% else %}
+        <span style="color:var(--fg-dim);font-size:10px">{{ a.get('reason', '') }}</span>
+      {% endif %}
+    </td>
   </tr>
   {% endfor %}
   </tbody>
@@ -130,15 +213,16 @@
 <h2>All-{{ conf_name }} {{ 'First' if tier_key == 'first' else 'Second' }} Team</h2>
 <div class="table-scroll">
 <table>
-  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th></tr></thead>
+  <thead><tr><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Stats</th></tr></thead>
   <tbody>
   {% for s in tier_data.slots %}
   <tr>
-    <td>{{ s.get('player_name', '?') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ s.get('team_name', '') }}/{{ s.get('player_name', '') }}">{{ s.get('player_name', '?') }}</a></td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ s.get('team_name', '') }}">{{ s.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ s.get('position', '?') }}</span></td>
     <td>{{ s.get('year_in_school', '') }}</td>
     <td class="num {% if s.get('overall_rating', 0) >= 90 %}stat-elite{% elif s.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ s.get('overall_rating', '') }}</td>
+    <td style="color:var(--fg-dim);font-size:10px">{{ s.get('reason', '') }}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -150,7 +234,65 @@
 {% endif %}
 
 {% else %}
-<div class="empty">Awards not yet computed. Complete the season first.</div>
+<div class="empty">Season awards not yet computed. Complete the regular season first.</div>
 {% endif %}
+
+</div>{# end panel-season #}
+
+{# ════════════════════════════════════════════════════ #}
+{# ── WEEKLY HONORS TAB ─────────────────────────────── #}
+{# ════════════════════════════════════════════════════ #}
+<div id="panel-weekly" class="award-panel">
+
+{% if weekly_awards %}
+
+{# Group by week for display #}
+{% set ns = namespace(weeks=[]) %}
+{% for wa in weekly_awards %}
+  {% if wa.week not in ns.weeks %}
+    {% set ns.weeks = ns.weeks + [wa.week] %}
+  {% endif %}
+{% endfor %}
+
+{% for wk in ns.weeks|sort(reverse=true) %}
+<h2>Week {{ wk }}</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Award</th><th>Recipient</th><th>Team</th><th>Position</th><th>Performance</th></tr></thead>
+  <tbody>
+  {% for wa in weekly_awards if wa.week == wk %}
+  <tr>
+    <td style="color:var(--yellow);font-weight:bold">{{ wa.award }}</td>
+    <td>
+      {% if wa.position == 'Coach' %}
+        <a href="/stats/college/{{ session_id }}/coach/{{ wa.team_name }}/head_coach">{{ wa.player_name }}</a>
+      {% else %}
+        <a href="/stats/college/{{ session_id }}/player/{{ wa.team_name }}/{{ wa.player_name }}">{{ wa.player_name }}</a>
+      {% endif %}
+    </td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ wa.team_name }}">{{ wa.team_name }}</a></td>
+    <td><span class="tag tag-pos">{{ wa.position }}</span></td>
+    <td style="color:var(--fg-dim);font-size:11px">{{ wa.get('stat_line', '') }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty">No weekly honors yet. Awards are given after each week's games.</div>
+{% endif %}
+
+</div>{# end panel-weekly #}
+
+<script>
+function showAwardTab(tab) {
+  document.querySelectorAll('.award-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.award-subtabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
 
 {% endblock %}
