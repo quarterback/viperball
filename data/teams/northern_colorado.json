@@ -4,7 +4,7 @@
     "school_name": "University of Northern Colorado",
     "abbreviation": "UNC",
     "mascot": "Bears",
-    "conference": "Pioneer Athletic Association",
+    "conference": "Moonshine League",
     "city": "Greeley",
     "state": "CO",
     "colors": [
@@ -37,12 +37,12 @@
         "weight": 165,
         "year": "Freshman",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "hybrid_viper",
         "potential": 5,
@@ -607,7 +607,7 @@
       },
       {
         "number": 59,
-        "name": "Héloïse Côté",
+        "name": "H\u00e9lo\u00efse C\u00f4t\u00e9",
         "position": "Zeroback/Back",
         "height": "5-7",
         "weight": 164,
@@ -703,7 +703,7 @@
       },
       {
         "number": 63,
-        "name": "Victoria Tūhoe",
+        "name": "Victoria T\u016bhoe",
         "position": "Wing/End",
         "height": "5-8",
         "weight": 182,

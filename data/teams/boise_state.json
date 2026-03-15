@@ -1,17 +1,16 @@
 {
   "team_info": {
-    "school_id": "fort_hays_state",
-    "school": "Fort Hays State University",
-    "abbreviation": "FHSU",
-    "mascot": "Tigers",
-    "conference": "Pioneer Athletic Association",
-    "city": "Hays",
-    "state": "KS",
+    "school_id": "boise_state",
+    "abbreviation": "BSU",
+    "mascot": "Broncos",
+    "conference": "Moonshine League",
+    "city": "Boise",
+    "state": "ID",
     "colors": [
-      "Black",
-      "Gold"
+      "Blue",
+      "Orange"
     ],
-    "school_name": "Fort Hays State University"
+    "school_name": "Boise State University"
   },
   "identity": {
     "style": "aggressive",
@@ -51,7 +50,7 @@
       "contract_years_remaining": 5,
       "contract_buyout": 768127,
       "year_signed": 2026,
-      "team_name": "Fort Hays State University",
+      "team_name": "Boise State University",
       "career_wins": 62,
       "career_losses": 82,
       "championships": 3,
@@ -106,7 +105,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 244030,
       "year_signed": 2026,
-      "team_name": "Fort Hays State University",
+      "team_name": "Boise State University",
       "career_wins": 100,
       "career_losses": 32,
       "championships": 0,
@@ -161,7 +160,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 297795,
       "year_signed": 2026,
-      "team_name": "Fort Hays State University",
+      "team_name": "Boise State University",
       "career_wins": 171,
       "career_losses": 57,
       "championships": 4,
@@ -217,7 +216,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 196012,
       "year_signed": 2026,
-      "team_name": "Fort Hays State University",
+      "team_name": "Boise State University",
       "career_wins": 118,
       "career_losses": 26,
       "championships": 1,
