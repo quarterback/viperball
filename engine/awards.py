@@ -2,9 +2,10 @@
 Viperball End-of-Season Awards System
 
 Selection methodology:
-- Winners chosen from player rosters using position-weighted attribute ratings
+- Winners chosen using actual season performance stats (WPA, yards, TDs, etc.)
+  with OVR-based attribute scoring as fallback when stats are unavailable
 - Team performance context (win%, avg OPI) applied as a 0.88–1.10× multiplier
-- Each named trophy has a separate scoring function tuned for its position group
+- Each named trophy has a stat-based scoring function tuned for its position group
 - Freshman eligibility restricted to players whose year == "Freshman"
 
 ─────────────────────────────────────────────────────────────────────────────
@@ -270,30 +271,9 @@ def _aggregate_player_season_stats(season) -> Dict[str, Dict[str, dict]]:
                 if not name:
                     continue
                 if name not in agg[team_name]:
-                    agg[team_name][name] = {
-                        "games": 0, "touches": 0, "yards": 0,
-                        "rushing_yards": 0, "rush_carries": 0,
-                        "tds": 0, "rushing_tds": 0, "fumbles": 0,
-                        "lateral_yards": 0, "laterals_thrown": 0,
-                        "kick_att": 0, "kick_made": 0,
-                        "kick_passes_thrown": 0, "kick_passes_completed": 0,
-                        "kick_pass_yards": 0, "kick_pass_tds": 0,
-                        "tackles": 0, "tfl": 0, "sacks": 0,
-                        "tag": p.get("tag", ""),
-                    }
+                    agg[team_name][name] = _init_player_stats(p)
                 a = agg[team_name][name]
-                a["games"] += 1
-                if not a["tag"]:
-                    a["tag"] = p.get("tag", "")
-                for stat in [
-                    "touches", "yards", "rushing_yards", "rush_carries",
-                    "tds", "rushing_tds", "fumbles", "lateral_yards",
-                    "laterals_thrown", "kick_att", "kick_made",
-                    "kick_passes_thrown", "kick_passes_completed",
-                    "kick_pass_yards", "kick_pass_tds",
-                    "tackles", "tfl", "sacks",
-                ]:
-                    a[stat] += p.get(stat, 0)
+                _accumulate_player_stats(a, p)
 
     # Also check playoff games
     for game in getattr(season, 'playoff_bracket', []):
@@ -309,32 +289,47 @@ def _aggregate_player_season_stats(season) -> Dict[str, Dict[str, dict]]:
                 if not name:
                     continue
                 if name not in agg[team_name]:
-                    agg[team_name][name] = {
-                        "games": 0, "touches": 0, "yards": 0,
-                        "rushing_yards": 0, "rush_carries": 0,
-                        "tds": 0, "rushing_tds": 0, "fumbles": 0,
-                        "lateral_yards": 0, "laterals_thrown": 0,
-                        "kick_att": 0, "kick_made": 0,
-                        "kick_passes_thrown": 0, "kick_passes_completed": 0,
-                        "kick_pass_yards": 0, "kick_pass_tds": 0,
-                        "tackles": 0, "tfl": 0, "sacks": 0,
-                        "tag": p.get("tag", ""),
-                    }
+                    agg[team_name][name] = _init_player_stats(p)
                 a = agg[team_name][name]
-                a["games"] += 1
-                if not a["tag"]:
-                    a["tag"] = p.get("tag", "")
-                for stat in [
-                    "touches", "yards", "rushing_yards", "rush_carries",
-                    "tds", "rushing_tds", "fumbles", "lateral_yards",
-                    "laterals_thrown", "kick_att", "kick_made",
-                    "kick_passes_thrown", "kick_passes_completed",
-                    "kick_pass_yards", "kick_pass_tds",
-                    "tackles", "tfl", "sacks",
-                ]:
-                    a[stat] += p.get(stat, 0)
+                _accumulate_player_stats(a, p)
 
     return agg
+
+
+_AGG_COUNTING_STATS = [
+    "touches", "yards", "rushing_yards", "rush_carries",
+    "tds", "rushing_tds", "fumbles", "lateral_yards",
+    "laterals_thrown", "lateral_assists",
+    "kick_att", "kick_made",
+    "kick_passes_thrown", "kick_passes_completed",
+    "kick_pass_yards", "kick_pass_tds",
+    "kick_pass_interceptions",
+    "tackles", "tfl", "sacks", "hurries",
+    "keeper_bells", "kick_deflections",
+    "kick_return_yards", "punt_return_yards",
+    "plays_involved",
+]
+
+
+def _init_player_stats(p: dict) -> dict:
+    d = {s: 0 for s in _AGG_COUNTING_STATS}
+    d.update({
+        "games": 0, "wpa": 0.0,
+        "tag": p.get("tag", ""),
+        "position": p.get("position", ""),
+    })
+    return d
+
+
+def _accumulate_player_stats(a: dict, p: dict):
+    a["games"] += 1
+    if not a["tag"]:
+        a["tag"] = p.get("tag", "")
+    if not a.get("position"):
+        a["position"] = p.get("position", "")
+    for stat in _AGG_COUNTING_STATS:
+        a[stat] += p.get(stat, 0)
+    a["wpa"] += p.get("wpa", 0.0)
 
 
 def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) -> float:
@@ -344,42 +339,43 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
     Defensive players: weighted by tackles, sacks, TFLs.
     """
     games = max(1, stats.get("games", 1))
+    wpa = stats.get("wpa", 0.0)
     if group in ("zeroback",):
-        # Zeroback: kick passing + rushing + lateral play
+        # Zeroback: kick passing + rushing + lateral play + WPA
         kp_yds = stats.get("kick_pass_yards", 0)
         kp_tds = stats.get("kick_pass_tds", 0)
         rush_yds = stats.get("rushing_yards", 0)
         tds = stats.get("tds", 0)
         lat_yds = stats.get("lateral_yards", 0)
         raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
-               + tds * 15 + kp_tds * 12) / games
+               + tds * 15 + kp_tds * 12) / games + wpa * 8
     elif group == "viper":
-        # Viper: yards, laterals, TDs
+        # Viper: yards, laterals, TDs + WPA
         yds = stats.get("yards", 0)
         lat_yds = stats.get("lateral_yards", 0)
         tds = stats.get("tds", 0)
-        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games
+        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games + wpa * 8
     elif group == "back":
-        # Halfback/Wingback: rushing yards, YPC, TDs
+        # Halfback/Wingback: rushing yards, YPC, TDs + WPA
         rush_yds = stats.get("rushing_yards", 0)
         carries = max(1, stats.get("rush_carries", 1))
         tds = stats.get("tds", 0)
         ypc = rush_yds / carries
-        raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games
+        raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games + wpa * 8
     elif group == "lineman":
-        # Defensive lineman: tackles, sacks, TFLs
+        # Defensive lineman: tackles, sacks, TFLs + WPA
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games
+        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games + wpa * 8
     elif group == "safety":
-        # Safety/Keeper: tackles, TFLs, sacks
+        # Safety/Keeper: tackles, TFLs, sacks + WPA
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games
+        raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games + wpa * 8
     else:
-        raw = stats.get("yards", 0) / games
+        raw = stats.get("yards", 0) / games + wpa * 8
     return round(raw * team_perf_mult, 2)
 
 
@@ -618,44 +614,94 @@ def _select_slots(
 # ──────────────────────────────────────────────
 
 def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score any offensive player using season stats (for MVP / OPOY selection)."""
+    """Score any offensive player using season stats + WPA (for MVP / OPOY)."""
     games = max(1, stats.get("games", 1))
     yds = stats.get("yards", 0)
     tds = stats.get("tds", 0)
     kp_yds = stats.get("kick_pass_yards", 0)
     kp_tds = stats.get("kick_pass_tds", 0)
     lat_yds = stats.get("lateral_yards", 0)
-    raw = (yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15 + tds * 18 + kp_tds * 14) / games
+    fumbles = stats.get("fumbles", 0)
+    wpa = stats.get("wpa", 0.0)
+    raw = ((yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15
+            + tds * 18 + kp_tds * 14 - fumbles * 8) / games
+           + wpa * 10)
+    return round(raw * team_perf_mult, 2)
+
+
+def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score a Zeroback — kick passing + rushing + lateral play + WPA."""
+    games = max(1, stats.get("games", 1))
+    kp_yds = stats.get("kick_pass_yards", 0)
+    kp_tds = stats.get("kick_pass_tds", 0)
+    kp_comp = stats.get("kick_passes_completed", 0)
+    kp_att = max(1, stats.get("kick_passes_thrown", 1))
+    rush_yds = stats.get("rushing_yards", 0)
+    tds = stats.get("tds", 0)
+    lat_yds = stats.get("lateral_yards", 0)
+    fumbles = stats.get("fumbles", 0)
+    wpa = stats.get("wpa", 0.0)
+    kp_pct = kp_comp / kp_att
+    raw = ((kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+            + tds * 15 + kp_tds * 12 + kp_pct * 20 - fumbles * 8) / games
+           + wpa * 10)
+    return round(raw * team_perf_mult, 2)
+
+
+def _stat_score_viper(stats: dict, team_perf_mult: float = 1.0) -> float:
+    """Score a Viper — all-purpose yards, laterals, TDs + WPA."""
+    games = max(1, stats.get("games", 1))
+    yds = stats.get("yards", 0)
+    lat_yds = stats.get("lateral_yards", 0)
+    tds = stats.get("tds", 0)
+    fumbles = stats.get("fumbles", 0)
+    kr_yds = stats.get("kick_return_yards", 0)
+    pr_yds = stats.get("punt_return_yards", 0)
+    wpa = stats.get("wpa", 0.0)
+    all_purpose = yds + kr_yds + pr_yds
+    raw = ((all_purpose * 0.35 + lat_yds * 0.3 + tds * 20 - fumbles * 8) / games
+           + wpa * 10)
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_lateral(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score lateral specialist using season stats."""
+    """Score lateral specialist — volume, accuracy, lateral yards + WPA."""
     games = max(1, stats.get("games", 1))
     lat_yds = stats.get("lateral_yards", 0)
     lat_thrown = stats.get("laterals_thrown", 0)
+    lat_assists = stats.get("lateral_assists", 0)
+    lat_pct = lat_assists / max(1, lat_thrown)
     yds = stats.get("yards", 0)
-    raw = (lat_yds * 0.6 + lat_thrown * 5 + yds * 0.1) / games
+    wpa = stats.get("wpa", 0.0)
+    raw = ((lat_yds * 0.5 + lat_thrown * 3 + lat_pct * 30 + yds * 0.1) / games
+           + wpa * 8)
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_kicker(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score kicker using season stats."""
+    """Score kicker — accuracy, volume + WPA."""
     games = max(1, stats.get("games", 1))
     kick_made = stats.get("kick_made", 0)
     kick_att = max(1, stats.get("kick_att", 1))
     pct = kick_made / kick_att
-    raw = (kick_made * 8 + pct * 30) / games
+    wpa = stats.get("wpa", 0.0)
+    raw = (kick_made * 8 + pct * 30) / games + wpa * 6
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_defense(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score any defensive player using season stats."""
+    """Score defensive player — tackles, sacks, TFLs, hurries + WPA."""
     games = max(1, stats.get("games", 1))
     tackles = stats.get("tackles", 0)
     sacks = stats.get("sacks", 0)
     tfl = stats.get("tfl", 0)
-    raw = (tackles * 2.2 + sacks * 11 + tfl * 5.5) / games
+    hurries = stats.get("hurries", 0)
+    bells = stats.get("keeper_bells", 0)
+    deflections = stats.get("kick_deflections", 0)
+    wpa = stats.get("wpa", 0.0)
+    raw = ((tackles * 2 + sacks * 12 + tfl * 6 + hurries * 3
+            + bells * 4 + deflections * 5) / games
+           + wpa * 8)
     return round(raw * team_perf_mult, 2)
 
 
@@ -718,16 +764,46 @@ def _select_individual_awards(
              f"Nation's outstanding collegiate viperball player ({t})")
 
     # ── Best Zeroback ─────────────────────────────
-    pair = _best("zeroback", _player_score)
-    if pair:
-        _add(pair[0], pair[1], "Best Zeroback",
-             f"Nation's outstanding Zeroback ({pair[1]})")
+    best_zb = None
+    best_zb_score = -1.0
+    for t_name, t in teams.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen or _pos_group(p.position) != "zeroback":
+                continue
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                s = _stat_score_zeroback(pstats, mult)
+            else:
+                s = _player_score(p, mult)
+            if s > best_zb_score:
+                best_zb_score = s
+                best_zb = (p, t_name)
+    if best_zb:
+        _add(best_zb[0], best_zb[1], "Best Zeroback",
+             f"Nation's outstanding Zeroback ({best_zb[1]})")
 
     # ── Best Viper ────────────────────────────────
-    pair = _best("viper", _player_score)
-    if pair:
-        _add(pair[0], pair[1], "Best Viper",
-             f"Nation's outstanding Viper ({pair[1]})")
+    best_vp = None
+    best_vp_score = -1.0
+    for t_name, t in teams.items():
+        mult = _team_perf_mult(t_name, standings)
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen or _pos_group(p.position) != "viper":
+                continue
+            pstats = _get_stats(t_name, p.name)
+            if pstats and pstats.get("games", 0) > 0:
+                s = _stat_score_viper(pstats, mult)
+            else:
+                s = _player_score(p, mult)
+            if s > best_vp_score:
+                best_vp_score = s
+                best_vp = (p, t_name)
+    if best_vp:
+        _add(best_vp[0], best_vp[1], "Best Viper",
+             f"Nation's outstanding Viper ({best_vp[1]})")
 
     # ── Best Lateral Specialist ─────────────────
     best_lat = None
