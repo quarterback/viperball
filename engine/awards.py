@@ -12,7 +12,7 @@ Selection methodology:
 INDIVIDUAL TROPHIES
 ─────────────────────────────────────────────────────────────────────────────
 
-  CVL MVP                   – National Player of the Year (all positions eligible).
+  Persephone Award                   – National Player of the Year (all positions eligible).
                               The sport's highest individual honour.  Any position can win.
 
   Best Zeroback             – Outstanding Zeroback.
@@ -476,7 +476,7 @@ def _player_score(player: Player, team_perf_mult: float = 1.0) -> float:
 
 def _national_poy_score(player: Player, team_perf_mult: float = 1.0) -> float:
     """
-    CVL MVP scorer — any position eligible.
+    Persephone Award scorer — any position eligible.
     Uses overall plus a 'impact' bonus for offensive skill positions.
     """
     base = float(player.overall)
@@ -529,7 +529,7 @@ def _team_win_pct(team_name: str, standings: dict) -> float:
 
 
 # Minimum team record thresholds
-_MIN_WIN_PCT_MVP = 0.500           # CVL MVP, conference MVP
+_MIN_WIN_PCT_MVP = 0.500           # Persephone Award, conference MVP
 _MIN_WIN_PCT_POY = 0.600           # Player of the Year awards
 _MIN_WIN_PCT_POSITIONAL = 0.500    # Best Zeroback, Best Viper, etc.
 
@@ -828,7 +828,7 @@ def _select_individual_awards(
                     best = (p, t_name)
         return best
 
-    # ── CVL MVP (national POY — any position) ──────────────────
+    # ── Persephone Award (national POY — any position) ──────────────────
     # Minimum .500 team record required
     best_poy = None
     best_poy_score = -1.0
@@ -857,7 +857,7 @@ def _select_individual_awards(
                 best_poy = (p, t_name)
     if best_poy:
         p, t = best_poy
-        _add(p, t, "CVL MVP",
+        _add(p, t, "Persephone Award",
              f"Nation's outstanding collegiate viperball player ({t})")
 
     # ── Best Zeroback ─────────────────────────────
