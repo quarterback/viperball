@@ -42,7 +42,7 @@ Missed snap kick attempts retain possession. The ball is dead at the line of scr
 
 ### Bonus Possession (Defensive Pesäpallo)
 
-When a team throws an interception (kick pass or lateral), the intercepted team gets a **bonus possession** after the intercepting team's next drive. The bonus drive starts from the intercepted team's own 25-yard line. Cancels if the intercepting team also throws an INT, or if the half expires.
+When a team throws an interception (kick pass or lateral), the intercepting team gets a **bonus possession** after their current drive ends, giving them back-to-back drives. The bonus drive starts from the 20-yard line. Cancels if the intercepting team also throws an INT, or if the half expires.
 
 ---
 

@@ -102,7 +102,7 @@ Three changes to make 70+ yard plays routine:
 
 The signature rule change of this workstream. Modeled on how the offense's pesäpallo rule works for snap kicks, but applied to the defense via interceptions.
 
-**Rule**: When a team throws an interception (kick pass or lateral), the intercepted team receives a **bonus possession** after the intercepting team's next drive. The bonus drive starts from the intercepted team's own 25-yard line.
+**Rule**: When a team throws an interception (kick pass or lateral), the intercepting team receives a **bonus possession** after their current drive ends, giving them back-to-back drives. The bonus drive starts from the 20-yard line.
 
 **Cancellation conditions**:
 - **INT-back**: If the intercepting team throws an interception on their drive, the bonus is cancelled. No new bonus is created — it neutralizes.
