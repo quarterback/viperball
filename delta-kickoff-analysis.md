@@ -88,21 +88,64 @@ These teams were losing so much that the delta system constantly pushed their st
 
 **Average record: ~2-9.** The system helped them the most and they're the worst teams in the league. The boost changed nothing.
 
-### The Georgia Case Study
+### Case Study: New Hampshire (14-1) — Most Penalized, Still Dominant
 
-Georgia received **2,075 free yards of field position** over 12 games — that's **173 bonus yards per game.** To put that in perspective, that's like starting every other drive at the 37-yard line instead of the 20. The delta system literally could not have done more for them.
+UNH was the 2nd most-penalized team in the league with **+1,047 ΔY** over 15 games. The system forced them into **85 Penalty Kill drives** — drives where they started from worse-than-normal field position because they were leading. They scored on **46 of those 85 drives (54.1%)**.
 
-They went 0-12.
+Here's what UNH looked like despite the system working against them all season:
 
-### The UBC Case Study
+| Stat | UNH (14-1) |
+|------|------------|
+| Points For | 907.0 |
+| Points Against | 540.5 |
+| Total Yards | 6,052.6 |
+| Yards/Game | 403.5 |
+| Touchdowns | 52 |
+| EPA/Game | +27.7 |
+| Delta Yards | **+1,047** (penalized) |
+| Delta Drives | 85 |
+| Scored on Delta Drives | 46/85 (54.1%) |
 
-UBC had **1,251 yards of field position taken away** over 17 games. Every time they built a lead, the system punished them by pinning their next drive deeper and deeper in their own territory.
+The system told UNH "you're winning too much, start from the 8-yard line" — and UNH marched down the field and scored anyway, more than half the time. That's not a team being helped or hurt by the system. That's a team whose talent overwhelms it.
 
-They went 15-2.
+### Case Study: Georgia (0-12) and Oklahoma (0-12) — Most Boosted, Still Winless
 
-### The gap between these teams is not a field position problem
+Georgia and Oklahoma were the two most-boosted teams in the league. The system gave them more free field position than any other teams. Neither won a single game.
 
-The delta system adjusts starting position by roughly 7-20 yards per drive, depending on the score margin. In a game where competent offenses routinely drive 40-80 yards, that adjustment is a nudge — not a shove. A 17-yard starting position boost doesn't help when your offense can't sustain a drive. A 15-yard starting position penalty doesn't matter when your offense can march the full field.
+| Stat | Georgia (0-12) | Oklahoma (0-12) |
+|------|----------------|-----------------|
+| Points For | 431.5 | 262.0 |
+| Points Against | 695.0 | 604.0 |
+| Total Yards | 2,883.3 | 1,974.6 |
+| Yards/Game | 240.3 | 164.5 |
+| Touchdowns | 18 | 4 |
+| EPA/Game | +1.28 | **-4.77** |
+| KP INTs | 16 | 20 |
+| Delta Yards | **-2,075** (boosted) | **-1,760** (boosted) |
+| Delta Drives | 5 | 6 |
+| Scored on Delta Drives | 2/5 (40.0%) | 3/6 (50.0%) |
+
+Georgia received **2,075 free yards of field position** over 12 games — **173 bonus yards per game.** That's like starting every other drive at the 37 instead of the 20. Oklahoma received **1,760 free yards** — **147 bonus yards per game.** The system literally could not have done more for either of them.
+
+Georgia went 0-12. Oklahoma went 0-12.
+
+Look at the underlying numbers and the reason is obvious. Oklahoma scored **4 touchdowns in 12 games** — one every three games. They threw **20 interceptions** against just 2 passing touchdowns. Their EPA per game was **negative.** No amount of field position fixes an offense that throws 10 picks for every touchdown pass.
+
+Georgia was slightly more functional — 18 TDs, 16 interceptions — but still couldn't finish games. They lost to Haverford 19.5-21.5 (a team that went 4-8). They got blown out 39.5-98.0 by Illinois. The system kept handing them better starting positions and they kept turning the ball over or stalling out.
+
+### The gap is not a field position problem
+
+The delta system adjusts starting position by roughly 7-20 yards per drive, depending on the score margin. Compare that to what actually separates these teams:
+
+| | UNH (14-1) | Oklahoma (0-12) |
+|--|------------|-----------------|
+| Yards/Game | 403.5 | 164.5 |
+| TD/Game | 3.5 | 0.3 |
+| EPA/Game | +27.7 | -4.77 |
+| Turnovers | 21 | 31 |
+| ΔY (system impact) | +1,047 (penalized) | -1,760 (boosted) |
+
+UNH outgains Oklahoma by **239 yards per game.** UNH scores **3.2 more touchdowns per game.** UNH generates **+32 more EPA per game.** The delta system's adjustment — a few yards of starting position — is a rounding error compared to that talent gap. It's like adjusting the tee box by 5 yards when one golfer shoots 68 and the other shoots 112.
 
 ---
 
