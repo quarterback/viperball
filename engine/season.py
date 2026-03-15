@@ -840,6 +840,7 @@ class Season:
     weekly_polls: List[WeeklyPoll] = field(default_factory=list)
 
     playoff_bracket: List[Game] = field(default_factory=list)
+    playoff_seeds: Dict[str, int] = field(default_factory=dict)  # team_name -> seed number
     champion: Optional[str] = None
     bowl_games: List[BowlGame] = field(default_factory=list)
 
@@ -2208,6 +2209,7 @@ class Season:
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
         playoff_teams = self.get_playoff_teams(num_teams)
         seeds = [t.team_name for t in playoff_teams]
+        self.playoff_seeds = {name: i + 1 for i, name in enumerate(seeds)}
 
         if num_teams == 4:
             semis = self._play_round(

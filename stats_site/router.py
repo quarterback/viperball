@@ -506,6 +506,15 @@ def college_polls(request: Request, session_id: str, week: int = 0):
     ))
 
 
+def _all_college_games(season) -> list:
+    """Return all completed games: regular season + playoff + bowl."""
+    games = list(season.schedule)
+    games.extend(season.playoff_bracket or [])
+    for bg in (season.bowl_games or []):
+        games.append(bg.game)
+    return games
+
+
 @router.get("/college/{session_id}/team/{team_name}", response_class=HTMLResponse)
 def college_team(request: Request, session_id: str, team_name: str, sort: str = "yards"):
     api = _get_api()
@@ -545,7 +554,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     # ── Aggregate team season stats from completed games ──
     team_season_stats = None
     completed_games_with_stats = []
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -671,7 +680,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
     # ── Aggregate per-player season stats ──
     player_season_stats = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -923,7 +932,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         if game.home_team != team_name and game.away_team != team_name:
@@ -1018,9 +1027,9 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    # Aggregate player stats from completed games
+    # Aggregate player stats from completed games (including postseason)
     player_agg = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
@@ -1142,9 +1151,9 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    # Aggregate team stats from completed games
+    # Aggregate team stats from completed games (including postseason)
     team_agg = {}
-    for game in season.schedule:
+    for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
@@ -1316,9 +1325,9 @@ def college_playoffs(request: Request, session_id: str):
             all_teams.add(g.away_team)
         total_teams = max(total_teams, len(all_teams))
 
-    # Derive seeds from first-round matchup order
-    seed_map = {}
-    if bracket:
+    # Use stored playoff seeds if available, otherwise derive from first-round order
+    seed_map = getattr(season, 'playoff_seeds', None) or {}
+    if not seed_map and bracket:
         first_wk = min(g.week for g in bracket)
         seed_counter = 1
         for g in sorted(bracket, key=lambda x: x.week):
