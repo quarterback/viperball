@@ -11058,6 +11058,16 @@ class ViperballEngine:
             stats["keeper_tackles"] = keeper_tackles
             stats["keeper_fake_tds_allowed"] = keeper_fake_tds
 
+            # ── Special Teams return aggregates ──
+            stats["kick_returns"] = sum(p.game_kick_returns for p in team_obj.players)
+            stats["kick_return_yards"] = sum(p.game_kick_return_yards for p in team_obj.players)
+            stats["kick_return_tds"] = sum(p.game_kick_return_tds for p in team_obj.players)
+            stats["punt_returns"] = sum(p.game_punt_returns for p in team_obj.players)
+            stats["punt_return_yards"] = sum(p.game_punt_return_yards for p in team_obj.players)
+            stats["punt_return_tds"] = sum(p.game_punt_return_tds for p in team_obj.players)
+            stats["muffs"] = sum(p.game_muffs for p in team_obj.players)
+            stats["st_tackles"] = sum(p.game_st_tackles for p in team_obj.players)
+
         for stats, plays in [(home_stats, home_plays), (away_stats, away_plays)]:
             plays_by_q = {q: 0 for q in range(1, 5)}
             for p in plays:
