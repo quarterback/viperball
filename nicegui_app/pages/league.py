@@ -1310,12 +1310,46 @@ async def _render_team_browser(session_id, standings, conferences, has_conferenc
                         player_season = next((tp for tp in team_players if tp["name"] == sel), None)
                         if player_season and player_season.get("games_played", 0) > 0:
                             ui.markdown("**Season Stats**")
+                            # Choose hero stats based on what the player actually does
+                            ps = player_season
+                            kick_att = ps.get("kick_att", 0)
+                            touches = ps.get("touches", 0)
+                            tackles = ps.get("tackles", 0)
+                            kr_yds = ps.get("kick_return_yards", 0)
+                            pr_yds = ps.get("punt_return_yards", 0)
+                            ret_yds = kr_yds + pr_yds
+                            rush_yds = ps.get("rushing_yards", 0)
+                            kick_returns = ps.get("kick_returns", 0)
+                            punt_returns = ps.get("punt_returns", 0)
+                            rush_carries = ps.get("rush_carries", 0)
+                            kp_thrown = ps.get("kick_passes_thrown", 0)
+                            kp_rec = ps.get("kick_pass_receptions", 0)
                             with ui.row().classes("w-full flex-wrap gap-3"):
-                                metric_card("Games", player_season["games_played"])
-                                metric_card("Touches", player_season["touches"])
-                                metric_card("Total Yards", player_season["yards"])
-                                metric_card("TDs", player_season["tds"])
-                                metric_card("Fumbles", player_season["fumbles"])
+                                metric_card("Games", ps["games_played"])
+                                if kick_att > 0 and kick_att >= touches and kick_att >= tackles:
+                                    metric_card("Kicks", f"{ps['kick_made']}/{kick_att}")
+                                    metric_card("Kick %", f"{ps['kick_pct']:.1f}%")
+                                    metric_card("Yards", ps["yards"])
+                                elif ret_yds > rush_yds and (kick_returns + punt_returns) > 0:
+                                    metric_card("Ret Yards", ret_yds)
+                                    metric_card("Returns", kick_returns + punt_returns)
+                                    metric_card("Ret TDs", ps.get("kick_return_tds", 0) + ps.get("punt_return_tds", 0))
+                                elif tackles >= touches and tackles > 0:
+                                    metric_card("Tackles", tackles)
+                                    metric_card("TFL", ps.get("tfl", 0))
+                                    metric_card("Sacks", ps.get("sacks", 0))
+                                elif kp_thrown > 0 and kp_thrown >= rush_carries:
+                                    metric_card("Comp/Att", f"{ps.get('kick_passes_completed', 0)}/{kp_thrown}")
+                                    metric_card("KP Yards", ps.get("kick_pass_yards", 0))
+                                    metric_card("KP TDs", ps.get("kick_pass_tds", 0))
+                                elif kp_rec > 0 and kp_rec >= rush_carries:
+                                    metric_card("Receptions", kp_rec)
+                                    metric_card("Yards", ps["yards"])
+                                    metric_card("TDs", ps["tds"])
+                                else:
+                                    metric_card("Yards", ps["yards"])
+                                    metric_card("TDs", ps["tds"])
+                                    metric_card("Y/Touch", ps.get("yards_per_touch", 0))
 
                             if player_season.get("rush_carries", 0) > 0 or player_season["rushing_yards"] > 0 or player_season["lateral_yards"] > 0:
                                 with ui.row().classes("w-full flex-wrap gap-3"):
