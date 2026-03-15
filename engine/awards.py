@@ -897,6 +897,7 @@ def _select_conference_individual_awards(
     prev_season_wins: Dict[str, int] = None,
     coaching_staffs: Optional[Dict] = None,
     player_stats_agg: Optional[Dict] = None,
+    season: Optional["Season"] = None,
 ) -> List[AwardWinner]:
     """Select conference-level individual awards mirroring national trophies."""
     conf_team_objs = {t: all_teams[t] for t in conf_teams if t in all_teams}
@@ -1026,13 +1027,38 @@ def _select_conference_individual_awards(
         _add(best_fresh[0], best_fresh[1], f"{conference_name} Freshman of the Year",
              f"{conference_name} Top Freshman ({best_fresh[1]})")
 
-    # Conference Coach of the Year — based solely on team results (win%)
+    # Conference Coach of the Year — conference win%, improvement, H2H, conf title
     conf_standings = {t: standings[t] for t in conf_teams if t in standings}
     if conf_standings:
-        coy_scores = {
-            t_name: r.win_percentage
-            for t_name, r in conf_standings.items()
-        }
+        # Determine conference champion
+        conf_champ = ""
+        if season and hasattr(season, 'get_conference_champions'):
+            champs = season.get_conference_champions()
+            conf_champ = champs.get(conference_name, "")
+        # Build H2H record among top teams from schedule
+        h2h_wins = {}  # team -> count of wins vs other conf teams
+        if season:
+            for g in season.schedule:
+                if not g.completed or g.home_score == g.away_score:
+                    continue
+                if g.home_team in conf_standings and g.away_team in conf_standings:
+                    winner = g.home_team if g.home_score > g.away_score else g.away_team
+                    h2h_wins[winner] = h2h_wins.get(winner, 0) + 1
+        coy_scores = {}
+        for t_name, r in conf_standings.items():
+            score = r.conf_win_percentage * 50  # primary: conf win%
+            score += r.win_percentage * 10       # secondary: overall win%
+            # Improvement bonus
+            if prev_season_wins:
+                prev_w = prev_season_wins.get(t_name, r.wins)
+                gain = r.wins - prev_w
+                score += max(0, gain) * 3
+            # Conference champion bonus
+            if t_name == conf_champ:
+                score += 10
+            # H2H tiebreaker (small weight)
+            score += h2h_wins.get(t_name, 0) * 2
+            coy_scores[t_name] = score
         coy_team = max(coy_scores, key=coy_scores.get)
         coy_display = _get_head_coach_name(coy_team, coaching_staffs)
         awards.append(AwardWinner(
@@ -1074,15 +1100,43 @@ def _select_team_awards(
     standings: dict,
     prev_season_wins: Dict[str, int] = None,
     coaching_staffs: Optional[Dict] = None,
+    season: Optional["Season"] = None,
 ) -> Tuple[str, str]:
     """Returns (coach_of_year_display, most_improved_team)."""
     sorted_std = sorted(standings.values(), key=lambda r: r.win_percentage, reverse=True)
 
-    # Coach of Year: based solely on team results (win%)
-    coy_scores = {
-        r.team_name: r.win_percentage
-        for r in standings.values()
-    }
+    # Coach of Year: weighted by results, improvement, and conference title
+    # - Win% is the primary factor
+    # - Big improvement bonus (team that dramatically exceeded prior year)
+    # - Conference championship bonus
+    conf_champs = set()
+    if season and hasattr(season, 'get_conference_champions'):
+        conf_champs = set(season.get_conference_champions().values())
+    # H2H: count wins against teams with winning records
+    h2h_quality_wins = {}
+    if season:
+        for g in season.schedule:
+            if not g.completed or g.home_score == g.away_score:
+                continue
+            winner = g.home_team if g.home_score > g.away_score else g.away_team
+            loser = g.away_team if winner == g.home_team else g.home_team
+            loser_rec = standings.get(loser)
+            if loser_rec and loser_rec.win_percentage >= 0.500:
+                h2h_quality_wins[winner] = h2h_quality_wins.get(winner, 0) + 1
+    coy_scores = {}
+    for r in standings.values():
+        score = r.win_percentage * 50  # primary: win percentage
+        # Improvement bonus
+        if prev_season_wins:
+            prev_w = prev_season_wins.get(r.team_name, r.wins)
+            gain = r.wins - prev_w
+            score += max(0, gain) * 3  # each win above last year
+        # Conference champion bonus
+        if r.team_name in conf_champs:
+            score += 10
+        # H2H quality wins (minor tiebreaker)
+        score += h2h_quality_wins.get(r.team_name, 0) * 2
+        coy_scores[r.team_name] = score
     coy_team = max(coy_scores, key=coy_scores.get) if coy_scores else ""
     coy = _get_head_coach_name(coy_team, coaching_staffs) if coy_team else ""
 
@@ -1174,11 +1228,13 @@ def compute_season_awards(
                 conf_name, conf_teams, teams, standings, prev_season_wins,
                 coaching_staffs=coaching_staffs,
                 player_stats_agg=player_stats_agg,
+                season=season,
             )
 
     # ── Team-level awards ─────────────────────────────────────────────────
     coy, most_imp = _select_team_awards(standings, prev_season_wins,
-                                         coaching_staffs=coaching_staffs)
+                                         coaching_staffs=coaching_staffs,
+                                         season=season)
     honors.coach_of_year = coy
     honors.most_improved = most_imp
 
