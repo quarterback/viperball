@@ -110,7 +110,7 @@
   <tr>
     <td style="color:var(--green);font-weight:bold">{{ a.get('award_name', '?') }}</td>
     <td style="color:var(--fg-dim);font-size:11px">{{ a.get('outlet', '') }}</td>
-    <td><a href="/stats/college/{{ session_id }}/player/{{ a.get('team_name', '') }}/{{ a.get('player_name', '') }}">{{ a.get('player_name', '?') }}</a></td>
+    <td>{% if a.get('is_coach_award') %}<a href="/stats/college/{{ session_id }}/coach/{{ a.get('team_name', '') }}/{{ a.get('season_stats', {}).get('role', 'oc') }}">{{ a.get('player_name', '?') }}</a>{% else %}<a href="/stats/college/{{ session_id }}/player/{{ a.get('team_name', '') }}/{{ a.get('player_name', '') }}">{{ a.get('player_name', '?') }}</a>{% endif %}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
     <td>{{ a.get('year_in_school', '') }}</td>

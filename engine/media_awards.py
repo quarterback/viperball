@@ -21,7 +21,7 @@ MEDIA OUTLETS & AWARDS
   The Sporting News (TSN)
     · TSN National Player of the Year
     · TSN Defensive Player of the Year
-    · TSN Comeback Player of the Year
+    · TSN Top Assistant Coach of the Year
 
 ─────────────────────────────────────────────────────────────────────
 DESIGN PRINCIPLES
@@ -544,7 +544,6 @@ def compute_media_awards(
     season: Season,
     year: int,
     conferences: Optional[Dict[str, list]] = None,
-    prev_season_games: Optional[Dict[str, int]] = None,
 ) -> List[dict]:
     """Compute all 7 media awards after the postseason.
 
@@ -553,13 +552,12 @@ def compute_media_awards(
                 playoff_bracket, and team rosters.
         year: The season year.
         conferences: {conf_name: [team_names]} for conference context.
-        prev_season_games: {player_name: games_played_last_year} for
-                           Comeback Player tracking (None if unavailable).
 
     Returns:
         List of award dicts, each with:
           award_name, outlet, player_name, team_name, position,
           year_in_school, overall_rating, reason, season_stats
+          (or for coach awards: coach_name, role, team_name, etc.)
     """
     standings = season.standings
     if not standings:
@@ -800,56 +798,93 @@ def compute_media_awards(
             p, t_name, stats, group))
         seen.add(f"{t_name}::{p.name}")
 
-    # ── 7. TSN Comeback Player of the Year ──────────────────────
-    # Player who missed significant time last season and returned to produce.
-    # Uses prev_season_games to detect gap years / low-games seasons.
-    best_comeback = None
-    best_comeback_score = -1.0
-    if prev_season_games:
-        for t_name, team in teams.items():
-            schedule_len = _get_team_schedule_len(season, t_name)
-            for p in team.players:
-                year_str = getattr(p, "year", "")
-                if year_str == "Freshman":
-                    continue  # freshmen can't come back
-                # Check if player had reduced games last year
-                prev_games = prev_season_games.get(p.name, None)
-                if prev_games is None:
-                    continue  # no prior data
-                # "Comeback" = played less than 40% of last year's schedule
-                # or was completely absent (0 games)
-                if prev_games > 5:
-                    continue  # played a full-ish season, not a comeback
+    # ── 7. TSN Top Assistant Coach of the Year ─────────────────
+    # The coordinator whose unit was most dominant this season.
+    # OC: scored by team offensive production (yards, TDs, scoring).
+    # DC: scored by team defensive dominance (PPG against, stop rate, TOs forced).
+    # STC: scored by special teams impact (return yards, field position).
+    # Winning record required. TSN bias: the coordinator who "made" the identity.
+    coaching_staffs = getattr(season, 'coaching_staffs', {})
+    if coaching_staffs:
+        best_asst = None
+        best_asst_score = -1.0
 
-                group = _pos_group(p.position)
-                stats = full_agg.get(t_name, {}).get(p.name)
-                if not stats or stats.get("games", 0) == 0:
-                    continue
-                # 50% floor for comeback (more lenient)
-                if stats["games"] < schedule_len * 0.50:
-                    continue
-                # Score based on raw production this season
-                games = max(1, stats["games"])
-                if _is_offensive(group):
-                    yds = stats.get("yards", 0) + stats.get("kick_pass_yards", 0)
-                    tds = stats.get("tds", 0)
-                    raw = (yds * 0.35 + tds * 20) / games
-                else:
-                    tackles = stats.get("tackles", 0)
-                    sacks = stats.get("sacks", 0)
-                    raw = (tackles * 2.5 + sacks * 14) / games
-                # Bonus for severity of absence: 0 games last year > 3 games
-                absence_mult = 1.0 + (5 - prev_games) * 0.04
-                raw *= absence_mult
-                if raw > best_comeback_score:
-                    best_comeback_score = raw
-                    best_comeback = (p, t_name, stats, group)
+        for t_name, staff in coaching_staffs.items():
+            rec = standings.get(t_name)
+            if not rec:
+                continue
+            wp = _team_win_pct(t_name, standings)
+            if wp < 0.500:
+                continue  # winning record required
+            games = max(1, rec.games_played)
 
-    if best_comeback:
-        p, t_name, stats, group = best_comeback
-        results.append(_make_award(
-            "TSN Comeback Player of the Year", "The Sporting News",
-            p, t_name, stats, group,
-            reason=f"Returned from limited action to produce at a high level"))
+            for role in ("oc", "dc", "stc"):
+                card = staff.get(role)
+                if card is None:
+                    continue
+
+                if role == "oc":
+                    # OC: offensive production
+                    ypg = rec.total_yards / games if hasattr(rec, 'total_yards') else 0
+                    tpg = rec.total_touchdowns / games if hasattr(rec, 'total_touchdowns') else 0
+                    ppg = rec.points_for / games
+                    kp_ypg = rec.total_kick_pass_yards / games if hasattr(rec, 'total_kick_pass_yards') else 0
+                    raw = ypg * 0.3 + tpg * 15 + ppg * 2 + kp_ypg * 0.15
+                    reason_str = f"OC — {int(ypg)} ypg, {ppg:.1f} ppg"
+                elif role == "dc":
+                    # DC: defensive dominance
+                    ppg_against = rec.points_against / games
+                    stop_rate = rec.stop_rate if hasattr(rec, 'stop_rate') else 0
+                    to_forced = rec.avg_turnovers_forced if hasattr(rec, 'avg_turnovers_forced') else 0
+                    # Lower PPG against is better → invert
+                    raw = (50 - ppg_against) * 3 + stop_rate * 0.8 + to_forced * 12
+                    reason_str = f"DC — {ppg_against:.1f} ppg allowed, {stop_rate:.0f}% stop rate"
+                else:  # stc
+                    # STC: special teams impact (return production, field position)
+                    # Use total return yards from player aggregation
+                    team_kr_yds = 0
+                    team_pr_yds = 0
+                    for pn, ps in full_agg.get(t_name, {}).items():
+                        team_kr_yds += ps.get("kick_return_yards", 0)
+                        team_pr_yds += ps.get("punt_return_yards", 0)
+                    ret_ypg = (team_kr_yds + team_pr_yds) / games
+                    raw = ret_ypg * 1.5
+                    reason_str = f"STC — {int(ret_ypg)} return ypg"
+
+                # Attribute bonus: better coordinators get a slight edge
+                attr_bonus = 0
+                if hasattr(card, 'overall'):
+                    attr_bonus = card.overall * 0.05
+                raw += attr_bonus
+
+                # Playoff bonus for TSN
+                if _team_made_playoffs(season, t_name):
+                    raw *= 1.10
+
+                if raw > best_asst_score:
+                    best_asst_score = raw
+                    best_asst = (card, t_name, role, reason_str)
+
+        if best_asst:
+            card, t_name, role, reason_str = best_asst
+            role_label = {"oc": "Offensive Coordinator",
+                          "dc": "Defensive Coordinator",
+                          "stc": "Special Teams Coordinator"}.get(role, role.upper())
+            results.append({
+                "award_name": "TSN Top Assistant Coach of the Year",
+                "outlet": "The Sporting News",
+                "player_name": card.full_name if hasattr(card, 'full_name') else str(card),
+                "team_name": t_name,
+                "position": role_label,
+                "year_in_school": "",
+                "overall_rating": card.overall if hasattr(card, 'overall') else 0,
+                "reason": reason_str,
+                "season_stats": {
+                    "role": role,
+                    "classification": getattr(card, 'classification', ''),
+                    "team_wins": _team_wins(t_name, standings),
+                },
+                "is_coach_award": True,
+            })
 
     return results
