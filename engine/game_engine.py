@@ -5696,7 +5696,14 @@ class ViperballEngine:
         #   on downs 2-3 via a controlled decision, not random selection
         # Zero out kick families here to prevent the weighted random
         # selection from choosing a field goal on 2nd down.
-        if down <= 3:
+        #
+        # Exception: very late in a half (Q2/Q4 under 45 seconds) when a
+        # team needs to score, kicks are allowed on any down — there may
+        # not be enough time to burn downs driving for a better position.
+        quarter = self.state.quarter
+        time_left = self.state.time_remaining
+        desperation_clock = (quarter in (2, 4) and time_left <= 45)
+        if down <= 3 and not desperation_clock:
             weights["field_goal"] = 0.0
             weights["snap_kick"] = 0.0
             weights["punt"] = 0.0
