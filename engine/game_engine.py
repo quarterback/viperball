@@ -5114,9 +5114,15 @@ class ViperballEngine:
 
         on_offense = (penalty.on_team == self.state.possession)
         if on_offense:
-            if play.yards_gained > 0:
-                self.state.field_position = max(1, self.state.field_position - play.yards_gained)
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+            # Offensive penalty negates the play — restore pre-play state
+            # then apply the penalty yardage.  The play simulation already
+            # advanced down/ytg/FP, so we must revert all three.
+            pre_fp = getattr(self, '_pre_play_fp', self.state.field_position)
+            pre_down = getattr(self, '_pre_play_down', self.state.down)
+            pre_ytg = getattr(self, '_pre_play_ytg', self.state.yards_to_go)
+            self.state.field_position = max(1, pre_fp - penalty.yards)
+            self.state.down = pre_down
+            self.state.yards_to_go = pre_ytg
             play.yards_gained = 0
             play.result = "penalty"
         else:
@@ -5150,6 +5156,11 @@ class ViperballEngine:
             self.state.field_position = max(1, self.state.field_position - penalty.yards)
         else:
             self.state.field_position = min(99, self.state.field_position + penalty.yards)
+            # Defensive post-play penalties that advance past the first-down
+            # marker grant an automatic first down (same as pre-snap logic).
+            if penalty.yards >= self.state.yards_to_go:
+                self.state.down = 1
+                self.state.yards_to_go = 20
 
         play.field_position = self.state.field_position
         play.penalty = penalty
@@ -5323,6 +5334,28 @@ class ViperballEngine:
     def simulate_play(self) -> Play:
         self.state.play_number += 1
 
+        # Save pre-play state.  Every Play in the log should show the
+        # starting situation (down, distance, field position) rather than
+        # the post-execution state.  This avoids confusing "repeated
+        # downs" in the play-by-play where a GAIN play stores post-play
+        # state but the following TD stores pre-play state (unchanged).
+        # Also used by penalty handlers to restore state when a penalty
+        # negates a play (replay the down from the correct spot).
+        self._pre_play_fp = self.state.field_position
+        self._pre_play_down = self.state.down
+        self._pre_play_ytg = self.state.yards_to_go
+
+        play = self._simulate_play_core()
+
+        # Stamp pre-play state on the Play so the play-by-play always
+        # shows "3rd & 5 at the 50" as the starting situation.
+        play.field_position = self._pre_play_fp
+        play.down = self._pre_play_down
+        play.yards_to_go = self._pre_play_ytg
+
+        return play
+
+    def _simulate_play_core(self) -> Play:
         # Victory formation: kneel when leading late
         if self._should_kneel():
             return self.simulate_kneel()
@@ -5655,6 +5688,18 @@ class ViperballEngine:
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.6
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.7
             weights["power"] = weights.get("power", 0.1) * 0.7
+
+        # ── Downs 1-3: no kicking via play selection ──
+        # Kicking on early downs is handled by dedicated paths:
+        # - select_kick_decision() gates kicks to downs 4-6
+        # - _check_snap_kick_shot_play() handles opportunistic snap kicks
+        #   on downs 2-3 via a controlled decision, not random selection
+        # Zero out kick families here to prevent the weighted random
+        # selection from choosing a field goal on 2nd down.
+        if down <= 3:
+            weights["field_goal"] = 0.0
+            weights["snap_kick"] = 0.0
+            weights["punt"] = 0.0
 
         # ── "2nd & Short" aggression ──
         if down == 2 and ytg < 5:
