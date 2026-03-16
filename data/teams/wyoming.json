@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "eastern_wyoming",
-    "school_name": "Eastern Wyoming College",
-    "abbreviation": "EWC",
-    "mascot": "Lancers",
-    "conference": "Prairie Athletic Union",
-    "city": "Torrington",
+    "school_id": "wyoming",
+    "school_name": "University of Wyoming",
+    "abbreviation": "WYO",
+    "mascot": "Cowboys",
+    "conference": "Pac-16",
+    "city": "Laramie",
     "state": "WY",
     "colors": [
-      "Blue",
-      "White"
+      "Brown",
+      "Gold"
     ]
   },
   "identity": {
@@ -1251,7 +1251,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 361570,
       "year_signed": 2026,
-      "team_name": "Eastern Wyoming College",
+      "team_name": "University of Wyoming",
       "career_wins": 94,
       "career_losses": 50,
       "championships": 1,
@@ -1306,7 +1306,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 302650,
       "year_signed": 2026,
-      "team_name": "Eastern Wyoming College",
+      "team_name": "University of Wyoming",
       "career_wins": 139,
       "career_losses": 65,
       "championships": 3,
@@ -1362,7 +1362,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 490226,
       "year_signed": 2026,
-      "team_name": "Eastern Wyoming College",
+      "team_name": "University of Wyoming",
       "career_wins": 168,
       "career_losses": 84,
       "championships": 4,
@@ -1415,7 +1415,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 477220,
       "year_signed": 2026,
-      "team_name": "Eastern Wyoming College",
+      "team_name": "University of Wyoming",
       "career_wins": 216,
       "career_losses": 108,
       "championships": 5,

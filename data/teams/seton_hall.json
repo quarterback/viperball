@@ -4,7 +4,7 @@
     "school_name": "Seton Hall University",
     "abbreviation": "SHU",
     "mascot": "Pirates",
-    "conference": "Galactic League",
+    "conference": "Big East",
     "city": "South Orange",
     "state": "NJ",
     "colors": [
@@ -63,18 +63,18 @@
       },
       {
         "number": 7,
-        "name": "Jéssica Cunha",
+        "name": "J\u00e9ssica Cunha",
         "position": "Shiftback/Back",
         "height": "5-5",
         "weight": 169,
         "year": "Junior",
         "hometown": {
-          "city": "São Paulo",
+          "city": "S\u00e3o Paulo",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio São Paulo",
+        "high_school": "Colegio S\u00e3o Paulo",
         "nationality": "Latin American",
         "archetype": "elusive_flanker",
         "potential": 3,
@@ -543,7 +543,7 @@
       },
       {
         "number": 50,
-        "name": "Ximena Sánchez",
+        "name": "Ximena S\u00e1nchez",
         "position": "Halfback/Back",
         "height": "5-6",
         "weight": 162,
@@ -799,7 +799,7 @@
       },
       {
         "number": 67,
-        "name": "Ximena Gómez",
+        "name": "Ximena G\u00f3mez",
         "position": "Halfback/Back",
         "height": "5-11",
         "weight": 176,

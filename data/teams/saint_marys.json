@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "ucsb",
-    "school_name": "University of California, Santa Barbara",
-    "abbreviation": "UCSB",
-    "mascot": "Gauchos",
-    "conference": "Big Pacific",
-    "city": "Santa Barbara",
+    "school_id": "saint_marys",
+    "school_name": "Saint Mary's",
+    "abbreviation": "SMC",
+    "mascot": "Gaels",
+    "conference": "West Coast Conference",
+    "city": "Moraga",
     "state": "CA",
     "colors": [
-      "Blue",
-      "Gold"
+      "Red",
+      "Blue"
     ]
   },
   "identity": {
@@ -799,7 +799,7 @@
       },
       {
         "number": 71,
-        "name": "Ophélie Gagnon",
+        "name": "Oph\u00e9lie Gagnon",
         "position": "Shiftback/Back",
         "height": "5-8",
         "weight": 173,
@@ -927,7 +927,7 @@
       },
       {
         "number": 81,
-        "name": "Paige Tūkiata",
+        "name": "Paige T\u016bkiata",
         "position": "Wing/End",
         "height": "5-10",
         "weight": 189,
@@ -1087,7 +1087,7 @@
       },
       {
         "number": 91,
-        "name": "Pénélope Morin",
+        "name": "P\u00e9n\u00e9lope Morin",
         "position": "Wingback/End",
         "height": "5-10",
         "weight": 179,
@@ -1119,7 +1119,7 @@
       },
       {
         "number": 93,
-        "name": "Renate González",
+        "name": "Renate Gonz\u00e1lez",
         "position": "Wingback/End",
         "height": "5-11",
         "weight": 198,
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 5,
       "contract_buyout": 1116155,
       "year_signed": 2026,
-      "team_name": "University of California, Santa Barbara",
+      "team_name": "Saint Mary's",
       "career_wins": 195,
       "career_losses": 141,
       "championships": 6,
@@ -1271,7 +1271,7 @@
       "contract_years_remaining": 4,
       "contract_buyout": 394544,
       "year_signed": 2026,
-      "team_name": "University of California, Santa Barbara",
+      "team_name": "Saint Mary's",
       "career_wins": 63,
       "career_losses": 21,
       "championships": 0,
@@ -1327,7 +1327,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 196748,
       "year_signed": 2026,
-      "team_name": "University of California, Santa Barbara",
+      "team_name": "Saint Mary's",
       "career_wins": 37,
       "career_losses": 35,
       "championships": 1,
@@ -1382,7 +1382,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 195487,
       "year_signed": 2026,
-      "team_name": "University of California, Santa Barbara",
+      "team_name": "Saint Mary's",
       "career_wins": 69,
       "career_losses": 39,
       "championships": 1,

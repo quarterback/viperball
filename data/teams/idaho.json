@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "idaho_state",
-    "school_name": "Idaho State University",
-    "abbreviation": "ISU",
-    "mascot": "Bengals",
-    "conference": "Pioneer Athletic Association",
-    "city": "Pocatello",
+    "school_id": "idaho",
+    "school_name": "University of Idaho",
+    "abbreviation": "IDHO",
+    "mascot": "Vandals",
+    "conference": "Pac-16",
+    "city": "Moscow",
     "state": "ID",
     "colors": [
-      "Orange",
-      "Black"
+      "Silver",
+      "Gold"
     ]
   },
   "identity": {
@@ -447,7 +447,7 @@
       },
       {
         "number": 27,
-        "name": "Bárbara Cunha",
+        "name": "B\u00e1rbara Cunha",
         "position": "Halfback/Back",
         "height": "5-5",
         "weight": 162,
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 457060,
       "year_signed": 2026,
-      "team_name": "Idaho State University",
+      "team_name": "University of Idaho",
       "career_wins": 98,
       "career_losses": 130,
       "championships": 3,
@@ -1271,7 +1271,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 571254,
       "year_signed": 2026,
-      "team_name": "Idaho State University",
+      "team_name": "University of Idaho",
       "career_wins": 224,
       "career_losses": 76,
       "championships": 5,
@@ -1326,7 +1326,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 261980,
       "year_signed": 2026,
-      "team_name": "Idaho State University",
+      "team_name": "University of Idaho",
       "career_wins": 181,
       "career_losses": 95,
       "championships": 3,
@@ -1381,7 +1381,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 277963,
       "year_signed": 2026,
-      "team_name": "Idaho State University",
+      "team_name": "University of Idaho",
       "career_wins": 100,
       "career_losses": 32,
       "championships": 0,

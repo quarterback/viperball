@@ -4,7 +4,7 @@
     "school_name": "United States Air Force Academy",
     "abbreviation": "AFA",
     "mascot": "Falcons",
-    "conference": "Pioneer Athletic Association",
+    "conference": "Moonshine League",
     "city": "Colorado Springs",
     "state": "CO",
     "colors": [
@@ -95,7 +95,7 @@
       },
       {
         "number": 3,
-        "name": "Clémence de Jong",
+        "name": "Cl\u00e9mence de Jong",
         "position": "Shiftback/Back",
         "height": "5-5",
         "weight": 174,
@@ -927,7 +927,7 @@
       },
       {
         "number": 82,
-        "name": "Chloé Martel",
+        "name": "Chlo\u00e9 Martel",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 163,
@@ -965,12 +965,12 @@
         "weight": 194,
         "year": "Freshman",
         "hometown": {
-          "city": "Lomé",
+          "city": "Lom\u00e9",
           "state": "TOG",
           "country": "Togo",
           "region": "african"
         },
-        "high_school": "Lomé Secondary School",
+        "high_school": "Lom\u00e9 Secondary School",
         "nationality": "African",
         "archetype": "none",
         "potential": 3,

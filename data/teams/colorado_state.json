@@ -1,17 +1,17 @@
 {
   "team_info": {
-    "school_id": "colorado_college",
+    "school_id": "colorado_state",
     "school": "Colorado College",
-    "abbreviation": "CC",
-    "mascot": "Tigers",
-    "conference": "Pioneer Athletic Association",
-    "city": "Colorado Springs",
+    "abbreviation": "CSU",
+    "mascot": "Rams",
+    "conference": "Mountain West",
+    "city": "Fort Collins",
     "state": "CO",
     "colors": [
-      "Black",
+      "Green",
       "Gold"
     ],
-    "school_name": "Colorado College"
+    "school_name": "Colorado State"
   },
   "identity": {
     "style": "aggressive",
@@ -51,7 +51,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 642432,
       "year_signed": 2026,
-      "team_name": "Colorado College",
+      "team_name": "Colorado State",
       "career_wins": 58,
       "career_losses": 86,
       "championships": 2,
@@ -107,7 +107,7 @@
       "contract_years_remaining": 3,
       "contract_buyout": 324931,
       "year_signed": 2026,
-      "team_name": "Colorado College",
+      "team_name": "Colorado State",
       "career_wins": 53,
       "career_losses": 43,
       "championships": 2,
@@ -160,7 +160,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 134479,
       "year_signed": 2026,
-      "team_name": "Colorado College",
+      "team_name": "Colorado State",
       "career_wins": 33,
       "career_losses": 39,
       "championships": 0,
@@ -215,7 +215,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 160337,
       "year_signed": 2026,
-      "team_name": "Colorado College",
+      "team_name": "Colorado State",
       "career_wins": 173,
       "career_losses": 127,
       "championships": 6,

@@ -2863,6 +2863,30 @@ def _state_distance(s1: str, s2: str) -> int:
     return 99
 
 
+def _load_protected_rivalries() -> Dict[str, Dict[str, Optional[str]]]:
+    """Load protected rivalries from data/rivalries.json.
+
+    These are permanent OOC rivalry games that are always scheduled.
+    """
+    import pathlib
+    rivalries_path = pathlib.Path(__file__).resolve().parent.parent / "data" / "rivalries.json"
+    if not rivalries_path.exists():
+        return {}
+    import json as _json
+    with open(rivalries_path) as f:
+        data = _json.load(f)
+    result: Dict[str, Dict[str, Optional[str]]] = {}
+    for entry in data.get("protected_rivalries", []):
+        team_a = entry["team_a"]
+        team_b = entry["team_b"]
+        rtype = entry.get("type", "non_conference")
+        result.setdefault(team_a, {"conference": None, "non_conference": None})
+        result.setdefault(team_b, {"conference": None, "non_conference": None})
+        result[team_a][rtype] = team_b
+        result[team_b][rtype] = team_a
+    return result
+
+
 def auto_assign_rivalries(
     conferences: Dict[str, List[str]],
     team_states: Dict[str, str],
@@ -2872,14 +2896,27 @@ def auto_assign_rivalries(
     """Auto-assign conference and non-conference rivals for AI teams.
 
     Uses state-based geographic proximity. Human team rivalries are preserved
-    from existing_rivalries (not overwritten).
+    from existing_rivalries (not overwritten). Protected rivalries from
+    data/rivalries.json are always included.
 
     Returns dict of team_name -> {"conference": rival_or_None, "non_conference": rival_or_None}
     """
     rivalries: Dict[str, Dict[str, Optional[str]]] = {}
+
+    # Load protected rivalries first (always scheduled)
+    protected = _load_protected_rivalries()
+    for t, r in protected.items():
+        rivalries.setdefault(t, {"conference": None, "non_conference": None})
+        for key in ("conference", "non_conference"):
+            if r.get(key):
+                rivalries[t][key] = r[key]
+
     if existing_rivalries:
         for t, r in existing_rivalries.items():
-            rivalries[t] = dict(r)
+            rivalries.setdefault(t, {"conference": None, "non_conference": None})
+            for key in ("conference", "non_conference"):
+                if r.get(key):
+                    rivalries[t][key] = r[key]
 
     team_conf: Dict[str, str] = {}
     for conf_name, members in conferences.items():

@@ -4,7 +4,7 @@
     "school_name": "Gonzaga University",
     "abbreviation": "GU",
     "mascot": "Bulldogs",
-    "conference": "Big Pacific",
+    "conference": "West Coast Conference",
     "city": "Spokane",
     "state": "WA",
     "colors": [
@@ -65,7 +65,7 @@
       },
       {
         "number": 3,
-        "name": "Eduarda Rodríguez",
+        "name": "Eduarda Rodr\u00edguez",
         "position": "Slotback",
         "height": "5-6",
         "weight": 186,
@@ -161,7 +161,7 @@
       },
       {
         "number": 17,
-        "name": "Waimārie Wilson",
+        "name": "Waim\u0101rie Wilson",
         "position": "Wingback",
         "height": "5-10",
         "weight": 176,

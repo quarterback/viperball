@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "uc_riverside",
-    "school_name": "University of California, Riverside",
-    "abbreviation": "UCR",
-    "mascot": "Highlanders",
-    "conference": "Outlands Coast Conference",
-    "city": "Riverside",
+    "school_id": "fresno_state",
+    "school_name": "Fresno State",
+    "abbreviation": "FRES",
+    "mascot": "Bulldogs",
+    "conference": "Mountain West",
+    "city": "Fresno",
     "state": "CA",
     "colors": [
-      "Blue",
-      "Gold"
+      "Cardinal",
+      "Blue"
     ]
   },
   "identity": {
@@ -159,7 +159,7 @@
       },
       {
         "number": 10,
-        "name": "Vanessa Sánchez",
+        "name": "Vanessa S\u00e1nchez",
         "position": "Wing/End",
         "height": "5-9",
         "weight": 191,
@@ -735,7 +735,7 @@
       },
       {
         "number": 53,
-        "name": "Veronique Martínez",
+        "name": "Veronique Mart\u00ednez",
         "position": "Back/Corner",
         "height": "6-0",
         "weight": 184,
@@ -805,12 +805,12 @@
         "weight": 188,
         "year": "Sophomore",
         "hometown": {
-          "city": "Asunción",
+          "city": "Asunci\u00f3n",
           "state": "PAR",
           "country": "Paraguay",
           "region": "latin_american"
         },
-        "high_school": "Colegio Asunción",
+        "high_school": "Colegio Asunci\u00f3n",
         "nationality": "Latin American",
         "archetype": "tackle_keeper",
         "potential": 2,
@@ -1087,7 +1087,7 @@
       },
       {
         "number": 92,
-        "name": "Océane Clarke",
+        "name": "Oc\u00e9ane Clarke",
         "position": "Shiftback/Back",
         "height": "5-6",
         "weight": 183,
@@ -1218,7 +1218,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 789190,
       "year_signed": 2026,
-      "team_name": "University of California, Riverside",
+      "team_name": "Fresno State",
       "career_wins": 247,
       "career_losses": 125,
       "championships": 5,
@@ -1274,7 +1274,7 @@
       "contract_years_remaining": 2,
       "contract_buyout": 303774,
       "year_signed": 2026,
-      "team_name": "University of California, Riverside",
+      "team_name": "Fresno State",
       "career_wins": 92,
       "career_losses": 16,
       "championships": 0,
@@ -1330,7 +1330,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 445054,
       "year_signed": 2026,
-      "team_name": "University of California, Riverside",
+      "team_name": "Fresno State",
       "career_wins": 107,
       "career_losses": 157,
       "championships": 5,
@@ -1383,7 +1383,7 @@
       "contract_years_remaining": 1,
       "contract_buyout": 99137,
       "year_signed": 2026,
-      "team_name": "University of California, Riverside",
+      "team_name": "Fresno State",
       "career_wins": 47,
       "career_losses": 61,
       "championships": 0,
