@@ -2265,7 +2265,7 @@ class Season:
 
         if num_teams <= 4:
             rounds.append({
-                "round_label": "Semifinals", "week": 999,
+                "round_label": "National Semifinals", "week": 999,
                 "matchups": [
                     {"home_seed": 1, "home_team": seeds[0], "away_seed": num_teams, "away_team": seeds[num_teams - 1]},
                     {"home_seed": 2, "home_team": seeds[1], "away_seed": num_teams - 1, "away_team": seeds[num_teams - 2]},
@@ -2283,7 +2283,7 @@ class Season:
                 "round_label": "Quarterfinals", "week": 998,
                 "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 8 - i, "away_team": seeds[7 - i]} for i in range(4)],
             })
-            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+            rounds.append({"round_label": "National Semifinals", "week": 999, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
             ]})
@@ -2305,7 +2305,7 @@ class Season:
                     {"home_seed": 4, "home_team": seeds[3], "away_seed": None, "away_team": "Winner 8/9"},
                 ],
             })
-            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+            rounds.append({"round_label": "National Semifinals", "week": 999, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"},
             ]})
@@ -2315,13 +2315,13 @@ class Season:
 
         elif num_teams == 16:
             rounds.append({
-                "round_label": "Round of 16", "week": 997,
+                "round_label": "Octofinals", "week": 997,
                 "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 16 - i, "away_team": seeds[15 - i]} for i in range(8)],
             })
             rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
             ]})
-            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+            rounds.append({"round_label": "National Semifinals", "week": 999, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
             ]})
             rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
@@ -2334,7 +2334,7 @@ class Season:
                 "matchups": [{"home_seed": 9 + i, "home_team": seeds[8 + i], "away_seed": 24 - i, "away_team": seeds[23 - i]} for i in range(8)],
             })
             rounds.append({
-                "round_label": "Round of 16", "week": 997,
+                "round_label": "Octofinals", "week": 997,
                 "matchups": [
                     {"home_seed": i + 1, "home_team": seeds[i], "away_seed": None, "away_team": f"Winner {9 + (7 - i)}/{24 - (7 - i)}"} for i in range(8)
                 ],
@@ -2342,7 +2342,7 @@ class Season:
             rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
             ]})
-            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+            rounds.append({"round_label": "National Semifinals", "week": 999, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
             ]})
             rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [
@@ -2351,16 +2351,16 @@ class Season:
 
         elif num_teams == 32:
             rounds.append({
-                "round_label": "Round of 32", "week": 996,
+                "round_label": "First Round", "week": 996,
                 "matchups": [{"home_seed": i + 1, "home_team": seeds[i], "away_seed": 32 - i, "away_team": seeds[31 - i]} for i in range(16)],
             })
-            rounds.append({"round_label": "Round of 16", "week": 997, "matchups": [
+            rounds.append({"round_label": "Octofinals", "week": 997, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(8)
             ]})
             rounds.append({"round_label": "Quarterfinals", "week": 998, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(4)
             ]})
-            rounds.append({"round_label": "Semifinals", "week": 999, "matchups": [
+            rounds.append({"round_label": "National Semifinals", "week": 999, "matchups": [
                 {"home_seed": None, "home_team": "TBD", "away_seed": None, "away_team": "TBD"} for _ in range(2)
             ]})
             rounds.append({"round_label": "National Championship", "week": 1000, "matchups": [

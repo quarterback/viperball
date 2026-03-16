@@ -792,7 +792,7 @@ def render_dynasty_mode(shared):
                                 p = a.get("player_name", "")
                                 t = a.get("team_name", "")
                                 label = f"{p} ({t})" if p else ""
-                                if n == "CVL MVP":
+                                if n == "Persephone Award":
                                     mvp_name = label
                                 elif n == "Best Zeroback":
                                     best_zb = label
@@ -800,13 +800,13 @@ def render_dynasty_mode(shared):
                                     best_vp = label
                                 elif n == "Best Lateral Specialist":
                                     best_lat = label
-                                elif n == "Best Defensive Player":
+                                elif n == "Minerva Award":
                                     best_def = label
                                 elif n == "Best Kicker":
                                     best_kick = label
                             mvp_history.append({
                                 "Year": yr,
-                                "CVL MVP": mvp_name,
+                                "Persephone Award": mvp_name,
                                 "Best ZB": best_zb,
                                 "Best Viper": best_vp,
                                 "Best Lat": best_lat,

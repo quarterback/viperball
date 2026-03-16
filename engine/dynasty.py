@@ -199,6 +199,9 @@ class Coach:
     first_year: Optional[int] = None
     current_year: Optional[int] = None
 
+    # Awards earned (championships, etc.)
+    career_awards: List[Dict] = field(default_factory=list)
+
     # Season-by-season record
     season_records: Dict[int, Dict] = field(default_factory=dict)  # year -> {wins, losses, champion, etc.}
 
@@ -668,11 +671,55 @@ class Dynasty:
             conferences=conf_dict,
             prev_season_wins=prev_wins if prev_wins else None,
         )
+
+        # Compute media awards (postseason — AP, UPI, The Lateral, TSN)
+        try:
+            from engine.media_awards import compute_media_awards
+            media = compute_media_awards(
+                season=season,
+                year=year,
+                conferences=conf_dict,
+            )
+            honors.media_awards = media
+        except Exception:
+            pass  # media awards are non-critical
+
         self.honors_history[year] = honors.to_dict()
 
         if player_cards is not None:
             self._record_awards_to_cards(honors, player_cards, year)
             self._populate_career_seasons(season, player_cards, year)
+
+        # Log national championship to every player card on the champion roster
+        if season.champion and player_cards is not None:
+            champ_cards = player_cards.get(season.champion, [])
+            for card in champ_cards:
+                card.career_awards.append({
+                    "year": year,
+                    "award": "National Championship",
+                    "level": "national",
+                    "team": season.champion,
+                    "position": card.position,
+                })
+
+        # Log national championship to coach
+        if season.champion and self.coach.team_name == season.champion:
+            self.coach.career_awards.append({
+                "year": year,
+                "award": "National Championship",
+                "team": season.champion,
+            })
+
+        # Log national championship to coaching staff CoachCards
+        if season.champion and hasattr(self, '_coaching_staffs') and self._coaching_staffs:
+            champ_staff = self._coaching_staffs.get(season.champion, {})
+            for role, coach_card in champ_staff.items():
+                coach_card.career_awards.append({
+                    "year": year,
+                    "award": "National Championship",
+                    "team": season.champion,
+                    "role": role,
+                })
 
         self.awards_history[year] = SeasonAwards(
             year=year,

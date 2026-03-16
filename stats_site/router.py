@@ -446,27 +446,67 @@ def college_schedule(request: Request, session_id: str, week: int = 0):
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    games = season.schedule
-    weeks = sorted(set(g.week for g in games))
+    games = list(season.schedule)
+
+    # Collect postseason games
+    playoff_games = list(season.playoff_bracket or [])
+    bowl_game_list = list(season.bowl_games or [])
+
+    # Build a set of bowl game objects for labeling
+    bowl_game_map = {}
+    for bg in bowl_game_list:
+        bowl_game_map[id(bg.game)] = bg.name
+
+    # Combine all games
+    all_games = games + playoff_games + [bg.game for bg in bowl_game_list]
+    weeks = sorted(set(g.week for g in all_games))
+
+    # Playoff round labels
+    round_labels = {
+        995: "Play-In Round", 996: "First Round", 997: "Octofinals",
+        998: "Quarterfinals", 999: "National Semifinals", 1000: "National Championship",
+    }
 
     if week > 0:
-        filtered = [g for g in games if g.week == week]
+        filtered = [g for g in all_games if g.week == week]
     else:
-        filtered = games
+        filtered = all_games
 
     serialized = [api["serialize_game"](g) for g in filtered]
 
-    # Add per-week game index for box score links
+    # Add per-week game index for box score links + postseason labels
     week_counters = {}
-    for g in serialized:
+    for i, g in enumerate(serialized):
         w = g["week"]
         idx = week_counters.get(w, 0)
         g["week_game_idx"] = idx
         week_counters[w] = idx + 1
+        # Add postseason metadata
+        orig = filtered[i]
+        bowl_name = bowl_game_map.get(id(orig))
+        if bowl_name:
+            g["bowl_name"] = bowl_name
+            g["game_type"] = "bowl"
+        elif w >= 995:
+            g["game_type"] = "playoff"
+            g["round_label"] = round_labels.get(w, f"Playoff Wk {w}")
+        else:
+            g["game_type"] = "regular"
+
+    # Build week labels for the filter
+    week_labels = {}
+    for w in weeks:
+        if w in round_labels:
+            week_labels[w] = round_labels[w]
+        elif any(id(bg.game) in bowl_game_map for bg in bowl_game_list if bg.game.week == w):
+            week_labels[w] = f"Bowls (Wk {w})"
+        else:
+            week_labels[w] = str(w)
 
     return templates.TemplateResponse("college/schedule.html", _ctx(
         request, section="college", session_id=session_id,
-        games=serialized, weeks=weeks, selected_week=week,
+        games=serialized, weeks=weeks, week_labels=week_labels,
+        selected_week=week,
         season_name=getattr(season, "name", "Season"),
     ))
 
@@ -669,16 +709,16 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
         team_season_stats = {
             "games_played": n,
-            "total_yards": total_yards,
-            "total_plays": total_plays,
+            "total_yards": int(round(total_yards)),
+            "total_plays": int(round(total_plays)),
             "avg_yards": round(total_yards / n, 1),
-            "yards_per_play": round(total_yards / max(1, total_plays), 2),
-            "rushing_yards": rushing_yards,
+            "yards_per_play": round(total_yards / max(1, total_plays), 1),
+            "rushing_yards": int(round(rushing_yards)),
             "avg_rushing": round(rushing_yards / n, 1),
-            "rushing_carries": rushing_carries,
-            "rushing_tds": rushing_tds,
+            "rushing_carries": int(round(rushing_carries)),
+            "rushing_tds": int(round(rushing_tds)),
             "yards_per_carry": round(rushing_yards / max(1, rushing_carries), 1),
-            "kick_pass_yards": kp_yards,
+            "kick_pass_yards": int(round(kp_yards)),
             "kp_attempts": kp_att,
             "kp_completions": kp_comp,
             "kp_comp_pct": round(kp_comp / max(1, kp_att) * 100, 1),
@@ -776,6 +816,12 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             agg["wpa"] += p.get("wpa", 0.0)
 
     for r in player_season_stats.values():
+        r["yards"] = int(round(r.get("yards", 0)))
+        r["rushing_yards"] = int(round(r.get("rushing_yards", 0)))
+        r["lateral_yards"] = int(round(r.get("lateral_yards", 0)))
+        r["kick_pass_yards"] = int(round(r.get("kick_pass_yards", 0)))
+        r["kick_return_yards"] = int(round(r.get("kick_return_yards", 0)))
+        r["punt_return_yards"] = int(round(r.get("punt_return_yards", 0)))
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
         r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
         r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
@@ -1182,6 +1228,10 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
                     season_totals[stat] += pg.get(stat, 0)
                 break
 
+    # Ensure yard totals are integers
+    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
+                "kick_return_yards", "punt_return_yards"):
+        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     # Derived season totals
     season_totals["yards_per_touch"] = round(
         season_totals["yards"] / max(1, season_totals["touches"]), 1
@@ -1353,6 +1403,12 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
 
     players = list(player_agg.values())
     for r in players:
+        r["yards"] = int(round(r.get("yards", 0)))
+        r["rushing_yards"] = int(round(r.get("rushing_yards", 0)))
+        r["lateral_yards"] = int(round(r.get("lateral_yards", 0)))
+        r["kick_pass_yards"] = int(round(r.get("kick_pass_yards", 0)))
+        r["kick_return_yards"] = int(round(r.get("kick_return_yards", 0)))
+        r["punt_return_yards"] = int(round(r.get("punt_return_yards", 0)))
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
         r["kick_pct"] = round(r["kick_made"] / max(1, r["kick_att"]) * 100, 1)
         r["total_return_yards"] = r["kick_return_yards"] + r["punt_return_yards"]
@@ -1461,6 +1517,12 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
 
     players = list(player_agg.values())
     for r in players:
+        r["yards"] = int(round(r.get("yards", 0)))
+        r["rushing_yards"] = int(round(r.get("rushing_yards", 0)))
+        r["lateral_yards"] = int(round(r.get("lateral_yards", 0)))
+        r["kick_pass_yards"] = int(round(r.get("kick_pass_yards", 0)))
+        r["kick_return_yards"] = int(round(r.get("kick_return_yards", 0)))
+        r["punt_return_yards"] = int(round(r.get("punt_return_yards", 0)))
         r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
         r["all_purpose_yards"] = r["rushing_yards"] + r["kick_return_yards"] + r["punt_return_yards"] + r["kick_pass_yards"]
         r["wpa"] = round(r["wpa"], 2)
@@ -1582,9 +1644,14 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["total_yards"] = int(round(t["total_yards"]))
+        t["rushing_yards"] = int(round(t["rushing_yards"]))
+        t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
+        t["kick_pass_yards"] = int(round(t.get("kick_pass_yards", 0) if "kick_pass_yards" in t else t.get("kp_yards", 0)))
+        t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
-        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
         t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
         t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
@@ -1638,10 +1705,10 @@ def college_playoffs(request: Request, session_id: str):
     # Round labels by week number
     round_labels = {
         995: "Play-In Round",
-        996: "Round of 32",
-        997: "Round of 16",
+        996: "First Round",
+        997: "Octofinals",
         998: "Quarterfinals",
-        999: "Semifinals",
+        999: "National Semifinals",
         1000: "National Championship",
     }
 
@@ -1747,6 +1814,16 @@ def college_awards(request: Request, session_id: str):
             season, year=2025,
             conferences=season.conferences if hasattr(season, 'conferences') else None,
         )
+        # Compute media awards (postseason)
+        try:
+            from engine.media_awards import compute_media_awards
+            media = compute_media_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            honors.media_awards = media
+        except Exception:
+            pass
         awards = honors.to_dict()
     except Exception as exc:
         import traceback
@@ -2065,8 +2142,12 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["total_yards"] = int(round(t["total_yards"]))
+        t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
+        t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
+        t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
-        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
         t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
@@ -2762,6 +2843,9 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                         season_totals[stat] += pg.get(stat, 0)
                     break
 
+    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
+                "kick_return_yards", "punt_return_yards"):
+        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     season_totals["ypc"] = round(
         season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
     )
@@ -2885,8 +2969,14 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["total_yards"] = int(round(t["total_yards"]))
+        t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
+        t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
+        t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
+        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
-        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 2)
+        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
@@ -3201,6 +3291,11 @@ def intl_team_stats(request: Request, sort: str = "total_yards"):
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["total_yards"] = int(round(t["total_yards"]))
+        t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
+        t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
+        t["kp_yards"] = int(round(t.get("kp_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
@@ -3628,16 +3723,16 @@ def _aggregate_archive_team_stats(schedule: list, team_name: str) -> dict | None
 
     return {
         "games_played": n,
-        "total_yards": total_yards,
-        "total_plays": total_plays,
+        "total_yards": int(round(total_yards)),
+        "total_plays": int(round(total_plays)),
         "avg_yards": round(total_yards / n, 1),
-        "yards_per_play": round(total_yards / max(1, total_plays), 2),
-        "rushing_yards": rushing_yards,
+        "yards_per_play": round(total_yards / max(1, total_plays), 1),
+        "rushing_yards": int(round(rushing_yards)),
         "avg_rushing": round(rushing_yards / n, 1),
-        "rushing_carries": rushing_carries,
-        "rushing_tds": rushing_tds,
+        "rushing_carries": int(round(rushing_carries)),
+        "rushing_tds": int(round(rushing_tds)),
         "yards_per_carry": round(rushing_yards / max(1, rushing_carries), 1),
-        "kick_pass_yards": kp_yards,
+        "kick_pass_yards": int(round(kp_yards)),
         "kp_attempts": kp_att,
         "kp_completions": kp_comp,
         "kp_comp_pct": round(kp_comp / max(1, kp_att) * 100, 1),

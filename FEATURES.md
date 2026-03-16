@@ -172,8 +172,8 @@ Computes a complete `SeasonHonors` object at the end of each season with:
 | The Iron Chain Award   | Best lateral specialist                       |
 | The Brickwall Award    | Best defensive stopper (lineman or safety)    |
 | The Kicker's Crown     | Best territorial/scoring kicker               |
-| Offensive Player of the Year | Overall best offensive player          |
-| Defensive Player of the Year | Overall best defensive player          |
+| Venus Award                  | Offensive Player of the Year            |
+| Bellona Award                | Defensive Player of the Year            |
 
 **Team-Level Honors**
 - Coach of the Year (win% × OPI surprise factor)

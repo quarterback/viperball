@@ -124,9 +124,37 @@
 {% if season_totals.games > 0 %}
 <div class="grid-4" style="margin-bottom:12px">
   <div class="metric"><div class="label">Games</div><div class="value">{{ season_totals.games }}</div></div>
+  {% if season_totals.kick_att > 0 and season_totals.kick_att >= season_totals.touches and season_totals.kick_att >= season_totals.tackles %}
+  {# Kicker-primary: show kicking stats #}
+  <div class="metric"><div class="label">Kicks</div><div class="value accent">{{ season_totals.kick_made }}/{{ season_totals.kick_att }}</div></div>
+  <div class="metric"><div class="label">Kick %</div><div class="value {% if season_totals.kick_pct >= 80 %}stat-elite{% elif season_totals.kick_pct >= 60 %}stat-good{% endif %}">{{ season_totals.kick_pct }}%</div></div>
+  <div class="metric"><div class="label">Yards</div><div class="value">{{ season_totals.yards }}</div></div>
+  {% elif (season_totals.kick_return_yards + season_totals.punt_return_yards) > season_totals.rushing_yards and (season_totals.kick_returns + season_totals.punt_returns) > 0 %}
+  {# Returner-primary: show return stats #}
+  <div class="metric"><div class="label">Ret Yards</div><div class="value accent">{{ season_totals.kick_return_yards + season_totals.punt_return_yards }}</div></div>
+  <div class="metric"><div class="label">Returns</div><div class="value">{{ season_totals.kick_returns + season_totals.punt_returns }}</div></div>
+  <div class="metric"><div class="label">Ret TDs</div><div class="value {% if (season_totals.kick_return_tds + season_totals.punt_return_tds) >= 2 %}stat-elite{% endif %}">{{ season_totals.kick_return_tds + season_totals.punt_return_tds }}</div></div>
+  {% elif season_totals.tackles >= season_totals.touches and season_totals.tackles > 0 %}
+  {# Defense-primary: show defensive stats #}
+  <div class="metric"><div class="label">Tackles</div><div class="value accent">{{ season_totals.tackles }}</div></div>
+  <div class="metric"><div class="label">TFL</div><div class="value">{{ season_totals.tfl }}</div></div>
+  <div class="metric"><div class="label">Sacks</div><div class="value {% if season_totals.sacks >= 5 %}stat-elite{% endif %}">{{ season_totals.sacks }}</div></div>
+  {% elif season_totals.kick_passes_thrown > 0 and season_totals.kick_passes_thrown >= season_totals.rush_carries %}
+  {# Kick passer-primary: show passing stats #}
+  <div class="metric"><div class="label">Comp/Att</div><div class="value accent">{{ season_totals.kick_passes_completed }}/{{ season_totals.kick_passes_thrown }}</div></div>
+  <div class="metric"><div class="label">KP Yards</div><div class="value">{{ season_totals.kick_pass_yards }}</div></div>
+  <div class="metric"><div class="label">KP TDs</div><div class="value {% if season_totals.kick_pass_tds >= 3 %}stat-elite{% endif %}">{{ season_totals.kick_pass_tds }}</div></div>
+  {% elif season_totals.kick_pass_receptions > 0 and season_totals.kick_pass_receptions >= season_totals.rush_carries %}
+  {# Receiver-primary: show reception stats #}
+  <div class="metric"><div class="label">Receptions</div><div class="value accent">{{ season_totals.kick_pass_receptions }}</div></div>
+  <div class="metric"><div class="label">Yards</div><div class="value">{{ season_totals.yards }}</div></div>
+  <div class="metric"><div class="label">TDs</div><div class="value {% if season_totals.tds >= 5 %}stat-elite{% endif %}">{{ season_totals.tds }}</div></div>
+  {% else %}
+  {# Default: rushing/offense stats #}
   <div class="metric"><div class="label">Yards</div><div class="value accent">{{ season_totals.yards }}</div></div>
   <div class="metric"><div class="label">TDs</div><div class="value {% if season_totals.tds >= 5 %}stat-elite{% endif %}">{{ season_totals.tds }}</div></div>
   <div class="metric"><div class="label">Y/Touch</div><div class="value">{{ season_totals.yards_per_touch }}</div></div>
+  {% endif %}
 </div>
 
 {# ── Rushing ── #}
