@@ -159,6 +159,9 @@ class SeasonHonors:
     # Conference-level individual awards: conf_name -> list of AwardWinner
     conference_awards: Dict[str, List[AwardWinner]] = field(default_factory=dict)
 
+    # Media awards (postseason — AP, UPI, The Lateral, TSN)
+    media_awards: List[Dict] = field(default_factory=list)
+
     # ── helpers ──
     def get_award(self, award_name: str) -> Optional[AwardWinner]:
         for a in self.individual_awards:
@@ -205,6 +208,17 @@ class SeasonHonors:
         for conf_name, awards_list in self.conference_awards.items():
             for a in awards_list:
                 results.append((a, "conference"))
+        for ma in self.media_awards:
+            results.append((AwardWinner(
+                award_name=ma.get("award_name", ""),
+                player_name=ma.get("player_name", ""),
+                team_name=ma.get("team_name", ""),
+                position=ma.get("position", ""),
+                year_in_school=ma.get("year_in_school", ""),
+                overall_rating=ma.get("overall_rating", 0),
+                reason=ma.get("reason", ""),
+                season_stats=ma.get("season_stats"),
+            ), "media"))
         return results
 
     def to_dict(self) -> dict:
@@ -227,6 +241,7 @@ class SeasonHonors:
             "coach_of_year": self.coach_of_year,
             "coach_of_year_team": self.coach_of_year_team,
             "most_improved": self.most_improved,
+            "media_awards": self.media_awards,
         }
 
 

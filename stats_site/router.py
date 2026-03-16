@@ -1814,6 +1814,16 @@ def college_awards(request: Request, session_id: str):
             season, year=2025,
             conferences=season.conferences if hasattr(season, 'conferences') else None,
         )
+        # Compute media awards (postseason)
+        try:
+            from engine.media_awards import compute_media_awards
+            media = compute_media_awards(
+                season, year=2025,
+                conferences=season.conferences if hasattr(season, 'conferences') else None,
+            )
+            honors.media_awards = media
+        except Exception:
+            pass
         awards = honors.to_dict()
     except Exception as exc:
         import traceback

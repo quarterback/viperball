@@ -99,6 +99,49 @@
 </div>
 {% endif %}
 
+{# ── Media Awards (Postseason) ── #}
+{% if awards.get('media_awards') %}
+<h2 style="margin-top:24px;">Media Awards <span style="font-size:12px;color:var(--fg-dim);font-weight:normal">(Postseason)</span></h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Award</th><th>Outlet</th><th>Player</th><th>Team</th><th>Position</th><th>Year</th><th class="num">OVR</th><th>Season Stats</th></tr></thead>
+  <tbody>
+  {% for a in awards.media_awards %}
+  <tr>
+    <td style="color:var(--green);font-weight:bold">{{ a.get('award_name', '?') }}</td>
+    <td style="color:var(--fg-dim);font-size:11px">{{ a.get('outlet', '') }}</td>
+    <td><a href="/stats/college/{{ session_id }}/player/{{ a.get('team_name', '') }}/{{ a.get('player_name', '') }}">{{ a.get('player_name', '?') }}</a></td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ a.get('team_name', '') }}">{{ a.get('team_name', '?') }}</a></td>
+    <td><span class="tag tag-pos">{{ a.get('position', '?') }}</span></td>
+    <td>{{ a.get('year_in_school', '') }}</td>
+    <td class="num {% if a.get('overall_rating', 0) >= 90 %}stat-elite{% elif a.get('overall_rating', 0) >= 80 %}stat-good{% endif %}">{{ a.get('overall_rating', '') }}</td>
+    <td>
+      {% set ss = a.get('season_stats') %}
+      {% if ss %}
+        {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
+        {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('rush_carries') %}<span class="stat-badge">{{ ss.rush_carries }} car</span>{% endif %}
+        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards }} lat</span>{% endif %}
+        {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
+        {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
+        {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}
+        {% if ss.get('tfl') %}<span class="stat-badge">{{ ss.tfl }} TFL</span>{% endif %}
+        {% if ss.get('hurries') %}<span class="stat-badge">{{ ss.hurries }} HUR</span>{% endif %}
+      {% else %}
+        <span style="color:var(--fg-dim);font-size:10px">{{ a.get('reason', '') }}</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 {# ── Coach of the Year / Most Improved ── #}
 <div class="grid-2">
 {% if awards.get('coach_of_year') %}

@@ -671,6 +671,25 @@ class Dynasty:
             conferences=conf_dict,
             prev_season_wins=prev_wins if prev_wins else None,
         )
+
+        # Compute media awards (postseason — AP, UPI, The Lateral, TSN)
+        try:
+            from engine.media_awards import compute_media_awards
+            # Build prev_season_games for Comeback Player detection
+            prev_season_games = None
+            if year - 1 in self.honors_history:
+                # Pull player game counts from last year's full stats
+                prev_season_games = self._get_prev_season_games(season, year)
+            media = compute_media_awards(
+                season=season,
+                year=year,
+                conferences=conf_dict,
+                prev_season_games=prev_season_games,
+            )
+            honors.media_awards = media
+        except Exception:
+            pass  # media awards are non-critical
+
         self.honors_history[year] = honors.to_dict()
 
         if player_cards is not None:
@@ -1332,6 +1351,23 @@ class Dynasty:
     def get_team_prestige(self, team_name: str) -> int:
         """Return current prestige rating for a team."""
         return self.team_prestige.get(team_name, 50)
+
+    def _get_prev_season_games(self, season, year: int) -> Optional[Dict[str, int]]:
+        """Build {player_name: games_played} from last year for Comeback detection."""
+        prev_honors = self.honors_history.get(year - 1)
+        if not prev_honors:
+            return None
+        # We don't have granular per-player game counts in honors_history,
+        # so scan player cards for last season's games_played
+        result = {}
+        if hasattr(self, '_player_cards') and self._player_cards:
+            for team_name, cards in self._player_cards.items():
+                for card in cards:
+                    for ss in card.career_seasons:
+                        if ss.season_year == year - 1:
+                            result[card.full_name] = ss.games_played
+                            break
+        return result if result else None
 
     def _record_awards_to_cards(
         self,
