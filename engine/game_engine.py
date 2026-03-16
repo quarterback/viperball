@@ -4337,11 +4337,29 @@ class ViperballEngine:
             k_skill = k_final.kicking if k_final else 60
             dk_range = 30 + (k_skill - 60) * 0.75 + 5
 
-            if fp >= 55:
+            # V3.1: Deficit awareness for final play — don't kick if the
+            # points can't close the gap.  Prefer drop kick (5 pts) over
+            # place kick (3 pts) when the deficit demands it.
+            stall_score_diff = self._get_score_diff()
+            stall_deficit = abs(stall_score_diff) if stall_score_diff < 0 else 0
+            pk_viable = stall_deficit <= 3  # Place kick (3 pts) can tie
+            dk_viable = stall_deficit <= 5  # Drop kick (5 pts) can tie
+            dk_in_range = final_fg_dist <= min(58, dk_range)
+
+            if fp >= 55 and pk_viable:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif final_fg_dist <= min(58, dk_range):
+            elif fp >= 55 and dk_viable and dk_in_range:
+                # Deficit too large for FG but drop kick can do it
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            elif dk_in_range and dk_viable:
+                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            elif stall_deficit == 0:
+                # Leading or tied — punt for field position
+                final_play = self.simulate_punt(PlayFamily.PUNT)
             else:
+                # Trailing and no kick can close the gap — punt
+                # (no Hail Mary mechanism yet, but at least we're
+                # not wasting the play on a futile field goal)
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
             final_play.home_score_after = self.state.home_score
@@ -4597,6 +4615,22 @@ class ViperballEngine:
             or trait_fx.get("take_points_bias", 1.0) < 0.85
         )
 
+        # ── V3.1: Late-game deficit awareness ──
+        # When trailing in Q4 with the clock winding down, don't kick if
+        # the points won't close the gap.  A coaching AI should never kick
+        # a field goal when down by 4.5 — that's giving up.  Drop kick
+        # (5 pts) or place kick (3 pts) must at least tie the game.
+        # Outside Q4 or with plenty of time, kicking for partial points
+        # is fine because there are more possessions coming.
+        dk_futile = False
+        pk_futile = False
+        if quarter == 4 and time_left <= 180 and score_diff < 0:
+            deficit = abs(score_diff)
+            if deficit > 5:
+                dk_futile = True  # Even a snap kick can't tie — need TD
+            if deficit > 3:
+                pk_futile = True  # Field goal can't tie — need snap kick or TD
+
         # ── Down 4: DRIVE-FIRST — keep the ball moving ──
         # The default on 4th is to go for it.  You still have 5th and
         # 6th down.  Use 4th to advance field position for a better
@@ -4604,24 +4638,24 @@ class ViperballEngine:
         if down == 4:
             # Gimme kick: very close range, high success, long ytg
             # (no point running into a wall when points are free)
-            if dk_success >= 0.65 and fg_distance <= 25 and ytg >= 10:
+            if not dk_futile and dk_success >= 0.65 and fg_distance <= 25 and ytg >= 10:
                 return PlayType.DROP_KICK
 
             # Clock pressure: before the half or late game, take points
-            if clock_pressure and dk_success >= 0.40 and fg_distance <= dk_comfort:
+            if not dk_futile and clock_pressure and dk_success >= 0.40 and fg_distance <= dk_comfort:
                 if ytg >= 6:
                     return PlayType.DROP_KICK
 
             # Green light kicker: coach trusts them, but still needs
             # decent conditions — not a blank check
-            if has_green_light and dk_success >= 0.50 and fg_distance <= dk_comfort:
+            if not dk_futile and has_green_light and dk_success >= 0.50 and fg_distance <= dk_comfort:
                 if ytg >= 8:
                     return PlayType.DROP_KICK
 
             # Offense stalling: very long ytg and in range — might as
             # well take the 5-pointer instead of grinding 15+ yards
             kick_mode_agg = self._current_style().get("kick_mode_aggression", 0.5)
-            if kick_mode_agg >= 0.60 and ytg >= 16 and dk_success >= 0.45:
+            if not dk_futile and kick_mode_agg >= 0.60 and ytg >= 16 and dk_success >= 0.45:
                 return PlayType.DROP_KICK
 
             # Default: keep driving
@@ -4632,11 +4666,11 @@ class ViperballEngine:
         best_kick = None
         best_kick_ev = 0.0
         # Drop kick: only within the coaching comfort zone
-        if fg_distance <= dk_comfort and dk_success >= 0.30:
+        if not dk_futile and fg_distance <= dk_comfort and dk_success >= 0.30:
             best_kick = PlayType.DROP_KICK
             best_kick_ev = dk_success * 5.0
         # Place kick (FG): available at any viable distance
-        if pk_success >= 0.20:
+        if not pk_futile and pk_success >= 0.20:
             fg_ev = pk_success * 3.0
             if fg_ev > best_kick_ev:
                 best_kick = PlayType.PLACE_KICK
@@ -4649,11 +4683,11 @@ class ViperballEngine:
         if down == 5:
             if self.state.kick_mode:
                 # Kick mode active: always attempt snap kick on 5th
-                if dk_success >= 0.15:
+                if not dk_futile and dk_success >= 0.15:
                     return PlayType.DROP_KICK
-                if pk_success >= 0.20:
+                if not pk_futile and pk_success >= 0.20:
                     return PlayType.PLACE_KICK
-                return None  # Out of range, go for it as last resort
+                return None  # Out of range or futile, go for it
 
             # Non-kick-mode: use the go-for-it matrix
             go_threshold = self._go_for_it_threshold(fp, 5)
@@ -4684,6 +4718,11 @@ class ViperballEngine:
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
         if down == 6:
+            # Late Q4 trailing with no viable kick: go for the TD.
+            # Punting when you're losing with no time is giving up.
+            if quarter == 4 and time_left <= 180 and score_diff < 0 and not best_kick:
+                return None  # Go for it — punting surrenders the game
+
             # Go for it on very short ytg (elite kickers lower this)
             go_ytg = max(1, 3 - (kicker_skill - 75) // 10)
             if ytg <= go_ytg:
@@ -4795,6 +4834,21 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.state.home_score - self.state.away_score
         return self.state.away_score - self.state.home_score
+
+    def _kick_can_tie_or_win(self, kick_type, score_diff: float) -> bool:
+        """Return True if the kick's point value can at least tie the game.
+
+        When trailing (score_diff < 0), a kick is only rational if its
+        points would close the gap.  Drop kick = 5 pts, place kick = 3 pts.
+        """
+        if score_diff >= 0:
+            return True  # Leading or tied — any points help
+        deficit = abs(score_diff)
+        if kick_type == PlayType.DROP_KICK:
+            return deficit <= 5
+        elif kick_type == PlayType.PLACE_KICK:
+            return deficit <= 3
+        return True
 
     # ── V2.7: Lead Management Countermeasure Engine ──
 
@@ -5294,7 +5348,20 @@ class ViperballEngine:
         # If not already in kick mode, the coaching AI decides here.
         if self.state.down == 4:
             kick_decision = self.select_kick_decision()
+
+            # V3.1: Late-game trailing snap kick mode activation.
+            # When trailing in Q4 with the clock winding down and a snap
+            # kick (5 pts) could tie/win, enter kick mode for rapid-fire
+            # snap kick attempts on 4th-6th.  Missing a snap kick only
+            # costs a down (not possession), so this is the optimal
+            # strategy when you need exactly a kick's worth of points.
             if kick_decision == PlayType.DROP_KICK:
+                score_diff = self._get_score_diff()
+                if (self.state.quarter == 4
+                        and self.state.time_remaining <= 180
+                        and score_diff < 0
+                        and abs(score_diff) <= 5):
+                    self.state.kick_mode = True
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
             # else: go for advancement, fall through to normal play
