@@ -4511,19 +4511,23 @@ class ViperballEngine:
 
     GO_FOR_IT_MATRIX = {
         # Down 4 values don't matter (always go for it on 4th).
-        # Down 5 = the real decision point.  Down 6 = last chance.
+        # Down 5: almost always go for it — 6th down is the safety net.
+        #   Running a play gains ~4 yards on average, improving a 6th-down
+        #   kick by ~6%.  Turnover risk is tiny.  There's no reason to kick
+        #   on 5th when you can convert or improve field position and still
+        #   kick on 6th.  (Same logic as NFL "don't kick FGs on 3rd down".)
+        #   Only kick on 5th with very long ytg AND clock pressure.
+        # Down 6 = last chance.
         # Values = max ytg to go for it; above this → kick if available.
-        # Kicker skill adjusts: elite kickers (90+) reduce by up to 3,
-        # meaning they kick even on shorter ytg.
-        # NOTE: select_kick_decision() also has a ytg <= 3 hard bypass,
-        # so down 5 always goes for it on 5th-and-3 or less regardless.
-        15:  {4: 20, 5: 3, 6: 2},
-        30:  {4: 20, 5: 4, 6: 2},
-        45:  {4: 20, 5: 5, 6: 3},
-        50:  {4: 20, 5: 6, 6: 3},
-        60:  {4: 20, 5: 5, 6: 3},
-        75:  {4: 20, 5: 4, 6: 2},
-        100: {4: 20, 5: 3, 6: 2},
+        # On 5th down, elite kickers INCREASE the threshold (more go-for-it)
+        # because their 6th-down safety net is more reliable.
+        15:  {4: 20, 5: 12, 6: 2},
+        30:  {4: 20, 5: 14, 6: 2},
+        45:  {4: 20, 5: 16, 6: 3},
+        50:  {4: 20, 5: 18, 6: 3},
+        60:  {4: 20, 5: 16, 6: 3},
+        75:  {4: 20, 5: 14, 6: 2},
+        100: {4: 20, 5: 12, 6: 2},
     }
 
     def _go_for_it_threshold(self, fp: int, down: int) -> int:
@@ -4676,40 +4680,53 @@ class ViperballEngine:
                 best_kick = PlayType.PLACE_KICK
                 best_kick_ev = fg_ev
 
-        # ── Down 5: THE SETUP SHOT ──
-        # This is the natural kick down.  4th down should have advanced
-        # field position; now the kicker steps up.  Think corner-3 in
-        # basketball — you worked the ball around and now take the shot.
+        # ── Down 5: USE THE DOWN — 6th is your kicking down ──
+        # 5th down should almost never be a kick.  The same logic as
+        # "don't kick a FG on 3rd down in the NFL" applies here:
+        #   - Gaining even a few yards improves the 6th-down kick.
+        #   - Turnover risk is tiny (teams protect the ball).
+        #   - If you convert the first down, you're chasing a 9-pt TD.
+        #   - If you fail, you still kick on 6th from almost the same spot.
+        # Only kick on 5th under clock pressure with long yardage, or
+        # in kick mode (coached aggressive kicking scheme).
         if down == 5:
             if self.state.kick_mode:
-                # Kick mode active: always attempt snap kick on 5th
+                # Kick mode active — but still prefer going for it on
+                # short yardage.  Only kick when ytg is significant.
+                if ytg <= 5:
+                    return None  # Go for conversion, kick on 6th if needed
                 if not dk_futile and dk_success >= 0.15:
                     return PlayType.DROP_KICK
                 if not pk_futile and pk_success >= 0.20:
                     return PlayType.PLACE_KICK
                 return None  # Out of range or futile, go for it
 
-            # Non-kick-mode: use the go-for-it matrix
+            # Non-kick-mode: heavily favour going for it.
+            # Only consider kicking under clock pressure with long ytg.
             go_threshold = self._go_for_it_threshold(fp, 5)
-            kicker_adj = (75 - kicker_skill) // 5
-            go_threshold = max(1, go_threshold + kicker_adj)
 
-            # Aggression lowers go-for-it threshold (more aggressive = go more often)
+            # Elite kickers INCREASE the threshold (more go-for-it) because
+            # a better kicker means the 6th-down safety net is more reliable.
+            # Weak kickers slightly decrease it (might want to kick now while
+            # the distance is shorter).
+            kicker_adj = (kicker_skill - 75) // 5
+            go_threshold = max(6, go_threshold + kicker_adj)
+
+            # Aggression raises go-for-it threshold (aggressive coaches go more)
             pf = off_mods.get("personality_factors", {})
             agg = pf.get("aggression", 1.0)
-            go_threshold = max(1, int(go_threshold / agg))
+            go_threshold = max(6, int(go_threshold * agg))
 
-            # Red zone gambler trait
+            # Red zone gambler trait: even more aggressive
             if fp >= 80:
                 rz_mult = trait_fx.get("go_for_it_redzone_multiplier", 1.0)
-                go_threshold = max(1, int(go_threshold / rz_mult))
+                go_threshold = max(6, int(go_threshold * rz_mult))
 
-            # Clock pressure on 5th: more willing to kick
+            # Clock pressure on 5th: significantly lower threshold
+            # — this is the ONLY situation where 5th-down kicks make sense
             if clock_pressure and best_kick:
-                go_threshold = max(1, go_threshold - 2)
+                go_threshold = max(3, go_threshold - 8)
 
-            if ytg <= 2:
-                return None
             if ytg <= go_threshold:
                 return None
             if best_kick:
@@ -5252,19 +5269,29 @@ class ViperballEngine:
                 return PlayType.DROP_KICK
             return None
 
-        # ── Down 5: Secondary chance (after select_kick_decision) ──
-        # The kicker's skill and style drive the frequency.
+        # ── Down 5: Almost never kick — save it for 6th down ──
+        # Same logic as "don't kick FGs on 3rd down" in the NFL.
+        # Running a play gains yards and improves the 6th-down kick.
+        # Only fire a snap kick on 5th in late-game clock pressure.
         if down == 5:
-            if ytg < 4:
-                return None  # Very short — go for it
+            quarter = self.state.quarter
+            time_left = self.state.time_remaining
+            clock_pressure = (
+                (quarter == 2 and time_left <= 180)
+                or (quarter == 4 and time_left <= 180)
+            )
+            if not clock_pressure:
+                return None  # Go for it — 6th down is the kicking down
+            if ytg < 6:
+                return None  # Short enough to convert, even under pressure
             if fg_distance <= 25:
-                shot_chance = 0.50
+                shot_chance = 0.30
             elif fg_distance <= 35:
-                shot_chance = 0.35
+                shot_chance = 0.20
             elif fg_distance <= 45:
-                shot_chance = 0.25
-            elif fg_distance <= 55:
                 shot_chance = 0.12
+            elif fg_distance <= 55:
+                shot_chance = 0.06
             else:
                 return None
             shot_chance *= snap_kick_agg * kicker_mult
@@ -5373,9 +5400,14 @@ class ViperballEngine:
         # ── Kick mode active (downs 4-6): snap kick specialist path ──
         # When the offense elected kick mode on 4th down, all subsequent
         # downs are snap kick attempts under the pesäpallo rule.
+        # Exception: on 5th down with short yardage, go for the conversion
+        # — 6th down is still available for the kick attempt.
         if self.state.kick_mode and self.state.down >= 4:
-            play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
-            return self._apply_post_play_penalties(play)
+            if self.state.down == 5 and self.state.yards_to_go <= 5:
+                pass  # Fall through to normal play selection
+            else:
+                play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+                return self._apply_post_play_penalties(play)
 
         # ── Down 4: movement decision point ──
         # If not already in kick mode, the coaching AI decides here.
@@ -5707,6 +5739,12 @@ class ViperballEngine:
             weights["field_goal"] = 0.0
             weights["snap_kick"] = 0.0
             weights["punt"] = 0.0
+        # 5th down: suppress kicks in the weight system too — 6th down is
+        # the kicking down.  Same logic as NFL "don't kick on 3rd down".
+        # Only allow under extreme clock pressure (desperation_clock).
+        if down == 5 and not desperation_clock:
+            weights["field_goal"] = 0.0
+            weights["snap_kick"] = 0.0
 
         # ── "2nd & Short" aggression ──
         if down == 2 and ytg < 5:
