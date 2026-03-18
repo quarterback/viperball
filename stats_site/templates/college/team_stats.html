@@ -54,6 +54,8 @@
   'opp_st_return_yards': 'st_def', 'opp_kr_avg': 'st_def',
   'turnover_margin': 'turnovers', 'takeaways': 'turnovers', 'turnovers_lost': 'turnovers',
   'penalties': 'penalties', 'penalty_yards': 'penalties', 'opp_penalties': 'penalties',
+  'epa': 'efficiency', 'avg_epa': 'efficiency', 'avg_team_rating': 'efficiency', 'avg_viper_eff': 'efficiency',
+  'delta_yards': 'delta', 'bonus_possessions': 'bonus',
 } %}
 {% set active_cat = cat_map.get(sort, 'scoring_off') %}
 
@@ -81,6 +83,16 @@
     ('Special Teams DEF', 'st_def', 'opp_st_return_yards'),
     ('Turnovers', 'turnovers', 'turnover_margin'),
     ('Penalties', 'penalties', 'penalties'),
+  ] %}
+  <a href="/stats/college/{{ session_id }}/team-stats?sort={{ default_sort }}{% if conference %}&conference={{ conference }}{% endif %}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="margin-bottom:4px;font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Viperball Analytics</div>
+<div class="tabs" style="margin-bottom:16px;">
+  {% for label, cat, default_sort in [
+    ('Efficiency', 'efficiency', 'epa'),
+    ('Delta System', 'delta', 'delta_yards'),
+    ('Bonus Poss', 'bonus', 'bonus_possessions'),
   ] %}
   <a href="/stats/college/{{ session_id }}/team-stats?sort={{ default_sort }}{% if conference %}&conference={{ conference }}{% endif %}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
   {% endfor %}
@@ -588,6 +600,93 @@
     <td class="num">{{ '%.1f'|format(t.opp_penalties / [t.games, 1]|max) }}</td>
     <td class="num">{{ t.opp_penalty_yards }}</td>
     <td class="num">{{ '%.1f'|format(t.opp_penalty_yards / [t.games, 1]|max) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ EFFICIENCY ═══════════════ #}
+{% if active_cat == 'efficiency' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('EPA', 'epa'), ('EPA/G', 'avg_epa'), ('Rating', 'avg_team_rating'), ('Viper Eff', 'avg_viper_eff')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="/stats/college/{{ session_id }}/team-stats?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">EPA</th><th class="num">EPA/G</th><th class="num">RTG</th><th class="num">VE</th>
+    <th class="num">YPP</th>
+    <th class="num">4D ATT</th><th class="num">4D%</th>
+    <th class="num">5D ATT</th><th class="num">5D%</th>
+    <th class="num">6D ATT</th><th class="num">6D%</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'epa' %}stat-good{% elif t.epa < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.epa) }}</td>
+    <td class="num {% if sort == 'avg_epa' %}stat-good{% elif t.avg_epa < 0 %}stat-bad{% endif %}">{{ t.avg_epa }}</td>
+    <td class="num {% if sort == 'avg_team_rating' %}stat-good{% elif t.avg_team_rating >= 70 %}stat-elite{% elif t.avg_team_rating >= 55 %}stat-good{% endif %}">{{ t.avg_team_rating }}</td>
+    <td class="num {% if sort == 'avg_viper_eff' %}stat-good{% endif %}">{{ t.avg_viper_eff }}</td>
+    <td class="num">{{ t.yards_per_play }}</td>
+    <td class="num">{{ t.down_4_att }}</td>
+    <td class="num">{{ t.down_4_rate }}%</td>
+    <td class="num">{{ t.down_5_att }}</td>
+    <td class="num">{{ t.down_5_rate }}%</td>
+    <td class="num">{{ t.down_6_att }}</td>
+    <td class="num">{{ t.down_6_rate }}%</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ DELTA SYSTEM ═══════════════ #}
+{% if active_cat == 'delta' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">&Delta; YDS</th><th class="num">&Delta; DRIVES</th><th class="num">&Delta; SCORES</th>
+    <th class="num">KILL%</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if t.delta_yards > 0 %}stat-good{% elif t.delta_yards < 0 %}stat-bad{% endif %}">{{ t.delta_yards }}</td>
+    <td class="num">{{ t.delta_drives }}</td>
+    <td class="num">{{ t.delta_scores }}</td>
+    <td class="num">{{ t.kill_rate if t.kill_rate is not none else '—' }}{% if t.kill_rate is not none %}%{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ BONUS POSSESSIONS ═══════════════ #}
+{% if active_cat == 'bonus' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">BONUS POSS</th><th class="num">BONUS YDS</th><th class="num">BONUS SCORES</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.bonus_possessions }}</td>
+    <td class="num">{{ t.bonus_yards }}</td>
+    <td class="num">{{ t.bonus_scores }}</td>
   </tr>
   {% endfor %}
   </tbody>
