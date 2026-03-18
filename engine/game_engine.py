@@ -1570,11 +1570,11 @@ OFFENSE_STYLES = {
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
         "kick_accuracy_bonus": 0.0,
-        "explosive_lateral_bonus": 0.20,
+        "explosive_lateral_bonus": 0.14,
         "option_read_bonus": 0.0,
         "broken_play_bonus": 0.0,
         "pindown_bonus": 0.0,
-        "lateral_success_bonus": 0.10,
+        "lateral_success_bonus": 0.08,
         "tired_def_yardage_bonus": 0.05,
         "run_vs_lateral": 0.30,
         "early_down_aggression": 0.85,
@@ -1625,7 +1625,7 @@ OFFENSE_STYLES = {
         "pindown_bonus": 0.10,
         "snap_kick_aggression": 1.5,
         "launch_pad_threshold": 55,
-        "kick_pass_bonus": 0.12,
+        "kick_pass_bonus": 0.08,
         "kick_mode_aggression": 0.80,
         "kick_pass_weights": {
             "quick_kick": 0.35, "territory": 0.40, "bomb": 0.10, "kick_lateral": 0.15,
@@ -1706,7 +1706,7 @@ OFFENSE_STYLES = {
         "viper_touch_rate": 0.35,
         "pre_snap_motion": 0.80,
         "misdirection_bonus": 1.3,
-        "kick_pass_bonus": 0.08,
+        "kick_pass_bonus": 0.06,
         "kick_mode_aggression": 0.40,
         "kick_pass_weights": {
             "quick_kick": 0.25, "territory": 0.25, "bomb": 0.35, "kick_lateral": 0.15,
@@ -1777,11 +1777,11 @@ OFFENSE_STYLES = {
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
         "kick_accuracy_bonus": 0.0,
-        "explosive_lateral_bonus": 0.25,
+        "explosive_lateral_bonus": 0.18,
         "option_read_bonus": 0.0,
-        "broken_play_bonus": 0.12,
+        "broken_play_bonus": 0.10,
         "pindown_bonus": 0.0,
-        "lateral_success_bonus": 0.15,
+        "lateral_success_bonus": 0.10,
         "run_vs_lateral": 0.15,
         "chain_length_preference": 4,
         "risk_tolerance": 0.90,
@@ -1965,9 +1965,9 @@ OFFENSE_STYLES = {
         "run_bonus": 0.0,
         "fatigue_resistance": 0.0,
         "kick_accuracy_bonus": 0.06,
-        "explosive_lateral_bonus": 0.12,
+        "explosive_lateral_bonus": 0.08,
         "option_read_bonus": 0.02,
-        "broken_play_bonus": 0.10,
+        "broken_play_bonus": 0.08,
         "pindown_bonus": 0.0,
         "run_vs_lateral": 0.35,
         "early_down_aggression": 0.85,
@@ -2281,7 +2281,7 @@ DEFENSE_STYLES = {
         },
         "read_success_rate": 0.45,
         "pressure_factor": 1.10,
-        "turnover_bonus": 0.30,
+        "turnover_bonus": 0.25,
         "explosive_suppression": 1.15,
         "kick_suppression": 1.05,
         "kick_pass_coverage": 0.04,
@@ -2447,10 +2447,10 @@ DEFENSE_STYLES = {
         },
         "read_success_rate": 0.48,
         "pressure_factor": 0.60,
-        "turnover_bonus": 0.35,
+        "turnover_bonus": 0.28,
         "explosive_suppression": 1.20,
         "kick_suppression": 0.88,
-        "kick_pass_coverage": 0.20,
+        "kick_pass_coverage": 0.18,
         "pindown_defense": 0.90,
         "fatigue_resistance": 0.00,
         "gap_breakdown_bonus": 0.04,
@@ -2558,7 +2558,7 @@ DEFENSE_STYLES = {
         },
         "read_success_rate": 0.42,
         "pressure_factor": 0.70,
-        "turnover_bonus": 0.22,
+        "turnover_bonus": 0.18,
         "explosive_suppression": 1.10,
         "kick_suppression": 1.00,
         "kick_pass_coverage": 0.08,
@@ -5754,26 +5754,32 @@ class ViperballEngine:
 
         # Aggression → kick_pass weight
         agg = pf.get("aggression", 1.0)
-        weights["kick_pass"] = weights.get("kick_pass", 0.05) * agg
-
         # Risk tolerance → trick_play weight
         risk = pf.get("risk_tolerance", 1.0)
         trick_mult = sub_fx.get("trick_play_weight_multiplier", 1.0) * trait_fx.get("trick_play_weight_multiplier", 1.0)
-        weights["trick_play"] = weights.get("trick_play", 0.05) * risk * trick_mult
+        weights["trick_play"] = weights.get("trick_play", 0.05) * min(1.4, risk * trick_mult)
 
         # Chaos appetite → lateral_spread weight
         chaos = pf.get("chaos_appetite", 1.0)
         lat_mult = trait_fx.get("lateral_weight_multiplier", 1.0)
-        weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * chaos * lat_mult
 
         # Tempo preference → kick_pass boost (tempo coaches love the air game)
         tempo = pf.get("tempo_preference", 1.0)
         kp_sub = sub_fx.get("kick_pass_weight_multiplier", 1.0)
         kp_trait = trait_fx.get("kick_pass_weight_multiplier", 1.0)
-        weights["kick_pass"] = weights.get("kick_pass", 0.05) * tempo * kp_sub * kp_trait
 
-        # Variance tolerance → explosive play families
-        var_tol = pf.get("variance_tolerance", 1.0)
+        # Cap the combined coaching multiplier to prevent runaway stacking.
+        # Previously: kick_pass *= agg * tempo * kp_sub * kp_trait (could reach 2.4+)
+        # Now: combined product capped at 1.35
+        kp_coaching_mult = min(1.35, agg * tempo * kp_sub * kp_trait)
+        weights["kick_pass"] = weights.get("kick_pass", 0.05) * kp_coaching_mult
+
+        # Cap lateral coaching multiplier at 1.30
+        lat_coaching_mult = min(1.30, chaos * lat_mult)
+        weights["lateral_spread"] = weights.get("lateral_spread", 0.2) * lat_coaching_mult
+
+        # Variance tolerance → explosive play families (capped at 1.20)
+        var_tol = min(1.20, pf.get("variance_tolerance", 1.0))
         for fam in ("speed_option", "viper_jet", "lateral_spread"):
             weights[fam] = weights.get(fam, 0.05) * var_tol
 
@@ -8261,13 +8267,12 @@ class ViperballEngine:
                 interceptor.game_lateral_interceptions += 1
                 int_tag = player_tag(interceptor)
 
-                # Explosive INT return — laterals intercepted in the open
-                # field often lead to big returns or pick-sixes.
-                # INTs should produce 70+ yard returns routinely.
+                # INT return — laterals intercepted in the open field.
+                # Reduced from 35+talent*25 to rein in pick-six frequency.
                 int_speed = interceptor.speed
                 int_agility = getattr(interceptor, 'agility', 75)
                 return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
-                return_yards = max(0, int(random.gauss(35 + return_talent * 25, 18)))
+                return_yards = max(0, int(random.gauss(20 + return_talent * 18, 15)))
                 new_fp = min(100, raw_fp + return_yards)
 
                 self.apply_stamina_drain(4)
@@ -9173,10 +9178,10 @@ class ViperballEngine:
         # defender's attributes vs the kicker.  Quick Kicks are safe; Bombs are
         # 50/50 balls in the air.
         sf_int_bases = {
-            KickPassSubFamily.QUICK_KICK: 0.09,
-            KickPassSubFamily.TERRITORY: 0.16,
-            KickPassSubFamily.BOMB: 0.22,
-            KickPassSubFamily.KICK_LATERAL: 0.09,
+            KickPassSubFamily.QUICK_KICK: 0.07,
+            KickPassSubFamily.TERRITORY: 0.13,
+            KickPassSubFamily.BOMB: 0.18,
+            KickPassSubFamily.KICK_LATERAL: 0.07,
         }
         int_chance = sf_int_bases[subfamily]
 
@@ -9217,7 +9222,7 @@ class ViperballEngine:
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
             return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
-            return_yards = max(0, int(random.gauss(35 + return_talent * 20, 18)))
+            return_yards = max(0, int(random.gauss(18 + return_talent * 15, 15)))
             new_fp = min(100, raw_fp + return_yards)
 
             if new_fp >= 100:
