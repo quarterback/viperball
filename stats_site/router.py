@@ -1559,38 +1559,99 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     season = api["require_season"](sess)
 
     # Aggregate team stats from completed games (including postseason)
+    # Collects both offensive (own) and defensive (opponent) stats
     team_agg = {}
+    _INIT_FIELDS = {
+        "games": 0,
+        # Scoring
+        "points_for": 0.0, "points_against": 0.0,
+        "q1_pf": 0.0, "q2_pf": 0.0, "q3_pf": 0.0, "q4_pf": 0.0,
+        "q1_pa": 0.0, "q2_pa": 0.0, "q3_pa": 0.0, "q4_pa": 0.0,
+        # Offense
+        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+        # Special teams offense
+        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+        "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
+        "muffs": 0,
+        # Defense (opponent stats)
+        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+        # Special teams defense (opponent returns)
+        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+        # Turnovers
+        "fumbles": 0, "tod": 0,
+        "opp_fumbles": 0, "opp_tod": 0,
+        # Penalties
+        "penalties": 0, "penalty_yards": 0,
+        "opp_penalties": 0, "opp_penalty_yards": 0,
+        # Efficiency / Delta / Bonus
+        "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+        "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
+        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+        "viper_eff_n": 0, "team_rating_n": 0,
+        "down_4_att": 0, "down_4_conv": 0,
+        "down_5_att": 0, "down_5_conv": 0,
+        "down_6_att": 0, "down_6_conv": 0,
+    }
+
     for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
             continue
         fr = game.full_result
         stats = fr.get("stats", {})
-        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+        pbp = fr.get("play_by_play", [])
+
+        # Build quarter scoring from play-by-play
+        home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+        away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+        if pbp and isinstance(pbp, list) and pbp and "home_score" in pbp[0]:
+            prev_home = 0.0
+            prev_away = 0.0
+            for play in pbp:
+                q = play.get("quarter", 0)
+                if q not in home_q:
+                    continue
+                cur_home = play.get("home_score", prev_home)
+                cur_away = play.get("away_score", prev_away)
+                home_q[q] += cur_home - prev_home
+                away_q[q] += cur_away - prev_away
+                prev_home = cur_home
+                prev_away = cur_away
+
+        for side, opp_side, t_name in [("home", "away", game.home_team), ("away", "home", game.away_team)]:
             conf = season.team_conferences.get(t_name, "")
             if conference and conf != conference:
                 continue
             s = stats.get(side)
+            opp_s = stats.get(opp_side)
             if not s:
                 continue
             if t_name not in team_agg:
-                team_agg[t_name] = {
-                    "team": t_name, "conference": conf, "games": 0,
-                    "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-                    "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-                    "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                    "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-                    "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-                    "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                    "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
-                    "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
-                    "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-                    "viper_eff_n": 0, "team_rating_n": 0,
-                    "down_4_att": 0, "down_4_conv": 0,
-                    "down_5_att": 0, "down_5_conv": 0,
-                    "down_6_att": 0, "down_6_conv": 0,
-                }
+                team_agg[t_name] = {"team": t_name, "conference": conf, **{k: v for k, v in _INIT_FIELDS.items()}}
             a = team_agg[t_name]
             a["games"] += 1
+
+            # Scoring
+            my_score = game.home_score if side == "home" else game.away_score
+            opp_score = game.away_score if side == "home" else game.home_score
+            a["points_for"] += my_score if my_score else 0
+            a["points_against"] += opp_score if opp_score else 0
+
+            # Quarter scoring
+            my_q = home_q if side == "home" else away_q
+            opp_q_scores = away_q if side == "home" else home_q
+            for q in [1, 2, 3, 4]:
+                a[f"q{q}_pf"] += my_q.get(q, 0)
+                a[f"q{q}_pa"] += opp_q_scores.get(q, 0)
+
+            # ── Offensive stats ──
             a["total_yards"] += s.get("total_yards", 0)
             a["total_plays"] += s.get("total_plays", 0)
             a["touchdowns"] += s.get("touchdowns", 0)
@@ -1609,17 +1670,55 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             a["dk_att"] += s.get("drop_kicks_attempted", 0)
             a["pk_made"] += s.get("place_kicks_made", 0)
             a["pk_att"] += s.get("place_kicks_attempted", 0)
+
+            # ── Special teams offense ──
+            a["kr_yards"] += s.get("kick_return_yards", 0)
+            a["kr_count"] += s.get("kick_returns", 0)
+            a["kr_tds"] += s.get("kick_return_tds", 0)
+            a["pr_yards"] += s.get("punt_return_yards", 0)
+            a["pr_count"] += s.get("punt_returns", 0)
+            a["pr_tds"] += s.get("punt_return_tds", 0)
+            a["muffs"] += s.get("muffs", 0)
+
+            # ── Defensive stats (opponent offensive numbers) ──
+            if opp_s:
+                a["opp_total_yards"] += opp_s.get("total_yards", 0)
+                a["opp_total_plays"] += opp_s.get("total_plays", 0)
+                a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
+                a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
+                a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
+                a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
+                a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
+                a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
+                a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
+                a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
+                a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
+                a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
+                a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
+                a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
+                a["opp_kr_count"] += opp_s.get("kick_returns", 0)
+                a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
+                a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
+                a["opp_pr_count"] += opp_s.get("punt_returns", 0)
+                a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
+                a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
+                a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
+                a["opp_penalties"] += opp_s.get("penalties", 0)
+                a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
+
+            # ── Turnovers / Penalties ──
             a["fumbles"] += s.get("fumbles_lost", 0)
             a["tod"] += s.get("turnovers_on_downs", 0)
             a["penalties"] += s.get("penalties", 0)
             a["penalty_yards"] += s.get("penalty_yards", 0)
+
+            # ── Efficiency / Delta / Bonus ──
             a["delta_yards"] += s.get("delta_yards", 0)
             a["delta_drives"] += s.get("delta_drives", 0)
             a["delta_scores"] += s.get("delta_scores", 0)
             a["bonus_possessions"] += s.get("bonus_possessions", 0)
             a["bonus_scores"] += s.get("bonus_possession_scores", 0)
             a["bonus_yards"] += s.get("bonus_possession_yards", 0)
-            # EPA: handle dict or number
             epa_val = s.get("epa", 0)
             if isinstance(epa_val, dict):
                 a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
@@ -1634,16 +1733,24 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             if tr is not None:
                 a["team_rating_sum"] += tr
                 a["team_rating_n"] += 1
-            # Down conversions
             dc = s.get("down_conversions", {})
             for d in [4, 5, 6]:
                 dd = dc.get(d, dc.get(str(d), {}))
                 a[f"down_{d}_att"] += dd.get("attempts", 0)
                 a[f"down_{d}_conv"] += dd.get("converted", 0)
 
+    # ── Compute derived stats ──
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        # Scoring
+        t["ppg"] = round(t["points_for"] / n, 1)
+        t["opp_ppg"] = round(t["points_against"] / n, 1)
+        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
+        for q in [1, 2, 3, 4]:
+            t[f"q{q}_ppg"] = round(t[f"q{q}_pf"] / n, 1)
+            t[f"q{q}_opp_ppg"] = round(t[f"q{q}_pa"] / n, 1)
+        # Offense
         t["total_yards"] = int(round(t["total_yards"]))
         t["rushing_yards"] = int(round(t["rushing_yards"]))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
@@ -1654,17 +1761,42 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
         t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
         t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
+        # Special teams offense
+        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
+        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
+        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
+        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
+        # Defense
+        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
+        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
+        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
+        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
+        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
+        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
+        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
+        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
+        # Special teams defense
+        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
+        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
+        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
+        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
+        # Turnovers
+        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
+        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
+        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
+        # Efficiency
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
-        # Down conversion rates
         for d in [4, 5, 6]:
             att = t[f"down_{d}_att"]
             conv = t[f"down_{d}_conv"]
             t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
         t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
-        # Get W-L from standings
+        # W-L from standings
         rec = season.standings.get(t["team"])
         if rec:
             t["wins"] = rec.wins
@@ -1673,18 +1805,50 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             t["wins"] = 0
             t["losses"] = 0
 
+    # ── Sorting ──
+    # Some defensive categories are "lower is better" — reverse=False for those
+    _LOWER_IS_BETTER = {
+        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
+        "opp_rushing_yards", "opp_avg_rushing", "opp_yards_per_carry",
+        "opp_kp_yards", "opp_kp_ypg", "opp_kp_comp_pct", "opp_touchdowns",
+        "opp_rushing_tds", "opp_kp_tds",
+        "opp_kr_avg", "opp_pr_avg", "opp_st_return_yards", "opp_st_return_tds",
+        "fumbles", "penalties", "penalty_yards", "turnovers_lost", "muffs",
+    }
     valid_sorts = {
+        # Scoring
+        "ppg": "ppg", "opp_ppg": "opp_ppg", "scoring_margin": "scoring_margin",
+        "q1_ppg": "q1_ppg", "q2_ppg": "q2_ppg", "q3_ppg": "q3_ppg", "q4_ppg": "q4_ppg",
+        "q1_opp_ppg": "q1_opp_ppg", "q2_opp_ppg": "q2_opp_ppg", "q3_opp_ppg": "q3_opp_ppg", "q4_opp_ppg": "q4_opp_ppg",
+        # Offense
         "total_yards": "total_yards", "avg_yards": "avg_yards",
         "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
         "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
+        "yards_per_play": "yards_per_play",
+        # Special teams
+        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
+        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
+        # Defense
+        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
+        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
+        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
+        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg",
+        "opp_kp_comp_pct": "opp_kp_comp_pct",
+        # Turnovers
+        "turnover_margin": "turnover_margin", "takeaways": "takeaways",
+        "turnovers_lost": "turnovers_lost",
+        # Penalties
+        "fumbles": "fumbles", "penalties": "penalties", "penalty_yards": "penalty_yards",
+        "opp_penalties": "opp_penalties",
+        # Efficiency
         "epa": "epa", "avg_epa": "avg_epa",
         "avg_team_rating": "avg_team_rating", "avg_viper_eff": "avg_viper_eff",
-        "delta_yards": "delta_yards", "fumbles": "fumbles",
-        "penalties": "penalties", "yards_per_play": "yards_per_play",
+        "delta_yards": "delta_yards",
         "bonus_possessions": "bonus_possessions",
     }
     sort_key = valid_sorts.get(sort, "total_yards")
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+    reverse = sort_key not in _LOWER_IS_BETTER
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
 
     conferences = sorted(season.conferences.keys())
 
