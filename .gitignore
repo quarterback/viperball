@@ -55,3 +55,6 @@ dynasty_save.json
 
 # Config with API keys (user-specific)
 config.json
+
+# Claude Code local settings (may contain API keys)
+.claude/settings.local.json
