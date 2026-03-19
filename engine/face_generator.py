@@ -47,13 +47,12 @@ SKIN_TONES = [
 ]
 
 HAIR_COLORS = [
-    "black hair", "brown hair", "red hair",
-    "blonde hair", "dark hair",
+    "black", "brown", "red", "blonde", "dark brown",
 ]
 
-HAIR_STYLES = [
-    "short hair", "buzzcut", "ponytail",
-    "braids", "afro", "bun", "long hair",
+HELMET_COLORS = [
+    "white helmet", "red helmet", "blue helmet", "green helmet",
+    "gold helmet", "orange helmet", "purple helmet", "gray helmet",
 ]
 
 
@@ -67,9 +66,12 @@ def build_pool_prompt(index: int) -> str:
 
     skin = _pick(SKIN_TONES, h, 0)
     hair_color = _pick(HAIR_COLORS, h, 8)
-    hair_style = _pick(HAIR_STYLES, h, 16)
+    helmet = _pick(HELMET_COLORS, h, 16)
 
-    return f"front-facing head of a woman, {skin}, {hair_color}, {hair_style}"
+    return (
+        f"female football player, {skin}, {hair_color} hair, "
+        f"{helmet}, sports jersey, running pose"
+    )
 
 
 def pool_face_path(index: int, faces_dir: str = _DEFAULT_FACES_DIR) -> Path:
@@ -114,7 +116,7 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     """Call PixelLab BitForge API and return raw PNG bytes."""
     payload = {
         "description": prompt,
-        "negative_description": "fantasy, detailed, realistic, 3d, smooth, gradient",
+        "negative_description": "fantasy, realistic, 3d, smooth, gradient, portrait, headshot, face only",
         "image_size": {"width": FACE_SIZE, "height": FACE_SIZE},
         "text_guidance_scale": 8.0,
         "outline": "single color black outline",
@@ -122,6 +124,7 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
         "detail": "low detail",
         "no_background": True,
         "view": "side",
+        "direction": "east",
         "seed": seed,
     }
 
