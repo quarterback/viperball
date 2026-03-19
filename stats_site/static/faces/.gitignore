@@ -1,1 +1,1 @@
-*.png
+# Face pool PNGs are committed so they persist across deploys

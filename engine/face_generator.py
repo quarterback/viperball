@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import logging
 import os
 import re
 from pathlib import Path
@@ -33,9 +34,11 @@ import time
 
 import requests as _requests
 
+log = logging.getLogger(__name__)
+
 PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-bitforge"
-PIXELLAB_TIMEOUT = 90  # seconds — image generation can be slow
-PIXELLAB_MAX_RETRIES = 3
+PIXELLAB_TIMEOUT = 30  # seconds — 24x24 images are tiny, shouldn't need long
+PIXELLAB_MAX_RETRIES = 2
 PIXELLAB_RETRY_BACKOFF = 2  # seconds, doubled each retry
 FACE_SIZE = 24  # 24x24 — chunky NES / Retro Bowl style
 
@@ -242,10 +245,14 @@ async def generate_pool(
     sem = asyncio.Semaphore(concurrency)
     results: dict = {"generated": [], "skipped": [], "failed": []}
 
+    done_count = 0
+
     async def _gen(idx: int):
+        nonlocal done_count
         out_path = pool_face_path(idx, faces_dir)
         if not force and out_path.is_file():
             results["skipped"].append(idx)
+            done_count += 1
             return
         async with sem:
             try:
@@ -255,6 +262,11 @@ async def generate_pool(
                 results["generated"].append(idx)
             except Exception as e:
                 results["failed"].append({"index": idx, "error": str(e)})
+            done_count += 1
+            if done_count % 10 == 0 or done_count == count:
+                log.info("Face pool progress: %d/%d (generated=%d, failed=%d)",
+                         done_count, count, len(results["generated"]),
+                         len(results["failed"]))
 
     await asyncio.gather(*[_gen(i) for i in range(count)])
     return results
