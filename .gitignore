@@ -52,3 +52,6 @@ dynasty_save.json
 *.db
 *.db-wal
 *.db-shm
+
+# Config with API keys (user-specific)
+config.json

@@ -8,14 +8,22 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>#{{ player.number }} {{ player.name }}</h1>
-  <div class="subtitle">
-    <a href="/stats/wvl/{{ session_id }}/team/{{ team_key }}">{{ team_name }}</a>
-    &middot; <span class="tag tag-pos">{{ player.position }}</span>
-    {% if player.archetype %}&middot; {{ player.archetype }}{% endif %}
-    {% if player.age %}&middot; Age {{ player.age }}{% endif %}
-    &middot; {{ tier_name }}
+<div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
+  {% if face_src %}
+  <div class="player-card-frame">
+    <img src="{{ face_src }}" alt="{{ player.name }}" class="player-card-face">
+    <span class="player-card-number">#{{ player.number }}</span>
+  </div>
+  {% endif %}
+  <div style="flex:1; min-width:0;">
+    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}</h1>
+    <div class="subtitle">
+      <a href="/stats/wvl/{{ session_id }}/team/{{ team_key }}">{{ team_name }}</a>
+      &middot; <span class="tag tag-pos">{{ player.position }}</span>
+      {% if player.archetype %}&middot; {{ player.archetype }}{% endif %}
+      {% if player.age %}&middot; Age {{ player.age }}{% endif %}
+      &middot; {{ tier_name }}
+    </div>
   </div>
 </div>
 

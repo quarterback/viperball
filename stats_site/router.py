@@ -15,6 +15,24 @@ router = APIRouter()
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# ── Pixel-art face pool ──
+_FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
+_face_pool_size: int | None = None
+
+def _get_face_pool_size() -> int:
+    global _face_pool_size
+    if _face_pool_size is None:
+        from engine.face_generator import get_pool_size
+        _face_pool_size = get_pool_size(_FACES_DIR)
+    return _face_pool_size
+
+def _face_url_for(player_id: str) -> str | None:
+    n = _get_face_pool_size()
+    if n == 0:
+        return None
+    from engine.face_generator import get_face_url
+    return get_face_url(player_id, pool_size=n, faces_dir=_FACES_DIR)
+
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
@@ -1315,12 +1333,16 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         except Exception:
             pass
 
+    # Pool-based pixel-art face
+    _pid = getattr(player, "player_id", "")
+    _face_src = _face_url_for(_pid) if _pid else None
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
         record=team_record, prestige=prestige, cross_links=cross_links,
-        player_awards=player_awards,
+        player_awards=player_awards, face_src=_face_src,
     ))
 
 
@@ -3037,6 +3059,10 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
     club = CLUBS_BY_KEY.get(team_key)
     team_name = club.name if club else team_key
 
+    # Pool-based pixel-art face
+    _pid = getattr(player, "player_id", "")
+    _face_src = _face_url_for(_pid) if _pid else None
+
     return templates.TemplateResponse("wvl/player.html", _ctx(
         request, section="wvl", session_id=session_id,
         player=player, card=card,
@@ -3045,7 +3071,7 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
         game_log=sorted(game_log, key=lambda g: g["week"]),
-        season_totals=season_totals,
+        season_totals=season_totals, face_src=_face_src,
     ))
 
 
@@ -3509,9 +3535,30 @@ def intl_player(request: Request, nation_code: str, player_name: str):
 
     cross_links = _find_cross_league_links(player_name, exclude_nation=nation_code)
 
+    # Pool-based pixel-art face
+    _pl = player.get("player", player) if isinstance(player, dict) else player
+    _pid = _pl.get("player_id", "") if isinstance(_pl, dict) else getattr(_pl, "player_id", "")
+    _face_src = _face_url_for(_pid) if _pid else None
+
     return templates.TemplateResponse("international/player.html", _ctx(
         request, section="international", player=player, nation_code=nation_code,
         nation=nation, team_data=team_data, cross_links=cross_links,
+        face_src=_face_src,
+    ))
+
+
+# ── FACE POOL ────────────────────────────────────────────────────────────
+
+@router.get("/faces", response_class=HTMLResponse)
+def face_pool_page(request: Request):
+    from engine.face_generator import get_pool_size
+    n = get_pool_size(_FACES_DIR)
+    has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
+    # Show a random-ish preview of existing faces (up to 24)
+    preview = list(range(min(n, 24)))
+    return templates.TemplateResponse("faces.html", _ctx(
+        request, section="faces", pool_size=n, has_key=has_key,
+        preview_indices=preview,
     ))
 
 
