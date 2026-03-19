@@ -3,6 +3,7 @@ Viperball Simulation API
 FastAPI wrapper around the Viperball engine
 """
 
+import json
 import sys
 import os
 import uuid
@@ -17,6 +18,21 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# ── Load config.json (API keys etc.) ──
+_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
+_config: dict = {}
+if os.path.isfile(_CONFIG_PATH):
+    try:
+        with open(_CONFIG_PATH) as _f:
+            _config = json.load(_f)
+    except Exception:
+        pass
+# Set PIXELLAB_API_KEY from config if not already in env
+if _config.get("pixellab_api_key") and not os.environ.get("PIXELLAB_API_KEY"):
+    _key = _config["pixellab_api_key"]
+    if _key != "PASTE_YOUR_KEY_HERE":
+        os.environ["PIXELLAB_API_KEY"] = _key
 # --- Core engine imports (loaded eagerly via engine/__init__.py) ---
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES
 from engine.season import (
@@ -4298,6 +4314,7 @@ def _get_fiv_cycle_data() -> dict:
 
 # ── Pixel-art face pool generation ─────────────────────────────────────
 
+@app.get("/generate-face-pool")
 @app.post("/generate-face-pool")
 async def generate_face_pool(count: int = 200, force: bool = False):
     """
@@ -4305,13 +4322,20 @@ async def generate_face_pool(count: int = 200, force: bool = False):
 
     Creates face_000.png … face_N.png in stats_site/static/faces/.
     These persist across dynasty resets — any player maps to a face via hash.
-    Requires PIXELLAB_API_KEY environment variable.
+
+    GET-friendly so you can trigger from a browser:
+      http://localhost:5000/generate-face-pool
+      http://localhost:5000/generate-face-pool?count=50
+
+    API key loaded from config.json automatically.
     """
     from engine.face_generator import generate_pool, get_pool_size
 
     api_key = os.environ.get("PIXELLAB_API_KEY", "")
     if not api_key:
-        raise HTTPException(400, "PIXELLAB_API_KEY environment variable not set")
+        raise HTTPException(400,
+            "No PixelLab API key found. "
+            "Add your key to config.json: {\"pixellab_api_key\": \"your-key\"}")
 
     face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                             "stats_site", "static", "faces")

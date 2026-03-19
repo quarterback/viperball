@@ -3547,6 +3547,21 @@ def intl_player(request: Request, nation_code: str, player_name: str):
     ))
 
 
+# ── FACE POOL ────────────────────────────────────────────────────────────
+
+@router.get("/faces", response_class=HTMLResponse)
+def face_pool_page(request: Request):
+    from engine.face_generator import get_pool_size
+    n = get_pool_size(_FACES_DIR)
+    has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
+    # Show a random-ish preview of existing faces (up to 24)
+    preview = list(range(min(n, 24)))
+    return templates.TemplateResponse("faces.html", _ctx(
+        request, section="faces", pool_size=n, has_key=has_key,
+        preview_indices=preview,
+    ))
+
+
 # ── SEARCH ───────────────────────────────────────────────────────────────
 
 @router.get("/search", response_class=HTMLResponse)

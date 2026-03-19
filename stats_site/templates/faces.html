@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Face Pool — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Face Pool
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Pixel Art Face Pool</h1>
+  <div class="subtitle">Generate reusable player portraits via PixelLab API</div>
+</div>
+
+<div style="max-width:600px;">
+
+<table>
+  <tbody>
+  <tr>
+    <td style="color:var(--fg-dim);width:160px">Faces in pool</td>
+    <td id="pool-count" style="font-weight:bold;font-size:14px">{{ pool_size }}</td>
+  </tr>
+  <tr>
+    <td style="color:var(--fg-dim)">API key</td>
+    <td>{% if has_key %}<span style="color:var(--green,#4caf50)">configured</span>{% else %}<span style="color:var(--red,#f44336)">missing — add to config.json</span>{% endif %}</td>
+  </tr>
+  </tbody>
+</table>
+
+{% if pool_size > 0 %}
+<h2>Preview</h2>
+<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+  {% for i in preview_indices %}
+  <div class="player-card-frame" style="width:64px;height:64px;">
+    <img src="/stats/static/faces/face_{{ '%03d'|format(i) }}.png" alt="face {{ i }}" class="player-card-face">
+    <span class="player-card-number">{{ i }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2>Generate</h2>
+<div style="margin-bottom:12px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Pool size (number of unique faces)</label><br>
+  <input type="number" id="face-count" value="200" min="10" max="500"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+</div>
+
+<button id="gen-btn" onclick="generatePool()"
+        style="background:var(--accent);color:var(--bg);border:none;padding:8px 20px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:bold;"
+        {% if not has_key %}disabled title="Add API key to config.json first"{% endif %}>
+  Generate Face Pool
+</button>
+
+<div id="gen-status" style="margin-top:12px;font-size:12px;color:var(--fg-dim);white-space:pre-line;"></div>
+</div>
+
+<script>
+async function generatePool() {
+  var btn = document.getElementById('gen-btn');
+  var status = document.getElementById('gen-status');
+  var count = document.getElementById('face-count').value || 200;
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  status.textContent = 'Calling PixelLab API — this may take a few minutes for large pools...\nEach face is a separate API call.\n';
+  try {
+    var resp = await fetch('/generate-face-pool?count=' + count, {method: 'POST'});
+    var data = await resp.json();
+    if (!resp.ok) {
+      status.textContent = 'Error: ' + (data.detail || JSON.stringify(data));
+    } else {
+      status.textContent = 'Done!\n' +
+        'Generated: ' + data.generated + '\n' +
+        'Skipped (already existed): ' + data.skipped + '\n' +
+        'Failed: ' + data.failed + '\n';
+      if (data.errors && data.errors.length) {
+        status.textContent += '\nFirst errors:\n' + data.errors.map(function(e){ return '  face_' + String(e.index).padStart(3,'0') + ': ' + e.error; }).join('\n');
+      }
+      document.getElementById('pool-count').textContent = data.generated + data.skipped;
+      if (data.generated > 0) {
+        setTimeout(function(){ location.reload(); }, 1500);
+      }
+    }
+  } catch(e) {
+    status.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate Face Pool';
+}
+</script>
+{% endblock %}
