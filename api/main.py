@@ -78,7 +78,7 @@ app.add_middleware(DomainRedirectMiddleware)
 # individual APIRoutes were checked first but /stats (no trailing slash)
 # fell through to NiceGUI before the redirect-slashes logic could fire.
 from stats_site.router import router as stats_router
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 
 # Redirect /stats → /stats/ (this APIRoute is checked before the Mount below)
 @app.get("/stats", include_in_schema=False)
@@ -4357,3 +4357,33 @@ def face_pool_status():
     face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                             "stats_site", "static", "faces")
     return {"pool_size": get_pool_size(face_dir)}
+
+
+@app.get("/download-face-pool")
+def download_face_pool():
+    """Download all generated face PNGs as a zip file.
+
+    Hit this after generating faces on Fly.io to pull them back into the repo:
+        curl -o faces.zip https://your-app.fly.dev/download-face-pool
+        unzip -o faces.zip -d stats_site/static/faces/
+    """
+    import io
+    import zipfile
+    from pathlib import Path
+
+    face_dir = Path(os.path.dirname(os.path.dirname(__file__))) / "stats_site" / "static" / "faces"
+    pngs = sorted(face_dir.glob("face_*.png"))
+    if not pngs:
+        raise HTTPException(404, "No faces generated yet. Call /generate-face-pool first.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pngs:
+            zf.write(p, p.name)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=faces.zip"},
+    )
