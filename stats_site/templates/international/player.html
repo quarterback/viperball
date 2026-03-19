@@ -10,14 +10,20 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>#{{ pl.get('number', '') }} {{ pl.get('name', '?') }}</h1>
-  <div class="subtitle">
-    <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
-    &middot; {{ pl.get('position', '?')[:20] }}
-    {% if pl.get('archetype') %}&middot; {{ pl.archetype }}{% endif %}
-    {% if player.get('caps') %}&middot; {{ player.caps }} cap{{ 's' if player.caps != 1 }}{% endif %}
-    {% if player.get('cvl_source') %}&middot; CVL: {{ player.cvl_source }}{% endif %}
+<div class="page-header" style="display:flex; align-items:center; gap:14px;">
+  {% if player_face %}
+  <img src="/stats/static/faces/{{ pl.get('player_id', '') }}.png" alt="" class="player-face"
+       style="width:96px; height:96px; image-rendering:pixelated; border:2px solid var(--border); background:var(--bg-alt); flex-shrink:0;">
+  {% endif %}
+  <div>
+    <h1 style="margin:0">#{{ pl.get('number', '') }} {{ pl.get('name', '?') }}</h1>
+    <div class="subtitle">
+      <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
+      &middot; {{ pl.get('position', '?')[:20] }}
+      {% if pl.get('archetype') %}&middot; {{ pl.archetype }}{% endif %}
+      {% if player.get('caps') %}&middot; {{ player.caps }} cap{{ 's' if player.caps != 1 }}{% endif %}
+      {% if player.get('cvl_source') %}&middot; CVL: {{ player.cvl_source }}{% endif %}
+    </div>
   </div>
 </div>
 

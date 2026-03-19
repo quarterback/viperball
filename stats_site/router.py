@@ -1315,12 +1315,17 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         except Exception:
             pass
 
+    # Check if pixel-art face exists for this player
+    _pid = getattr(player, "player_id", "")
+    _face_dir = os.path.join(os.path.dirname(__file__), "static", "faces")
+    _has_face = bool(_pid) and os.path.isfile(os.path.join(_face_dir, f"{_pid}.png"))
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
         team=team, game_log=game_log, season_totals=season_totals,
         record=team_record, prestige=prestige, cross_links=cross_links,
-        player_awards=player_awards,
+        player_awards=player_awards, player_face=_has_face,
     ))
 
 
@@ -3037,6 +3042,11 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
     club = CLUBS_BY_KEY.get(team_key)
     team_name = club.name if club else team_key
 
+    # Check if pixel-art face exists for this player
+    _pid = getattr(player, "player_id", "")
+    _face_dir = os.path.join(os.path.dirname(__file__), "static", "faces")
+    _has_face = bool(_pid) and os.path.isfile(os.path.join(_face_dir, f"{_pid}.png"))
+
     return templates.TemplateResponse("wvl/player.html", _ctx(
         request, section="wvl", session_id=session_id,
         player=player, card=card,
@@ -3045,7 +3055,7 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
         game_log=sorted(game_log, key=lambda g: g["week"]),
-        season_totals=season_totals,
+        season_totals=season_totals, player_face=_has_face,
     ))
 
 
@@ -3509,9 +3519,16 @@ def intl_player(request: Request, nation_code: str, player_name: str):
 
     cross_links = _find_cross_league_links(player_name, exclude_nation=nation_code)
 
+    # Check if pixel-art face exists for this player
+    _pl = player.get("player", player) if isinstance(player, dict) else player
+    _pid = _pl.get("player_id", "") if isinstance(_pl, dict) else getattr(_pl, "player_id", "")
+    _face_dir = os.path.join(os.path.dirname(__file__), "static", "faces")
+    _has_face = bool(_pid) and os.path.isfile(os.path.join(_face_dir, f"{_pid}.png"))
+
     return templates.TemplateResponse("international/player.html", _ctx(
         request, section="international", player=player, nation_code=nation_code,
         nation=nation, team_data=team_data, cross_links=cross_links,
+        player_face=_has_face,
     ))
 
 

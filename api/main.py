@@ -82,6 +82,13 @@ def _stats_redirect():
 
 _stats_app = FastAPI()
 _stats_app.include_router(stats_router)
+
+# Serve generated pixel-art face images at /stats/static/faces/<player_id>.png
+from starlette.staticfiles import StaticFiles as _StaticFiles
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "stats_site", "static")
+os.makedirs(os.path.join(_STATIC_DIR, "faces"), exist_ok=True)
+_stats_app.mount("/static", _StaticFiles(directory=_STATIC_DIR), name="stats-static")
+
 app.mount("/stats", _stats_app)
 
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
@@ -4287,3 +4294,58 @@ def _get_fiv_cycle_data() -> dict:
         raise HTTPException(status_code=404, detail="No active FIV cycle")
     _fiv_active_cycle_data = data
     return data
+
+
+# ── Pixel-art face generation ──────────────────────────────────────────
+
+@app.post("/sessions/{session_id}/generate-faces")
+async def generate_faces_for_session(session_id: str, team: str = "", force: bool = False):
+    """
+    Generate pixel-art player faces for a session's roster via PixelLab API.
+
+    - If `team` is specified, only that team's players are generated.
+    - Set `force=true` to regenerate existing faces.
+    - Requires PIXELLAB_API_KEY environment variable.
+    """
+    from engine.player_card import player_to_card
+    from engine.face_generator import generate_faces_batch
+
+    api_key = os.environ.get("PIXELLAB_API_KEY", "")
+    if not api_key:
+        raise HTTPException(400, "PIXELLAB_API_KEY environment variable not set")
+
+    sess = sessions.get(session_id)
+    if not sess:
+        raise HTTPException(404, f"Session '{session_id}' not found")
+    season = sess.get("season")
+    if not season:
+        raise HTTPException(400, "No season in this session")
+
+    # Collect player cards
+    cards = []
+    team_names = [team] if team else list(season.teams.keys())
+    for tn in team_names:
+        t = season.teams.get(tn)
+        if not t:
+            continue
+        for p in t.players:
+            try:
+                cards.append(player_to_card(p, tn))
+            except Exception:
+                pass
+
+    if not cards:
+        return {"message": "No players found", "generated": 0}
+
+    face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            "stats_site", "static", "faces")
+    results = await generate_faces_batch(
+        cards, output_dir=face_dir, api_key=api_key, force=force,
+    )
+    return {
+        "message": f"Face generation complete for {len(cards)} players",
+        "generated": len(results["generated"]),
+        "skipped": len(results["skipped"]),
+        "failed": len(results["failed"]),
+        "errors": results["failed"][:10],  # cap error details
+    }

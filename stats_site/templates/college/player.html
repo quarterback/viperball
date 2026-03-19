@@ -8,15 +8,21 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>#{{ player.number }} {{ player.name }}</h1>
-  <div class="subtitle">
-    <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
-    {% if team.mascot %} {{ team.mascot }}{% endif %}
-    &middot; <span class="tag tag-pos">{{ player.position }}</span> {{ player.position_full }}
-    &middot; {{ player.year_abbr }}
-    {% if player.archetype %}&middot; {{ player.archetype }}{% endif %}
-    {% if record %}&middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span>{% endif %}
+<div class="page-header" style="display:flex; align-items:center; gap:14px;">
+  {% if player_face %}
+  <img src="/stats/static/faces/{{ player.player_id }}.png" alt="" class="player-face"
+       style="width:96px; height:96px; image-rendering:pixelated; border:2px solid var(--border); background:var(--bg-alt); flex-shrink:0;">
+  {% endif %}
+  <div>
+    <h1 style="margin:0">#{{ player.number }} {{ player.name }}</h1>
+    <div class="subtitle">
+      <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
+      {% if team.mascot %} {{ team.mascot }}{% endif %}
+      &middot; <span class="tag tag-pos">{{ player.position }}</span> {{ player.position_full }}
+      &middot; {{ player.year_abbr }}
+      {% if player.archetype %}&middot; {{ player.archetype }}{% endif %}
+      {% if record %}&middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span></span>{% endif %}
+    </div>
   </div>
 </div>
 
