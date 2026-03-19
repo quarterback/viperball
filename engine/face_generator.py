@@ -29,9 +29,14 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
+import time
+
 import requests as _requests
 
 PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-bitforge"
+PIXELLAB_TIMEOUT = 90  # seconds — image generation can be slow
+PIXELLAB_MAX_RETRIES = 3
+PIXELLAB_RETRY_BACKOFF = 2  # seconds, doubled each retry
 FACE_SIZE = 24  # 24x24 — chunky NES / Retro Bowl style
 
 _DEFAULT_FACES_DIR = os.path.join(
@@ -130,7 +135,11 @@ def get_face_url(player_id: str, pool_size: int = 0,
 # ── PixelLab API ──
 
 def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
-    """Call PixelLab BitForge API and return raw PNG bytes."""
+    """Call PixelLab BitForge API and return raw PNG bytes.
+
+    Retries on timeouts and transient server errors (5xx) with exponential
+    backoff so that slow image-generation jobs aren't silently dropped.
+    """
     payload = {
         "description": prompt,
         "negative_description": "fantasy, realistic, 3d, smooth, gradient, portrait, headshot, face only",
@@ -145,17 +154,34 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
         "seed": seed,
     }
 
-    resp = _requests.post(
-        PIXELLAB_API_URL,
-        json=payload,
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=30,
-    )
+    last_err: Exception | None = None
+    for attempt in range(PIXELLAB_MAX_RETRIES):
+        try:
+            resp = _requests.post(
+                PIXELLAB_API_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=PIXELLAB_TIMEOUT,
+            )
+        except (_requests.exceptions.Timeout, _requests.exceptions.ConnectionError) as exc:
+            last_err = exc
+            if attempt < PIXELLAB_MAX_RETRIES - 1:
+                time.sleep(PIXELLAB_RETRY_BACKOFF * (2 ** attempt))
+                continue
+            raise RuntimeError(
+                f"PixelLab request failed after {PIXELLAB_MAX_RETRIES} attempts: {exc}"
+            ) from exc
 
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"PixelLab API error {resp.status_code}: {resp.text[:200]}"
-        )
+        if resp.status_code >= 500 and attempt < PIXELLAB_MAX_RETRIES - 1:
+            last_err = RuntimeError(f"PixelLab API error {resp.status_code}")
+            time.sleep(PIXELLAB_RETRY_BACKOFF * (2 ** attempt))
+            continue
+
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"PixelLab API error {resp.status_code}: {resp.text[:200]}"
+            )
+        break
 
     data = resp.json()
     image_b64 = data.get("image", {}).get("base64", "")
