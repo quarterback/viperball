@@ -19,28 +19,9 @@ from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-# ── Load config.json (API keys etc.) ──
-_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
-
 def _load_pixellab_key() -> str:
-    """Return the PixelLab API key, checking config.json dynamically."""
-    key = os.environ.get("PIXELLAB_API_KEY", "")
-    if key:
-        return key
-    if os.path.isfile(_CONFIG_PATH):
-        try:
-            with open(_CONFIG_PATH) as f:
-                cfg = json.load(f)
-            key = cfg.get("pixellab_api_key", "")
-            if key and key != "PASTE_YOUR_KEY_HERE":
-                os.environ["PIXELLAB_API_KEY"] = key
-                return key
-        except Exception:
-            pass
-    return ""
-
-# Try loading at startup too
-_load_pixellab_key()
+    """Return the PixelLab API key from environment (set via Fly.io secrets)."""
+    return os.environ.get("PIXELLAB_API_KEY", "")
 # --- Core engine imports (loaded eagerly via engine/__init__.py) ---
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES
 from engine.season import (
