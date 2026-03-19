@@ -4316,7 +4316,7 @@ async def generate_face_pool(count: int = 200, force: bool = False):
       http://localhost:5000/generate-face-pool
       http://localhost:5000/generate-face-pool?count=50
 
-    API key loaded from config.json automatically.
+    API key loaded from PIXELLAB_API_KEY environment variable (set via Fly.io secrets).
     """
     from engine.face_generator import generate_pool, get_pool_size
 
@@ -4324,7 +4324,7 @@ async def generate_face_pool(count: int = 200, force: bool = False):
     if not api_key:
         raise HTTPException(400,
             "No PixelLab API key found. "
-            "Add your key to config.json: {\"pixellab_api_key\": \"your-key\"}")
+            "Set PIXELLAB_API_KEY via: fly secrets set PIXELLAB_API_KEY=your-key")
 
     face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                             "stats_site", "static", "faces")

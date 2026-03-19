@@ -31,44 +31,29 @@ from typing import List, Optional
 
 import requests as _requests
 
-PIXELLAB_API_URL = "https://api.pixellab.ai/v2/create-image-bitforge"
-FACE_SIZE = 48  # 48x48 pixel art portraits
+PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-bitforge"
+FACE_SIZE = 24  # 24x24 — chunky NES / Retro Bowl style
 
 _DEFAULT_FACES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "stats_site", "static", "faces"
 )
 
 
-# ── Appearance trait pools (used to build diverse prompts) ──
+# ── Appearance trait pools (simple traits for chunky retro faces) ──
 
 SKIN_TONES = [
-    "light skin", "fair skin", "medium skin", "olive skin",
-    "tan skin", "brown skin", "dark brown skin", "deep brown skin",
+    "light skin", "medium skin", "olive skin",
+    "tan skin", "brown skin", "dark brown skin",
 ]
 
 HAIR_COLORS = [
-    "black hair", "dark brown hair", "brown hair", "auburn hair",
-    "red hair", "blonde hair", "dark blonde hair", "light brown hair",
+    "black hair", "brown hair", "red hair",
+    "blonde hair", "dark hair",
 ]
 
 HAIR_STYLES = [
-    "short hair", "buzzcut", "medium length hair", "long ponytail",
-    "braids", "cornrows", "afro", "bun", "pixie cut",
-    "shoulder length hair", "high ponytail", "dreadlocks",
-]
-
-EXPRESSIONS = [
-    "determined expression", "confident smile", "intense stare",
-    "focused expression", "serious look", "slight grin",
-]
-
-FACE_SHAPES = [
-    "round face", "oval face", "angular face", "heart-shaped face",
-]
-
-ACCESSORIES = [
-    "", "", "",  # most players have no accessory (weighted)
-    "headband", "eye black", "face paint stripes",
+    "short hair", "buzzcut", "ponytail",
+    "braids", "afro", "bun", "long hair",
 ]
 
 
@@ -83,25 +68,8 @@ def build_pool_prompt(index: int) -> str:
     skin = _pick(SKIN_TONES, h, 0)
     hair_color = _pick(HAIR_COLORS, h, 8)
     hair_style = _pick(HAIR_STYLES, h, 16)
-    expression = _pick(EXPRESSIONS, h, 24)
-    face_shape = _pick(FACE_SHAPES, h, 32)
-    accessory = _pick(ACCESSORIES, h, 40)
 
-    parts = [
-        "pixel art portrait of a female athlete",
-        "front-facing headshot",
-        skin,
-        f"{hair_color} {hair_style}",
-        face_shape,
-        expression,
-    ]
-    if accessory:
-        parts.append(accessory)
-
-    parts.append("sports jersey, clean background")
-    parts.append("16-bit retro game style")
-
-    return ", ".join(parts)
+    return f"front-facing head of a woman, {skin}, {hair_color}, {hair_style}"
 
 
 def pool_face_path(index: int, faces_dir: str = _DEFAULT_FACES_DIR) -> Path:
@@ -146,9 +114,14 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     """Call PixelLab BitForge API and return raw PNG bytes."""
     payload = {
         "description": prompt,
+        "negative_description": "fantasy, detailed, realistic, 3d, smooth, gradient",
         "image_size": {"width": FACE_SIZE, "height": FACE_SIZE},
         "text_guidance_scale": 8.0,
+        "outline": "single color black outline",
+        "shading": "flat shading",
+        "detail": "low detail",
         "no_background": True,
+        "view": "side",
         "seed": seed,
     }
 
