@@ -36,11 +36,11 @@ import requests as _requests
 
 log = logging.getLogger(__name__)
 
-PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-bitforge"
-PIXELLAB_TIMEOUT = 30  # seconds — 24x24 images are tiny, shouldn't need long
-PIXELLAB_MAX_RETRIES = 2
+PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-pixflux"
+PIXELLAB_TIMEOUT = 120  # seconds — pixflux can be slow for queued jobs
+PIXELLAB_MAX_RETRIES = 4
 PIXELLAB_RETRY_BACKOFF = 2  # seconds, doubled each retry
-FACE_SIZE = 24  # 24x24 — chunky NES / Retro Bowl style
+FACE_SIZE = 32  # 32x32 — chunky NES / Retro Bowl style (pixflux min)
 
 _DEFAULT_FACES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "stats_site", "static", "faces"
@@ -145,14 +145,10 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     """
     payload = {
         "description": prompt,
-        "negative_description": "fantasy, realistic, 3d, smooth, gradient, portrait, headshot, face only",
         "image_size": {"width": FACE_SIZE, "height": FACE_SIZE},
-        "text_guidance_scale": 8.0,
         "outline": "single color black outline",
-        "shading": "flat shading",
         "detail": "low detail",
         "no_background": True,
-        "view": "side",
         "direction": "east",
         "seed": seed,
     }
@@ -175,7 +171,7 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
                 f"PixelLab request failed after {PIXELLAB_MAX_RETRIES} attempts: {exc}"
             ) from exc
 
-        if resp.status_code >= 500 and attempt < PIXELLAB_MAX_RETRIES - 1:
+        if (resp.status_code == 429 or resp.status_code >= 500) and attempt < PIXELLAB_MAX_RETRIES - 1:
             last_err = RuntimeError(f"PixelLab API error {resp.status_code}")
             time.sleep(PIXELLAB_RETRY_BACKOFF * (2 ** attempt))
             continue
