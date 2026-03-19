@@ -4305,7 +4305,7 @@ def _get_fiv_cycle_data() -> dict:
 
 @app.get("/generate-face-pool")
 @app.post("/generate-face-pool")
-async def generate_face_pool(count: int = 200, force: bool = False):
+async def generate_face_pool(count: int = 50, force: bool = False):
     """
     Generate the reusable pixel-art face pool via PixelLab API.
 
