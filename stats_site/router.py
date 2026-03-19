@@ -3551,23 +3551,9 @@ def intl_player(request: Request, nation_code: str, player_name: str):
 
 @router.get("/faces", response_class=HTMLResponse)
 def face_pool_page(request: Request):
-    import json as _json
     from engine.face_generator import get_pool_size
     n = get_pool_size(_FACES_DIR)
-    # Check key dynamically (config.json may have been added after startup)
     has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
-    if not has_key:
-        _cfg_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
-        if os.path.isfile(_cfg_path):
-            try:
-                with open(_cfg_path) as _f:
-                    _cfg = _json.load(_f)
-                _k = _cfg.get("pixellab_api_key", "")
-                if _k and _k != "PASTE_YOUR_KEY_HERE":
-                    os.environ["PIXELLAB_API_KEY"] = _k
-                    has_key = True
-            except Exception:
-                pass
     # Show a random-ish preview of existing faces (up to 24)
     preview = list(range(min(n, 24)))
     return templates.TemplateResponse("faces.html", _ctx(
