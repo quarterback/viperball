@@ -4296,56 +4296,51 @@ def _get_fiv_cycle_data() -> dict:
     return data
 
 
-# ── Pixel-art face generation ──────────────────────────────────────────
+# ── Pixel-art face pool generation ─────────────────────────────────────
 
-@app.post("/sessions/{session_id}/generate-faces")
-async def generate_faces_for_session(session_id: str, team: str = "", force: bool = False):
+@app.post("/generate-face-pool")
+async def generate_face_pool(count: int = 200, force: bool = False):
     """
-    Generate pixel-art player faces for a session's roster via PixelLab API.
+    Generate the reusable pixel-art face pool via PixelLab API.
 
-    - If `team` is specified, only that team's players are generated.
-    - Set `force=true` to regenerate existing faces.
-    - Requires PIXELLAB_API_KEY environment variable.
+    Creates face_000.png … face_N.png in stats_site/static/faces/.
+    These persist across dynasty resets — any player maps to a face via hash.
+    Requires PIXELLAB_API_KEY environment variable.
     """
-    from engine.player_card import player_to_card
-    from engine.face_generator import generate_faces_batch
+    from engine.face_generator import generate_pool, get_pool_size
 
     api_key = os.environ.get("PIXELLAB_API_KEY", "")
     if not api_key:
         raise HTTPException(400, "PIXELLAB_API_KEY environment variable not set")
 
-    sess = sessions.get(session_id)
-    if not sess:
-        raise HTTPException(404, f"Session '{session_id}' not found")
-    season = sess.get("season")
-    if not season:
-        raise HTTPException(400, "No season in this session")
-
-    # Collect player cards
-    cards = []
-    team_names = [team] if team else list(season.teams.keys())
-    for tn in team_names:
-        t = season.teams.get(tn)
-        if not t:
-            continue
-        for p in t.players:
-            try:
-                cards.append(player_to_card(p, tn))
-            except Exception:
-                pass
-
-    if not cards:
-        return {"message": "No players found", "generated": 0}
-
     face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                             "stats_site", "static", "faces")
-    results = await generate_faces_batch(
-        cards, output_dir=face_dir, api_key=api_key, force=force,
+    existing = get_pool_size(face_dir)
+
+    results = await generate_pool(
+        count=count, faces_dir=face_dir, api_key=api_key, force=force,
     )
+
+    # Bust the cached pool size in the stats router
+    try:
+        import stats_site.router as _sr
+        _sr._face_pool_size = None
+    except Exception:
+        pass
+
     return {
-        "message": f"Face generation complete for {len(cards)} players",
+        "message": f"Face pool: {existing} existed, now generating up to {count}",
         "generated": len(results["generated"]),
         "skipped": len(results["skipped"]),
         "failed": len(results["failed"]),
-        "errors": results["failed"][:10],  # cap error details
+        "errors": results["failed"][:10],
     }
+
+
+@app.get("/face-pool-status")
+def face_pool_status():
+    """Check how many faces are in the pool."""
+    from engine.face_generator import get_pool_size
+    face_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            "stats_site", "static", "faces")
+    return {"pool_size": get_pool_size(face_dir)}

@@ -1,20 +1,22 @@
 """
-PixelLab Face Generator for Viperball
+PixelLab Face Pool for Viperball
 
-Generates deterministic pixel-art player portraits using the PixelLab API.
-Appearance traits (hair, skin, expression, etc.) are derived from a hash of
-the player_id so the same player always gets the same face.
+Pre-generates a reusable pool of pixel-art portraits via the PixelLab API.
+Faces are saved as face_000.png … face_N.png and persist across dynasty
+resets.  Any player in any save maps to a face deterministically:
+
+    face_index = hash(player_id) % pool_size
 
 Usage:
-    from engine.face_generator import generate_face, generate_faces_batch
+    # Generate the pool (one-time, or to grow it):
+    python -m engine.face_generator --count 200
 
-    # Single player (sync)
-    generate_face_sync(player_card, output_dir="stats_site/static/faces")
+    # In code — look up which face a player gets:
+    from engine.face_generator import get_face_index, get_pool_size
+    idx = get_face_index(player_id)         # e.g. 42
+    # template uses: /stats/static/faces/face_042.png
 
-    # Batch (async, for the API endpoint)
-    await generate_faces_batch(player_cards, output_dir="stats_site/static/faces")
-
-Requires PIXELLAB_API_KEY environment variable.
+Requires PIXELLAB_API_KEY environment variable for generation.
 """
 
 from __future__ import annotations
@@ -23,29 +25,21 @@ import asyncio
 import base64
 import hashlib
 import os
+import re
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 import requests as _requests
-
-if TYPE_CHECKING:
-    from engine.player_card import PlayerCard
 
 PIXELLAB_API_URL = "https://api.pixellab.ai/v2/create-image-bitforge"
 FACE_SIZE = 48  # 48x48 pixel art portraits
 
-
-def _hash_player(player_id: str) -> int:
-    """Deterministic 64-bit hash from player_id."""
-    return int(hashlib.sha256(player_id.encode()).hexdigest(), 16)
-
-
-def _pick(options: list, h: int, shift: int) -> str:
-    """Deterministically pick from a list using bit-shifted hash."""
-    return options[(h >> shift) % len(options)]
+_DEFAULT_FACES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "stats_site", "static", "faces"
+)
 
 
-# ── Appearance trait pools ──
+# ── Appearance trait pools (used to build diverse prompts) ──
 
 SKIN_TONES = [
     "light skin", "fair skin", "medium skin", "olive skin",
@@ -78,9 +72,13 @@ ACCESSORIES = [
 ]
 
 
-def build_face_prompt(player: "PlayerCard") -> str:
-    """Build a PixelLab prompt from deterministic player appearance traits."""
-    h = _hash_player(player.player_id)
+def _pick(options: list, h: int, shift: int) -> str:
+    return options[(h >> shift) % len(options)]
+
+
+def build_pool_prompt(index: int) -> str:
+    """Build a unique PixelLab prompt for face slot `index`."""
+    h = int(hashlib.sha256(f"viperball-face-{index}".encode()).hexdigest(), 16)
 
     skin = _pick(SKIN_TONES, h, 0)
     hair_color = _pick(HAIR_COLORS, h, 8)
@@ -106,15 +104,43 @@ def build_face_prompt(player: "PlayerCard") -> str:
     return ", ".join(parts)
 
 
-def face_path(player_id: str, output_dir: str) -> Path:
-    """Return the expected file path for a player's face image."""
-    return Path(output_dir) / f"{player_id}.png"
+def pool_face_path(index: int, faces_dir: str = _DEFAULT_FACES_DIR) -> Path:
+    """Path for a specific pool face: face_042.png"""
+    return Path(faces_dir) / f"face_{index:03d}.png"
 
 
-def has_face(player_id: str, output_dir: str) -> bool:
-    """Check if a face image already exists (cached)."""
-    return face_path(player_id, output_dir).is_file()
+# ── Pool inspection ──
 
+def get_pool_size(faces_dir: str = _DEFAULT_FACES_DIR) -> int:
+    """Count how many pool faces currently exist."""
+    d = Path(faces_dir)
+    if not d.is_dir():
+        return 0
+    return sum(1 for f in d.iterdir() if re.match(r"face_\d{3}\.png$", f.name))
+
+
+def get_face_index(player_id: str, pool_size: int = 0,
+                   faces_dir: str = _DEFAULT_FACES_DIR) -> Optional[int]:
+    """
+    Map a player_id to a face index.  Returns None if pool is empty.
+    """
+    n = pool_size or get_pool_size(faces_dir)
+    if n == 0:
+        return None
+    h = int(hashlib.sha256(player_id.encode()).hexdigest(), 16)
+    return h % n
+
+
+def get_face_url(player_id: str, pool_size: int = 0,
+                 faces_dir: str = _DEFAULT_FACES_DIR) -> Optional[str]:
+    """Return the static URL path for a player's face, or None if no pool."""
+    idx = get_face_index(player_id, pool_size, faces_dir)
+    if idx is None:
+        return None
+    return f"/stats/static/faces/face_{idx:03d}.png"
+
+
+# ── PixelLab API ──
 
 def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     """Call PixelLab BitForge API and return raw PNG bytes."""
@@ -139,7 +165,6 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
         )
 
     data = resp.json()
-    # Try multiple response shapes (API may vary)
     image_b64 = data.get("image", {}).get("base64", "")
     if not image_b64:
         images = data.get("data", {}).get("images", [])
@@ -156,79 +181,113 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     return base64.b64decode(image_b64)
 
 
-def generate_face_sync(
-    player: "PlayerCard",
-    output_dir: str = "stats_site/static/faces",
+def generate_pool_face(
+    index: int,
+    faces_dir: str = _DEFAULT_FACES_DIR,
     api_key: Optional[str] = None,
     force: bool = False,
-) -> Optional[Path]:
-    """
-    Generate a pixel-art face for a single player (synchronous).
-
-    Returns the path to the saved PNG, or None on failure.
-    Skips generation if the face already exists (unless force=True).
-    """
+) -> Path:
+    """Generate a single pool face (synchronous). Skips if it already exists."""
     api_key = api_key or os.environ.get("PIXELLAB_API_KEY", "")
     if not api_key:
-        raise ValueError(
-            "PIXELLAB_API_KEY not set. "
-            "Set the environment variable or pass api_key directly."
-        )
+        raise ValueError("PIXELLAB_API_KEY not set")
 
-    out_path = face_path(player.player_id, output_dir)
+    out_path = pool_face_path(index, faces_dir)
     if not force and out_path.is_file():
         return out_path
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    prompt = build_face_prompt(player)
-    seed = _hash_player(player.player_id) % (2**31)
+    prompt = build_pool_prompt(index)
+    seed_hash = int(hashlib.sha256(f"viperball-face-{index}".encode()).hexdigest(), 16)
+    seed = seed_hash % (2**31)
 
     png_bytes = _call_pixellab(prompt, seed, api_key)
     out_path.write_bytes(png_bytes)
     return out_path
 
 
-async def generate_face(
-    player: "PlayerCard",
-    output_dir: str = "stats_site/static/faces",
-    api_key: Optional[str] = None,
-    force: bool = False,
-) -> Optional[Path]:
-    """Async wrapper around generate_face_sync."""
-    return await asyncio.to_thread(
-        generate_face_sync, player, output_dir, api_key, force
-    )
-
-
-async def generate_faces_batch(
-    players: List["PlayerCard"],
-    output_dir: str = "stats_site/static/faces",
+async def generate_pool(
+    count: int = 200,
+    faces_dir: str = _DEFAULT_FACES_DIR,
     api_key: Optional[str] = None,
     force: bool = False,
     concurrency: int = 4,
 ) -> dict:
     """
-    Generate faces for a list of players with concurrency control.
+    Generate the full face pool asynchronously.
 
-    Returns {"generated": [...], "skipped": [...], "failed": [...]}.
+    Returns {"generated": [indices], "skipped": [indices], "failed": [...]}.
     """
     api_key = api_key or os.environ.get("PIXELLAB_API_KEY", "")
     sem = asyncio.Semaphore(concurrency)
-    results = {"generated": [], "skipped": [], "failed": []}
+    results: dict = {"generated": [], "skipped": [], "failed": []}
 
-    async def _gen(p: "PlayerCard"):
-        if not force and has_face(p.player_id, output_dir):
-            results["skipped"].append(p.player_id)
+    async def _gen(idx: int):
+        out_path = pool_face_path(idx, faces_dir)
+        if not force and out_path.is_file():
+            results["skipped"].append(idx)
             return
         async with sem:
             try:
-                await generate_face(p, output_dir, api_key, force=force)
-                results["generated"].append(p.player_id)
-            except Exception as e:
-                results["failed"].append(
-                    {"player_id": p.player_id, "error": str(e)}
+                await asyncio.to_thread(
+                    generate_pool_face, idx, faces_dir, api_key, force
                 )
+                results["generated"].append(idx)
+            except Exception as e:
+                results["failed"].append({"index": idx, "error": str(e)})
 
-    await asyncio.gather(*[_gen(p) for p in players])
+    await asyncio.gather(*[_gen(i) for i in range(count)])
     return results
+
+
+# ── CLI entry point ──
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Generate the viperball pixel-art face pool via PixelLab API"
+    )
+    parser.add_argument(
+        "--count", type=int, default=200,
+        help="Number of faces to generate (default: 200)",
+    )
+    parser.add_argument(
+        "--dir", default=_DEFAULT_FACES_DIR,
+        help="Output directory for face PNGs",
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Regenerate existing faces",
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=4,
+        help="Max concurrent API calls (default: 4)",
+    )
+    args = parser.parse_args()
+
+    api_key = os.environ.get("PIXELLAB_API_KEY", "")
+    if not api_key:
+        print("ERROR: Set PIXELLAB_API_KEY environment variable first")
+        sys.exit(1)
+
+    existing = get_pool_size(args.dir)
+    print(f"Face pool: {existing} existing faces in {args.dir}")
+    print(f"Generating up to {args.count} faces (concurrency={args.concurrency})...")
+
+    results = asyncio.run(generate_pool(
+        count=args.count,
+        faces_dir=args.dir,
+        api_key=api_key,
+        force=args.force,
+        concurrency=args.concurrency,
+    ))
+
+    print(f"Done: {len(results['generated'])} generated, "
+          f"{len(results['skipped'])} skipped, "
+          f"{len(results['failed'])} failed")
+    if results["failed"]:
+        for f in results["failed"][:5]:
+            print(f"  FAIL face_{f['index']:03d}: {f['error']}")

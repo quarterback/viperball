@@ -10,13 +10,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:center; gap:14px;">
-  {% if player_face %}
-  <img src="/stats/static/faces/{{ pl.get('player_id', '') }}.png" alt="" class="player-face"
-       style="width:96px; height:96px; image-rendering:pixelated; border:2px solid var(--border); background:var(--bg-alt); flex-shrink:0;">
+<div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
+  {% if face_src %}
+  <div class="player-card-frame">
+    <img src="{{ face_src }}" alt="{{ pl.get('name', '?') }}" class="player-card-face">
+    <span class="player-card-number">#{{ pl.get('number', '') }}</span>
+  </div>
   {% endif %}
-  <div>
-    <h1 style="margin:0">#{{ pl.get('number', '') }} {{ pl.get('name', '?') }}</h1>
+  <div style="flex:1; min-width:0;">
+    <h1 style="margin:0">{% if not face_src %}#{{ pl.get('number', '') }} {% endif %}{{ pl.get('name', '?') }}</h1>
     <div class="subtitle">
       <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
       &middot; {{ pl.get('position', '?')[:20] }}
