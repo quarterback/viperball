@@ -42,18 +42,33 @@ _DEFAULT_FACES_DIR = os.path.join(
 # ── Appearance trait pools (simple traits for chunky retro faces) ──
 
 SKIN_TONES = [
-    "light skin", "medium skin", "olive skin",
-    "tan skin", "brown skin", "dark brown skin",
+    "pale skin", "light skin", "fair skin", "peach skin",
+    "medium skin", "olive skin", "golden skin", "tan skin",
+    "caramel skin", "brown skin", "dark brown skin", "deep brown skin",
+    "ebony skin", "warm beige skin",
 ]
 
 HAIR_COLORS = [
-    "black hair", "brown hair", "red hair",
-    "blonde hair", "dark hair",
+    "black", "jet black", "dark brown", "brown", "chestnut",
+    "auburn", "red", "ginger", "strawberry blonde",
+    "dirty blonde", "blonde", "platinum blonde", "light brown",
+    "sandy brown", "copper", "burgundy", "dark red",
+    "silver", "gray", "white",
 ]
 
 HAIR_STYLES = [
-    "short hair", "buzzcut", "ponytail",
-    "braids", "afro", "bun", "long hair",
+    "short hair", "buzzcut", "ponytail", "high ponytail",
+    "braids", "cornrows", "afro", "bun", "top knot",
+    "pixie cut", "long hair", "shoulder length hair",
+    "dreadlocks", "box braids", "french braid",
+    "slicked back hair", "curly hair", "wavy hair",
+]
+
+HELMET_COLORS = [
+    "white helmet", "red helmet", "blue helmet", "navy helmet",
+    "green helmet", "dark green helmet", "gold helmet", "yellow helmet",
+    "orange helmet", "purple helmet", "gray helmet", "black helmet",
+    "maroon helmet", "teal helmet", "crimson helmet", "silver helmet",
 ]
 
 
@@ -68,8 +83,12 @@ def build_pool_prompt(index: int) -> str:
     skin = _pick(SKIN_TONES, h, 0)
     hair_color = _pick(HAIR_COLORS, h, 8)
     hair_style = _pick(HAIR_STYLES, h, 16)
+    helmet = _pick(HELMET_COLORS, h, 24)
 
-    return f"front-facing head of a woman, {skin}, {hair_color}, {hair_style}"
+    return (
+        f"female football player, {skin}, {hair_color} {hair_style}, "
+        f"{helmet}, sports jersey, running pose"
+    )
 
 
 def pool_face_path(index: int, faces_dir: str = _DEFAULT_FACES_DIR) -> Path:
@@ -114,7 +133,7 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     """Call PixelLab BitForge API and return raw PNG bytes."""
     payload = {
         "description": prompt,
-        "negative_description": "fantasy, detailed, realistic, 3d, smooth, gradient",
+        "negative_description": "fantasy, realistic, 3d, smooth, gradient, portrait, headshot, face only",
         "image_size": {"width": FACE_SIZE, "height": FACE_SIZE},
         "text_guidance_scale": 8.0,
         "outline": "single color black outline",
@@ -122,6 +141,7 @@ def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
         "detail": "low detail",
         "no_background": True,
         "view": "side",
+        "direction": "east",
         "seed": seed,
     }
 
