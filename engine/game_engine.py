@@ -2948,6 +2948,13 @@ class ViperballEngine:
         self._home_injured_in_game: set = set()
         self._away_injured_in_game: set = set()
 
+        # --- Coaching substitution state ---
+        # Benched players are temporarily removed from play selection
+        # (like injured, but reversible). Maps player_name -> reason string.
+        self._home_benched: dict = {}   # {name: reason}
+        self._away_benched: dict = {}
+        self._substitution_log: List = []  # list of substitution event dicts
+
         # Filter out unavailable players (weekly injuries) and mark DTD
         _unavailable_home = unavailable_home or set()
         _unavailable_away = unavailable_away or set()
@@ -3465,45 +3472,49 @@ class ViperballEngine:
             return self._home_injured_in_game
         return self._away_injured_in_game
 
+    def _unavailable_in_game(self, team) -> set:
+        """Return set of player names unavailable (injured OR benched)."""
+        return self._injured_in_game(team) | self._benched_names(team)
+
     def _offense_skill(self, team):
         """Return offensive skill-position players (ball carriers, receivers).
 
-        Excludes players injured during this game so backups step in immediately.
+        Excludes players injured or benched during this game so backups step in.
         """
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         skill = [p for p in team.players if p.position in
                  ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
-                 and p.name not in injured]
+                 and p.name not in unavailable]
         if skill:
             return skill
-        # Fallback: any non-injured players
-        fallback = [p for p in team.players if p.name not in injured]
+        # Fallback: any available players
+        fallback = [p for p in team.players if p.name not in unavailable]
         return fallback[:8] if fallback else team.players[:8]
 
     def _offense_all(self, team):
         """Return all offensive players including OL."""
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
-               and p.name not in injured]
+               and p.name not in unavailable]
         return off if off else team.players[:8]
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
-                and p.name not in injured]
+                and p.name not in unavailable]
         return defs if defs else team.players[:5]
 
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
-        injured = self._injured_in_game(team)
-        zbs = [p for p in team.players if p.position == "Zeroback" and p.name not in injured]
+        unavailable = self._unavailable_in_game(team)
+        zbs = [p for p in team.players if p.position == "Zeroback" and p.name not in unavailable]
         if zbs:
             return zbs
-        vps = [p for p in team.players if p.position == "Viper" and p.name not in injured]
+        vps = [p for p in team.players if p.position == "Viper" and p.name not in unavailable]
         if vps:
             return vps
-        sbs = [p for p in team.players if p.position == "Slotback" and p.name not in injured]
+        sbs = [p for p in team.players if p.position == "Slotback" and p.name not in unavailable]
         if sbs:
             return sbs
         return self._offense_skill(team)
@@ -3773,6 +3784,8 @@ class ViperballEngine:
             if quarter == 3:
                 self._apply_halftime_coaching_adjustments()
                 self.recover_energy_halftime()
+                # Clear halftime benches — performance-benched players get second chance
+                self._clear_halftime_benches()
                 # Reset timeouts and 3-minute warning for second half
                 self.state.home_timeouts = 3
                 self.state.away_timeouts = 3
@@ -4059,6 +4072,13 @@ class ViperballEngine:
 
         # Between-drive recovery: players get a brief rest
         self.recover_energy_between_drives()
+
+        # ── Coaching substitutions: evaluate benching/resting between drives ──
+        # Process bench expirations first (1-drive rests return to active)
+        self._process_bench_expirations(self.home_team)
+        self._process_bench_expirations(self.away_team)
+        # Then evaluate new substitutions
+        self.evaluate_coaching_substitutions()
 
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
@@ -4747,9 +4767,9 @@ class ViperballEngine:
             return yards
 
         # Compute defensive quality from the unit on the field.
-        # Blend of tackling, awareness, and speed across non-injured defenders.
+        # Blend of tackling, awareness, and speed across non-injured/benched defenders.
         def_team = self.get_defensive_team()
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         defenders = [p for p in def_team.players
                      if p.position in ("Keeper", "Defensive Line")
                      and p.name not in injured]
@@ -4769,7 +4789,7 @@ class ViperballEngine:
 
         # Average offensive talent on the field
         off_team = self.get_offensive_team()
-        off_injured = self._injured_in_game(off_team)
+        off_injured = self._unavailable_in_game(off_team)
         attackers = [p for p in off_team.players if p.name not in off_injured][:11]
         if not attackers:
             attackers = off_team.players[:5]
@@ -6614,7 +6634,7 @@ class ViperballEngine:
         return max(0, int(base_return * returner_modifier))
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
         kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
         if yards_gained <= 0:
@@ -6672,7 +6692,7 @@ class ViperballEngine:
         Returns dict with keys: 'dl' (Defensive Line), 'keeper' (Keepers),
         'all' (combined eligible pool).
         """
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         dl = [p for p in def_team.players
               if p.position == "Defensive Line" and p.name not in injured]
         kp = [p for p in def_team.players
@@ -7348,7 +7368,7 @@ class ViperballEngine:
         of the contest — a defense stacked with awareness but lacking speed
         will struggle to field a Bomb defender.
         """
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         eligible = [p for p in def_team.players
                     if p.position in ("Keeper", "Defensive Line")
                     and p.name not in injured]
@@ -8256,8 +8276,8 @@ class ViperballEngine:
                 self.change_possession()
                 raw_fp = max(1, 100 - int_spot)
 
-                # Pick the interceptor (exclude injured defenders)
-                _inj_set = self._injured_in_game(def_team)
+                # Pick the interceptor (exclude injured/benched defenders)
+                _inj_set = self._unavailable_in_game(def_team)
                 int_candidates = [p for p in def_team.players[:8] if p.name not in _inj_set]
                 if not int_candidates:
                     int_candidates = def_team.players[:6]
@@ -10623,6 +10643,219 @@ class ViperballEngine:
         else:
             return 4.0  # +300% injury risk — reckless to keep playing
 
+    # ── Coaching Substitution System ────────────────────────────────
+    # Between drives, coaches evaluate whether to bench struggling or
+    # exhausted starters and sub in backups.  Triggers:
+    #   1. Performance: starter with 2+ fumbles or terrible YPC gets pulled
+    #   2. Fatigue: starter with <30 energy gets rested for a drive
+    #   3. Blowout: 25+ point lead in Q3/Q4, starters get pulled
+    # Benched players can return (unlike injured players) — fatigue rests
+    # last 1 drive, performance benches last until halftime or end of game.
+
+    def _benched_names(self, team) -> set:
+        """Return set of player names currently benched on this team."""
+        if team == self.home_team:
+            return set(self._home_benched.keys())
+        return set(self._away_benched.keys())
+
+    def _bench_player(self, team, player, reason: str, duration: str = "drive"):
+        """Bench a player. duration: 'drive' (1 drive rest), 'half' (until halftime/end),
+        'game' (rest of game, e.g. blowout protection)."""
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        benched[player.name] = {"reason": reason, "duration": duration, "drive_count": 0}
+
+        # Find the backup who replaces them
+        injured = self._injured_in_game(team)
+        excluded = injured | set(benched.keys())
+        same_pos = [p for p in team.players if p.position == player.position
+                    and p.name not in excluded]
+        sub_name = None
+        if same_pos:
+            sub = max(same_pos, key=lambda p: p.overall)
+            sub_name = sub.name
+
+        self._substitution_log.append({
+            "team": team.name,
+            "quarter": self.state.quarter,
+            "time_remaining": self.state.time_remaining,
+            "benched_player": player.name,
+            "benched_position": player.position,
+            "reason": reason,
+            "duration": duration,
+            "substitute": sub_name,
+        })
+
+    def _unbench_player(self, team, player_name: str):
+        """Return a benched player to active duty."""
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        benched.pop(player_name, None)
+
+    def _process_bench_expirations(self, team):
+        """Check if any benched players should return (drive-based rest expired)."""
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        expired = []
+        for name, info in benched.items():
+            info["drive_count"] = info.get("drive_count", 0) + 1
+            if info["duration"] == "drive" and info["drive_count"] >= 1:
+                expired.append(name)
+        for name in expired:
+            benched.pop(name, None)
+
+    def evaluate_coaching_substitutions(self):
+        """Between drives, coaches evaluate performance and fatigue to decide subs.
+
+        Called at the start of each drive (after energy recovery). Coaches on
+        BOTH teams evaluate their personnel — offense evaluates their own
+        players, defense evaluates theirs.
+        """
+        for team in (self.home_team, self.away_team):
+            benched = self._home_benched if team == self.home_team else self._away_benched
+            injured = self._injured_in_game(team)
+            already_out = injured | set(benched.keys())
+
+            # ── 1. Blowout protection: pull starters when up big ──
+            score_diff = self.state.home_score - self.state.away_score
+            if team == self.away_team:
+                score_diff = -score_diff
+            is_winning_blowout = score_diff >= 25 and self.state.quarter >= 3
+
+            if is_winning_blowout:
+                skill = [p for p in team.players
+                         if p.position in ("Zeroback", "Halfback", "Wingback",
+                                           "Slotback", "Viper")
+                         and p.name not in already_out
+                         and getattr(p, 'game_role', '') == "STARTER"]
+                for p in skill:
+                    # Only bench if there's a backup available
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, "blowout_rest", "game")
+                        already_out.add(p.name)
+                continue  # Skip other checks during blowout — just rest starters
+
+            # ── 2. Performance-based benching ──
+            # Bench starters who are actively hurting the team
+            skill = [p for p in team.players
+                     if p.position in ("Zeroback", "Halfback", "Wingback",
+                                       "Slotback", "Viper")
+                     and p.name not in already_out
+                     and getattr(p, 'game_role', '') == "STARTER"]
+
+            for p in skill:
+                should_bench = False
+                reason = ""
+
+                # 2a. Multiple fumbles — coaches lose trust
+                fumbles = getattr(p, 'game_fumbles', 0)
+                if fumbles >= 2:
+                    should_bench = True
+                    reason = "fumbles"
+
+                # 2b. Zeroback with multiple turnovers (fumbles + INTs thrown)
+                if p.position == "Zeroback":
+                    kp_ints = getattr(p, 'game_kick_pass_interceptions', 0)
+                    total_turnovers = fumbles + kp_ints
+                    if total_turnovers >= 3:
+                        should_bench = True
+                        reason = "turnovers"
+
+                # 2c. Ball carrier with lots of carries but terrible YPC
+                carries = getattr(p, 'game_rush_carries', 0)
+                rush_yards = getattr(p, 'game_rushing_yards', 0)
+                if carries >= 8 and carries > 0:
+                    ypc = rush_yards / carries
+                    if ypc < 1.5:
+                        # ~40% chance coach pulls them — coaches give leeway
+                        if random.random() < 0.40:
+                            should_bench = True
+                            reason = "ineffective"
+
+                if should_bench:
+                    # Check that a backup exists
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, reason, "half")
+                        already_out.add(p.name)
+
+            # ── 3. Fatigue / workload rotation ──
+            # Coaches rest workhorse players who've been carrying the load.
+            # Two triggers:
+            #   a) Energy below threshold (rarely happens due to recovery)
+            #   b) Heavy usage: 12+ carries by Q3, or 18+ by Q4 — coaches
+            #      want to keep their starter fresh for the next game.
+            # Also gives backups reps, which is realistic.
+            active_skill = [p for p in team.players
+                            if p.position in ("Zeroback", "Halfback", "Wingback",
+                                              "Slotback", "Viper")
+                            and p.name not in already_out
+                            and getattr(p, 'game_role', '') == "STARTER"]
+
+            for p in active_skill:
+                should_rest = False
+                # a) Energy-based rest
+                energy_threshold = 45 if self.state.quarter >= 3 else 30
+                if p.game_energy < energy_threshold:
+                    should_rest = True
+
+                # b) Workload-based rest — high-usage backs get a breather
+                carries = getattr(p, 'game_rush_carries', 0)
+                touches = getattr(p, 'game_touches', 0)
+                if self.state.quarter >= 3 and carries >= 12:
+                    # More likely to rest as carries pile up
+                    rest_prob = min(0.40, 0.15 + (carries - 12) * 0.05)
+                    if random.random() < rest_prob:
+                        should_rest = True
+                elif self.state.quarter >= 4 and touches >= 18:
+                    if random.random() < 0.30:
+                        should_rest = True
+
+                if should_rest:
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, "fatigue_rest", "drive")
+                        already_out.add(p.name)
+
+            # ── 4. Defensive rotation (less frequent) ──
+            defenders = [p for p in team.players
+                         if p.position in ("Keeper", "Defensive Line")
+                         and p.name not in already_out
+                         and getattr(p, 'game_def_role', '') == "STARTER"]
+
+            for p in defenders:
+                should_rest = False
+                if p.game_energy < (40 if self.state.quarter >= 3 else 25):
+                    should_rest = True
+                # Defensive players with 10+ tackles get rested
+                tackles = getattr(p, 'game_tackles', 0)
+                if self.state.quarter >= 3 and tackles >= 10:
+                    if random.random() < 0.25:
+                        should_rest = True
+                if should_rest:
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups and random.random() < 0.50:
+                        self._bench_player(team, p, "fatigue_rest", "drive")
+                        already_out.add(p.name)
+
+    def _clear_halftime_benches(self):
+        """At halftime, players benched for 'half' duration return."""
+        for benched in (self._home_benched, self._away_benched):
+            expired = [name for name, info in benched.items()
+                       if info["duration"] == "half"]
+            for name in expired:
+                benched.pop(name, None)
+
     def recover_energy_between_drives(self):
         """Between drives, involved players recover a small amount of energy."""
         team = self.get_offensive_team()
@@ -11347,6 +11580,7 @@ class ViperballEngine:
                 }
                 for e in self.in_game_injuries
             ],
+            "coaching_substitutions": self._substitution_log,
             # ── V2: Engine metadata ──
             "v2_engine": {
                 "contest_model": V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid"),
