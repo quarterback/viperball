@@ -19,7 +19,7 @@
   </div>
   {% endif %}
   <div style="flex:1; min-width:0;">
-    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}</h1>
+    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}{% set _flag = player.hometown_country|flag %}{% if not _flag %}{% set _flag = player.hometown_state|flag %}{% endif %}{% if _flag %} {{ _flag }}{% endif %}</h1>
     <div class="subtitle">
       <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
       {% if team.mascot %} {{ team.mascot }}{% endif %}

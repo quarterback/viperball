@@ -21,7 +21,7 @@
   </div>
   {% endif %}
   <div style="flex:1; min-width:0;">
-    <h1 style="margin:0">{% if not face_src %}#{{ pl.get('number', '') }} {% endif %}{{ pl.get('name', '?') }}</h1>
+    <h1 style="margin:0">{% if not face_src %}#{{ pl.get('number', '') }} {% endif %}{{ pl.get('name', '?') }}{% set _flag = (pl.get('hometown_country', '')|flag) %}{% if not _flag %}{% set _flag = (nation_code|flag) %}{% endif %}{% if _flag %} {{ _flag }}{% endif %}</h1>
     <div class="subtitle">
       <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
       &middot; {{ pl.get('position', '?')[:20] }}

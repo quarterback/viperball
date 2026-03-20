@@ -15,6 +15,104 @@ router = APIRouter()
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# ── Country code → flag emoji ──
+# Maps 2- and 3-letter codes used in hometown_state to ISO 3166-1 alpha-2
+# so we can build Unicode regional indicator flag emojis.
+_CODE_TO_ISO2 = {
+    # US states → US
+    "USA": "US",
+    # Canadian provinces
+    "ON": "CA", "BC": "CA", "AB": "CA", "QC": "CA", "MB": "CA",
+    "SK": "CA", "NS": "CA", "NB": "CA", "PE": "CA", "NL": "CA",
+    # Australian states
+    "VIC": "AU", "NSW": "AU", "QLD": "AU", "WA": "AU", "SA": "AU", "TAS": "AU",
+    "AUS": "AU",
+    # East Asian
+    "JPN": "JP", "KOR": "KR", "TWN": "TW", "CHN": "CN",
+    # Southeast Asian
+    "THA": "TH", "VNM": "VN", "PHL": "PH", "IDN": "ID", "SGP": "SG", "MYS": "MY",
+    # African
+    "NGA": "NG", "GHA": "GH", "SEN": "SN", "CIV": "CI", "GIN": "GN",
+    "MLI": "ML", "TOG": "TG", "KEN": "KE", "UGA": "UG", "TZA": "TZ",
+    "ETH": "ET", "RWA": "RW", "ZAF": "ZA", "ZWE": "ZW", "ZMB": "ZM", "BWA": "BW",
+    "CMR": "CM", "RSA": "ZA",
+    # Caribbean
+    "JAM": "JM", "TTO": "TT", "BRB": "BB", "BAH": "BS", "HAI": "HT",
+    "DOM": "DO", "PRI": "PR", "GUY": "GY", "SUR": "SR",
+    "LCA": "LC", "DMA": "DM", "SKN": "KN", "GRN": "GD", "CUB": "CU",
+    # Latin American
+    "BRA": "BR", "ARG": "AR", "COL": "CO", "PER": "PE", "CHI": "CL",
+    "MEX": "MX", "VEN": "VE", "URU": "UY", "PAR": "PY", "ECU": "EC",
+    "CRC": "CR", "GTM": "GT", "GUA": "GT", "PAN": "PA", "HON": "HN",
+    # UK / European
+    "ENG": "GB", "SCO": "GB", "WAL": "GB", "NIR": "GB", "GBR": "GB",
+    "FRA": "FR", "GER": "DE", "ESP": "ES", "NED": "NL", "BEL": "BE",
+    "POR": "PT", "ITA": "IT", "IRL": "IE", "POL": "PL", "CZE": "CZ", "UKR": "UA",
+    # Nordic
+    "SWE": "SE", "NOR": "NO", "DEN": "DK", "FIN": "FI",
+    # Pacific
+    "FIJ": "FJ", "SAM": "WS", "PNG": "PG", "NZL": "NZ",
+    # Middle East / Central Asia
+    "EGY": "EG", "MAR": "MA", "KSA": "SA", "IRN": "IR", "ISR": "IL",
+    "UAE": "AE", "TUR": "TR",
+    # Other
+    "RUS": "RU", "IND": "IN", "MGL": "MN", "KAZ": "KZ", "UZB": "UZ",
+    "CAN": "CA",
+}
+
+# US state abbreviations
+_US_STATES = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC",
+}
+
+_COUNTRY_NAME_TO_ISO2 = {
+    "United States": "US", "USA": "US", "Canada": "CA", "Australia": "AU",
+    "Japan": "JP", "South Korea": "KR", "China": "CN", "Taiwan": "TW",
+    "Thailand": "TH", "Vietnam": "VN", "Philippines": "PH", "Indonesia": "ID",
+    "Singapore": "SG", "Malaysia": "MY",
+    "Nigeria": "NG", "Ghana": "GH", "Senegal": "SN", "Kenya": "KE",
+    "South Africa": "ZA", "Tanzania": "TZ", "Cameroon": "CM",
+    "Côte d'Ivoire": "CI", "Uganda": "UG", "Ethiopia": "ET",
+    "Jamaica": "JM", "Trinidad and Tobago": "TT", "Haiti": "HT",
+    "Dominican Republic": "DO", "Cuba": "CU", "Barbados": "BB",
+    "Brazil": "BR", "Argentina": "AR", "Colombia": "CO", "Peru": "PE",
+    "Chile": "CL", "Mexico": "MX", "Venezuela": "VE", "Uruguay": "UY",
+    "Paraguay": "PY", "Ecuador": "EC", "Costa Rica": "CR", "Guatemala": "GT",
+    "Panama": "PA", "Honduras": "HN",
+    "England": "GB", "Scotland": "GB", "Wales": "GB", "United Kingdom": "GB",
+    "Northern Ireland": "GB",
+    "France": "FR", "Germany": "DE", "Spain": "ES", "Netherlands": "NL",
+    "Belgium": "BE", "Portugal": "PT", "Italy": "IT", "Ireland": "IE",
+    "Poland": "PL", "Czech Republic": "CZ", "Ukraine": "UA",
+    "Sweden": "SE", "Norway": "NO", "Denmark": "DK", "Finland": "FI",
+    "Fiji": "FJ", "Samoa": "WS", "Papua New Guinea": "PG", "New Zealand": "NZ",
+    "Egypt": "EG", "Morocco": "MA", "Saudi Arabia": "SA", "Iran": "IR",
+    "Israel": "IL", "UAE": "AE", "Turkey": "TR",
+    "Russia": "RU", "India": "IN", "Mongolia": "MN",
+}
+
+def _flag_emoji(code: str) -> str:
+    """Convert a country/state code or country name to a flag emoji, or empty string."""
+    if not code:
+        return ""
+    # Try as country name first
+    iso2 = _COUNTRY_NAME_TO_ISO2.get(code, "")
+    if not iso2:
+        code_upper = code.strip().upper()
+        if code_upper in _US_STATES:
+            iso2 = "US"
+        else:
+            iso2 = _CODE_TO_ISO2.get(code_upper, "")
+    if not iso2 or len(iso2) != 2:
+        return ""
+    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in iso2)
+
+templates.env.filters["flag"] = _flag_emoji
+
 # ── Pixel-art face pool ──
 _FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
 _face_pool_size: int | None = None
