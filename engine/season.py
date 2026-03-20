@@ -1758,6 +1758,20 @@ class Season:
             self.injury_tracker.process_week(week, self.teams, self.standings)
 
         week_games = [g for g in self.schedule if g.week == week and not g.completed]
+
+        # Bye week recovery: teams not playing this week get enhanced healing.
+        # Identifies bye teams and gives them an extra resolve pass (double
+        # recovery chance) plus no new practice injuries.
+        playing_teams = set()
+        for g in week_games:
+            playing_teams.add(g.home_team)
+            playing_teams.add(g.away_team)
+        if self.injury_tracker is not None:
+            bye_teams = [name for name in self.teams if name not in playing_teams]
+            for team_name in bye_teams:
+                # Extra recovery pass — bye week rest accelerates healing
+                self.injury_tracker.resolve_week_bye(week, team_name)
+
         for game in week_games:
             self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts,
                                use_fast_sim=use_fast_sim)

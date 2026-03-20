@@ -610,6 +610,46 @@ class InjuryTracker:
 
             self.active_injuries[team_name] = still_active
 
+    def resolve_week_bye(self, week: int, team_name: str):
+        """Enhanced recovery for a team on a bye week.
+
+        Bye weeks give players extra rest and treatment time.  Effects:
+        - 40% chance any non-season-ending injury shaves 1 week off its timeline
+        - Players within 1 week of return are auto-cleared
+        - No setback risk (the whole point of a bye is safe recovery)
+        """
+        injuries = self.active_injuries.get(team_name, [])
+        still_active = []
+        for inj in injuries:
+            if inj.week_return <= week:
+                # Already recovered
+                continue
+            if inj.is_season_ending:
+                still_active.append(inj)
+                continue
+            if inj.is_day_to_day:
+                # DTD players are cleared on bye weeks
+                inj.recovery_note = "Cleared during bye week"
+                continue
+
+            weeks_remaining = inj.week_return - week
+            if weeks_remaining <= 1:
+                # Close enough — bye week clears them
+                inj.week_return = week
+                inj.weeks_out = week - inj.week_injured
+                inj.recovery_note = "Cleared during bye week rest"
+                continue
+
+            # 40% chance to shave a week off recovery
+            if self.rng.random() < 0.40:
+                inj.week_return -= 1
+                inj.weeks_out = max(0, inj.weeks_out - 1)
+                inj.recovery_note = "Bye week rest — ahead of schedule"
+
+            still_active.append(inj)
+
+        self.active_injuries[team_name] = still_active
+
     # ── In-game injury roll ──────────────────────────────
 
     def roll_in_game_injury(self, player, team_name: str, week: int,
