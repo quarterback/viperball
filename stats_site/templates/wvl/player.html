@@ -56,7 +56,6 @@
   <tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ card.get('height', '—') }} / {{ card.get('weight', '—') }} lbs</td></tr>
   {% set ht = card.get('hometown', {}) %}
   {% if ht.get('city') %}<tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ ht.city }}{% if ht.state %}, {{ ht.state }}{% endif %}{% if ht.country and ht.country != 'USA' %} ({{ ht.country }}){% endif %}</td></tr>{% endif %}
-  {% if card.get('nationality') %}<tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ card.nationality }}</td></tr>{% endif %}
   <tr><td style="color:var(--fg-dim)">Overall</td>
     {% set ovr = card.get('ratings', {}).get('overall', player.overall if player.overall is defined else 0) %}
     <td class="{% if ovr >= 85 %}stat-elite{% elif ovr >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td>
