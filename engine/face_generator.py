@@ -37,9 +37,9 @@ import requests as _requests
 log = logging.getLogger(__name__)
 
 PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-bitforge"
-PIXELLAB_TIMEOUT = 30  # seconds — 24x24 images are tiny, shouldn't need long
-PIXELLAB_MAX_RETRIES = 2
-PIXELLAB_RETRY_BACKOFF = 2  # seconds, doubled each retry
+PIXELLAB_TIMEOUT = 120  # seconds — generation can be slow under load
+PIXELLAB_MAX_RETRIES = 3
+PIXELLAB_RETRY_BACKOFF = 3  # seconds, doubled each retry
 FACE_SIZE = 24  # 24x24 — chunky NES / Retro Bowl style
 
 _DEFAULT_FACES_DIR = os.path.join(
@@ -304,10 +304,14 @@ if __name__ == "__main__":
         print("ERROR: Set PIXELLAB_API_KEY environment variable first")
         sys.exit(1)
 
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+
     existing = get_pool_size(args.dir)
     print(f"Face pool: {existing} existing faces in {args.dir}")
-    print(f"Generating up to {args.count} faces (concurrency={args.concurrency})...")
+    print(f"Generating up to {args.count} faces (concurrency={args.concurrency}, "
+          f"timeout={PIXELLAB_TIMEOUT}s per request)...")
 
+    t0 = time.time()
     results = asyncio.run(generate_pool(
         count=args.count,
         faces_dir=args.dir,
@@ -315,10 +319,11 @@ if __name__ == "__main__":
         force=args.force,
         concurrency=args.concurrency,
     ))
+    elapsed = time.time() - t0
 
-    print(f"Done: {len(results['generated'])} generated, "
+    print(f"Done in {elapsed:.0f}s: {len(results['generated'])} generated, "
           f"{len(results['skipped'])} skipped, "
           f"{len(results['failed'])} failed")
     if results["failed"]:
-        for f in results["failed"][:5]:
+        for f in results["failed"][:10]:
             print(f"  FAIL face_{f['index']:03d}: {f['error']}")
