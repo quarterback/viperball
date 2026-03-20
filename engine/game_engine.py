@@ -3536,7 +3536,7 @@ class ViperballEngine:
         """
         ol_players = [p for p in team.players
                       if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if not ol_players:
             return
 
@@ -6555,10 +6555,13 @@ class ViperballEngine:
         (via assign_game_roles), so this concentrates returns on depth
         players who earn their field time on special teams.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
+                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
+            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")
+                        and p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6589,10 +6592,12 @@ class ViperballEngine:
         Special teams coverage is where backup defenders earn playing time.
         Defensive starters are resting; rotation guys make the tackle.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Keeper", "Defensive Line")]
+                    ("Keeper", "Defensive Line")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = team.players
+            eligible = [p for p in team.players if p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6856,7 +6861,7 @@ class ViperballEngine:
 
         # ── Get blocker ──
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players:
             blocker = max(ol_players,
                           key=lambda p: p.power * 0.50 + getattr(p, 'awareness', 70) * 0.30
@@ -8770,7 +8775,7 @@ class ViperballEngine:
         # ── OL Protection Credits on KP ──
         # Even on non-sack plays, OL earns block credits for protection
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players and random.random() < 0.35:
             self._credit_ol_blocks(team, 3)
 
@@ -9205,7 +9210,7 @@ class ViperballEngine:
             hurry_def_team = self.get_defensive_team()
             hurry_eligible = [p for p in hurry_def_team.players
                               if p.position in ("Defensive Line", "Keeper")
-                              and p.name not in self._injured_names(hurry_def_team)]
+                              and p.name not in self._unavailable_in_game(hurry_def_team)]
             if hurry_eligible:
                 hurry_weights = []
                 for hp in hurry_eligible:
