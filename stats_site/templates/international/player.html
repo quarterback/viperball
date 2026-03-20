@@ -10,6 +10,9 @@
 {% endblock %}
 
 {% block content %}
+{% if stadium_url %}
+<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
+{% endif %}
 <div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
   {% if face_src %}
   <div class="player-card-frame">
@@ -18,7 +21,7 @@
   </div>
   {% endif %}
   <div style="flex:1; min-width:0;">
-    <h1 style="margin:0">{% if not face_src %}#{{ pl.get('number', '') }} {% endif %}{{ pl.get('name', '?') }}</h1>
+    <h1 style="margin:0">{% if not face_src %}#{{ pl.get('number', '') }} {% endif %}{{ pl.get('name', '?') }}{% set _flag = (pl.get('hometown_country', '')|flag) %}{% if not _flag %}{% set _flag = (nation_code|flag) %}{% endif %}{% if _flag %} {{ _flag }}{% endif %}</h1>
     <div class="subtitle">
       <a href="/stats/international/team/{{ nation_code }}">{{ nation.get('name', nation_code) }}</a>
       &middot; {{ pl.get('position', '?')[:20] }}
@@ -115,7 +118,6 @@
   <tbody>
   {% if pl.get('hometown_city') %}<tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ pl.hometown_city }}{% if pl.get('hometown_state') %}, {{ pl.hometown_state }}{% endif %}</td></tr>{% endif %}
   {% if pl.get('hometown_country') %}<tr><td style="color:var(--fg-dim)">Country</td><td>{{ pl.hometown_country }}</td></tr>{% endif %}
-  {% if pl.get('nationality') %}<tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ pl.nationality }}</td></tr>{% endif %}
   </tbody>
 </table>
 {% endif %}

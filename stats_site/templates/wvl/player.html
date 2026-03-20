@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block content %}
+{% if stadium_url %}
+<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
+{% endif %}
 <div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
   {% if face_src %}
   <div class="player-card-frame">
@@ -16,7 +19,8 @@
   </div>
   {% endif %}
   <div style="flex:1; min-width:0;">
-    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}</h1>
+    {% set _ht = card.get('hometown', {}) if card else {} %}
+    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}{% set _flag = (_ht.get('country', '')|flag) %}{% if not _flag %}{% set _flag = (_ht.get('state', '')|flag) %}{% endif %}{% if _flag %} {{ _flag }}{% endif %}</h1>
     <div class="subtitle">
       <a href="/stats/wvl/{{ session_id }}/team/{{ team_key }}">{{ team_name }}</a>
       &middot; <span class="tag tag-pos">{{ player.position }}</span>
@@ -53,7 +57,6 @@
   <tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ card.get('height', '—') }} / {{ card.get('weight', '—') }} lbs</td></tr>
   {% set ht = card.get('hometown', {}) %}
   {% if ht.get('city') %}<tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ ht.city }}{% if ht.state %}, {{ ht.state }}{% endif %}{% if ht.country and ht.country != 'USA' %} ({{ ht.country }}){% endif %}</td></tr>{% endif %}
-  {% if card.get('nationality') %}<tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ card.nationality }}</td></tr>{% endif %}
   <tr><td style="color:var(--fg-dim)">Overall</td>
     {% set ovr = card.get('ratings', {}).get('overall', player.overall if player.overall is defined else 0) %}
     <td class="{% if ovr >= 85 %}stat-elite{% elif ovr >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td>

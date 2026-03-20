@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block content %}
+{% if stadium_url %}
+<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
+{% endif %}
 <div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
   {% if face_src %}
   <div class="player-card-frame">
@@ -16,7 +19,7 @@
   </div>
   {% endif %}
   <div style="flex:1; min-width:0;">
-    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}</h1>
+    <h1 style="margin:0">{% if not face_src %}#{{ player.number }} {% endif %}{{ player.name }}{% set _flag = player.hometown_country|flag %}{% if not _flag %}{% set _flag = player.hometown_state|flag %}{% endif %}{% if _flag %} {{ _flag }}{% endif %}</h1>
     <div class="subtitle">
       <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
       {% if team.mascot %} {{ team.mascot }}{% endif %}
@@ -54,7 +57,6 @@
   <tr><td style="color:var(--fg-dim)">Year</td><td>{{ player.year }}{% if player.redshirt %} <span class="tag">REDSHIRT</span>{% endif %}</td></tr>
   <tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ player.height if player.height else '—' }} / {{ player.weight if player.weight else '—' }} lbs</td></tr>
   <tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ player.hometown_city }}{% if player.hometown_state %}, {{ player.hometown_state }}{% endif %}{% if player.hometown_country and player.hometown_country != 'USA' %} ({{ player.hometown_country }}){% endif %}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ player.nationality }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if player.overall >= 85 %}stat-elite{% elif player.overall >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ player.overall }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Potential</td><td>{% for i in range(player.potential) %}&#9733;{% endfor %}{% for i in range(5 - player.potential) %}&#9734;{% endfor %} ({{ player.development }})</td></tr>
   {% if prestige %}<tr><td style="color:var(--fg-dim)">Team Prestige</td><td>{{ prestige }}</td></tr>{% endif %}
