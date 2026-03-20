@@ -1575,8 +1575,41 @@ class Season:
                 opponent_bonus_data=home_bonus,
             )
 
+    def _weekly_award_prior_wins(self, award_category: str):
+        """Count prior weekly award wins per recipient for diversification.
+
+        Returns a dict mapping (player_name, team_name) -> win_count.
+        ``award_category`` should be ``"Player"`` or ``"Coach"`` – it is
+        matched against the award name substring so national and conference
+        awards both contribute to the same history.
+        """
+        counts: Dict[str, int] = {}
+        for a in self.weekly_awards:
+            if award_category in a.get("award", ""):
+                key = (a["player_name"], a["team_name"])
+                counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    @staticmethod
+    def _apply_repeat_penalty(raw_score: float, prior_wins: int) -> float:
+        """Discount a weekly-award score for prior winners to encourage diversity.
+
+        Each previous win applies a 10% cumulative penalty (compounding).
+        A one-time winner is scored at 90% of raw, two-time at 81%, etc.
+        This means a repeat candidate must be meaningfully better than
+        alternatives to win again, but a truly elite performance still can.
+        """
+        if prior_wins <= 0:
+            return raw_score
+        return raw_score * (0.90 ** prior_wins)
+
     def _compute_weekly_awards(self, week: int, week_games: List[Game]):
         """Compute Player of the Week awards after a week's games."""
+
+        # Build prior-win counts for diversification (players & coaches)
+        player_prior = self._weekly_award_prior_wins("Player")
+        coach_prior = self._weekly_award_prior_wins("Coach")
+
         # Collect all player performances this week
         performances = []  # (player_name, team_name, position, score, stat_line)
         for game in week_games:
@@ -1627,8 +1660,13 @@ class Season:
         if not performances:
             return
 
-        # National Player of the Week - best overall
-        performances.sort(key=lambda x: x[3], reverse=True)
+        # National Player of the Week – apply repeat-winner penalty for ranking
+        performances.sort(
+            key=lambda x: self._apply_repeat_penalty(
+                x[3], player_prior.get((x[0], x[1]), 0)
+            ),
+            reverse=True,
+        )
         best = performances[0]
         self.weekly_awards.append({
             "week": week,
@@ -1639,16 +1677,19 @@ class Season:
             "stat_line": best[4],
         })
 
-        # Conference Players of the Week
-        conf_best = {}
+        # Conference Players of the Week – also penalise repeats
+        conf_best: Dict[str, tuple] = {}
         for name, team_name, pos, score, stat_line in performances:
             conf = self.team_conferences.get(team_name, "")
             if not conf:
                 continue
-            if conf not in conf_best or score > conf_best[conf][3]:
-                conf_best[conf] = (name, team_name, pos, score, stat_line)
+            adj = self._apply_repeat_penalty(
+                score, player_prior.get((name, team_name), 0)
+            )
+            if conf not in conf_best or adj > conf_best[conf][5]:
+                conf_best[conf] = (name, team_name, pos, score, stat_line, adj)
 
-        for conf, (name, team_name, pos, _, stat_line) in conf_best.items():
+        for conf, (name, team_name, pos, _, stat_line, _adj) in conf_best.items():
             # Don't duplicate if same as national winner
             if name == best[0] and team_name == best[1]:
                 continue
@@ -1699,7 +1740,13 @@ class Season:
             coach_performances.append((coach_display, win_team, coach_score, stat_line))
 
         if coach_performances:
-            coach_performances.sort(key=lambda x: x[2], reverse=True)
+            # Apply repeat-winner penalty for coach ranking
+            coach_performances.sort(
+                key=lambda x: self._apply_repeat_penalty(
+                    x[2], coach_prior.get((x[0], x[1]), 0)
+                ),
+                reverse=True,
+            )
             best_coach = coach_performances[0]
             self.weekly_awards.append({
                 "week": week,
@@ -1709,15 +1756,18 @@ class Season:
                 "position": "Coach",
                 "stat_line": best_coach[3],
             })
-            # Conference Coach of the Week
-            conf_best_coach = {}
+            # Conference Coach of the Week – also penalise repeats
+            conf_best_coach: Dict[str, tuple] = {}
             for coach_display, team_name, score, stat_line in coach_performances:
                 conf = self.team_conferences.get(team_name, "")
                 if not conf:
                     continue
-                if conf not in conf_best_coach or score > conf_best_coach[conf][2]:
-                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line)
-            for conf, (coach_display, team_name, _, stat_line) in conf_best_coach.items():
+                adj = self._apply_repeat_penalty(
+                    score, coach_prior.get((coach_display, team_name), 0)
+                )
+                if conf not in conf_best_coach or adj > conf_best_coach[conf][4]:
+                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line, adj)
+            for conf, (coach_display, team_name, _, stat_line, _adj) in conf_best_coach.items():
                 if coach_display == best_coach[0] and team_name == best_coach[1]:
                     continue
                 self.weekly_awards.append({
