@@ -10,6 +10,9 @@
 {% endblock %}
 
 {% block content %}
+{% if stadium_url %}
+<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
+{% endif %}
 <div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
   {% if face_src %}
   <div class="player-card-frame">

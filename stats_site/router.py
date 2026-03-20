@@ -1363,6 +1363,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         team=team, game_log=game_log, season_totals=season_totals,
         record=team_record, prestige=prestige, cross_links=cross_links,
         player_awards=player_awards, face_src=_face_src,
+        stadium_url=_stadium_url_for(team_name),
     ))
 
 
@@ -3098,6 +3099,7 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         year=data.get("year", "?"),
         game_log=sorted(game_log, key=lambda g: g["week"]),
         season_totals=season_totals, face_src=_face_src,
+        stadium_url=_stadium_url_for(team_key),
     ))
 
 
@@ -3571,6 +3573,7 @@ def intl_player(request: Request, nation_code: str, player_name: str):
         request, section="international", player=player, nation_code=nation_code,
         nation=nation, team_data=team_data, cross_links=cross_links,
         face_src=_face_src,
+        stadium_url=_stadium_url_for(nation_code),
     ))
 
 
