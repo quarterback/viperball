@@ -10857,11 +10857,19 @@ class ViperballEngine:
                 benched.pop(name, None)
 
     def recover_energy_between_drives(self):
-        """Between drives, involved players recover a small amount of energy."""
-        team = self.get_offensive_team()
-        for p in team.players:
+        """Between drives, both sides recover energy.
+
+        The offense (about to start a new drive) gets a full recovery bump.
+        The defense (just finished a shift) gets a smaller bump — they were
+        exerting themselves on the previous drive and the changeover is brief.
+        """
+        off_team = self.get_offensive_team()
+        def_team = self.get_defensive_team()
+        for p in off_team.players:
             p.game_energy = min(100.0, p.game_energy + 5.0)
             p.plays_since_last_touch += 1
+        for p in def_team.players:
+            p.game_energy = min(100.0, p.game_energy + 3.0)
 
     def recover_energy_halftime(self):
         """At halftime, all players recover 30 energy."""
