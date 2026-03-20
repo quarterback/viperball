@@ -33,6 +33,24 @@ def _face_url_for(player_id: str) -> str | None:
     from engine.face_generator import get_face_url
     return get_face_url(player_id, pool_size=n, faces_dir=_FACES_DIR)
 
+# ── Pixel-art stadium pool ──
+_STADIUMS_DIR = os.path.join(os.path.dirname(__file__), "static", "stadiums")
+_stadium_pool_size: int | None = None
+
+def _get_stadium_pool_size() -> int:
+    global _stadium_pool_size
+    if _stadium_pool_size is None:
+        from engine.stadium_generator import get_pool_size
+        _stadium_pool_size = get_pool_size(_STADIUMS_DIR)
+    return _stadium_pool_size
+
+def _stadium_url_for(team_id: str) -> str | None:
+    n = _get_stadium_pool_size()
+    if n == 0:
+        return None
+    from engine.stadium_generator import get_stadium_url
+    return get_stadium_url(team_id, pool_size=n, stadiums_dir=_STADIUMS_DIR)
+
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
@@ -994,6 +1012,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         sorted_roster=sorted_roster, sort=sort,
         team_awards=team_awards,
         coaching_staff=coaching_staff,
+        stadium_url=_stadium_url_for(team_name),
     ))
 
 
@@ -1136,6 +1155,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
         bowl_name=bowl_name, is_playoff=is_playoff,
+        stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
     ))
 
 
@@ -2209,10 +2229,12 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
 
     _normalize_box_score_stats(box)
 
+    _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("pro/game.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
         box=box, week=week, matchup=matchup,
         league_name=season.config.league_name,
+        stadium_url=_stadium_url_for(_home_key),
     ))
 
 
@@ -2232,6 +2254,7 @@ def pro_team(request: Request, league: str, session_id: str, team_key: str):
         request, section="pro", league=league, session_id=session_id,
         team=detail, team_key=team_key,
         league_name=season.config.league_name,
+        stadium_url=_stadium_url_for(team_key),
     ))
 
 
@@ -2595,6 +2618,7 @@ def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: s
     except ImportError:
         rivalry = None
 
+    _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("wvl/game.html", _ctx(
         request, section="wvl", session_id=session_id,
         box=box, week=week, matchup=matchup, tier=tier,
@@ -2602,6 +2626,7 @@ def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: s
         rivalry=rivalry,
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
+        stadium_url=_stadium_url_for(_home_key),
     ))
 
 
@@ -2679,6 +2704,7 @@ def wvl_team(request: Request, session_id: str, team_key: str):
         year=data.get("year", "?"),
         financial=financial,
         team_achievement=team_achievement,
+        stadium_url=_stadium_url_for(team_key),
     ))
 
 
@@ -3352,6 +3378,7 @@ def intl_game(request: Request, match_id: str):
         match=match, gr=game_result,
         home_code=home_code, away_code=away_code,
         home_name=home_name, away_name=away_name,
+        stadium_url=_stadium_url_for(home_code),
     ))
 
 
@@ -3673,6 +3700,7 @@ def intl_team(request: Request, nation_code: str):
 
     return templates.TemplateResponse("international/team.html", _ctx(
         request, section="international", team=team, nation_code=nation_code,
+        stadium_url=_stadium_url_for(nation_code),
     ))
 
 

@@ -9,6 +9,13 @@
 
 {% block content %}
 
+{% if stadium_url %}
+<div class="stadium-banner">
+  <img src="{{ stadium_url }}" alt="Stadium">
+  <div class="stadium-overlay"></div>
+</div>
+{% endif %}
+
 {% set home = box.get('home_name', box.get('home_key', '?')) %}
 {% set away = box.get('away_name', box.get('away_key', '?')) %}
 {% set home_key = box.get('home_key', '') %}
