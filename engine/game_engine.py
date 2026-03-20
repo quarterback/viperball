@@ -3496,14 +3496,22 @@ class ViperballEngine:
         unavailable = self._unavailable_in_game(team)
         off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
                and p.name not in unavailable]
-        return off if off else team.players[:8]
+        if off:
+            return off
+        # Fallback: any available player (avoids returning injured/benched)
+        fallback = [p for p in team.players if p.name not in unavailable]
+        return fallback[:8] if fallback else team.players[:8]
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
         unavailable = self._unavailable_in_game(team)
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
                 and p.name not in unavailable]
-        return defs if defs else team.players[:5]
+        if defs:
+            return defs
+        # Fallback: any available player on defense side
+        fallback = [p for p in team.players if p.name not in unavailable]
+        return fallback[:5] if fallback else team.players[:5]
 
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
@@ -3528,7 +3536,7 @@ class ViperballEngine:
         """
         ol_players = [p for p in team.players
                       if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if not ol_players:
             return
 
@@ -3542,6 +3550,7 @@ class ViperballEngine:
             if b.name not in seen:
                 b.game_blocks += 1
                 b.game_plays_involved += 1
+                self.drain_player_energy(b, "lineman")
                 seen.add(b.name)
 
         if yards_gained >= 5 and random.random() < 0.35:
@@ -4075,10 +4084,10 @@ class ViperballEngine:
 
         # ── Coaching substitutions: evaluate benching/resting between drives ──
         # Process bench expirations first (1-drive rests return to active)
-        self._process_bench_expirations(self.home_team)
-        self._process_bench_expirations(self.away_team)
-        # Then evaluate new substitutions
-        self.evaluate_coaching_substitutions()
+        just_returned = self._process_bench_expirations(self.home_team)
+        just_returned |= self._process_bench_expirations(self.away_team)
+        # Then evaluate new substitutions (skip players who just came off bench)
+        self.evaluate_coaching_substitutions(just_returned)
 
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
@@ -6546,10 +6555,13 @@ class ViperballEngine:
         (via assign_game_roles), so this concentrates returns on depth
         players who earn their field time on special teams.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
+                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
+            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")
+                        and p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6580,10 +6592,12 @@ class ViperballEngine:
         Special teams coverage is where backup defenders earn playing time.
         Defensive starters are resting; rotation guys make the tackle.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Keeper", "Defensive Line")]
+                    ("Keeper", "Defensive Line")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = team.players
+            eligible = [p for p in team.players if p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6847,7 +6861,7 @@ class ViperballEngine:
 
         # ── Get blocker ──
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players:
             blocker = max(ol_players,
                           key=lambda p: p.power * 0.50 + getattr(p, 'awareness', 70) * 0.30
@@ -7728,6 +7742,7 @@ class ViperballEngine:
             if assist_tackler != tackler:
                 assist_tackler.game_tackles += 1
                 assist_tackler.game_plays_involved += 1
+                self.drain_player_energy(assist_tackler, "tackler")
 
         yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
         yards_gained = max(-5, yards_gained)
@@ -8130,6 +8145,10 @@ class ViperballEngine:
         tackler = self._pick_def_tackler(def_team, yards_gained)
         tackler.game_tackles += 1
 
+        # Drain energy: trick play carrier and tackler
+        self.drain_player_energy(carrier, "carrier")
+        self.drain_player_energy(tackler, "tackler")
+
         trick_tackle_red = self._tackle_reduction(tackler, yards_gained)
         yards_gained = max(-5, int(yards_gained - trick_tackle_red))
         new_position = min(100, fp + yards_gained)
@@ -8285,6 +8304,7 @@ class ViperballEngine:
                 int_weights = self._spread_the_love_defense(int_candidates, int_weights)
                 interceptor = random.choices(int_candidates, weights=int_weights, k=1)[0]
                 interceptor.game_lateral_interceptions += 1
+                self.drain_player_energy(interceptor, "carrier")
                 int_tag = player_tag(interceptor)
 
                 # INT return — laterals intercepted in the open field.
@@ -8473,6 +8493,7 @@ class ViperballEngine:
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
         lat_tackler.game_tackles += 1
+        self.drain_player_energy(lat_tackler, "tackler")
 
         # Tackling reduces lateral chain yards
         lat_tackle_red = self._tackle_reduction(lat_tackler, yards_gained)
@@ -8702,6 +8723,8 @@ class ViperballEngine:
             sacker.game_sacks += 1
             sacker.game_tackles += 1
             sacker.game_plays_involved += 1
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(sacker, "tackler")
 
             new_fp = max(1, self.state.field_position - sack_yards)
             if new_fp <= 0:
@@ -8752,7 +8775,7 @@ class ViperballEngine:
         # ── OL Protection Credits on KP ──
         # Even on non-sack plays, OL earns block credits for protection
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players and random.random() < 0.35:
             self._credit_ol_blocks(team, 3)
 
@@ -9097,6 +9120,7 @@ class ViperballEngine:
                 if kp_assist != kp_tackler:
                     kp_assist.game_tackles += 1
                     kp_assist.game_plays_involved += 1
+                    self.drain_player_energy(kp_assist, "tackler")
             kp_tackle_red = self._tackle_reduction(kp_tackler, total_yards)
             yards_gained = max(1, int(total_yards - kp_tackle_red))
             if yards_gained <= 0:
@@ -9143,6 +9167,11 @@ class ViperballEngine:
             receiver.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
 
+            # Drain energy: kicker, receiver, and tackler all exerted
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(receiver, "carrier")
+            self.drain_player_energy(kp_tackler, "tackler")
+
             injury_note = ""
             recv_inj = self.check_in_game_injury(receiver, play_type="kick_pass")
             if recv_inj:
@@ -9181,7 +9210,7 @@ class ViperballEngine:
             hurry_def_team = self.get_defensive_team()
             hurry_eligible = [p for p in hurry_def_team.players
                               if p.position in ("Defensive Line", "Keeper")
-                              and p.name not in self._injured_names(hurry_def_team)]
+                              and p.name not in self._unavailable_in_game(hurry_def_team)]
             if hurry_eligible:
                 hurry_weights = []
                 for hp in hurry_eligible:
@@ -9238,6 +9267,10 @@ class ViperballEngine:
             interceptor = matched_defender
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
+
+            # Drain: kicker threw, interceptor ran it back
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(interceptor, "carrier")
 
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
@@ -9296,6 +9329,10 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
 
+        # Incompletion — kicker and matched defender still exerted
+        self.drain_player_energy(kicker, "kick_pass")
+        self.drain_player_energy(matched_defender, "tackler")
+
         throwing_team_inc = self.state.possession
         self.state.down += 1
 
@@ -9353,6 +9390,7 @@ class ViperballEngine:
             if style_name in ("ghost", "chain_gang", "lateral_spread"):
                 success_roll -= 0.08  # Lower = better
             self.apply_stamina_drain(3)
+            self.drain_player_energy(playmaker, "carrier")
             if success_roll < 0.45:
                 # Fake works! Gain 8-22 yards
                 fake_gain = random.randint(8, 22)
@@ -9415,6 +9453,9 @@ class ViperballEngine:
                     description=f"FAKE PUNT! {ftag} stuffed — TURNOVER ON DOWNS!",
                     fatigue=round(stamina, 1),
                 )
+
+        # Punter exerts on every actual punt attempt
+        self.drain_player_energy(punter, "kick_pass")
 
         # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
         block_prob = self.calculate_block_probability(kick_type="punt")
@@ -9694,6 +9735,7 @@ class ViperballEngine:
             td_returner.game_punt_return_tds += 1
             new_pos = 100 - min(99, self.state.field_position + distance)
             td_returner.game_punt_return_yards += new_pos
+            self.drain_player_energy(td_returner, "carrier")
             self.change_possession()
             self.add_score(9)
             self.apply_stamina_drain(2)
@@ -9771,6 +9813,7 @@ class ViperballEngine:
             final_position = max(1, landing_spot - return_yards)
             returner.game_punt_returns += 1
             returner.game_punt_return_yards += return_yards
+            self.drain_player_energy(returner, "carrier")
             rtag = player_tag(returner)
             if return_yards > 0:
                 returner_desc = f", {rtag} returns {return_yards} yards"
@@ -10690,8 +10733,12 @@ class ViperballEngine:
         benched = self._home_benched if team == self.home_team else self._away_benched
         benched.pop(player_name, None)
 
-    def _process_bench_expirations(self, team):
-        """Check if any benched players should return (drive-based rest expired)."""
+    def _process_bench_expirations(self, team) -> set:
+        """Check if any benched players should return (drive-based rest expired).
+
+        Returns set of player names just returned from the bench so they
+        can be excluded from immediate re-benching (prevents bounce loop).
+        """
         benched = self._home_benched if team == self.home_team else self._away_benched
         expired = []
         for name, info in benched.items():
@@ -10700,18 +10747,34 @@ class ViperballEngine:
                 expired.append(name)
         for name in expired:
             benched.pop(name, None)
+        return set(expired)
 
-    def evaluate_coaching_substitutions(self):
+    def _is_last_kicker(self, team, player, already_out: set) -> bool:
+        """Return True if benching this player would leave the team with no kicker."""
+        if player.position != "Zeroback":
+            return False
+        other_kickers = [p for p in team.players
+                         if p.position == "Zeroback"
+                         and p.name != player.name
+                         and p.name not in already_out]
+        return len(other_kickers) == 0
+
+    def evaluate_coaching_substitutions(self, just_returned: set = None):
         """Between drives, coaches evaluate performance and fatigue to decide subs.
 
         Called at the start of each drive (after energy recovery). Coaches on
         BOTH teams evaluate their personnel — offense evaluates their own
         players, defense evaluates theirs.
+
+        just_returned: players who just came off the bench this drive — skip
+        them to prevent immediate re-benching (bounce loop).
         """
+        if just_returned is None:
+            just_returned = set()
         for team in (self.home_team, self.away_team):
             benched = self._home_benched if team == self.home_team else self._away_benched
             injured = self._injured_in_game(team)
-            already_out = injured | set(benched.keys())
+            already_out = injured | set(benched.keys()) | just_returned
 
             # ── 1. Blowout protection: pull starters when up big ──
             score_diff = self.state.home_score - self.state.away_score
@@ -10726,6 +10789,8 @@ class ViperballEngine:
                          and p.name not in already_out
                          and getattr(p, 'game_role', '') == "STARTER"]
                 for p in skill:
+                    if self._is_last_kicker(team, p, already_out):
+                        continue  # Never bench the team's last available kicker
                     # Only bench if there's a backup available
                     backups = [b for b in team.players
                                if b.position == p.position
@@ -10773,7 +10838,7 @@ class ViperballEngine:
                             should_bench = True
                             reason = "ineffective"
 
-                if should_bench:
+                if should_bench and not self._is_last_kicker(team, p, already_out):
                     # Check that a backup exists
                     backups = [b for b in team.players
                                if b.position == p.position
@@ -10815,7 +10880,7 @@ class ViperballEngine:
                     if random.random() < 0.30:
                         should_rest = True
 
-                if should_rest:
+                if should_rest and not self._is_last_kicker(team, p, already_out):
                     backups = [b for b in team.players
                                if b.position == p.position
                                and b.name not in already_out
@@ -10857,11 +10922,19 @@ class ViperballEngine:
                 benched.pop(name, None)
 
     def recover_energy_between_drives(self):
-        """Between drives, involved players recover a small amount of energy."""
-        team = self.get_offensive_team()
-        for p in team.players:
+        """Between drives, both sides recover energy.
+
+        The offense (about to start a new drive) gets a full recovery bump.
+        The defense (just finished a shift) gets a smaller bump — they were
+        exerting themselves on the previous drive and the changeover is brief.
+        """
+        off_team = self.get_offensive_team()
+        def_team = self.get_defensive_team()
+        for p in off_team.players:
             p.game_energy = min(100.0, p.game_energy + 5.0)
             p.plays_since_last_touch += 1
+        for p in def_team.players:
+            p.game_energy = min(100.0, p.game_energy + 3.0)
 
     def recover_energy_halftime(self):
         """At halftime, all players recover 30 energy."""
