@@ -9,6 +9,13 @@
 
 {% block content %}
 
+{% if stadium_url %}
+<div class="stadium-banner">
+  <img src="{{ stadium_url }}" alt="Stadium">
+  <div class="stadium-overlay"></div>
+</div>
+{% endif %}
+
 {# ── Scoreboard ── #}
 <div class="box-score-header">
   <div class="box-team">

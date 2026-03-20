@@ -8,6 +8,12 @@
 {% endblock %}
 
 {% block content %}
+{% if stadium_url %}
+<div class="stadium-banner">
+  <img src="{{ stadium_url }}" alt="Stadium">
+  <div class="stadium-overlay"></div>
+</div>
+{% endif %}
 <div class="page-header">
   <h1>{{ team.get('team_name', team_key) }}</h1>
   <div class="subtitle">
