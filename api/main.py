@@ -1735,6 +1735,57 @@ def remove_archive(archive_key: str):
     return {"message": "Archive deleted"}
 
 
+# ═══════════════════════════════════════════════════════════════
+# SAVE HISTORY — browse / restore previous versions of any save
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/history")
+def list_history(save_type: Optional[str] = None, limit: int = 100):
+    """List all historical save versions, optionally filtered by save_type."""
+    from engine.db import list_all_save_history
+    entries = list_all_save_history(save_type=save_type, limit=limit)
+    return {"history": entries}
+
+
+@app.get("/history/{save_type}/{save_key}")
+def get_save_history(save_type: str, save_key: str, limit: int = 50):
+    """List previous versions of a specific save."""
+    from engine.db import list_save_history
+    entries = list_save_history(save_type, save_key, limit=limit)
+    return {"history": entries, "save_type": save_type, "save_key": save_key}
+
+
+@app.get("/history/entry/{history_id}")
+def get_history_entry(history_id: int):
+    """Load the full data of a historical save version."""
+    from engine.db import load_save_history_entry
+    data = load_save_history_entry(history_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return data
+
+
+@app.post("/history/restore/{history_id}")
+def restore_history_entry(history_id: int):
+    """Restore a historical save version as the current save.
+
+    The current save is snapshotted to history first, so nothing is lost.
+    """
+    from engine.db import restore_save_from_history
+    ok = restore_save_from_history(history_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return {"message": "Save restored from history", "restored_history_id": history_id}
+
+
+@app.post("/history/prune")
+def prune_history(keep_per_key: int = 20):
+    """Delete old history entries, keeping the newest `keep_per_key` per save."""
+    from engine.db import prune_save_history
+    prune_save_history(keep_per_key=keep_per_key)
+    return {"message": f"Pruned history, kept newest {keep_per_key} per save"}
+
+
 @app.post("/sessions/{session_id}/dynasty")
 def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     from engine.geography import get_geographic_conference_defaults
