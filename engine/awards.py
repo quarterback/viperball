@@ -261,6 +261,8 @@ def _pos_group(position: str) -> str:
         return "lineman"
     if "safety" in pos or "keeper" in pos:
         return "safety"
+    if "kicker" in pos:
+        return "kicker"
     return "other"
 
 
@@ -385,6 +387,11 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
         raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games
+    elif group == "kicker":
+        kick_made = stats.get("kick_made", 0)
+        kick_att = max(1, stats.get("kick_att", 1))
+        pct = kick_made / kick_att
+        raw = (kick_made * 8 + pct * 30) / games
     else:
         raw = stats.get("yards", 0) / games
     return round(raw * team_perf_mult, 2)
@@ -420,6 +427,11 @@ def _format_stat_line(stats: dict, group: str) -> str:
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
         parts.append(f"{tackles} TKL, {sacks} sacks, {tfl} TFL")
+    elif group == "kicker":
+        kick_made = stats.get("kick_made", 0)
+        kick_att = stats.get("kick_att", 0)
+        pct = round(100 * kick_made / max(1, kick_att), 1)
+        parts.append(f"{kick_made}/{kick_att} kicks ({pct}%)")
     else:
         yds = stats.get("yards", 0)
         tds = stats.get("tds", 0)
@@ -454,6 +466,9 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
         d["tackles"] = stats.get("tackles", 0)
         d["sacks"] = stats.get("sacks", 0)
         d["tfl"] = stats.get("tfl", 0)
+    elif group == "kicker":
+        d["kick_made"] = stats.get("kick_made", 0)
+        d["kick_att"] = stats.get("kick_att", 0)
     else:
         d["yards"] = stats.get("yards", 0)
         d["tds"] = stats.get("tds", 0)
@@ -607,13 +622,25 @@ def _best_in_position(
             uid = f"{team_name}::{player.name}"
             if uid in exclude:
                 continue
-            if _pos_group(player.position) != group_filter:
+            if group_filter == "kicker":
+                # Kicker is role-based, not position-based — any player who kicks
+                if use_stats and player.name in team_stats:
+                    if team_stats[player.name].get("kick_att", 0) == 0:
+                        continue
+                elif player.kicking < 60:
+                    continue
+            elif _pos_group(player.position) != group_filter:
                 continue
             if freshman_only and getattr(player, "year", "") != "Freshman":
                 continue
             if use_stats and player.name in team_stats:
                 pstats = team_stats[player.name]
                 if pstats.get("games", 0) == 0:
+                    continue
+                # Minimum 50% of team games played
+                team_rec = standings.get(team_name)
+                team_gp = team_rec.games_played if team_rec else 0
+                if team_gp > 0 and pstats["games"] < team_gp * 0.5:
                     continue
                 score = _stat_score_for_group(pstats, group_filter, mult)
                 wpa = pstats.get("wpa", 0.0)
@@ -627,17 +654,17 @@ def _best_in_position(
     return best_pair
 
 
-# Canonical All-CVL position slots
+# Canonical All-CVL position slots (skill positions + kicker only)
 _AA_SLOTS = [
     ("zeroback", "Zeroback",              _player_score),
     ("viper",    "Viper (1)",             _player_score),
     ("viper",    "Viper (2)",             _player_score),
+    ("viper",    "Viper (3)",             _player_score),
     ("back",     "Halfback/Wingback (1)", _player_score),
     ("back",     "Halfback/Wingback (2)", _player_score),
     ("back",     "Halfback/Wingback (3)", _player_score),
-    ("lineman",  "Lineman (1)",           _player_score),
-    ("lineman",  "Lineman (2)",           _player_score),
     ("safety",   "Safety/Keeper",         _player_score),
+    ("kicker",   "Kicker",               _player_score),
 ]
 
 

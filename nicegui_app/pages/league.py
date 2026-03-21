@@ -1630,6 +1630,26 @@ async def _render_awards_stats(session_id, standings, user_team):
             conf_award_select.on("update:model-value", lambda: _render_conf_awards())
             _render_conf_awards()
 
+    # Media awards (postseason — AP, UPI, The Lateral, TSN)
+    media_awards = awards.get("media_awards", [])
+    if media_awards:
+        ui.label("Postseason Media Awards").classes("text-lg font-semibold text-slate-700 mt-4")
+        with ui.row().classes("w-full flex-wrap gap-3"):
+            for ma in media_awards:
+                ma_team = ma.get("team_name", "")
+                ma_player = ma.get("player_name", "")
+                ma_pos = ma.get("position", "")
+                is_coach = ma.get("is_coach_award", False)
+                if is_coach:
+                    metric_card(ma.get("award_name", ""), ma_player, f"{ma_team} -- {ma_pos}")
+                else:
+                    with ui.card().classes("p-3 cursor-pointer hover:shadow-md transition-shadow").style(
+                        "min-width:180px;"
+                    ).on("click", lambda _e, _t=ma_team, _p=ma_player: _show_cvl_player_card(session_id, _t, _p)):
+                        ui.label(ma.get("award_name", "")).classes("text-xs font-bold text-slate-500")
+                        ui.label(ma_player).classes("text-lg font-bold text-indigo-700")
+                        ui.label(f"{ma_team} -- {ma_pos}").classes("text-xs text-gray-400")
+
     ui.separator()
 
     # Statistical Leaders

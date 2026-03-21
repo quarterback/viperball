@@ -1517,6 +1517,27 @@ def bowl_results(session_id: str):
     return {"bowl_results": results}
 
 
+def _apply_awards_to_players(season, honors) -> None:
+    """Write computed awards onto Player objects so roster endpoints include them."""
+    # Build player lookup: (team_name, player_name) -> Player
+    player_lookup = {}
+    for team_name, team in season.teams.items():
+        for p in team.players:
+            player_lookup[(team_name, p.name)] = p
+
+    for winner, level in honors.all_winners():
+        key = (winner.team_name, winner.player_name)
+        player = player_lookup.get(key)
+        if player is not None:
+            if not hasattr(player, "career_awards"):
+                player.career_awards = []
+            # Avoid duplicates on repeated endpoint calls
+            entry = {"year": honors.year, "award": winner.award_name, "level": level,
+                     "team": winner.team_name, "position": winner.position}
+            if entry not in player.career_awards:
+                player.career_awards.append(entry)
+
+
 @app.get("/sessions/{session_id}/season/awards")
 def season_awards(session_id: str):
     from engine.awards import compute_season_awards
@@ -1524,10 +1545,23 @@ def season_awards(session_id: str):
     season = _require_season(session)
 
     try:
+        conf_dict = season.conferences if hasattr(season, 'conferences') else None
         season_honors = compute_season_awards(
             season, year=2025,
-            conferences=season.conferences if hasattr(season, 'conferences') else None,
+            conferences=conf_dict,
         )
+        # Compute media awards (AP, UPI, The Lateral, TSN)
+        try:
+            from engine.media_awards import compute_media_awards
+            media = compute_media_awards(season=season, year=2025, conferences=conf_dict)
+            season_honors.media_awards = media
+        except Exception:
+            pass  # media awards are non-critical
+
+        # Append awards to Player objects so roster/player-card endpoints can
+        # display them (single-season mode has no dynasty card sync).
+        _apply_awards_to_players(season, season_honors)
+
         result = season_honors.to_dict()
         return result
     except Exception as e:
