@@ -1113,6 +1113,43 @@ async def _render_team_browser(session_id, standings, conferences, has_conferenc
                     metric_card("PA", fmt_vb_score(team_record.get("points_against", 0)))
                     metric_card("Team Rating", f"{team_record.get('avg_opi', 0):.1f}")
 
+            # -- Ranking History --
+            try:
+                polls_resp = await run.io_bound(api_client.get_polls, session_id)
+                all_polls = polls_resp.get("polls", [])
+            except api_client.APIError:
+                all_polls = []
+
+            if all_polls:
+                rank_history = []
+                for poll in all_polls:
+                    week = poll.get("week", "?")
+                    team_entry = next(
+                        (r for r in poll.get("rankings", []) if r.get("team_name") == selected),
+                        None,
+                    )
+                    if team_entry:
+                        rank_history.append({
+                            "Week": week,
+                            "Rank": team_entry.get("rank", ""),
+                            "Record": team_entry.get("record", ""),
+                            "Power Index": f"{team_entry.get('power_index', 0):.1f}",
+                            "Quality Wins": team_entry.get("quality_wins", 0),
+                            "SOS Rank": team_entry.get("sos_rank", 0),
+                        })
+                    else:
+                        rank_history.append({
+                            "Week": week,
+                            "Rank": "NR",
+                            "Record": "",
+                            "Power Index": "",
+                            "Quality Wins": "",
+                            "SOS Rank": "",
+                        })
+
+                with ui.expansion("Poll Ranking History").classes("w-full"):
+                    stat_table(rank_history)
+
             try:
                 roster_resp = await run.io_bound(api_client.get_roster, session_id, selected)
                 roster = roster_resp.get("roster", [])

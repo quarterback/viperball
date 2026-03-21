@@ -1931,6 +1931,10 @@ class Season:
         """Get current team rankings from latest poll, or by win pct if no poll exists"""
         if self.weekly_polls:
             return {r.team_name: r.rank for r in self.weekly_polls[-1].rankings}
+        return self._rankings_by_record()
+
+    def _rankings_by_record(self) -> Dict[str, int]:
+        """Fallback rankings based on win pct and point differential"""
         ranked = sorted(
             [(n, r) for n, r in self.standings.items() if r.games_played > 0],
             key=lambda x: (x[1].win_percentage, x[1].point_differential),
@@ -1938,8 +1942,25 @@ class Season:
         )
         return {name: i + 1 for i, (name, _) in enumerate(ranked)}
 
+    def _get_rankings_at_week(self, week: int) -> Dict[str, int]:
+        """Get team rankings from the most recent poll on or before the given week.
+
+        Uses the poll closest to (but not after) the game week so that quality
+        wins reflect opponent strength at the time of the matchup, not
+        retroactively.
+        """
+        best_poll = None
+        for poll in self.weekly_polls:
+            if poll.week <= week:
+                best_poll = poll
+            else:
+                break
+        if best_poll is not None:
+            return {r.team_name: r.rank for r in best_poll.rankings}
+        return self._rankings_by_record()
+
     def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
-        """Count wins against teams ranked in top 100"""
+        """Count wins against teams ranked in top 100 at time of the game."""
         quality = 0
         for game in self.schedule:
             if not game.completed:
@@ -1950,12 +1971,17 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 100:
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
                 quality += 1
         return quality
 
     def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Score for wins against ranked teams, weighted by opponent rank tier.
+        """Score for wins against ranked teams, weighted by opponent rank tier at time of game.
+
+        Uses the poll from the week the game was played (not retroactive rankings)
+        so teams are rewarded for beating opponents who were strong when they
+        actually played them.
 
         Tiers (expanded to top-100):
           Top 5:   10 pts   — elite wins rewarded heavily
@@ -1974,8 +2000,9 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 100:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
+                rank = week_rankings[opp]
                 if rank <= 5:
                     score += 10.0
                 elif rank <= 10:
@@ -1989,7 +2016,10 @@ class Season:
         return score
 
     def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily"""
+        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily.
+
+        Uses rankings at time of game, not retroactive.
+        """
         penalty = 0.0
         for game in self.schedule:
             if not game.completed:
@@ -2000,8 +2030,9 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings:
+                rank = week_rankings[opp]
                 if rank <= 5:
                     penalty += 0.5
                 elif rank <= 10:
