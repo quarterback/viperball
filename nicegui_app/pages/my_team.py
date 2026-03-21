@@ -1072,6 +1072,14 @@ async def _render_history(session_id: str):
             metric_card("Championships", str(coach.get("championships", 0)))
         with ui.column():
             metric_card("Seasons", str(coach.get("years_experience", 0)))
+        with ui.column():
+            metric_card("Conf. Titles", str(coach.get("conference_titles", 0)))
+        with ui.column():
+            ps_apps = coach.get("playoff_appearances", 0) + coach.get("bowl_appearances", 0)
+            metric_card("Postseason Apps", str(ps_apps))
+        with ui.column():
+            ps_wins = coach.get("playoff_wins", 0) + coach.get("bowl_wins", 0)
+            metric_card("Postseason Wins", str(ps_wins))
 
     season_records = coach.get("season_records", {})
     if season_records:

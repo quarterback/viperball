@@ -1931,6 +1931,10 @@ class Season:
         """Get current team rankings from latest poll, or by win pct if no poll exists"""
         if self.weekly_polls:
             return {r.team_name: r.rank for r in self.weekly_polls[-1].rankings}
+        return self._rankings_by_record()
+
+    def _rankings_by_record(self) -> Dict[str, int]:
+        """Fallback rankings based on win pct and point differential"""
         ranked = sorted(
             [(n, r) for n, r in self.standings.items() if r.games_played > 0],
             key=lambda x: (x[1].win_percentage, x[1].point_differential),
@@ -1938,8 +1942,25 @@ class Season:
         )
         return {name: i + 1 for i, (name, _) in enumerate(ranked)}
 
+    def _get_rankings_at_week(self, week: int) -> Dict[str, int]:
+        """Get team rankings from the most recent poll on or before the given week.
+
+        Uses the poll closest to (but not after) the game week so that quality
+        wins reflect opponent strength at the time of the matchup, not
+        retroactively.
+        """
+        best_poll = None
+        for poll in self.weekly_polls:
+            if poll.week <= week:
+                best_poll = poll
+            else:
+                break
+        if best_poll is not None:
+            return {r.team_name: r.rank for r in best_poll.rankings}
+        return self._rankings_by_record()
+
     def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
-        """Count wins against teams ranked in top 50"""
+        """Count wins against teams ranked in top 100 at time of the game."""
         quality = 0
         for game in self.schedule:
             if not game.completed:
@@ -1950,14 +1971,24 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
                 quality += 1
         return quality
 
     def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents.
+        """Score for wins against ranked teams, weighted by opponent rank tier at time of game.
 
-        Expanded to top-50 so teams outside the top 25 still contribute to resume quality.
+        Uses the poll from the week the game was played (not retroactive rankings)
+        so teams are rewarded for beating opponents who were strong when they
+        actually played them.
+
+        Tiers (expanded to top-100):
+          Top 5:   10 pts   — elite wins rewarded heavily
+          Top 10:   5 pts   — marquee wins
+          Top 25:   3 pts   — strong wins
+          Top 50:   2 pts   — solid wins
+          Top 100:  1 pt    — respectable wins
         """
         score = 0.0
         for game in self.schedule:
@@ -1969,26 +2000,26 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
+                rank = week_rankings[opp]
                 if rank <= 5:
-                    score += 5.0
+                    score += 10.0
                 elif rank <= 10:
-                    score += 3.5
-                elif rank <= 15:
-                    score += 2.5
-                elif rank <= 20:
-                    score += 1.5
+                    score += 5.0
                 elif rank <= 25:
-                    score += 1.0
-                elif rank <= 35:
-                    score += 0.6
+                    score += 3.0
+                elif rank <= 50:
+                    score += 2.0
                 else:
-                    score += 0.3
+                    score += 1.0
         return score
 
     def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily"""
+        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily.
+
+        Uses rankings at time of game, not retroactive.
+        """
         penalty = 0.0
         for game in self.schedule:
             if not game.completed:
@@ -1999,8 +2030,9 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings:
+                rank = week_rankings[opp]
                 if rank <= 5:
                     penalty += 0.5
                 elif rank <= 10:
@@ -2060,7 +2092,7 @@ class Season:
         Components (100-point scale):
         - Win percentage:       40 pts  (primary driver — winning matters most)
         - Strength of schedule: 15 pts
-        - Quality wins:         20 pts  (weighted by opponent rank, expanded to top-50)
+        - Quality wins:         uncapped (weighted by opponent rank tier, expanded to top-100)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
         - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
@@ -2078,7 +2110,7 @@ class Season:
         sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
-        qw_component = min(20.0, qw_score * 4.0)
+        qw_component = qw_score
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
@@ -2444,6 +2476,42 @@ class Season:
     def _get_winner(self, game: Game) -> str:
         return game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
 
+    @staticmethod
+    def _pick_game_mvp(game: Game) -> Optional[Tuple[str, str, str]]:
+        """Pick MVP from a completed game. Returns (player_name, team_name, reason) or None."""
+        fr = getattr(game, "full_result", None)
+        if not fr:
+            return None
+        ps = fr.get("player_stats", {})
+        best_score = -1.0
+        best = None
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            for p in ps.get(side, []):
+                name = p.get("name", "")
+                if not name:
+                    continue
+                yards = p.get("yards", 0)
+                tds = p.get("tds", 0)
+                kp_yds = p.get("kick_pass_yards", 0)
+                kp_tds = p.get("kick_pass_tds", 0)
+                tackles = p.get("tackles", 0)
+                sacks = p.get("sacks", 0)
+                wpa = p.get("wpa", 0.0)
+                score = yards * 0.3 + tds * 25 + kp_yds * 0.25 + kp_tds * 20 + tackles * 3 + sacks * 15 + wpa * 15
+                if score > best_score:
+                    best_score = score
+                    parts = []
+                    if yards:
+                        parts.append(f"{yards} yds")
+                    if tds:
+                        parts.append(f"{tds} TD")
+                    if kp_yds:
+                        parts.append(f"{kp_yds} KP yds")
+                    if tackles:
+                        parts.append(f"{tackles} TKL")
+                    best = (name, team_name, ", ".join(parts) if parts else "")
+        return best
+
     def _play_round(self, matchups: list, week: int, verbose: bool = False) -> list:
         games = []
         for home, away in matchups:
@@ -2452,6 +2520,11 @@ class Season:
             games.append(game)
         for game in games:
             self.simulate_game(game, verbose=verbose)
+            mvp = self._pick_game_mvp(game)
+            if mvp:
+                game.mvp_name = mvp[0]
+                game.mvp_team = mvp[1]
+                game.mvp_reason = mvp[2]
         return games
 
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
@@ -2664,6 +2737,7 @@ class Season:
             a_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_a.team_name), 0)
             b_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_b.team_name), 0)
 
+            mvp = self._pick_game_mvp(game)
             bowl = BowlGame(
                 name=names[i],
                 tier=tier,
@@ -2673,6 +2747,10 @@ class Season:
                 team_1_record=team_a.record_str,
                 team_2_record=team_b.record_str,
             )
+            if mvp:
+                bowl.mvp_name = mvp[0]
+                bowl.mvp_team = mvp[1]
+                bowl.mvp_reason = mvp[2]
             self.bowl_games.append(bowl)
 
 

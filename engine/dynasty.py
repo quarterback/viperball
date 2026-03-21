@@ -193,6 +193,10 @@ class Coach:
     career_losses: int = 0
     championships: int = 0
     playoff_appearances: int = 0
+    playoff_wins: int = 0
+    conference_titles: int = 0
+    bowl_wins: int = 0
+    bowl_appearances: int = 0
 
     # Years coached
     years_coached: List[int] = field(default_factory=list)
@@ -593,6 +597,15 @@ class Dynasty:
                 if hc is None:
                     continue
 
+                # Season W/L
+                rec = season.standings.get(team_name)
+                if rec:
+                    hc.career_wins += rec.wins
+                    hc.career_losses += rec.losses
+                    hc.seasons_coached += 1
+                # Championship
+                if team_name == season.champion:
+                    hc.championships += 1
                 # Conference title
                 if team_name in conf_champ_teams:
                     hc.conference_titles += 1
@@ -605,6 +618,18 @@ class Dynasty:
                 # Championship game appearance
                 if team_name in championship_game_teams:
                     hc.championship_appearances += 1
+                # Bowl game
+                for bg in getattr(season, 'bowl_games', []):
+                    g = bg.game
+                    if team_name in (g.home_team, g.away_team):
+                        if g.completed and g.home_score is not None and g.away_score is not None:
+                            if (g.home_score > g.away_score and team_name == g.home_team) or \
+                               (g.away_score > g.home_score and team_name == g.away_team):
+                                hc.career_awards.append({
+                                    "year": year, "award": f"{bg.name} Champion",
+                                    "level": "postseason", "team": team_name,
+                                })
+                        break
 
                 # Update coaching tree for all assistant coaches
                 for role, card in staff.items():
@@ -645,6 +670,33 @@ class Dynasty:
             if self.coach.team_name in playoff_teams:
                 self.coach.playoff_appearances += 1
 
+            # Playoff wins
+            coach_pw = playoff_wins_by_team.get(self.coach.team_name, 0)
+            self.coach.playoff_wins += coach_pw
+
+            # Conference title
+            conf_champions = season.get_conference_champions() if self.conferences else {}
+            coach_conf_champ_teams = set(conf_champions.values())
+            if self.coach.team_name in coach_conf_champ_teams:
+                self.coach.conference_titles += 1
+
+            # Bowl game
+            coach_bowl = False
+            coach_bowl_win = False
+            for bg in getattr(season, 'bowl_games', []):
+                g = bg.game
+                if self.coach.team_name in (g.home_team, g.away_team):
+                    coach_bowl = True
+                    if g.completed and g.home_score is not None and g.away_score is not None:
+                        if (g.home_score > g.away_score and self.coach.team_name == g.home_team) or \
+                           (g.away_score > g.home_score and self.coach.team_name == g.away_team):
+                            coach_bowl_win = True
+                    break
+            if coach_bowl:
+                self.coach.bowl_appearances += 1
+            if coach_bowl_win:
+                self.coach.bowl_wins += 1
+
             # Store coach season record
             self.coach.season_records[year] = {
                 "wins": coach_record.wins,
@@ -653,6 +705,9 @@ class Dynasty:
                 "points_against": coach_record.points_against,
                 "champion": (self.coach.team_name == season.champion),
                 "playoff": (self.coach.team_name in playoff_teams),
+                "conference_champion": (self.coach.team_name in coach_conf_champ_teams),
+                "bowl": coach_bowl,
+                "bowl_win": coach_bowl_win,
             }
 
         # Team-level standings

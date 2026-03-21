@@ -139,9 +139,9 @@
 </div>
 <div class="grid-4" style="margin-bottom:12px">
   <div class="metric"><div class="label">Seasons</div><div class="value">{{ coach.seasons_coached }}</div></div>
-  <div class="metric"><div class="label">Conf. Titles</div><div class="value">{{ coach.conference_titles }}</div></div>
-  <div class="metric"><div class="label">Playoff Apps</div><div class="value">{{ coach.playoff_appearances }}</div></div>
-  <div class="metric"><div class="label">Playoff Wins</div><div class="value">{{ coach.playoff_wins }}</div></div>
+  <div class="metric"><div class="label">Conf. Titles</div><div class="value {% if coach.conference_titles > 0 %}stat-good{% endif %}">{{ coach.conference_titles }}</div></div>
+  <div class="metric"><div class="label">Postseason Apps</div><div class="value">{{ postseason_apps }}</div></div>
+  <div class="metric"><div class="label">Postseason Wins</div><div class="value {% if postseason_wins > 0 %}stat-good{% endif %}">{{ postseason_wins }}</div></div>
 </div>
 
 {# Current Season #}

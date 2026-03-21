@@ -294,6 +294,29 @@
 </div>
 {% endif %}
 
+{# ── Postseason ── #}
+{% if postseason %}
+<div>
+<h2>Bowls &amp; Playoff Appearances</h2>
+<table>
+  <thead>
+    <tr><th>Event</th><th>Result</th><th>Opponent</th><th class="num">Score</th>{% if postseason|selectattr('mvp')|list %}<th>MVP</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+  {% for p in postseason %}
+  <tr>
+    <td>{{ p.event }}</td>
+    <td><span class="tag {% if p.result == 'W' %}stat-elite{% else %}stat-bad{% endif %}">{{ p.result }}</span></td>
+    <td>{{ p.opponent }}</td>
+    <td class="num">{{ p.score }}</td>
+    {% if postseason|selectattr('mvp')|list %}<td>{{ p.mvp or '' }}</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 {# ── Awards ── #}
 {% if team_awards %}
 <div>
