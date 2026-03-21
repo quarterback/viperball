@@ -55,7 +55,7 @@
   {% for p in roster|sort(attribute='overall', reverse=true) if p is mapping %}
   <tr>
     <td class="num">{{ p.get('number', '') }}</td>
-    <td>{{ p.get('name', '?') }}</td>
+    <td><a href="/stats/pro/{{ league }}/{{ session_id }}/player/{{ team_key }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ p.get('position', p.get('tag', '?')) }}</span></td>
     <td class="num {% if p.get('overall', 0) >= 85 %}stat-elite{% elif p.get('overall', 0) >= 70 %}stat-good{% endif %}">{{ p.get('overall', '?') }}</td>
     <td class="num">{{ p.get('speed', '') }}</td>
@@ -90,7 +90,7 @@
   <tbody>
   {% for p in off_players|sort(attribute='total_yards', reverse=true) %}
   <tr>
-    <td>{{ p.get('name', '?') }}</td>
+    <td><a href="/stats/pro/{{ league }}/{{ session_id }}/player/{{ team_key }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
     <td class="num">{{ p.get('games', 0) }}</td>
     <td class="num {% if p.get('rushing_yards', 0) >= 200 %}stat-elite{% elif p.get('rushing_yards', 0) >= 100 %}stat-good{% endif %}">{{ p.get('rushing_yards', 0) }}</td>
@@ -119,7 +119,7 @@
   <tbody>
   {% for p in def_players|sort(attribute='tackles', reverse=true) %}
   <tr>
-    <td>{{ p.get('name', '?') }}</td>
+    <td><a href="/stats/pro/{{ league }}/{{ session_id }}/player/{{ team_key }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
     <td><span class="tag tag-pos">{{ p.get('position', '?') }}</span></td>
     <td class="num">{{ p.get('games', 0) }}</td>
     <td class="num {% if p.get('tackles', 0) >= 20 %}stat-elite{% elif p.get('tackles', 0) >= 10 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
