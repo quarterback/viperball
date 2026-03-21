@@ -334,6 +334,7 @@ _AGG_COUNTING_STATS = [
     "keeper_tackles", "coverage_snaps", "muffs",
     "points_allowed_in_coverage", "completions_allowed_in_coverage",
     "kick_return_yards", "punt_return_yards",
+    "offensive_snaps", "defensive_snaps",
     "plays_involved",
 ]
 
@@ -553,8 +554,8 @@ def _compute_kpr(stats: dict) -> float:
 
     Higher is better. Measures a keeper's value as captain of the
     defensive backfield: deflections (disrupting the aerial attack),
-    tackles (last-line stops), bells (loose ball recoveries worth 0.5
-    scoreboard points each), coverage involvement, minus mistakes (muffs).
+    keeper tackles (last-line stops), bells (loose ball recoveries),
+    minus mistakes (muffs).
 
     Scaled to roughly 0-10 range for a typical season.
     """
@@ -562,14 +563,11 @@ def _compute_kpr(stats: dict) -> float:
     deflections = stats.get("kick_deflections", 0)
     k_tackles = stats.get("keeper_tackles", 0)
     bells = stats.get("keeper_bells", 0)
-    coverage = stats.get("coverage_snaps", 0)
-    tackles = stats.get("tackles", 0)
     muffs = stats.get("muffs", 0)
     # Per-game composite weighted toward disruptive plays
-    raw = (deflections * 10 + k_tackles * 5 + bells * 8
-           + tackles * 2 + coverage * 0.3 - muffs * 6) / games
-    # Scale to 0-10 range
-    return round(min(10.0, max(0.0, raw / 0.8)), 1)
+    raw = (deflections * 6 + k_tackles * 3 + bells * 8 - muffs * 5) / games
+    # Scale to 0-10 range: a keeper averaging 5 impact plays/game ≈ 5.0 KPR
+    return round(min(10.0, max(0.0, raw)), 1)
 
 
 def _compute_keeper_era(stats: dict) -> float:

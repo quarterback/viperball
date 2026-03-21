@@ -79,6 +79,9 @@ class GameLog:
     # Line play
     blocks: int = 0
     pancakes: int = 0
+    # Snap counts
+    offensive_snaps: int = 0
+    defensive_snaps: int = 0
     # Impact
     wpa: float = 0.0
     plays_involved: int = 0
@@ -133,6 +136,8 @@ class GameLog:
             "muffs": self.muffs,
             "blocks": self.blocks,
             "pancakes": self.pancakes,
+            "offensive_snaps": self.offensive_snaps,
+            "defensive_snaps": self.defensive_snaps,
             "wpa": self.wpa,
             "plays_involved": self.plays_involved,
         }
@@ -205,6 +210,9 @@ class SeasonStats:
     # Line play
     blocks: int = 0
     pancakes: int = 0
+    # Snap counts
+    offensive_snaps: int = 0
+    defensive_snaps: int = 0
     # Impact
     wpa: float = 0.0
     plays_involved: int = 0
@@ -298,6 +306,8 @@ class SeasonStats:
         self.muffs += log.muffs
         self.blocks += log.blocks
         self.pancakes += log.pancakes
+        self.offensive_snaps += log.offensive_snaps
+        self.defensive_snaps += log.defensive_snaps
         self.wpa += log.wpa
         self.plays_involved += log.plays_involved
 
@@ -799,6 +809,8 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         muffs=getattr(player, 'game_muffs', 0),
         blocks=getattr(player, 'game_blocks', 0),
         pancakes=getattr(player, 'game_pancakes', 0),
+        offensive_snaps=getattr(player, 'game_offensive_snaps', 0),
+        defensive_snaps=getattr(player, 'game_defensive_snaps', 0),
         wpa=round(getattr(player, 'game_wpa', 0.0), 2),
         plays_involved=getattr(player, 'game_plays_involved', 0),
     )

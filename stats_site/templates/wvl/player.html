@@ -276,6 +276,12 @@
   <tr><td style="color:var(--fg-dim);width:160px">WPA</td><td class="num {% if season_totals.wpa >= 3.0 %}stat-elite{% elif season_totals.wpa >= 1.0 %}stat-good{% elif season_totals.wpa < -1.0 %}stat-bad{% endif %}">{{ "%.2f"|format(season_totals.wpa) }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Plays Involved</td><td class="num">{{ season_totals.plays_involved }}</td></tr>
   <tr><td style="color:var(--fg-dim)">WPA/Play</td><td class="num">{{ "%.3f"|format(season_totals.wpa_per_play) }}</td></tr>
+  {% if season_totals.offensive_snaps > 0 %}
+  <tr><td style="color:var(--fg-dim)">Off. Snaps</td><td class="num">{{ season_totals.offensive_snaps }}</td></tr>
+  {% endif %}
+  {% if season_totals.defensive_snaps > 0 %}
+  <tr><td style="color:var(--fg-dim)">Def. Snaps</td><td class="num">{{ season_totals.defensive_snaps }}</td></tr>
+  {% endif %}
   </tbody>
 </table>
 {% endif %}
