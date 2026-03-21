@@ -497,6 +497,7 @@ def _render_league_switcher(all_sessions: dict, active_lid: str):
             # Hub button
             async def _go_hub():
                 _set_active_league(None)
+                app.storage.user["pro_league_session_id"] = None
                 app.storage.user["pro_league_pending_nav"] = True
                 ui.navigate.to("/")
 
@@ -746,6 +747,7 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
                                 _db_save_archive(lid, _completed_league_snapshots[lid])
                             _auto_save(lid, session_id)
                             _set_active_league(None)
+                            app.storage.user["pro_league_session_id"] = None
                             app.storage.user["pro_league_pending_nav"] = True
                             ui.navigate.to("/")
 

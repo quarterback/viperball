@@ -2428,39 +2428,71 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         raise HTTPException(404, "Pro league session not found")
 
     # Aggregate team stats from all completed game results
+    # Collects both offensive (own) and defensive (opponent) stats
     team_agg = {}
+    _INIT_FIELDS = {
+        "games": 0,
+        # Scoring
+        "points_for": 0.0, "points_against": 0.0,
+        # Offense
+        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+        # Special teams offense
+        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+        "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
+        "muffs": 0,
+        # Defense (opponent stats)
+        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+        # Special teams defense
+        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+        # Turnovers
+        "fumbles": 0, "tod": 0,
+        "opp_fumbles": 0, "opp_tod": 0,
+        # Penalties
+        "penalties": 0, "penalty_yards": 0,
+        "opp_penalties": 0, "opp_penalty_yards": 0,
+        # Efficiency / Delta / Bonus
+        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
+        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
+        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+        "viper_eff_n": 0, "team_rating_n": 0,
+        "down_4_att": 0, "down_4_conv": 0,
+        "down_5_att": 0, "down_5_conv": 0,
+        "down_6_att": 0, "down_6_conv": 0,
+    }
     for week_num, week_games in season.results.items():
         for matchup_key, game in week_games.items():
             result = game.get("result", {})
             stats = result.get("stats", {})
-            for side in ("home", "away"):
+            for side, opp_side in [("home", "away"), ("away", "home")]:
                 t_key = game.get(f"{side}_key", "")
                 t_name = game.get(f"{side}_name", t_key)
                 s = stats.get(side)
+                opp_s = stats.get(opp_side)
                 if not s or not t_key:
                     continue
                 div = season._get_division_for_key(t_key)
                 if division and div != division:
                     continue
                 if t_key not in team_agg:
-                    team_agg[t_key] = {
-                        "team_key": t_key, "team": t_name, "division": div, "games": 0,
-                        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-                        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-                        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-                        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-                        "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
-                        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
-                        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-                        "viper_eff_n": 0, "team_rating_n": 0,
-                        "down_4_att": 0, "down_4_conv": 0,
-                        "down_5_att": 0, "down_5_conv": 0,
-                        "down_6_att": 0, "down_6_conv": 0,
-                    }
+                    team_agg[t_key] = {"team_key": t_key, "team": t_name, "division": div, **{k: v for k, v in _INIT_FIELDS.items()}}
                 a = team_agg[t_key]
                 a["games"] += 1
+
+                # Scoring
+                my_score = game.get(f"{side}_score", 0) or 0
+                opp_score = game.get(f"{opp_side}_score", 0) or 0
+                a["points_for"] += my_score
+                a["points_against"] += opp_score
+
+                # ── Offensive stats ──
                 a["total_yards"] += s.get("total_yards", 0)
                 a["total_plays"] += s.get("total_plays", 0)
                 a["touchdowns"] += s.get("touchdowns", 0)
@@ -2479,10 +2511,49 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                 a["dk_att"] += s.get("drop_kicks_attempted", 0)
                 a["pk_made"] += s.get("place_kicks_made", 0)
                 a["pk_att"] += s.get("place_kicks_attempted", 0)
+
+                # ── Special teams offense ──
+                a["kr_yards"] += s.get("kick_return_yards", 0)
+                a["kr_count"] += s.get("kick_returns", 0)
+                a["kr_tds"] += s.get("kick_return_tds", 0)
+                a["pr_yards"] += s.get("punt_return_yards", 0)
+                a["pr_count"] += s.get("punt_returns", 0)
+                a["pr_tds"] += s.get("punt_return_tds", 0)
+                a["muffs"] += s.get("muffs", 0)
+
+                # ── Defensive stats (opponent offensive numbers) ──
+                if opp_s:
+                    a["opp_total_yards"] += opp_s.get("total_yards", 0)
+                    a["opp_total_plays"] += opp_s.get("total_plays", 0)
+                    a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
+                    a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
+                    a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
+                    a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
+                    a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
+                    a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
+                    a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
+                    a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
+                    a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
+                    a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
+                    a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
+                    a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
+                    a["opp_kr_count"] += opp_s.get("kick_returns", 0)
+                    a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
+                    a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
+                    a["opp_pr_count"] += opp_s.get("punt_returns", 0)
+                    a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
+                    a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
+                    a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
+                    a["opp_penalties"] += opp_s.get("penalties", 0)
+                    a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
+
+                # ── Turnovers / Penalties ──
                 a["fumbles"] += s.get("fumbles_lost", 0)
                 a["tod"] += s.get("turnovers_on_downs", 0)
                 a["penalties"] += s.get("penalties", 0)
                 a["penalty_yards"] += s.get("penalty_yards", 0)
+
+                # ── Efficiency / Delta / Bonus ──
                 a["delta_yards"] += s.get("delta_yards", 0)
                 a["delta_drives"] += s.get("delta_drives", 0)
                 a["delta_scores"] += s.get("delta_scores", 0)
@@ -2512,17 +2583,50 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        # Scoring
+        t["ppg"] = round(t["points_for"] / n, 1)
+        t["opp_ppg"] = round(t["points_against"] / n, 1)
+        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
+        # Offense
         t["total_yards"] = int(round(t["total_yards"]))
         t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
+        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
+        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
         t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
+        # Special teams offense
+        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
+        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
+        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
+        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
+        # Defense
+        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
+        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
+        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
+        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
+        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
+        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
+        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
+        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
+        # Special teams defense
+        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
+        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
+        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
+        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
+        # Turnovers
+        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
+        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
+        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
+        # Efficiency
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
-        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
         for d in [4, 5, 6]:
             att = t[f"down_{d}_att"]
             conv = t[f"down_{d}_conv"]
@@ -2536,6 +2640,15 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
             t["wins"] = 0
             t["losses"] = 0
 
+    # Some defensive categories are "lower is better"
+    _LOWER_IS_BETTER = {
+        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
+        "opp_rushing_yards", "opp_avg_rushing", "opp_yards_per_carry",
+        "opp_kp_yards", "opp_kp_ypg", "opp_kp_comp_pct", "opp_touchdowns",
+        "opp_rushing_tds", "opp_kp_tds",
+        "opp_st_return_yards", "opp_kr_avg",
+        "turnovers_lost",
+    }
     valid_sorts = {
         "total_yards": "total_yards", "avg_yards": "avg_yards",
         "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
@@ -2545,9 +2658,20 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         "delta_yards": "delta_yards", "fumbles": "fumbles",
         "penalties": "penalties", "yards_per_play": "yards_per_play",
         "bonus_possessions": "bonus_possessions",
+        "ppg": "ppg", "scoring_margin": "scoring_margin",
+        "opp_ppg": "opp_ppg",
+        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
+        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
+        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
+        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg", "opp_kp_comp_pct": "opp_kp_comp_pct",
+        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
+        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
+        "turnover_margin": "turnover_margin", "takeaways": "takeaways", "turnovers_lost": "turnovers_lost",
+        "penalty_yards": "penalty_yards", "opp_penalties": "opp_penalties",
     }
     sort_key = valid_sorts.get(sort, "total_yards")
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+    reverse = sort_key not in _LOWER_IS_BETTER
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
 
     divisions = sorted(season.config.divisions.keys()) if season.config.divisions else []
 
@@ -3289,33 +3413,53 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
     tier_list = sorted(season.tier_seasons.keys())
 
     # Full aggregate — same logic as pro_team_stats
+    # Collects both offensive (own) and defensive (opponent) stats
     team_agg = {}
+    _WVL_INIT = {
+        "games": 0,
+        "points_for": 0.0, "points_against": 0.0,
+        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+        "pr_yards": 0, "pr_count": 0, "pr_tds": 0, "muffs": 0,
+        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+        "fumbles": 0, "tod": 0, "opp_fumbles": 0, "opp_tod": 0,
+        "penalties": 0, "penalty_yards": 0, "opp_penalties": 0, "opp_penalty_yards": 0,
+        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
+        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
+        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+        "viper_eff_n": 0, "team_rating_n": 0,
+        "down_4_att": 0, "down_4_conv": 0,
+        "down_5_att": 0, "down_5_conv": 0,
+        "down_6_att": 0, "down_6_conv": 0,
+    }
     for week_num, week_games in tier_season.results.items():
         for matchup_key, game in week_games.items():
             result = game.get("result", {})
             stats = result.get("stats", {})
-            for side in ("home", "away"):
+            for side, opp_side in [("home", "away"), ("away", "home")]:
                 t_key = game.get(f"{side}_key", "")
                 t_name = game.get(f"{side}_name", t_key)
                 s = stats.get(side)
+                opp_s = stats.get(opp_side)
                 if not s or not t_key:
                     continue
                 if t_key not in team_agg:
-                    team_agg[t_key] = {
-                        "team_key": t_key, "team": t_name, "games": 0,
-                        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-                        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-                        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-                        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-                        "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
-                        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
-                        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-                        "viper_eff_n": 0, "team_rating_n": 0,
-                    }
+                    team_agg[t_key] = {"team_key": t_key, "team": t_name, **{k: v for k, v in _WVL_INIT.items()}}
                 a = team_agg[t_key]
                 a["games"] += 1
+                my_score = game.get(f"{side}_score", 0) or 0
+                opp_score = game.get(f"{opp_side}_score", 0) or 0
+                a["points_for"] += my_score
+                a["points_against"] += opp_score
                 a["total_yards"] += s.get("total_yards", 0)
                 a["total_plays"] += s.get("total_plays", 0)
                 a["touchdowns"] += s.get("touchdowns", 0)
@@ -3334,6 +3478,37 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
                 a["dk_att"] += s.get("drop_kicks_attempted", 0)
                 a["pk_made"] += s.get("place_kicks_made", 0)
                 a["pk_att"] += s.get("place_kicks_attempted", 0)
+                a["kr_yards"] += s.get("kick_return_yards", 0)
+                a["kr_count"] += s.get("kick_returns", 0)
+                a["kr_tds"] += s.get("kick_return_tds", 0)
+                a["pr_yards"] += s.get("punt_return_yards", 0)
+                a["pr_count"] += s.get("punt_returns", 0)
+                a["pr_tds"] += s.get("punt_return_tds", 0)
+                a["muffs"] += s.get("muffs", 0)
+                if opp_s:
+                    a["opp_total_yards"] += opp_s.get("total_yards", 0)
+                    a["opp_total_plays"] += opp_s.get("total_plays", 0)
+                    a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
+                    a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
+                    a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
+                    a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
+                    a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
+                    a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
+                    a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
+                    a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
+                    a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
+                    a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
+                    a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
+                    a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
+                    a["opp_kr_count"] += opp_s.get("kick_returns", 0)
+                    a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
+                    a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
+                    a["opp_pr_count"] += opp_s.get("punt_returns", 0)
+                    a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
+                    a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
+                    a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
+                    a["opp_penalties"] += opp_s.get("penalties", 0)
+                    a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
                 a["fumbles"] += s.get("fumbles_lost", 0)
                 a["tod"] += s.get("turnovers_on_downs", 0)
                 a["penalties"] += s.get("penalties", 0)
@@ -3358,10 +3533,18 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
                 if tr is not None:
                     a["team_rating_sum"] += tr
                     a["team_rating_n"] += 1
+                dc = s.get("down_conversions", {})
+                for d in [4, 5, 6]:
+                    dd = dc.get(d, dc.get(str(d), {}))
+                    a[f"down_{d}_att"] += dd.get("attempts", 0)
+                    a[f"down_{d}_conv"] += dd.get("converted", 0)
 
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["ppg"] = round(t["points_for"] / n, 1)
+        t["opp_ppg"] = round(t["points_against"] / n, 1)
+        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
         t["total_yards"] = int(round(t["total_yards"]))
         t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
@@ -3369,11 +3552,40 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         t["delta_yards"] = int(round(t.get("delta_yards", 0)))
         t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
+        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
+        t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
+        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
+        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
+        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
+        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
+        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
+        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
+        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
+        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
+        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
+        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
+        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
+        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
+        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
+        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
+        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
+        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
+        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
+        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
+        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+        for d in [4, 5, 6]:
+            att = t[f"down_{d}_att"]
+            conv = t[f"down_{d}_conv"]
+            t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
+        t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         rec = tier_season.standings.get(t["team_key"])
         if rec:
             t["wins"] = rec.wins
@@ -3382,6 +3594,12 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
             t["wins"] = 0
             t["losses"] = 0
 
+    _LOWER_IS_BETTER = {
+        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
+        "opp_rushing_yards", "opp_avg_rushing", "opp_kp_yards", "opp_kp_ypg",
+        "opp_kp_comp_pct", "opp_touchdowns", "opp_st_return_yards", "opp_kr_avg",
+        "turnovers_lost",
+    }
     valid_sorts = {
         "total_yards": "total_yards", "avg_yards": "avg_yards",
         "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
@@ -3391,9 +3609,19 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         "delta_yards": "delta_yards", "fumbles": "fumbles",
         "penalties": "penalties", "yards_per_play": "yards_per_play",
         "bonus_possessions": "bonus_possessions",
+        "ppg": "ppg", "scoring_margin": "scoring_margin", "opp_ppg": "opp_ppg",
+        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
+        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
+        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
+        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg",
+        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
+        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
+        "turnover_margin": "turnover_margin", "takeaways": "takeaways", "turnovers_lost": "turnovers_lost",
+        "penalty_yards": "penalty_yards", "opp_penalties": "opp_penalties",
     }
     sort_key = valid_sorts.get(sort, "total_yards")
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+    reverse = sort_key not in _LOWER_IS_BETTER
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
 
     return templates.TemplateResponse("wvl/team_stats.html", _ctx(
         request, section="wvl", session_id=session_id,

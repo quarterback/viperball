@@ -32,77 +32,584 @@
 </div>
 {% endif %}
 
-{# Sort selector #}
-<div style="margin-bottom:16px; font-size:11px;">
-  <strong>Sort by:</strong>
-  {% for label, key in [
-    ('Total Yards', 'total_yards'), ('Avg Yards', 'avg_yards'), ('YPP', 'yards_per_play'),
-    ('TDs', 'touchdowns'), ('Rushing', 'rushing_yards'), ('Kick-Pass', 'kp_yards'),
-    ('Laterals', 'lateral_yards'), ('EPA', 'epa'), ('EPA/G', 'avg_epa'),
-    ('Rating', 'avg_team_rating'), ('Viper Eff', 'avg_viper_eff'),
-    ('Delta Yds', 'delta_yards'), ('Bonus Poss', 'bonus_possessions'),
-    ('Fumbles', 'fumbles'), ('Penalties', 'penalties'),
+{# ── URL helper ── #}
+{% set base_url = "/stats/pro/" ~ league ~ "/" ~ session_id ~ "/team-stats" %}
+{% macro sort_url(key) %}{{ base_url }}?sort={{ key }}{% if division %}&division={{ division }}{% endif %}{% endmacro %}
+
+{# ── Category mapping ── #}
+{% set tab = sort %}
+{% set cat_map = {
+  'ppg': 'scoring_off', 'scoring_margin': 'scoring_off',
+  'total_yards': 'total_off', 'avg_yards': 'total_off', 'yards_per_play': 'total_off', 'touchdowns': 'total_off',
+  'rushing_yards': 'rushing_off', 'kp_yards': 'kp_off', 'lateral_yards': 'kp_off',
+  'st_return_yards': 'st_off', 'kr_avg': 'st_off', 'pr_avg': 'st_off',
+  'opp_ppg': 'scoring_def',
+  'opp_total_yards': 'total_def', 'opp_avg_yards': 'total_def', 'opp_yards_per_play': 'total_def', 'opp_touchdowns': 'total_def',
+  'opp_rushing_yards': 'rushing_def', 'opp_avg_rushing': 'rushing_def',
+  'opp_kp_yards': 'kp_def', 'opp_kp_ypg': 'kp_def', 'opp_kp_comp_pct': 'kp_def',
+  'opp_st_return_yards': 'st_def', 'opp_kr_avg': 'st_def',
+  'turnover_margin': 'turnovers', 'takeaways': 'turnovers', 'turnovers_lost': 'turnovers',
+  'penalties': 'penalties', 'penalty_yards': 'penalties', 'opp_penalties': 'penalties',
+  'epa': 'efficiency', 'avg_epa': 'efficiency', 'avg_team_rating': 'efficiency', 'avg_viper_eff': 'efficiency',
+  'delta_yards': 'delta', 'bonus_possessions': 'bonus', 'fumbles': 'turnovers',
+} %}
+{% set active_cat = cat_map.get(sort, 'scoring_off') %}
+
+{# ── Category tabs ── #}
+<div style="margin-bottom:4px;font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Team Stats</div>
+<div class="tabs" style="margin-bottom:4px;">
+  {% for label, cat, default_sort in [
+    ('Scoring Offense', 'scoring_off', 'ppg'),
+    ('Total Offense', 'total_off', 'total_yards'),
+    ('Rushing Offense', 'rushing_off', 'rushing_yards'),
+    ('Kick-Pass Offense', 'kp_off', 'kp_yards'),
+    ('Special Teams OFF', 'st_off', 'st_return_yards'),
   ] %}
-  {% if not loop.first %}&middot; {% endif %}
-  <a href="/stats/pro/{{ league }}/{{ session_id }}/team-stats?sort={{ key }}{% if division %}&division={{ division }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  <a href="{{ sort_url(default_sort) }}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div class="tabs" style="margin-bottom:16px;">
+  {% for label, cat, default_sort in [
+    ('Scoring Defense', 'scoring_def', 'opp_ppg'),
+    ('Total Defense', 'total_def', 'opp_total_yards'),
+    ('Rushing Defense', 'rushing_def', 'opp_rushing_yards'),
+    ('Kick-Pass Defense', 'kp_def', 'opp_kp_yards'),
+    ('Special Teams DEF', 'st_def', 'opp_st_return_yards'),
+    ('Turnovers', 'turnovers', 'turnover_margin'),
+    ('Penalties', 'penalties', 'penalties'),
+  ] %}
+  <a href="{{ sort_url(default_sort) }}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="margin-bottom:4px;font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Viperball Analytics</div>
+<div class="tabs" style="margin-bottom:16px;">
+  {% for label, cat, default_sort in [
+    ('Efficiency', 'efficiency', 'epa'),
+    ('Delta System', 'delta', 'delta_yards'),
+    ('Bonus Poss', 'bonus', 'bonus_possessions'),
+  ] %}
+  <a href="{{ sort_url(default_sort) }}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
   {% endfor %}
 </div>
 
-{% if teams %}
-<div style="overflow-x:auto;">
-<table>
-  <thead>
-    <tr>
-      <th class="num">#</th>
-      <th>Team</th>
-      <th>Div</th>
-      <th>W-L</th>
-      <th class="num">GP</th>
-      <th class="num">YDS</th>
-      <th class="num">Y/G</th>
-      <th class="num">YPP</th>
-      <th class="num">TD</th>
-      <th class="num">RUSH</th>
-      <th class="num">KP</th>
-      <th class="num">KP%</th>
-      <th class="num">LAT</th>
-      <th class="num">EPA</th>
-      <th class="num">E/G</th>
-      <th class="num">RTG</th>
-      <th class="num">VE</th>
-      <th class="num">&Delta;Y</th>
-      <th class="num">FUM</th>
-      <th class="num">PEN</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for t in teams %}
-  <tr>
-    <td class="num rank">{{ loop.index }}</td>
+{# ── Helper: team row start ── #}
+{% macro team_row(t, rank) %}
+    <td class="num rank">{{ rank }}</td>
     <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ t.team_key }}">{{ t.team }}</a></td>
     <td style="font-size:10px;">{{ t.division[:12] if t.division else '—' }}</td>
     <td class="record"><span class="w">{{ t.wins }}</span>-<span class="l">{{ t.losses }}</span></td>
     <td class="num">{{ t.games }}</td>
-    <td class="num {% if sort == 'total_yards' %}stat-good{% endif %}">{{ t.total_yards }}</td>
-    <td class="num {% if sort == 'avg_yards' %}stat-good{% endif %}">{{ t.avg_yards }}</td>
-    <td class="num {% if sort == 'yards_per_play' %}stat-good{% endif %}">{{ t.yards_per_play }}</td>
-    <td class="num {% if sort == 'touchdowns' %}stat-good{% endif %}">{{ t.touchdowns }}</td>
-    <td class="num {% if sort == 'rushing_yards' %}stat-good{% endif %}">{{ t.rushing_yards }}</td>
-    <td class="num {% if sort == 'kp_yards' %}stat-good{% endif %}">{{ t.kp_yards }}</td>
-    <td class="num">{{ t.kp_comp_pct }}%</td>
-    <td class="num {% if sort == 'lateral_yards' %}stat-good{% endif %}">{{ t.lateral_yards }}</td>
-    <td class="num {% if sort == 'epa' %}stat-good{% elif t.epa < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.epa) }}</td>
-    <td class="num {% if sort == 'avg_epa' %}stat-good{% elif t.avg_epa < 0 %}stat-bad{% endif %}">{{ t.avg_epa }}</td>
-    <td class="num {% if sort == 'avg_team_rating' %}stat-good{% elif t.avg_team_rating >= 70 %}stat-elite{% elif t.avg_team_rating >= 55 %}stat-good{% endif %}">{{ t.avg_team_rating }}</td>
-    <td class="num {% if sort == 'avg_viper_eff' %}stat-good{% endif %}">{{ t.avg_viper_eff }}</td>
-    <td class="num {% if sort == 'delta_yards' %}stat-good{% elif t.delta_yards > 0 %}stat-good{% elif t.delta_yards < 0 %}stat-bad{% endif %}">{{ t.delta_yards }}</td>
-    <td class="num {% if sort == 'fumbles' %}stat-good{% elif t.fumbles >= 5 %}stat-bad{% endif %}">{{ t.fumbles }}</td>
-    <td class="num {% if sort == 'penalties' %}stat-good{% elif t.penalties >= 20 %}stat-bad{% endif %}">{{ t.penalties }}</td>
+{% endmacro %}
+
+{% if teams %}
+
+{# ═══════════════ SCORING OFFENSE ═══════════════ #}
+{% if active_cat == 'scoring_off' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Points/G', 'ppg'), ('Margin', 'scoring_margin')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">PTS</th><th class="num">PTS/G</th><th class="num">OPP PTS</th><th class="num">OPP/G</th>
+    <th class="num">MARGIN</th><th class="num">TD</th><th class="num">DK</th><th class="num">PK</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num">{{ '%.1f'|format(t.points_for) }}</td>
+    <td class="num {% if sort == 'ppg' %}stat-good{% endif %}">{{ t.ppg }}</td>
+    <td class="num">{{ '%.1f'|format(t.points_against) }}</td>
+    <td class="num">{{ t.opp_ppg }}</td>
+    <td class="num {% if sort == 'scoring_margin' %}stat-good{% endif %} {% if t.scoring_margin > 0 %}stat-good{% elif t.scoring_margin < 0 %}stat-bad{% endif %}">{{ '%+.1f'|format(t.scoring_margin) }}</td>
+    <td class="num">{{ t.touchdowns }}</td>
+    <td class="num">{{ t.dk_made }}/{{ t.dk_att }}</td>
+    <td class="num">{{ t.pk_made }}/{{ t.pk_att }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% endif %}
+
+{# ═══════════════ TOTAL OFFENSE ═══════════════ #}
+{% if active_cat == 'total_off' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Total Yards', 'total_yards'), ('Avg Yards', 'avg_yards'), ('YPP', 'yards_per_play'), ('TDs', 'touchdowns')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">YDS</th><th class="num">Y/G</th><th class="num">YPP</th><th class="num">PLAYS</th>
+    <th class="num">TD</th><th class="num">RUSH</th><th class="num">KP YDS</th><th class="num">LAT YDS</th>
+    <th class="num">DK</th><th class="num">PK</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'total_yards' %}stat-good{% endif %}">{{ t.total_yards }}</td>
+    <td class="num {% if sort == 'avg_yards' %}stat-good{% endif %}">{{ t.avg_yards }}</td>
+    <td class="num {% if sort == 'yards_per_play' %}stat-good{% endif %}">{{ t.yards_per_play }}</td>
+    <td class="num">{{ t.total_plays }}</td>
+    <td class="num {% if sort == 'touchdowns' %}stat-good{% endif %}">{{ t.touchdowns }}</td>
+    <td class="num">{{ t.rushing_yards }}</td>
+    <td class="num">{{ t.kp_yards }}</td>
+    <td class="num">{{ t.lateral_yards }}</td>
+    <td class="num">{{ t.dk_made }}/{{ t.dk_att }}</td>
+    <td class="num">{{ t.pk_made }}/{{ t.pk_att }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ RUSHING OFFENSE ═══════════════ #}
+{% if active_cat == 'rushing_off' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">RUSH YDS</th><th class="num">R/G</th><th class="num">CAR</th>
+    <th class="num">YPC</th><th class="num">RUSH TD</th>
+    <th class="num">TOTAL YDS</th><th class="num">TD</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.rushing_yards }}</td>
+    <td class="num">{{ t.avg_rushing }}</td>
+    <td class="num">{{ t.rushing_carries }}</td>
+    <td class="num">{{ t.yards_per_carry }}</td>
+    <td class="num">{{ t.rushing_tds }}</td>
+    <td class="num">{{ t.total_yards }}</td>
+    <td class="num">{{ t.touchdowns }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ KICK-PASS OFFENSE ═══════════════ #}
+{% if active_cat == 'kp_off' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('KP Yards', 'kp_yards'), ('Lateral Yards', 'lateral_yards')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">KP YDS</th><th class="num">KP/G</th><th class="num">COMP</th><th class="num">ATT</th>
+    <th class="num">KP%</th><th class="num">KP TD</th><th class="num">INT</th>
+    <th class="num">LAT YDS</th><th class="num">CHAINS</th><th class="num">LAT%</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'kp_yards' %}stat-good{% endif %}">{{ t.kp_yards }}</td>
+    <td class="num">{{ t.kp_ypg }}</td>
+    <td class="num">{{ t.kp_comp }}</td>
+    <td class="num">{{ t.kp_att }}</td>
+    <td class="num">{{ t.kp_comp_pct }}%</td>
+    <td class="num">{{ t.kp_tds }}</td>
+    <td class="num {% if t.kp_ints >= 5 %}stat-bad{% endif %}">{{ t.kp_ints }}</td>
+    <td class="num {% if sort == 'lateral_yards' %}stat-good{% endif %}">{{ t.lateral_yards }}</td>
+    <td class="num">{{ t.lateral_chains }}</td>
+    <td class="num">{{ t.lateral_pct }}%</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ SPECIAL TEAMS OFFENSE ═══════════════ #}
+{% if active_cat == 'st_off' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Return Yards', 'st_return_yards'), ('KR Avg', 'kr_avg'), ('PR Avg', 'pr_avg')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">RET YDS</th><th class="num">RET TD</th>
+    <th class="num">KR</th><th class="num">KR YDS</th><th class="num">KR AVG</th><th class="num">KR TD</th>
+    <th class="num">PR</th><th class="num">PR YDS</th><th class="num">PR AVG</th><th class="num">PR TD</th>
+    <th class="num">MUFFS</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'st_return_yards' %}stat-good{% endif %}">{{ t.st_return_yards }}</td>
+    <td class="num {% if t.st_return_tds > 0 %}stat-elite{% endif %}">{{ t.st_return_tds }}</td>
+    <td class="num">{{ t.kr_count }}</td>
+    <td class="num">{{ t.kr_yards }}</td>
+    <td class="num {% if sort == 'kr_avg' %}stat-good{% endif %}">{{ t.kr_avg }}</td>
+    <td class="num {% if t.kr_tds > 0 %}stat-elite{% endif %}">{{ t.kr_tds }}</td>
+    <td class="num">{{ t.pr_count }}</td>
+    <td class="num">{{ t.pr_yards }}</td>
+    <td class="num {% if sort == 'pr_avg' %}stat-good{% endif %}">{{ t.pr_avg }}</td>
+    <td class="num {% if t.pr_tds > 0 %}stat-elite{% endif %}">{{ t.pr_tds }}</td>
+    <td class="num {% if t.muffs > 0 %}stat-bad{% endif %}">{{ t.muffs }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ SCORING DEFENSE ═══════════════ #}
+{% if active_cat == 'scoring_def' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">OPP PTS</th><th class="num">OPP/G</th><th class="num">PTS/G</th>
+    <th class="num">MARGIN</th><th class="num">OPP TD</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num">{{ '%.1f'|format(t.points_against) }}</td>
+    <td class="num stat-good">{{ t.opp_ppg }}</td>
+    <td class="num">{{ t.ppg }}</td>
+    <td class="num {% if t.scoring_margin > 0 %}stat-good{% elif t.scoring_margin < 0 %}stat-bad{% endif %}">{{ '%+.1f'|format(t.scoring_margin) }}</td>
+    <td class="num">{{ t.opp_touchdowns }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ TOTAL DEFENSE ═══════════════ #}
+{% if active_cat == 'total_def' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Total Yards', 'opp_total_yards'), ('Avg Yards', 'opp_avg_yards'), ('YPP', 'opp_yards_per_play'), ('TDs Allowed', 'opp_touchdowns')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">OPP YDS</th><th class="num">OPP Y/G</th><th class="num">OPP YPP</th><th class="num">OPP PLAYS</th>
+    <th class="num">OPP TD</th><th class="num">OPP RUSH</th><th class="num">OPP KP</th><th class="num">OPP LAT</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'opp_total_yards' %}stat-good{% endif %}">{{ t.opp_total_yards }}</td>
+    <td class="num {% if sort == 'opp_avg_yards' %}stat-good{% endif %}">{{ t.opp_avg_yards }}</td>
+    <td class="num {% if sort == 'opp_yards_per_play' %}stat-good{% endif %}">{{ t.opp_yards_per_play }}</td>
+    <td class="num">{{ t.opp_total_plays }}</td>
+    <td class="num {% if sort == 'opp_touchdowns' %}stat-good{% endif %}">{{ t.opp_touchdowns }}</td>
+    <td class="num">{{ t.opp_rushing_yards }}</td>
+    <td class="num">{{ t.opp_kp_yards }}</td>
+    <td class="num">{{ t.opp_lateral_yards }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ RUSHING DEFENSE ═══════════════ #}
+{% if active_cat == 'rushing_def' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Rush Yards Allowed', 'opp_rushing_yards'), ('Rush Y/G', 'opp_avg_rushing')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">OPP RUSH</th><th class="num">OPP R/G</th><th class="num">OPP CAR</th>
+    <th class="num">OPP YPC</th><th class="num">OPP RTD</th>
+    <th class="num">OPP YDS</th><th class="num">OPP TD</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.opp_rushing_yards }}</td>
+    <td class="num {% if sort == 'opp_avg_rushing' %}stat-good{% endif %}">{{ t.opp_avg_rushing }}</td>
+    <td class="num">{{ t.opp_rushing_carries }}</td>
+    <td class="num">{{ t.opp_yards_per_carry }}</td>
+    <td class="num">{{ t.opp_rushing_tds }}</td>
+    <td class="num">{{ t.opp_total_yards }}</td>
+    <td class="num">{{ t.opp_touchdowns }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ KICK-PASS DEFENSE ═══════════════ #}
+{% if active_cat == 'kp_def' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('KP Yards Allowed', 'opp_kp_yards'), ('KP Y/G', 'opp_kp_ypg'), ('OPP KP%', 'opp_kp_comp_pct')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">OPP KP</th><th class="num">OPP KP/G</th><th class="num">OPP COMP</th><th class="num">OPP ATT</th>
+    <th class="num">OPP KP%</th><th class="num">OPP KP TD</th><th class="num">OPP INT</th>
+    <th class="num">OPP LAT</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.opp_kp_yards }}</td>
+    <td class="num {% if sort == 'opp_kp_ypg' %}stat-good{% endif %}">{{ t.opp_kp_ypg }}</td>
+    <td class="num">{{ t.opp_kp_comp }}</td>
+    <td class="num">{{ t.opp_kp_att }}</td>
+    <td class="num {% if sort == 'opp_kp_comp_pct' %}stat-good{% endif %}">{{ t.opp_kp_comp_pct }}%</td>
+    <td class="num">{{ t.opp_kp_tds }}</td>
+    <td class="num {% if t.opp_kp_ints >= 5 %}stat-elite{% endif %}">{{ t.opp_kp_ints }}</td>
+    <td class="num">{{ t.opp_lateral_yards }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ SPECIAL TEAMS DEFENSE ═══════════════ #}
+{% if active_cat == 'st_def' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Opp Return Yds', 'opp_st_return_yards'), ('Opp KR Avg', 'opp_kr_avg')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">OPP RET</th><th class="num">OPP RTD</th>
+    <th class="num">OPP KR</th><th class="num">OPP KR YDS</th><th class="num">OPP KR AVG</th><th class="num">OPP KR TD</th>
+    <th class="num">OPP PR</th><th class="num">OPP PR YDS</th><th class="num">OPP PR AVG</th><th class="num">OPP PR TD</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.opp_st_return_yards }}</td>
+    <td class="num {% if t.opp_st_return_tds > 0 %}stat-bad{% endif %}">{{ t.opp_st_return_tds }}</td>
+    <td class="num">{{ t.opp_kr_count }}</td>
+    <td class="num">{{ t.opp_kr_yards }}</td>
+    <td class="num {% if sort == 'opp_kr_avg' %}stat-good{% endif %}">{{ t.opp_kr_avg }}</td>
+    <td class="num {% if t.opp_kr_tds > 0 %}stat-bad{% endif %}">{{ t.opp_kr_tds }}</td>
+    <td class="num">{{ t.opp_pr_count }}</td>
+    <td class="num">{{ t.opp_pr_yards }}</td>
+    <td class="num">{{ t.opp_pr_avg }}</td>
+    <td class="num {% if t.opp_pr_tds > 0 %}stat-bad{% endif %}">{{ t.opp_pr_tds }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ TURNOVERS ═══════════════ #}
+{% if active_cat == 'turnovers' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Margin', 'turnover_margin'), ('Takeaways', 'takeaways'), ('Turnovers Lost', 'turnovers_lost'), ('Fumbles', 'fumbles')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">MARGIN</th>
+    <th class="num">TAKEAWAYS</th><th class="num">OPP FUM</th><th class="num">OPP TOD</th><th class="num">OPP INT</th>
+    <th class="num">LOST</th><th class="num">FUM</th><th class="num">TOD</th><th class="num">INT</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'turnover_margin' %}stat-good{% endif %} {% if t.turnover_margin > 0 %}stat-good{% elif t.turnover_margin < 0 %}stat-bad{% endif %}">{{ '%+d'|format(t.turnover_margin) }}</td>
+    <td class="num {% if sort == 'takeaways' %}stat-good{% endif %}">{{ t.takeaways }}</td>
+    <td class="num">{{ t.opp_fumbles }}</td>
+    <td class="num">{{ t.opp_tod }}</td>
+    <td class="num">{{ t.opp_kp_ints }}</td>
+    <td class="num {% if sort == 'turnovers_lost' %}stat-good{% endif %}">{{ t.turnovers_lost }}</td>
+    <td class="num">{{ t.fumbles }}</td>
+    <td class="num">{{ t.tod }}</td>
+    <td class="num">{{ t.kp_ints }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ PENALTIES ═══════════════ #}
+{% if active_cat == 'penalties' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Penalties', 'penalties'), ('Penalty Yards', 'penalty_yards'), ('Opp Penalties', 'opp_penalties')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">PEN</th><th class="num">PEN/G</th><th class="num">PEN YDS</th><th class="num">PY/G</th>
+    <th class="num">OPP PEN</th><th class="num">OPP PEN/G</th><th class="num">OPP PY</th><th class="num">OPP PY/G</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'penalties' %}stat-good{% endif %}">{{ t.penalties }}</td>
+    <td class="num">{{ '%.1f'|format(t.penalties / [t.games, 1]|max) }}</td>
+    <td class="num {% if sort == 'penalty_yards' %}stat-good{% endif %}">{{ t.penalty_yards }}</td>
+    <td class="num">{{ '%.1f'|format(t.penalty_yards / [t.games, 1]|max) }}</td>
+    <td class="num {% if sort == 'opp_penalties' %}stat-good{% endif %}">{{ t.opp_penalties }}</td>
+    <td class="num">{{ '%.1f'|format(t.opp_penalties / [t.games, 1]|max) }}</td>
+    <td class="num">{{ t.opp_penalty_yards }}</td>
+    <td class="num">{{ '%.1f'|format(t.opp_penalty_yards / [t.games, 1]|max) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ EFFICIENCY ═══════════════ #}
+{% if active_cat == 'efficiency' %}
+<div style="margin-bottom:8px; font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('EPA', 'epa'), ('EPA/G', 'avg_epa'), ('Rating', 'avg_team_rating'), ('Viper Eff', 'avg_viper_eff')] %}
+  {% if not loop.first %}&middot; {% endif %}
+  <a href="{{ sort_url(key) }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">EPA</th><th class="num">EPA/G</th><th class="num">RTG</th><th class="num">VE</th>
+    <th class="num">YPP</th>
+    <th class="num">4D ATT</th><th class="num">4D%</th>
+    <th class="num">5D ATT</th><th class="num">5D%</th>
+    <th class="num">6D ATT</th><th class="num">6D%</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if sort == 'epa' %}stat-good{% elif t.epa < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.epa) }}</td>
+    <td class="num {% if sort == 'avg_epa' %}stat-good{% elif t.avg_epa < 0 %}stat-bad{% endif %}">{{ t.avg_epa }}</td>
+    <td class="num {% if sort == 'avg_team_rating' %}stat-good{% elif t.avg_team_rating >= 70 %}stat-elite{% elif t.avg_team_rating >= 55 %}stat-good{% endif %}">{{ t.avg_team_rating }}</td>
+    <td class="num {% if sort == 'avg_viper_eff' %}stat-good{% endif %}">{{ t.avg_viper_eff }}</td>
+    <td class="num">{{ t.yards_per_play }}</td>
+    <td class="num">{{ t.down_4_att }}</td>
+    <td class="num">{{ t.down_4_rate }}%</td>
+    <td class="num">{{ t.down_5_att }}</td>
+    <td class="num">{{ t.down_5_rate }}%</td>
+    <td class="num">{{ t.down_6_att }}</td>
+    <td class="num">{{ t.down_6_rate }}%</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ DELTA SYSTEM ═══════════════ #}
+{% if active_cat == 'delta' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">&Delta; YDS</th><th class="num">&Delta; DRIVES</th><th class="num">&Delta; SCORES</th>
+    <th class="num">KILL%</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num {% if t.delta_yards > 0 %}stat-good{% elif t.delta_yards < 0 %}stat-bad{% endif %}">{{ t.delta_yards }}</td>
+    <td class="num">{{ t.delta_drives }}</td>
+    <td class="num">{{ t.delta_scores }}</td>
+    <td class="num">{{ t.kill_rate if t.kill_rate is not none else '—' }}{% if t.kill_rate is not none %}%{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ═══════════════ BONUS POSSESSIONS ═══════════════ #}
+{% if active_cat == 'bonus' %}
+<div style="overflow-x:auto;">
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Team</th><th>Div</th><th>W-L</th><th class="num">GP</th>
+    <th class="num">BONUS POSS</th><th class="num">BONUS YDS</th><th class="num">BONUS SCORES</th>
+  </tr></thead>
+  <tbody>
+  {% for t in teams %}
+  <tr>
+    {{ team_row(t, loop.index) }}
+    <td class="num stat-good">{{ t.bonus_possessions }}</td>
+    <td class="num">{{ t.bonus_yards }}</td>
+    <td class="num">{{ t.bonus_scores }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 {% else %}
 <p class="empty">No team stats available yet. Simulate some games first.</p>
 {% endif %}
