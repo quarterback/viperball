@@ -1293,6 +1293,9 @@ class Player:
     # ERA tracking — points/completions allowed while in coverage
     game_points_allowed_in_coverage: float = 0.0
     game_completions_allowed_in_coverage: int = 0
+    # Snap counts
+    game_offensive_snaps: int = 0
+    game_defensive_snaps: int = 0
     game_lateral_receptions: int = 0
     game_lateral_assists: int = 0
     game_lateral_tds: int = 0
@@ -3505,6 +3508,22 @@ class ViperballEngine:
         fallback = [p for p in team.players if p.name not in unavailable]
         return fallback[:8] if fallback else team.players[:8]
 
+    def _credit_snap_counts(self):
+        """Credit offensive and defensive snap counts to all on-field players."""
+        off_team = self.get_offensive_team()
+        def_team = self.get_defensive_team()
+        off_unavail = self._unavailable_in_game(off_team)
+        def_unavail = self._unavailable_in_game(def_team)
+        for p in off_team.players:
+            if p.name not in off_unavail:
+                p.game_offensive_snaps += 1
+        for p in def_team.players:
+            if p.name not in def_unavail:
+                p.game_defensive_snaps += 1
+                # Keepers get coverage snap credit on every defensive snap
+                if p.position in ("Keeper",):
+                    p.game_coverage_snaps += 1
+
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
         unavailable = self._unavailable_in_game(team)
@@ -5354,6 +5373,11 @@ class ViperballEngine:
         play_family = self.select_play_family(formation=self._current_formation)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
+        # Track who started with possession for ERA attribution
+        self._play_start_possession = self.state.possession
+        # Credit snap counts before the play resolves
+        self._credit_snap_counts()
+
         play = self._dispatch_play(play_type, play_family)
         # Stamp formation on the play object and prepend to description
         formation = self._current_formation
@@ -6972,6 +6996,12 @@ class ViperballEngine:
         off_chance -= turnover_bonus * 0.10
         off_chance = max(0.0, off_chance)
         if random.random() >= off_chance:
+            # Credit bell to a specific defender (keepers get priority)
+            unavail = self._unavailable_in_game(def_team)
+            keepers = [p for p in def_team.players if p.position == "Keeper" and p.name not in unavail]
+            if keepers:
+                bell_player = random.choice(keepers)
+                bell_player.game_keeper_bells += 1
             return 'defense', True
         else:
             return 'offense', False
@@ -7738,6 +7768,8 @@ class ViperballEngine:
         def_team_for_tackle = self.get_defensive_team()
         tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
         tackler.game_tackles += 1
+        if tackler.position == "Keeper":
+            tackler.game_keeper_tackles += 1
 
         # Assist tackle: ~30% of run plays involve a second defender
         if random.random() < 0.30:
@@ -9122,10 +9154,14 @@ class ViperballEngine:
             kp_def_team = self.get_defensive_team()
             kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
             kp_tackler.game_tackles += 1
+            if kp_tackler.position == "Keeper":
+                kp_tackler.game_keeper_tackles += 1
             if random.random() < 0.25:
                 kp_assist = self._pick_def_tackler(kp_def_team, total_yards)
                 if kp_assist != kp_tackler:
                     kp_assist.game_tackles += 1
+                    if kp_assist.position == "Keeper":
+                        kp_assist.game_keeper_tackles += 1
                     kp_assist.game_plays_involved += 1
                     self.drain_player_energy(kp_assist, "tackler")
             kp_tackle_red = self._tackle_reduction(kp_tackler, total_yards)
@@ -9339,6 +9375,9 @@ class ViperballEngine:
         # Incompletion — kicker and matched defender still exerted
         self.drain_player_energy(kicker, "kick_pass")
         self.drain_player_energy(matched_defender, "tackler")
+        # Kick deflection credit: ~40% of incompletions are defender-caused
+        if matched_defender and matched_defender.position == "Keeper" and random.random() < 0.40:
+            matched_defender.game_kick_deflections += 1
 
         throwing_team_inc = self.state.possession
         self.state.down += 1
@@ -10452,20 +10491,24 @@ class ViperballEngine:
             self.state.home_score += points
         else:
             self.state.away_score += points
-        # ERA tracking: attribute points allowed to defending keeper(s)
-        self._attribute_points_to_keeper(points)
+        # ERA tracking: only attribute to keeper when the scoring team
+        # is the one that started the play with possession (offensive score).
+        # Defensive scores (INT return TDs, safeties) change possession first,
+        # so self.state.possession != self._play_start_possession.
+        play_start = getattr(self, '_play_start_possession', None)
+        if play_start and self.state.possession == play_start:
+            self._attribute_points_to_keeper(points)
 
     def _attribute_points_to_keeper(self, points: float):
         """Attribute points scored against the defense to the keeper(s) on the field."""
         def_team = self.get_defensive_team()
-        injured = getattr(self, '_home_injured_in_game', set()) if def_team == self.home_team else getattr(self, '_away_injured_in_game', set())
+        unavail = self._unavailable_in_game(def_team)
         for p in def_team.players:
-            if p.name in injured:
+            if p.name in unavail:
                 continue
-            if "keeper" in p.position.lower() or "safety" in p.position.lower():
+            if p.position == "Keeper":
                 p.game_points_allowed_in_coverage += points
-                p.game_coverage_snaps += 1
-                break  # attribute to the primary keeper
+                break
 
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
@@ -11609,6 +11652,8 @@ class ViperballEngine:
                         "hurries": p.game_hurries,
                         "blocks": p.game_blocks,
                         "pancakes": p.game_pancakes,
+                        "offensive_snaps": p.game_offensive_snaps,
+                        "defensive_snaps": p.game_defensive_snaps,
                         "kick_pass_ints": p.game_kick_pass_ints,
                         "wpa": round(p.game_wpa, 2),
                         "plays_involved": p.game_plays_involved,

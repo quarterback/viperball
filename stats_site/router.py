@@ -1363,6 +1363,8 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
+        # Snap counts
+        "offensive_snaps": 0, "defensive_snaps": 0,
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
@@ -1410,6 +1412,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
                     "points_allowed_in_coverage",
                     "completions_allowed_in_coverage",
                     "blocks", "pancakes",
+                    "offensive_snaps", "defensive_snaps",
                     "wpa", "plays_involved",
                 ]:
                     season_totals[stat] += pg.get(stat, 0)
@@ -3156,6 +3159,8 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
+        # Snap counts
+        "offensive_snaps": 0, "defensive_snaps": 0,
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
@@ -3212,6 +3217,7 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                         "points_allowed_in_coverage",
                         "completions_allowed_in_coverage",
                         "blocks", "pancakes",
+                        "offensive_snaps", "defensive_snaps",
                         "wpa", "plays_involved",
                     ]:
                         season_totals[stat] += pg.get(stat, 0)

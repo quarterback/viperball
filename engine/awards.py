@@ -334,6 +334,8 @@ _AGG_COUNTING_STATS = [
     "keeper_tackles", "coverage_snaps", "muffs",
     "points_allowed_in_coverage", "completions_allowed_in_coverage",
     "kick_return_yards", "punt_return_yards",
+    "blocks", "pancakes",
+    "offensive_snaps", "defensive_snaps",
     "plays_involved",
 ]
 
@@ -384,10 +386,22 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         ypc = rush_yds / carries
         raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games
     elif group == "lineman":
+        # Two-way players: blend offensive line production with defensive disruption
+        # Offensive: blocks per snap + pancake rate
+        blocks = stats.get("blocks", 0)
+        pancakes = stats.get("pancakes", 0)
+        off_snaps = max(1, stats.get("offensive_snaps", 1))
+        block_rate = blocks / off_snaps  # typically 0.15-0.35
+        pancake_rate = pancakes / off_snaps  # typically 0.01-0.05
+        ol_score = (block_rate * 30 + pancake_rate * 80) * (games / max(1, games))
+        # Defensive: tackles, sacks, TFL per game
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games
+        dl_score = (tackles * 2 + sacks * 12 + tfl * 6) / games
+        # 40/60 blend: defensive disruption matters more but OL production
+        # ensures linemen who dominate the trenches on both sides are rewarded
+        raw = ol_score * 0.40 + dl_score * 0.60
     elif group == "keeper_def":
         # 50/50 blend of KPR (0-10, higher=better) and inverted ERA
         # (0-9.99, lower=better → invert to 0-10 higher=better)
@@ -442,7 +456,14 @@ def _format_stat_line(stats: dict, group: str) -> str:
         kpr = _compute_kpr(stats)
         era = _compute_keeper_era(stats)
         parts.append(f"{deflections} DEFL, {k_tackles} TKL, {bells} BLL, {coverage} COV | {kpr} KPR, {era:.2f} ERA")
-    elif group in ("lineman", "safety"):
+    elif group == "lineman":
+        blocks = stats.get("blocks", 0)
+        pancakes = stats.get("pancakes", 0)
+        tackles = stats.get("tackles", 0)
+        sacks = stats.get("sacks", 0)
+        tfl = stats.get("tfl", 0)
+        parts.append(f"{blocks} BLK, {pancakes} PAN, {tackles} TKL, {sacks} sacks, {tfl} TFL")
+    elif group == "safety":
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
@@ -489,7 +510,15 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
         d["muffs"] = stats.get("muffs", 0)
         d["kpr"] = _compute_kpr(stats)
         d["keeper_era"] = _compute_keeper_era(stats)
-    elif group in ("lineman", "safety"):
+    elif group == "lineman":
+        d["blocks"] = stats.get("blocks", 0)
+        d["pancakes"] = stats.get("pancakes", 0)
+        d["tackles"] = stats.get("tackles", 0)
+        d["sacks"] = stats.get("sacks", 0)
+        d["tfl"] = stats.get("tfl", 0)
+        d["offensive_snaps"] = stats.get("offensive_snaps", 0)
+        d["defensive_snaps"] = stats.get("defensive_snaps", 0)
+    elif group == "safety":
         d["tackles"] = stats.get("tackles", 0)
         d["sacks"] = stats.get("sacks", 0)
         d["tfl"] = stats.get("tfl", 0)
@@ -521,8 +550,8 @@ def _player_score(player: Player, team_perf_mult: float = 1.0) -> float:
         raw = (player.speed * 1.2 + player.lateral_skill * 1.1 + player.agility * 1.1
                + player.power * 0.9 + player.stamina * 0.9) / 5.2
     elif "lineman" in pos or "line" in pos or "wedge" in pos:
-        raw = (player.tackling * 1.6 + player.power * 1.5 + player.stamina * 1.2
-               + player.awareness * 0.9) / 5.2
+        raw = (player.tackling * 1.4 + player.power * 1.4 + player.stamina * 1.0
+               + player.awareness * 1.0) / 4.8
     elif "keeper" in pos:
         raw = (player.speed * 1.0 + player.tackling * 1.4 + player.hands * 1.2
                + player.awareness * 1.4 + player.stamina * 0.8) / 5.8
@@ -553,8 +582,8 @@ def _compute_kpr(stats: dict) -> float:
 
     Higher is better. Measures a keeper's value as captain of the
     defensive backfield: deflections (disrupting the aerial attack),
-    tackles (last-line stops), bells (loose ball recoveries worth 0.5
-    scoreboard points each), coverage involvement, minus mistakes (muffs).
+    keeper tackles (last-line stops), bells (loose ball recoveries),
+    minus mistakes (muffs).
 
     Scaled to roughly 0-10 range for a typical season.
     """
@@ -562,14 +591,11 @@ def _compute_kpr(stats: dict) -> float:
     deflections = stats.get("kick_deflections", 0)
     k_tackles = stats.get("keeper_tackles", 0)
     bells = stats.get("keeper_bells", 0)
-    coverage = stats.get("coverage_snaps", 0)
-    tackles = stats.get("tackles", 0)
     muffs = stats.get("muffs", 0)
     # Per-game composite weighted toward disruptive plays
-    raw = (deflections * 10 + k_tackles * 5 + bells * 8
-           + tackles * 2 + coverage * 0.3 - muffs * 6) / games
-    # Scale to 0-10 range
-    return round(min(10.0, max(0.0, raw / 0.8)), 1)
+    raw = (deflections * 6 + k_tackles * 3 + bells * 8 - muffs * 5) / games
+    # Scale to 0-10 range: a keeper averaging 5 impact plays/game ≈ 5.0 KPR
+    return round(min(10.0, max(0.0, raw)), 1)
 
 
 def _compute_keeper_era(stats: dict) -> float:
