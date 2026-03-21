@@ -595,6 +595,32 @@ def _wpa_tiebreak(
     return candidate_wpa > best_wpa
 
 
+def _passes_volume_gate(pstats: dict, group: str, standings: dict, team_name: str) -> bool:
+    """Check that a player played enough games and had enough volume.
+
+    Requires 80% of team games played AND position-specific minimum
+    touch/attempt thresholds to prevent tiny-sample-size rate inflation.
+    """
+    games = pstats.get("games", 0)
+    if games == 0:
+        return False
+    team_rec = standings.get(team_name)
+    team_gp = team_rec.games_played if team_rec else 0
+    if team_gp > 0 and games < team_gp * 0.8:
+        return False
+    # Minimum volume thresholds per position group
+    if group == "back":
+        if pstats.get("rush_carries", 0) < games * 2:
+            return False
+    elif group == "viper":
+        if pstats.get("yards", 0) == 0 and pstats.get("tds", 0) == 0:
+            return False
+    elif group == "zeroback":
+        if pstats.get("kick_passes_thrown", 0) < games * 2:
+            return False
+    return True
+
+
 # ──────────────────────────────────────────────
 # POSITION SLOT SELECTORS
 # ──────────────────────────────────────────────
@@ -635,12 +661,7 @@ def _best_in_position(
                 continue
             if use_stats and player.name in team_stats:
                 pstats = team_stats[player.name]
-                if pstats.get("games", 0) == 0:
-                    continue
-                # Minimum 50% of team games played
-                team_rec = standings.get(team_name)
-                team_gp = team_rec.games_played if team_rec else 0
-                if team_gp > 0 and pstats["games"] < team_gp * 0.5:
+                if not _passes_volume_gate(pstats, group_filter, standings, team_name):
                     continue
                 score = _stat_score_for_group(pstats, group_filter, mult)
                 wpa = pstats.get("wpa", 0.0)
@@ -859,11 +880,11 @@ def _select_individual_awards(
                 if position_groups and _pos_group(p.position) not in position_groups:
                     continue
                 pstats = _get_stats(t_name, p.name)
-                if pstats and pstats.get("games", 0) > 0:
-                    s = stat_score_fn(pstats, mult)
-                    wpa = pstats.get("wpa", 0.0)
-                else:
-                    continue  # require actual stats for major awards
+                group = _pos_group(p.position)
+                if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                    continue
+                s = stat_score_fn(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
                 if _wpa_tiebreak(s, wpa, best_score, best_wpa):
                     best_score = s
                     best_wpa = wpa
@@ -883,16 +904,14 @@ def _select_individual_awards(
             if f"{t_name}::{p.name}" in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                if group in ("lineman", "safety"):
-                    s = _stat_score_defense(pstats, mult)
-                else:
-                    s = _stat_score_any_offense(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
+            group = _pos_group(p.position)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if group in ("lineman", "safety"):
+                s = _stat_score_defense(pstats, mult)
             else:
-                s = _national_poy_score(p, mult)
-                wpa = 0.0
+                s = _stat_score_any_offense(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
                 best_poy_wpa = wpa
@@ -958,15 +977,14 @@ def _select_individual_awards(
                 uid = f"{t_name}::{p.name}"
                 if uid in seen:
                     continue
-                if _pos_group(p.position) not in ("lineman", "safety"):
+                group = _pos_group(p.position)
+                if group not in ("lineman", "safety"):
                     continue
                 pstats = _get_stats(t_name, p.name)
-                if pstats and pstats.get("games", 0) > 0:
-                    s = _stat_score_defense(pstats, mult)
-                    wpa = pstats.get("wpa", 0.0)
-                else:
-                    s = _defensive_score(p, mult)
-                    wpa = 0.0
+                if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                    continue
+                s = _stat_score_defense(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
                 if _wpa_tiebreak(s, wpa, best_minerva_score, best_minerva_wpa):
                     best_minerva_score = s
                     best_minerva_wpa = wpa
@@ -989,11 +1007,12 @@ def _select_individual_awards(
             if uid in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0 and pstats.get("kick_att", 0) > 0:
-                s = _stat_score_kicker(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                continue  # require actual kick attempts — no OVR fallback
+            if not pstats or not _passes_volume_gate(pstats, "kicker", standings, t_name):
+                continue
+            if pstats.get("kick_att", 0) == 0:
+                continue
+            s = _stat_score_kicker(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_k_score, best_k_wpa):
                 best_k_score = s
                 best_k_wpa = wpa
@@ -1018,14 +1037,12 @@ def _select_individual_awards(
                 continue
             if _pos_group(p.position) not in off_groups:
                 continue
+            group = _pos_group(p.position)
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
                 best_off_wpa = wpa
@@ -1048,16 +1065,14 @@ def _select_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in def_groups:
+            group = _pos_group(p.position)
+            if group not in def_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _defensive_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
                 best_def_wpa = wpa
@@ -1167,16 +1182,14 @@ def _select_conference_individual_awards(
             if f"{t_name}::{p.name}" in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                if group in ("lineman", "safety"):
-                    s = _stat_score_defense(pstats, mult)
-                else:
-                    s = _stat_score_any_offense(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
+            group = _pos_group(p.position)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if group in ("lineman", "safety"):
+                s = _stat_score_defense(pstats, mult)
             else:
-                s = _national_poy_score(p, mult)
-                wpa = 0.0
+                s = _stat_score_any_offense(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
                 best_poy_wpa = wpa
@@ -1196,16 +1209,14 @@ def _select_conference_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in off_groups:
+            group = _pos_group(p.position)
+            if group not in off_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
                 best_off_wpa = wpa
@@ -1225,16 +1236,14 @@ def _select_conference_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in def_groups:
+            group = _pos_group(p.position)
+            if group not in def_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _defensive_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
                 best_def_wpa = wpa
@@ -1255,14 +1264,12 @@ def _select_conference_individual_awards(
                 continue
             if getattr(p, "year", "") != "Freshman":
                 continue
+            group = _pos_group(p.position)
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_fresh_score, best_fresh_wpa):
                 best_fresh_score = s
                 best_fresh_wpa = wpa
