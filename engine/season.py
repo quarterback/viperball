@@ -1939,7 +1939,7 @@ class Season:
         return {name: i + 1 for i, (name, _) in enumerate(ranked)}
 
     def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
-        """Count wins against teams ranked in top 50"""
+        """Count wins against teams ranked in top 100"""
         quality = 0
         for game in self.schedule:
             if not game.completed:
@@ -1950,14 +1950,19 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
+            if opp in rankings and rankings[opp] <= 100:
                 quality += 1
         return quality
 
     def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents.
+        """Score for wins against ranked teams, weighted by opponent rank tier.
 
-        Expanded to top-50 so teams outside the top 25 still contribute to resume quality.
+        Tiers (expanded to top-100):
+          Top 5:   10 pts   — elite wins rewarded heavily
+          Top 10:   5 pts   — marquee wins
+          Top 25:   3 pts   — strong wins
+          Top 50:   2 pts   — solid wins
+          Top 100:  1 pt    — respectable wins
         """
         score = 0.0
         for game in self.schedule:
@@ -1969,22 +1974,18 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
+            if opp in rankings and rankings[opp] <= 100:
                 rank = rankings[opp]
                 if rank <= 5:
-                    score += 5.0
+                    score += 10.0
                 elif rank <= 10:
-                    score += 3.5
-                elif rank <= 15:
-                    score += 2.5
-                elif rank <= 20:
-                    score += 1.5
+                    score += 5.0
                 elif rank <= 25:
-                    score += 1.0
-                elif rank <= 35:
-                    score += 0.6
+                    score += 3.0
+                elif rank <= 50:
+                    score += 2.0
                 else:
-                    score += 0.3
+                    score += 1.0
         return score
 
     def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
@@ -2060,7 +2061,7 @@ class Season:
         Components (100-point scale):
         - Win percentage:       40 pts  (primary driver — winning matters most)
         - Strength of schedule: 15 pts
-        - Quality wins:         20 pts  (weighted by opponent rank, expanded to top-50)
+        - Quality wins:         20 pts  (weighted by opponent rank tier, expanded to top-100)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
         - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
@@ -2078,7 +2079,7 @@ class Season:
         sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
-        qw_component = min(20.0, qw_score * 4.0)
+        qw_component = min(20.0, qw_score)
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
