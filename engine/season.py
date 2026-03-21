@@ -2061,7 +2061,7 @@ class Season:
         Components (100-point scale):
         - Win percentage:       40 pts  (primary driver — winning matters most)
         - Strength of schedule: 15 pts
-        - Quality wins:         20 pts  (weighted by opponent rank tier, expanded to top-100)
+        - Quality wins:         uncapped (weighted by opponent rank tier, expanded to top-100)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
         - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
@@ -2079,7 +2079,7 @@ class Season:
         sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
-        qw_component = min(20.0, qw_score)
+        qw_component = qw_score
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
