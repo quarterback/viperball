@@ -1290,6 +1290,9 @@ class Player:
     game_fake_td_allowed: int = 0
     game_keeper_tackles: int = 0
     game_keeper_return_yards: int = 0
+    # ERA tracking — points/completions allowed while in coverage
+    game_points_allowed_in_coverage: float = 0.0
+    game_completions_allowed_in_coverage: int = 0
     game_lateral_receptions: int = 0
     game_lateral_assists: int = 0
     game_lateral_tds: int = 0
@@ -9112,6 +9115,10 @@ class ViperballEngine:
             # Kick pass "floor-spacing": successful completion spreads
             # the defense thin, reducing tackle effectiveness next play
             self._spread_thin_next_play = True
+            # ERA tracking: attribute completion to coverage defender
+            if matched_defender and ("keeper" in matched_defender.position.lower()
+                                     or "safety" in matched_defender.position.lower()):
+                matched_defender.game_completions_allowed_in_coverage += 1
             kp_def_team = self.get_defensive_team()
             kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
             kp_tackler.game_tackles += 1
@@ -10445,6 +10452,20 @@ class ViperballEngine:
             self.state.home_score += points
         else:
             self.state.away_score += points
+        # ERA tracking: attribute points allowed to defending keeper(s)
+        self._attribute_points_to_keeper(points)
+
+    def _attribute_points_to_keeper(self, points: float):
+        """Attribute points scored against the defense to the keeper(s) on the field."""
+        def_team = self.get_defensive_team()
+        injured = getattr(self, '_home_injured_in_game', set()) if def_team == self.home_team else getattr(self, '_away_injured_in_game', set())
+        for p in def_team.players:
+            if p.name in injured:
+                continue
+            if "keeper" in p.position.lower() or "safety" in p.position.lower():
+                p.game_points_allowed_in_coverage += points
+                p.game_coverage_snaps += 1
+                break  # attribute to the primary keeper
 
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
@@ -11566,6 +11587,8 @@ class ViperballEngine:
                         "coverage_snaps": p.game_coverage_snaps,
                         "keeper_tackles": p.game_keeper_tackles,
                         "keeper_return_yards": p.game_keeper_return_yards,
+                        "points_allowed_in_coverage": p.game_points_allowed_in_coverage,
+                        "completions_allowed_in_coverage": p.game_completions_allowed_in_coverage,
                         "kick_returns": p.game_kick_returns,
                         "kick_return_yards": p.game_kick_return_yards,
                         "kick_return_tds": p.game_kick_return_tds,

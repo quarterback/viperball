@@ -156,22 +156,11 @@
   <tr><td style="color:var(--fg-dim)">Rush Carries</td><td class="num">{{ season_totals.rush_carries }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Rushing Yards</td><td class="num">{{ season_totals.rushing_yards }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Rushing TDs</td><td class="num {% if season_totals.rushing_tds >= 5 %}stat-elite{% endif %}">{{ season_totals.rushing_tds }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Yards</td><td class="num">{{ season_totals.lateral_yards }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Y/Touch</td><td class="num">{{ season_totals.yards_per_touch }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Fumbles</td><td class="num {% if season_totals.fumbles > 3 %}stat-bad{% endif %}">{{ season_totals.fumbles }}</td></tr>
-  </tbody>
-</table>
-{% endif %}
-
-{# ── Lateral Chain ── #}
-{% if season_totals.laterals_thrown > 0 or season_totals.lateral_receptions > 0 %}
-<h3 style="margin:10px 0 4px;font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Lateral Chain</h3>
-<table>
-  <tbody>
-  <tr><td style="color:var(--fg-dim);width:160px">Laterals Thrown</td><td class="num">{{ season_totals.laterals_thrown }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Receptions</td><td class="num">{{ season_totals.lateral_receptions }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Assists</td><td class="num">{{ season_totals.lateral_assists }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral TDs</td><td class="num {% if season_totals.lateral_tds > 0 %}stat-elite{% endif %}">{{ season_totals.lateral_tds }}</td></tr>
+  {% if season_totals.laterals_thrown > 0 or season_totals.lateral_receptions > 0 %}
+  <tr><td style="color:var(--fg-dim)">Laterals</td><td class="num">{{ season_totals.laterals_thrown }} thrown, {{ season_totals.lateral_receptions }} rec{% if season_totals.lateral_tds > 0 %}, {{ season_totals.lateral_tds }} TD{% endif %}</td></tr>
+  {% endif %}
   </tbody>
 </table>
 {% endif %}
@@ -248,10 +237,19 @@
 <h3 style="margin:10px 0 4px;font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Keeper</h3>
 <table>
   <tbody>
+  {% if season_totals.coverage_snaps >= 10 %}
+  <tr><td style="color:var(--fg-dim);width:160px">KPR</td><td class="num {% if season_totals.kpr >= 7.0 %}stat-elite{% elif season_totals.kpr >= 4.0 %}stat-good{% endif %}" style="font-weight:bold">{{ season_totals.kpr }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">ERA</td><td class="num {% if season_totals.keeper_era <= 2.5 %}stat-elite{% elif season_totals.keeper_era <= 4.0 %}stat-good{% elif season_totals.keeper_era >= 6.0 %}stat-bad{% endif %}" style="font-weight:bold">{{ "%.2f"|format(season_totals.keeper_era) }}</td></tr>
+  {% endif %}
   <tr><td style="color:var(--fg-dim);width:160px">Keeper Tackles</td><td class="num">{{ season_totals.keeper_tackles }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Bells</td><td class="num {% if season_totals.keeper_bells >= 3 %}stat-elite{% endif %}">{{ season_totals.keeper_bells }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Kick Deflections</td><td class="num">{{ season_totals.kick_deflections }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Coverage Snaps</td><td class="num">{{ season_totals.coverage_snaps }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Pts Allowed</td><td class="num">{{ "%.1f"|format(season_totals.points_allowed_in_coverage) }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Comp. Allowed</td><td class="num">{{ season_totals.completions_allowed_in_coverage }}</td></tr>
+  {% if season_totals.muffs > 0 %}
+  <tr><td style="color:var(--fg-dim)">Muffs</td><td class="num stat-bad">{{ season_totals.muffs }}</td></tr>
+  {% endif %}
   {% if season_totals.keeper_return_yards > 0 %}
   <tr><td style="color:var(--fg-dim)">Keeper Return Yards</td><td class="num">{{ season_totals.keeper_return_yards }}</td></tr>
   {% endif %}
@@ -292,9 +290,10 @@
   <thead>
     <tr>
       <th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th>
-      <th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th>
+      <th class="num">TCH</th><th class="num">RUSH</th><th class="num">YDS</th><th class="num">TD</th>
       <th class="num">FUM</th><th class="num">KM/KA</th>
-      <th class="num">TKL</th><th class="num">SCK</th>
+      <th class="num">KP</th><th class="num">KPY</th><th class="num">RET</th>
+      <th class="num">TKL</th><th class="num">SCK</th><th class="num">WPA</th>
     </tr>
   </thead>
   <tbody>
@@ -309,12 +308,17 @@
       {{ g.team_score }}-{{ g.opp_score }}
     </td>
     <td class="num">{{ g.get('touches', 0) }}</td>
+    <td class="num {% if g.get('rushing_yards', 0) >= 100 %}stat-elite{% elif g.get('rushing_yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('rushing_yards', 0)|int }}</td>
     <td class="num {% if g.get('yards', 0) >= 100 %}stat-elite{% elif g.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('yards', 0) }}</td>
     <td class="num {% if g.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ g.get('tds', 0) }}</td>
     <td class="num {% if g.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ g.get('fumbles', 0) }}</td>
     <td class="num">{% if g.get('kick_att', 0) > 0 %}{{ g.get('kick_made', 0) }}/{{ g.get('kick_att', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if g.get('kick_passes_thrown', 0) > 0 %}{{ g.get('kick_passes_completed', 0) }}/{{ g.get('kick_passes_thrown', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if g.get('kick_pass_yards', 0) >= 200 %}stat-elite{% elif g.get('kick_pass_yards', 0) >= 100 %}stat-good{% endif %}">{% if g.get('kick_passes_thrown', 0) > 0 %}{{ g.get('kick_pass_yards', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% set ret = g.get('kick_return_yards', 0) + g.get('punt_return_yards', 0) %}{% if ret > 0 %}{{ ret }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{{ g.get('tackles', 0) }}</td>
     <td class="num">{{ g.get('sacks', 0) }}</td>
+    <td class="num {% if g.get('wpa', 0) > 5 %}stat-elite{% elif g.get('wpa', 0) > 2 %}stat-good{% elif g.get('wpa', 0) < -2 %}stat-bad{% endif %}">{% set wpa = g.get('wpa', 0) %}{% if wpa %}{{ '{:+.1f}'.format(wpa) }}{% else %}0.0{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
