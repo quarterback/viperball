@@ -488,9 +488,9 @@ NEW_SCHOOLS = [
     # ══════════════════════════════════════════════════════════════════
     # SERVICE ACADEMIES (3 new)
     # ══════════════════════════════════════════════════════════════════
-    {"id": "army", "name": "United States Military Academy", "abbrev": "ARMY", "mascot": "Black Knights", "city": "West Point", "state": "NY", "colors": ["Black", "Gold"], "conference": "Pioneer Athletic Association", "tier": 78},
-    {"id": "navy", "name": "United States Naval Academy", "abbrev": "NAVY", "mascot": "Midshipmen", "city": "Annapolis", "state": "MD", "colors": ["Navy", "Gold"], "conference": "Yankee Fourteen", "tier": 78},
-    {"id": "merchant_marine", "name": "United States Merchant Marine Academy", "abbrev": "USMM", "mascot": "Mariners", "city": "Kings Point", "state": "NY", "colors": ["Blue", "Gray"], "conference": "Yankee Fourteen", "tier": 72},
+    {"id": "army", "name": "Army", "abbrev": "ARMY", "mascot": "Black Knights", "city": "West Point", "state": "NY", "colors": ["Black", "Gold"], "conference": "Pioneer Athletic Association", "tier": 78},
+    {"id": "navy", "name": "Navy", "abbrev": "NAVY", "mascot": "Midshipmen", "city": "Annapolis", "state": "MD", "colors": ["Navy", "Gold"], "conference": "Yankee Fourteen", "tier": 78},
+    {"id": "merchant_marine", "name": "Merchant Marine", "abbrev": "USMM", "mascot": "Mariners", "city": "Kings Point", "state": "NY", "colors": ["Blue", "Gray"], "conference": "Yankee Fourteen", "tier": 72},
     # ══════════════════════════════════════════════════════════════════
     # IVY LEAGUE & NESCAC (6 new)
     # ══════════════════════════════════════════════════════════════════
