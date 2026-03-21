@@ -2476,6 +2476,42 @@ class Season:
     def _get_winner(self, game: Game) -> str:
         return game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
 
+    @staticmethod
+    def _pick_game_mvp(game: Game) -> Optional[Tuple[str, str, str]]:
+        """Pick MVP from a completed game. Returns (player_name, team_name, reason) or None."""
+        fr = getattr(game, "full_result", None)
+        if not fr:
+            return None
+        ps = fr.get("player_stats", {})
+        best_score = -1.0
+        best = None
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            for p in ps.get(side, []):
+                name = p.get("name", "")
+                if not name:
+                    continue
+                yards = p.get("yards", 0)
+                tds = p.get("tds", 0)
+                kp_yds = p.get("kick_pass_yards", 0)
+                kp_tds = p.get("kick_pass_tds", 0)
+                tackles = p.get("tackles", 0)
+                sacks = p.get("sacks", 0)
+                wpa = p.get("wpa", 0.0)
+                score = yards * 0.3 + tds * 25 + kp_yds * 0.25 + kp_tds * 20 + tackles * 3 + sacks * 15 + wpa * 15
+                if score > best_score:
+                    best_score = score
+                    parts = []
+                    if yards:
+                        parts.append(f"{yards} yds")
+                    if tds:
+                        parts.append(f"{tds} TD")
+                    if kp_yds:
+                        parts.append(f"{kp_yds} KP yds")
+                    if tackles:
+                        parts.append(f"{tackles} TKL")
+                    best = (name, team_name, ", ".join(parts) if parts else "")
+        return best
+
     def _play_round(self, matchups: list, week: int, verbose: bool = False) -> list:
         games = []
         for home, away in matchups:
@@ -2484,6 +2520,11 @@ class Season:
             games.append(game)
         for game in games:
             self.simulate_game(game, verbose=verbose)
+            mvp = self._pick_game_mvp(game)
+            if mvp:
+                game.mvp_name = mvp[0]
+                game.mvp_team = mvp[1]
+                game.mvp_reason = mvp[2]
         return games
 
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
@@ -2696,6 +2737,7 @@ class Season:
             a_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_a.team_name), 0)
             b_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_b.team_name), 0)
 
+            mvp = self._pick_game_mvp(game)
             bowl = BowlGame(
                 name=names[i],
                 tier=tier,
@@ -2705,6 +2747,10 @@ class Season:
                 team_1_record=team_a.record_str,
                 team_2_record=team_b.record_str,
             )
+            if mvp:
+                bowl.mvp_name = mvp[0]
+                bowl.mvp_team = mvp[1]
+                bowl.mvp_reason = mvp[2]
             self.bowl_games.append(bowl)
 
 

@@ -1102,6 +1102,46 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
                 "coaching_style": card.coaching_style,
             })
 
+    # ── Postseason history ──
+    postseason_entries = []
+
+    # Bowl games
+    for bg in getattr(season, 'bowl_games', []):
+        g = bg.game
+        if team_name in (g.home_team, g.away_team) and g.completed:
+            opp = g.away_team if g.home_team == team_name else g.home_team
+            hs, aws = (g.home_score or 0), (g.away_score or 0)
+            won = (hs > aws and g.home_team == team_name) or (aws > hs and g.away_team == team_name)
+            score_str = f"{max(hs, aws):.1f}-{min(hs, aws):.1f}" if won else f"{min(hs, aws):.1f}-{max(hs, aws):.1f}"
+            postseason_entries.append({
+                "event": bg.name,
+                "result": "W" if won else "L",
+                "opponent": opp,
+                "score": score_str,
+                "mvp": getattr(bg, 'mvp_name', None),
+            })
+
+    # Playoff bracket
+    _ROUND_NAMES = {
+        996: "First Round", 997: "Second Round", 998: "Quarterfinals",
+        999: "Semifinals", 1000: "National Championship",
+    }
+    for game in (season.playoff_bracket or []):
+        if team_name not in (game.home_team, game.away_team) or not game.completed:
+            continue
+        opp = game.away_team if game.home_team == team_name else game.home_team
+        hs, aws = (game.home_score or 0), (game.away_score or 0)
+        won = (hs > aws and game.home_team == team_name) or (aws > hs and game.away_team == team_name)
+        score_str = f"{max(hs, aws):.1f}-{min(hs, aws):.1f}" if won else f"{min(hs, aws):.1f}-{max(hs, aws):.1f}"
+        round_name = _ROUND_NAMES.get(game.week, f"Round {game.week}")
+        postseason_entries.append({
+            "event": f"National Playoff — {round_name}",
+            "result": "W" if won else "L",
+            "opponent": opp,
+            "score": score_str,
+            "mvp": getattr(game, 'mvp_name', None),
+        })
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1110,6 +1150,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         sorted_roster=sorted_roster, sort=sort,
         team_awards=team_awards,
         coaching_staff=coaching_staff,
+        postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
     ))
 
@@ -1184,12 +1225,18 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     # Personality sliders for display
     sliders = card.personality_sliders or {}
 
+    # Postseason combined stats (playoff + bowl)
+    bowl_count = sum(1 for a in (card.career_awards or []) if a.get("level") == "postseason")
+    postseason_apps = card.playoff_appearances + bowl_count
+    postseason_wins = card.playoff_wins + bowl_count  # bowl award = bowl win
+
     return templates.TemplateResponse("college/coach.html", _ctx(
         request, section="college", session_id=session_id,
         coach=card, team_name=team_name, role=coach_role, role_label=role_label,
         career_history=career_history, coaching_tree=coaching_tree,
         season_record=season_record, coach_awards=coach_awards,
         sliders=sliders,
+        postseason_apps=postseason_apps, postseason_wins=postseason_wins,
     ))
 
 

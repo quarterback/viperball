@@ -993,8 +993,7 @@ def _select_individual_awards(
                 s = _stat_score_kicker(pstats, mult)
                 wpa = pstats.get("wpa", 0.0)
             else:
-                s = _kicker_score(p, mult)
-                wpa = 0.0
+                continue  # require actual kick attempts — no OVR fallback
             if _wpa_tiebreak(s, wpa, best_k_score, best_k_wpa):
                 best_k_score = s
                 best_k_wpa = wpa
