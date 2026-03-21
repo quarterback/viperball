@@ -1437,6 +1437,14 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     season_totals["wpa_per_play"] = round(
         season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
+    # Keeper analytics — KPR (higher=better) and ERA (lower=better)
+    if season_totals["coverage_snaps"] >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
 
     # Team record for context
     record = season.standings.get(team_name)
@@ -3226,6 +3234,14 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
     season_totals["wpa_per_play"] = round(
         season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
+    # Keeper analytics — KPR (higher=better) and ERA (lower=better)
+    if season_totals.get("coverage_snaps", 0) >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
 
     from engine.wvl_config import CLUBS_BY_KEY
     club = CLUBS_BY_KEY.get(team_key)
