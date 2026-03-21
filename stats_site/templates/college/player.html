@@ -157,8 +157,8 @@
   {% elif season_totals.kick_pass_receptions > 0 and season_totals.kick_pass_receptions >= season_totals.rush_carries %}
   {# Receiver-primary: show reception stats #}
   <div class="metric"><div class="label">Receptions</div><div class="value accent">{{ season_totals.kick_pass_receptions }}</div></div>
-  <div class="metric"><div class="label">Yards</div><div class="value">{{ season_totals.yards }}</div></div>
-  <div class="metric"><div class="label">TDs</div><div class="value {% if season_totals.tds >= 5 %}stat-elite{% endif %}">{{ season_totals.tds }}</div></div>
+  <div class="metric"><div class="label">Rec Yards</div><div class="value {% if season_totals.kick_pass_yards >= 500 %}stat-elite{% elif season_totals.kick_pass_yards >= 200 %}stat-good{% endif %}">{{ season_totals.kick_pass_yards }}</div></div>
+  <div class="metric"><div class="label">Rec TDs</div><div class="value {% if season_totals.kick_pass_tds >= 3 %}stat-elite{% endif %}">{{ season_totals.kick_pass_tds }}</div></div>
   {% else %}
   {# Default: rushing/offense stats #}
   <div class="metric"><div class="label">Yards</div><div class="value accent">{{ season_totals.yards }}</div></div>
@@ -210,6 +210,9 @@
   {% endif %}
   {% if season_totals.kick_pass_receptions > 0 %}
   <tr><td style="color:var(--fg-dim)">Receptions</td><td class="num">{{ season_totals.kick_pass_receptions }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Receiving Yards</td><td class="num {% if season_totals.kick_pass_yards >= 500 %}stat-elite{% elif season_totals.kick_pass_yards >= 200 %}stat-good{% endif %}">{{ season_totals.kick_pass_yards }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Receiving TDs</td><td class="num {% if season_totals.kick_pass_tds >= 3 %}stat-elite{% endif %}">{{ season_totals.kick_pass_tds }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Yds/Rec</td><td class="num">{{ "%.1f"|format(season_totals.kick_pass_yards / [season_totals.kick_pass_receptions, 1]|max) }}</td></tr>
   {% endif %}
   </tbody>
 </table>
@@ -318,7 +321,7 @@
       <th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th>
       <th class="num">TCH</th><th class="num">RUSH</th><th class="num">YDS</th><th class="num">TD</th>
       <th class="num">FUM</th><th class="num">KM/KA</th>
-      <th class="num">KP</th><th class="num">KPY</th><th class="num">RET</th>
+      <th class="num">KP</th><th class="num">KPY</th><th class="num">REC</th><th class="num">RET</th>
       <th class="num">TKL</th><th class="num">SCK</th><th class="num">WPA</th>
     </tr>
   </thead>
@@ -340,7 +343,8 @@
     <td class="num {% if g.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ g.get('fumbles', 0) }}</td>
     <td class="num">{% if g.get('kick_att', 0) > 0 %}{{ g.get('kick_made', 0) }}/{{ g.get('kick_att', 0) }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{% if g.get('kick_passes_thrown', 0) > 0 %}{{ g.get('kick_passes_completed', 0) }}/{{ g.get('kick_passes_thrown', 0) }}{% else %}&mdash;{% endif %}</td>
-    <td class="num {% if g.get('kick_pass_yards', 0) >= 200 %}stat-elite{% elif g.get('kick_pass_yards', 0) >= 100 %}stat-good{% endif %}">{% if g.get('kick_passes_thrown', 0) > 0 %}{{ g.get('kick_pass_yards', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if g.get('kick_pass_yards', 0) >= 200 %}stat-elite{% elif g.get('kick_pass_yards', 0) >= 100 %}stat-good{% endif %}">{% if g.get('kick_passes_thrown', 0) > 0 or g.get('kick_pass_receptions', 0) > 0 %}{{ g.get('kick_pass_yards', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if g.get('kick_pass_receptions', 0) > 0 %}{{ g.get('kick_pass_receptions', 0) }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{% set ret = g.get('kick_return_yards', 0) + g.get('punt_return_yards', 0) %}{% if ret > 0 %}{{ ret }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{{ g.get('tackles', 0) }}</td>
     <td class="num">{{ g.get('sacks', 0) }}</td>

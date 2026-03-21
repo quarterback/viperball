@@ -276,7 +276,7 @@
     },
     {
       "id": "coast_guard",
-      "name": "United States Coast Guard Academy"
+      "name": "Coast Guard"
     },
     {
       "id": "penn",
@@ -298,7 +298,7 @@
     },
     {
       "id": "space_force",
-      "name": "United States Space Force Academy"
+      "name": "Space Force"
     },
     {
       "id": "south_dakota",
@@ -404,11 +404,11 @@
     },
     {
       "id": "air_force",
-      "name": "United States Air Force Academy"
+      "name": "Air Force"
     },
     {
       "id": "army",
-      "name": "United States Military Academy"
+      "name": "Army"
     },
     {
       "id": "denver",
@@ -458,7 +458,7 @@
     },
     {
       "id": "marine_corps",
-      "name": "United States Marine Corps Academy"
+      "name": "Marine Corps"
     },
     {
       "id": "dayton",
@@ -754,11 +754,11 @@
     },
     {
       "id": "merchant_marine",
-      "name": "United States Merchant Marine Academy"
+      "name": "Merchant Marine"
     },
     {
       "id": "navy",
-      "name": "United States Naval Academy"
+      "name": "Navy"
     },
     {
       "id": "umbc",

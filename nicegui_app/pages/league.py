@@ -1381,8 +1381,8 @@ async def _render_team_browser(session_id, standings, conferences, has_conferenc
                                     metric_card("KP TDs", ps.get("kick_pass_tds", 0))
                                 elif kp_rec > 0 and kp_rec >= rush_carries:
                                     metric_card("Receptions", kp_rec)
-                                    metric_card("Yards", ps["yards"])
-                                    metric_card("TDs", ps["tds"])
+                                    metric_card("Rec Yards", ps.get("kick_pass_yards", 0))
+                                    metric_card("Rec TDs", ps.get("kick_pass_tds", 0))
                                 else:
                                     metric_card("Yards", ps["yards"])
                                     metric_card("TDs", ps["tds"])

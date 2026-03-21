@@ -497,7 +497,7 @@ def _render_draft(container, dynasty):
 # MAIN TAB LAYOUT
 # ═══════════════════════════════════════════════════════════════
 
-def _render_main(container):
+def _render_main(container, state):
     dynasty = _get_dynasty()
     if not dynasty:
         _render_setup(container)
@@ -568,7 +568,7 @@ def _render_main(container):
             with ui.tab_panel(tab_history):
                 containers["history"] = ui.column().classes("w-full")
 
-    _fill_dashboard(containers, dynasty)
+    _fill_dashboard(containers, dynasty, state)
     _fill_roster(containers, dynasty)
     _fill_schedule(containers, dynasty)
     _fill_playoffs(containers, dynasty)
@@ -585,7 +585,7 @@ def _render_main(container):
                 containers[key].clear()
             except Exception:
                 pass
-        _fill_dashboard(containers, dynasty_fresh)
+        _fill_dashboard(containers, dynasty_fresh, state)
         _fill_roster(containers, dynasty_fresh)
         _fill_schedule(containers, dynasty_fresh)
         _fill_playoffs(containers, dynasty_fresh)
@@ -600,7 +600,7 @@ def _render_main(container):
 # DASHBOARD TAB
 # ═══════════════════════════════════════════════════════════════
 
-def _fill_dashboard(containers, dynasty):
+def _fill_dashboard(containers, dynasty, state):
     c = containers.get("dashboard")
     if not c:
         return
@@ -3167,6 +3167,6 @@ async def render_wvl_section(state, shared):
     if dynasty and phase == "draft":
         _render_draft(container, dynasty)
     elif dynasty:
-        _render_main(container)
+        _render_main(container, state)
     else:
         _render_setup(container)

@@ -1946,6 +1946,18 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     )
     dynasty.rivalries = rivalries_dict
 
+    # Generate coaching staffs if not yet created (first dynasty season)
+    if not dynasty._coaching_staffs:
+        from engine.coaching import generate_coaching_staff
+        all_team_names = list(dynasty.team_histories.keys())
+        staff_rng = random.Random(dynasty.current_year + 42)
+        for team_name in dynasty.team_histories:
+            prestige = dynasty.team_prestige.get(team_name, 50)
+            dynasty._coaching_staffs[team_name] = generate_coaching_staff(
+                team_name=team_name, prestige=prestige, year=dynasty.current_year, rng=staff_rng,
+                all_team_names=all_team_names,
+            )
+
     season = create_season(
         f"{dynasty.current_year} CVL Season",
         teams,
@@ -2113,6 +2125,27 @@ def dynasty_advance(session_id: str):
     recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
 
     human_nil = dynasty._nil_programs.get(human_team)
+
+    # ── HS Recruiting Pipeline ──
+    from engine.recruiting import HSRecruitingPipeline
+    pool_size = 300
+    if dynasty._hs_pipeline is None:
+        dynasty._hs_pipeline = HSRecruitingPipeline()
+        dynasty._hs_pipeline.generate_initial_pipeline(
+            base_seed=year, size_per_class=pool_size,
+        )
+    else:
+        dynasty._hs_pipeline.advance_year(
+            new_9th_seed=year, size=pool_size, rng=rng,
+        )
+    try:
+        from engine.db import save_hs_pipeline
+        save_hs_pipeline(
+            dynasty_name=dynasty.dynasty_name,
+            pipeline_data=dynasty._hs_pipeline.to_dict(),
+        )
+    except Exception:
+        pass
 
     session["offseason"] = {
         "portal": portal,
