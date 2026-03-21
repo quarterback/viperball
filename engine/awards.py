@@ -331,6 +331,8 @@ _AGG_COUNTING_STATS = [
     "kick_pass_interceptions",
     "tackles", "tfl", "sacks", "hurries",
     "keeper_bells", "kick_deflections",
+    "keeper_tackles", "coverage_snaps", "muffs",
+    "points_allowed_in_coverage", "completions_allowed_in_coverage",
     "kick_return_yards", "punt_return_yards",
     "plays_involved",
 ]
@@ -573,28 +575,22 @@ def _compute_kpr(stats: dict) -> float:
 def _compute_keeper_era(stats: dict) -> float:
     """Compute Keeper ERA — an ERA-style rate stat. Lower is better.
 
-    Like a pitcher's ERA measures earned runs per 9 innings, Keeper ERA
-    measures how many points the opposition scores per coverage snap,
-    scaled to 9 snaps. A keeper who is on the field frequently while
-    the opponent scores little has a low ERA. Muffs and missed tackles
-    inflate it; deflections and bells suppress it.
+    Like a pitcher's ERA tracks earned runs allowed per 9 innings,
+    Keeper ERA tracks points scored against the keeper's coverage
+    per 9 coverage snaps. Built from actual per-play attribution:
+    the game engine tracks points_allowed_in_coverage and
+    completions_allowed_in_coverage on each keeper/safety.
+
+    ERA = (points_allowed_in_coverage / coverage_snaps) * 9
 
     Elite: < 2.50 | Good: 2.50-4.00 | Average: 4.00-5.50 | Poor: > 5.50
     """
     coverage = stats.get("coverage_snaps", 0)
     if coverage < 10:
         return 9.99  # insufficient sample
-    deflections = stats.get("kick_deflections", 0)
-    k_tackles = stats.get("keeper_tackles", 0)
-    bells = stats.get("keeper_bells", 0)
-    tackles = stats.get("tackles", 0)
-    muffs = stats.get("muffs", 0)
-    # Impact plays reduce ERA, mistakes increase it
-    impact = deflections * 2.0 + k_tackles * 1.5 + bells * 2.5 + tackles * 1.0
-    mistakes = muffs * 3.0
-    # ERA = (coverage - net_impact) / coverage * 9
-    rate = (coverage - impact + mistakes) / coverage * 9.0
-    return round(max(0.0, min(9.99, rate)), 2)
+    pts_allowed = stats.get("points_allowed_in_coverage", 0)
+    era = (pts_allowed / coverage) * 9.0
+    return round(max(0.0, min(9.99, era)), 2)
 
 
 def _kicker_score(player: Player, team_perf_mult: float = 1.0) -> float:

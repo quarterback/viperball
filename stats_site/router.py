@@ -1359,6 +1359,8 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         "keeper_tackles": 0, "keeper_bells": 0,
         "kick_deflections": 0, "coverage_snaps": 0,
         "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
         # Impact
@@ -1405,6 +1407,8 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
                     "keeper_tackles", "keeper_bells",
                     "kick_deflections", "coverage_snaps",
                     "keeper_return_yards",
+                    "points_allowed_in_coverage",
+                    "completions_allowed_in_coverage",
                     "blocks", "pancakes",
                     "wpa", "plays_involved",
                 ]:
@@ -3148,6 +3152,8 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         "keeper_tackles": 0, "keeper_bells": 0,
         "kick_deflections": 0, "coverage_snaps": 0,
         "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
         # Impact
@@ -3203,6 +3209,8 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                         "keeper_tackles", "keeper_bells",
                         "kick_deflections", "coverage_snaps",
                         "keeper_return_yards",
+                        "points_allowed_in_coverage",
+                        "completions_allowed_in_coverage",
                         "blocks", "pancakes",
                         "wpa", "plays_involved",
                     ]:

@@ -45,6 +45,8 @@ class GameLog:
     kick_deflections: int = 0
     keeper_tackles: int = 0
     keeper_bells: int = 0
+    points_allowed_in_coverage: float = 0.0
+    completions_allowed_in_coverage: int = 0
     return_yards: int = 0
     tackles: int = 0
     tfl: int = 0
@@ -102,6 +104,8 @@ class GameLog:
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
+            "points_allowed_in_coverage": self.points_allowed_in_coverage,
+            "completions_allowed_in_coverage": self.completions_allowed_in_coverage,
             "return_yards": self.return_yards,
             "tackles": self.tackles,
             "tfl": self.tfl,
@@ -167,6 +171,8 @@ class SeasonStats:
     kick_deflections: int = 0
     keeper_tackles: int = 0
     keeper_bells: int = 0
+    points_allowed_in_coverage: float = 0.0
+    completions_allowed_in_coverage: int = 0
     return_yards: int = 0
     tackles: int = 0
     tfl: int = 0
@@ -263,6 +269,8 @@ class SeasonStats:
         self.kick_deflections += log.kick_deflections
         self.keeper_tackles += log.keeper_tackles
         self.keeper_bells += log.keeper_bells
+        self.points_allowed_in_coverage += log.points_allowed_in_coverage
+        self.completions_allowed_in_coverage += log.completions_allowed_in_coverage
         self.return_yards += log.return_yards
         self.tackles += log.tackles
         self.tfl += log.tfl
@@ -315,6 +323,8 @@ class SeasonStats:
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
+            "points_allowed_in_coverage": self.points_allowed_in_coverage,
+            "completions_allowed_in_coverage": self.completions_allowed_in_coverage,
             "return_yards": self.return_yards,
             "tackles": self.tackles,
             "tfl": self.tfl,
@@ -760,6 +770,8 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         kick_deflections=player.game_kick_deflections,
         keeper_tackles=player.game_keeper_tackles,
         keeper_bells=player.game_keeper_bells,
+        points_allowed_in_coverage=player.game_points_allowed_in_coverage,
+        completions_allowed_in_coverage=player.game_completions_allowed_in_coverage,
         return_yards=player.game_keeper_return_yards,
         tackles=player.game_tackles,
         tfl=player.game_tfl,

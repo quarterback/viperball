@@ -245,6 +245,8 @@
   <tr><td style="color:var(--fg-dim)">Bells</td><td class="num {% if season_totals.keeper_bells >= 3 %}stat-elite{% endif %}">{{ season_totals.keeper_bells }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Kick Deflections</td><td class="num">{{ season_totals.kick_deflections }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Coverage Snaps</td><td class="num">{{ season_totals.coverage_snaps }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Pts Allowed</td><td class="num">{{ "%.1f"|format(season_totals.points_allowed_in_coverage) }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Comp. Allowed</td><td class="num">{{ season_totals.completions_allowed_in_coverage }}</td></tr>
   {% if season_totals.muffs > 0 %}
   <tr><td style="color:var(--fg-dim)">Muffs</td><td class="num stat-bad">{{ season_totals.muffs }}</td></tr>
   {% endif %}
