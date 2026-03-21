@@ -822,6 +822,15 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
         hurries = int(max(0, round(rng.gauss(0.5, 0.5))))
         def_kp_ints = 1 if rng.random() < 0.08 else 0
 
+        # Keeper-position players get keeper-specific stats
+        keeper_bells = 0
+        keeper_tackles = 0
+        kick_deflections = 0
+        if player.position == "Keeper":
+            keeper_bells = int(max(0, round(rng.gauss(1.5, 1.0))))
+            keeper_tackles = int(max(0, round(rng.gauss(3, 1.5))))
+            kick_deflections = int(max(0, round(rng.gauss(1.0, 0.8))))
+
         entry = _make_player_entry(
             player,
             tackles=tackles,
@@ -830,6 +839,9 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             hurries=hurries,
             kick_pass_ints=def_kp_ints,
             st_tackles=int(max(0, round(rng.gauss(0.5, 0.5)))),
+            keeper_bells=keeper_bells,
+            keeper_tackles=keeper_tackles,
+            kick_deflections=kick_deflections,
             def_role="STARTER" if tackles >= 4 else "ROTATION",
         )
         all_stat_players.append(entry)
