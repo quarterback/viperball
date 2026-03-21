@@ -363,14 +363,12 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         kp_tds = stats.get("kick_pass_tds", 0)
         rush_yds = stats.get("rushing_yards", 0)
         tds = stats.get("tds", 0)
-        lat_yds = stats.get("lateral_yards", 0)
-        raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+        raw = (kp_yds * 0.45 + rush_yds * 0.35
                + tds * 15 + kp_tds * 12) / games
     elif group == "viper":
         yds = stats.get("yards", 0)
-        lat_yds = stats.get("lateral_yards", 0)
         tds = stats.get("tds", 0)
-        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games
+        raw = (yds * 0.5 + tds * 20) / games
     elif group == "back":
         rush_yds = stats.get("rushing_yards", 0)
         carries = max(1, stats.get("rush_carries", 1))
@@ -413,9 +411,8 @@ def _format_stat_line(stats: dict, group: str) -> str:
         parts.append(f"{rush_yds} rush yds, {tds} TD")
     elif group == "viper":
         yds = stats.get("yards", 0)
-        lat_yds = stats.get("lateral_yards", 0)
         tds = stats.get("tds", 0)
-        parts.append(f"{yds} yds, {lat_yds} lat yds, {tds} TD")
+        parts.append(f"{yds} yds, {tds} TD")
     elif group == "back":
         rush_yds = stats.get("rushing_yards", 0)
         carries = stats.get("rush_carries", 0)
@@ -456,7 +453,6 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
         d["tds"] = stats.get("tds", 0)
     elif group == "viper":
         d["yards"] = stats.get("yards", 0)
-        d["lateral_yards"] = stats.get("lateral_yards", 0)
         d["tds"] = stats.get("tds", 0)
     elif group == "back":
         d["rushing_yards"] = stats.get("rushing_yards", 0)
@@ -741,15 +737,14 @@ def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
     tds = stats.get("tds", 0)
     kp_yds = stats.get("kick_pass_yards", 0)
     kp_tds = stats.get("kick_pass_tds", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
-    raw = (yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15
+    raw = (yds * 0.4 + kp_yds * 0.35
            + tds * 18 + kp_tds * 14 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Zeroback — kick passing + rushing + lateral play.
+    """Score a Zeroback — kick passing + rushing.
     Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     kp_yds = stats.get("kick_pass_yards", 0)
@@ -758,26 +753,24 @@ def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
     kp_att = max(1, stats.get("kick_passes_thrown", 1))
     rush_yds = stats.get("rushing_yards", 0)
     tds = stats.get("tds", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
     kp_pct = kp_comp / kp_att
-    raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+    raw = (kp_yds * 0.45 + rush_yds * 0.35
            + tds * 15 + kp_tds * 12 + kp_pct * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_viper(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Viper — all-purpose yards, laterals, TDs.
+    """Score a Viper — all-purpose yards, TDs.
     Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     yds = stats.get("yards", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     tds = stats.get("tds", 0)
     fumbles = stats.get("fumbles", 0)
     kr_yds = stats.get("kick_return_yards", 0)
     pr_yds = stats.get("punt_return_yards", 0)
     all_purpose = yds + kr_yds + pr_yds
-    raw = (all_purpose * 0.35 + lat_yds * 0.3 + tds * 20 - fumbles * 8) / games
+    raw = (all_purpose * 0.5 + tds * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 

@@ -156,22 +156,11 @@
   <tr><td style="color:var(--fg-dim)">Rush Carries</td><td class="num">{{ season_totals.rush_carries }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Rushing Yards</td><td class="num">{{ season_totals.rushing_yards }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Rushing TDs</td><td class="num {% if season_totals.rushing_tds >= 5 %}stat-elite{% endif %}">{{ season_totals.rushing_tds }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Yards</td><td class="num">{{ season_totals.lateral_yards }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Y/Touch</td><td class="num">{{ season_totals.yards_per_touch }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Fumbles</td><td class="num {% if season_totals.fumbles > 3 %}stat-bad{% endif %}">{{ season_totals.fumbles }}</td></tr>
-  </tbody>
-</table>
-{% endif %}
-
-{# ── Lateral Chain ── #}
-{% if season_totals.laterals_thrown > 0 or season_totals.lateral_receptions > 0 %}
-<h3 style="margin:10px 0 4px;font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Lateral Chain</h3>
-<table>
-  <tbody>
-  <tr><td style="color:var(--fg-dim);width:160px">Laterals Thrown</td><td class="num">{{ season_totals.laterals_thrown }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Receptions</td><td class="num">{{ season_totals.lateral_receptions }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral Assists</td><td class="num">{{ season_totals.lateral_assists }}</td></tr>
-  <tr><td style="color:var(--fg-dim)">Lateral TDs</td><td class="num {% if season_totals.lateral_tds > 0 %}stat-elite{% endif %}">{{ season_totals.lateral_tds }}</td></tr>
+  {% if season_totals.laterals_thrown > 0 or season_totals.lateral_receptions > 0 %}
+  <tr><td style="color:var(--fg-dim)">Laterals</td><td class="num">{{ season_totals.laterals_thrown }} thrown, {{ season_totals.lateral_receptions }} rec{% if season_totals.lateral_tds > 0 %}, {{ season_totals.lateral_tds }} TD{% endif %}</td></tr>
+  {% endif %}
   </tbody>
 </table>
 {% endif %}
@@ -292,7 +281,7 @@
   <thead>
     <tr>
       <th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th>
-      <th class="num">TCH</th><th class="num">YDS</th><th class="num">TD</th>
+      <th class="num">TCH</th><th class="num">RUSH</th><th class="num">YDS</th><th class="num">TD</th>
       <th class="num">FUM</th><th class="num">KM/KA</th>
       <th class="num">KP</th><th class="num">KPY</th><th class="num">RET</th>
       <th class="num">TKL</th><th class="num">SCK</th><th class="num">WPA</th>
@@ -310,6 +299,7 @@
       {{ g.team_score }}-{{ g.opp_score }}
     </td>
     <td class="num">{{ g.get('touches', 0) }}</td>
+    <td class="num {% if g.get('rushing_yards', 0) >= 100 %}stat-elite{% elif g.get('rushing_yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('rushing_yards', 0)|int }}</td>
     <td class="num {% if g.get('yards', 0) >= 100 %}stat-elite{% elif g.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('yards', 0) }}</td>
     <td class="num {% if g.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ g.get('tds', 0) }}</td>
     <td class="num {% if g.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ g.get('fumbles', 0) }}</td>
