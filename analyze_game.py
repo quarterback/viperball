@@ -66,6 +66,15 @@ SPORT CONTEXT (for readers unfamiliar with Viperball):
   - Higher turnover rates are normal (laterals compound fumble risk).
   - Half-point scores (bells) mean fractional final scores are valid.
   - Two-way play is mandatory — same players on offense and defense.
+  - NO KICKOFFS: After each score, the receiving team starts at the 20-yard
+    line +/- the current score differential. Trailing teams get better field
+    position (down 14 → start at the 34); leading teams get worse (up 21 →
+    start at the 1). This is the "Delta Yards" system — it's Viperball's
+    built-in comeback mechanic and the sport's most distinctive feature.
+  - BONUS POSSESSIONS: When a team intercepts a lateral or kick pass, the
+    intercepting team runs their drive, then the original team gets the ball
+    back as a bonus possession — unless the intercepting team also throws
+    an INT (which cancels the bonus). Inspired by pesäpallo.
 
 METRIC BENCHMARKS:
   PPD (Points/Drive):    Elite 5.0+ | Good 3.5-5.0 | Avg 2.5-3.5 | Poor <2.5
@@ -201,20 +210,50 @@ def analyze_game_data(game_data: dict) -> str:
         lines.append("")
 
     # ── Delta Profile + Conversion by Zone ──
-    lines.append("─── OPERATING ENVIRONMENT (DELTA PROFILE) ───")
-    lines.append("(Delta = the conditions each team operates in. Positive = easier states.)")
-    lines.append("(KILL% = drives ending in total failure. High KILL% ≠ winning; controlled outcomes = winning.)")
+    lines.append("─── DELTA YARDS & FIELD POSITION ───")
+    lines.append("(Viperball has NO kickoffs. After each score, the receiving team starts at")
+    lines.append(" the 20-yard line adjusted by score differential. Trailing = better field")
+    lines.append(" position; leading = worse. 'Δ Yards' = net yards gained or lost from this")
+    lines.append(" system. A team leading big all game will have large negative Δ Yards —")
+    lines.append(" that's the cost of winning, not a flaw.)")
     lines.append("")
 
     for side, label in [('home', home['team']), ('away', away['team'])]:
+        stats = game_data['stats'][side]
         metrics = calculate_viperball_metrics(game_data, side)
         delta = metrics.get('delta_profile', {})
         lines.append(f"  {label}:")
         dy = delta.get('delta_yds', 0)
-        lines.append(f"    Δ Yards:  {'+' if dy >= 0 else ''}{round(dy)}")
+        raw_delta = stats.get('delta_yards', 0)
+        lines.append(f"    Δ Yards (raw):  {'+' if raw_delta >= 0 else ''}{round(raw_delta)}")
+        lines.append(f"      (Negative = leading team penalty; positive = trailing team bonus)")
+        adj_yds = stats.get('adjusted_yards', stats.get('total_yards', 0))
+        tot_yds = round(stats.get('total_yards', 0))
+        lines.append(f"    Total Yards:    {tot_yds}  |  Adjusted (with Δ): {round(adj_yds)}")
         lines.append(f"    Δ Drives: {delta.get('delta_drives', 0):+d}")
         lines.append(f"    Δ Scores: {delta.get('delta_scores', 0):+d}")
         lines.append(f"    KILL%:    {delta.get('team_kill_pct', 0)}% (opponent: {delta.get('opp_kill_pct', 0)}%)")
+        lines.append("")
+
+    # ── Bonus Possessions ──
+    lines.append("─── BONUS POSSESSIONS ───")
+    lines.append("(When a team intercepts a lateral or kick pass, the intercepting team gets")
+    lines.append(" their drive, then the original team gets the ball back as a bonus drive.")
+    lines.append(" An INT thrown back during the intercepting team's drive cancels the bonus.)")
+    lines.append("")
+
+    for side, label in [('home', home['team']), ('away', away['team'])]:
+        stats = game_data['stats'][side]
+        bp = stats.get('bonus_possessions', 0)
+        bp_yds = stats.get('bonus_possession_yards', 0)
+        bp_scores = stats.get('bonus_possession_scores', 0)
+        lines.append(f"  {label}:")
+        lines.append(f"    Bonus Drives:  {bp}")
+        if bp > 0:
+            lines.append(f"    Bonus Yards:   {round(bp_yds)}")
+            lines.append(f"    Bonus Scores:  {bp_scores}/{bp} ({round(bp_scores / bp * 100)}% conversion)")
+        else:
+            lines.append(f"    (No bonus possessions earned)")
         lines.append("")
 
     lines.append("─── CONVERSION BY FIELD POSITION ───")
