@@ -153,21 +153,21 @@
 <div class="grid-4" style="margin-bottom:16px;">
   {% if team_stats.avg_viper_eff is not none %}
   <div class="metric">
-    <div class="label">Viper Efficiency</div>
+    <div class="label stat-tip" data-tip="Yards per play boosted by lateral success rate. Higher = better use of Viperball mechanics. Avg ~5, elite 8+.">Viper Efficiency</div>
     <div class="value accent">{{ team_stats.avg_viper_eff }}</div>
   </div>
   {% endif %}
   <div class="metric">
-    <div class="label">EPA (Total)</div>
+    <div class="label stat-tip" data-tip="Expected Points Added. Total points this team created above/below what an average team would from the same field positions.">EPA (Total)</div>
     <div class="value {% if team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
   </div>
   <div class="metric">
-    <div class="label">EPA / Game</div>
+    <div class="label stat-tip" data-tip="EPA per game average. Easier to compare across teams. 5+ per game is elite, negative means below average.">EPA / Game</div>
     <div class="value {% if team_stats.avg_epa > 0 %}stat-good{% elif team_stats.avg_epa < 0 %}stat-bad{% endif %}">{{ team_stats.avg_epa }}</div>
   </div>
   {% if team_stats.avg_team_rating is not none %}
   <div class="metric">
-    <div class="label">Avg Team Rating</div>
+    <div class="label stat-tip" data-tip="Overall team performance grade 0-100. 70+ elite, 55+ good.">Avg Team Rating</div>
     <div class="value">{{ team_stats.avg_team_rating }}</div>
   </div>
   {% endif %}

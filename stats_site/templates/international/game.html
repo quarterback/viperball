@@ -300,7 +300,7 @@
   {% endfor %}
 </div>
 <table>
-  <thead><tr><th class="num">Q</th><th class="num">Time</th><th>Poss</th><th class="num">FP</th><th>Down</th><th>Play</th><th class="num">YDS</th><th class="num">EPA</th><th>Description</th></tr></thead>
+  <thead><tr><th class="num">Q</th><th class="num">Time</th><th>Poss</th><th class="num">FP</th><th>Down</th><th>Play</th><th class="num">YDS</th><th class="num stat-tip" data-tip="Expected Points Added. How much this play changed the team's expected score.">EPA</th><th>Description</th></tr></thead>
   <tbody>
   {% for p in pbp %}
   {% set is_score = p.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td') if p.result else false %}

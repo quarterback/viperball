@@ -142,14 +142,14 @@
 {% if hm or am %}
 <h2>Game Ratings</h2>
 <div class="grid-4" style="margin-bottom:16px;">
-  {% for label, key, src, fmt, elite_thresh, good_thresh in [
-    ('Team Rating', 'team_rating', 'vm', '%.1f', 75, 55),
-    ('PPD', 'ppd', 'vm', '%.2f', 5.0, 3.5),
-    ('EPA', 'epa', 'ts', '%.1f', 5, 0),
-    ('Explosive Plays', 'explosive_plays', 'vm', '%d', 8, 5),
+  {% for label, key, src, fmt, elite_thresh, good_thresh, tip in [
+    ('Team Rating', 'team_rating', 'vm', '%.1f', 75, 55, 'Overall team grade 0-100. 70+ elite, 55+ good.'),
+    ('PPD', 'ppd', 'vm', '%.2f', 5.0, 3.5, 'Points Per Drive. Avg points scored each possession. 5+ elite, 3.5+ good.'),
+    ('EPA', 'epa', 'ts', '%.1f', 5, 0, 'Expected Points Added. Total points above/below average. Positive = helped win, negative = hurt. 5+ elite.'),
+    ('Explosive Plays', 'explosive_plays', 'vm', '%d', 8, 5, 'Plays gaining 20+ yards. More = bigger play-making ability.'),
   ] %}
   <div class="metric">
-    <div class="label">{{ label }}</div>
+    <div class="label stat-tip" data-tip="{{ tip }}">{{ label }}</div>
     <div class="value" style="font-size:11px;">
       {% if src == 'ts' %}
         {% set av = as_.get(key) %}
@@ -167,14 +167,14 @@
 </div>
 
 <div class="grid-4" style="margin-bottom:16px;">
-  {% for label, key, fmt, suffix, elite_thresh, good_thresh in [
-    ('Conversion %', 'conversion_pct', '%.1f', '%', 55, 45),
-    ('Lateral %', 'lateral_pct', '%.1f', '%', 80, 65),
-    ('TO Margin', 'to_margin', '%+d', '', 2, 1),
-    ('Avg Start', 'avg_start', '%.1f', '', 35, 28),
+  {% for label, key, fmt, suffix, elite_thresh, good_thresh, tip in [
+    ('Conversion %', 'conversion_pct', '%.1f', '%', 55, 45, 'Rate of converting on 4th-6th down attempts. 55%+ elite, 45%+ good.'),
+    ('Lateral %', 'lateral_pct', '%.1f', '%', 80, 65, 'Successful lateral completion rate. 80%+ elite. Failed laterals = turnovers.'),
+    ('TO Margin', 'to_margin', '%+d', '', 2, 1, 'Turnover margin. Positive = more takeaways than giveaways.'),
+    ('Avg Start', 'avg_start', '%.1f', '', 35, 28, 'Average starting field position (yard line). Higher = better. 35+ elite.'),
   ] %}
   <div class="metric">
-    <div class="label">{{ label }}</div>
+    <div class="label stat-tip" data-tip="{{ tip }}">{{ label }}</div>
     <div class="value" style="font-size:11px;">
       {% set av = am.get(key) %}
       {% set hv = hm.get(key) %}
@@ -841,7 +841,7 @@
     <tr>
       <th class="num">Q</th><th class="num">Time</th><th>Poss</th>
       <th class="num">FP</th><th>Down</th>
-      <th>Play</th><th class="num">YDS</th><th class="num">EPA</th>
+      <th>Play</th><th class="num">YDS</th><th class="num stat-tip" data-tip="Expected Points Added. How much this play changed the team's expected score. Green (+2) = big positive play. Red (-2) = big setback.">EPA</th>
       <th>Description</th>
     </tr>
   </thead>

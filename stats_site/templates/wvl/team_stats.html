@@ -539,11 +539,14 @@
 <table>
   <thead><tr>
     <th class="num">#</th><th>Team</th><th>W-L</th><th class="num">GP</th>
-    <th class="num">EPA</th><th class="num">EPA/G</th><th class="num">RTG</th><th class="num">VE</th>
-    <th class="num">YPP</th>
-    <th class="num">4D ATT</th><th class="num">4D%</th>
-    <th class="num">5D ATT</th><th class="num">5D%</th>
-    <th class="num">6D ATT</th><th class="num">6D%</th>
+    <th class="num stat-tip" data-tip="Expected Points Added. Season total points above/below average.">EPA</th>
+    <th class="num stat-tip" data-tip="EPA per game average.">EPA/G</th>
+    <th class="num stat-tip" data-tip="Team Rating 0-100. 70+ elite, 55+ good.">RTG</th>
+    <th class="num stat-tip" data-tip="Viper Efficiency. Yards per play boosted by lateral success rate.">VE</th>
+    <th class="num stat-tip" data-tip="Yards Per Play.">YPP</th>
+    <th class="num">4D ATT</th><th class="num stat-tip" data-tip="4th down conversion rate.">4D%</th>
+    <th class="num">5D ATT</th><th class="num stat-tip" data-tip="5th down conversion rate.">5D%</th>
+    <th class="num">6D ATT</th><th class="num stat-tip" data-tip="6th down conversion rate.">6D%</th>
   </tr></thead>
   <tbody>
   {% for t in teams %}
