@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "ferris_state",
-    "school": "Ferris State University",
+    "school": "Ferris State",
     "abbreviation": "FSU",
     "mascot": "Bulldogs",
     "conference": "Prairie Athletic Union",
@@ -11,7 +11,7 @@
       "Crimson",
       "Gold"
     ],
-    "school_name": "Ferris State University"
+    "school_name": "Ferris State"
   },
   "identity": {
     "style": "aggressive",

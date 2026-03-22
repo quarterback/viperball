@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "villanova",
-    "school_name": "Villanova University",
+    "school_name": "Villanova",
     "abbreviation": "NOVA",
     "mascot": "Wildcats",
     "conference": "Big East",
@@ -991,7 +991,7 @@
       },
       {
         "number": 90,
-        "name": "Ma\u00efa Thibodeau",
+        "name": "Maïa Thibodeau",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 166,
@@ -1125,12 +1125,12 @@
         "weight": 198,
         "year": "Freshman",
         "hometown": {
-          "city": "M\u00e1laga",
+          "city": "Málaga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "M\u00e1laga Academy",
+        "high_school": "Málaga Academy",
         "nationality": "European",
         "archetype": "none",
         "potential": 3,

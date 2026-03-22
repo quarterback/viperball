@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "pacific",
-    "school_name": "University of the Pacific",
+    "school_name": "Pacific",
     "abbreviation": "UOP",
     "mascot": "Tigers",
     "conference": "West Coast Conference",
@@ -95,7 +95,7 @@
       },
       {
         "number": 4,
-        "name": "\u00c9milie Gauthier",
+        "name": "Émilie Gauthier",
         "position": "Lineman",
         "height": "5-11",
         "weight": 210,
@@ -543,7 +543,7 @@
       },
       {
         "number": 42,
-        "name": "Oc\u00e9ane Wilson",
+        "name": "Océane Wilson",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 161,
@@ -741,12 +741,12 @@
         "weight": 182,
         "year": "Junior",
         "hometown": {
-          "city": "D\u00fcsseldorf",
+          "city": "Düsseldorf",
           "state": "GER",
           "country": "Germany",
           "region": "uk_european"
         },
-        "high_school": "D\u00fcsseldorf Academy",
+        "high_school": "Düsseldorf Academy",
         "nationality": "European",
         "archetype": "speed_flanker",
         "potential": 3,

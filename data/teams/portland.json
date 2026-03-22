@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "portland",
-    "school_name": "University of Portland",
+    "school_name": "Portland",
     "abbreviation": "UP",
     "mascot": "Pilots",
     "conference": "West Coast Conference",
@@ -95,7 +95,7 @@
       },
       {
         "number": 5,
-        "name": "T\u0101m\u0101hine Edwards",
+        "name": "Tāmāhine Edwards",
         "position": "Lineman",
         "height": "6-0",
         "weight": 211,
@@ -831,18 +831,18 @@
       },
       {
         "number": 62,
-        "name": "Teresa G\u00f3mez",
+        "name": "Teresa Gómez",
         "position": "Wingback/End",
         "height": "5-10",
         "weight": 177,
         "year": "Senior",
         "hometown": {
-          "city": "Medell\u00edn",
+          "city": "Medellín",
           "state": "COL",
           "country": "Colombia",
           "region": "latin_american"
         },
-        "high_school": "Colegio Medell\u00edn",
+        "high_school": "Colegio Medellín",
         "nationality": "Latin American",
         "archetype": "speed_flanker",
         "potential": 3,

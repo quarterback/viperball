@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "nw_missouri_state",
-    "school": "Northwest Missouri State University",
+    "school": "Northwest Missouri State",
     "abbreviation": "NWMSU",
     "mascot": "Bearcats",
     "conference": "Mountain West",
@@ -11,7 +11,7 @@
       "Green",
       "White"
     ],
-    "school_name": "Northwest Missouri State University"
+    "school_name": "Northwest Missouri State"
   },
   "identity": {
     "style": "aggressive",
