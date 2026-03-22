@@ -539,20 +539,24 @@
 <table>
   <thead><tr>
     <th class="num">#</th><th>Team</th><th>W-L</th><th class="num">GP</th>
-    <th class="num">EPA</th><th class="num">EPA/G</th><th class="num">RTG</th><th class="num">VE</th>
-    <th class="num">YPP</th>
-    <th class="num">4D ATT</th><th class="num">4D%</th>
-    <th class="num">5D ATT</th><th class="num">5D%</th>
-    <th class="num">6D ATT</th><th class="num">6D%</th>
+    {% set bm = benchmarks if benchmarks is defined else {} %}
+    <th class="num stat-tip" data-tip="Expected Points Added (season total).{{ ' Median: ' ~ bm.epa.med ~ ', top 25%: ' ~ bm.epa.p75 if bm.epa else '' }}">EPA</th>
+    <th class="num stat-tip" data-tip="EPA per game.{{ ' Median: ' ~ bm.avg_epa.med ~ ', top 25%: ' ~ bm.avg_epa.p75 if bm.avg_epa else '' }}">EPA/G</th>
+    <th class="num stat-tip" data-tip="Team Rating 0-100.{{ ' Median: ' ~ bm.avg_team_rating.med ~ ', top 25%: ' ~ bm.avg_team_rating.p75 if bm.avg_team_rating else '' }}">RTG</th>
+    <th class="num stat-tip" data-tip="Viper Efficiency. YPP boosted by lateral success.{{ ' Median: ' ~ bm.avg_viper_eff.med ~ ', top 25%: ' ~ bm.avg_viper_eff.p75 if bm.avg_viper_eff else '' }}">VE</th>
+    <th class="num stat-tip" data-tip="Yards Per Play.">YPP</th>
+    <th class="num">4D ATT</th><th class="num stat-tip" data-tip="4th down conversion rate.">4D%</th>
+    <th class="num">5D ATT</th><th class="num stat-tip" data-tip="5th down conversion rate.">5D%</th>
+    <th class="num">6D ATT</th><th class="num stat-tip" data-tip="6th down conversion rate.">6D%</th>
   </tr></thead>
   <tbody>
   {% for t in teams %}
   <tr>
     {{ team_row(t, loop.index) }}
-    <td class="num {% if sort == 'epa' %}stat-good{% elif t.get('epa', 0) < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.get('epa', 0)) }}</td>
-    <td class="num {% if sort == 'avg_epa' %}stat-good{% elif t.get('avg_epa', 0) < 0 %}stat-bad{% endif %}">{{ t.get('avg_epa', 0) }}</td>
-    <td class="num {% if sort == 'avg_team_rating' %}stat-good{% elif t.get('avg_team_rating', 0) >= 70 %}stat-elite{% elif t.get('avg_team_rating', 0) >= 55 %}stat-good{% endif %}">{{ t.get('avg_team_rating', 0) }}</td>
-    <td class="num {% if sort == 'avg_viper_eff' %}stat-good{% endif %}">{{ t.get('avg_viper_eff', 0) }}</td>
+    <td class="num {% if bm.epa %}{% if t.get('epa', 0) >= bm.epa.p90 %}stat-elite{% elif t.get('epa', 0) >= bm.epa.p75 %}stat-good{% elif t.get('epa', 0) < bm.epa.p25 %}stat-bad{% endif %}{% elif t.get('epa', 0) < 0 %}stat-bad{% endif %}">{{ '%.1f'|format(t.get('epa', 0)) }}</td>
+    <td class="num {% if bm.avg_epa %}{% if t.get('avg_epa', 0) >= bm.avg_epa.p90 %}stat-elite{% elif t.get('avg_epa', 0) >= bm.avg_epa.p75 %}stat-good{% elif t.get('avg_epa', 0) < bm.avg_epa.p25 %}stat-bad{% endif %}{% elif t.get('avg_epa', 0) < 0 %}stat-bad{% endif %}">{{ t.get('avg_epa', 0) }}</td>
+    <td class="num {% if bm.avg_team_rating %}{% if t.get('avg_team_rating', 0) >= bm.avg_team_rating.p90 %}stat-elite{% elif t.get('avg_team_rating', 0) >= bm.avg_team_rating.p75 %}stat-good{% endif %}{% elif t.get('avg_team_rating', 0) >= 70 %}stat-elite{% elif t.get('avg_team_rating', 0) >= 55 %}stat-good{% endif %}">{{ t.get('avg_team_rating', 0) }}</td>
+    <td class="num {% if bm.avg_viper_eff %}{% if t.get('avg_viper_eff', 0) >= bm.avg_viper_eff.p90 %}stat-elite{% elif t.get('avg_viper_eff', 0) >= bm.avg_viper_eff.p75 %}stat-good{% endif %}{% endif %}">{{ t.get('avg_viper_eff', 0) }}</td>
     <td class="num">{{ t.get('yards_per_play', 0) }}</td>
     <td class="num">{{ t.down_4_att }}</td>
     <td class="num">{{ t.down_4_rate }}%</td>

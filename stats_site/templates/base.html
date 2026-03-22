@@ -439,6 +439,36 @@ td.rank {
 .change-down { color: var(--red); }
 .change-none { color: var(--fg-dim); }
 
+/* Stat tooltips — hover for explanation */
+.stat-tip {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted var(--fg-dim);
+}
+.stat-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-alt);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: normal;
+  white-space: normal;
+  width: max-content;
+  max-width: 260px;
+  line-height: 1.4;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.stat-tip:hover::after { opacity: 1; }
+
 /* Badges / tags */
 .tag {
   display: inline-block;

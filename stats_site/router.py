@@ -432,6 +432,69 @@ def _ctx(request, **kwargs):
     return kwargs
 
 
+def _compute_benchmarks(teams, keys):
+    """Compute league percentile benchmarks (p25/median/p75/p90) for stat keys.
+
+    Returns dict like {"epa": {"p25": -2.1, "med": 1.3, "p75": 5.0, "p90": 8.2}, ...}
+    """
+    benchmarks = {}
+    for key in keys:
+        vals = sorted(
+            [t[key] for t in teams if isinstance(t.get(key), (int, float))],
+        )
+        n = len(vals)
+        if n < 4:
+            benchmarks[key] = None
+            continue
+        benchmarks[key] = {
+            "p25": round(vals[n // 4], 2),
+            "med": round(vals[n // 2], 2),
+            "p75": round(vals[3 * n // 4], 2),
+            "p90": round(vals[int(n * 0.9)], 2),
+        }
+    return benchmarks
+
+
+def _game_benchmarks_from_season(season):
+    """Collect per-game EPA/rating/VE from all completed games and return benchmarks."""
+    per_game = []
+    all_games = list(season.schedule) + list(season.playoff_bracket or []) + [
+        bg.game for bg in (season.bowl_games or [])
+    ]
+    for g in all_games:
+        fr = getattr(g, "full_result", None) or getattr(g, "_full_result", None)
+        if not fr or not isinstance(fr, dict):
+            continue
+        stats = fr.get("stats", {})
+        for side in ("home", "away"):
+            s = stats.get(side)
+            if not s:
+                continue
+            entry = {}
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                entry["epa"] = epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                entry["epa"] = epa_val
+            vm = s.get("viperball_metrics", {})
+            if vm and vm.get("team_rating") is not None:
+                entry["team_rating"] = vm["team_rating"]
+            if vm and vm.get("ppd") is not None:
+                entry["ppd"] = vm["ppd"]
+            ve = s.get("viper_efficiency")
+            if ve is not None:
+                entry["viper_efficiency"] = ve
+            ep = vm.get("explosive_plays") if vm else None
+            if ep is not None:
+                entry["explosive_plays"] = ep
+            per_game.append(entry)
+    if len(per_game) < 4:
+        return {}
+    return _compute_benchmarks(per_game, [
+        "epa", "team_rating", "ppd", "viper_efficiency", "explosive_plays",
+    ])
+
+
 # ── HOME ─────────────────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
@@ -1142,6 +1205,8 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "mvp": getattr(game, 'mvp_name', None),
         })
 
+    benchmarks = _game_benchmarks_from_season(season)
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1152,6 +1217,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         coaching_staff=coaching_staff,
         postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
+        benchmarks=benchmarks,
     ))
 
 
@@ -1305,12 +1371,15 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         except Exception:
             pass
 
+    benchmarks = _game_benchmarks_from_season(season)
+
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
         bowl_name=bowl_name, is_playoff=is_playoff,
         analysis_text=analysis_text,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
+        benchmarks=benchmarks,
     ))
 
 
@@ -2073,11 +2142,17 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
 
     conferences = sorted(season.conferences.keys())
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play", "total_yards", "avg_yards",
+    ])
+
     return templates.TemplateResponse("college/team_stats.html", _ctx(
         request, section="college", session_id=session_id,
         teams=teams, sort=sort, conference=conference,
         conferences=conferences,
         season_name=getattr(season, "name", "Season"),
+        benchmarks=benchmarks,
     ))
 
 
@@ -2418,6 +2493,8 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
         except Exception:
             pass
 
+    benchmarks = _game_benchmarks_from_season(season)
+
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("pro/game.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
@@ -2425,6 +2502,7 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
         league_name=season.config.league_name,
         analysis_text=analysis_text,
         stadium_url=_stadium_url_for(_home_key),
+        benchmarks=benchmarks,
     ))
 
 
@@ -2712,11 +2790,17 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
 
     divisions = sorted(season.config.divisions.keys()) if season.config.divisions else []
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play",
+    ])
+
     return templates.TemplateResponse("pro/team_stats.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
         teams=teams, sort=sort, division=division,
         divisions=divisions,
         league_name=season.config.league_name,
+        benchmarks=benchmarks,
     ))
 
 
@@ -3105,11 +3189,14 @@ def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: s
     except ImportError:
         rivalry = None
 
+    benchmarks = _game_benchmarks_from_season(tier_season)
+
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("wvl/game.html", _ctx(
         request, section="wvl", session_id=session_id,
         box=box, week=week, matchup=matchup, tier=tier,
         tier_name=_wvl_tier_label(tier),
+        benchmarks=benchmarks,
         rivalry=rivalry,
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
@@ -3831,12 +3918,18 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
     reverse = sort_key not in _LOWER_IS_BETTER
     teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play",
+    ])
+
     return templates.TemplateResponse("wvl/team_stats.html", _ctx(
         request, section="wvl", session_id=session_id,
         teams=teams, sort=sort, selected_tier=tier,
         tier_name=_wvl_tier_label(tier),
         tier_list=tier_list, tier_label=_wvl_tier_label,
         dynasty_name=data.get("dynasty_name", "WVL"),
+        benchmarks=benchmarks,
         year=data.get("year", "?"),
     ))
 
@@ -4142,8 +4235,13 @@ def intl_team_stats(request: Request, sort: str = "total_yards"):
     sort_key = valid_sorts.get(sort, "total_yards")
     teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+    ])
+
     return templates.TemplateResponse("international/team_stats.html", _ctx(
         request, section="international", teams=teams, sort=sort,
+        benchmarks=benchmarks,
     ))
 
 

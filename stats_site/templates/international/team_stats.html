@@ -51,10 +51,11 @@
       <th class="num">RUSH</th>
       <th class="num">KP</th>
       <th class="num">LAT</th>
-      <th class="num">EPA</th>
-      <th class="num">E/G</th>
-      <th class="num">RTG</th>
-      <th class="num">VE</th>
+      {% set bm = benchmarks if benchmarks is defined else {} %}
+      <th class="num stat-tip" data-tip="Expected Points Added.{{ ' Median: ' ~ bm.epa.med ~ ', top 25%: ' ~ bm.epa.p75 if bm.epa else '' }}">EPA</th>
+      <th class="num stat-tip" data-tip="EPA per game.{{ ' Median: ' ~ bm.avg_epa.med if bm.avg_epa else '' }}">E/G</th>
+      <th class="num stat-tip" data-tip="Team Rating 0-100.{{ ' Median: ' ~ bm.avg_team_rating.med if bm.avg_team_rating else '' }}">RTG</th>
+      <th class="num stat-tip" data-tip="Viper Efficiency.{{ ' Median: ' ~ bm.avg_viper_eff.med if bm.avg_viper_eff else '' }}">VE</th>
       <th class="num">&Delta;Y</th>
       <th class="num">FUM</th>
     </tr>

@@ -259,7 +259,7 @@ class BoxScoreGenerator:
         lines.append("## ADVANCED METRICS")
         lines.append("")
         lines.append("### Viper Efficiency")
-        lines.append("*Formula: (Total Yards / Plays) x (1 + Lateral Success Rate) x Viper Impact*")
+        lines.append("*Yards per play boosted by lateral success. Higher = better. Think of it as 'how well does this team use Viperball mechanics?' Average ~5, elite 8+.*")
         lines.append("")
         lines.append(f"| Team | Viper Efficiency |")
         lines.append(f"|------|------------------|")
@@ -288,7 +288,7 @@ class BoxScoreGenerator:
         lines.append("")
 
         lines.append("### Lateral Efficiency")
-        lines.append("*Formula: (Successful Lateral Chains / Total Lateral Attempts) x 100%*")
+        lines.append("*How often lateral chains succeed without turnovers. 70%+ is solid, below 50% means too many fumbles.*")
         lines.append("")
         lines.append(f"| Team | Lateral Efficiency |")
         lines.append(f"|------|--------------------|")
