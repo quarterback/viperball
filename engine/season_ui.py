@@ -83,34 +83,59 @@ def display_team_dashboard(record: TeamRecord, rank: Optional[int] = None):
     print(f"{'-' * 70}")
 
     metrics = [
-        ("⭐ Overall Performance Index", record.avg_opi, 100),
-        ("🗺️  Territory Rating", record.avg_territory, 100),
-        ("💪 Pressure Index", record.avg_pressure, 100),
-        ("⚡ Chaos Factor", record.avg_chaos, 100),
-        ("👟 Kicking Efficiency", record.avg_kicking, 100),
-        ("📍 Drive Quality", record.avg_drive_quality, 10),
-        ("🛡️  Turnover Impact", record.avg_turnover_impact, 100),
+        ("Team Rating", record.avg_team_rating, 100),
+        ("PPD (Pts/Drive)", record.avg_ppd, 10),
+        ("Conversion %", record.avg_conversion_pct, 100),
+        ("Lateral %", record.avg_lateral_pct, 100),
+        ("Explosive Plays/G", record.avg_explosive, 15),
+        ("TO Margin/G", record.avg_to_margin, 5),
     ]
 
     for label, value, max_val in metrics:
-        # Create progress bar
         bar_width = 30
-        filled = int((value / max_val) * bar_width)
+        norm = min(1.0, max(0.0, value / max_val)) if max_val > 0 else 0.0
+        filled = int(norm * bar_width)
         bar = "█" * filled + "░" * (bar_width - filled)
 
-        # Rating
-        if value >= max_val * 0.8:
+        if norm >= 0.8:
             rating = "ELITE"
-        elif value >= max_val * 0.6:
+        elif norm >= 0.6:
             rating = "GREAT"
-        elif value >= max_val * 0.4:
+        elif norm >= 0.4:
             rating = "GOOD"
-        elif value >= max_val * 0.2:
-            rating = "POOR"
+        elif norm >= 0.2:
+            rating = "AVG"
         else:
-            rating = "WEAK"
+            rating = "POOR"
 
-        print(f"{label:<25} {bar} {value:>6.1f}/{max_val:<3} {rating:>5}")
+        print(f"  {label:<20} {bar} {value:>6.1f} {rating:>5}")
+
+    # Conversion by zone (season aggregate)
+    print(f"\n{'LATE-DOWN CONVERSION BY FIELD ZONE':^70}")
+    print(f"{'-' * 70}")
+    conv = record.season_conversion_by_zone
+    zone_labels = {
+        "own_deep": "Own 1-25",
+        "own_half": "Own 26-50",
+        "opp_half": "Opp 51-75",
+        "opp_deep": "Opp 76-99",
+    }
+    print(f"  {'Zone':<15} {'4D%':>10} {'5D%':>10} {'6D%':>10}")
+    print(f"  {'─'*15} {'─'*10} {'─'*10} {'─'*10}")
+    for zone_key, zone_label in zone_labels.items():
+        zd = conv.get(zone_key, {})
+        cols = []
+        for d in (4, 5, 6):
+            att = zd.get(f'd{d}_att', 0)
+            pct = zd.get(f'd{d}_pct', 0)
+            cols.append(f"{pct:.0f}% ({att})" if att > 0 else "—")
+        print(f"  {zone_label:<15} {cols[0]:>10} {cols[1]:>10} {cols[2]:>10}")
+
+    # Delta profile
+    print(f"\n  {'Season 5D%:':<20} {record.season_5d_pct:.1f}%")
+    print(f"  {'5D% Own Deep:':<20} {record.season_5d_own_deep_pct:.1f}%")
+    print(f"  {'KILL%:':<20} {record.season_kill_pct:.1f}%")
+    print(f"  {'Avg Δ Yards/G:':<20} {record.avg_delta_yds:+.1f}")
 
 
 # ========================================
@@ -133,8 +158,8 @@ def display_standings(season: Season, show_metrics: bool = True):
 
     # Header
     if show_metrics:
-        print(f"{'#':<3} {'TEAM':<20} {'O/D STYLES':<25} {'W-L':<8} {'PF':<6} {'PA':<6} {'DIFF':<7} {'OPI':<5}")
-        print(f"{'-' * 100}")
+        print(f"{'#':<3} {'TEAM':<20} {'STYLES':<22} {'W-L':<7} {'PF':<6} {'PA':<6} {'DIFF':<7} {'RTG':<5} {'PPD':<5} {'5D%':<5} {'KILL':<5}")
+        print(f"{'-' * 115}")
     else:
         print(f"{'#':<3} {'TEAM':<20} {'O/D STYLES':<25} {'W-L':<8} {'PF':<6} {'PA':<6} {'DIFF':<7}")
         print(f"{'-' * 85}")
@@ -143,15 +168,18 @@ def display_standings(season: Season, show_metrics: bool = True):
     for i, record in enumerate(standings, start=1):
         rank = f"{i}."
         team = record.team_name[:19]
-        styles = f"{format_offense_style(record.offense_style)[:12]}/{format_defense_style(record.defense_style)[:10]}"
+        styles = f"{format_offense_style(record.offense_style)[:10]}/{format_defense_style(record.defense_style)[:9]}"
         wl = record.record_str
         pf = f"{record.points_for / max(1, record.games_played):.1f}"
         pa = f"{record.points_against / max(1, record.games_played):.1f}"
         diff = f"{record.point_differential:+.1f}"
 
         if show_metrics:
-            opi = f"{record.avg_opi:.1f}"
-            print(f"{rank:<3} {team:<20} {styles:<25} {wl:<8} {pf:<6} {pa:<6} {diff:<7} {opi:<5}")
+            rtg = f"{record.avg_team_rating:.0f}"
+            ppd = f"{record.avg_ppd:.1f}"
+            d5 = f"{record.season_5d_pct:.0f}%"
+            kill = f"{record.season_kill_pct:.0f}%"
+            print(f"{rank:<3} {team:<20} {styles:<22} {wl:<7} {pf:<6} {pa:<6} {diff:<7} {rtg:<5} {ppd:<5} {d5:<5} {kill:<5}")
         else:
             print(f"{rank:<3} {team:<20} {styles:<25} {wl:<8} {pf:<6} {pa:<6} {diff:<7}")
 
@@ -247,17 +275,31 @@ def display_season_summary(season: Season):
     best_defense = min(standings, key=lambda r: r.points_against / max(1, r.games_played))
     print(f"  🛡️  Best Defense: {best_defense.team_name} ({best_defense.points_against / max(1, best_defense.games_played):.1f} PPG allowed)")
 
-    # Highest OPI
-    highest_opi = max(standings, key=lambda r: r.avg_opi)
-    print(f"  ⭐ Highest OPI: {highest_opi.team_name} ({highest_opi.avg_opi:.1f}/100)")
+    # Highest Team Rating
+    highest_rtg = max(standings, key=lambda r: r.avg_team_rating)
+    print(f"  Team Rating: {highest_rtg.team_name} ({highest_rtg.avg_team_rating:.1f}/100)")
 
-    # Most chaos
-    most_chaos = max(standings, key=lambda r: r.avg_chaos)
-    print(f"  💥 Chaos Award: {most_chaos.team_name} ({most_chaos.avg_chaos:.1f}/100)")
+    # Best PPD
+    best_ppd = max(standings, key=lambda r: r.avg_ppd)
+    print(f"  Best PPD: {best_ppd.team_name} ({best_ppd.avg_ppd:.2f} pts/drive)")
 
-    # Best kicking
-    best_kicking = max(standings, key=lambda r: r.avg_kicking)
-    print(f"  👟 Kicking Award: {best_kicking.team_name} ({best_kicking.avg_kicking:.1f}/100)")
+    # Best 5D conversion
+    best_5d = max(standings, key=lambda r: r.season_5d_pct)
+    print(f"  Best 5D%: {best_5d.team_name} ({best_5d.season_5d_pct:.1f}%)")
+
+    # Best survival (5D from own deep)
+    best_survival = max(standings, key=lambda r: r.season_5d_own_deep_pct if r.conv_zone_own_deep_5d_att >= 3 else 0)
+    if best_survival.conv_zone_own_deep_5d_att >= 3:
+        print(f"  Best Survival (5D Own Deep): {best_survival.team_name} ({best_survival.season_5d_own_deep_pct:.1f}%)")
+
+    # Lowest KILL%
+    lowest_kill = min(standings, key=lambda r: r.season_kill_pct if r.total_team_drives_for_kill > 0 else 100)
+    if lowest_kill.total_team_drives_for_kill > 0:
+        print(f"  Lowest KILL%: {lowest_kill.team_name} ({lowest_kill.season_kill_pct:.1f}%)")
+
+    # Best TO margin
+    best_to = max(standings, key=lambda r: r.avg_to_margin)
+    print(f"  Best TO Margin: {best_to.team_name} ({best_to.avg_to_margin:+.1f}/game)")
 
     print(f"{'=' * 100}\n")
 

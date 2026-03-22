@@ -156,6 +156,9 @@ def _render_standings(session_id, standings, has_conferences, user_team):
             "PA": fmt_vb_score(record["points_against"]),
             "Diff": fmt_vb_score(record.get("point_differential", 0)),
             "Team Rtg": f"{record.get('avg_opi', 0):.1f}",
+            "PPD": f"{record.get('avg_ppd', 0):.1f}",
+            "5D%": f"{record.get('season_5d_pct', 0):.0f}%",
+            "KILL%": f"{record.get('season_kill_pct', 0):.0f}%",
         })
         standings_data.append(row)
     st.dataframe(pd.DataFrame(standings_data), hide_index=True, use_container_width=True, height=600)
