@@ -32,9 +32,47 @@
 {% if team.get('record') %}
 {% set rec = team.record %}
 <div class="grid-4" style="margin-bottom:16px;">
-  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ rec.get('wins',0) }}</span>-<span class="l">{{ rec.get('losses',0) }}</span></div></div>
+  <div class="metric"><div class="label">Record</div><div class="value"><span class="w">{{ rec.get('wins',0) }}</span>-<span class="l">{{ rec.get('losses',0) }}</span>{% if rec.get('ties') %}-<span class="t">{{ rec.ties }}</span>{% endif %}</div></div>
+  <div class="metric"><div class="label">Points Per Drive</div><div class="value accent">{{ rec.get('avg_ppd', 0) }}</div></div>
+  <div class="metric"><div class="label">Team Rating</div><div class="value">{{ rec.get('avg_team_rating', 0) }}</div></div>
+  <div class="metric"><div class="label">TO Margin</div><div class="value {% if rec.get('avg_to_margin', 0) > 0 %}stat-good{% elif rec.get('avg_to_margin', 0) < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(rec.get('avg_to_margin', 0)) }}</div></div>
+</div>
+
+<div class="grid-4" style="margin-bottom:16px;">
   <div class="metric"><div class="label">Points For</div><div class="value">{{ rec.get('points_for',0) }}</div></div>
   <div class="metric"><div class="label">Points Against</div><div class="value">{{ rec.get('points_against',0) }}</div></div>
+  <div class="metric"><div class="label">Conversion %</div><div class="value">{{ rec.get('avg_conversion_pct', 0) }}%</div></div>
+  <div class="metric"><div class="label">Lateral %</div><div class="value">{{ rec.get('avg_lateral_pct', 0) }}%</div></div>
+</div>
+
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric"><div class="label">5th Down Conv %</div><div class="value {% if rec.get('season_5d_pct', 0) >= 55 %}stat-good{% elif rec.get('season_5d_pct', 0) < 35 %}stat-bad{% endif %}">{{ rec.get('season_5d_pct', 0) }}%</div></div>
+  <div class="metric"><div class="label">5D% Own Deep</div><div class="value">{{ rec.get('season_5d_own_deep_pct', 0) }}%</div></div>
+  <div class="metric"><div class="label">KILL%</div><div class="value {% if rec.get('season_kill_pct', 0) <= 10 %}stat-good{% elif rec.get('season_kill_pct', 0) >= 25 %}stat-bad{% endif %}">{{ rec.get('season_kill_pct', 0) }}%</div></div>
+  <div class="metric"><div class="label">Avg &Delta; Yards</div><div class="value {% if rec.get('avg_delta_yds', 0) > 0 %}stat-good{% elif rec.get('avg_delta_yds', 0) < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(rec.get('avg_delta_yds', 0)) }}</div></div>
+</div>
+
+{% if rec.get('conversion_by_zone') %}
+<h3 style="margin-bottom:8px; color:var(--accent);">5th-Down Conversion by Field Zone</h3>
+<table style="margin-bottom:16px;">
+  <thead>
+    <tr><th>Zone</th><th class="num">5D Att</th><th class="num">5D%</th></tr>
+  </thead>
+  <tbody>
+    {% set zones = [('own_deep', 'Own 1-25'), ('own_half', 'Own 26-50'), ('opp_half', 'Opp 51-75'), ('opp_deep', 'Opp 76-99')] %}
+    {% for key, label in zones %}
+    {% set z = rec.conversion_by_zone.get(key, {}) %}
+    <tr>
+      <td>{{ label }}</td>
+      <td class="num">{{ z.get('d5_att', 0) }}</td>
+      <td class="num">{% if z.get('d5_att', 0) > 0 %}{{ z.d5_pct }}%{% else %}&mdash;{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="grid-4" style="margin-bottom:16px;">
   <div class="metric"><div class="label">Division</div><div class="value" style="font-size:13px">{{ team.get('division','—') }}</div></div>
 </div>
 {% endif %}

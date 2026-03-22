@@ -1039,6 +1039,29 @@ class ProLeagueSeason:
             "points": record.points,
             "points_for": record.points_for, "points_against": record.points_against,
             "pct": record.pct,
+            # Analytics
+            "avg_team_rating": round(record.avg_team_rating, 1),
+            "avg_ppd": round(record.avg_ppd, 2),
+            "avg_conversion_pct": round(record.total_conversion_pct / max(1, record.games_played), 1),
+            "avg_lateral_pct": round(record.total_lateral_pct / max(1, record.games_played), 1),
+            "avg_to_margin": round(record.total_to_margin / max(1, record.games_played), 1),
+            "season_5d_pct": record.season_5d_pct,
+            "season_kill_pct": record.season_kill_pct,
+            "avg_delta_yds": record.avg_delta_yds,
+            "season_5d_own_deep_pct": round(
+                record.conv_zone_own_deep_5d_conv / max(1, record.conv_zone_own_deep_5d_att) * 100, 1
+            ),
+            "conversion_by_zone": {
+                zone: {
+                    "d5_att": getattr(record, f"conv_zone_{zone}_5d_att", 0),
+                    "d5_conv": getattr(record, f"conv_zone_{zone}_5d_conv", 0),
+                    "d5_pct": round(
+                        getattr(record, f"conv_zone_{zone}_5d_conv", 0)
+                        / max(1, getattr(record, f"conv_zone_{zone}_5d_att", 0)) * 100, 1
+                    ),
+                }
+                for zone in ("own_deep", "own_half", "opp_half", "opp_deep")
+            },
         } if record else {"wins": 0, "losses": 0, "ties": 0, "points": 0, "points_for": 0, "points_against": 0, "pct": 0.0}
 
         return {
