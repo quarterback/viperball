@@ -347,7 +347,10 @@ def _render_standings(session_id, standings, has_conferences, user_team):
             "PF": fmt_vb_score(record["points_for"]),
             "PA": fmt_vb_score(record["points_against"]),
             "Diff": fmt_vb_score(record.get("point_differential", 0)),
-            "Team Rating": f"{record.get('avg_opi', 0):.1f}",
+            "Rtg": f"{record.get('avg_team_rating', record.get('avg_opi', 0)):.0f}",
+            "PPD": f"{record.get('avg_ppd', 0):.1f}",
+            "5D%": f"{record.get('season_5d_pct', 0):.0f}%",
+            "KILL%": f"{record.get('season_kill_pct', 0):.0f}%",
         })
         standings_data.append(row)
     stat_table(standings_data)
