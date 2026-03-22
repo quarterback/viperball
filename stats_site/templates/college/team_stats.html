@@ -679,6 +679,7 @@
   <thead><tr>
     <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th><th class="num">GP</th>
     <th class="num">BONUS POSS</th><th class="num">BONUS YDS</th><th class="num">BONUS SCORES</th>
+    <th class="num">CONV %</th><th class="num">SCORES/G</th>
   </tr></thead>
   <tbody>
   {% for t in teams %}
@@ -687,6 +688,10 @@
     <td class="num stat-good">{{ t.bonus_possessions }}</td>
     <td class="num">{{ t.bonus_yards }}</td>
     <td class="num">{{ t.bonus_scores }}</td>
+    {% set bconv = (t.bonus_scores / t.bonus_possessions * 100) | round(1) if t.bonus_possessions > 0 else 0.0 %}
+    <td class="num {% if bconv >= 60 %}stat-good{% elif bconv < 40 %}stat-bad{% endif %}">{{ "%.1f"|format(bconv) }}%</td>
+    {% set bspg = (t.bonus_scores / t.gp) | round(2) if t.gp > 0 else 0.0 %}
+    <td class="num {% if bspg >= 1.0 %}stat-good{% endif %}">{{ "%.2f"|format(bspg) }}</td>
   </tr>
   {% endfor %}
   </tbody>
