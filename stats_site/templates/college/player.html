@@ -338,14 +338,14 @@
     </td>
     <td class="num">{{ g.get('touches', 0) }}</td>
     <td class="num {% if g.get('rushing_yards', 0) >= 100 %}stat-elite{% elif g.get('rushing_yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('rushing_yards', 0)|int }}</td>
-    <td class="num {% if g.get('yards', 0) >= 100 %}stat-elite{% elif g.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('yards', 0) }}</td>
+    <td class="num {% if g.get('yards', 0) >= 100 %}stat-elite{% elif g.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ g.get('yards', 0)|round(0)|int }}</td>
     <td class="num {% if g.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ g.get('tds', 0) }}</td>
     <td class="num {% if g.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ g.get('fumbles', 0) }}</td>
     <td class="num">{% if g.get('kick_att', 0) > 0 %}{{ g.get('kick_made', 0) }}/{{ g.get('kick_att', 0) }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{% if g.get('kick_passes_thrown', 0) > 0 %}{{ g.get('kick_passes_completed', 0) }}/{{ g.get('kick_passes_thrown', 0) }}{% else %}&mdash;{% endif %}</td>
-    <td class="num {% if g.get('kick_pass_yards', 0) >= 200 %}stat-elite{% elif g.get('kick_pass_yards', 0) >= 100 %}stat-good{% endif %}">{% if g.get('kick_passes_thrown', 0) > 0 or g.get('kick_pass_receptions', 0) > 0 %}{{ g.get('kick_pass_yards', 0) }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if g.get('kick_pass_yards', 0) >= 200 %}stat-elite{% elif g.get('kick_pass_yards', 0) >= 100 %}stat-good{% endif %}">{% if g.get('kick_passes_thrown', 0) > 0 or g.get('kick_pass_receptions', 0) > 0 %}{{ g.get('kick_pass_yards', 0)|round(0)|int }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{% if g.get('kick_pass_receptions', 0) > 0 %}{{ g.get('kick_pass_receptions', 0) }}{% else %}&mdash;{% endif %}</td>
-    <td class="num">{% set ret = g.get('kick_return_yards', 0) + g.get('punt_return_yards', 0) %}{% if ret > 0 %}{{ ret }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% set ret = g.get('kick_return_yards', 0) + g.get('punt_return_yards', 0) %}{% if ret > 0 %}{{ ret|round(0)|int }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{{ g.get('tackles', 0) }}</td>
     <td class="num">{{ g.get('sacks', 0) }}</td>
     <td class="num {% if g.get('wpa', 0) > 5 %}stat-elite{% elif g.get('wpa', 0) > 2 %}stat-good{% elif g.get('wpa', 0) < -2 %}stat-bad{% endif %}">{% set wpa = g.get('wpa', 0) %}{% if wpa %}{{ '{:+.1f}'.format(wpa) }}{% else %}0.0{% endif %}</td>

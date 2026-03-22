@@ -580,7 +580,7 @@
   {% for t in teams %}
   <tr>
     {{ team_row(t, loop.index) }}
-    <td class="num {% if t.get('delta_yards', 0) > 0 %}stat-good{% elif t.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ t.get('delta_yards', 0) }}</td>
+    <td class="num {% if t.get('delta_yards', 0) > 0 %}stat-good{% elif t.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ t.get('delta_yards', 0)|round(0)|int }}</td>
     <td class="num">{{ t.delta_drives }}</td>
     <td class="num">{{ t.delta_scores }}</td>
     <td class="num">{{ t.kill_rate if t.kill_rate is not none else '—' }}{% if t.kill_rate is not none %}%{% endif %}</td>
@@ -604,7 +604,7 @@
   <tr>
     {{ team_row(t, loop.index) }}
     <td class="num stat-good">{{ t.bonus_possessions }}</td>
-    <td class="num">{{ t.bonus_yards }}</td>
+    <td class="num">{{ t.bonus_yards|round(0)|int }}</td>
     <td class="num">{{ t.bonus_scores }}</td>
   </tr>
   {% endfor %}

@@ -4796,7 +4796,7 @@ class ViperballEngine:
     # Elite defense (90+) can push these ~10-12% higher.
     # Weak defense (60-) drops them ~8-10% lower.
 
-    def _late_down_defensive_clamp(self, yards: float) -> float:
+    def _late_down_defensive_clamp(self, yards: float) -> int:
         """Apply defensive intensity ramp on downs 4-6.
 
         Returns modified yards.  On early downs (1-3) this is a no-op.
@@ -4870,9 +4870,9 @@ class ViperballEngine:
 
         if random.random() < clamp_prob:
             # Defense squelches — yards reduced to stuff or minimal gain
-            return max(-2.0, round(yards * random.uniform(*yard_range), 1))
+            return int(round(max(-2.0, yards * random.uniform(*yard_range))))
 
-        return yards
+        return int(round(yards))
 
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":

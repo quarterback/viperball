@@ -74,9 +74,9 @@
 {% macro stat_row(label, key, fmt='d', suffix='') %}
 {% if as_.get(key) is not none or hs.get(key) is not none %}
 <tr>
-  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(as_.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(as_.get(key, 0)) }}{{ suffix }}{% else %}{{ as_.get(key, 0) }}{{ suffix }}{% endif %}</td>
+  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(as_.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(as_.get(key, 0)) }}{{ suffix }}{% else %}{{ as_.get(key, 0)|round(0)|int }}{{ suffix }}{% endif %}</td>
   <td>{{ label }}</td>
-  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(hs.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(hs.get(key, 0)) }}{{ suffix }}{% else %}{{ hs.get(key, 0) }}{{ suffix }}{% endif %}</td>
+  <td class="num">{% if fmt == 'f1' %}{{ '%.1f'|format(hs.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(hs.get(key, 0)) }}{{ suffix }}{% else %}{{ hs.get(key, 0)|round(0)|int }}{{ suffix }}{% endif %}</td>
 </tr>
 {% endif %}
 {% endmacro %}
