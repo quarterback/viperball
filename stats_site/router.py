@@ -2719,6 +2719,171 @@ def pro_stats(request: Request, league: str, session_id: str, category: str = "a
     ))
 
 
+@router.get("/pro/{league}/{session_id}/player/{team_key}/{player_name}", response_class=HTMLResponse)
+def pro_player(request: Request, league: str, session_id: str, team_key: str, player_name: str):
+    api = _get_api()
+    key = f"{league.lower()}_{session_id}"
+    season = api["pro_sessions"].get(key)
+    if not season:
+        raise HTTPException(404, "Pro league session not found")
+
+    # Find the team and player
+    team = season.teams.get(team_key)
+    if not team:
+        raise HTTPException(404, f"Team '{team_key}' not found")
+
+    player = None
+    for p in getattr(team, "players", []):
+        if p.name == player_name:
+            player = p
+            break
+    if not player:
+        raise HTTPException(404, f"Player '{player_name}' not found on {team_key}")
+
+    # Build player card
+    card = None
+    try:
+        from engine.player_card import player_to_card
+        pc = player_to_card(player, team_key)
+        card = pc.to_dict()
+    except Exception:
+        pass
+
+    # Build season stats from completed games
+    season_totals = {
+        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
+        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
+        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
+        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
+        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+        "kick_return_yards": 0, "punt_return_yards": 0,
+        "rush_carries": 0, "rushing_tds": 0,
+        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
+        "kick_pass_ints": 0,
+        "kick_returns": 0, "kick_return_tds": 0,
+        "punt_returns": 0, "punt_return_tds": 0,
+        "muffs": 0, "st_tackles": 0,
+        "keeper_tackles": 0, "keeper_bells": 0,
+        "kick_deflections": 0, "coverage_snaps": 0,
+        "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
+        "blocks": 0, "pancakes": 0,
+        "offensive_snaps": 0, "defensive_snaps": 0,
+        "wpa": 0.0, "plays_involved": 0,
+    }
+    game_log = []
+    _ACCUM_STATS = [
+        "touches", "yards", "rushing_yards", "lateral_yards",
+        "tds", "fumbles", "laterals_thrown",
+        "kick_att", "kick_made", "pk_att", "pk_made",
+        "dk_att", "dk_made", "tackles", "tfl", "sacks",
+        "hurries", "kick_pass_yards", "kick_pass_tds",
+        "kick_passes_thrown", "kick_passes_completed",
+        "kick_return_yards", "punt_return_yards",
+        "rush_carries", "rushing_tds",
+        "lateral_receptions", "lateral_assists", "lateral_tds",
+        "kick_pass_interceptions_thrown", "kick_pass_receptions",
+        "kick_pass_ints",
+        "kick_returns", "kick_return_tds",
+        "punt_returns", "punt_return_tds",
+        "muffs", "st_tackles",
+        "keeper_tackles", "keeper_bells",
+        "kick_deflections", "coverage_snaps",
+        "keeper_return_yards",
+        "points_allowed_in_coverage",
+        "completions_allowed_in_coverage",
+        "blocks", "pancakes",
+        "offensive_snaps", "defensive_snaps",
+        "wpa", "plays_involved",
+    ]
+    for week_num, week_games in season.results.items():
+        for matchup_key, game_data in week_games.items():
+            if not game_data:
+                continue
+            home_key = game_data.get("home_key", "")
+            away_key = game_data.get("away_key", "")
+            if home_key != team_key and away_key != team_key:
+                continue
+            side = "home" if home_key == team_key else "away"
+            opp_side = "away" if side == "home" else "home"
+            opponent_key = game_data.get(f"{opp_side}_key", "")
+            opponent_name = game_data.get(f"{opp_side}_name", opponent_key)
+            result = game_data.get("result", {})
+            ps = result.get("player_stats", {}).get(side, [])
+            for pg in ps:
+                if pg.get("name") == player_name:
+                    home_score = game_data.get("home_score", 0)
+                    away_score = game_data.get("away_score", 0)
+                    my_score = home_score if side == "home" else away_score
+                    opp_score = away_score if side == "home" else home_score
+                    entry = {
+                        "week": week_num,
+                        "opponent": opponent_name,
+                        "opponent_key": opponent_key,
+                        "is_home": side == "home",
+                        "won": my_score > opp_score,
+                        "team_score": my_score,
+                        "opp_score": opp_score,
+                    }
+                    entry.update(pg)
+                    game_log.append(entry)
+                    season_totals["games"] += 1
+                    for stat in _ACCUM_STATS:
+                        season_totals[stat] += pg.get(stat, 0)
+                    break
+
+    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
+                "kick_return_yards", "punt_return_yards"):
+        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
+    season_totals["ypc"] = round(
+        season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
+    )
+    season_totals["yards_per_touch"] = season_totals["ypc"]
+    season_totals["kp_pct"] = round(
+        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+    season_totals["kick_pct"] = round(
+        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
+    )
+    season_totals["total_return_yards"] = (
+        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+    season_totals["kick_return_avg"] = round(
+        season_totals["kick_return_yards"] / max(1, season_totals["kick_returns"]), 1
+    )
+    season_totals["punt_return_avg"] = round(
+        season_totals["punt_return_yards"] / max(1, season_totals["punt_returns"]), 1
+    )
+    # Keeper analytics
+    if season_totals.get("coverage_snaps", 0) >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
+
+    team_name = team.name
+    division = season._get_division_for_key(team_key)
+
+    _pid = getattr(player, "player_id", "")
+    _face_src = _face_url_for(_pid) if _pid else None
+
+    return templates.TemplateResponse("pro/player.html", _ctx(
+        request, section="pro", league=league, session_id=session_id,
+        player=player, card=card,
+        team_key=team_key, team_name=team_name,
+        division=division,
+        league_name=season.config.league_name,
+        game_log=sorted(game_log, key=lambda g: g["week"]),
+        season_totals=season_totals, face_src=_face_src,
+        stadium_url=_stadium_url_for(team_key),
+    ))
+
+
 # ── WVL (Women's Viperball League) ──────────────────────────────────────
 
 def _wvl_tier_label(tier_num):

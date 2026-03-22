@@ -42,10 +42,10 @@
       <td class="num rank">{{ loop.index }}</td>
       <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
       <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
-      <td class="num">{{ t.get('points_for', 0) }}</td>
-      <td class="num">{{ t.get('points_against', 0) }}</td>
-      <td class="num {% if (t.get('points_for', 0) - t.get('points_against', 0)) > 0 %}stat-good{% elif (t.get('points_for', 0) - t.get('points_against', 0)) < 0 %}stat-bad{% endif %}">
-        {{ "%+.1f"|format(t.get('points_for', 0) - t.get('points_against', 0)) }}
+      <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
+      <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
+      <td class="num {% if t.get('diff', t.get('pf', 0) - t.get('pa', 0)) > 0 %}stat-good{% elif t.get('diff', t.get('pf', 0) - t.get('pa', 0)) < 0 %}stat-bad{% endif %}">
+        {{ "%+.1f"|format(t.get('diff', t.get('pf', 0) - t.get('pa', 0))) }}
       </td>
     </tr>
     {% endfor %}
@@ -66,8 +66,8 @@
       <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
       <td>{{ t.get('division', '') }}</td>
       <td class="record"><span class="w">{{ t.get('wins', 0) }}</span>-<span class="l">{{ t.get('losses', 0) }}</span></td>
-      <td class="num">{{ t.get('points_for', 0) }}</td>
-      <td class="num">{{ t.get('points_against', 0) }}</td>
+      <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
+      <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
     </tr>
     {% endfor %}
     </tbody>

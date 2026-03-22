@@ -739,13 +739,16 @@ async def _render_dashboard(season: ProLeagueSeason, dq_mgr: DraftyQueenzManager
 
                     with ui.row().classes("gap-2 mt-3"):
                         async def _back_to_hub():
-                            # Archive and save to DB
-                            archive_season(season)
-                            from engine.pro_league import _completed_league_snapshots
-                            lid = season.config.league_id
-                            if lid in _completed_league_snapshots:
-                                _db_save_archive(lid, _completed_league_snapshots[lid])
-                            _auto_save(lid, session_id)
+                            try:
+                                # Archive and save to DB
+                                archive_season(season)
+                                from engine.pro_league import _completed_league_snapshots
+                                lid = season.config.league_id
+                                if lid in _completed_league_snapshots:
+                                    _db_save_archive(lid, _completed_league_snapshots[lid])
+                                _auto_save(lid, session_id)
+                            except Exception as e:
+                                _log.warning(f"Archive/save failed on hub return: {e}")
                             _set_active_league(None)
                             app.storage.user["pro_league_session_id"] = None
                             app.storage.user["pro_league_pending_nav"] = True
