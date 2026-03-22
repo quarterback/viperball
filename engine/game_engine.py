@@ -4320,9 +4320,20 @@ class ViperballEngine:
                 # Interceptions (only) grant the intercepting team a bonus
                 # possession after their current drive ends, giving them
                 # back-to-back drives as a reward for the turnover.
-                # If this drive ends in an INT and there was already a
-                # bonus pending, the INT-back cancels it.
+                # If this drive ends in an INT-back or a fumble, the
+                # pending bonus is canceled.
                 is_interception = play.result in ("lateral_intercepted", "kick_pass_intercepted", "int_return_td")
+                is_fumble = play.result == "fumble"
+
+                if is_fumble and (self._bonus_recipient and self._bonus_drives_remaining >= 0
+                                  or self.state.bonus_possession_team):
+                    # Fumble cancels any pending bonus possession.
+                    # Like a basketball possession-arrow reset: if you
+                    # earned a bonus off an INT but fumble before it
+                    # triggers, the bonus is waived.
+                    self._bonus_recipient = ""
+                    self._bonus_drives_remaining = -1
+                    self.state.bonus_possession_team = ""
 
                 if is_interception:
                     if self._bonus_recipient and self._bonus_drives_remaining >= 0:
