@@ -130,18 +130,23 @@ def _coaching_flavor(team, rng: random.Random) -> float:
 
 
 def _team_strength(team, unavailable: set = None) -> float:
-    """Calculate composite team strength (0-100 scale) from ratings."""
+    """Calculate composite team strength (0-100 scale) from live player ratings."""
     all_players = team.players
     if not all_players:
         return 50.0
 
     avail = [p for p in all_players if p.name not in (unavailable or set())] or all_players
-    avg_ovr = sum(p.overall for p in avail) / len(avail)
+    n = len(avail)
+    avg_ovr = sum(p.overall for p in avail) / n
+    # Compute live from current player attributes (not cached team values)
+    avg_speed = sum(getattr(p, 'speed', 50) for p in avail) / n
+    avg_lateral = sum(getattr(p, 'lateral_skill', 50) for p in avail) / n
+    avg_kicking = sum(getattr(p, 'kicking', 50) for p in avail) / n
 
     off_components = (
-        team.avg_speed * 0.25 +
-        team.lateral_proficiency * 0.20 +
-        team.kicking_strength * 0.15 +
+        avg_speed * 0.25 +
+        avg_lateral * 0.20 +
+        avg_kicking * 0.15 +
         team.prestige * 0.15 +
         avg_ovr * 0.25
     )
@@ -152,15 +157,18 @@ def _team_strength(team, unavailable: set = None) -> float:
 
 
 def _defensive_strength(team, unavailable: set = None) -> float:
-    """Calculate defensive strength from team attributes."""
+    """Calculate defensive strength from live player attributes."""
     all_players = team.players
     avail = [p for p in all_players if p.name not in (unavailable or set())] or all_players
-    avg_ovr = sum(p.overall for p in avail) / max(1, len(avail))
+    n = max(1, len(avail))
+    avg_ovr = sum(p.overall for p in avail) / n
+    avg_speed = sum(getattr(p, 'speed', 50) for p in avail) / n
+    avg_tackling = sum(getattr(p, 'tackling', 50) for p in avail) / n
     return (
-        team.defensive_strength * 0.40 +
+        avg_tackling * 0.40 +
         team.prestige * 0.20 +
         avg_ovr * 0.25 +
-        team.avg_speed * 0.15
+        avg_speed * 0.15
     )
 
 
