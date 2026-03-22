@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "montana_state",
-    "school_name": "Montana State University",
+    "school_name": "Montana State",
     "abbreviation": "MSU",
     "mascot": "Bobcats",
     "conference": "Moonshine League",
@@ -261,12 +261,12 @@
         "weight": 186,
         "year": "Freshman",
         "hometown": {
-          "city": "Bras\u00edlia",
+          "city": "Brasília",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio Bras\u00edlia",
+        "high_school": "Colegio Brasília",
         "nationality": "Latin American",
         "archetype": "dual_threat_zb",
         "potential": 2,

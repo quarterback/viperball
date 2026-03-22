@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "creighton",
-    "school_name": "Creighton University",
+    "school_name": "Creighton",
     "abbreviation": "CU",
     "mascot": "Bluejays",
     "conference": "Big East",
@@ -95,7 +95,7 @@
       },
       {
         "number": 15,
-        "name": "Liliane Desch\u00eanes",
+        "name": "Liliane Deschênes",
         "position": "Viper/Back",
         "height": "5-8",
         "weight": 171,

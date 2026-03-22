@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "marquette",
-    "school_name": "Marquette University",
+    "school_name": "Marquette",
     "abbreviation": "MU",
     "mascot": "Golden Eagles",
     "conference": "Big East",
@@ -544,7 +544,7 @@
       },
       {
         "number": 52,
-        "name": "Monique Gagn\u00e9",
+        "name": "Monique Gagné",
         "position": "Offensive Line",
         "height": "6-0",
         "weight": 202,
@@ -800,7 +800,7 @@
       },
       {
         "number": 71,
-        "name": "Olivia Fern\u00e1ndez",
+        "name": "Olivia Fernández",
         "position": "Wingback",
         "height": "5-9",
         "weight": 188,

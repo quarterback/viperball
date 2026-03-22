@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "east_texas_am",
-    "school": "East Texas A&M University",
+    "school": "East Texas A&M",
     "abbreviation": "ETAMU",
     "mascot": "Lions",
     "conference": "Mountain West",
@@ -11,7 +11,7 @@
       "Blue",
       "Gold"
     ],
-    "school_name": "East Texas A&M University"
+    "school_name": "East Texas A&M"
   },
   "identity": {
     "style": "balanced",

@@ -49,7 +49,7 @@
   <div class="metric"><div class="label">5th Down Conv %</div><div class="value {% if rec.get('season_5d_pct', 0) >= 55 %}stat-good{% elif rec.get('season_5d_pct', 0) < 35 %}stat-bad{% endif %}">{{ rec.get('season_5d_pct', 0) }}%</div></div>
   <div class="metric"><div class="label">5D% Own Deep</div><div class="value">{{ rec.get('season_5d_own_deep_pct', 0) }}%</div></div>
   <div class="metric"><div class="label">KILL%</div><div class="value {% if rec.get('season_kill_pct', 0) <= 10 %}stat-good{% elif rec.get('season_kill_pct', 0) >= 25 %}stat-bad{% endif %}">{{ rec.get('season_kill_pct', 0) }}%</div></div>
-  <div class="metric"><div class="label">Avg &Delta; Yards</div><div class="value {% if rec.get('avg_delta_yds', 0) > 0 %}stat-good{% elif rec.get('avg_delta_yds', 0) < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(rec.get('avg_delta_yds', 0)) }}</div></div>
+  <div class="metric"><div class="label">Net YPG</div><div class="value {% if rec.get('avg_delta_yds', 0) > 0 %}stat-good{% elif rec.get('avg_delta_yds', 0) < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(rec.get('avg_delta_yds', 0)) }}</div></div>
 </div>
 
 {% if rec.get('conversion_by_zone') %}

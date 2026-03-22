@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "grand_valley_state",
-    "school": "Grand Valley State University",
+    "school": "Grand Valley State",
     "abbreviation": "GVSU",
     "mascot": "Lakers",
     "conference": "Prairie Athletic Union",
@@ -12,7 +12,7 @@
       "Black",
       "White"
     ],
-    "school_name": "Grand Valley State University"
+    "school_name": "Grand Valley State"
   },
   "identity": {
     "style": "aggressive",
