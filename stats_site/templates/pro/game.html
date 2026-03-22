@@ -844,4 +844,12 @@
 <pre style="color:var(--fg-dim);font-size:11px;">{{ box | tojson(indent=2) }}</pre>
 {% endif %}
 
+{% if analysis_text %}
+<h2>Game Analysis</h2>
+<details>
+  <summary>Full analytical report (click to expand)</summary>
+  <pre style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;color:var(--fg);white-space:pre-wrap;">{{ analysis_text }}</pre>
+</details>
+{% endif %}
+
 {% endblock %}

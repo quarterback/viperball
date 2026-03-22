@@ -362,6 +362,12 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "offense_style": getattr(rec, 'offense_style', ''),
         "defense_style": getattr(rec, 'defense_style', ''),
         "dye": rec.dye_season_summary if hasattr(rec, 'dye_season_summary') else None,
+        # Conversion-by-zone and delta analytics
+        "season_5d_pct": round(rec.season_5d_pct, 1) if hasattr(rec, 'season_5d_pct') else 0.0,
+        "season_5d_own_deep_pct": round(rec.season_5d_own_deep_pct, 1) if hasattr(rec, 'season_5d_own_deep_pct') else 0.0,
+        "season_kill_pct": round(rec.season_kill_pct, 1) if hasattr(rec, 'season_kill_pct') else 0.0,
+        "avg_delta_yds": round(rec.avg_delta_yds, 1) if hasattr(rec, 'avg_delta_yds') else 0.0,
+        "conversion_by_zone": rec.season_conversion_by_zone if hasattr(rec, 'season_conversion_by_zone') else {},
     }
 
 

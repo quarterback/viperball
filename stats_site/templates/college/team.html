@@ -59,6 +59,49 @@
     <div class="value">{{ record.avg_lateral_pct }}%</div>
   </div>
 </div>
+
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">5th Down Conv %</div>
+    <div class="value {% if record.season_5d_pct >= 55 %}stat-good{% elif record.season_5d_pct < 35 %}stat-bad{% endif %}">{{ record.season_5d_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">5D% Own Deep</div>
+    <div class="value">{{ record.season_5d_own_deep_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">KILL%</div>
+    <div class="value {% if record.season_kill_pct <= 10 %}stat-good{% elif record.season_kill_pct >= 25 %}stat-bad{% endif %}">{{ record.season_kill_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">Avg &Delta; Yards</div>
+    <div class="value {% if record.avg_delta_yds > 0 %}stat-good{% elif record.avg_delta_yds < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(record.avg_delta_yds) }}</div>
+  </div>
+</div>
+
+{% if record.conversion_by_zone %}
+<h3 style="margin-bottom:8px; color:var(--accent);">Late-Down Conversion by Field Zone</h3>
+<table style="margin-bottom:16px;">
+  <thead>
+    <tr><th>Zone</th><th class="num">4D Att</th><th class="num">4D%</th><th class="num">5D Att</th><th class="num">5D%</th><th class="num">6D Att</th><th class="num">6D%</th></tr>
+  </thead>
+  <tbody>
+    {% set zones = [('own_deep', 'Own 1-25'), ('own_half', 'Own 26-50'), ('opp_half', 'Opp 51-75'), ('opp_deep', 'Opp 76-99')] %}
+    {% for key, label in zones %}
+    {% set z = record.conversion_by_zone.get(key, {}) %}
+    <tr>
+      <td>{{ label }}</td>
+      <td class="num">{{ z.get('d4_att', 0) }}</td>
+      <td class="num">{% if z.get('d4_att', 0) > 0 %}{{ z.d4_pct }}%{% else %}&mdash;{% endif %}</td>
+      <td class="num">{{ z.get('d5_att', 0) }}</td>
+      <td class="num">{% if z.get('d5_att', 0) > 0 %}{{ z.d5_pct }}%{% else %}&mdash;{% endif %}</td>
+      <td class="num">{{ z.get('d6_att', 0) }}</td>
+      <td class="num">{% if z.get('d6_att', 0) > 0 %}{{ z.d6_pct }}%{% else %}&mdash;{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endif %}
 
 {% if team_stats %}

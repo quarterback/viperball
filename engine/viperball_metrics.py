@@ -39,17 +39,25 @@ def calculate_ppd(drives: List[Dict], team: str) -> float:
     if not team_drives:
         return 3.0
 
-    scoring_drives = sum(
-        1 for d in team_drives
-        if d.get("result") in ["touchdown", "successful_kick", "pindown", "safety"]
-    )
+    # Count actual scoring drives by type for accurate weighting
+    td_drives = sum(1 for d in team_drives
+                    if d.get("result") == "touchdown")
+    kick_drives = sum(1 for d in team_drives
+                      if d.get("result") == "successful_kick")
+    pindown_drives = sum(1 for d in team_drives
+                         if d.get("result") == "pindown")
+    safety_drives = sum(1 for d in team_drives
+                        if d.get("result") == "safety")
 
-    # Weighted average points per scoring outcome in Viperball
-    # TD = 9, DK = 5, PK = 3, Pindown = 1, Safety = 2
-    avg_points_per_scoring_drive = (0.40 * 9 + 0.30 * 4 + 0.20 * 1 + 0.10 * 2)
+    # Calculate actual points scored across drives
+    # TD = 9, DK/PK average = 4 (weighted toward DK=5 in aggressive
+    # offenses, PK=3 in conservative ones), Pindown = 1, Safety = 2
+    # Use 4.2 as the league-average kick value (DK slightly more common
+    # than PK due to 5-point payoff incentivizing attempts)
+    total_drive_pts = (td_drives * 9 + kick_drives * 4.2
+                       + pindown_drives * 1 + safety_drives * 2)
 
-    scoring_rate = scoring_drives / len(team_drives)
-    ppd = scoring_rate * avg_points_per_scoring_drive
+    ppd = total_drive_pts / len(team_drives)
     return round(ppd, 2)
 
 
@@ -73,6 +81,113 @@ def calculate_conversion_pct(plays: List[Dict], team: str) -> float:
     )
 
     return round((conversions / len(pressure_plays)) * 100, 1)
+
+
+def calculate_conversion_by_field_zone(plays: List[Dict], team: str) -> Dict:
+    """Late-down conversion rates split by field position zone.
+
+    This is the missing analytical layer: two teams can both convert 53%
+    on 5th down, but one does it from midfield and the other from their
+    own 15. Those are fundamentally different performances.
+
+    Zones (from the team's own perspective):
+      - 'own_deep'  (1-25):  backed up, hostile territory
+      - 'own_half'  (26-50): own side, manageable
+      - 'opp_half'  (51-75): opponent's side, scoring range approaches
+      - 'opp_deep'  (76-99): red zone / scoring position
+
+    Returns per-zone conversion rates for downs 4, 5, and 6.
+    """
+    team_plays = [p for p in plays if p.get("possession") == team]
+
+    zones = {
+        "own_deep": (1, 25),
+        "own_half": (26, 50),
+        "opp_half": (51, 75),
+        "opp_deep": (76, 99),
+    }
+
+    results = {}
+    for zone_name, (lo, hi) in zones.items():
+        zone_results = {}
+        for down in (4, 5, 6):
+            attempts = [
+                p for p in team_plays
+                if p.get("down") == down
+                and lo <= p.get("field_position", 0) <= hi
+            ]
+            conversions = sum(
+                1 for p in attempts
+                if p.get("result") in [
+                    "first_down", "touchdown", "successful_kick",
+                    "punt_return_td",
+                ]
+            )
+            att_count = len(attempts)
+            pct = round((conversions / att_count) * 100, 1) if att_count else 0.0
+            zone_results[f"d{down}_att"] = att_count
+            zone_results[f"d{down}_conv"] = conversions
+            zone_results[f"d{down}_pct"] = pct
+        results[zone_name] = zone_results
+
+    return results
+
+
+def calculate_delta_profile(plays: List[Dict], drives: List[Dict],
+                            team: str) -> Dict:
+    """Delta profile — how much difficulty a team faces vs creates.
+
+    Measures the environment each team operates in:
+      - delta_yds:    net yardage differential (positive = gaining more)
+      - delta_drives: net drive count differential
+      - delta_scores: net scoring differential
+      - kill_pct:     how often drives end with total failure (TOD, no gain)
+
+    Low KILL% + positive delta = controlled winning
+    High KILL% + negative delta = chaotic losing (disruption without control)
+    """
+    team_plays = [p for p in plays if p.get("possession") == team]
+    opp_plays = [p for p in plays if p.get("possession") != team]
+
+    team_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in team_plays)
+    opp_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in opp_plays)
+
+    team_drives = [d for d in drives if d.get("team") == team]
+    opp_drives = [d for d in drives if d.get("team") != team]
+
+    team_scoring = sum(
+        1 for d in team_drives
+        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
+    )
+    opp_scoring = sum(
+        1 for d in opp_drives
+        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
+    )
+
+    # Kill %: drives that end in total failure (turnover on downs or punt with minimal gain)
+    team_kills = sum(
+        1 for d in team_drives
+        if d.get("result") in ("turnover_on_downs", "punt")
+        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
+    )
+    opp_kills = sum(
+        1 for d in opp_drives
+        if d.get("result") in ("turnover_on_downs", "punt")
+        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
+    )
+
+    total_drives = len(team_drives)
+    opp_total_drives = len(opp_drives)
+
+    return {
+        "delta_yds": team_yards - opp_yards,
+        "delta_drives": total_drives - opp_total_drives,
+        "delta_scores": team_scoring - opp_scoring,
+        "team_kill_pct": round(team_kills / max(1, total_drives) * 100, 1),
+        "opp_kill_pct": round(opp_kills / max(1, opp_total_drives) * 100, 1),
+        "team_drives": total_drives,
+        "opp_drives": opp_total_drives,
+    }
 
 
 def calculate_lateral_pct(plays: List[Dict], team: str) -> float:
@@ -104,7 +219,7 @@ def calculate_explosive_plays(plays: List[Dict], team: str) -> int:
     Universal concept — ESPN uses this exact stat.
     """
     team_plays = [p for p in plays if p.get("possession") == team]
-    return sum(1 for p in team_plays if (p.get("yards_gained") or 0) >= 15)
+    return sum(1 for p in team_plays if (p.get("yards", p.get("yards_gained", 0)) or 0) >= 15)
 
 
 def calculate_to_margin(plays: List[Dict], team: str) -> int:
@@ -168,7 +283,7 @@ def calculate_kick_stats(plays: List[Dict], team: str) -> Dict:
 
     dk_made = sum(1 for p in dk_plays if p.get("result") == "successful_kick")
     pk_made = sum(1 for p in pk_plays if p.get("result") == "successful_kick")
-    punt_avg = sum(abs(p.get("yards_gained", 0)) for p in punts) / max(1, len(punts))
+    punt_avg = sum(abs(p.get("yards", p.get("yards_gained", 0))) for p in punts) / max(1, len(punts))
 
     return {
         "dk_att": len(dk_plays),
@@ -440,6 +555,10 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
     scoring = calculate_scoring_profile(plays, drives, team, game_stats)
     defense = calculate_defensive_impact(plays, drives, team, game_stats)
 
+    # Field-position-conditioned conversion rates
+    conv_by_zone = calculate_conversion_by_field_zone(plays, team)
+    delta = calculate_delta_profile(plays, drives, team)
+
     metrics = {
         # New fan-friendly metrics
         "ppd": ppd,
@@ -453,6 +572,10 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
         "scoring_profile": scoring,
         # Defensive impact — defense winning extra offense
         "defensive_impact": defense,
+        # Field-position-conditioned conversion (the missing layer)
+        "conversion_by_zone": conv_by_zone,
+        # Delta profile — operating environment
+        "delta_profile": delta,
         # Legacy aliases for backward compat during migration
         "territory_rating": avg_start * 2.0,  # rough 0-100 proxy
         "pressure_index": conv_pct,            # same concept

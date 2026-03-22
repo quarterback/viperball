@@ -6,8 +6,8 @@ concepts fans already know (WPA from baseball/NFL, WAR from baseball).
 
 Key concepts:
   - EP (Expected Points): How many points a league-average offense would
-    score from a given field position + down. Calibrated for 5-down,
-    9-point TD Viperball.
+    score from a given field position + down. Calibrated for 6-down,
+    20-yards-to-gain, 9-point TD Viperball.
   - WPA (Win Probability Added): How much each play shifts the team's
     expected win probability. Derived from EP swings scaled to game
     context (score, time remaining). Positive = helped your team win,

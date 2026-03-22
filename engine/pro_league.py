@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Tuple
 from engine.game_engine import load_team_from_json, Team, ViperballEngine
 from engine.fast_sim import fast_sim_game
 from engine.weather import generate_game_weather, describe_conditions
+from engine.viperball_metrics import calculate_viperball_metrics
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -327,6 +328,76 @@ class ProTeamRecord:
     def point_diff(self) -> int:
         return self.points_for - self.points_against
 
+    # Analytics accumulators (mirrors CVL TeamRecord)
+    total_team_rating: float = 0.0
+    total_ppd: float = 0.0
+    total_conversion_pct: float = 0.0
+    total_lateral_pct: float = 0.0
+    total_explosive: float = 0.0
+    total_to_margin: float = 0.0
+    # Conversion-by-zone (flat accumulators)
+    conv_zone_own_deep_5d_att: int = 0
+    conv_zone_own_deep_5d_conv: int = 0
+    conv_zone_own_half_5d_att: int = 0
+    conv_zone_own_half_5d_conv: int = 0
+    conv_zone_opp_half_5d_att: int = 0
+    conv_zone_opp_half_5d_conv: int = 0
+    conv_zone_opp_deep_5d_att: int = 0
+    conv_zone_opp_deep_5d_conv: int = 0
+    total_delta_yds: float = 0.0
+    total_team_kill_drives: int = 0
+    total_team_drives_for_kill: int = 0
+
+    def add_metrics(self, metrics: Dict):
+        """Accumulate per-game analytics from viperball_metrics output."""
+        self.total_team_rating += metrics.get('team_rating', metrics.get('opi', 0.0))
+        self.total_ppd += metrics.get('ppd', 0.0)
+        self.total_conversion_pct += metrics.get('conversion_pct', 0.0)
+        self.total_lateral_pct += metrics.get('lateral_pct', 0.0)
+        self.total_explosive += metrics.get('explosive_plays', 0.0)
+        self.total_to_margin += metrics.get('to_margin', 0.0)
+
+        # Conversion-by-zone (5D only for pro — the key signal)
+        conv_zones = metrics.get('conversion_by_zone', {})
+        for zone_key in ('own_deep', 'own_half', 'opp_half', 'opp_deep'):
+            zd = conv_zones.get(zone_key, {})
+            att_field = f"conv_zone_{zone_key}_5d_att"
+            conv_field = f"conv_zone_{zone_key}_5d_conv"
+            setattr(self, att_field, getattr(self, att_field, 0) + zd.get('d5_att', 0))
+            setattr(self, conv_field, getattr(self, conv_field, 0) + zd.get('d5_conv', 0))
+
+        # Delta
+        delta = metrics.get('delta_profile', {})
+        self.total_delta_yds += delta.get('delta_yds', 0)
+        team_drives = delta.get('team_drives', 0)
+        if team_drives > 0:
+            self.total_team_kill_drives += round(delta.get('team_kill_pct', 0) / 100 * team_drives)
+            self.total_team_drives_for_kill += team_drives
+
+    @property
+    def avg_team_rating(self) -> float:
+        return self.total_team_rating / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def avg_ppd(self) -> float:
+        return self.total_ppd / self.games_played if self.games_played > 0 else 0.0
+
+    @property
+    def season_5d_pct(self) -> float:
+        total_att = sum(getattr(self, f"conv_zone_{z}_5d_att", 0)
+                        for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        total_conv = sum(getattr(self, f"conv_zone_{z}_5d_conv", 0)
+                         for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        return round(total_conv / total_att * 100, 1) if total_att > 0 else 0.0
+
+    @property
+    def season_kill_pct(self) -> float:
+        return round(self.total_team_kill_drives / max(1, self.total_team_drives_for_kill) * 100, 1)
+
+    @property
+    def avg_delta_yds(self) -> float:
+        return round(self.total_delta_yds / self.games_played, 1) if self.games_played > 0 else 0.0
+
     def record_result(self, won: Optional[bool], pf: int, pa: int, is_div: bool):
         """Record a game result. won=True → win, won=False → loss, won=None → draw."""
         if won is True:
@@ -566,6 +637,15 @@ class ProLeagueSeason:
                 pf=int(away_score), pa=int(home_score), is_div=is_div
             )
 
+            # Accumulate advanced metrics for season analytics
+            try:
+                home_metrics = calculate_viperball_metrics(result, "home")
+                away_metrics = calculate_viperball_metrics(result, "away")
+                self.standings[matchup.home_key].add_metrics(home_metrics)
+                self.standings[matchup.away_key].add_metrics(away_metrics)
+            except Exception:
+                pass  # Don't block game results if metrics fail
+
             self._accumulate_player_stats(matchup.home_key, result, "home")
             self._accumulate_player_stats(matchup.away_key, result, "away")
 
@@ -630,6 +710,12 @@ class ProLeagueSeason:
                 "div_record": f"{r.div_wins}-{r.div_losses}-{r.div_ties}",
                 "streak": f"{r.streak_type}{r.streak}" if r.streak_type else "-",
                 "last_5": "".join(r.last_5[-5:]),
+                # Analytics
+                "avg_team_rating": round(r.avg_team_rating, 1),
+                "avg_ppd": round(r.avg_ppd, 2),
+                "season_5d_pct": round(r.season_5d_pct, 1),
+                "season_kill_pct": round(r.season_kill_pct, 1),
+                "avg_delta_yds": round(r.avg_delta_yds, 1),
             } for r in div_teams]
         return {
             "league": self.config.league_name,

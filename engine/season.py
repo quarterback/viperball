@@ -248,6 +248,39 @@ class TeamRecord:
     bonus_poss_yards: int = 0
     opponent_bonus_poss_scores: int = 0
 
+    # Conversion-by-zone season accumulators (4D/5D/6D × 4 zones)
+    conv_zone_own_deep_4d_att: int = 0
+    conv_zone_own_deep_4d_conv: int = 0
+    conv_zone_own_deep_5d_att: int = 0
+    conv_zone_own_deep_5d_conv: int = 0
+    conv_zone_own_deep_6d_att: int = 0
+    conv_zone_own_deep_6d_conv: int = 0
+    conv_zone_own_half_4d_att: int = 0
+    conv_zone_own_half_4d_conv: int = 0
+    conv_zone_own_half_5d_att: int = 0
+    conv_zone_own_half_5d_conv: int = 0
+    conv_zone_own_half_6d_att: int = 0
+    conv_zone_own_half_6d_conv: int = 0
+    conv_zone_opp_half_4d_att: int = 0
+    conv_zone_opp_half_4d_conv: int = 0
+    conv_zone_opp_half_5d_att: int = 0
+    conv_zone_opp_half_5d_conv: int = 0
+    conv_zone_opp_half_6d_att: int = 0
+    conv_zone_opp_half_6d_conv: int = 0
+    conv_zone_opp_deep_4d_att: int = 0
+    conv_zone_opp_deep_4d_conv: int = 0
+    conv_zone_opp_deep_5d_att: int = 0
+    conv_zone_opp_deep_5d_conv: int = 0
+    conv_zone_opp_deep_6d_att: int = 0
+    conv_zone_opp_deep_6d_conv: int = 0
+
+    # Delta profile season accumulators
+    total_delta_yds: float = 0.0
+    total_team_kill_drives: int = 0
+    total_team_drives_for_kill: int = 0
+    total_opp_kill_drives: int = 0
+    total_opp_drives_for_kill: int = 0
+
     def add_game_result(self, won: Optional[bool], points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
                         defensive_ints: int = 0,
@@ -336,6 +369,33 @@ class TeamRecord:
 
         self.dye_total_delta_yards += metrics.get("delta_yards_raw", 0)
 
+        # Conversion-by-zone accumulators
+        conv_zones = metrics.get('conversion_by_zone', {})
+        for zone_key in ('own_deep', 'own_half', 'opp_half', 'opp_deep'):
+            zd = conv_zones.get(zone_key, {})
+            for down in (4, 5, 6):
+                att_key = f"d{down}_att"
+                conv_key = f"d{down}_conv"
+                field_att = f"conv_zone_{zone_key}_{down}d_att"
+                field_conv = f"conv_zone_{zone_key}_{down}d_conv"
+                setattr(self, field_att, getattr(self, field_att, 0) + zd.get(att_key, 0))
+                setattr(self, field_conv, getattr(self, field_conv, 0) + zd.get(conv_key, 0))
+
+        # Delta profile accumulators
+        delta = metrics.get('delta_profile', {})
+        self.total_delta_yds += delta.get('delta_yds', 0)
+        team_drives_count = delta.get('team_drives', 0)
+        opp_drives_count = delta.get('opp_drives', 0)
+        team_kill_pct = delta.get('team_kill_pct', 0)
+        opp_kill_pct = delta.get('opp_kill_pct', 0)
+        # Convert % back to raw counts for accurate season totals
+        if team_drives_count > 0:
+            self.total_team_kill_drives += round(team_kill_pct / 100 * team_drives_count)
+            self.total_team_drives_for_kill += team_drives_count
+        if opp_drives_count > 0:
+            self.total_opp_kill_drives += round(opp_kill_pct / 100 * opp_drives_count)
+            self.total_opp_drives_for_kill += opp_drives_count
+
         if bonus_data:
             self.bonus_poss_total += bonus_data.get("count", 0)
             self.bonus_poss_scores += bonus_data.get("scores", 0)
@@ -390,6 +450,55 @@ class TeamRecord:
     @property
     def stop_rate(self) -> float:
         return round(self.total_defensive_stops / max(1, self.total_opponent_drives) * 100, 1) if self.total_opponent_drives else 0.0
+
+    # ── Conversion by field zone (season-level) ──
+
+    @property
+    def season_conversion_by_zone(self) -> Dict:
+        """Season-aggregate conversion rates by field zone and down."""
+        zones = {}
+        for zone_key in ('own_deep', 'own_half', 'opp_half', 'opp_deep'):
+            zone = {}
+            for down in (4, 5, 6):
+                att = getattr(self, f"conv_zone_{zone_key}_{down}d_att", 0)
+                conv = getattr(self, f"conv_zone_{zone_key}_{down}d_conv", 0)
+                pct = round(conv / att * 100, 1) if att > 0 else 0.0
+                zone[f"d{down}_att"] = att
+                zone[f"d{down}_conv"] = conv
+                zone[f"d{down}_pct"] = pct
+            zones[zone_key] = zone
+        return zones
+
+    @property
+    def season_5d_pct(self) -> float:
+        """Overall 5th-down conversion rate across all zones."""
+        total_att = sum(getattr(self, f"conv_zone_{z}_5d_att", 0)
+                        for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        total_conv = sum(getattr(self, f"conv_zone_{z}_5d_conv", 0)
+                         for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        return round(total_conv / total_att * 100, 1) if total_att > 0 else 0.0
+
+    @property
+    def season_5d_own_deep_pct(self) -> float:
+        """5th-down conversion rate from own deep (1-25) — the survival metric."""
+        att = self.conv_zone_own_deep_5d_att
+        conv = self.conv_zone_own_deep_5d_conv
+        return round(conv / att * 100, 1) if att > 0 else 0.0
+
+    @property
+    def season_kill_pct(self) -> float:
+        """Season KILL% — drives ending in total failure."""
+        return round(self.total_team_kill_drives / max(1, self.total_team_drives_for_kill) * 100, 1)
+
+    @property
+    def season_opp_kill_pct(self) -> float:
+        """Season opponent KILL%."""
+        return round(self.total_opp_kill_drives / max(1, self.total_opp_drives_for_kill) * 100, 1)
+
+    @property
+    def avg_delta_yds(self) -> float:
+        """Average yardage differential per game."""
+        return round(self.total_delta_yds / self.games_played, 1) if self.games_played > 0 else 0.0
 
     # ── Legacy property aliases (backward compat) ──
 

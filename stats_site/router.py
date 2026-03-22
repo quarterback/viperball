@@ -1296,10 +1296,20 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     if fr:
         _normalize_box_score_stats(fr)
 
+    # Generate game analysis text if full result is available
+    analysis_text = None
+    if fr and not fr.get("_fast_sim"):
+        try:
+            from analyze_game import analyze_game_data
+            analysis_text = analyze_game_data(fr)
+        except Exception:
+            pass
+
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
         bowl_name=bowl_name, is_playoff=is_playoff,
+        analysis_text=analysis_text,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
     ))
 
@@ -2390,11 +2400,22 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
 
     _normalize_box_score_stats(box)
 
+    # Generate game analysis if full result available
+    analysis_text = None
+    fr = box.get("result") if isinstance(box, dict) else None
+    if fr and not (fr.get("_fast_sim") if isinstance(fr, dict) else False):
+        try:
+            from analyze_game import analyze_game_data
+            analysis_text = analyze_game_data(fr)
+        except Exception:
+            pass
+
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("pro/game.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
         box=box, week=week, matchup=matchup,
         league_name=season.config.league_name,
+        analysis_text=analysis_text,
         stadium_url=_stadium_url_for(_home_key),
     ))
 
