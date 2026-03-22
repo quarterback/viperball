@@ -403,12 +403,12 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         # ensures linemen who dominate the trenches on both sides are rewarded
         raw = ol_score * 0.40 + dl_score * 0.60
     elif group == "keeper_def":
-        # 50/50 blend of KPR (0-10, higher=better) and inverted ERA
-        # (0-9.99, lower=better → invert to 0-10 higher=better)
+        # Blend of KPR (0-10), inverted ERA (0-10), and WPA impact
         kpr = _compute_kpr(stats)
         era = _compute_keeper_era(stats)
         inv_era = max(0.0, 10.0 - era)
-        raw = kpr * 0.5 + inv_era * 0.5  # already a rate, no /games
+        wpa = min(10.0, max(-5.0, stats.get("wpa", 0.0)))
+        raw = kpr * 0.30 + inv_era * 0.35 + wpa * 0.35
     elif group == "safety":
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
@@ -432,18 +432,18 @@ def _format_stat_line(stats: dict, group: str) -> str:
     if group in ("zeroback",):
         kp_comp = stats.get("kick_passes_completed", 0)
         kp_att = stats.get("kick_passes_thrown", 0)
-        kp_yds = stats.get("kick_pass_yards", 0)
+        kp_yds = int(round(stats.get("kick_pass_yards", 0)))
         kp_tds = stats.get("kick_pass_tds", 0)
-        rush_yds = stats.get("rushing_yards", 0)
+        rush_yds = int(round(stats.get("rushing_yards", 0)))
         tds = stats.get("tds", 0)
         parts.append(f"{kp_comp}/{kp_att} KP {kp_yds} yds {kp_tds} KP TD")
         parts.append(f"{rush_yds} rush yds, {tds} TD")
     elif group == "viper":
-        yds = stats.get("yards", 0)
+        yds = int(round(stats.get("yards", 0)))
         tds = stats.get("tds", 0)
         parts.append(f"{yds} yds, {tds} TD")
     elif group == "back":
-        rush_yds = stats.get("rushing_yards", 0)
+        rush_yds = int(round(stats.get("rushing_yards", 0)))
         carries = stats.get("rush_carries", 0)
         tds = stats.get("tds", 0)
         ypc = round(rush_yds / max(1, carries), 1)
@@ -474,7 +474,7 @@ def _format_stat_line(stats: dict, group: str) -> str:
         pct = round(100 * kick_made / max(1, kick_att), 1)
         parts.append(f"{kick_made}/{kick_att} kicks ({pct}%)")
     else:
-        yds = stats.get("yards", 0)
+        yds = int(round(stats.get("yards", 0)))
         tds = stats.get("tds", 0)
         parts.append(f"{yds} yds, {tds} TD")
 
@@ -491,15 +491,15 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
     if group in ("zeroback",):
         d["kick_passes_completed"] = stats.get("kick_passes_completed", 0)
         d["kick_passes_thrown"] = stats.get("kick_passes_thrown", 0)
-        d["kick_pass_yards"] = stats.get("kick_pass_yards", 0)
+        d["kick_pass_yards"] = int(round(stats.get("kick_pass_yards", 0)))
         d["kick_pass_tds"] = stats.get("kick_pass_tds", 0)
-        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["rushing_yards"] = int(round(stats.get("rushing_yards", 0)))
         d["tds"] = stats.get("tds", 0)
     elif group == "viper":
-        d["yards"] = stats.get("yards", 0)
+        d["yards"] = int(round(stats.get("yards", 0)))
         d["tds"] = stats.get("tds", 0)
     elif group == "back":
-        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["rushing_yards"] = int(round(stats.get("rushing_yards", 0)))
         d["rush_carries"] = stats.get("rush_carries", 0)
         d["tds"] = stats.get("tds", 0)
     elif group == "keeper_def":
@@ -526,7 +526,7 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
         d["kick_made"] = stats.get("kick_made", 0)
         d["kick_att"] = stats.get("kick_att", 0)
     else:
-        d["yards"] = stats.get("yards", 0)
+        d["yards"] = int(round(stats.get("yards", 0)))
         d["tds"] = stats.get("tds", 0)
     wpa = stats.get("wpa", 0.0)
     if wpa:
@@ -718,6 +718,10 @@ def _passes_volume_gate(pstats: dict, group: str, standings: dict, team_name: st
             return False
     elif group == "zeroback":
         if pstats.get("kick_passes_thrown", 0) < games * 2:
+            return False
+    elif group == "keeper_def":
+        # Keepers must have meaningful coverage snaps (at least ~20/game)
+        if pstats.get("coverage_snaps", 0) < games * 15:
             return False
     return True
 
@@ -1120,11 +1124,11 @@ def _select_individual_awards(
         _add(best_k[0], best_k[1], "Best Kicker",
              f"Nation's outstanding kicker ({best_k[1]})")
 
-    # ── Diamond Gloves (best defensive backfield player by KPR + ERA) ────
-    # Keepers and safeties eligible. Highest KPR wins.
-    # Minimum .500 team record required, must have coverage snaps
+    # ── Diamond Gloves (best defensive backfield player by KPR + ERA + WPA) ──
+    # Keepers and safeties eligible. Composite score: KPR, inverted ERA, WPA.
+    # Minimum .500 team record required, must have meaningful coverage snaps.
     best_dg = None
-    best_dg_kpr = -1.0
+    best_dg_score = -999.0
     for t_name, t in teams.items():
         if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POSITIONAL:
             continue
@@ -1141,8 +1145,13 @@ def _select_individual_awards(
             if pstats.get("coverage_snaps", 0) < 20:
                 continue
             kpr = _compute_kpr(pstats)
-            if kpr > best_dg_kpr:
-                best_dg_kpr = kpr
+            era = _compute_keeper_era(pstats)
+            inv_era = max(0.0, 10.0 - era)
+            wpa = pstats.get("wpa", 0.0)
+            # Composite: KPR (0-10), inverted ERA (0-10), WPA scaled
+            dg_score = kpr * 0.35 + inv_era * 0.35 + min(10.0, max(-5.0, wpa)) * 0.30
+            if dg_score > best_dg_score:
+                best_dg_score = dg_score
                 best_dg = (p, t_name, pstats)
     if best_dg:
         p, t, pstats = best_dg

@@ -636,6 +636,9 @@ def _make_player_entry(player, **overrides) -> Dict:
         "keeper_bells": 0,
         "coverage_snaps": 0,
         "keeper_tackles": 0,
+        "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
         # Roles
         "off_role": "ROTATION",
         "def_role": "ROTATION",
@@ -646,7 +649,8 @@ def _make_player_entry(player, **overrides) -> Dict:
 
 
 def _generate_player_stats(team, stats: Dict, scoring: Dict,
-                           rng: random.Random) -> List[Dict]:
+                           rng: random.Random,
+                           opp_score: float = 0.0) -> List[Dict]:
     """Generate individual player stat leaders from team totals.
 
     Output field names match the full game engine so the API aggregator
@@ -834,10 +838,19 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
         keeper_bells = 0
         keeper_tackles = 0
         kick_deflections = 0
+        coverage_snaps = 0
+        pts_allowed = 0.0
+        completions_allowed = 0
         if player.position == "Keeper":
             keeper_bells = int(max(0, round(rng.gauss(1.5, 1.0))))
             keeper_tackles = int(max(0, round(rng.gauss(3, 1.5))))
             kick_deflections = int(max(0, round(rng.gauss(1.0, 0.8))))
+            # Approximate coverage snaps (~40 defensive snaps per game)
+            coverage_snaps = int(max(20, round(rng.gauss(40, 5))))
+            # Distribute opponent points across keepers
+            n_keepers = max(1, sum(1 for p in defenders if p.position == "Keeper"))
+            pts_allowed = round(opp_score / n_keepers, 1)
+            completions_allowed = int(max(0, round(rng.gauss(3, 1.5))))
 
         entry = _make_player_entry(
             player,
@@ -850,6 +863,9 @@ def _generate_player_stats(team, stats: Dict, scoring: Dict,
             keeper_bells=keeper_bells,
             keeper_tackles=keeper_tackles,
             kick_deflections=kick_deflections,
+            coverage_snaps=coverage_snaps,
+            points_allowed_in_coverage=pts_allowed,
+            completions_allowed_in_coverage=completions_allowed,
             def_role="STARTER" if tackles >= 4 else "ROTATION",
         )
         all_stat_players.append(entry)
@@ -1030,8 +1046,10 @@ def fast_sim_game(home_team, away_team,
     home_stats = _generate_team_stats(home_scoring, home_team, away_def, rng)
     away_stats = _generate_team_stats(away_scoring, away_team, home_def, rng)
 
-    home_player_stats = _generate_player_stats(home_team, home_stats, home_scoring, rng)
-    away_player_stats = _generate_player_stats(away_team, away_stats, away_scoring, rng)
+    home_player_stats = _generate_player_stats(home_team, home_stats, home_scoring, rng,
+                                               opp_score=away_scoring["score"])
+    away_player_stats = _generate_player_stats(away_team, away_stats, away_scoring, rng,
+                                               opp_score=home_scoring["score"])
 
     home_metrics = _generate_synthetic_metrics(home_stats, home_scoring, home_str, rng)
     away_metrics = _generate_synthetic_metrics(away_stats, away_scoring, away_str, rng)

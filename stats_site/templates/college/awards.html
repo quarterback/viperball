@@ -77,12 +77,12 @@
       {% if ss %}
         {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
         {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
-        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards|round(1) }} KP yds</span>{% endif %}
         {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
-        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
-        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards|round(1) }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards|round(1) }} rush</span>{% endif %}
         {% if ss.get('rush_carries') %}<span class="stat-badge">{{ ss.rush_carries }} car</span>{% endif %}
-        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards }} lat</span>{% endif %}
+        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards|round(1) }} lat</span>{% endif %}
         {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
         {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
         {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}
@@ -120,12 +120,12 @@
       {% if ss %}
         {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
         {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
-        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards|round(1) }} KP yds</span>{% endif %}
         {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
-        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
-        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards|round(1) }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards|round(1) }} rush</span>{% endif %}
         {% if ss.get('rush_carries') %}<span class="stat-badge">{{ ss.rush_carries }} car</span>{% endif %}
-        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards }} lat</span>{% endif %}
+        {% if ss.get('lateral_yards') %}<span class="stat-badge">{{ ss.lateral_yards|round(1) }} lat</span>{% endif %}
         {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
         {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
         {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}
@@ -226,10 +226,10 @@
       {% if ss %}
         {% if ss.get('games') %}<span class="stat-badge">{{ ss.games }} GP</span>{% endif %}
         {% if ss.get('kick_passes_completed') is not none and ss.get('kick_passes_thrown') is not none %}<span class="stat-badge">{{ ss.kick_passes_completed }}/{{ ss.kick_passes_thrown }} KP</span>{% endif %}
-        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards }} KP yds</span>{% endif %}
+        {% if ss.get('kick_pass_yards') %}<span class="stat-badge">{{ ss.kick_pass_yards|round(1) }} KP yds</span>{% endif %}
         {% if ss.get('kick_pass_tds') %}<span class="stat-badge">{{ ss.kick_pass_tds }} KP TD</span>{% endif %}
-        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards }} yds</span>{% endif %}
-        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards }} rush</span>{% endif %}
+        {% if ss.get('yards') %}<span class="stat-badge">{{ ss.yards|round(1) }} yds</span>{% endif %}
+        {% if ss.get('rushing_yards') %}<span class="stat-badge">{{ ss.rushing_yards|round(1) }} rush</span>{% endif %}
         {% if ss.get('tds') %}<span class="stat-badge">{{ ss.tds }} TD</span>{% endif %}
         {% if ss.get('tackles') %}<span class="stat-badge">{{ ss.tackles }} TKL</span>{% endif %}
         {% if ss.get('sacks') %}<span class="stat-badge">{{ ss.sacks }} sacks</span>{% endif %}

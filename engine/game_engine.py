@@ -43,8 +43,8 @@ V2_ENGINE_CONFIG = {
     "prestige_decay_enabled": True,
     # Narrative generation: YAR, headlines, composure graph
     "narrative_enabled": True,
-    # Power ratio exponent: tune between 1.5 (mild) and 2.0 (spec)
-    "power_ratio_exponent": 1.8,
+    # Power ratio exponent: higher = bigger talent gap advantage
+    "power_ratio_exponent": 2.2,
     # V2.4: Starting yard line for drives (20 = standard, 15 = tighter field)
     "starting_yard_line": 20,
     # V2.4: Minimum combined suppression multiplier — prevents degenerate 0-yard drives
@@ -157,7 +157,7 @@ COMPOSURE_EVENTS = {
 
 COMPOSURE_PREGAME = {
     "rivalry": 0.15,        # +15% variance (both teams)
-    "playoff": 0.25,        # +25% variance
+    "playoff": 0.08,        # Reduced variance — playoffs reward consistency
     "trap_game_favorite": -0.15,   # Favorite starts lower composure
     "trap_game_underdog": +0.15,   # Underdog gets composure boost
 }
@@ -4342,22 +4342,28 @@ class ViperballEngine:
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    # Possession reset consumes clock (celebration, setup)
+                    self.state.time_remaining = max(0, self.state.time_remaining - 10)
                     self.kickoff(receiving)
                 elif play.result == "successful_kick":
                     kicking_team = self.state.possession
                     receiving = "away" if kicking_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "punt_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "int_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
@@ -4398,12 +4404,12 @@ class ViperballEngine:
             dk_viable = stall_deficit <= 5  # Drop kick (5 pts) can tie
             dk_in_range = final_fg_dist <= min(58, dk_range)
 
-            if fp >= 55 and pk_viable:
+            if fp >= 60 and final_fg_dist <= 50 and pk_viable:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif fp >= 55 and dk_viable and dk_in_range:
+            elif fp >= 55 and dk_viable and dk_in_range and final_fg_dist <= 55:
                 # Deficit too large for FG but drop kick can do it
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
-            elif dk_in_range and dk_viable:
+            elif dk_in_range and dk_viable and final_fg_dist <= 55:
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             elif stall_deficit == 0:
                 # Leading or tied — punt for field position
@@ -4503,32 +4509,36 @@ class ViperballEngine:
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
         """Field goal accuracy — kicker-range model.
 
-        In a sport that evolved around kicking (no forward pass), kickers
-        are far more developed than NFL kickers.  50-yard FGs are routine.
-        60-70 yarders are competitive.  The kicker's skill determines
-        their COMFORTABLE RANGE — within it, makes are near-automatic.
-        Beyond it, success drops off steeply.
-
-        60-skill → comfortable to ~45 yards
-        75-skill → comfortable to ~58 yards
-        85-skill → comfortable to ~67 yards
-        95-skill → comfortable to ~76 yards
+        Realistic probability model:
+        - Under 40 yards: near-automatic for good kickers
+        - 40-54 yards: competitive range, skill-dependent
+        - 55-58 yards: 0.3% (extremely rare)
+        - 59-65 yards: 0.1% (once-in-a-lifetime)
+        - 65+ yards: impossible (handled by caller)
         """
-        comfortable_range = 45 + (kicker_skill - 60) * 0.9
+        if distance > 65:
+            return 0.0
+        if distance >= 59:
+            return 0.001  # 0.1% — near-impossible
+        if distance >= 55:
+            return 0.003  # 0.3% — extremely rare
+
+        # Normal range: skill-dependent comfort zone
+        comfortable_range = 30 + (kicker_skill - 60) * 0.5  # 60-skill→30yd, 90-skill→45yd
 
         if distance <= 20:
-            return 0.99  # Chip shot
+            return 0.97  # Chip shot
         elif distance <= comfortable_range:
             frac = (distance - 20) / max(1, comfortable_range - 20)
-            return 0.98 - frac * 0.10  # 0.98 close → 0.88 at edge
-        elif distance <= comfortable_range + 10:
+            return 0.95 - frac * 0.10  # 0.95 close → 0.85 at edge
+        elif distance <= comfortable_range + 8:
             over = distance - comfortable_range
-            return max(0.10, 0.85 - over * 0.05)
-        elif distance <= comfortable_range + 20:
-            over = distance - comfortable_range - 10
-            return max(0.05, 0.30 - over * 0.02)
+            return max(0.15, 0.80 - over * 0.08)  # 0.80 → 0.16
+        elif distance <= 54:
+            over = distance - comfortable_range - 8
+            return max(0.05, 0.15 - over * 0.01)
         else:
-            return max(0.03, 0.08 - (distance - comfortable_range - 20) * 0.01)
+            return 0.003
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
@@ -4620,8 +4630,9 @@ class ViperballEngine:
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         kicker_skill = kicker.kicking
 
+        # Place kicks beyond 54 yards are near-impossible; never attempt beyond 65
+        pk_success = self._place_kick_success(fg_distance, kicker_skill) if fg_distance <= 54 else 0.0
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
-        pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
         if fp >= 90:
@@ -7119,17 +7130,11 @@ class ViperballEngine:
         return max(raw_yards, floor)
 
     def _should_use_halo(self, carrier) -> bool:
-        """Determine if this play uses team halo or individual ratings.
+        """Halo system disabled — individual player ratings always used.
 
-        V2 Rule: 90% of plays use halo.  Star-designated players at
-        Critical Contest Points always use individual ratings.
+        This ensures talent gaps between teams are reflected in play outcomes.
         """
-        if not V2_ENGINE_CONFIG.get("halo_enabled", False):
-            return False
-        if carrier.star_designated:
-            return False  # Stars always use individual ratings
-        # 90% halo, 10% individual (for non-star plays)
-        return random.random() < 0.90
+        return False
 
     def _contest_run_yards(self, carrier, tackler, play_config,
                            play_family: "PlayFamily | None" = None) -> float:
@@ -7181,10 +7186,10 @@ class ViperballEngine:
             play_shift = ((base_low + base_high) / 2.0) - 3.0
             center = base_yards + play_shift
 
-            # Variance: closer matchups = more volatile
+            # Variance: closer matchups = more volatile, but talent gaps tighten variance
             ratio_distance = abs(ratio - 1.0)
             proximity = 1.0 - min(1.0, ratio_distance / 0.5)
-            variance = 0.8 + proximity * 1.4
+            variance = 0.7 + proximity * 1.0
 
             # ── V2.5: Film Study Escalation ──
             # Later drives can produce more yards via dice roll + carrier ability
@@ -10338,6 +10343,31 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
+        # ── Max field goal distance: 65 yards ──
+        # Beyond 65 yards is physically impossible for a place kick.
+        # If they're too far, punt instead (handled by kick decision logic).
+        if distance > 65:
+            # Too far for a place kick — treat as missed/punt-like
+            self.change_possession()
+            self.state.field_position = 100 - self.state.field_position
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=1, yards_to_go=20,
+                play_type="place_kick", play_family=family.value,
+                players_involved=[player_label(kicker)],
+                yards_gained=0,
+                result=PlayResult.MISSED_KICK.value,
+                description=f"{ptag} field goal {distance}yd — NO GOOD! (out of range)",
+                fatigue=round(stamina, 1),
+            )
+
         # ── Kicker-range success model ──
         # Uses the same model as _place_kick_success: the kicker determines
         # a comfortable range.  Within range, kicks are near-automatic.
@@ -10500,15 +10530,16 @@ class ViperballEngine:
             self._attribute_points_to_keeper(points)
 
     def _attribute_points_to_keeper(self, points: float):
-        """Attribute points scored against the defense to the keeper(s) on the field."""
+        """Attribute points scored against the defense to all keepers on the field."""
         def_team = self.get_defensive_team()
         unavail = self._unavailable_in_game(def_team)
-        for p in def_team.players:
-            if p.name in unavail:
-                continue
-            if p.position == "Keeper":
-                p.game_points_allowed_in_coverage += points
-                break
+        active_keepers = [p for p in def_team.players
+                          if p.position == "Keeper" and p.name not in unavail]
+        if not active_keepers:
+            return
+        share = points / len(active_keepers)
+        for p in active_keepers:
+            p.game_points_allowed_in_coverage += share
 
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
@@ -11177,13 +11208,17 @@ class ViperballEngine:
         self.state.away_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX, self.state.away_composure))
 
     def _check_underdog_surge(self):
-        """Underdog Surge: if the underdog is leading in Q4, reduce their
-        fatigue drain by 15% (crowd energy, adrenaline).
+        """Underdog Surge: if the underdog is leading in Q4, small composure bump.
+
+        Reduced in playoffs — better teams should close out games.
         """
         if not V2_ENGINE_CONFIG.get("composure_enabled", False):
             return
         if self.state.quarter != 4:
             return
+
+        # Reduce surge in playoffs — talent should win out
+        surge_amount = 1 if getattr(self, '_is_playoff', False) else 2
 
         home_prestige = self.home_team.prestige
         away_prestige = self.away_team.prestige
@@ -11192,11 +11227,11 @@ class ViperballEngine:
         # Home is underdog and leading
         if home_prestige < away_prestige - 10 and score_diff > 0:
             self.state.home_composure = min(COMPOSURE_MAX,
-                self.state.home_composure + 2)  # Steady composure boost
+                self.state.home_composure + surge_amount)
         # Away is underdog and leading
         elif away_prestige < home_prestige - 10 and score_diff < 0:
             self.state.away_composure = min(COMPOSURE_MAX,
-                self.state.away_composure + 2)
+                self.state.away_composure + surge_amount)
 
     # ═══════════════════════════════════════════════════════════
     # V2: HERO BALL + DEFENSIVE KEYING
