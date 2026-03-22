@@ -59,6 +59,10 @@ V2_ENGINE_CONFIG = {
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
     # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
     "base_yards_multiplier": 2.3,
+    # V2.8: Play clock limit (seconds).  If a team's computed play clock
+    # exceeds this, the coach risks a delay-of-game penalty (5 yards,
+    # replay the down).  Higher clock_management coaches snap in time.
+    "play_clock_limit": 40,
 }
 
 
@@ -1434,7 +1438,7 @@ PENALTY_CATALOG = {
     "pre_snap": [
         {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.014},
         {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.012},
-        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.005},
+        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.0},  # V2.8: mechanically driven by play clock
         {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.004},
         {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
         {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
@@ -4174,6 +4178,10 @@ class ViperballEngine:
 
             # Kneel plays manage their own clock — skip normal time deduction
             if play.play_type == "kneel":
+                # V2.8: Defense calls timeout after kneel to preserve clock
+                # and force the offense to run more plays.
+                if self.state.time_remaining > 0:
+                    self._call_defensive_timeout_on_kneel(drive_team)
                 if self.state.time_remaining <= 0:
                     drive_result = "kneel"
                     break
@@ -4241,7 +4249,35 @@ class ViperballEngine:
                     else:
                         tempo_mult *= 1.2 * clock_burn
 
-            time_elapsed = max(8, int(base_time * tempo_mult))
+            # ── V2.8: Play clock enforcement ──
+            # If computed base_time exceeds the play clock limit, the coach
+            # must snap in time or face a delay-of-game penalty (5 yards,
+            # replay the down).  Better clock managers almost always avoid it.
+            play_clock_limit = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+            final_time = max(8, int(base_time * tempo_mult))
+            if final_time > play_clock_limit and play.result != "penalty":
+                off_mods = self.home_coaching_mods if drive_team == "home" else self.away_coaching_mods
+                clock_mgmt = off_mods.get("clock_management", 0.5)
+                # avoidance_chance: 0.55 at clock_mgmt=0.0, 0.95 at clock_mgmt=1.0
+                avoidance_chance = 0.55 + 0.40 * clock_mgmt
+                if random.random() > avoidance_chance:
+                    # Delay of game — 5 yards, replay the down
+                    self.state.field_position = max(1, self.state.field_position - 5)
+                    play.description += " | DELAY OF GAME — play clock expired. 5-yard penalty, replay the down."
+                    play.penalty = Penalty(
+                        name="Delay of Game", yards=5, on_team=drive_team,
+                        player="", declined=False, phase="pre_snap",
+                    )
+                    # Don't advance the down — it's replayed
+                    self.state.down = getattr(self, '_pre_play_down', self.state.down)
+                    self.state.yards_to_go = getattr(self, '_pre_play_ytg', self.state.yards_to_go) + 5
+                    # Still deduct the play clock limit worth of time (they burned 40s doing nothing)
+                    final_time = play_clock_limit
+                else:
+                    # Coach snapped just in time — clamp to the limit
+                    final_time = play_clock_limit
+
+            time_elapsed = final_time
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
@@ -5247,21 +5283,57 @@ class ViperballEngine:
         """Victory formation check: kneel instead of running plays when
         the leading team can run out the clock safely.
 
-        Triggers:
-        - Q4, under 90s, lead > 5 points
-        - Q4, under 45s, any lead
+        V2.8: Accounts for opponent's remaining timeouts.  Each defensive
+        timeout can stop the clock after a kneel, so the offense needs
+        enough kneels to burn through the remaining time *plus* the time
+        the defense can reclaim by forcing additional plays.
+
+        In the 6-down system each kneel burns ~37s and costs 1 down.
+        With 6 downs available per set, the offense can kneel up to 6 times
+        before a turnover on downs (which would be catastrophic).  Safe
+        kneeling means running out the clock within a single set of downs.
         """
         if self.state.quarter != 4:
             return False
-        time_left = self.state.time_remaining
         score_diff = self._get_score_diff()
         if score_diff <= 0:
             return False
-        if time_left <= 90 and score_diff > 5:
-            return True
-        if time_left <= 45 and score_diff > 0:
-            return True
-        return False
+
+        time_left = self.state.time_remaining
+        seconds_per_kneel = 37  # average of 35-40
+
+        # How many downs remain in this set before turnover?
+        downs_left = max(1, 7 - self.state.down)  # downs 1-6, turnover on 7th
+
+        # Defensive timeouts: each one stops the clock after a kneel,
+        # but the kneel itself still burns its 37s.  The timeout just
+        # means the clock doesn't run between plays (normally ~0s for
+        # kneels anyway).  The real cost is that the offense burns a
+        # down for each timeout + each kneel.  So the offense needs
+        # enough downs to cover kneels.
+        def_side = "away" if self.state.possession == "home" else "home"
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+
+        # Each kneel burns 37s.  Defense can call timeout after each of
+        # their remaining TOs, but the kneel still consumed its time.
+        # The offense needs ceil(time_left / 37) kneels total.
+        kneels_needed = max(1, -(-time_left // seconds_per_kneel))  # ceiling division
+
+        # Can we kneel it out within the remaining downs?
+        can_kneel_out = kneels_needed <= downs_left
+
+        # Safety margin: don't kneel unless lead is big enough relative
+        # to remaining time (prevents kneeling away a 1-point lead with
+        # 2 minutes left where a fumbled snap could be disaster).
+        if time_left > 90:
+            safe_lead = score_diff > 9  # need double-digit lead
+        elif time_left > 45:
+            safe_lead = score_diff > 5
+        else:
+            safe_lead = score_diff > 0
+
+        return can_kneel_out and safe_lead
 
     def simulate_kneel(self) -> Play:
         """Victory formation: kneel-down that burns 35-40 seconds of clock
@@ -5801,6 +5873,27 @@ class ViperballEngine:
                     weights[rk] = weights.get(rk, 0.05) * max(0.3, 1.0 - suppress * 0.5)
                 weights["snap_kick"] = weights.get("snap_kick", 0.08) * (1.0 + suppress * 1.5)
                 weights["field_goal"] = weights.get("field_goal", 0.06) * (1.0 + suppress * 1.5)
+
+        # ── V2.8: Clock-run mode ──
+        # When leading in Q4 but not in kneel range, grind the clock with
+        # run-heavy play calling.  Turnovers here are catastrophic — suppress
+        # risky plays aggressively.  Coach clock_management skill scales it.
+        if (quarter == 4 and score_diff > 0
+                and time_left > 60 and not self._is_blowout()):
+            off_mods_cr = self._coaching_mods()
+            clock_mgmt = off_mods_cr.get("clock_management", 0.5)
+            # Scale: low clock_mgmt → modest changes, high → very conservative
+            cr_intensity = 0.30 + 0.70 * clock_mgmt  # 0.30 to 1.0
+
+            # Boost run plays (clock keeps running on ground plays)
+            for rk in ("dive_option", "power", "sweep_option", "counter", "draw"):
+                weights[rk] = weights.get(rk, 0.05) * (1.0 + 0.60 * cr_intensity)
+            # Suppress risky plays
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * max(0.25, 1.0 - 0.50 * cr_intensity)
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * max(0.20, 1.0 - 0.40 * cr_intensity)
+            weights["trick_play"] = weights.get("trick_play", 0.05) * max(0.15, 1.0 - 0.60 * cr_intensity)
+            # Keep punt weight normal — punting for field position is fine
+            # Keep snap_kick/field_goal — safe points are good
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
@@ -11038,70 +11131,221 @@ class ViperballEngine:
         for p in self.away_team.players:
             p.game_energy = min(100.0, p.game_energy + 30.0)
 
-    def call_timeout(self) -> bool:
-        """Coaching AI decides whether to call a timeout.
+    def _call_defensive_timeout_on_kneel(self, off_side: str) -> bool:
+        """Defense calls a timeout after a victory-formation kneel to stop
+        the clock and force the offense to keep running plays.
 
-        Considers: star player fatigue, clock management, momentum.
-        Returns True if timeout was called (by either offense or defense).
+        Only triggers when the defense is trailing and has timeouts left.
+        High clock_management coaches call this nearly every time.
+        """
+        def_side = "away" if off_side == "home" else "home"
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+        if def_timeouts <= 0:
+            return False
+
+        # Only call if trailing
+        if def_side == "home":
+            def_score_diff = self.state.home_score - self.state.away_score
+        else:
+            def_score_diff = self.state.away_score - self.state.home_score
+        if def_score_diff >= 0:
+            return False  # winning or tied — no reason to call TO on a kneel
+
+        # Coach clock_management gates the probability
+        def_mods = (self.home_coaching_mods if def_side == "home"
+                    else self.away_coaching_mods)
+        clock_mgmt = def_mods.get("clock_management", 0.5)
+
+        # Base probability is very high — any competent coach calls TO here.
+        # 0.70 at clock_mgmt=0.0, 0.95 at clock_mgmt=1.0
+        call_prob = 0.70 + 0.25 * clock_mgmt
+
+        # timeout_hoarder / timeout_sprinter trait adjustments
+        sub_arch = def_mods.get("sub_archetype", "")
+        hidden_traits = def_mods.get("hidden_trait_effects", {})
+        if "timeout_hoarder" in hidden_traits:
+            call_prob *= 0.80  # hoarders are reluctant even in obvious spots
+        if "timeout_sprinter" in hidden_traits:
+            call_prob = min(0.98, call_prob * 1.10)
+
+        if random.random() < call_prob:
+            if def_side == "home":
+                self.state.home_timeouts -= 1
+            else:
+                self.state.away_timeouts -= 1
+
+            # Rest the defensive team during the stoppage
+            def_team = (self.home_team if def_side == "home"
+                        else self.away_team)
+            for p in def_team.players:
+                p.game_energy = min(100.0, p.game_energy + 15.0)
+
+            return True
+
+        return False
+
+    def call_timeout(self) -> bool:
+        """V2.8: Realistic timeout decision engine.
+
+        Five categories of timeout calls, each with situational triggers
+        and coach-skill gating.  Good coaches hoard timeouts for Q4;
+        bad coaches may waste them on fatigue or personnel issues.
+
+        Categories:
+        1. Strategic clock stop (defense, Q4/Q2) — stop clock to get ball back
+        2. Star fatigue rest (offense, any quarter) — rare, red-zone only
+        3. Injury timeout (official, any quarter) — not charged to either team
+        4. Personnel/scheme regrouping (offense, Q1-Q3) — regroup after solved play
+        5. Offensive clock stop (offense, Q2/Q4 trailing) — preserve time to score
+
+        Returns True if any timeout was called.
         """
         off_side = self.state.possession
         def_side = "away" if off_side == "home" else "home"
 
-        off_timeouts = self.state.home_timeouts if off_side == "home" else self.state.away_timeouts
-        def_timeouts = self.state.home_timeouts if def_side == "home" else self.state.away_timeouts
+        off_timeouts = (self.state.home_timeouts if off_side == "home"
+                        else self.state.away_timeouts)
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+
+        off_mods = (self.home_coaching_mods if off_side == "home"
+                    else self.away_coaching_mods)
+        def_mods = (self.home_coaching_mods if def_side == "home"
+                    else self.away_coaching_mods)
 
         quarter = self.state.quarter
         time_left = self.state.time_remaining
+        score_diff = self._get_score_diff()  # positive = offense leading
 
-        off_team = self.get_offensive_team()
-        should_call = False
+        off_clock_mgmt = off_mods.get("clock_management", 0.5)
+        def_clock_mgmt = def_mods.get("clock_management", 0.5)
+
+        off_traits = off_mods.get("hidden_trait_effects", {})
+        def_traits = def_mods.get("hidden_trait_effects", {})
+
         caller = None
 
-        if off_timeouts > 0:
+        # ── Category 3: Injury timeout (official-called, no team charged) ──
+        # ~0.3% chance per play.  Both teams rest.  Not a strategic decision.
+        if random.random() < 0.003:
+            off_team = self.get_offensive_team()
+            def_team_obj = (self.home_team if def_side == "home"
+                            else self.away_team)
+            for p in off_team.players:
+                p.game_energy = min(100.0, p.game_energy + 10.0)
+            for p in def_team_obj.players:
+                p.game_energy = min(100.0, p.game_energy + 10.0)
+            # No timeout charged to either team
+            return True
+
+        # ── Category 1: Strategic clock stop (defense) ──
+        # Trailing defense stops the clock to preserve time for a comeback.
+        if def_timeouts > 0:
+            def_score_diff = -score_diff  # negative = defense trailing
+            can_stop = False
+            call_prob = 0.0
+
+            if quarter == 4 and def_score_diff < 0 and def_score_diff >= -14:
+                # Q4 with <5 min left, trailing by ≤14
+                if time_left < 300:
+                    # Urgency ramps as clock ticks down
+                    urgency = min(1.0, (300 - time_left) / 300.0)
+                    deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
+                    call_prob = 0.20 + 0.50 * urgency + 0.15 * deficit_factor
+                    # Clock management skill amplifies good decisions
+                    call_prob *= (0.60 + 0.40 * def_clock_mgmt)
+                    can_stop = True
+
+            elif quarter == 2 and def_score_diff < 0 and time_left < 60:
+                # Q2 with <1 min: try to get ball back before halftime
+                call_prob = 0.25 * (0.50 + 0.50 * def_clock_mgmt)
+                can_stop = True
+
+            if can_stop:
+                # Trait adjustments
+                if "timeout_hoarder" in def_traits:
+                    call_prob *= 0.70  # hoarders are reluctant
+                if "timeout_sprinter" in def_traits:
+                    call_prob = min(0.90, call_prob * 1.25)
+
+                call_prob = min(0.85, call_prob)
+                if random.random() < call_prob:
+                    caller = def_side
+
+        # ── Category 5: Offensive clock stop (trailing offense) ──
+        # Offense uses timeout to preserve time when trailing late.
+        if caller is None and off_timeouts > 0 and score_diff < 0:
+            if quarter in (2, 4) and time_left < 120:
+                call_prob = 0.35 * (0.50 + 0.50 * off_clock_mgmt)
+                if quarter == 4:
+                    call_prob *= 1.5  # more urgent in Q4
+
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.70
+                if "timeout_sprinter" in off_traits:
+                    call_prob = min(0.85, call_prob * 1.25)
+
+                if random.random() < min(0.75, call_prob):
+                    caller = off_side
+
+        # ── Category 2: Star fatigue rest (offense) ──
+        # Rare — only in red zone with exhausted stars.  Bad clock managers
+        # are more likely to waste one here instead of saving for late game.
+        if caller is None and off_timeouts > 0:
+            off_team = self.get_offensive_team()
             skill_players = self._offense_skill(off_team)
             fatigued_stars = [p for p in skill_players
                              if p.game_energy < 50 and p.overall >= 75]
 
             if fatigued_stars and self.state.field_position >= 50:
-                should_call = random.random() < 0.40
-                caller = off_side
+                # Good clock managers resist: 15% at clock_mgmt=1.0, 30% at 0.0
+                call_prob = 0.30 - 0.15 * off_clock_mgmt
 
-            if quarter in (2, 4) and time_left < 120:
-                score_diff = self._get_score_diff()
-                if score_diff < 0:
-                    should_call = random.random() < 0.60
+                # Don't waste TOs in Q4 if you have a good clock manager
+                if quarter == 4 and off_clock_mgmt > 0.6:
+                    call_prob *= 0.3
+
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.50
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.40
+
+                if random.random() < call_prob:
                     caller = off_side
 
-        if not should_call and def_timeouts > 0:
-            if quarter == 4 and time_left < 180:
-                if off_side == "home":
-                    def_score_diff = self.state.away_score - self.state.home_score
-                else:
-                    def_score_diff = self.state.home_score - self.state.away_score
+        # ── Category 4: Personnel/scheme timeout (offense, Q1-Q3) ──
+        # When the DC has solved a play family and the offense is struggling.
+        # Only if team has 2+ timeouts (preserve last one for emergencies).
+        if (caller is None and off_timeouts >= 2
+                and quarter <= 3
+                and self.drive_play_count >= 3):
+            # Check if offense has been shut down on this drive (no gains)
+            recent_stall = (self.drive_play_count >= 4
+                            and getattr(self, '_drive_yards', 0) <= 2)
+            if recent_stall:
+                # Bad clock managers burn TOs here more often
+                call_prob = 0.05 + 0.03 * (1.0 - off_clock_mgmt)
 
-                if def_score_diff < 0 and def_score_diff >= -14:
-                    urgency = min(1.0, (180 - time_left) / 180.0)
-                    deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
-                    call_prob = 0.35 + 0.45 * urgency + 0.15 * deficit_factor
-                    call_prob = min(0.85, call_prob)
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.50
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.30
 
-                    def_mods = self.home_coaching_mods if def_side == "home" else self.away_coaching_mods
-                    awareness = def_mods.get("personality_factors", {}).get("clock_awareness", 1.0)
-                    call_prob *= awareness
+                if random.random() < call_prob:
+                    caller = off_side
 
-                    if random.random() < call_prob:
-                        should_call = True
-                        caller = def_side
-
-        if should_call and caller:
+        # ── Execute the timeout ──
+        if caller:
             if caller == "home":
                 self.state.home_timeouts -= 1
             else:
                 self.state.away_timeouts -= 1
 
-            rest_team = off_team if caller == off_side else (
-                self.home_team if def_side == "home" else self.away_team
-            )
+            # Rest the calling team
+            rest_team = (self.get_offensive_team() if caller == off_side
+                         else (self.home_team if def_side == "home"
+                               else self.away_team))
             for p in rest_team.players:
                 p.game_energy = min(100.0, p.game_energy + 15.0)
 
