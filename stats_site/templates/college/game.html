@@ -140,14 +140,20 @@
    ══════════════════════════════════════════════════════════ #}
 
 {% if hm or am %}
+{# Build dynamic benchmark tips and thresholds from season data #}
+{% set bm = benchmarks if benchmarks is defined else {} %}
 <h2>Game Ratings</h2>
 <div class="grid-4" style="margin-bottom:16px;">
-  {% for label, key, src, fmt, elite_thresh, good_thresh, tip in [
-    ('Team Rating', 'team_rating', 'vm', '%.1f', 75, 55, 'Overall team grade 0-100. 70+ elite, 55+ good.'),
-    ('PPD', 'ppd', 'vm', '%.2f', 5.0, 3.5, 'Points Per Drive. Avg points scored each possession. 5+ elite, 3.5+ good.'),
-    ('EPA', 'epa', 'ts', '%.1f', 5, 0, 'Expected Points Added. Total points above/below average. Positive = helped win, negative = hurt. 5+ elite.'),
-    ('Explosive Plays', 'explosive_plays', 'vm', '%d', 8, 5, 'Plays gaining 20+ yards. More = bigger play-making ability.'),
+  {% for label, key, src, fmt, desc in [
+    ('Team Rating', 'team_rating', 'vm', '%.1f', 'Overall team grade 0-100.'),
+    ('PPD', 'ppd', 'vm', '%.2f', 'Points Per Drive. Avg points scored each possession.'),
+    ('EPA', 'epa', 'ts', '%.1f', 'Expected Points Added. Positive = helped win, negative = hurt.'),
+    ('Explosive Plays', 'explosive_plays', 'vm', '%d', 'Plays gaining 20+ yards.'),
   ] %}
+  {% set b = bm.get(key) if bm else none %}
+  {% set elite_thresh = b.p90 if b else 0 %}
+  {% set good_thresh = b.p75 if b else 0 %}
+  {% set tip = desc ~ (' League median: ' ~ b.med ~ ', top 25%: ' ~ b.p75 ~ ', top 10%: ' ~ b.p90 if b else '') %}
   <div class="metric">
     <div class="label stat-tip" data-tip="{{ tip }}">{{ label }}</div>
     <div class="value" style="font-size:11px;">
@@ -158,29 +164,29 @@
         {% set av = am.get(key) %}
         {% set hv = hm.get(key) %}
       {% endif %}
-      <span class="{% if av is not none and av >= elite_thresh %}stat-elite{% elif av is not none and av >= good_thresh %}stat-good{% elif av is not none and key == 'epa' and av < 0 %}stat-bad{% endif %}">{{ fmt|format(av) if av is not none else '—' }}</span>
+      <span class="{% if av is not none and av >= elite_thresh %}stat-elite{% elif av is not none and av >= good_thresh %}stat-good{% elif av is not none and key == 'epa' and b and av < b.p25 %}stat-bad{% endif %}">{{ fmt|format(av) if av is not none else '—' }}</span>
       <span style="color:var(--fg-dim)">&nbsp;/&nbsp;</span>
-      <span class="{% if hv is not none and hv >= elite_thresh %}stat-elite{% elif hv is not none and hv >= good_thresh %}stat-good{% elif hv is not none and key == 'epa' and hv < 0 %}stat-bad{% endif %}">{{ fmt|format(hv) if hv is not none else '—' }}</span>
+      <span class="{% if hv is not none and hv >= elite_thresh %}stat-elite{% elif hv is not none and hv >= good_thresh %}stat-good{% elif hv is not none and key == 'epa' and b and hv < b.p25 %}stat-bad{% endif %}">{{ fmt|format(hv) if hv is not none else '—' }}</span>
     </div>
   </div>
   {% endfor %}
 </div>
 
 <div class="grid-4" style="margin-bottom:16px;">
-  {% for label, key, fmt, suffix, elite_thresh, good_thresh, tip in [
-    ('Conversion %', 'conversion_pct', '%.1f', '%', 55, 45, 'Rate of converting on 4th-6th down attempts. 55%+ elite, 45%+ good.'),
-    ('Lateral %', 'lateral_pct', '%.1f', '%', 80, 65, 'Successful lateral completion rate. 80%+ elite. Failed laterals = turnovers.'),
-    ('TO Margin', 'to_margin', '%+d', '', 2, 1, 'Turnover margin. Positive = more takeaways than giveaways.'),
-    ('Avg Start', 'avg_start', '%.1f', '', 35, 28, 'Average starting field position (yard line). Higher = better. 35+ elite.'),
+  {% for label, key, fmt, suffix, desc in [
+    ('Conversion %', 'conversion_pct', '%.1f', '%', 'Rate of converting on 4th-6th down attempts.'),
+    ('Lateral %', 'lateral_pct', '%.1f', '%', 'Successful lateral completion rate. Failed laterals = turnovers.'),
+    ('TO Margin', 'to_margin', '%+d', '', 'Turnover margin. Positive = more takeaways than giveaways.'),
+    ('Avg Start', 'avg_start', '%.1f', '', 'Average starting field position (yard line). Higher = better.'),
   ] %}
   <div class="metric">
-    <div class="label stat-tip" data-tip="{{ tip }}">{{ label }}</div>
+    <div class="label stat-tip" data-tip="{{ desc }}">{{ label }}</div>
     <div class="value" style="font-size:11px;">
       {% set av = am.get(key) %}
       {% set hv = hm.get(key) %}
-      <span class="{% if av is not none and av >= elite_thresh %}stat-elite{% elif av is not none and av >= good_thresh %}stat-good{% elif av is not none and key == 'to_margin' and av < 0 %}stat-bad{% endif %}">{{ (fmt|format(av) ~ suffix) if av is not none else '—' }}</span>
+      <span class="{% if av is not none and key == 'to_margin' and av > 0 %}stat-good{% elif av is not none and key == 'to_margin' and av < 0 %}stat-bad{% endif %}">{{ (fmt|format(av) ~ suffix) if av is not none else '—' }}</span>
       <span style="color:var(--fg-dim)">&nbsp;/&nbsp;</span>
-      <span class="{% if hv is not none and hv >= elite_thresh %}stat-elite{% elif hv is not none and hv >= good_thresh %}stat-good{% elif hv is not none and key == 'to_margin' and hv < 0 %}stat-bad{% endif %}">{{ (fmt|format(hv) ~ suffix) if hv is not none else '—' }}</span>
+      <span class="{% if hv is not none and key == 'to_margin' and hv > 0 %}stat-good{% elif hv is not none and key == 'to_margin' and hv < 0 %}stat-bad{% endif %}">{{ (fmt|format(hv) ~ suffix) if hv is not none else '—' }}</span>
     </div>
   </div>
   {% endfor %}

@@ -149,26 +149,30 @@
 </table>
 
 {# ── Efficiency ── #}
+{% set bm = benchmarks if benchmarks is defined else {} %}
 <h3 style="margin-bottom:8px; color:var(--accent);">Efficiency</h3>
 <div class="grid-4" style="margin-bottom:16px;">
   {% if team_stats.avg_viper_eff is not none %}
+  {% set bve = bm.get('viper_efficiency') if bm else none %}
   <div class="metric">
-    <div class="label stat-tip" data-tip="Yards per play boosted by lateral success rate. Higher = better use of Viperball mechanics. Avg ~5, elite 8+.">Viper Efficiency</div>
+    <div class="label stat-tip" data-tip="Yards per play boosted by lateral success rate.{{ ' League median: ' ~ bve.med ~ ', top 25%: ' ~ bve.p75 if bve else '' }}">Viper Efficiency</div>
     <div class="value accent">{{ team_stats.avg_viper_eff }}</div>
   </div>
   {% endif %}
+  {% set bepa = bm.get('epa') if bm else none %}
   <div class="metric">
-    <div class="label stat-tip" data-tip="Expected Points Added. Total points this team created above/below what an average team would from the same field positions.">EPA (Total)</div>
-    <div class="value {% if team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
+    <div class="label stat-tip" data-tip="Expected Points Added. Total points above/below what an average team would produce.{{ ' League median: ' ~ bepa.med ~ ', top 25%: ' ~ bepa.p75 if bepa else '' }}">EPA (Total)</div>
+    <div class="value {% if bepa %}{% if team_stats.total_epa >= bepa.p75 %}stat-good{% elif team_stats.total_epa < bepa.p25 %}stat-bad{% endif %}{% elif team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
   </div>
   <div class="metric">
-    <div class="label stat-tip" data-tip="EPA per game average. Easier to compare across teams. 5+ per game is elite, negative means below average.">EPA / Game</div>
+    <div class="label stat-tip" data-tip="EPA per game average.{{ ' League median: ' ~ bepa.med ~ ', top 25%: ' ~ bepa.p75 if bepa else '' }}">EPA / Game</div>
     <div class="value {% if team_stats.avg_epa > 0 %}stat-good{% elif team_stats.avg_epa < 0 %}stat-bad{% endif %}">{{ team_stats.avg_epa }}</div>
   </div>
   {% if team_stats.avg_team_rating is not none %}
+  {% set btr = bm.get('team_rating') if bm else none %}
   <div class="metric">
-    <div class="label stat-tip" data-tip="Overall team performance grade 0-100. 70+ elite, 55+ good.">Avg Team Rating</div>
-    <div class="value">{{ team_stats.avg_team_rating }}</div>
+    <div class="label stat-tip" data-tip="Overall team grade 0-100.{{ ' League median: ' ~ btr.med ~ ', top 25%: ' ~ btr.p75 if btr else '' }}">Avg Team Rating</div>
+    <div class="value {% if btr %}{% if team_stats.avg_team_rating >= btr.p90 %}stat-elite{% elif team_stats.avg_team_rating >= btr.p75 %}stat-good{% endif %}{% endif %}">{{ team_stats.avg_team_rating }}</div>
   </div>
   {% endif %}
 </div>
