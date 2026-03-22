@@ -259,11 +259,11 @@
 {% if as_.get(key) is not none or hs.get(key) is not none %}
 <tr>
   <td class="num">
-    {% if made_key and as_.get(made_key) is not none %}{{ as_.get(made_key, 0) }}/{{ as_.get(key, 0) }}{% elif fmt == 'f1' %}{{ '%.1f'|format(as_.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(as_.get(key, 0)) }}{{ suffix }}{% else %}{{ as_.get(key, 0) }}{{ suffix }}{% endif %}
+    {% if made_key and as_.get(made_key) is not none %}{{ as_.get(made_key, 0) }}/{{ as_.get(key, 0) }}{% elif fmt == 'f1' %}{{ '%.1f'|format(as_.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(as_.get(key, 0)) }}{{ suffix }}{% else %}{{ as_.get(key, 0)|round(0)|int }}{{ suffix }}{% endif %}
   </td>
   <td>{{ label }}</td>
   <td class="num">
-    {% if made_key and hs.get(made_key) is not none %}{{ hs.get(made_key, 0) }}/{{ hs.get(key, 0) }}{% elif fmt == 'f1' %}{{ '%.1f'|format(hs.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(hs.get(key, 0)) }}{{ suffix }}{% else %}{{ hs.get(key, 0) }}{{ suffix }}{% endif %}
+    {% if made_key and hs.get(made_key) is not none %}{{ hs.get(made_key, 0) }}/{{ hs.get(key, 0) }}{% elif fmt == 'f1' %}{{ '%.1f'|format(hs.get(key, 0)) }}{{ suffix }}{% elif fmt == 'f2' %}{{ '%.2f'|format(hs.get(key, 0)) }}{{ suffix }}{% else %}{{ hs.get(key, 0)|round(0)|int }}{{ suffix }}{% endif %}
   </td>
 </tr>
 {% endif %}
@@ -362,9 +362,9 @@
   {{ section_header('SPECIAL TEAMS') }}
   {% if as_.get('kick_returns') or hs.get('kick_returns') %}
   <tr>
-    <td class="num">{{ as_.get('kick_returns', 0) }} for {{ as_.get('kick_return_yards', 0) }} yds</td>
+    <td class="num">{{ as_.get('kick_returns', 0) }} for {{ as_.get('kick_return_yards', 0)|round(0)|int }} yds</td>
     <td>Kick Returns</td>
-    <td class="num">{{ hs.get('kick_returns', 0) }} for {{ hs.get('kick_return_yards', 0) }} yds</td>
+    <td class="num">{{ hs.get('kick_returns', 0) }} for {{ hs.get('kick_return_yards', 0)|round(0)|int }} yds</td>
   </tr>
   {% if as_.get('kick_return_tds') or hs.get('kick_return_tds') %}
   {{ stat_row('Kick Return TDs', 'kick_return_tds') }}
@@ -372,9 +372,9 @@
   {% endif %}
   {% if as_.get('punt_returns') or hs.get('punt_returns') %}
   <tr>
-    <td class="num">{{ as_.get('punt_returns', 0) }} for {{ as_.get('punt_return_yards', 0) }} yds</td>
+    <td class="num">{{ as_.get('punt_returns', 0) }} for {{ as_.get('punt_return_yards', 0)|round(0)|int }} yds</td>
     <td>Punt Returns</td>
-    <td class="num">{{ hs.get('punt_returns', 0) }} for {{ hs.get('punt_return_yards', 0) }} yds</td>
+    <td class="num">{{ hs.get('punt_returns', 0) }} for {{ hs.get('punt_return_yards', 0)|round(0)|int }} yds</td>
   </tr>
   {% if as_.get('punt_return_tds') or hs.get('punt_return_tds') %}
   {{ stat_row('Punt Return TDs', 'punt_return_tds') }}
@@ -404,9 +404,9 @@
   {% endif %}
   {% if as_.get('penalties') is not none or hs.get('penalties') is not none %}
   <tr>
-    <td class="num {% if as_.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ as_.get('penalties', 0) }} ({{ as_.get('penalty_yards', 0) }} yds)</td>
+    <td class="num {% if as_.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ as_.get('penalties', 0) }} ({{ as_.get('penalty_yards', 0)|round(0)|int }} yds)</td>
     <td>Penalties (Yards)</td>
-    <td class="num {% if hs.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ hs.get('penalties', 0) }} ({{ hs.get('penalty_yards', 0) }} yds)</td>
+    <td class="num {% if hs.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ hs.get('penalties', 0) }} ({{ hs.get('penalty_yards', 0)|round(0)|int }} yds)</td>
   </tr>
   {% endif %}
 
@@ -439,9 +439,9 @@
   {% if as_.get('delta_yards') is not none or hs.get('delta_yards') is not none %}
   {{ section_header('DELTA SYSTEM') }}
   <tr>
-    <td class="num {% if as_.get('delta_yards', 0) > 0 %}stat-good{% elif as_.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ as_.get('delta_yards', 0) }}</td>
+    <td class="num {% if as_.get('delta_yards', 0) > 0 %}stat-good{% elif as_.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ as_.get('delta_yards', 0)|round(0)|int }}</td>
     <td>Delta Yards</td>
-    <td class="num {% if hs.get('delta_yards', 0) > 0 %}stat-good{% elif hs.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ hs.get('delta_yards', 0) }}</td>
+    <td class="num {% if hs.get('delta_yards', 0) > 0 %}stat-good{% elif hs.get('delta_yards', 0) < 0 %}stat-bad{% endif %}">{{ hs.get('delta_yards', 0)|round(0)|int }}</td>
   </tr>
   {{ stat_row('Adjusted Yards', 'adjusted_yards') }}
   {% if as_.get('delta_drives', 0) > 0 or hs.get('delta_drives', 0) > 0 %}
@@ -820,7 +820,7 @@
     <td class="num">{{ p.quarter }}</td>
     <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
     <td>{% if p.possession == 'home' %}{{ home[:15] }}{% else %}{{ away[:15] }}{% endif %}</td>
-    <td class="num">{{ p.field_position if p.field_position is defined else '—' }}</td>
+    <td class="num">{% if p.field_position is defined %}{% if p.field_position < 50 %}OWN {{ p.field_position }}{% elif p.field_position == 50 %}50{% else %}OPP {{ 100 - p.field_position }}{% endif %}{% else %}&mdash;{% endif %}</td>
     <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go }}{% else %}&mdash;{% endif %}</td>
     <td>
       {% if is_score %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') | upper }}</span>

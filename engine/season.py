@@ -675,7 +675,7 @@ class PollRanking:
     poll_score: float
     prev_rank: Optional[int] = None
     power_index: float = 0.0
-    quality_wins: int = 0
+    quality_wins: float = 0.0
     sos_rank: int = 0
     bid_type: str = ""
 
@@ -1756,11 +1756,11 @@ class Season:
                             stat_parts.append(f"{tfl} TFL")
                     else:
                         score = off_score
-                        stat_parts = [f"{yards} yds"]
+                        stat_parts = [f"{int(round(yards))} yds"]
                         if tds:
                             stat_parts.append(f"{tds} TD")
                         if kp_yds:
-                            stat_parts.append(f"{kp_yds} KP yds")
+                            stat_parts.append(f"{int(round(kp_yds))} KP yds")
                         if kp_tds:
                             stat_parts.append(f"{kp_tds} KP TD")
                     stat_line = ", ".join(stat_parts)
@@ -2201,7 +2201,7 @@ class Season:
         Components (100-point scale):
         - Win percentage:       40 pts  (primary driver — winning matters most)
         - Strength of schedule: 15 pts
-        - Quality wins:         uncapped (weighted by opponent rank tier, expanded to top-100)
+        - Quality wins:         20 pts max (weighted by opponent rank tier, expanded to top-100)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
         - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
@@ -2219,7 +2219,7 @@ class Season:
         sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
-        qw_component = qw_score
+        qw_component = min(20.0, qw_score)
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
@@ -2240,14 +2240,14 @@ class Season:
                  conf_component + diff_component - loss_penalty)
         return max(0.0, round(power, 2))
 
-    def get_all_power_rankings(self) -> List[Tuple[str, float, int]]:
-        """Get all teams sorted by power index. Returns [(team_name, power_index, quality_wins)]"""
+    def get_all_power_rankings(self) -> List[Tuple[str, float, float]]:
+        """Get all teams sorted by power index. Returns [(team_name, power_index, quality_win_score)]"""
         rankings = self._get_current_rankings()
         results = []
         for team_name, record in self.standings.items():
             if record.games_played > 0:
                 pi = self.calculate_power_index(team_name)
-                qw = self._count_quality_wins(team_name, rankings)
+                qw = self._quality_win_score(team_name, rankings)
                 results.append((team_name, pi, qw))
         results.sort(key=lambda x: x[1], reverse=True)
         return results

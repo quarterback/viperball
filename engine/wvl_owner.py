@@ -432,17 +432,20 @@ def apply_investment_boosts(
     bonus_mult = arch.get("investment_bonus", 1.0)
 
     # Budget effectiveness: more money = stronger boosts (diminishing returns)
-    budget_factor = min(2.0, investment_budget / 10.0) * bonus_mult
+    budget_factor = min(2.5, investment_budget / 8.0) * bonus_mult
     boosts_applied = {}
 
-    # Youth infra multiplier: infrastructure level 1–10 gives 1.0–2.0x
+    # Infrastructure multipliers: level 1–10 gives 1.0–2.0x for each category
+    training_infra_mult = 1.0 + infrastructure.get("training", 1.0) / 10.0
+    coaching_infra_mult = 1.0 + infrastructure.get("coaching", 1.0) / 10.0
     youth_infra_mult = 1.0 + infrastructure.get("youth", 1.0) / 10.0
+    science_infra_mult = 1.0 + infrastructure.get("science", 1.0) / 10.0
 
     for card in roster:
-        # Training Facilities → physical attrs
+        # Training Facilities → physical attrs (infra-scaled)
         if allocation.training > 0.05:
-            boost = int(allocation.training * budget_factor * rng.uniform(1, 3))
-            boost = max(0, min(3, boost))
+            raw = allocation.training * budget_factor * rng.uniform(1, 3) * training_infra_mult
+            boost = max(0, min(5, int(raw)))
             for attr in ["speed", "stamina", "agility"]:
                 old = getattr(card, attr)
                 new = min(99, old + boost)
@@ -450,10 +453,10 @@ def apply_investment_boosts(
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
 
-        # Coaching Staff Budget → mental attrs
+        # Coaching Staff Budget → mental attrs (infra-scaled)
         if allocation.coaching > 0.05:
-            boost = int(allocation.coaching * budget_factor * rng.uniform(1, 3))
-            boost = max(0, min(3, boost))
+            raw = allocation.coaching * budget_factor * rng.uniform(1, 3) * coaching_infra_mult
+            boost = max(0, min(5, int(raw)))
             for attr in ["awareness", "tackling"]:
                 old = getattr(card, attr)
                 new = min(99, old + boost)
@@ -463,8 +466,8 @@ def apply_investment_boosts(
 
         # Youth Academy → development speed for young players (infra-scaled)
         if allocation.youth > 0.05 and getattr(card, "age", 30) and card.age is not None and card.age < 25:
-            raw_boost = allocation.youth * budget_factor * rng.uniform(1, 4) * youth_infra_mult
-            boost = max(0, min(5, int(raw_boost)))
+            raw_boost = allocation.youth * budget_factor * rng.uniform(1, 5) * youth_infra_mult
+            boost = max(0, min(7, int(raw_boost)))
             for attr in ["speed", "agility", "lateral_skill", "hands"]:
                 old = getattr(card, attr)
                 new = min(99, old + boost)
@@ -472,10 +475,10 @@ def apply_investment_boosts(
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
 
-        # Sports Science → minor injury resilience (modeled as stamina + power boost)
+        # Sports Science → injury resilience (infra-scaled)
         if allocation.science > 0.05:
-            boost = int(allocation.science * budget_factor * rng.uniform(0.5, 2))
-            boost = max(0, min(2, boost))
+            raw = allocation.science * budget_factor * rng.uniform(0.5, 2.5) * science_infra_mult
+            boost = max(0, min(3, int(raw)))
             for attr in ["stamina", "power"]:
                 old = getattr(card, attr)
                 new = min(99, old + boost)
@@ -691,7 +694,7 @@ def compute_financials(
 # ═══════════════════════════════════════════════════════════════
 
 def compute_investment_modifier(allocation: InvestmentAllocation, budget: float) -> float:
-    """Return a small additive team-strength bonus (0–4 points on 0–100 scale).
+    """Return an additive team-strength bonus (0–8 points on 0–100 scale).
 
     Used to inject in-season effects from investment spending into fast_sim
     without requiring attribute changes.  Specifically:
@@ -699,11 +702,11 @@ def compute_investment_modifier(allocation: InvestmentAllocation, budget: float)
       - coaching  → overall consistency
       - science   → marginal stamina / resilience
     """
-    budget_scale = min(2.0, budget / 10.0)
-    training_bonus = allocation.training * budget_scale * 2.0
-    coaching_bonus = allocation.coaching * budget_scale * 1.5
-    science_bonus  = allocation.science  * budget_scale * 1.0
-    return min(4.0, training_bonus + coaching_bonus + science_bonus)
+    budget_scale = min(2.5, budget / 8.0)
+    training_bonus = allocation.training * budget_scale * 3.0
+    coaching_bonus = allocation.coaching * budget_scale * 2.5
+    science_bonus  = allocation.science  * budget_scale * 1.5
+    return min(8.0, training_bonus + coaching_bonus + science_bonus)
 
 
 def generate_ai_investment(prestige: int, rng: Optional[random.Random] = None) -> InvestmentAllocation:
