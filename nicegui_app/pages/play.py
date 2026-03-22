@@ -495,13 +495,6 @@ async def _render_dynasty_start_season(state: UserState, shared: dict):
     async def _start():
         starting_spinner.classes(remove="hidden")
         try:
-            # Auto-complete offseason if still pending (NIL/transfers/recruiting
-            # may have been skipped in the NiceGUI UI)
-            try:
-                await run.io_bound(api_client.offseason_complete, state.session_id)
-            except api_client.APIError:
-                pass  # Already completed or no offseason to finalize
-
             await run.io_bound(
                 api_client.dynasty_start_season,
                 state.session_id,
