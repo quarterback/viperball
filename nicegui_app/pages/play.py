@@ -453,6 +453,458 @@ async def _fetch_bowls(session_id: str) -> dict:
         return {}
 
 
+async def _render_offseason_flow(state: UserState, shared: dict, off_status: dict):
+    """Render the offseason flow: NIL allocation, transfer portal, recruiting."""
+    try:
+        dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
+    except api_client.APIError:
+        notify_error("Could not load dynasty status.")
+        return
+
+    dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
+    current_year = dyn_status.get("current_year", "?")
+    coach_team = dyn_status.get("coach", {}).get("team", "")
+    off_phase = off_status.get("phase", "nil")
+
+    ui.label(f"{dynasty_name} — Offseason (Year {current_year})").classes("text-2xl font-bold text-slate-800")
+
+    # Progress stepper
+    phase_labels = {"nil": "NIL Budget", "portal": "Transfer Portal", "recruiting": "Recruiting", "ready": "Finalize"}
+    phase_order = ["nil", "portal", "recruiting", "ready"]
+    current_idx = phase_order.index(off_phase) if off_phase in phase_order else 0
+
+    with ui.row().classes("w-full gap-2 mb-4"):
+        for i, key in enumerate(phase_order):
+            label = phase_labels[key]
+            if i < current_idx:
+                ui.badge(f"{i+1}. {label}", color="green").classes("text-sm")
+            elif i == current_idx:
+                ui.badge(f"{i+1}. {label}", color="primary").classes("text-sm font-bold")
+            else:
+                ui.badge(f"{i+1}. {label}", color="grey").classes("text-sm")
+
+    with ui.row().classes("w-full gap-3 flex-wrap mb-4"):
+        metric_card("Team", coach_team)
+        metric_card("Retention Risks", str(off_status.get("retention_risks_count", 0)))
+        metric_card("Portal Players", str(off_status.get("portal_count", 0)))
+        metric_card("Recruit Pool", str(off_status.get("recruit_pool_size", 0)))
+
+    if off_phase == "nil":
+        await _render_offseason_nil(state, off_status)
+    elif off_phase == "portal":
+        await _render_offseason_portal(state, coach_team)
+    elif off_phase == "recruiting":
+        await _render_offseason_recruiting(state, coach_team)
+    elif off_phase == "ready":
+        await _render_offseason_finalize(state, current_year)
+
+
+async def _render_offseason_nil(state: UserState, off_status: dict):
+    """NIL budget allocation phase."""
+    ui.label("NIL Budget Allocation").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label("Allocate your NIL budget across recruiting, transfer portal, and player retention.").classes(
+        "text-sm text-slate-500 mb-2"
+    )
+
+    try:
+        nil_data = await run.io_bound(api_client.get_offseason_nil, state.session_id)
+    except api_client.APIError:
+        notify_error("Could not load NIL data.")
+        return
+
+    budget = nil_data.get("annual_budget", 0)
+    metric_card("Annual Budget", f"${budget:,.0f}")
+
+    default_recruit = int(budget * 0.50)
+    default_portal = int(budget * 0.30)
+    default_retain = budget - default_recruit - default_portal
+
+    recruit_input = ui.number("Recruiting Pool ($)", value=default_recruit, min=0, max=budget, step=10000).classes(
+        "w-48"
+    )
+    portal_input = ui.number("Portal Pool ($)", value=default_portal, min=0, max=budget, step=10000).classes("w-48")
+    retain_input = ui.number("Retention Pool ($)", value=default_retain, min=0, max=budget, step=10000).classes("w-48")
+
+    alloc_label = ui.label("").classes("text-sm mt-2")
+
+    def _update_alloc():
+        total = int(recruit_input.value or 0) + int(portal_input.value or 0) + int(retain_input.value or 0)
+        remaining = budget - total
+        if remaining >= 0:
+            alloc_label.text = f"Allocated: ${total:,.0f} | Remaining: ${remaining:,.0f}"
+            alloc_label.classes(remove="text-red-600", add="text-slate-600")
+        else:
+            alloc_label.text = f"Over budget by ${abs(remaining):,.0f}!"
+            alloc_label.classes(remove="text-slate-600", add="text-red-600")
+
+    recruit_input.on("update:model-value", lambda _: _update_alloc())
+    portal_input.on("update:model-value", lambda _: _update_alloc())
+    retain_input.on("update:model-value", lambda _: _update_alloc())
+    _update_alloc()
+
+    spinner = ui.spinner(size="lg").classes("hidden")
+
+    async def _confirm():
+        r = int(recruit_input.value or 0)
+        p = int(portal_input.value or 0)
+        t = int(retain_input.value or 0)
+        if r + p + t > budget:
+            notify_error(f"Total allocation exceeds budget (${budget:,.0f}).")
+            return
+        spinner.classes(remove="hidden")
+        try:
+            await run.io_bound(api_client.offseason_nil_allocate, state.session_id, r, p, t)
+            notify_success("NIL budget allocated! Moving to Transfer Portal.")
+            ui.navigate.to("/")
+        except api_client.APIError as e:
+            notify_error(f"Allocation failed: {e.detail}")
+        finally:
+            spinner.classes(add="hidden")
+
+    ui.button("Confirm NIL Allocation & Continue to Portal", on_click=_confirm, icon="check").props(
+        "color=primary size=lg"
+    ).classes("mt-4")
+
+
+async def _render_offseason_portal(state: UserState, coach_team: str):
+    """Transfer portal browsing and offers."""
+    ui.label("Transfer Portal").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label("Browse available transfer players, make offers, and commit players to your roster.").classes(
+        "text-sm text-slate-500 mb-2"
+    )
+
+    positions = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
+    pos_select = ui.select(positions, value="All", label="Position Filter").classes("w-40")
+    min_ovr = ui.number("Min Overall", value=0, min=0, max=99).classes("w-32")
+
+    portal_container = ui.column().classes("w-full")
+
+    async def _load_portal():
+        portal_container.clear()
+        pos_param = pos_select.value if pos_select.value != "All" else None
+        ovr_param = int(min_ovr.value) if min_ovr.value and int(min_ovr.value) > 0 else None
+        try:
+            portal_resp = await run.io_bound(
+                api_client.get_offseason_portal, state.session_id, position=pos_param, min_overall=ovr_param
+            )
+        except api_client.APIError as e:
+            with portal_container:
+                notify_error(f"Could not load portal: {e.detail}")
+            return
+
+        entries = portal_resp.get("entries", [])
+        total = portal_resp.get("total_entries", 0)
+        available = portal_resp.get("total_available", 0)
+
+        with portal_container:
+            with ui.row().classes("gap-3 mb-2"):
+                metric_card("Total Entries", str(total))
+                metric_card("Available", str(available))
+
+            if not entries:
+                ui.label("No available portal players matching filters.").classes("text-slate-400 italic")
+                return
+
+            # Table
+            columns = [
+                {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                {"name": "position", "label": "Pos", "field": "position"},
+                {"name": "overall", "label": "OVR", "field": "overall", "sortable": True},
+                {"name": "year", "label": "Year", "field": "year"},
+                {"name": "origin_team", "label": "From", "field": "origin_team", "align": "left"},
+                {"name": "reason", "label": "Reason", "field": "reason"},
+                {"name": "stars", "label": "Stars", "field": "stars", "sortable": True},
+                {"name": "offers", "label": "Offers", "field": "offers"},
+            ]
+            rows = [
+                {
+                    "name": e.get("name", ""),
+                    "position": e.get("position", ""),
+                    "overall": e.get("overall", 0),
+                    "year": e.get("year", ""),
+                    "origin_team": e.get("origin_team", ""),
+                    "reason": e.get("reason", "").replace("_", " ").title(),
+                    "stars": e.get("potential", 0),
+                    "offers": e.get("offers_count", 0),
+                    "global_index": e.get("global_index", -1),
+                }
+                for e in entries
+            ]
+            table = ui.table(columns=columns, rows=rows, row_key="name", selection="single").classes(
+                "w-full"
+            ).props("dense")
+
+            # Actions for selected player
+            with ui.row().classes("gap-4 mt-4 items-end"):
+                nil_offer_input = ui.number("NIL Offer ($)", value=25000, min=0, max=500000, step=5000).classes("w-40")
+                action_spinner = ui.spinner(size="md").classes("hidden")
+
+                async def _make_offer():
+                    selected = table.selected
+                    if not selected:
+                        notify_error("Select a player first.")
+                        return
+                    gidx = selected[0].get("global_index", -1)
+                    if gidx < 0:
+                        notify_error("Cannot interact with this player.")
+                        return
+                    action_spinner.classes(remove="hidden")
+                    try:
+                        await run.io_bound(
+                            api_client.offseason_portal_offer,
+                            state.session_id,
+                            entry_index=gidx,
+                            nil_amount=int(nil_offer_input.value or 0),
+                        )
+                        notify_success(f"Offer sent to {selected[0]['name']}!")
+                        await _load_portal()
+                    except api_client.APIError as e:
+                        notify_error(f"Offer failed: {e.detail}")
+                    finally:
+                        action_spinner.classes(add="hidden")
+
+                async def _commit():
+                    selected = table.selected
+                    if not selected:
+                        notify_error("Select a player first.")
+                        return
+                    gidx = selected[0].get("global_index", -1)
+                    if gidx < 0:
+                        notify_error("Cannot interact with this player.")
+                        return
+                    action_spinner.classes(remove="hidden")
+                    try:
+                        await run.io_bound(
+                            api_client.offseason_portal_commit, state.session_id, entry_index=gidx
+                        )
+                        notify_success(f"Committed {selected[0]['name']} to {coach_team}!")
+                        await _load_portal()
+                    except api_client.APIError as e:
+                        notify_error(f"Commit failed: {e.detail}")
+                    finally:
+                        action_spinner.classes(add="hidden")
+
+                ui.button("Make Offer", on_click=_make_offer, icon="local_offer").props("color=secondary")
+                ui.button("Commit Player", on_click=_commit, icon="person_add").props("color=primary")
+
+    await _load_portal()
+
+    ui.separator().classes("my-4")
+    resolve_spinner = ui.spinner(size="lg").classes("hidden")
+
+    async def _resolve_portal():
+        resolve_spinner.classes(remove="hidden")
+        try:
+            result = await run.io_bound(api_client.offseason_portal_resolve, state.session_id)
+            total_transfers = result.get("total_transfers", 0)
+            human_transfers = result.get("human_transfers", [])
+            msg = f"Portal resolved! {total_transfers} total transfers."
+            if human_transfers:
+                names = ", ".join(f"{t.get('name', '')} ({t.get('position', '')})" for t in human_transfers)
+                msg += f" Your transfers: {names}"
+            notify_success(msg)
+            ui.navigate.to("/")
+        except api_client.APIError as e:
+            notify_error(f"Portal resolution failed: {e.detail}")
+        finally:
+            resolve_spinner.classes(add="hidden")
+
+    ui.button("Resolve Portal & Continue to Recruiting", on_click=_resolve_portal, icon="arrow_forward").props(
+        "color=primary size=lg"
+    )
+
+
+async def _render_offseason_recruiting(state: UserState, coach_team: str):
+    """Recruiting phase: scout, offer, and sign high school recruits."""
+    ui.label("Recruiting").classes("text-xl font-bold text-slate-700 mt-2")
+    ui.label("Scout, evaluate, and offer scholarships to high school recruits.").classes(
+        "text-sm text-slate-500 mb-2"
+    )
+
+    try:
+        rec_resp = await run.io_bound(api_client.get_offseason_recruiting, state.session_id)
+    except api_client.APIError as e:
+        notify_error(f"Could not load recruiting: {e.detail}")
+        return
+
+    recruits = rec_resp.get("recruits", [])
+    total_pool = rec_resp.get("total_pool", 0)
+    board = rec_resp.get("board", {})
+
+    with ui.row().classes("gap-3 mb-4"):
+        metric_card("Recruit Pool", str(total_pool))
+        metric_card("Showing", str(len(recruits)))
+        if board:
+            metric_card("Scholarships", str(board.get("scholarships_available", 0)))
+            metric_card("Scouting Pts", str(board.get("scouting_points", 0)))
+
+    if recruits:
+        columns = [
+            {"name": "name", "label": "Name", "field": "name", "align": "left"},
+            {"name": "position", "label": "Pos", "field": "position"},
+            {"name": "stars", "label": "Stars", "field": "stars", "sortable": True},
+            {"name": "region", "label": "Region", "field": "region"},
+            {"name": "hometown", "label": "Hometown", "field": "hometown", "align": "left"},
+        ]
+        rows = []
+        for r in recruits[:50]:
+            row = {
+                "name": r.get("name", ""),
+                "position": r.get("position", ""),
+                "stars": r.get("stars", 0),
+                "region": r.get("region", "").replace("_", " ").title(),
+                "hometown": r.get("hometown", ""),
+                "pool_index": r.get("pool_index", 0),
+            }
+            scouted = r.get("scouted", {})
+            if scouted:
+                row["spd"] = scouted.get("speed", "?")
+                row["agi"] = scouted.get("agility", "?")
+                row["pwr"] = scouted.get("power", "?")
+                row["hnd"] = scouted.get("hands", "?")
+            if "true_overall" in r:
+                row["ovr"] = r["true_overall"]
+            rows.append(row)
+
+        # Add scouted attribute columns if any recruit has them
+        has_scouted = any("spd" in r for r in rows)
+        if has_scouted:
+            columns += [
+                {"name": "spd", "label": "SPD", "field": "spd"},
+                {"name": "agi", "label": "AGI", "field": "agi"},
+                {"name": "pwr", "label": "PWR", "field": "pwr"},
+                {"name": "hnd", "label": "HND", "field": "hnd"},
+            ]
+        has_ovr = any("ovr" in r for r in rows)
+        if has_ovr:
+            columns.append({"name": "ovr", "label": "OVR", "field": "ovr", "sortable": True})
+
+        table = ui.table(columns=columns, rows=rows, row_key="name", selection="single").classes("w-full").props(
+            "dense"
+        )
+
+        with ui.row().classes("gap-4 mt-4 items-end"):
+            scout_level = ui.select(["basic", "full"], value="basic", label="Scout Level").classes("w-32")
+            action_spinner = ui.spinner(size="md").classes("hidden")
+
+            async def _scout():
+                selected = table.selected
+                if not selected:
+                    notify_error("Select a recruit first.")
+                    return
+                pidx = selected[0].get("pool_index", 0)
+                action_spinner.classes(remove="hidden")
+                try:
+                    result = await run.io_bound(
+                        api_client.offseason_recruiting_scout,
+                        state.session_id,
+                        recruit_index=pidx,
+                        level=scout_level.value,
+                    )
+                    pts_left = result.get("scouting_points_remaining", 0)
+                    notify_success(f"Scouted {selected[0]['name']}! ({pts_left} pts remaining)")
+                    ui.navigate.to("/")
+                except api_client.APIError as e:
+                    notify_error(f"Scouting failed: {e.detail}")
+                finally:
+                    action_spinner.classes(add="hidden")
+
+            async def _offer():
+                selected = table.selected
+                if not selected:
+                    notify_error("Select a recruit first.")
+                    return
+                pidx = selected[0].get("pool_index", 0)
+                action_spinner.classes(remove="hidden")
+                try:
+                    result = await run.io_bound(
+                        api_client.offseason_recruiting_offer, state.session_id, recruit_index=pidx
+                    )
+                    offers_made = result.get("offers_made", 0)
+                    max_offers = result.get("max_offers", 0)
+                    notify_success(f"Offered {selected[0]['name']}! ({offers_made}/{max_offers} offers used)")
+                    ui.navigate.to("/")
+                except api_client.APIError as e:
+                    notify_error(f"Offer failed: {e.detail}")
+                finally:
+                    action_spinner.classes(add="hidden")
+
+            ui.button("Scout", on_click=_scout, icon="search").props("color=secondary")
+            ui.button("Offer Scholarship", on_click=_offer, icon="school").props("color=primary")
+
+    else:
+        ui.label("No recruits available.").classes("text-slate-400 italic")
+
+    # Offer board
+    if board and board.get("offered"):
+        ui.label("Your Offer Board").classes("text-lg font-semibold text-slate-700 mt-4")
+        offer_rows = []
+        for offered_id in board.get("offered", []):
+            for r in recruits:
+                if r.get("name", "") in offered_id or offered_id in r.get("name", ""):
+                    offer_rows.append({"name": r.get("name", ""), "pos": r.get("position", ""), "stars": r.get("stars", 0)})
+                    break
+        if offer_rows:
+            ui.table(
+                columns=[
+                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                    {"name": "pos", "label": "Pos", "field": "pos"},
+                    {"name": "stars", "label": "Stars", "field": "stars"},
+                ],
+                rows=offer_rows,
+                row_key="name",
+            ).classes("w-full").props("dense")
+
+    ui.separator().classes("my-4")
+    resolve_spinner = ui.spinner(size="lg").classes("hidden")
+
+    async def _resolve_recruiting():
+        resolve_spinner.classes(remove="hidden")
+        try:
+            result = await run.io_bound(api_client.offseason_recruiting_resolve, state.session_id)
+            human_signed = result.get("human_signed", [])
+            total_signed = result.get("total_signed", 0)
+            msg = f"Signing day complete! {total_signed} total recruits signed."
+            if human_signed:
+                names = ", ".join(f"{r.get('name', '')} ({r.get('position', '')})" for r in human_signed)
+                msg += f" Your class: {names}"
+            notify_success(msg)
+            ui.navigate.to("/")
+        except api_client.APIError as e:
+            notify_error(f"Signing day failed: {e.detail}")
+        finally:
+            resolve_spinner.classes(add="hidden")
+
+    ui.button("Run Signing Day & Continue", on_click=_resolve_recruiting, icon="arrow_forward").props(
+        "color=primary size=lg"
+    )
+
+
+async def _render_offseason_finalize(state: UserState, current_year):
+    """Offseason ready — finalize and move to season setup."""
+    ui.label("Offseason Complete").classes("text-xl font-bold text-green-700 mt-2")
+    ui.label(
+        "All offseason phases are done! Your roster has been updated with portal transfers and incoming recruits."
+    ).classes("text-sm text-slate-600 mb-4")
+
+    spinner = ui.spinner(size="lg").classes("hidden")
+
+    async def _finalize():
+        spinner.classes(remove="hidden")
+        try:
+            await run.io_bound(api_client.offseason_complete, state.session_id)
+            notify_success(f"Offseason finalized! Ready to start the {current_year} season.")
+            ui.navigate.to("/")
+        except api_client.APIError as e:
+            notify_error(f"Finalize failed: {e.detail}")
+        finally:
+            spinner.classes(add="hidden")
+
+    ui.button(f"Start {current_year} Season Setup", on_click=_finalize, icon="sports_football").props(
+        "color=primary size=lg"
+    )
+
+
 async def _render_dynasty_start_season(state: UserState, shared: dict):
     """Show dynasty start-season UI when dynasty exists but no active season."""
     try:
@@ -519,8 +971,16 @@ async def _render_season_play(state: UserState, shared: dict):
     try:
         status = await run.io_bound(api_client.get_season_status, state.session_id)
     except api_client.APIError:
-        # Dynasty in setup/offseason — no active season yet, show dynasty start UI
+        # Dynasty in setup/offseason — no active season yet
         if state.mode == "dynasty":
+            # Check if we're in offseason (has offseason activities to do)
+            try:
+                off_status = await run.io_bound(api_client.get_offseason_status, state.session_id)
+                await _render_offseason_flow(state, shared, off_status)
+                return
+            except api_client.APIError:
+                pass
+            # Not in offseason — show start season UI
             await _render_dynasty_start_season(state, shared)
             return
         old_mode = state.mode
@@ -529,10 +989,15 @@ async def _render_season_play(state: UserState, shared: dict):
         _render_mode_selection(state, shared, play_tab=old_mode)
         return
 
-    # After dynasty advance, phase is "offseason" and season is gone — show start UI
+    # After dynasty advance, phase is "offseason" and season is gone — show offseason UI
     if state.mode == "dynasty" and status.get("phase") == "offseason":
-        await _render_dynasty_start_season(state, shared)
-        return
+        try:
+            off_status = await run.io_bound(api_client.get_offseason_status, state.session_id)
+            await _render_offseason_flow(state, shared, off_status)
+            return
+        except api_client.APIError:
+            await _render_dynasty_start_season(state, shared)
+            return
 
     season_name = status.get("name", "Season")
     ui.label(f"{season_name}").classes("text-2xl font-bold text-slate-800")
