@@ -85,10 +85,12 @@ SPORT CONTEXT (for readers unfamiliar with Viperball):
     built-in comeback mechanic and the sport's most distinctive feature.
     Drives with a field position bonus are "power plays"; defending those
     drives while leading from a pushed-back position is a "penalty kill."
-  - BONUS POSSESSIONS: When a team intercepts a kick pass or lateral, the
-    intercepting team runs their drive, then the original team gets the ball
-    back as a bonus possession — unless the intercepting team also throws
-    an INT (which cancels the bonus). Inspired by pesäpallo.
+  - BONUS POSSESSIONS: When a team intercepts a kick pass, the intercepting
+    team runs their drive, then the original team gets the ball back as a
+    bonus possession — unless the intercepting team throws an INT back
+    (which cancels the bonus). This is one of the most important stats for
+    understanding dominant teams: a strong secondary generates extra drives
+    that the opponent never gets to match. Inspired by pesäpallo.
 
 METRIC BENCHMARKS:
   PPD (Points/Drive):    Elite 5.0+ | Good 3.5-5.0 | Avg 2.5-3.5 | Poor <2.5
@@ -252,9 +254,13 @@ def analyze_game_data(game_data: dict) -> str:
 
     # ── Bonus Possessions ──
     lines.append("─── BONUS POSSESSIONS ───")
-    lines.append("(When a team intercepts a lateral or kick pass, the intercepting team gets")
-    lines.append(" their drive, then the original team gets the ball back as a bonus drive.")
-    lines.append(" An INT thrown back during the intercepting team's drive cancels the bonus.)")
+    lines.append("(When a team intercepts a kick pass, the intercepting team gets their drive,")
+    lines.append(" then the original team gets the ball back as a bonus drive — unless the")
+    lines.append(" intercepting team throws an INT back, which cancels the bonus.")
+    lines.append(" Bonus drives are a massive advantage: a dominant secondary generates extra")
+    lines.append(" possessions that don't exist for the opponent. A team earning 4-5 bonus")
+    lines.append(" drives per game at a 60%+ conversion rate is adding 10-15 points that the")
+    lines.append(" other team simply never gets a chance to match.)")
     lines.append("")
 
     for side, label in [('home', home['team']), ('away', away['team'])]:
