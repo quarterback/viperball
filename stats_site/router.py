@@ -922,7 +922,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "kp_tds": kp_tds,
             "kp_ints": kp_ints,
             "lateral_chains": lateral_chains,
-            "lateral_yards": lateral_yards,
+            "lateral_yards": int(round(lateral_yards)),
             "successful_laterals": successful_laterals,
             "lateral_pct": round(successful_laterals / max(1, lateral_chains) * 100, 1),
             "touchdowns": touchdowns,
@@ -933,9 +933,9 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "fumbles": fumbles,
             "tod": tod,
             "penalties": penalties,
-            "penalty_yards": penalty_yards,
-            "delta_yards": delta_yards,
-            "adjusted_yards": adjusted_yards,
+            "penalty_yards": int(round(penalty_yards)),
+            "delta_yards": int(round(delta_yards)),
+            "adjusted_yards": int(round(adjusted_yards)),
             "delta_drives": delta_drives,
             "delta_scores": delta_scores_total,
             "kill_rate": round(delta_scores_total / max(1, delta_drives) * 100, 1) if delta_drives > 0 else None,
@@ -1499,7 +1499,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
     # Ensure yard totals are integers
     for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards"):
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
         season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     # Derived season totals
     season_totals["yards_per_touch"] = round(
@@ -2038,6 +2038,14 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["kick_pass_yards"] = int(round(t.get("kick_pass_yards", 0) if "kick_pass_yards" in t else t.get("kp_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
+        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
@@ -2691,6 +2699,14 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
+        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
@@ -2941,7 +2957,7 @@ def pro_player(request: Request, league: str, session_id: str, team_key: str, pl
                     break
 
     for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards"):
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
         season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     season_totals["ypc"] = round(
         season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
@@ -3621,7 +3637,7 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                     break
 
     for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards"):
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
         season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     season_totals["ypc"] = round(
         season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
@@ -3824,6 +3840,8 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
         t["delta_yards"] = int(round(t.get("delta_yards", 0)))
         t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
@@ -3838,6 +3856,10 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         t["opp_total_yards"] = int(round(t["opp_total_yards"]))
         t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
         t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
         t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
         t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
         t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)

@@ -2248,6 +2248,21 @@ def compute_gameday_modifiers(
     hc_aff = hc.hc_affinity if hc else "balanced"
     aff_fx = HC_AFFINITY_EFFECTS.get(hc_aff, HC_AFFINITY_EFFECTS["balanced"])
 
+    # V2.8: Clock management — derived composite skill (0.0-1.0)
+    # Drives play-clock discipline, timeout strategy, and end-of-game decisions.
+    clock_mgmt_raw = (
+        instincts_raw * 0.40    # game sense — reading situations
+        + composure_raw * 0.35  # poise — not panicking with the clock
+        + leadership_raw * 0.25 # organizational discipline
+    )
+    clock_mgmt = norm(clock_mgmt_raw)
+    # Sub-archetype bonuses
+    sub_arch = hc.sub_archetype if hc else ""
+    if sub_arch == "clock_surgeon":
+        clock_mgmt = min(1.0, clock_mgmt + 0.15)
+    elif sub_arch == "economist":
+        clock_mgmt = min(1.0, clock_mgmt + 0.05)
+
     return {
         "instincts_factor": norm(instincts_raw),
         "leadership_factor": norm(leadership_raw),
@@ -2266,6 +2281,8 @@ def compute_gameday_modifiers(
         "dev_aura": compute_dev_aura(coaching_staff),
         # V2.7 — lead management countermeasure profile
         "lead_management": compute_lead_management_profile(coaching_staff, offense_style),
+        # V2.8 — clock management composite skill
+        "clock_management": clock_mgmt,
     }
 
 

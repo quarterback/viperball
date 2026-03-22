@@ -229,7 +229,7 @@
 <div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Delta Yards</div>
-    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards }}</div>
+    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards|round(0)|int }}</div>
   </div>
   <div class="metric">
     <div class="label">Adjusted Yards</div>
