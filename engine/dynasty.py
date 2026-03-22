@@ -566,6 +566,7 @@ class Dynasty:
                 history.best_season_year = year
 
         # ── Update coaching staff postseason stats & coaching trees ──
+        playoff_wins_by_team: Dict[str, int] = {}
         if hasattr(self, '_coaching_staffs') and self._coaching_staffs:
             # Conference champions
             conf_champions = season.get_conference_champions() if self.conferences else {}
