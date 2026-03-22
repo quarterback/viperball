@@ -497,7 +497,7 @@ class TeamRecord:
 
     @property
     def avg_delta_yds(self) -> float:
-        """Average yardage differential per game."""
+        """Net yards per game (team yards minus opponent yards). Displayed as 'Net YPG'."""
         return round(self.total_delta_yds / self.games_played, 1) if self.games_played > 0 else 0.0
 
     # ── Legacy property aliases (backward compat) ──

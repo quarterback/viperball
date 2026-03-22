@@ -135,7 +135,7 @@ def display_team_dashboard(record: TeamRecord, rank: Optional[int] = None):
     print(f"\n  {'Season 5D%:':<20} {record.season_5d_pct:.1f}%")
     print(f"  {'5D% Own Deep:':<20} {record.season_5d_own_deep_pct:.1f}%")
     print(f"  {'KILL%:':<20} {record.season_kill_pct:.1f}%")
-    print(f"  {'Avg Δ Yards/G:':<20} {record.avg_delta_yds:+.1f}")
+    print(f"  {'Net YPG:':<20} {record.avg_delta_yds:+.1f}")
 
 
 # ========================================

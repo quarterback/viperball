@@ -497,7 +497,7 @@ async def _render_dashboard(session_id: str, mode: str, team_name: str, standing
             metric_card("Lateral %", f"{record.get('avg_lateral_pct', record.get('avg_chaos', 0)):.1f}%")
         with ui.column():
             delta_yds = record.get('avg_delta_yds', 0)
-            metric_card("Avg Δ Yds", f"{delta_yds:+.0f}")
+            metric_card("Net YPG", f"{delta_yds:+.0f}")
         with ui.column():
             metric_card("5D% Own Deep", f"{record.get('season_5d_own_deep_pct', 0):.0f}%")
 
