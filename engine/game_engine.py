@@ -7405,11 +7405,7 @@ class ViperballEngine:
         # ── V2: Apply star override (performance floor) ──
         yards = self._apply_star_override(yards, carrier)
 
-        # ── V2.5: Micro-jitter — break up round-number clustering ──
-        # Adds ±0.3 yards of noise so results don't always land on .0 or .5
-        yards += random.uniform(-0.3, 0.3)
-
-        return max(-2.0, round(yards, 1))
+        return max(-2, int(round(yards)))
 
     def _pick_kick_pass_defender(self, def_team, subfamily: "KickPassSubFamily"):
         """Pick an individual defender for the kick pass H2H contest.
@@ -12028,13 +12024,13 @@ class ViperballEngine:
             "quarter": play.quarter,
             "time_remaining": play.time,
             "possession": play.possession,
-            "field_position": play.field_position,
+            "field_position": int(round(play.field_position)) if play.field_position is not None else None,
             "down": play.down,
-            "yards_to_go": play.yards_to_go,
+            "yards_to_go": int(round(play.yards_to_go)) if play.yards_to_go is not None else None,
             "play_type": play.play_type,
             "play_family": play.play_family,
             "players": play.players_involved,
-            "yards": play.yards_gained,
+            "yards": int(round(play.yards_gained)) if play.yards_gained is not None else None,
             "result": play.result,
             "description": play.description,
             "fatigue": play.fatigue,

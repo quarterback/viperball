@@ -854,8 +854,8 @@
     <td class="num">{{ p.quarter }}</td>
     <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
     <td>{% if p.possession == 'home' %}{{ game.home_team[:15] }}{% else %}{{ game.away_team[:15] }}{% endif %}</td>
-    <td class="num">{% if p.field_position is defined %}{% if p.field_position < 50 %}OWN {{ p.field_position }}{% elif p.field_position == 50 %}50{% else %}OPP {{ 100 - p.field_position }}{% endif %}{% else %}&mdash;{% endif %}</td>
-    <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go }}{% else %}&mdash;{% endif %}</td>
+    <td class="num">{% if p.field_position is defined %}{% set fp = p.field_position|round(0)|int %}{% if fp < 50 %}OWN {{ fp }}{% elif fp == 50 %}50{% else %}OPP {{ 100 - fp }}{% endif %}{% else %}&mdash;{% endif %}</td>
+    <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go|round(0)|int }}{% else %}&mdash;{% endif %}</td>
     <td>
       {% if is_score %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') | upper }}</span>
       {% elif is_turnover %}<span class="tag" style="border-color:var(--red);color:var(--red)">{{ p.result | replace('_',' ') | upper }}</span>
@@ -863,7 +863,7 @@
       {% else %}<span style="color:var(--fg-dim)">{{ p.play_family | default(p.play_type, true) | replace('_',' ') }}</span>
       {% endif %}
     </td>
-    <td class="num {% if p.yards is defined and p.yards >= 20 %}stat-good{% elif p.yards is defined and p.yards < 0 %}stat-bad{% endif %}">{{ p.yards if p.yards is defined else '—' }}</td>
+    <td class="num {% if p.yards is defined and p.yards >= 20 %}stat-good{% elif p.yards is defined and p.yards < 0 %}stat-bad{% endif %}">{{ p.yards|round(0)|int if p.yards is defined else '—' }}</td>
     <td class="num {% if p.epa is defined and p.epa > 2 %}stat-good{% elif p.epa is defined and p.epa < -2 %}stat-bad{% endif %}">{{ '%.1f'|format(p.epa) if p.epa is defined and p.epa is not none else '—' }}</td>
     <td style="white-space:normal;max-width:400px;{% if is_score %}color:var(--yellow);font-weight:bold{% elif is_turnover %}color:var(--red){% elif is_penalty %}color:var(--fg-dim){% endif %}">
       {{ p.description if p.description else '—' }}
