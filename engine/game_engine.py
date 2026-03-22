@@ -4316,39 +4316,32 @@ class ViperballEngine:
                         else:
                             self._away_momentum_plays = mom_plays
 
-                # ── Defensive Bonus Possession (pesäpallo-inspired) ──
-                # Interceptions (only) grant the intercepting team a bonus
-                # possession after their current drive ends, giving them
-                # back-to-back drives as a reward for the turnover.
-                # If this drive ends in an INT-back or a fumble, the
-                # pending bonus is canceled.
+                # ── Defensive Bonus Possession (pesäpallo / hockey power-play) ──
+                # Interceptions grant the intercepting team a bonus
+                # possession (back-to-back drives).  Any turnover
+                # (fumble OR interception) while a bonus is pending or
+                # active cancels/waives it — like a power-play goal
+                # releasing the man from the penalty box.
                 is_interception = play.result in ("lateral_intercepted", "kick_pass_intercepted", "int_return_td")
                 is_fumble = play.result == "fumble"
+                has_pending_bonus = (
+                    (self._bonus_recipient and self._bonus_drives_remaining >= 0)
+                    or bool(self.state.bonus_possession_team)
+                )
 
-                if is_fumble and (self._bonus_recipient and self._bonus_drives_remaining >= 0
-                                  or self.state.bonus_possession_team):
-                    # Fumble cancels any pending bonus possession.
-                    # Like a basketball possession-arrow reset: if you
-                    # earned a bonus off an INT but fumble before it
-                    # triggers, the bonus is waived.
+                if (is_fumble or is_interception) and (has_pending_bonus or self._is_bonus_drive):
+                    # Any turnover (fumble or INT) cancels a pending
+                    # bonus *and* suppresses creating a new one.
+                    # An INT during a bonus drive just ends the drive
+                    # cleanly — no chain of bonus possessions.
                     self._bonus_recipient = ""
                     self._bonus_drives_remaining = -1
                     self.state.bonus_possession_team = ""
-
-                if is_interception:
-                    if self._bonus_recipient and self._bonus_drives_remaining >= 0:
-                        # INT back — cancel the pending bonus possession.
-                        # Per pesäpallo rule: an interception back neutralizes
-                        # the bonus. No new bonus is created.
-                        self._bonus_recipient = ""
-                        self._bonus_drives_remaining = -1
-                        self.state.bonus_possession_team = ""
-                    else:
-                        # Fresh INT (no pending bonus) — grant bonus
-                        # possession to the team that made the interception
-                        # (the defense), not the team that threw it.
-                        intercepting_team = "away" if drive_team == "home" else "home"
-                        self.state.bonus_possession_team = intercepting_team
+                elif is_interception:
+                    # Fresh INT with no bonus context — grant bonus
+                    # possession to the intercepting team (defense).
+                    intercepting_team = "away" if drive_team == "home" else "home"
+                    self.state.bonus_possession_team = intercepting_team
 
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
