@@ -797,6 +797,15 @@ def _render_team_browser(session_id, standings, conferences, has_conferences):
         rc4.metric("PA", fmt_vb_score(team_record.get("points_against", 0)))
         rc5.metric("Team Rtg", f"{team_record.get('avg_opi', 0):.1f}")
 
+        # Analytics row
+        ac1, ac2, ac3, ac4, ac5 = st.columns(5)
+        ac1.metric("PPD", f"{team_record.get('avg_ppd', 0):.1f}")
+        ac2.metric("5D%", f"{team_record.get('season_5d_pct', 0):.0f}%")
+        ac3.metric("KILL%", f"{team_record.get('season_kill_pct', 0):.0f}%")
+        ac4.metric("TO Margin", f"{team_record.get('avg_to_margin', 0):+.1f}")
+        delta_yds = team_record.get('avg_delta_yds', 0)
+        ac5.metric("Avg Δ Yds", f"{delta_yds:+.0f}")
+
     try:
         roster_resp = api_client.get_roster(session_id, browse_team)
         roster = roster_resp.get("roster", [])

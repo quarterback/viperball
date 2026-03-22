@@ -13,6 +13,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from analyze_game import analyze_game_data as _analyze_game_data
+
 from engine import ViperballEngine, load_team_from_json, get_available_teams, get_available_styles, OFFENSE_STYLES, DEFENSE_STYLES, ST_SCHEMES
 from engine.game_engine import WEATHER_CONDITIONS, POSITION_ARCHETYPES, get_archetype_info
 from engine.season import load_teams_from_directory, create_season
@@ -1189,6 +1191,16 @@ def render_game_detail(result, key_prefix="gd"):
                 "Result": p['result'],
             })
         st.dataframe(pd.DataFrame(play_rows), hide_index=True, use_container_width=True, height=400)
+
+    with st.expander("Game Analysis", expanded=False):
+        try:
+            analysis_text = _analyze_game_data(result)
+            st.code(analysis_text, language=None)
+            st.download_button("Download Analysis (.txt)", analysis_text,
+                               file_name=f"{safe_filename(home_name)}_vs_{safe_filename(away_name)}_analysis.txt",
+                               mime="text/plain", key=f"{key_prefix}_dl_analysis")
+        except Exception as e:
+            st.warning(f"Analysis unavailable: {e}")
 
     with st.expander("Export Game Data", expanded=False):
         dl1, dl2 = st.columns(2)
