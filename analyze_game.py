@@ -57,21 +57,35 @@ SPORT CONTEXT (for readers unfamiliar with Viperball):
   (backward/sideways only), and kick passing (punting to a teammate). Played
   on a 100-yard field with 6 downs to gain 20 yards.
 
-  SCORING: TD=9 | Snap Kick=5 | Field Goal=3 | Safety=2 | Pindown=1 | Bell=½
+  SCORING:
+    TD = 9 pts | Snap Kick = 5 pts | Field Goal = 3 pts | Safety = 2 pts
+    Pindown (rouge) = 1 pt — awarded when a kicked ball enters the end zone
+      and the receiving team fails to return it out. Like the CFL single.
+    Bell = ½ pt — awarded on any loose-ball recovery (fumble, muffed punt,
+      blocked kick). Play continues after the bell; it's a live-ball score.
   Typical game scores: 45-70 pts per team (combined 90-140).
 
+  KEY POSITIONS:
+  - Zeroback (ZB): The most important player on the field. Receives the
+    snap, serves as the primary ball carrier AND the team's kicker (snap
+    kicks, kick passes). Everything flows through the Zeroback.
+  - Viper (VP): A versatile skill player who lines up anywhere and moves
+    pre-snap — Viperball's mismatch creator. Think slot receiver meets
+    rugby utility back.
+
   KEY DIFFERENCES FROM FOOTBALL:
-  - No forward passes. Laterals replace the passing game.
-  - Snap kicks (drop kicks) can be attempted on any play for 5 points.
-  - Higher turnover rates are normal (laterals compound fumble risk).
-  - Half-point scores (bells) mean fractional final scores are valid.
+  - No forward passes. Ball moves via rushing, kick passing (punting to a
+    teammate), and laterals.
+  - Snap kicks (drop kicks) can be attempted on any down for 5 points.
   - Two-way play is mandatory — same players on offense and defense.
-  - NO KICKOFFS: After each score, the receiving team starts at the 20-yard
-    line +/- the current score differential. Trailing teams get better field
-    position (down 14 → start at the 34); leading teams get worse (up 21 →
-    start at the 1). This is the "Delta Yards" system — it's Viperball's
+  - NO KICKOFFS — THE DELTA YARDS SYSTEM: After each score, the receiving
+    team starts at the 20-yard line +/- the current score differential.
+    Trailing teams get better field position (down 14 → start at the 34);
+    leading teams get worse (up 21 → start at the 1). This is Viperball's
     built-in comeback mechanic and the sport's most distinctive feature.
-  - BONUS POSSESSIONS: When a team intercepts a lateral or kick pass, the
+    Drives with a field position bonus are "power plays"; defending those
+    drives while leading from a pushed-back position is a "penalty kill."
+  - BONUS POSSESSIONS: When a team intercepts a kick pass or lateral, the
     intercepting team runs their drive, then the original team gets the ball
     back as a bonus possession — unless the intercepting team also throws
     an INT (which cancels the bonus). Inspired by pesäpallo.
@@ -79,10 +93,10 @@ SPORT CONTEXT (for readers unfamiliar with Viperball):
 METRIC BENCHMARKS:
   PPD (Points/Drive):    Elite 5.0+ | Good 3.5-5.0 | Avg 2.5-3.5 | Poor <2.5
   Conversion %:          Elite 55%+ | Good 45-55%   | Avg 35-45%  | Poor <35%
-  Lateral %:             Elite 80%+ | Good 65-80%   | Avg 50-65%  | Poor <50%
   Explosive Plays/Game:  Dominant 10+ | Good 6-9 | Average 3-5
   TO Margin:             +3 is significant (4-8 total TOs per game is normal)
   ZBR (Zeroback Rating): 0-158.3 scale (like NFL passer rating)
+  VPR (Viper Rating):    0-158.3 scale (same scale as ZBR, emphasizes explosiveness)
 ================================================================================
 """.strip()
 
@@ -108,7 +122,6 @@ def _grade(value, thresholds):
 
 PPD_GRADES = [(5.0, "ELITE"), (3.5, "Good"), (2.5, "Average"), (0, "Poor")]
 CONV_GRADES = [(55, "ELITE"), (45, "Good"), (35, "Average"), (0, "Poor")]
-LAT_GRADES = [(80, "ELITE"), (65, "Good"), (50, "Average"), (0, "Poor")]
 ZBR_GRADES = [(130, "ELITE"), (100, "Great"), (80, "Solid"), (60, "Average"), (0, "Struggling")]
 
 
@@ -183,7 +196,6 @@ def analyze_game_data(game_data: dict) -> str:
 
         ppd = metrics['ppd']
         conv = metrics['conversion_pct']
-        lat = metrics['lateral_pct']
         explosive = metrics['explosive_plays']
         to_margin = metrics['to_margin']
         rating = metrics['team_rating']
@@ -191,7 +203,6 @@ def analyze_game_data(game_data: dict) -> str:
         lines.append(f"  {label} (Team Rating: {_fmt(rating)}/100)")
         lines.append(f"    PPD:              {_fmt(ppd, 2)}  [{_grade(ppd, PPD_GRADES)}]")
         lines.append(f"    Conversion %:     {_fmt(conv)}%  [{_grade(conv, CONV_GRADES)}]")
-        lines.append(f"    Lateral %:        {_fmt(lat)}%  [{_grade(lat, LAT_GRADES)}]")
         lines.append(f"    Explosive Plays:  {explosive}")
         lines.append(f"    TO Margin:        {to_margin:+d}")
         lines.append(f"    Total Yards:      {round(stats.get('total_yards', 0))}")
@@ -213,9 +224,10 @@ def analyze_game_data(game_data: dict) -> str:
     lines.append("─── DELTA YARDS & FIELD POSITION ───")
     lines.append("(Viperball has NO kickoffs. After each score, the receiving team starts at")
     lines.append(" the 20-yard line adjusted by score differential. Trailing = better field")
-    lines.append(" position; leading = worse. 'Δ Yards' = net yards gained or lost from this")
-    lines.append(" system. A team leading big all game will have large negative Δ Yards —")
-    lines.append(" that's the cost of winning, not a flaw.)")
+    lines.append(" position (a 'power play'); leading = worse (a 'penalty kill').")
+    lines.append(" 'Δ Yards' = net yards gained or lost from this system. A team leading big")
+    lines.append(" all game will have large negative Δ Yards — that's the cost of winning,")
+    lines.append(" not a flaw.)")
     lines.append("")
 
     for side, label in [('home', home['team']), ('away', away['team'])]:
@@ -232,7 +244,10 @@ def analyze_game_data(game_data: dict) -> str:
         lines.append(f"    Total Yards:    {tot_yds}  |  Adjusted (with Δ): {round(adj_yds)}")
         lines.append(f"    Δ Drives: {delta.get('delta_drives', 0):+d}")
         lines.append(f"    Δ Scores: {delta.get('delta_scores', 0):+d}")
-        lines.append(f"    KILL%:    {delta.get('team_kill_pct', 0)}% (opponent: {delta.get('opp_kill_pct', 0)}%)")
+        team_kill = delta.get('team_kill_pct', 0)
+        opp_kill = delta.get('opp_kill_pct', 0)
+        lines.append(f"    PK% (Penalty Kill):  {team_kill}%  — scoring rate when leading & pinned back")
+        lines.append(f"    Opp PP% (Power Play): {opp_kill}%  — opponent's scoring rate on boosted drives")
         lines.append("")
 
     # ── Bonus Possessions ──
@@ -257,8 +272,10 @@ def analyze_game_data(game_data: dict) -> str:
         lines.append("")
 
     lines.append("─── CONVERSION BY FIELD POSITION ───")
-    lines.append("(The missing analytical layer: where do late-down conversions happen?)")
-    lines.append("(Same 5D% means nothing if one team converts from their own 15 vs midfield)")
+    lines.append("(Viperball uses 6 downs to gain 20 yards. 4D/5D/6D = conversion rate on")
+    lines.append(" 4th, 5th, and 6th down — the pressure downs. Downs 1-3 are omitted because")
+    lines.append(" converting that early is routine. Where a team converts matters as much as")
+    lines.append(" how often — converting 5th down from your own 15 is harder than from midfield.)")
     lines.append("")
 
     zone_labels = {
@@ -356,18 +373,6 @@ def analyze_game_data(game_data: dict) -> str:
         narratives.append(
             f"Turnover battle: {to_winner} was +{abs(home_to)} in turnovers, "
             f"giving them extra possessions that {to_loser} couldn't overcome."
-        )
-
-    # Lateral game story
-    home_lat = home_metrics['lateral_pct']
-    away_lat = away_metrics['lateral_pct']
-    if abs(home_lat - away_lat) > 15:
-        better = home['team'] if home_lat > away_lat else away['team']
-        worse = away['team'] if home_lat > away_lat else home['team']
-        narratives.append(
-            f"Lateral discipline: {better} completed {max(home_lat, away_lat):.0f}% of "
-            f"lateral chains vs {worse}'s {min(home_lat, away_lat):.0f}%. "
-            f"In a sport where every lateral risks a fumble, that gap is decisive."
         )
 
     # Kicking story
