@@ -36,78 +36,78 @@ PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "stat_center": 42,             # gaussian center for all stats
-        "stat_spread": 7,              # gaussian std dev
-        "hidden_gem_count": (1, 3),    # 1-3 players get large stat boosts
-        "hidden_gem_boost": (25, 40),  # 42+40=82 → a doormat gem can be legitimately good
-        "hidden_gem_stats": (3, 5),    # boost several stats to make them well-rounded
+        "stat_center": 33,             # gaussian center for all stats
+        "stat_spread": 5,              # tight clustering — consistently weak
+        "hidden_gem_count": (1, 2),    # 1-2 players get modest stat boosts
+        "hidden_gem_boost": (12, 22),  # 33+22=55 → gem is decent but not a game-changer
+        "hidden_gem_stats": (2, 4),    # boost a few stats
         "potential_weights": {
-            "freshman": [5, 5, 10, 35, 45],
-            "sophomore": [3, 5, 8, 34, 50],
-            "junior": [2, 3, 5, 35, 55],
-            "senior": [0, 2, 10, 33, 55],
+            "freshman": [2, 4, 10, 35, 49],
+            "sophomore": [1, 3, 8, 34, 54],
+            "junior": [0, 2, 5, 35, 58],
+            "senior": [0, 1, 8, 33, 58],
         },
-        "dev_weights": [40, 5, 45, 10],
-        "prestige_range": (5, 20),
+        "dev_weights": [35, 3, 48, 14],
+        "prestige_range": (2, 15),
     },
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 51,
-        "stat_spread": 8,
-        "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (18, 30),  # 51+30=81 → underdog gems can be very good
+        "stat_center": 42,
+        "stat_spread": 6,
+        "hidden_gem_count": (1, 3),
+        "hidden_gem_boost": (10, 18),  # 42+18=60 → gem can hang with mid-tier guys
         "hidden_gem_stats": (2, 4),
         "potential_weights": {
-            "freshman": [10, 12, 15, 30, 33],
-            "sophomore": [8, 10, 12, 32, 38],
-            "junior": [5, 8, 10, 35, 42],
-            "senior": [0, 5, 15, 35, 45],
+            "freshman": [5, 8, 14, 35, 38],
+            "sophomore": [3, 6, 11, 35, 45],
+            "junior": [2, 4, 8, 38, 48],
+            "senior": [0, 3, 12, 37, 48],
         },
-        "dev_weights": [45, 10, 35, 10],
-        "prestige_range": (18, 35),
+        "dev_weights": [40, 8, 38, 14],
+        "prestige_range": (12, 30),
     },
     "punching_above": {
         "label": "Punching Above Their Weight",
         "description": "Mid-tier program with surprising talent. Well-coached and greater than the sum of their parts.",
-        "stat_center": 59,
-        "stat_spread": 9,
-        "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (12, 22),
-        "hidden_gem_stats": (2, 4),
+        "stat_center": 52,
+        "stat_spread": 7,
+        "hidden_gem_count": (2, 3),
+        "hidden_gem_boost": (8, 14),   # 52+14=66 → gem can compete with regional powers
+        "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [15, 20, 20, 25, 20],
-            "sophomore": [12, 18, 18, 28, 24],
-            "junior": [8, 15, 15, 32, 30],
-            "senior": [0, 10, 25, 35, 30],
+            "freshman": [10, 16, 22, 28, 24],
+            "sophomore": [7, 13, 18, 32, 30],
+            "junior": [4, 10, 15, 36, 35],
+            "senior": [0, 7, 22, 38, 33],
         },
-        "dev_weights": [50, 18, 22, 10],
-        "prestige_range": (32, 50),
+        "dev_weights": [48, 15, 25, 12],
+        "prestige_range": (25, 45),
     },
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 67,
-        "stat_spread": 9,
-        "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (8, 16),
-        "hidden_gem_stats": (2, 4),
+        "stat_center": 63,
+        "stat_spread": 7,
+        "hidden_gem_count": (2, 4),
+        "hidden_gem_boost": (5, 10),   # 63+10=73 → gem approaches national power level
+        "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [25, 25, 20, 18, 12],
-            "sophomore": [20, 22, 18, 22, 18],
-            "junior": [15, 20, 15, 28, 22],
-            "senior": [0, 15, 30, 30, 25],
+            "freshman": [20, 24, 22, 20, 14],
+            "sophomore": [16, 20, 20, 24, 20],
+            "junior": [10, 18, 18, 30, 24],
+            "senior": [0, 12, 28, 33, 27],
         },
-        "dev_weights": [55, 22, 15, 8],
-        "prestige_range": (45, 68),
+        "dev_weights": [52, 20, 18, 10],
+        "prestige_range": (40, 65),
     },
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 77,
-        "stat_spread": 9,
+        "stat_center": 76,
+        "stat_spread": 7,
         "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (5, 12),
+        "hidden_gem_boost": (3, 7),    # 76+7=83 → gem is a legitimate star
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
             "freshman": [35, 30, 18, 12, 5],
@@ -115,25 +115,25 @@ PROGRAM_ARCHETYPES = {
             "junior": [25, 25, 15, 22, 13],
             "senior": [0, 22, 35, 28, 15],
         },
-        "dev_weights": [50, 28, 12, 10],
-        "prestige_range": (65, 82),
+        "dev_weights": [48, 28, 14, 10],
+        "prestige_range": (62, 82),
     },
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 84,
-        "stat_spread": 8,
-        "hidden_gem_count": (4, 6),
-        "hidden_gem_boost": (3, 8),
+        "stat_center": 87,
+        "stat_spread": 6,              # tight clustering — consistently elite
+        "hidden_gem_count": (3, 5),
+        "hidden_gem_boost": (2, 5),    # 87+5=92 → already stacked, gems are marginal
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [42, 32, 16, 8, 2],
-            "sophomore": [38, 30, 18, 10, 4],
-            "junior": [30, 28, 18, 16, 8],
-            "senior": [0, 28, 38, 24, 10],
+            "freshman": [45, 32, 14, 7, 2],
+            "sophomore": [40, 30, 16, 10, 4],
+            "junior": [32, 28, 18, 14, 8],
+            "senior": [0, 30, 38, 22, 10],
         },
-        "dev_weights": [45, 32, 13, 10],
-        "prestige_range": (78, 99),
+        "dev_weights": [42, 34, 14, 10],
+        "prestige_range": (80, 99),
     },
 }
 

@@ -298,13 +298,13 @@ _STAR_DISTRIBUTION = {
     1: 0.15,   # ~15% one-star (walk-on caliber)
 }
 
-# Stat generation by star tier
+# Stat generation by star tier — wide gaps prevent talent compression
 _STAT_RANGES: Dict[int, Tuple[int, int]] = {
-    5: (80, 97),
-    4: (74, 92),
-    3: (67, 86),
-    2: (60, 80),
-    1: (55, 74),
+    5: (83, 98),
+    4: (72, 90),
+    3: (58, 78),
+    2: (45, 68),
+    1: (35, 58),
 }
 
 # Development trait probabilities by star tier
