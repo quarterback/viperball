@@ -252,7 +252,39 @@ def _render_setup(container):
             "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); padding: 32px; border-radius: 12px;"
         ):
             ui.label("Women's Viperball League").classes("text-3xl font-bold text-white")
-            ui.label("Galactic Premiership — Owner Mode").classes("text-lg text-indigo-200")
+            ui.label("Galactic Premiership").classes("text-lg text-indigo-200")
+
+        # Mode selector
+        with ui.row().classes("w-full gap-4 mt-4"):
+            with ui.card().classes("flex-1 p-4 cursor-pointer hover:ring-2 ring-blue-400").style(
+                "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);"
+            ):
+                ui.label("Commissioner Mode").classes("text-lg font-bold text-white")
+                ui.label(
+                    "Run the entire league. Simulate seasons, track careers from college to retirement, "
+                    "manage the Hall of Fame. No team to manage — you control everything."
+                ).classes("text-xs text-blue-200 mt-1")
+
+                async def _start_commish():
+                    app.storage.user["_wvl_commish_phase"] = "setup"
+                    from nicegui_app.pages.wvl_commissioner import render_commissioner_section
+                    ui.navigate.to("/")
+
+                ui.button("Start Commissioner Mode", icon="gavel", on_click=_start_commish).classes(
+                    "bg-white text-blue-800 mt-3"
+                ).props("no-caps")
+
+            with ui.card().classes("flex-1 p-4").style(
+                "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);"
+            ):
+                ui.label("Owner Mode").classes("text-lg font-bold text-white")
+                ui.label(
+                    "Pick a club and run it as owner. Manage finances, sign free agents, "
+                    "invest in facilities. Deep team management simulation."
+                ).classes("text-xs text-indigo-200 mt-1")
+
+        ui.separator().classes("my-2")
+        ui.label("Owner Mode Setup").classes("text-lg font-semibold text-slate-700")
 
         with ui.card().classes("w-full p-6 mt-4"):
             ui.label("Step 1: Create Your Owner").classes("text-lg font-semibold")
@@ -3253,6 +3285,13 @@ def _offseason_step_financials(dynasty, data):
 # ═══════════════════════════════════════════════════════════════
 
 async def render_wvl_section(state, shared):
+    # Check for commissioner mode first
+    commish_phase = app.storage.user.get("_wvl_commish_phase")
+    if commish_phase and commish_phase != "setup":
+        from nicegui_app.pages.wvl_commissioner import render_commissioner_section
+        render_commissioner_section()
+        return
+
     container = ui.column().classes("w-full max-w-5xl mx-auto p-4")
 
     dynasty = _get_dynasty()
@@ -3262,4 +3301,21 @@ async def render_wvl_section(state, shared):
     elif dynasty:
         _render_main(container, state)
     else:
+        # Check if a commissioner dynasty exists (offer to resume)
+        from engine.db import load_commissioner_dynasty
+        commish = load_commissioner_dynasty()
+        if commish:
+            with container:
+                with ui.card().classes("w-full p-4 mb-4 bg-blue-50"):
+                    ui.label(f"Commissioner Dynasty: {commish.dynasty_name} (Year {commish.current_year})").classes(
+                        "text-sm font-semibold text-blue-800"
+                    )
+                    async def _resume_commish():
+                        app.storage.user["_wvl_commish_phase"] = "dashboard"
+                        ui.navigate.to("/")
+                    ui.button("Resume Commissioner Mode", icon="gavel", on_click=_resume_commish).classes(
+                        "bg-blue-600 text-white"
+                    )
+                ui.separator().classes("mb-4")
+
         _render_setup(container)
