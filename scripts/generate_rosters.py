@@ -36,104 +36,104 @@ PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "stat_center": 33,             # gaussian center for all stats
-        "stat_spread": 5,              # tight clustering — consistently weak
-        "hidden_gem_count": (1, 2),    # 1-2 players get modest stat boosts
-        "hidden_gem_boost": (12, 22),  # 33+22=55 → gem is decent but not a game-changer
-        "hidden_gem_stats": (2, 4),    # boost a few stats
+        "stat_center": 28,             # team OVR lands ~20-35
+        "stat_spread": 5,              # tight — consistently bad
+        "hidden_gem_count": (1, 2),    # 1-2 players get modest boosts
+        "hidden_gem_boost": (10, 20),  # 28+20=48 → gem is passable, not transformative
+        "hidden_gem_stats": (2, 4),
         "potential_weights": {
-            "freshman": [2, 4, 10, 35, 49],
-            "sophomore": [1, 3, 8, 34, 54],
-            "junior": [0, 2, 5, 35, 58],
-            "senior": [0, 1, 8, 33, 58],
+            "freshman": [1, 3, 8, 35, 53],
+            "sophomore": [0, 2, 6, 34, 58],
+            "junior": [0, 1, 4, 35, 60],
+            "senior": [0, 0, 5, 33, 62],
         },
-        "dev_weights": [35, 3, 48, 14],
-        "prestige_range": (2, 15),
+        "dev_weights": [30, 2, 50, 18],
+        "prestige_range": (1, 12),
     },
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 42,
+        "stat_center": 50,             # team OVR lands ~40-58
         "stat_spread": 6,
         "hidden_gem_count": (1, 3),
-        "hidden_gem_boost": (10, 18),  # 42+18=60 → gem can hang with mid-tier guys
+        "hidden_gem_boost": (8, 16),   # 50+16=66 → gem can hang with upper mid-majors
         "hidden_gem_stats": (2, 4),
         "potential_weights": {
-            "freshman": [5, 8, 14, 35, 38],
-            "sophomore": [3, 6, 11, 35, 45],
-            "junior": [2, 4, 8, 38, 48],
-            "senior": [0, 3, 12, 37, 48],
+            "freshman": [4, 7, 14, 36, 39],
+            "sophomore": [2, 5, 10, 36, 47],
+            "junior": [1, 3, 7, 38, 51],
+            "senior": [0, 2, 10, 38, 50],
         },
-        "dev_weights": [40, 8, 38, 14],
-        "prestige_range": (12, 30),
+        "dev_weights": [38, 6, 40, 16],
+        "prestige_range": (10, 28),
     },
     "punching_above": {
         "label": "Punching Above Their Weight",
-        "description": "Mid-tier program with surprising talent. Well-coached and greater than the sum of their parts.",
-        "stat_center": 52,
-        "stat_spread": 7,
+        "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
+        "stat_center": 65,             # team OVR lands ~60-72
+        "stat_spread": 6,
         "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (8, 14),   # 52+14=66 → gem can compete with regional powers
+        "hidden_gem_boost": (6, 12),   # 65+12=77 → gem can compete with low-end powers
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [10, 16, 22, 28, 24],
-            "sophomore": [7, 13, 18, 32, 30],
-            "junior": [4, 10, 15, 36, 35],
+            "freshman": [10, 16, 24, 28, 22],
+            "sophomore": [7, 13, 20, 32, 28],
+            "junior": [4, 10, 16, 36, 34],
             "senior": [0, 7, 22, 38, 33],
         },
-        "dev_weights": [48, 15, 25, 12],
-        "prestige_range": (25, 45),
+        "dev_weights": [46, 14, 28, 12],
+        "prestige_range": (24, 48),
     },
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 63,
-        "stat_spread": 7,
+        "stat_center": 81,             # team OVR lands ~78-84
+        "stat_spread": 5,
         "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (5, 10),   # 63+10=73 → gem approaches national power level
+        "hidden_gem_boost": (4, 8),    # 81+8=89 → gem approaches national power level
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [20, 24, 22, 20, 14],
-            "sophomore": [16, 20, 20, 24, 20],
-            "junior": [10, 18, 18, 30, 24],
-            "senior": [0, 12, 28, 33, 27],
+            "freshman": [22, 26, 22, 18, 12],
+            "sophomore": [18, 22, 20, 22, 18],
+            "junior": [12, 20, 18, 28, 22],
+            "senior": [0, 14, 30, 32, 24],
         },
-        "dev_weights": [52, 20, 18, 10],
-        "prestige_range": (40, 65),
+        "dev_weights": [50, 22, 18, 10],
+        "prestige_range": (45, 68),
     },
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 76,
-        "stat_spread": 7,
+        "stat_center": 89,             # team OVR lands ~85-93
+        "stat_spread": 4,
         "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (3, 7),    # 76+7=83 → gem is a legitimate star
+        "hidden_gem_boost": (3, 6),    # 89+6=95 → gem is an All-American
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [35, 30, 18, 12, 5],
-            "sophomore": [30, 28, 18, 15, 9],
-            "junior": [25, 25, 15, 22, 13],
-            "senior": [0, 22, 35, 28, 15],
+            "freshman": [38, 30, 16, 11, 5],
+            "sophomore": [32, 28, 18, 14, 8],
+            "junior": [26, 26, 16, 20, 12],
+            "senior": [0, 24, 36, 26, 14],
         },
-        "dev_weights": [48, 28, 14, 10],
-        "prestige_range": (62, 82),
+        "dev_weights": [46, 30, 14, 10],
+        "prestige_range": (65, 85),
     },
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 87,
-        "stat_spread": 6,              # tight clustering — consistently elite
+        "stat_center": 95,             # team OVR lands ~93-99
+        "stat_spread": 3,              # very tight — wall-to-wall elite talent
         "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (2, 5),    # 87+5=92 → already stacked, gems are marginal
+        "hidden_gem_boost": (1, 4),    # 95+4=99 → already stacked, gems just polish
         "hidden_gem_stats": (2, 3),
         "potential_weights": {
-            "freshman": [45, 32, 14, 7, 2],
-            "sophomore": [40, 30, 16, 10, 4],
-            "junior": [32, 28, 18, 14, 8],
-            "senior": [0, 30, 38, 22, 10],
+            "freshman": [50, 30, 12, 6, 2],
+            "sophomore": [45, 28, 15, 8, 4],
+            "junior": [35, 28, 18, 12, 7],
+            "senior": [0, 32, 38, 20, 10],
         },
-        "dev_weights": [42, 34, 14, 10],
-        "prestige_range": (80, 99),
+        "dev_weights": [40, 36, 14, 10],
+        "prestige_range": (82, 99),
     },
 }
 
@@ -209,8 +209,8 @@ POSITIONS = [
 ]
 
 def _stat_roll(center, std):
-    """Generate a single stat using gaussian distribution, clamped 30-99."""
-    return max(30, min(99, int(round(random.gauss(center, std)))))
+    """Generate a single stat using gaussian distribution, clamped 15-99."""
+    return max(15, min(99, int(round(random.gauss(center, std)))))
 
 
 # Position-specific center offsets (added to archetype stat_center)
