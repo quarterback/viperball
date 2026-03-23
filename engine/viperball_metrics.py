@@ -93,8 +93,8 @@ def calculate_conversion_by_field_zone(plays: List[Dict], team: str) -> Dict:
     Zones (from the team's own perspective):
       - 'own_deep'  (1-25):  backed up, hostile territory
       - 'own_half'  (26-50): own side, manageable
-      - 'opp_half'  (51-75): opponent's side, scoring range approaches
-      - 'opp_deep'  (76-99): red zone / scoring position
+      - 'opp_half'  (51-75): opponent's side (Opp 49-25), scoring range approaches
+      - 'opp_deep'  (76-99): red zone / scoring position (Opp 24-1)
 
     Returns per-zone conversion rates for downs 4, 5, and 6.
     """

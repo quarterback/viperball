@@ -287,8 +287,8 @@ def analyze_game_data(game_data: dict) -> str:
     zone_labels = {
         "own_deep": "Own 1-25 (backed up)",
         "own_half": "Own 26-50",
-        "opp_half": "Opp 51-75",
-        "opp_deep": "Opp 76-99 (red zone)",
+        "opp_half": "Opp 49-25",
+        "opp_deep": "Opp 24-1 (red zone)",
     }
 
     for side, label in [('home', home['team']), ('away', away['team'])]:

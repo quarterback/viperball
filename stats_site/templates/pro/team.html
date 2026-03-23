@@ -59,7 +59,7 @@
     <tr><th>Zone</th><th class="num">5D Att</th><th class="num">5D%</th></tr>
   </thead>
   <tbody>
-    {% set zones = [('own_deep', 'Own 1-25'), ('own_half', 'Own 26-50'), ('opp_half', 'Opp 51-75'), ('opp_deep', 'Opp 76-99')] %}
+    {% set zones = [('own_deep', 'Own 1-25'), ('own_half', 'Own 26-50'), ('opp_half', 'Opp 49-25'), ('opp_deep', 'Opp 24-1')] %}
     {% for key, label in zones %}
     {% set z = rec.conversion_by_zone.get(key, {}) %}
     <tr>
