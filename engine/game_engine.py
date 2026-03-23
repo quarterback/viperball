@@ -12340,9 +12340,9 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
     overalls = sorted(p.overall for p in players)
     worst_3_avg = sum(overalls[:3]) / 3.0
 
-    # Map: overall 40 → prestige 15, overall 80 → prestige 95
-    # Linear: prestige = (worst_3_avg - 40) * 2.0 + 15
-    prestige = (worst_3_avg - 40) * 2.0 + 15
+    # Map: overall 20 → prestige 10, overall 85 → prestige 95
+    # Linear: prestige = (worst_3_avg - 20) * 1.3 + 10
+    prestige = (worst_3_avg - 20) * 1.3 + 10
 
     # Add some noise so identical rosters don't all land on the same prestige
     prestige += random.gauss(0, 3)
