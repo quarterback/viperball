@@ -123,13 +123,15 @@ def _get_league_configs() -> dict:
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint for Fly.io deployment monitoring."""
+    """Health check endpoint for Fly.io deployment monitoring.
+
+    Avoids calling get_available_teams() which reads ~199 JSON files from disk,
+    blocking the single uvicorn worker and causing request timeouts.
+    """
     import resource
-    team_count = len(get_available_teams())
     mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return {
         "status": "ok",
-        "teams": team_count,
         "sessions": len(sessions),
         "pro_sessions": len(pro_sessions),
         "wvl_sessions": len(wvl_sessions),
