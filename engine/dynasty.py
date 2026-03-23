@@ -304,6 +304,9 @@ class Dynasty:
     # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
     _hs_pipeline: Optional[object] = field(default=None, repr=False)
 
+    # Persisted roster data for next season (populated by offseason_complete)
+    _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
 

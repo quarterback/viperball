@@ -2694,6 +2694,14 @@ def _render_offseason_start(container, dynasty):
             app.storage.user["wvl_last_offseason_data"] = offseason
             app.storage.user["_wvl_offseason_step"] = 0
 
+            # Notify about bridge imports
+            bridge = offseason.get("bridge_import")
+            if bridge:
+                ui.notify(
+                    f"Imported {bridge['players_imported']} CVL graduates from {bridge['pools_consumed']} class(es)!",
+                    type="positive", position="top", timeout=5000,
+                )
+
             refresh = app.storage.user.get("_wvl_refresh")
             if refresh:
                 refresh()
@@ -2926,11 +2934,22 @@ def _offseason_step_import(dynasty, data):
         if len(cached_graduates) > 15:
             ui.label(f"... and {len(cached_graduates) - 15} more").classes("text-xs text-slate-400 italic mt-1")
     else:
-        ui.label("No CVL graduates available.").classes("text-sm text-slate-400 italic mb-2")
-        ui.label(
-            "To import college players, run a CVL season first and use "
-            "Export > Export Graduating Class before starting WVL offseason."
-        ).classes("text-xs text-slate-500")
+        # Check if bridge DB auto-imported graduates
+        bridge = data.get("bridge_import")
+        if bridge:
+            ui.label(
+                f"Auto-imported {bridge['players_imported']} CVL graduates "
+                f"from {bridge['pools_consumed']} graduating class(es)."
+            ).classes("text-sm text-green-700 font-semibold mb-2")
+            ui.label(
+                "These players were automatically added to this offseason's free agency pool."
+            ).classes("text-xs text-slate-500")
+        else:
+            ui.label("No CVL graduates available.").classes("text-sm text-slate-400 italic mb-2")
+            ui.label(
+                "CVL graduates are automatically imported when available. "
+                "Run a CVL dynasty season to generate graduating players."
+            ).classes("text-xs text-slate-500")
 
     ui.separator().classes("mt-3 mb-3")
     ui.label("Custom Player Import").classes("text-sm font-semibold text-slate-600")

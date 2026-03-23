@@ -1283,6 +1283,11 @@ def serialize_dynasty(dynasty) -> dict:
     else:
         data["coaching_staffs"] = {}
 
+    # Next-season rosters (persisted by offseason_complete for roster continuity)
+    next_rosters = getattr(dynasty, '_next_season_rosters', None)
+    if next_rosters:
+        data["next_season_rosters"] = next_rosters
+
     return data
 
 
@@ -1356,6 +1361,11 @@ def deserialize_dynasty(data: dict):
     for conf in dynasty.conferences.values():
         if conf.championship_history:
             conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
+
+    # Next-season rosters (roster continuity across seasons)
+    next_rosters = data.get("next_season_rosters")
+    if next_rosters:
+        dynasty._next_season_rosters = next_rosters
 
     return dynasty
 

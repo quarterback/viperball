@@ -758,6 +758,40 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
     )
 
 
+def card_to_player(card: PlayerCard) -> "Player":
+    """Convert a PlayerCard back to a game_engine.Player for season simulation."""
+    from engine.game_engine import Player
+    return Player(
+        number=card.number,
+        name=card.full_name,
+        position=card.position,
+        speed=card.speed,
+        stamina=card.stamina,
+        kicking=card.kicking,
+        lateral_skill=card.lateral_skill,
+        tackling=card.tackling,
+        agility=card.agility,
+        power=card.power,
+        awareness=card.awareness,
+        hands=card.hands,
+        kick_power=card.kick_power,
+        kick_accuracy=card.kick_accuracy,
+        player_id=card.player_id,
+        nationality=card.nationality,
+        hometown_city=card.hometown_city,
+        hometown_country=card.hometown_country,
+        high_school=card.high_school,
+        height=card.height,
+        weight=card.weight,
+        year=card.year,
+        potential=card.potential,
+        development=card.development,
+        redshirt=card.redshirt,
+        redshirt_used=card.redshirt_used,
+        archetype=card.archetype,
+    )
+
+
 def game_result_to_log(player, opponent: str, week: int) -> GameLog:
     """Snapshot a Player's in-game counters into a GameLog after a game."""
     return GameLog(

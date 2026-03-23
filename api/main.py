@@ -1918,6 +1918,26 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         team_archetypes=dyn_archetypes,
     )
 
+    # ── Roster continuity: restore developed rosters from previous season ──
+    # If offseason_complete() persisted roster data, replace the fresh-loaded
+    # players with the developed ones (preserving team metadata like state).
+    next_rosters = getattr(dynasty, '_next_season_rosters', None)
+    if next_rosters:
+        from engine.player_card import PlayerCard, card_to_player
+        for team_name, team in teams.items():
+            card_dicts = next_rosters.get(team_name)
+            if card_dicts:
+                restored_players = []
+                for cd in card_dicts:
+                    try:
+                        card = PlayerCard.from_dict(cd)
+                        restored_players.append(card_to_player(card))
+                    except Exception:
+                        pass
+                if restored_players:
+                    team.players = restored_players
+        dynasty._next_season_rosters = None
+
     seed = req.ai_seed if req.ai_seed is not None else random.randint(0, 999999)
     ai_configs = auto_assign_all_teams(
         TEAMS_DIR,
@@ -2819,9 +2839,36 @@ def offseason_recruiting_resolve(session_id: str):
 @app.post("/sessions/{session_id}/offseason/complete")
 def offseason_complete(session_id: str):
     from engine.db import save_dynasty as db_save_dynasty
+    from engine.player_card import card_to_player
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
-    _require_offseason(session)
+    offseason = _require_offseason(session)
+
+    # ── Persist roster state for next season ──
+    # Apply portal transfers and recruiting results to player_cards,
+    # then save them so dynasty_start_season() can rebuild teams from
+    # developed rosters instead of loading fresh from disk.
+    player_cards = offseason.get("player_cards", {})
+
+    if player_cards:
+        # Apply portal transfers
+        portal = offseason.get("portal")
+        if portal:
+            for entry in portal.entries:
+                if entry.committed_to and entry.origin_team and entry.origin_team != entry.committed_to:
+                    origin_cards = player_cards.get(entry.origin_team, [])
+                    transferred = [c for c in origin_cards if c.full_name == entry.player_name]
+                    player_cards[entry.origin_team] = [
+                        c for c in origin_cards if c.full_name != entry.player_name
+                    ]
+                    dest_cards = player_cards.get(entry.committed_to, [])
+                    dest_cards.extend(transferred)
+                    player_cards[entry.committed_to] = dest_cards
+
+        # Serialize rosters for persistence
+        dynasty._next_season_rosters = {}
+        for team_name, cards in player_cards.items():
+            dynasty._next_season_rosters[team_name] = [c.to_dict() for c in cards]
 
     session.pop("offseason", None)
     session["phase"] = "setup"
