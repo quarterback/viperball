@@ -1655,6 +1655,23 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     _pid = getattr(player, "player_id", "")
     _face_src = _face_url_for(_pid) if _pid else None
 
+    # International career data from career tracker (if available)
+    intl_data = None
+    if dynasty:
+        tracker = getattr(dynasty, "career_tracker", None)
+        if tracker:
+            key = player_name.strip().lower()
+            record = tracker.careers.get(key)
+            if record and (record.international_seasons or record.national_team):
+                intl_data = {
+                    "national_team": record.national_team,
+                    "caps": record.international_caps,
+                    "seasons": record.international_seasons,
+                    "yards": sum(s.get("yards", 0) for s in record.international_seasons),
+                    "tds": sum(s.get("tds", 0) for s in record.international_seasons),
+                    "world_cup_appearances": record.world_cup_appearances,
+                }
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
@@ -1662,6 +1679,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         record=team_record, prestige=prestige, cross_links=cross_links,
         player_awards=player_awards, face_src=_face_src,
         stadium_url=_stadium_url_for(team_name),
+        intl_data=intl_data,
     ))
 
 
@@ -1817,6 +1835,135 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         players=players, sort=sort, conference=conference,
         conferences=conferences,
         season_name=getattr(season, "name", "Season"),
+    ))
+
+
+# ── Alumni / Hall of Fame ──────────────────────────────────────
+
+
+def _build_alumni_list(dynasty) -> list:
+    """Build a list of alumni dicts from the dynasty career tracker."""
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker or not tracker.careers:
+        return []
+    alumni = []
+    for _key, record in tracker.careers.items():
+        alumni.append({
+            "name": record.full_name,
+            "position": record.position,
+            "college_team": record.college_team,
+            "conference": record.college_conference,
+            "graduation_year": record.pro_entry_year or 0,
+            "peak_overall": record.peak_overall,
+            "career_games": sum(s.get("games_played", s.get("games", 0)) for s in record.college_seasons),
+            "career_yards": sum(s.get("total_yards", s.get("yards", 0)) for s in record.college_seasons),
+            "career_tds": sum(s.get("touchdowns", s.get("tds", 0)) for s in record.college_seasons),
+            "career_tackles": sum(s.get("tackles", 0) for s in record.college_seasons),
+            "college_seasons_count": len(record.college_seasons),
+            "awards": record.career_awards,
+            "nationality": record.nationality,
+            "hometown": record.hometown,
+            "national_team": record.national_team,
+            "international_caps": record.international_caps,
+            "international_seasons": record.international_seasons,
+            "pro_seasons": record.pro_seasons,
+            "career_status": record.career_status,
+        })
+    alumni.sort(key=lambda a: (-a["career_yards"], -a["career_tds"], a["name"]))
+    return alumni
+
+
+@router.get("/college/{session_id}/alumni", response_class=HTMLResponse)
+def college_alumni(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+
+    if not dynasty:
+        raise HTTPException(404, "Alumni page requires dynasty mode")
+
+    alumni = _build_alumni_list(dynasty)
+
+    # Filter by conference
+    if conference:
+        alumni = [a for a in alumni if a["conference"] == conference]
+
+    # Sort
+    sort_keys = {
+        "yards": lambda a: -a["career_yards"],
+        "tds": lambda a: -a["career_tds"],
+        "overall": lambda a: -a["peak_overall"],
+        "tackles": lambda a: -a["career_tackles"],
+        "name": lambda a: a["name"],
+        "team": lambda a: a["college_team"],
+        "year": lambda a: -a["graduation_year"],
+    }
+    key_fn = sort_keys.get(sort, sort_keys["yards"])
+    alumni.sort(key=key_fn)
+
+    conferences = sorted(dynasty.conferences.keys()) if dynasty.conferences else []
+
+    return templates.TemplateResponse("college/alumni.html", _ctx(
+        request, section="college", session_id=session_id,
+        alumni=alumni, sort=sort, conference=conference,
+        conferences=conferences,
+        season_name=getattr(season, "name", "Season"),
+        dynasty=dynasty,
+    ))
+
+
+@router.get("/college/{session_id}/alumni/{player_name}", response_class=HTMLResponse)
+def college_alumni_profile(request: Request, session_id: str, player_name: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+
+    if not dynasty:
+        raise HTTPException(404, "Alumni profile requires dynasty mode")
+
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        raise HTTPException(404, "No career tracker available")
+
+    # Look up player by name (case-insensitive)
+    key = player_name.strip().lower()
+    record = tracker.careers.get(key)
+    if not record:
+        # Try URL-decoded match
+        from urllib.parse import unquote
+        decoded = unquote(player_name).strip().lower()
+        record = tracker.careers.get(decoded)
+    if not record:
+        raise HTTPException(404, f"Alumni '{player_name}' not found")
+
+    # Build profile data
+    profile = record.to_dict()
+    profile["career_games"] = sum(s.get("games_played", s.get("games", 0)) for s in record.college_seasons)
+    profile["career_yards"] = sum(s.get("total_yards", s.get("yards", 0)) for s in record.college_seasons)
+    profile["career_tds"] = sum(s.get("touchdowns", s.get("tds", 0)) for s in record.college_seasons)
+    profile["career_tackles"] = sum(s.get("tackles", 0) for s in record.college_seasons)
+    profile["career_fumbles"] = sum(s.get("fumbles", 0) for s in record.college_seasons)
+    profile["career_kick_made"] = sum(s.get("kick_made", 0) for s in record.college_seasons)
+    profile["career_kick_att"] = sum(s.get("kick_att", 0) for s in record.college_seasons)
+    profile["career_sacks"] = sum(s.get("sacks", 0) for s in record.college_seasons)
+    profile["pro_teams"] = record.pro_teams_summary
+    profile["intl_career_yards"] = sum(s.get("yards", 0) for s in record.international_seasons)
+    profile["intl_career_tds"] = sum(s.get("tds", 0) for s in record.international_seasons)
+    profile["intl_career_games"] = sum(s.get("games", 0) for s in record.international_seasons)
+
+    # Face
+    face_src = None
+    pid = profile.get("player_id", "")
+    if pid:
+        face_src = _face_url_for(pid)
+
+    return templates.TemplateResponse("college/alumni_profile.html", _ctx(
+        request, section="college", session_id=session_id,
+        profile=profile, dynasty=dynasty,
+        season_name=getattr(season, "name", "Season"),
+        face_src=face_src,
     ))
 
 

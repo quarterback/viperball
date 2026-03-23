@@ -388,6 +388,39 @@
 </table>
 {% endif %}
 
+{# International Career from FIV #}
+{% if intl_data %}
+<h2>International Career</h2>
+<div class="grid-4" style="margin-bottom:12px">
+  <div class="metric"><div class="label">Nation</div><div class="value">{{ intl_data.national_team }}</div></div>
+  <div class="metric"><div class="label">Caps</div><div class="value accent">{{ intl_data.caps }}</div></div>
+  <div class="metric"><div class="label">Intl Yards</div><div class="value">{{ intl_data.yards }}</div></div>
+  <div class="metric"><div class="label">Intl TDs</div><div class="value">{{ intl_data.tds }}</div></div>
+</div>
+{% if intl_data.seasons %}
+<table>
+  <thead>
+    <tr>
+      <th class="num">Year</th><th>Competition</th><th>Nation</th>
+      <th class="num">GP</th><th class="num">YDS</th><th class="num">TD</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in intl_data.seasons %}
+  <tr>
+    <td class="num">{{ s.year }}</td>
+    <td>{{ s.competition or 'FIV' }}</td>
+    <td>{{ s.nation }}</td>
+    <td class="num">{{ s.games }}</td>
+    <td class="num">{{ s.yards }}</td>
+    <td class="num">{{ s.tds }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
 </div>
 </div>
 {% endblock %}
