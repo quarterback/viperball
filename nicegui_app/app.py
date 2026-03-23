@@ -192,13 +192,12 @@ def index():
     shared = _load_shared_data()
     state = UserState()
 
-    # Check if we should auto-navigate to Pro Leagues (after season creation)
+    # Check if we should auto-navigate to a section (one-shot flags)
     pending_pro = app.storage.user.get("pro_league_pending_nav")
     if pending_pro:
         app.storage.user["pro_league_pending_nav"] = None
 
-    # Check if we should auto-navigate to WVL (commissioner mode)
-    pending_wvl = app.storage.user.get("_wvl_commish_phase")
+    pending_wvl = app.storage.user.pop("_wvl_pending_nav", None)
 
     if pending_pro:
         initial_section = "Pro Leagues"
