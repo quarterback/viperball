@@ -267,7 +267,7 @@ def _render_setup(container):
 
                 async def _start_commish():
                     app.storage.user["_wvl_commish_phase"] = "setup"
-                    from nicegui_app.pages.wvl_commissioner import render_commissioner_section
+                    app.storage.user["_wvl_pending_nav"] = True
                     ui.navigate.to("/")
 
                 ui.button("Start Commissioner Mode", icon="gavel", on_click=_start_commish).classes(
@@ -3312,6 +3312,7 @@ async def render_wvl_section(state, shared):
                     )
                     async def _resume_commish():
                         app.storage.user["_wvl_commish_phase"] = "dashboard"
+                        app.storage.user["_wvl_pending_nav"] = True
                         ui.navigate.to("/")
                     ui.button("Resume Commissioner Mode", icon="gavel", on_click=_resume_commish).classes(
                         "bg-blue-600 text-white"

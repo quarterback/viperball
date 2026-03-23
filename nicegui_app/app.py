@@ -192,13 +192,23 @@ def index():
     shared = _load_shared_data()
     state = UserState()
 
-    # Check if we should auto-navigate to Pro Leagues (after season creation)
+    # Validate stored session — if the API server restarted, the in-memory
+    # session is gone but the cookie still has the stale session_id.
+    if state.session_id:
+        try:
+            api_client.get_season_status(state.session_id)
+        except api_client.APIError as e:
+            if e.status_code == 404:
+                state.clear_session()
+        except Exception:
+            pass  # Connection error — don't clear, API might just be slow
+
+    # Check if we should auto-navigate to a section (one-shot flags)
     pending_pro = app.storage.user.get("pro_league_pending_nav")
     if pending_pro:
         app.storage.user["pro_league_pending_nav"] = None
 
-    # Check if we should auto-navigate to WVL (commissioner mode)
-    pending_wvl = app.storage.user.get("_wvl_commish_phase")
+    pending_wvl = app.storage.user.pop("_wvl_pending_nav", None)
 
     if pending_pro:
         initial_section = "Pro Leagues"
@@ -346,19 +356,18 @@ def index():
     # ─── Main content area ───────────────────────────────────────
     content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
 
-    if initial_section == "Pro Leagues":
-        async def _init_pro():
+    if initial_section != "Home":
+        async def _init_section():
             content_container.clear()
             with content_container:
                 try:
-                    from nicegui_app.pages.pro_leagues import render_pro_leagues_section
-                    await render_pro_leagues_section(state, shared)
+                    await _render_section(initial_section, state, shared, _switch_to)
                 except Exception as exc:
                     import logging
-                    logging.getLogger("viperball").error(f"Pro Leagues render error: {exc}", exc_info=True)
-                    ui.label(f"Error loading Pro Leagues: {exc}").classes("text-red-500")
+                    logging.getLogger("viperball").error(f"{initial_section} render error: {exc}", exc_info=True)
+                    ui.label(f"Error loading {initial_section}: {exc}").classes("text-red-500")
                     traceback.print_exc()
-        ui.timer(0.1, _init_pro, once=True)
+        ui.timer(0.1, _init_section, once=True)
     else:
         with content_container:
             from nicegui_app.pages.home import render_home_sync
