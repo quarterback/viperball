@@ -1283,6 +1283,11 @@ def serialize_dynasty(dynasty) -> dict:
     else:
         data["coaching_staffs"] = {}
 
+    # Next-season rosters (persisted by offseason_complete for roster continuity)
+    next_rosters = getattr(dynasty, '_next_season_rosters', None)
+    if next_rosters:
+        data["next_season_rosters"] = next_rosters
+
     return data
 
 
@@ -1356,6 +1361,11 @@ def deserialize_dynasty(data: dict):
     for conf in dynasty.conferences.values():
         if conf.championship_history:
             conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
+
+    # Next-season rosters (roster continuity across seasons)
+    next_rosters = data.get("next_season_rosters")
+    if next_rosters:
+        dynasty._next_season_rosters = next_rosters
 
     return dynasty
 
@@ -1477,6 +1487,58 @@ def save_box_scores_bulk(
             _log.debug(f"Bulk-saved {len(rows)} box scores for session {session_id}")
     finally:
         conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMMISSIONER MODE PERSISTENCE
+# ═══════════════════════════════════════════════════════════════
+
+def save_commissioner_dynasty(dynasty, save_key: str = "current", user_id: str = "default"):
+    """Save a WVLCommissionerDynasty to the database."""
+    data = dynasty.to_dict()
+    save_blob("wvl_commissioner", save_key, data,
+              label=dynasty.dynasty_name, user_id=user_id)
+    _log.info(f"Saved commissioner dynasty '{dynasty.dynasty_name}' for user={user_id}")
+
+
+def load_commissioner_dynasty(save_key: str = "current", user_id: str = "default"):
+    """Load a WVLCommissionerDynasty. Returns the dynasty or None."""
+    data = load_blob("wvl_commissioner", save_key, user_id=user_id)
+    if data is None:
+        return None
+    try:
+        from engine.wvl_commissioner import WVLCommissionerDynasty
+        return WVLCommissionerDynasty.from_dict(data)
+    except Exception as e:
+        _log.warning(f"Failed to deserialize commissioner dynasty: {e}")
+        return None
+
+
+def delete_commissioner_dynasty(save_key: str = "current", user_id: str = "default"):
+    """Delete a saved commissioner dynasty."""
+    delete_blob("wvl_commissioner", save_key, user_id=user_id)
+
+
+def list_commissioner_dynasties(user_id: str = "default") -> list:
+    """List saved commissioner dynasties."""
+    return list_saves("wvl_commissioner", user_id=user_id)
+
+
+def save_hall_of_fame_entry(entry_data: dict, player_key: str, user_id: str = "default"):
+    """Save an individual Hall of Fame entry as a permanent artifact."""
+    save_blob("hall_of_fame", player_key, entry_data,
+              label=entry_data.get("full_name", player_key), user_id=user_id)
+
+
+def load_hall_of_fame(user_id: str = "default") -> list:
+    """Load all Hall of Fame entries."""
+    metas = list_saves("hall_of_fame", user_id=user_id)
+    entries = []
+    for meta in metas:
+        data = load_blob("hall_of_fame", meta["save_key"], user_id=user_id)
+        if data:
+            entries.append(data)
+    return entries
 
 
 # ═══════════════════════════════════════════════════════════════
