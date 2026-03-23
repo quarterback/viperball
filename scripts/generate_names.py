@@ -82,88 +82,89 @@ DEFAULT_PIPELINE = {
     'west_coast': 0.065,
     'texas_southwest': 0.060,
     # ── Africa (15% of intl) ──
-    'african': 0.022,             # West Africa (Nigeria, Ghana, Senegal, etc.)
-    'ethiopian': 0.022,           # Ethiopia
-    'east_african': 0.031,        # Uganda, Rwanda, DR Congo, Kenya, Tanzania, Malawi
-    'lusophone_african': 0.015,   # Angola
-    'malagasy': 0.015,            # Madagascar
-    # ── Canada (12% of intl) ──
-    'canadian_english': 0.052,
-    'canadian_french': 0.036,
-    # ── Europe (10% of intl — every country ≥1%) ──
-    'nordic': 0.012,
-    'uk_european': 0.012,
-    'irish_european': 0.012,
-    'french': 0.012,
-    'german': 0.012,
-    'spanish': 0.012,
-    'italian': 0.012,
-    'dutch': 0.012,
-    'portuguese': 0.012,
-    'polish': 0.012,
-    'czech': 0.012,
-    'russian': 0.012,
-    'turkish': 0.012,
+    'african': 0.019,             # West Africa (Nigeria, Ghana, Senegal, etc.)
+    'ethiopian': 0.019,           # Ethiopia
+    'east_african': 0.027,        # Uganda, Rwanda, DR Congo, Kenya, Tanzania, Malawi
+    'lusophone_african': 0.012,   # Angola
+    'malagasy': 0.012,            # Madagascar
+    # ── Canada (11% of intl) ──
+    'canadian_english': 0.039,
+    'canadian_french': 0.026,
+    # ── Europe (18% of intl — UK & Nordic dominant) ──
+    'nordic': 0.022,             # Scandinavia — dominant
+    'uk_european': 0.022,        # UK — dominant
+    'irish_european': 0.012,     # Ireland
+    'french': 0.008,
+    'german': 0.008,
+    'spanish': 0.006,
+    'italian': 0.006,
+    'dutch': 0.006,
+    'portuguese': 0.006,
+    'polish': 0.006,
+    'czech': 0.006,
+    'russian': 0.006,
+    'turkish': 0.006,
     # ── Pacific / Australia (10% of intl) ──
-    'australian': 0.047,
-    'pacific_islander': 0.026,
-    # ── New Zealand (5% of intl) ──
-    'new_zealand': 0.037,
-    # ── Latin America (5% of intl) ──
+    'australian': 0.038,
+    'pacific_islander': 0.021,
+    # ── New Zealand (1.4% of total) ──
+    'new_zealand': 0.014,
+    # ── Caribbean (32% of intl — the sport's heartland) ──
+    'caribbean': 0.191,
+    # ── Latin America (3% of intl) ──
     'latin_american': 0.019,
-    'caribbean': 0.019,
     # ── Other International (8% of intl) ──
-    'southeast_asian': 0.012,
-    'vietnamese': 0.012,
-    'cambodian': 0.012,
-    'east_asian': 0.012,
-    'indian': 0.012,
-    'arabic': 0.012,
-    'central_asian': 0.012,
+    'southeast_asian': 0.007,
+    'vietnamese': 0.007,
+    'cambodian': 0.007,
+    'east_asian': 0.007,
+    'indian': 0.007,
+    'arabic': 0.007,
+    'central_asian': 0.006,
 }
 
 # International baseline (sums to 0.59) — applied on top of any school's domestic pipeline
-# Every name pool with data gets at least 1.2% representation
 INTERNATIONAL_BASELINE = {
-    # Africa (~10.5%)
-    'african': 0.022,
-    'ethiopian': 0.022,
-    'east_african': 0.031,
-    'lusophone_african': 0.015,
-    'malagasy': 0.015,
-    # Canada (~8.8%)
-    'canadian_english': 0.052,
-    'canadian_french': 0.036,
-    # Europe (~15.6% — every country ≥1.2%)
-    'nordic': 0.012,
-    'uk_european': 0.012,
+    # Africa (~8.9%)
+    'african': 0.019,
+    'ethiopian': 0.019,
+    'east_african': 0.027,
+    'lusophone_african': 0.012,
+    'malagasy': 0.012,
+    # Canada (~6.5%)
+    'canadian_english': 0.039,
+    'canadian_french': 0.026,
+    # Europe (~10.6% — UK & Nordic dominant)
+    'nordic': 0.022,
+    'uk_european': 0.022,
     'irish_european': 0.012,
-    'french': 0.012,
-    'german': 0.012,
-    'spanish': 0.012,
-    'italian': 0.012,
-    'dutch': 0.012,
-    'portuguese': 0.012,
-    'polish': 0.012,
-    'czech': 0.012,
-    'russian': 0.012,
-    'turkish': 0.012,
-    # Pacific / Australia (~7.3%)
-    'australian': 0.047,
-    'pacific_islander': 0.026,
-    # New Zealand (~3.7%)
-    'new_zealand': 0.037,
-    # Latin America (~3.8%)
+    'french': 0.008,
+    'german': 0.008,
+    'spanish': 0.006,
+    'italian': 0.006,
+    'dutch': 0.006,
+    'portuguese': 0.006,
+    'polish': 0.006,
+    'czech': 0.006,
+    'russian': 0.006,
+    'turkish': 0.006,
+    # Pacific / Australia (~5.9%)
+    'australian': 0.038,
+    'pacific_islander': 0.021,
+    # New Zealand (1.4%)
+    'new_zealand': 0.014,
+    # Caribbean (~19.1%)
+    'caribbean': 0.191,
+    # Latin America (~1.9%)
     'latin_american': 0.019,
-    'caribbean': 0.019,
-    # Other International (~8.4%)
-    'southeast_asian': 0.012,
-    'vietnamese': 0.012,
-    'cambodian': 0.012,
-    'east_asian': 0.012,
-    'indian': 0.012,
-    'arabic': 0.012,
-    'central_asian': 0.012,
+    # Other International (~4.8%)
+    'southeast_asian': 0.007,
+    'vietnamese': 0.007,
+    'cambodian': 0.007,
+    'east_asian': 0.007,
+    'indian': 0.007,
+    'arabic': 0.007,
+    'central_asian': 0.006,
 }
 
 # Keys considered domestic (US) regions
@@ -202,6 +203,7 @@ REGION_TO_ORIGIN = {
     'polish': ('polish', 'Polish'),
     'czech': ('czech', 'Czech'),
     'central_asian': ('central_asian', 'Central Asian'),
+    'irish_european': ('irish_european', 'Irish'),
     'ethiopian': ('ethiopian', 'Ethiopian'),
     'east_african': ('east_african', 'East African'),
     'malagasy': ('malagasy', 'Malagasy'),
