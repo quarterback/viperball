@@ -2045,8 +2045,39 @@ class Season:
             if not games:
                 break
 
+    def _win_pct_excluding(self, team_name: str, exclude_team: str) -> float:
+        """Win percentage for team_name excluding all games against exclude_team.
+
+        This prevents circular dependencies in SOS: an undefeated team no longer
+        drags down its own opponents' records (and thus its own SOS).
+        """
+        wins = 0
+        total = 0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            # Skip head-to-head games against the excluded team
+            if game.home_team == team_name and game.away_team == exclude_team:
+                continue
+            if game.away_team == team_name and game.home_team == exclude_team:
+                continue
+            if game.home_team == team_name:
+                total += 1
+                if (game.home_score or 0) > (game.away_score or 0):
+                    wins += 1
+            elif game.away_team == team_name:
+                total += 1
+                if (game.away_score or 0) > (game.home_score or 0):
+                    wins += 1
+        return wins / total if total > 0 else 0.5
+
     def _calculate_sos(self, team_name: str) -> float:
-        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts"""
+        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts.
+
+        Uses adjusted win percentages that exclude head-to-head games against
+        the team being evaluated (standard RPI approach) so that dominant teams
+        don't artificially deflate their own SOS.
+        """
         opponents = set()
         for game in self.schedule:
             if game.completed:
@@ -2062,7 +2093,7 @@ class Season:
         opp_opp_win_pcts = []
         for opp in opponents:
             if opp in self.standings:
-                opp_wp = self.standings[opp].win_percentage
+                opp_wp = self._win_pct_excluding(opp, team_name)
                 opp_win_pcts.append(opp_wp)
                 opp_opps = set()
                 for g in self.schedule:
@@ -2073,7 +2104,7 @@ class Season:
                             opp_opps.add(g.home_team)
                 for oo in opp_opps:
                     if oo in self.standings:
-                        opp_opp_win_pcts.append(self.standings[oo].win_percentage)
+                        opp_opp_win_pcts.append(self._win_pct_excluding(oo, team_name))
 
         direct = sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
         indirect = sum(opp_opp_win_pcts) / len(opp_opp_win_pcts) if opp_opp_win_pcts else 0.5
