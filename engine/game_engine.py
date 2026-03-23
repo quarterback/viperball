@@ -12578,6 +12578,13 @@ def generate_team_on_the_fly(
     players = []
     used_numbers: set = set()
 
+    # Per-team center jitter: shifts the whole roster up or down so teams
+    # within the same archetype tier aren't all identical OVR.
+    # ±25 points creates massive differentiation — a doormat can field a
+    # competitive roster one year or be truly abysmal, and programs can
+    # grow into better tiers through recruiting and development.
+    team_center_offset = int(round(random.gauss(0, 25)))
+
     for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
         number = 1 if is_viper and i == 0 else None
         while number is None or number in used_numbers:
@@ -12591,7 +12598,8 @@ def generate_team_on_the_fly(
             year=year,
         )
         attrs = generate_player_attributes(position, philosophy, year, is_viper,
-                                           program_archetype=program_archetype)
+                                           program_archetype=program_archetype,
+                                           team_center_offset=team_center_offset)
         archetype = assign_archetype(
             position,
             attrs["speed"], attrs["stamina"],
