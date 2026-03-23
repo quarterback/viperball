@@ -4180,9 +4180,19 @@ class ViperballEngine:
             if play.play_type == "kneel":
                 # V2.8: Defense calls timeout after kneel to preserve clock
                 # and force the offense to run more plays.
+                def_called_to = False
                 if self.state.time_remaining > 0:
-                    self._call_defensive_timeout_on_kneel(drive_team)
+                    def_called_to = self._call_defensive_timeout_on_kneel(drive_team)
                 if self.state.time_remaining <= 0:
+                    drive_result = "kneel"
+                    break
+                # If the defense did NOT call timeout, the game clock is
+                # running.  When the remaining game clock is less than the
+                # play clock (40s), the play clock will expire before the
+                # next snap is required — the game is over.
+                play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+                if not def_called_to and self.state.time_remaining < play_clock:
+                    self.state.time_remaining = 0
                     drive_result = "kneel"
                     break
                 continue
@@ -5318,7 +5328,16 @@ class ViperballEngine:
         # Each kneel burns 37s.  Defense can call timeout after each of
         # their remaining TOs, but the kneel still consumed its time.
         # The offense needs ceil(time_left / 37) kneels total.
-        kneels_needed = max(1, -(-time_left // seconds_per_kneel))  # ceiling division
+        # However, the final sub-40s of game clock doesn't require a snap:
+        # the play clock (40s) will expire before the game clock does,
+        # so the last "kneel" is free — just let the clock run out.
+        play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+        effective_time = max(0, time_left - play_clock)  # free burn at the end
+        kneels_needed = max(1, -(-effective_time // seconds_per_kneel))  # ceiling division
+        # Edge case: if time_left <= play_clock, one kneel suffices (or zero,
+        # but we need at least one to trigger victory formation).
+        if time_left <= play_clock:
+            kneels_needed = 1
 
         # Can we kneel it out within the remaining downs?
         can_kneel_out = kneels_needed <= downs_left
