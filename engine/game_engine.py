@@ -4037,7 +4037,9 @@ class ViperballEngine:
             opp_score = self.state.home_score
 
         point_differential = their_score - opp_score  # positive = leading
-        start_position = max(1, int(baseline - point_differential))
+        # Cap at opponent's 20 (field position 80) — even in a blowout,
+        # the trailing team never starts past the opp 20.
+        start_position = max(1, min(80, int(baseline - point_differential)))
 
         # Track delta yards — field position cost of the score-differential kickoff system
         # Leading teams start drives further back; delta yards = yards lost to this mechanic
