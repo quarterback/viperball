@@ -267,7 +267,6 @@ def _render_setup(container):
 
                 async def _start_commish():
                     app.storage.user["_wvl_commish_phase"] = "setup"
-                    from nicegui_app.pages.wvl_commissioner import render_commissioner_section
                     ui.navigate.to("/")
 
                 ui.button("Start Commissioner Mode", icon="gavel", on_click=_start_commish).classes(
