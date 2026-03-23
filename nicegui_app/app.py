@@ -192,6 +192,17 @@ def index():
     shared = _load_shared_data()
     state = UserState()
 
+    # Validate stored session — if the API server restarted, the in-memory
+    # session is gone but the cookie still has the stale session_id.
+    if state.session_id:
+        try:
+            api_client.get_season_status(state.session_id)
+        except api_client.APIError as e:
+            if e.status_code == 404:
+                state.clear_session()
+        except Exception:
+            pass  # Connection error — don't clear, API might just be slow
+
     # Check if we should auto-navigate to a section (one-shot flags)
     pending_pro = app.storage.user.get("pro_league_pending_nav")
     if pending_pro:
