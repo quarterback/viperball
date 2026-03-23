@@ -71,42 +71,99 @@ def load_name_pools(gender: str = 'female'):
     _name_pools_cache[cache_key] = pools
     return pools
 
-# Default pipeline: 66% domestic (US), 34% international
+# Default pipeline: 41% domestic (US), 59% international
+# Reflects viperball's global expansion — comparable to college tennis (61-68% intl)
 DEFAULT_PIPELINE = {
-    # Domestic US (66%)
-    'northeast': 0.12,
-    'mid_atlantic': 0.10,
-    'south': 0.12,
-    'midwest': 0.12,
-    'west_coast': 0.10,
-    'texas_southwest': 0.10,
-    # International (34%)
-    'australian': 0.062,
-    'canadian_english': 0.021,
-    'canadian_french': 0.021,
-    'new_zealand': 0.014,
-    'pacific_islander': 0.004,
-    'uk_european': 0.035,
-    'latin_american': 0.012,
-    'african': 0.019,
-    'nordic': 0.100,
-    'caribbean': 0.050,
-    'other_intl': 0.003,
+    # Domestic US (41%)
+    'northeast': 0.075,
+    'mid_atlantic': 0.065,
+    'south': 0.075,
+    'midwest': 0.070,
+    'west_coast': 0.065,
+    'texas_southwest': 0.060,
+    # ── Africa (15% of intl) ──
+    'african': 0.022,             # West Africa (Nigeria, Ghana, Senegal, etc.)
+    'ethiopian': 0.022,           # Ethiopia
+    'east_african': 0.031,        # Uganda, Rwanda, DR Congo, Kenya, Tanzania, Malawi
+    'lusophone_african': 0.015,   # Angola
+    'malagasy': 0.015,            # Madagascar
+    # ── Canada (12% of intl) ──
+    'canadian_english': 0.052,
+    'canadian_french': 0.036,
+    # ── Europe (10% of intl — every country ≥1%) ──
+    'nordic': 0.012,
+    'uk_european': 0.012,
+    'irish_european': 0.012,
+    'french': 0.012,
+    'german': 0.012,
+    'spanish': 0.012,
+    'italian': 0.012,
+    'dutch': 0.012,
+    'portuguese': 0.012,
+    'polish': 0.012,
+    'czech': 0.012,
+    'russian': 0.012,
+    'turkish': 0.012,
+    # ── Pacific / Australia (10% of intl) ──
+    'australian': 0.047,
+    'pacific_islander': 0.026,
+    # ── New Zealand (5% of intl) ──
+    'new_zealand': 0.037,
+    # ── Latin America (5% of intl) ──
+    'latin_american': 0.019,
+    'caribbean': 0.019,
+    # ── Other International (8% of intl) ──
+    'southeast_asian': 0.012,
+    'vietnamese': 0.012,
+    'cambodian': 0.012,
+    'east_asian': 0.012,
+    'indian': 0.012,
+    'arabic': 0.012,
+    'central_asian': 0.012,
 }
 
-# International baseline (sums to 0.34) — applied on top of any school's domestic pipeline
+# International baseline (sums to 0.59) — applied on top of any school's domestic pipeline
+# Every name pool with data gets at least 1.2% representation
 INTERNATIONAL_BASELINE = {
-    'australian': 0.062,
-    'canadian_english': 0.021,
-    'canadian_french': 0.021,
-    'new_zealand': 0.014,
-    'pacific_islander': 0.004,
-    'uk_european': 0.035,
-    'latin_american': 0.012,
-    'african': 0.019,
-    'nordic': 0.100,
-    'caribbean': 0.050,
-    'other_intl': 0.003,
+    # Africa (~10.5%)
+    'african': 0.022,
+    'ethiopian': 0.022,
+    'east_african': 0.031,
+    'lusophone_african': 0.015,
+    'malagasy': 0.015,
+    # Canada (~8.8%)
+    'canadian_english': 0.052,
+    'canadian_french': 0.036,
+    # Europe (~15.6% — every country ≥1.2%)
+    'nordic': 0.012,
+    'uk_european': 0.012,
+    'irish_european': 0.012,
+    'french': 0.012,
+    'german': 0.012,
+    'spanish': 0.012,
+    'italian': 0.012,
+    'dutch': 0.012,
+    'portuguese': 0.012,
+    'polish': 0.012,
+    'czech': 0.012,
+    'russian': 0.012,
+    'turkish': 0.012,
+    # Pacific / Australia (~7.3%)
+    'australian': 0.047,
+    'pacific_islander': 0.026,
+    # New Zealand (~3.7%)
+    'new_zealand': 0.037,
+    # Latin America (~3.8%)
+    'latin_american': 0.019,
+    'caribbean': 0.019,
+    # Other International (~8.4%)
+    'southeast_asian': 0.012,
+    'vietnamese': 0.012,
+    'cambodian': 0.012,
+    'east_asian': 0.012,
+    'indian': 0.012,
+    'arabic': 0.012,
+    'central_asian': 0.012,
 }
 
 # Keys considered domestic (US) regions
@@ -248,14 +305,14 @@ def select_origin(recruiting_pipeline: Optional[Dict[str, float]] = None) -> Tup
         # Separate domestic keys from any legacy international keys
         domestic = {k: v for k, v in recruiting_pipeline.items() if k in DOMESTIC_KEYS}
         if domestic:
-            # Normalize domestic portion to 66% of total
+            # Normalize domestic portion to 41% of total
             dom_total = sum(domestic.values())
-            domestic_norm = {k: v / dom_total * 0.66 for k, v in domestic.items()}
+            domestic_norm = {k: v / dom_total * 0.41 for k, v in domestic.items()}
         else:
-            # Fallback: use default domestic distribution at 66%
+            # Fallback: use default domestic distribution at 41%
             default_dom = {k: v for k, v in DEFAULT_PIPELINE.items() if k in DOMESTIC_KEYS}
             dom_total = sum(default_dom.values())
-            domestic_norm = {k: v / dom_total * 0.66 for k, v in default_dom.items()}
+            domestic_norm = {k: v / dom_total * 0.50 for k, v in default_dom.items()}
         # Always use the global international baseline (34%)
         pipeline = {**domestic_norm, **INTERNATIONAL_BASELINE}
 
