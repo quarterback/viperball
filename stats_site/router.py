@@ -1274,6 +1274,103 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
     benchmarks = _game_benchmarks_from_season(season)
 
+    # ── Championship banners ──
+    # Current season achievement (from playoff bracket)
+    current_season_achievement = None
+    if season.champion == team_name:
+        current_season_achievement = "champion"
+    else:
+        # Check playoff bracket for highest round reached
+        highest_week = 0
+        for game in (season.playoff_bracket or []):
+            if team_name in (game.home_team, game.away_team):
+                highest_week = max(highest_week, game.week)
+        if highest_week == 1000:
+            current_season_achievement = "finalist"
+        elif highest_week >= 999:
+            current_season_achievement = "final_four"
+        elif highest_week == 998:
+            current_season_achievement = "sweet_16"
+        elif highest_week > 0:
+            current_season_achievement = "playoff"
+
+    # Check conference champion for current season
+    current_conf_champ = False
+    try:
+        conf_champ_map = season.get_conference_champions()
+        current_conf_champ = team_name in set(conf_champ_map.values())
+    except Exception:
+        pass
+
+    # Check bowl result for current season
+    current_bowl_win = False
+    current_bowl_appearance = False
+    for bg in getattr(season, 'bowl_games', []):
+        g = bg.game
+        if team_name in (g.home_team, g.away_team):
+            current_bowl_appearance = True
+            if g.completed and g.home_score is not None and g.away_score is not None:
+                if (g.home_score > g.away_score and team_name == g.home_team) or \
+                   (g.away_score > g.home_score and team_name == g.away_team):
+                    current_bowl_win = True
+            break
+
+    # Dynasty history banners (across all seasons)
+    banners = []
+    team_hist = None
+    if dynasty and hasattr(dynasty, 'team_histories'):
+        team_hist = dynasty.team_histories.get(team_name)
+    if team_hist:
+        # Use dataclass attributes directly
+        champ_years = getattr(team_hist, 'championship_years', [])
+        finalist_years = getattr(team_hist, 'finalist_years', [])
+        final_four_years = getattr(team_hist, 'final_four_years', [])
+        sweet_16_years = getattr(team_hist, 'sweet_16_years', [])
+        conf_title_years = getattr(team_hist, 'conference_title_years', [])
+
+        if champ_years:
+            banners.append({"type": "champion", "label": "National Champions", "years": sorted(champ_years), "count": len(champ_years)})
+        if finalist_years:
+            banners.append({"type": "finalist", "label": "National Finalist", "years": sorted(finalist_years), "count": len(finalist_years)})
+        if final_four_years:
+            banners.append({"type": "final_four", "label": "Final Four", "years": sorted(final_four_years), "count": len(final_four_years)})
+        if sweet_16_years:
+            banners.append({"type": "sweet_16", "label": "Sweet 16", "years": sorted(sweet_16_years), "count": len(sweet_16_years)})
+
+        # Playoff appearances (excluding those already covered by higher achievements)
+        total_po = getattr(team_hist, 'total_playoff_appearances', 0)
+        higher_count = len(champ_years) + len(finalist_years) + len(final_four_years) + len(sweet_16_years)
+        remaining_po = total_po - higher_count
+        if remaining_po > 0:
+            banners.append({"type": "playoff", "label": "Playoff Appearances", "years": [], "count": remaining_po})
+
+        if conf_title_years:
+            banners.append({"type": "conference", "label": "Conference Champions", "years": sorted(conf_title_years), "count": len(conf_title_years)})
+
+        # Bowl wins (only if not covered by playoff achievement)
+        bowl_wins = getattr(team_hist, 'total_bowl_wins', 0)
+        if bowl_wins > 0:
+            banners.append({"type": "bowl_win", "label": "Bowl Wins", "years": [], "count": bowl_wins})
+
+    # If no dynasty, show current season achievement
+    if not team_hist:
+        if current_season_achievement == "champion":
+            banners.append({"type": "champion", "label": "National Champions", "years": [], "count": 1})
+        elif current_season_achievement == "finalist":
+            banners.append({"type": "finalist", "label": "National Finalist", "years": [], "count": 1})
+        elif current_season_achievement == "final_four":
+            banners.append({"type": "final_four", "label": "Final Four", "years": [], "count": 1})
+        elif current_season_achievement == "sweet_16":
+            banners.append({"type": "sweet_16", "label": "Sweet 16", "years": [], "count": 1})
+        elif current_season_achievement == "playoff":
+            banners.append({"type": "playoff", "label": "Playoff Appearance", "years": [], "count": 1})
+        if current_conf_champ:
+            banners.append({"type": "conference", "label": "Conference Champion", "years": [], "count": 1})
+        if current_bowl_win:
+            banners.append({"type": "bowl_win", "label": "Bowl Win", "years": [], "count": 1})
+        elif current_bowl_appearance and not current_season_achievement:
+            banners.append({"type": "bowl_appearance", "label": "Bowl Appearance", "years": [], "count": 1})
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1285,6 +1382,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
         benchmarks=benchmarks,
+        banners=banners,
     ))
 
 

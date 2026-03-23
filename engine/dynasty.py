@@ -112,8 +112,12 @@ class TeamHistory:
     best_season_wins: int = 0
     best_season_year: Optional[int] = None
 
-    # Championships
+    # Championships & postseason milestones
     championship_years: List[int] = field(default_factory=list)
+    finalist_years: List[int] = field(default_factory=list)
+    final_four_years: List[int] = field(default_factory=list)
+    sweet_16_years: List[int] = field(default_factory=list)
+    conference_title_years: List[int] = field(default_factory=list)
 
     @property
     def win_percentage(self) -> float:
@@ -501,6 +505,30 @@ class Dynasty:
             for t, r in self.seasons[year - 1].standings.items():
                 prev_wins[t] = r.wins
 
+        # ── Determine playoff round reached per team ──
+        # Week 1000 = championship, 999 = semifinals (Final Four),
+        # 998 = quarterfinals (Sweet 16), 997/996 = earlier rounds
+        _playoff_round_reached: Dict[str, int] = {}  # team -> highest week they played in
+        for game in season.playoff_bracket:
+            for t in (game.home_team, game.away_team):
+                if t not in _playoff_round_reached or game.week > _playoff_round_reached[t]:
+                    _playoff_round_reached[t] = game.week
+
+        # Determine finalist (loser of week 1000 championship game)
+        _finalist = None
+        for game in season.playoff_bracket:
+            if game.week == 1000 and game.completed and game.home_score is not None:
+                if game.home_score > game.away_score:
+                    _finalist = game.away_team
+                else:
+                    _finalist = game.home_team
+                break
+
+        # Pre-compute conference champions and playoff teams once
+        playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
+        conf_champs = season.get_conference_champions() if self.conferences else {}
+        conf_champ_set = set(conf_champs.values())
+
         # Update team histories
         for team_name, record in season.standings.items():
             history = self.team_histories[team_name]
@@ -512,7 +540,6 @@ class Dynasty:
             history.total_points_against += record.points_against
 
             # Check if playoff team
-            playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
             if team_name in playoff_teams:
                 history.total_playoff_appearances += 1
 
@@ -521,9 +548,22 @@ class Dynasty:
                 history.total_championships += 1
                 history.championship_years.append(year)
 
+            # Track postseason milestones (highest round only)
+            if team_name == _finalist:
+                history.finalist_years.append(year)
+            elif team_name != season.champion:
+                highest_week = _playoff_round_reached.get(team_name, 0)
+                if highest_week >= 999:
+                    # Reached Final Four (semifinalist) but lost in semis
+                    history.final_four_years.append(year)
+                elif highest_week == 998:
+                    # Reached quarterfinals (Sweet 16) but lost there
+                    history.sweet_16_years.append(year)
+
             # Conference champion check
-            conf_champs = season.get_conference_champions() if self.conferences else {}
-            is_conf_champ = team_name in set(conf_champs.values())
+            is_conf_champ = team_name in conf_champ_set
+            if is_conf_champ:
+                history.conference_title_years.append(year)
 
             # Bowl game tracking
             bowl_team = False
@@ -563,6 +603,9 @@ class Dynasty:
                 "avg_delta_yds": record.avg_delta_yds,
                 "conversion_by_zone": record.season_conversion_by_zone,
                 "champion": (team_name == season.champion),
+                "finalist": (team_name == _finalist),
+                "final_four": (team_name != season.champion and team_name != _finalist and _playoff_round_reached.get(team_name, 0) >= 999),
+                "sweet_16": (_playoff_round_reached.get(team_name, 0) == 998),
                 "playoff": (team_name in playoff_teams),
                 "conference_champion": is_conf_champ,
                 "bowl": bowl_team,
@@ -1906,9 +1949,16 @@ class Dynasty:
                 if team_name == champion:
                     history.total_championships += 1
                     history.championship_years.append(year)
+                elif team_name == result.get("runner_up"):
+                    history.finalist_years.append(year)
+                elif team_name in result.get("final_four", []):
+                    history.final_four_years.append(year)
 
                 if team_name in result.get("_playoff_teams", set()):
                     history.total_playoff_appearances += 1
+
+                if team_name in result.get("_conf_champs", set()):
+                    history.conference_title_years.append(year)
 
             if progress_callback:
                 progress_callback(i + 1, num_years)

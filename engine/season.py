@@ -3407,6 +3407,7 @@ def fast_sim_season(
         "final_four": final_four,
         "_records": records,
         "_playoff_teams": set(playoff_list),
+        "_conf_champs": set(conf_champs.values()),
     }
 
 
