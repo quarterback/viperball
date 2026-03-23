@@ -61,7 +61,7 @@
     <td>{{ p.full_name or p.player }}</td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 75 %}stat-good{% elif p.overall < 60 %}stat-bad{% endif %}">{{ p.overall }}</td>
-    <td class="num">{{ "&#9733;" * p.potential }}</td>
+    <td class="num">{{ ("&#9733;" * p.potential)|safe }}</td>
     <td>{{ p.development }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team }}</a></td>
     <td>{{ conf_abbrev(p.conference) }}</td>

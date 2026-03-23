@@ -2151,12 +2151,7 @@ def dynasty_advance(session_id: str):
     portal = TransferPortal(year=year)
     populate_portal(portal, offseason_player_cards, team_records, rng=rng)
 
-    recruit_pool = generate_recruit_class(year=year, size=300, rng=random.Random(year))
-    recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
-
-    human_nil = dynasty._nil_programs.get(human_team)
-
-    # ── HS Recruiting Pipeline ──
+    # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
     from engine.recruiting import HSRecruitingPipeline
     pool_size = 300
     if dynasty._hs_pipeline is None:
@@ -2164,10 +2159,18 @@ def dynasty_advance(session_id: str):
         dynasty._hs_pipeline.generate_initial_pipeline(
             base_seed=year, size_per_class=pool_size,
         )
+        # First year: no graduates yet, fall back to fresh generation
+        recruit_pool = generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
     else:
-        dynasty._hs_pipeline.advance_year(
+        graduates = dynasty._hs_pipeline.advance_year(
             new_9th_seed=year, size=pool_size, rng=rng,
         )
+        # Use pipeline graduates (12th graders) as the recruit pool
+        recruit_pool = [g.recruit for g in graduates] if graduates else generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
+
+    recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
+
+    human_nil = dynasty._nil_programs.get(human_team)
     try:
         from engine.db import save_hs_pipeline
         save_hs_pipeline(

@@ -390,6 +390,29 @@
 </div>
 {% endif %}
 
+{# ── Program History (dynasty year-by-year) ── #}
+{% if season_history %}
+<div>
+<h2>Program History</h2>
+<table>
+  <thead>
+    <tr><th>Year</th><th>Record</th><th>Postseason</th><th class="num">PPG</th><th class="num">Opp PPG</th></tr>
+  </thead>
+  <tbody>
+  {% for s in season_history %}
+  <tr>
+    <td>{{ s.year }}</td>
+    <td><strong>{{ s.record }}</strong></td>
+    <td>{% if s.postseason %}<span class="tag stat-good">{{ s.postseason }}</span>{% endif %}</td>
+    <td class="num">{{ s.ppg }}</td>
+    <td class="num">{{ s.opp_ppg }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 {# ── Awards ── #}
 {% if team_awards %}
 <div>
