@@ -3287,7 +3287,7 @@ def _offseason_step_financials(dynasty, data):
 async def render_wvl_section(state, shared):
     # Check for commissioner mode first
     commish_phase = app.storage.user.get("_wvl_commish_phase")
-    if commish_phase and commish_phase != "setup":
+    if commish_phase:
         from nicegui_app.pages.wvl_commissioner import render_commissioner_section
         render_commissioner_section()
         return

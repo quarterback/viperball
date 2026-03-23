@@ -196,7 +196,16 @@ def index():
     pending_pro = app.storage.user.get("pro_league_pending_nav")
     if pending_pro:
         app.storage.user["pro_league_pending_nav"] = None
-    initial_section = "Pro Leagues" if pending_pro else "Home"
+
+    # Check if we should auto-navigate to WVL (commissioner mode)
+    pending_wvl = app.storage.user.get("_wvl_commish_phase")
+
+    if pending_pro:
+        initial_section = "Pro Leagues"
+    elif pending_wvl:
+        initial_section = "WVL"
+    else:
+        initial_section = "Home"
     active_nav = {"current": initial_section}
 
     nav_buttons: dict = {}
