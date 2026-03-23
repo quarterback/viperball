@@ -476,6 +476,35 @@ def generate_roster(school_data):
         for stat_key in boosted_stats:
             player['stats'][stat_key] = min(99, player['stats'][stat_key] + boost)
 
+    # ── Program Icons ──
+    # Doormats and underdogs get 1-2 players who can develop WAY beyond the
+    # team's talent level.  These aren't stat-boosted today — they have elite
+    # *ceiling* (potential 5, quick development).  They're the face of the
+    # program: the player who makes a doormat worth watching.
+    if program_arch in ("doormat", "underdog"):
+        icon_count = 1
+        if program_arch == "doormat":
+            # Doormats always get 1, 40% chance of a second
+            icon_count = 2 if random.random() < 0.40 else 1
+        else:
+            # Underdogs get 1 icon 60% of the time
+            icon_count = 1 if random.random() < 0.60 else 0
+
+        if icon_count > 0:
+            # Pick non-lineman positions for icons (they should be visible stars)
+            icon_eligible = [
+                i for i, p in enumerate(roster)
+                if p['position'] not in ('Offensive Line', 'Defensive Line')
+            ]
+            icon_indices = random.sample(
+                icon_eligible, min(icon_count, len(icon_eligible))
+            )
+            for idx in icon_indices:
+                player = roster[idx]
+                player['potential'] = 5
+                player['development'] = 'quick'
+                player['program_icon'] = True
+
     # Sort by jersey number
     roster.sort(key=lambda p: p['number'])
 
@@ -496,6 +525,23 @@ def generate_roster(school_data):
         school_name=school_name
     )
 
+    # ── Program Infrastructure ──
+    # 5 attributes (1-10) that influence recruiting attractiveness.
+    # Initialized from archetype; can be upgraded via dynasty investment.
+    _INFRA_BY_ARCHETYPE = {
+        "blue_blood":     {"facilities": (8, 10), "campus_life": (8, 10), "location": (7, 10), "coaching_development": (8, 10), "nil_program": (8, 10)},
+        "national_power": {"facilities": (7, 9),  "campus_life": (7, 9),  "location": (6, 9),  "coaching_development": (7, 9),  "nil_program": (7, 9)},
+        "regional_power": {"facilities": (5, 7),  "campus_life": (5, 7),  "location": (5, 8),  "coaching_development": (5, 7),  "nil_program": (5, 7)},
+        "punching_above": {"facilities": (3, 6),  "campus_life": (4, 7),  "location": (3, 7),  "coaching_development": (3, 6),  "nil_program": (3, 5)},
+        "underdog":       {"facilities": (2, 4),  "campus_life": (3, 6),  "location": (2, 6),  "coaching_development": (2, 4),  "nil_program": (2, 4)},
+        "doormat":        {"facilities": (1, 3),  "campus_life": (2, 5),  "location": (1, 5),  "coaching_development": (1, 3),  "nil_program": (1, 2)},
+    }
+    infra_ranges = _INFRA_BY_ARCHETYPE.get(program_arch, _INFRA_BY_ARCHETYPE["regional_power"])
+    program_infrastructure = {
+        key: random.randint(*rng)
+        for key, rng in infra_ranges.items()
+    }
+
     return {
         'team_info': {
             'school_id': school_id,
@@ -508,6 +554,7 @@ def generate_roster(school_data):
             'colors': school_data['colors']
         },
         'program_archetype': program_arch,
+        'program_infrastructure': program_infrastructure,
         'identity': identity,
         'recruiting_pipeline': recruiting_pipeline,
         'roster': {

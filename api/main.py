@@ -1979,6 +1979,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
     session["season"] = season
     season.human_teams = list(session.get("human_teams", []))
+    # Attach live prestige tracking so it updates after every game
+    dynasty.attach_prestige_to_season(season)
     session["phase"] = "regular"
     session["config"] = {
         "playoff_size": playoff_size,

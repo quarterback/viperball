@@ -139,6 +139,8 @@ class Recruit:
     prefers_geography: float = 0.3   # 0-1: how much being close to home matters
     prefers_nil: float = 0.2         # 0-1: how much NIL money matters
     prefers_coaching: float = 0.15   # 0-1: how much coaching quality matters
+    prefers_facilities: float = 0.15 # 0-1: how much facilities/campus/location matters
+    prefers_playing_time: float = 0.1  # 0-1: how much starting opportunity matters
 
     @property
     def full_name(self) -> str:
@@ -521,7 +523,11 @@ def generate_single_recruit(
     # Decision preferences (randomised personality)
     pres = rng.uniform(0.2, 0.6)
     geo = rng.uniform(0.1, 0.4)
-    nil_pref = max(0.0, 1.0 - pres - geo)
+    nil_pref = rng.uniform(0.05, 0.3)
+    fac = rng.uniform(0.05, 0.25)
+    # Lower-star recruits care more about playing time opportunity
+    pt_base = 0.05 if stars >= 4 else (0.15 if stars >= 3 else 0.25)
+    pt = rng.uniform(pt_base * 0.5, pt_base * 1.5)
 
     return Recruit(
         recruit_id=recruit_id,
@@ -550,6 +556,8 @@ def generate_single_recruit(
         prefers_prestige=pres,
         prefers_geography=geo,
         prefers_nil=nil_pref,
+        prefers_facilities=fac,
+        prefers_playing_time=pt,
     )
 
 
@@ -746,9 +754,17 @@ def _compute_team_score(
     max_nil_in_class: float,
     rng: random.Random,
     coaching_score: float = 0.0,
+    infrastructure: Optional[Dict[str, int]] = None,
+    position_depth: int = 0,
 ) -> float:
     """
     Compute how attractive a team is to a recruit.
+
+    Args:
+        infrastructure: Dict with keys facilities, campus_life, location,
+                        coaching_development, nil_program (each 1-10).
+        position_depth: How many players at recruit's position are already
+                        committed/rostered.  Higher = less playing time.
 
     Returns a score 0-100.
     """
@@ -772,6 +788,31 @@ def _compute_team_score(
     # Coaching component (0-100): HC recruiting attribute normalized
     coach_score = coaching_score * 100.0  # coaching_score is 0-1
 
+    # Infrastructure component (0-100): average of facilities, campus_life, location
+    infra = infrastructure or {}
+    if infra:
+        infra_avg = (
+            infra.get("facilities", 5)
+            + infra.get("campus_life", 5)
+            + infra.get("location", 5)
+        ) / 3.0
+        infra_score = infra_avg * 10.0  # 1-10 → 10-100
+    else:
+        infra_score = 50.0
+
+    # Playing time component (0-100): fewer players at position = more opportunity
+    # position_depth 0-1 = wide open (100), 2-3 = normal (60-80), 4+ = crowded (20-40)
+    if position_depth <= 1:
+        playing_time_score = 100.0
+    elif position_depth == 2:
+        playing_time_score = 80.0
+    elif position_depth == 3:
+        playing_time_score = 60.0
+    elif position_depth == 4:
+        playing_time_score = 40.0
+    else:
+        playing_time_score = max(10.0, 100.0 - position_depth * 18.0)
+
     # Random factor (personality noise)
     noise = rng.uniform(-8, 8)
 
@@ -780,6 +821,8 @@ def _compute_team_score(
         + recruit.prefers_geography * geo_score
         + recruit.prefers_nil * nil_score
         + recruit.prefers_coaching * coach_score
+        + recruit.prefers_facilities * infra_score
+        + recruit.prefers_playing_time * playing_time_score
         + noise
     )
     return max(0.0, min(100.0, score))
@@ -794,6 +837,8 @@ def simulate_recruit_decisions(
     rng: Optional[random.Random] = None,
     team_coaching_scores: Optional[Dict[str, float]] = None,
     coaching_prestige_bonus: Optional[Dict[str, int]] = None,
+    team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
+    team_rosters: Optional[Dict[str, List[Dict]]] = None,
 ) -> Dict[str, List[Recruit]]:
     """
     Simulate all recruits making their decisions.
@@ -801,13 +846,20 @@ def simulate_recruit_decisions(
     Processes recruits from highest-star to lowest. Each recruit picks
     the offering team with the best score (if any offers exist).
 
+    Roster-aware: recruits consider position depth when deciding. If a
+    team already has many players at the recruit's position, the recruit
+    sees less playing time opportunity and may choose a program where
+    they can start.
+
     Args:
-        pool:           Full recruit pool.
-        team_boards:    Dict of team_name -> RecruitingBoard.
-        team_prestige:  Dict of team_name -> prestige (0-100).
-        team_regions:   Dict of team_name -> region key.
-        nil_offers:     Dict of team_name -> { recruit_id: dollar_amount }.
-        rng:            Seeded Random.
+        pool:                Full recruit pool.
+        team_boards:         Dict of team_name -> RecruitingBoard.
+        team_prestige:       Dict of team_name -> prestige (0-100).
+        team_regions:        Dict of team_name -> region key.
+        nil_offers:          Dict of team_name -> { recruit_id: dollar_amount }.
+        rng:                 Seeded Random.
+        team_infrastructure: Dict of team_name -> {facilities, campus_life, ...}.
+        team_rosters:        Dict of team_name -> list of player dicts with 'position' key.
 
     Returns:
         Dict of team_name -> list of signed Recruit objects.
@@ -823,6 +875,19 @@ def simulate_recruit_decisions(
                 max_nil = amt
 
     signed_by_team: Dict[str, List[Recruit]] = {tn: [] for tn in team_boards}
+
+    # Build position depth counts per team (existing roster + already committed)
+    position_counts: Dict[str, Dict[str, int]] = {}
+    for tn in team_boards:
+        counts: Dict[str, int] = {}
+        # Count existing roster players by position
+        if team_rosters and tn in team_rosters:
+            for p in team_rosters[tn]:
+                pos = p.get("position", "")
+                counts[pos] = counts.get(pos, 0) + 1
+        position_counts[tn] = counts
+
+    infra = team_infrastructure or {}
 
     # Process by star rating (top recruits commit first)
     sorted_pool = sorted(pool, key=lambda r: (-r.stars, -r.true_overall))
@@ -844,6 +909,7 @@ def simulate_recruit_decisions(
             nil_amt = nil_offers.get(team_name, {}).get(recruit.recruit_id, 0.0)
             cs = (team_coaching_scores or {}).get(team_name, 0.0)
             p_bonus = (coaching_prestige_bonus or {}).get(team_name, 0)
+            pos_depth = position_counts.get(team_name, {}).get(recruit.position, 0)
             score = _compute_team_score(
                 recruit=recruit,
                 team_name=team_name,
@@ -853,6 +919,8 @@ def simulate_recruit_decisions(
                 max_nil_in_class=max_nil,
                 rng=rng,
                 coaching_score=cs,
+                infrastructure=infra.get(team_name),
+                position_depth=pos_depth,
             )
             if score > best_score:
                 best_score = score
@@ -865,6 +933,10 @@ def simulate_recruit_decisions(
             board.committed.append(recruit.recruit_id)
             board.signed.append(recruit.recruit_id)
             signed_by_team[best_team].append(recruit)
+            # Update position depth so next recruit sees accurate counts
+            pos_counts = position_counts.get(best_team, {})
+            pos_counts[recruit.position] = pos_counts.get(recruit.position, 0) + 1
+            position_counts[best_team] = pos_counts
 
     return signed_by_team
 
@@ -881,6 +953,7 @@ def auto_recruit_team(
     scholarships: int = 8,
     nil_budget: float = 500_000.0,
     rng: Optional[random.Random] = None,
+    current_roster: Optional[List[Dict]] = None,
 ) -> Tuple[RecruitingBoard, Dict[str, float]]:
     """
     Auto-recruit for a CPU team. Returns the board and NIL offers dict.
@@ -888,6 +961,7 @@ def auto_recruit_team(
     Strategy:
     - Prioritise recruits from home region
     - Higher-prestige teams target higher-star recruits
+    - Deprioritise positions where the team is already deep
     - Spread NIL budget across top targets
     """
     if rng is None:
@@ -900,6 +974,13 @@ def auto_recruit_team(
     )
 
     nil_offers: Dict[str, float] = {}
+
+    # Count existing roster depth by position
+    pos_depth: Dict[str, int] = {}
+    if current_roster:
+        for p in current_roster:
+            pos = p.get("position", "")
+            pos_depth[pos] = pos_depth.get(pos, 0) + 1
 
     # Filter available recruits (not yet committed)
     available = [r for r in pool if r.committed_to is None and not r.signed]
@@ -919,9 +1000,20 @@ def auto_recruit_team(
         # Geography bonus
         geo = 1.4 if recruit.region == team_region else 1.0
 
+        # Position need: deprioritise positions we're already stacked at
+        depth = pos_depth.get(recruit.position, 0)
+        if depth >= 5:
+            need_mult = 0.6   # way overstocked — barely interested
+        elif depth >= 4:
+            need_mult = 0.75  # full — mild interest
+        elif depth >= 3:
+            need_mult = 0.9   # adequate — slight discount
+        else:
+            need_mult = 1.1   # real need — bonus interest
+
         # Overall desirability
         base = recruit.stars * 20 + recruit.true_overall * 0.3
-        score = base * star_match * geo + rng.uniform(-5, 5)
+        score = base * star_match * geo * need_mult + rng.uniform(-5, 5)
         scored.append((score, recruit))
 
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -954,9 +1046,15 @@ def run_full_recruiting_cycle(
     rng: Optional[random.Random] = None,
     team_coaching_scores: Optional[Dict[str, float]] = None,
     coaching_prestige_bonus: Optional[Dict[str, int]] = None,
+    team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
+    team_rosters: Optional[Dict[str, List[Dict]]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle (for use by Dynasty.advance_season).
+
+    Args:
+        team_infrastructure: Dict of team_name -> {facilities, campus_life, ...}.
+        team_rosters:        Dict of team_name -> list of player dicts for depth calc.
 
     Returns:
         {
@@ -979,6 +1077,7 @@ def run_full_recruiting_cycle(
             boards[team] = human_board
             all_nil[team] = human_nil_offers or {}
         else:
+            roster = (team_rosters or {}).get(team)
             board, nil = auto_recruit_team(
                 team_name=team,
                 pool=pool,
@@ -987,6 +1086,7 @@ def run_full_recruiting_cycle(
                 scholarships=scholarships_per_team.get(team, 8),
                 nil_budget=nil_budgets.get(team, 500_000.0),
                 rng=rng,
+                current_roster=roster,
             )
             boards[team] = board
             all_nil[team] = nil
@@ -1000,6 +1100,8 @@ def run_full_recruiting_cycle(
         rng=rng,
         team_coaching_scores=team_coaching_scores,
         coaching_prestige_bonus=coaching_prestige_bonus,
+        team_infrastructure=team_infrastructure,
+        team_rosters=team_rosters,
     )
 
     # Class rankings

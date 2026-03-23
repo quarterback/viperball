@@ -281,6 +281,10 @@ class TeamRecord:
     total_opp_kill_drives: int = 0
     total_opp_drives_for_kill: int = 0
 
+    # Streak tracking (for dynamic prestige)
+    win_streak: int = 0
+    loss_streak: int = 0
+
     def add_game_result(self, won: Optional[bool], points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
                         defensive_ints: int = 0,
@@ -292,14 +296,20 @@ class TeamRecord:
                         opponent_bonus_data: Optional[Dict] = None):
         if won is None:
             self.ties += 1
+            self.win_streak = 0
+            self.loss_streak = 0
             if is_conference_game:
                 self.conf_ties += 1
         elif won:
             self.wins += 1
+            self.win_streak += 1
+            self.loss_streak = 0
             if is_conference_game:
                 self.conf_wins += 1
         else:
             self.losses += 1
+            self.loss_streak += 1
+            self.win_streak = 0
             if is_conference_game:
                 self.conf_losses += 1
 
@@ -985,6 +995,10 @@ class Season:
 
     # Human-controlled teams — fast-sim skips these games
     human_teams: List[str] = field(default_factory=list)
+
+    # Live prestige — updated after every game via adjust_prestige_postgame.
+    # Set by Dynasty at season start; None means prestige tracking is off.
+    team_prestige: Optional[Dict[str, int]] = None
 
     def __post_init__(self):
         for team_name, team in self.teams.items():
@@ -1683,6 +1697,35 @@ class Season:
                 bonus_data=away_bonus,
                 opponent_bonus_data=home_bonus,
             )
+
+        # ── Dynamic prestige: update after every game ──
+        if self.team_prestige is not None and not is_tie:
+            from engine.nil_system import adjust_prestige_postgame
+
+            home_record = self.standings.get(game.home_team)
+            away_record = self.standings.get(game.away_team)
+
+            if fcs_side != "home" and game.home_team in self.team_prestige:
+                h_win_streak = getattr(home_record, 'win_streak', 0) if home_record else 0
+                h_loss_streak = getattr(home_record, 'loss_streak', 0) if home_record else 0
+                self.team_prestige[game.home_team] = adjust_prestige_postgame(
+                    current_prestige=self.team_prestige[game.home_team],
+                    won=(home_won is True),
+                    opponent_prestige=self.team_prestige.get(game.away_team, 50),
+                    win_streak=h_win_streak,
+                    loss_streak=h_loss_streak,
+                )
+
+            if fcs_side != "away" and game.away_team in self.team_prestige:
+                a_win_streak = getattr(away_record, 'win_streak', 0) if away_record else 0
+                a_loss_streak = getattr(away_record, 'loss_streak', 0) if away_record else 0
+                self.team_prestige[game.away_team] = adjust_prestige_postgame(
+                    current_prestige=self.team_prestige[game.away_team],
+                    won=(away_won is True),
+                    opponent_prestige=self.team_prestige.get(game.home_team, 50),
+                    win_streak=a_win_streak,
+                    loss_streak=a_loss_streak,
+                )
 
     def _weekly_award_prior_wins(self, award_category: str):
         """Count prior weekly award wins per recipient for diversification.
