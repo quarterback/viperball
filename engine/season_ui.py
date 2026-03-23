@@ -117,8 +117,8 @@ def display_team_dashboard(record: TeamRecord, rank: Optional[int] = None):
     zone_labels = {
         "own_deep": "Own 1-25",
         "own_half": "Own 26-50",
-        "opp_half": "Opp 51-75",
-        "opp_deep": "Opp 76-99",
+        "opp_half": "Opp 49-25",
+        "opp_deep": "Opp 24-1",
     }
     print(f"  {'Zone':<15} {'4D%':>10} {'5D%':>10} {'6D%':>10}")
     print(f"  {'─'*15} {'─'*10} {'─'*10} {'─'*10}")
