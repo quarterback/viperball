@@ -38,9 +38,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
         "stat_center": 28,             # team OVR lands ~20-35
         "stat_spread": 5,              # tight — consistently bad
-        "hidden_gem_count": (1, 2),    # 1-2 players get modest boosts
-        "hidden_gem_boost": (10, 20),  # 28+20=48 → gem is passable, not transformative
-        "hidden_gem_stats": (2, 4),
+        "hidden_gem_count": (2, 3),    # 2-3 legit players — portal bait
+        "hidden_gem_boost": (45, 58),  # 28+55=83 → gem is a legit regional-power-level player
+        "hidden_gem_stats": (5, 7),    # boost across most stats — these are REAL players
         "potential_weights": {
             "freshman": [1, 3, 8, 35, 53],
             "sophomore": [0, 2, 6, 34, 58],
@@ -55,9 +55,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
         "stat_center": 50,             # team OVR lands ~40-58
         "stat_spread": 6,
-        "hidden_gem_count": (1, 3),
-        "hidden_gem_boost": (8, 16),   # 50+16=66 → gem can hang with upper mid-majors
-        "hidden_gem_stats": (2, 4),
+        "hidden_gem_count": (2, 4),    # 2-4 legit players — portal targets
+        "hidden_gem_boost": (28, 38),  # 50+35=85 → gem could start at a power program
+        "hidden_gem_stats": (4, 6),    # boost across many stats
         "potential_weights": {
             "freshman": [4, 7, 14, 36, 39],
             "sophomore": [2, 5, 10, 36, 47],
@@ -72,9 +72,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
         "stat_center": 65,             # team OVR lands ~60-72
         "stat_spread": 6,
-        "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (6, 12),   # 65+12=77 → gem can compete with low-end powers
-        "hidden_gem_stats": (2, 3),
+        "hidden_gem_count": (3, 4),    # 3-4 standouts
+        "hidden_gem_boost": (18, 26),  # 65+22=87 → gem is national-power caliber
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [10, 16, 24, 28, 22],
             "sophomore": [7, 13, 20, 32, 28],
@@ -89,9 +89,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
         "stat_center": 81,             # team OVR lands ~78-84
         "stat_spread": 5,
-        "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (4, 8),    # 81+8=89 → gem approaches national power level
-        "hidden_gem_stats": (2, 3),
+        "hidden_gem_count": (3, 5),    # 3-5 standouts
+        "hidden_gem_boost": (8, 14),   # 81+12=93 → gem is near blue-blood level
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [22, 26, 22, 18, 12],
             "sophomore": [18, 22, 20, 22, 18],
@@ -106,9 +106,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
         "stat_center": 89,             # team OVR lands ~85-93
         "stat_spread": 4,
-        "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (3, 6),    # 89+6=95 → gem is an All-American
-        "hidden_gem_stats": (2, 3),
+        "hidden_gem_count": (4, 7),    # deep bench of stars
+        "hidden_gem_boost": (4, 8),    # 89+7=96 → gem is an All-American
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [38, 30, 16, 11, 5],
             "sophomore": [32, 28, 18, 14, 8],
@@ -123,9 +123,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
         "stat_center": 95,             # team OVR lands ~93-99
         "stat_spread": 3,              # very tight — wall-to-wall elite talent
-        "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (1, 4),    # 95+4=99 → already stacked, gems just polish
-        "hidden_gem_stats": (2, 3),
+        "hidden_gem_count": (5, 8),    # stacked — stars everywhere
+        "hidden_gem_boost": (1, 4),    # 95+3=98 → already elite, gems just polish
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [50, 30, 12, 6, 2],
             "sophomore": [45, 28, 15, 8, 4],
