@@ -37,13 +37,20 @@ def render_game_simulator(state: UserState, shared: dict):
     off_tips = shared["OFFENSE_TOOLTIPS"]
     def_tips = shared["DEFENSE_TOOLTIPS"]
 
+    intl_teams = shared.get("intl_teams", [])
+
     team_key_list = [t["key"] for t in teams]
     team_options = {t["key"]: t["name"] for t in teams}
+    intl_key_list = [t["key"] for t in intl_teams]
+    intl_options = {t["key"]: t["name"] for t in intl_teams}
     style_options = {k: styles[k]["label"] for k in style_keys}
     def_style_options = {k: defense_styles[k]["label"] for k in defense_style_keys}
     weather_options = {k: v["label"] for k, v in WEATHER_CONDITIONS.items()}
 
     ui.label("Game Simulator").classes("text-2xl font-bold text-slate-800 mb-4")
+
+    # ── Mode Toggle ──
+    mode_toggle = ui.toggle(["CVL", "International"], value="CVL").classes("mb-4")
 
     # ── Team Selection ──
     with ui.row().classes("w-full gap-8 flex-wrap"):
@@ -103,6 +110,23 @@ def render_game_simulator(state: UserState, shared: dict):
 
             away_off.on_value_change(lambda _: _update_away_tip())
             _update_away_tip()
+
+    # ── Mode toggle handler ──
+    def _on_mode_change(_):
+        if mode_toggle.value == "International":
+            opts = intl_options
+            keys = intl_key_list
+        else:
+            opts = team_options
+            keys = team_key_list
+        home_select.options = opts
+        away_select.options = opts
+        home_select.value = keys[0] if keys else None
+        away_select.value = keys[min(1, len(keys) - 1)] if keys else None
+        home_select.update()
+        away_select.update()
+
+    mode_toggle.on_value_change(_on_mode_change)
 
     # ── Controls Row ──
     with ui.row().classes("w-full gap-4 items-end mt-2"):
@@ -204,8 +228,15 @@ def render_game_simulator(state: UserState, shared: dict):
 
         seed_val = int(seed_input.value or 0)
         actual_seed = seed_val if seed_val > 0 else random.randint(1, 999999)
-        home_team = load_team(home_key)
-        away_team = load_team(away_key)
+
+        if mode_toggle.value == "International":
+            from engine.fiv import generate_single_national_team
+            rng = random.Random(actual_seed)
+            home_team = generate_single_national_team(home_key, rng).to_engine_team()
+            away_team = generate_single_national_team(away_key, rng).to_engine_team()
+        else:
+            home_team = load_team(home_key)
+            away_team = load_team(away_key)
 
         style_overrides = {
             home_team.name: home_off.value,

@@ -134,8 +134,11 @@ def _load_shared_data() -> dict:
     st_schemes = {k: {"label": v.get("label", k), "description": v.get("description", "")}
                   for k, v in ST_SCHEMES.items()}
 
+    from engine.fiv import get_fiv_nation_list
+
     _shared_cache = {
         "teams": teams,
+        "intl_teams": get_fiv_nation_list(),
         "styles": styles,
         "team_names": {t["key"]: t["name"] for t in teams},
         "style_keys": list(styles.keys()),

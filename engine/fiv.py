@@ -774,6 +774,42 @@ def _compute_team_rating(roster: List[NationalTeamPlayer]) -> int:
     return max(0, min(99, int(avg)))
 
 
+# ── Public helpers for Quick Game international mode ──
+
+
+def get_fiv_nation_list() -> List[Dict[str, str]]:
+    """Return nation list for UI dropdowns.
+
+    Returns a sorted list of ``{"key": "<CODE>", "name": "<Country Name>"}``
+    dicts, matching the format used by ``get_available_teams()`` for CVL teams.
+    """
+    nations = _load_all_nations()
+    return sorted(
+        [{"key": code, "name": info.name} for code, info in nations.items()],
+        key=lambda x: x["name"],
+    )
+
+
+def generate_single_national_team(
+    code: str,
+    rng: Optional[random.Random] = None,
+) -> NationalTeam:
+    """Generate a single national team by nation code (e.g. ``"USA"``).
+
+    Builds a full 36-player roster and computes team rating.  Intended for
+    quick-game / exhibition use where a full FIV cycle is not needed.
+    """
+    nations = _load_all_nations()
+    if code not in nations:
+        raise ValueError(f"Unknown FIV nation code: {code}")
+    nation_info = nations[code]
+    if rng is None:
+        rng = random.Random()
+    roster = _generate_full_roster(nation_info, rng)
+    rating = _compute_team_rating(roster)
+    return NationalTeam(nation=nation_info, roster=roster, rating=rating)
+
+
 def generate_national_teams(
     cvl_players: Optional[List[Player]] = None,
     rng: Optional[random.Random] = None,
