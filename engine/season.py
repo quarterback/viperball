@@ -799,6 +799,7 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
 
 
 MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
+MIN_CONFERENCE_SIZE = 9   # conferences need ≥9 teams to guarantee 8 conf games
 
 
 def get_non_conference_slots(
@@ -1249,6 +1250,44 @@ class Season:
 
         self.schedule = games
 
+    def _consolidate_small_conferences(self):
+        """Merge conferences with fewer than MIN_CONFERENCE_SIZE teams.
+
+        Repeatedly merges the smallest conference into the next-smallest
+        until all conferences meet the minimum size.  Updates both
+        ``self.conferences`` and ``self.team_conferences``.
+        """
+        if len(self.conferences) < 2:
+            return
+
+        changed = True
+        while changed:
+            changed = False
+            small = [
+                (name, teams)
+                for name, teams in self.conferences.items()
+                if len(teams) < MIN_CONFERENCE_SIZE
+            ]
+            if not small:
+                break
+            # Sort so smallest conference is first
+            small.sort(key=lambda x: len(x[1]))
+            src_name, src_teams = small[0]
+            # Find the next-smallest conference to merge into
+            candidates = sorted(
+                ((n, t) for n, t in self.conferences.items() if n != src_name),
+                key=lambda x: len(x[1]),
+            )
+            if not candidates:
+                break
+            dst_name, dst_teams = candidates[0]
+            # Merge src into dst
+            dst_teams.extend(src_teams)
+            for t in src_teams:
+                self.team_conferences[t] = dst_name
+            del self.conferences[src_name]
+            changed = True
+
     def _generate_partial_schedule(
         self,
         team_names: List[str],
@@ -1267,6 +1306,9 @@ class Season:
         guaranteed to appear in the schedule. AI teams' remaining non-conference
         slots are auto-filled.
         """
+        # Consolidate undersized conferences so every team gets ≥8 conf games
+        self._consolidate_small_conferences()
+
         game_counts = {name: 0 for name in team_names}
         conf_game_counts = {name: 0 for name in team_names}
         scheduled_pairs = set()
@@ -2045,8 +2087,39 @@ class Season:
             if not games:
                 break
 
+    def _win_pct_excluding(self, team_name: str, exclude_team: str) -> float:
+        """Win percentage for team_name excluding all games against exclude_team.
+
+        This prevents circular dependencies in SOS: an undefeated team no longer
+        drags down its own opponents' records (and thus its own SOS).
+        """
+        wins = 0
+        total = 0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            # Skip head-to-head games against the excluded team
+            if game.home_team == team_name and game.away_team == exclude_team:
+                continue
+            if game.away_team == team_name and game.home_team == exclude_team:
+                continue
+            if game.home_team == team_name:
+                total += 1
+                if (game.home_score or 0) > (game.away_score or 0):
+                    wins += 1
+            elif game.away_team == team_name:
+                total += 1
+                if (game.away_score or 0) > (game.home_score or 0):
+                    wins += 1
+        return wins / total if total > 0 else 0.5
+
     def _calculate_sos(self, team_name: str) -> float:
-        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts"""
+        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts.
+
+        Uses adjusted win percentages that exclude head-to-head games against
+        the team being evaluated (standard RPI approach) so that dominant teams
+        don't artificially deflate their own SOS.
+        """
         opponents = set()
         for game in self.schedule:
             if game.completed:
@@ -2062,7 +2135,7 @@ class Season:
         opp_opp_win_pcts = []
         for opp in opponents:
             if opp in self.standings:
-                opp_wp = self.standings[opp].win_percentage
+                opp_wp = self._win_pct_excluding(opp, team_name)
                 opp_win_pcts.append(opp_wp)
                 opp_opps = set()
                 for g in self.schedule:
@@ -2073,7 +2146,7 @@ class Season:
                             opp_opps.add(g.home_team)
                 for oo in opp_opps:
                     if oo in self.standings:
-                        opp_opp_win_pcts.append(self.standings[oo].win_percentage)
+                        opp_opp_win_pcts.append(self._win_pct_excluding(oo, team_name))
 
         direct = sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
         indirect = sum(opp_opp_win_pcts) / len(opp_opp_win_pcts) if opp_opp_win_pcts else 0.5
@@ -2933,6 +3006,8 @@ def load_teams_from_directory(
                         Only used when fresh=True. Teams not in the dict get
                         a random archetype from a weighted distribution.
     """
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_dir = Path(directory)
     archetypes = team_archetypes or {}
@@ -2944,10 +3019,13 @@ def load_teams_from_directory(
         with open(team_file) as f:
             raw = _json.load(f)
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
 
     return teams
@@ -2971,6 +3049,8 @@ def load_teams_with_states(
         (teams_dict, team_states_dict) where team_states maps team_name -> state
     """
     import json as _json
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_states = {}
     team_dir = Path(directory)
@@ -2981,10 +3061,13 @@ def load_teams_with_states(
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
         if state:
             team_states[team.name] = state

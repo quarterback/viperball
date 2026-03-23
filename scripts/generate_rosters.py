@@ -38,9 +38,9 @@ PROGRAM_ARCHETYPES = {
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
         "stat_center": 28,             # team OVR lands ~20-35
         "stat_spread": 5,              # tight — consistently bad
-        "hidden_gem_count": (2, 3),    # 2-3 legit players — portal bait
-        "hidden_gem_boost": (45, 58),  # 28+55=83 → gem is a legit regional-power-level player
-        "hidden_gem_stats": (5, 7),    # boost across most stats — these are REAL players
+        "hidden_gem_count": (1, 2),    # 1-2 legit players — portal bait
+        "hidden_gem_boost": (30, 42),  # 28+36=64 → gem is a solid mid-tier player, not elite
+        "hidden_gem_stats": (3, 5),    # boost across some stats
         "potential_weights": {
             "freshman": [1, 3, 8, 35, 53],
             "sophomore": [0, 2, 6, 34, 58],
@@ -53,11 +53,11 @@ PROGRAM_ARCHETYPES = {
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 50,             # team OVR lands ~40-58
+        "stat_center": 50,             # team OVR lands ~44-56
         "stat_spread": 6,
-        "hidden_gem_count": (2, 4),    # 2-4 legit players — portal targets
-        "hidden_gem_boost": (28, 38),  # 50+35=85 → gem could start at a power program
-        "hidden_gem_stats": (4, 6),    # boost across many stats
+        "hidden_gem_count": (1, 3),    # 1-3 legit players — portal targets
+        "hidden_gem_boost": (20, 30),  # 52+25=77 → gem reaches regional-power caliber
+        "hidden_gem_stats": (3, 5),    # boost across some stats
         "potential_weights": {
             "freshman": [4, 7, 14, 36, 39],
             "sophomore": [2, 5, 10, 36, 47],
@@ -70,10 +70,10 @@ PROGRAM_ARCHETYPES = {
     "punching_above": {
         "label": "Punching Above Their Weight",
         "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
-        "stat_center": 65,             # team OVR lands ~60-72
+        "stat_center": 65,             # team OVR lands ~59-71
         "stat_spread": 6,
-        "hidden_gem_count": (3, 4),    # 3-4 standouts
-        "hidden_gem_boost": (18, 26),  # 65+22=87 → gem is national-power caliber
+        "hidden_gem_count": (2, 3),    # 2-3 standouts
+        "hidden_gem_boost": (15, 22),  # 63+18=81 → gem is regional-power caliber
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [10, 16, 24, 28, 22],
@@ -87,10 +87,10 @@ PROGRAM_ARCHETYPES = {
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 81,             # team OVR lands ~78-84
+        "stat_center": 78,             # team OVR lands ~72-84
         "stat_spread": 5,
         "hidden_gem_count": (3, 5),    # 3-5 standouts
-        "hidden_gem_boost": (8, 14),   # 81+12=93 → gem is near blue-blood level
+        "hidden_gem_boost": (8, 14),   # 75+11=86 → gem is national-power caliber
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [22, 26, 22, 18, 12],
@@ -138,15 +138,30 @@ PROGRAM_ARCHETYPES = {
 }
 
 # Weighted distribution for assigning archetypes to AI teams.
-# Creates a realistic league where most teams are mid-tier with a few
-# elite programs and a handful of weak ones.
+# Creates a realistic league: mostly average teams, fewer elite, a cadre of doormats.
+# ~60% below regional power, ~22% regional, ~18% national/blue blood.
 AI_ARCHETYPE_WEIGHTS = {
-    "doormat": 8,
-    "underdog": 18,
-    "punching_above": 25,
-    "regional_power": 27,
-    "national_power": 15,
-    "blue_blood": 7,
+    "doormat": 12,
+    "underdog": 24,
+    "punching_above": 28,
+    "regional_power": 22,
+    "national_power": 10,
+    "blue_blood": 4,
+}
+
+# Conference strength floors: minimum effective stat_center for teams in each
+# conference.  The floor constrains the bottom — even the worst team in a strong
+# conference can't generate below the threshold.  Max potential is unconstrained.
+# Format: "Conference Name" -> minimum stat_center (after archetype + jitter).
+# Conferences not listed have no floor (teams can be as bad as their archetype allows).
+CONFERENCE_FLOORS = {
+    "SEC": 60,           # range ~93-60 — worst SEC team is still solid
+    "Big Ten": 55,       # range ~90-55
+    "ACC": 69,           # range ~84-69 — tight, consistently good
+    "Big East": 53,      # range ~80-53
+    "Yankee Fourteen": 65,  # range ~85-65 — high floor
+    "Pac-12": 65,        # range ~88-65
+    "Pac-16": 65,        # alias — Pac-12 may be renamed Pac-16
 }
 
 # Default archetype (matches existing generation behavior)
@@ -244,16 +259,21 @@ _STAT_KEYS = [
 
 
 def generate_player_attributes(position, team_philosophy, year, is_viper=False,
-                               program_archetype=None):
+                               program_archetype=None, team_center_offset=0):
     """Generate player stats using gaussian distribution shaped by program archetype.
 
     Each stat is rolled as gauss(center, spread) where center depends on the
     program's archetype (doormat→42, blue_blood→84) plus position, philosophy,
-    viper, and class-year offsets.  All stats clamped to 30-99.
+    viper, and class-year offsets.  All stats clamped to 15-99.
+
+    Args:
+        team_center_offset: Per-team jitter added to the archetype center so
+            teams within the same tier aren't all identical OVR.  Rolled once
+            per team in generate_team_on_the_fly().
     """
     archetype_data = PROGRAM_ARCHETYPES.get(program_archetype or DEFAULT_ARCHETYPE,
                                              PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
-    center = archetype_data["stat_center"]
+    center = archetype_data["stat_center"] + team_center_offset
     std = archetype_data["stat_spread"]
 
     # Gather all offsets

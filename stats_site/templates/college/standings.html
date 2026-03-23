@@ -71,8 +71,19 @@
 </table>
 
 {# ── Conference Standings ── #}
+<div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0">Conference Standings</h2>
+  <select id="conf-select" style="background:var(--bg-card,#1a1a2e);color:var(--fg,#e0e0e0);border:1px solid var(--border,#333);padding:6px 12px;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer">
+    <option value="">Select a conference&hellip;</option>
+    {% for conf_name in conferences.keys()|sort %}
+    <option value="{{ conf_name }}">{{ conf_name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
 {% for conf_name, conf_standings in conferences.items()|sort %}
-<h2>{{ conf_name }}</h2>
+<div class="conf-section" data-conf="{{ conf_name }}" style="display:none">
+<h3>{{ conf_name }}</h3>
 <table>
   <thead>
     <tr>
@@ -98,6 +109,17 @@
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% endfor %}
+
+<script>
+document.getElementById('conf-select').addEventListener('change', function() {
+  document.querySelectorAll('.conf-section').forEach(function(d) { d.style.display = 'none'; });
+  if (this.value) {
+    var el = document.querySelector('.conf-section[data-conf="' + this.value + '"]');
+    if (el) el.style.display = '';
+  }
+});
+</script>
 
 {% endblock %}

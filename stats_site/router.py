@@ -1371,6 +1371,40 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         elif current_bowl_appearance and not current_season_achievement:
             banners.append({"type": "bowl_appearance", "label": "Bowl Appearance", "years": [], "count": 1})
 
+    # ── Season-by-season history (dynasty only) ──
+    season_history = []
+    if team_hist and getattr(team_hist, 'season_records', None):
+        for yr in sorted(team_hist.season_records.keys(), reverse=True):
+            sr = team_hist.season_records[yr]
+            postseason_label = ""
+            if sr.get("champion"):
+                postseason_label = "National Champion"
+            elif sr.get("finalist"):
+                postseason_label = "National Finalist"
+            elif sr.get("final_four"):
+                postseason_label = "Final Four"
+            elif sr.get("sweet_16"):
+                postseason_label = "Sweet 16"
+            elif sr.get("playoff"):
+                postseason_label = "Playoff"
+            if sr.get("bowl_win"):
+                bowl_label = f"{sr.get('bowl_name', 'Bowl')} (W)"
+                postseason_label = f"{postseason_label} · {bowl_label}" if postseason_label else bowl_label
+            elif sr.get("bowl"):
+                bowl_label = f"{sr.get('bowl_name', 'Bowl')} (L)"
+                postseason_label = f"{postseason_label} · {bowl_label}" if postseason_label else bowl_label
+            if sr.get("conference_champion") and "Champion" not in postseason_label:
+                cc = "Conf. Champ"
+                postseason_label = f"{postseason_label} · {cc}" if postseason_label else cc
+            total_games = max(1, sr.get("wins", 0) + sr.get("losses", 0))
+            season_history.append({
+                "year": yr,
+                "record": f"{sr.get('wins', 0)}-{sr.get('losses', 0)}",
+                "postseason": postseason_label,
+                "ppg": round(sr.get("points_for", 0) / total_games, 1),
+                "opp_ppg": round(sr.get("points_against", 0) / total_games, 1),
+            })
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1383,6 +1417,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         stadium_url=_stadium_url_for(team_name),
         benchmarks=benchmarks,
         banners=banners,
+        season_history=season_history,
     ))
 
 

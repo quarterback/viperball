@@ -58,7 +58,7 @@
     <td {% if p.is_alpha %}style="color:var(--yellow);font-weight:bold"{% endif %}>{{ p.name }}</td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% elif p.scouted_stars <= 2 %}stat-bad{% endif %}">
-      {{ "&#9733;" * p.scouted_stars }}{{ "&#9734;" * (5 - p.scouted_stars) }}
+      {{ ("&#9733;" * p.scouted_stars ~ "&#9734;" * (5 - p.scouted_stars))|safe }}
     </td>
     <td>{{ p.hometown }}</td>
     <td>{{ p.high_school }}</td>

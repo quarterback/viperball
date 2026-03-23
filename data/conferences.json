@@ -303,6 +303,30 @@
     {
       "id": "south_dakota",
       "name": "South Dakota"
+    },
+    {
+      "id": "missouri",
+      "name": "Missouri"
+    },
+    {
+      "id": "oklahoma",
+      "name": "Oklahoma"
+    },
+    {
+      "id": "idaho",
+      "name": "Idaho"
+    },
+    {
+      "id": "wyoming",
+      "name": "Wyoming"
+    },
+    {
+      "id": "colgate",
+      "name": "Colgate"
+    },
+    {
+      "id": "rochester",
+      "name": "Rochester"
     }
   ],
   "Interstate Athletic Association": [
@@ -337,6 +361,10 @@
     {
       "id": "texas_southern",
       "name": "Texas Southern"
+    },
+    {
+      "id": "vanderbilt",
+      "name": "Vanderbilt"
     }
   ],
   "Midwest States Interscholastic Association": [
@@ -497,6 +525,22 @@
     {
       "id": "calgary",
       "name": "Calgary"
+    },
+    {
+      "id": "bowdoin",
+      "name": "Bowdoin"
+    },
+    {
+      "id": "new_hampshire",
+      "name": "New Hampshire"
+    },
+    {
+      "id": "vermont",
+      "name": "Vermont"
+    },
+    {
+      "id": "cornell",
+      "name": "Cornell"
     }
   ],
   "Pac-16": [
@@ -537,10 +581,6 @@
       "name": "Colorado"
     },
     {
-      "id": "idaho",
-      "name": "Idaho"
-    },
-    {
       "id": "nevada",
       "name": "Nevada"
     },
@@ -555,10 +595,6 @@
     {
       "id": "washington",
       "name": "Washington"
-    },
-    {
-      "id": "wyoming",
-      "name": "Wyoming"
     },
     {
       "id": "washington_state",
@@ -653,14 +689,6 @@
       "name": "Ole Miss"
     },
     {
-      "id": "missouri",
-      "name": "Missouri"
-    },
-    {
-      "id": "oklahoma",
-      "name": "Oklahoma"
-    },
-    {
       "id": "south_carolina",
       "name": "South Carolina"
     },
@@ -671,10 +699,6 @@
     {
       "id": "texas",
       "name": "Texas"
-    },
-    {
-      "id": "vanderbilt",
-      "name": "Vanderbilt"
     }
   ],
   "West Coast Conference": [
@@ -717,18 +741,6 @@
   ],
   "Yankee Fourteen": [
     {
-      "id": "bowdoin",
-      "name": "Bowdoin"
-    },
-    {
-      "id": "colgate",
-      "name": "Colgate"
-    },
-    {
-      "id": "cornell",
-      "name": "Cornell"
-    },
-    {
       "id": "ithaca",
       "name": "Ithaca"
     },
@@ -763,18 +775,6 @@
     {
       "id": "umbc",
       "name": "UMBC"
-    },
-    {
-      "id": "new_hampshire",
-      "name": "New Hampshire"
-    },
-    {
-      "id": "rochester",
-      "name": "Rochester"
-    },
-    {
-      "id": "vermont",
-      "name": "Vermont"
     },
     {
       "id": "yale",
