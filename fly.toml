@@ -24,6 +24,11 @@ primary_region = 'ams'
     hard_limit = 250
     soft_limit = 200
 
+  # Keep idle connections (especially WebSockets for NiceGUI/socket.io) alive
+  # longer than the default 60s to prevent page timeouts.
+  [http_service.http_options]
+    idle_timeout = "300s"
+
 # Service-level health check: controls whether traffic is routed to this machine.
 # Uses [[http_service.checks]] (not top-level [checks] which blocks deployments on failure).
 # Grace period gives NiceGUI time to initialize socket.io routes and load team data.
