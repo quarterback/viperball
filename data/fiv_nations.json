@@ -17,7 +17,8 @@
         {"name": "Ecuador", "code": "ECU", "tier": "developing", "name_pool": "latin_american"},
         {"name": "Uruguay", "code": "URU", "tier": "developing", "name_pool": "latin_american"},
         {"name": "Venezuela", "code": "VEN", "tier": "developing", "name_pool": "latin_american"},
-        {"name": "Paraguay", "code": "PAR", "tier": "developing", "name_pool": "latin_american"}
+        {"name": "Paraguay", "code": "PAR", "tier": "developing", "name_pool": "latin_american"},
+        {"name": "Bolivia", "code": "BOL", "tier": "developing", "name_pool": "latin_american"}
       ]
     },
     "ifav": {
@@ -29,17 +30,28 @@
         {"name": "Nigeria", "code": "NGA", "tier": "strong", "name_pool": "african"},
         {"name": "South Africa", "code": "RSA", "tier": "strong", "name_pool": "african"},
         {"name": "Ghana", "code": "GHA", "tier": "competitive", "name_pool": "african"},
-        {"name": "Kenya", "code": "KEN", "tier": "competitive", "name_pool": "african"},
+        {"name": "Kenya", "code": "KEN", "tier": "competitive", "name_pool": "east_african"},
         {"name": "Egypt", "code": "EGY", "tier": "competitive", "name_pool": "arabic"},
         {"name": "Morocco", "code": "MAR", "tier": "competitive", "name_pool": "arabic"},
         {"name": "Cameroon", "code": "CMR", "tier": "developing", "name_pool": "african"},
         {"name": "Senegal", "code": "SEN", "tier": "developing", "name_pool": "african"},
         {"name": "Côte d'Ivoire", "code": "CIV", "tier": "developing", "name_pool": "african"},
-        {"name": "Tanzania", "code": "TAN", "tier": "developing", "name_pool": "african"},
+        {"name": "Tanzania", "code": "TAN", "tier": "developing", "name_pool": "east_african"},
         {"name": "Saudi Arabia", "code": "KSA", "tier": "developing", "name_pool": "arabic"},
         {"name": "Iran", "code": "IRN", "tier": "developing", "name_pool": "arabic"},
         {"name": "Israel", "code": "ISR", "tier": "developing", "name_pool": "uk_european"},
-        {"name": "UAE", "code": "UAE", "tier": "developing", "name_pool": "arabic"}
+        {"name": "UAE", "code": "UAE", "tier": "developing", "name_pool": "arabic"},
+        {"name": "Ethiopia", "code": "ETH", "tier": "developing", "name_pool": "ethiopian"},
+        {"name": "Uganda", "code": "UGA", "tier": "developing", "name_pool": "east_african"},
+        {"name": "DR Congo", "code": "COD", "tier": "developing", "name_pool": "east_african"},
+        {"name": "Madagascar", "code": "MDG", "tier": "developing", "name_pool": "malagasy"},
+        {"name": "Rwanda", "code": "RWA", "tier": "developing", "name_pool": "east_african"},
+        {"name": "Togo", "code": "TOG", "tier": "developing", "name_pool": "african"},
+        {"name": "Angola", "code": "AGO", "tier": "developing", "name_pool": "lusophone_african"},
+        {"name": "Malawi", "code": "MWI", "tier": "developing", "name_pool": "east_african"},
+        {"name": "Central African Republic", "code": "CAF", "tier": "developing", "name_pool": "african"},
+        {"name": "Guinea", "code": "GIN", "tier": "developing", "name_pool": "african"},
+        {"name": "Yemen", "code": "YEM", "tier": "developing", "name_pool": "arabic"}
       ]
     },
     "evv": {
@@ -81,7 +93,11 @@
         {"name": "Kazakhstan", "code": "KAZ", "tier": "developing", "name_pool": "central_asian"},
         {"name": "Turkey", "code": "TUR", "tier": "developing", "name_pool": "turkish"},
         {"name": "Uzbekistan", "code": "UZB", "tier": "developing", "name_pool": "central_asian"},
-        {"name": "Mongolia", "code": "MGL", "tier": "developing", "name_pool": "east_asian"}
+        {"name": "Mongolia", "code": "MGL", "tier": "developing", "name_pool": "east_asian"},
+        {"name": "Vietnam", "code": "VNM", "tier": "developing", "name_pool": "vietnamese"},
+        {"name": "Laos", "code": "LAO", "tier": "developing", "name_pool": "cambodian"},
+        {"name": "Cambodia", "code": "KHM", "tier": "developing", "name_pool": "cambodian"},
+        {"name": "Malaysia", "code": "MYS", "tier": "developing", "name_pool": "southeast_asian"}
       ]
     },
     "cmv": {
@@ -105,7 +121,9 @@
         {"name": "Guatemala", "code": "GUA", "tier": "developing", "name_pool": "latin_american"},
         {"name": "Honduras", "code": "HON", "tier": "developing", "name_pool": "latin_american"},
         {"name": "Haiti", "code": "HAI", "tier": "developing", "name_pool": "caribbean"},
-        {"name": "Samoa", "code": "SAM", "tier": "developing", "name_pool": "pacific_islander"}
+        {"name": "Samoa", "code": "SAM", "tier": "developing", "name_pool": "pacific_islander"},
+        {"name": "Nicaragua", "code": "NIC", "tier": "developing", "name_pool": "latin_american"},
+        {"name": "El Salvador", "code": "SLV", "tier": "developing", "name_pool": "latin_american"}
       ]
     }
   },
@@ -124,18 +142,57 @@
   "heritage_weights": {
     "high": ["MEX", "JAM", "NGA", "PHI", "KOR", "DOM", "HAI", "COL"],
     "medium": ["GER", "JPN", "BRA", "GBR", "GHA", "IND", "CHN", "CUB", "TTO"],
-    "low": ["POL", "IRL", "ITA", "ECU", "PER", "SAM", "GUA", "HON"]
+    "low": ["POL", "IRL", "ITA", "ECU", "PER", "SAM", "GUA", "HON", "ETH", "VNM"]
   },
   "diaspora_tables": {
     "BRA": ["POR", "JPN", "ITA"],
-    "MAR": ["FRA"],
+    "ARG": ["ITA", "ESP"],
+    "VEN": ["ITA", "ESP", "POR"],
+    "COL": ["ESP"],
+    "MEX": ["ESP"],
+    "PER": ["ESP"],
+    "CHI": ["ESP"],
+    "URU": ["ITA", "ESP"],
+    "ECU": ["ESP"],
+    "BOL": ["ESP"],
+    "NIC": ["ESP"],
+    "SLV": ["ESP"],
+    "CRC": ["ESP"],
+    "GUA": ["ESP"],
+    "HON": ["ESP"],
+    "PAN": ["ESP"],
+    "FRA": ["MAR", "SEN", "CIV", "GIN", "TOG", "CMR", "COD", "MDG", "RWA", "VNM", "KHM", "HAI"],
+    "ESP": ["MEX", "COL", "ARG", "PER", "CHI", "VEN", "ECU", "URU", "BOL", "CRC", "GUA", "HON", "NIC", "SLV", "PAN", "DOM", "CUB"],
+    "POR": ["BRA", "AGO", "MOZ"],
+    "ITA": ["ARG", "BRA", "VEN", "URU"],
+    "MAR": ["FRA", "ESP"],
     "EGY": ["FRA"],
     "TUR": ["GER", "NED"],
-    "GBR": ["IRL", "AUS", "JAM"],
+    "GBR": ["IRL", "AUS", "JAM", "NGA", "GHA", "KEN", "UGA", "MWI", "TTO", "IND", "RSA"],
     "PHI": ["USA", "JPN"],
     "FIJ": ["NZL", "AUS"],
     "SAM": ["NZL", "AUS"],
-    "KOR": ["JPN", "USA"]
+    "PNG": ["AUS"],
+    "KOR": ["JPN", "USA"],
+    "AUS": ["GBR", "NZL", "VNM", "CHN", "IND", "PHI", "KOR"],
+    "ETH": ["USA"],
+    "VNM": ["USA", "AUS", "FRA"],
+    "KHM": ["USA", "AUS", "FRA"],
+    "AGO": ["POR"],
+    "COD": ["FRA", "BEL"],
+    "MDG": ["FRA"],
+    "MYS": ["AUS", "GBR"],
+    "RWA": ["FRA", "BEL"],
+    "GIN": ["FRA"],
+    "TOG": ["FRA"],
+    "UGA": ["GBR", "KEN"],
+    "MWI": ["GBR", "RSA"],
+    "IND": ["GBR", "AUS"],
+    "NGA": ["GBR", "USA"],
+    "GHA": ["GBR", "USA"],
+    "KEN": ["GBR"],
+    "JAM": ["GBR", "CAN"],
+    "TTO": ["GBR", "CAN"]
   },
   "mercenary_nations": {
     "aggressive": {
