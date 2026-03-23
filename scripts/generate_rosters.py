@@ -149,6 +149,21 @@ AI_ARCHETYPE_WEIGHTS = {
     "blue_blood": 4,
 }
 
+# Conference strength floors: minimum effective stat_center for teams in each
+# conference.  The floor constrains the bottom — even the worst team in a strong
+# conference can't generate below the threshold.  Max potential is unconstrained.
+# Format: "Conference Name" -> minimum stat_center (after archetype + jitter).
+# Conferences not listed have no floor (teams can be as bad as their archetype allows).
+CONFERENCE_FLOORS = {
+    "SEC": 60,           # range ~93-60 — worst SEC team is still solid
+    "Big Ten": 55,       # range ~90-55
+    "ACC": 69,           # range ~84-69 — tight, consistently good
+    "Big East": 53,      # range ~80-53
+    "Yankee Fourteen": 65,  # range ~85-65 — high floor
+    "Pac-12": 65,        # range ~88-65
+    "Pac-16": 65,        # alias — Pac-12 may be renamed Pac-16
+}
+
 # Default archetype (matches existing generation behavior)
 DEFAULT_ARCHETYPE = "regional_power"
 

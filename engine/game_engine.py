@@ -12351,7 +12351,8 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
 
 
 def load_team_from_json(filepath: str, fresh: bool = False,
-                        program_archetype: Optional[str] = None) -> Team:
+                        program_archetype: Optional[str] = None,
+                        conference_floor: int = 0) -> Team:
     """Load a team from its JSON metadata file.
 
     Args:
@@ -12362,6 +12363,9 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                dynamic generation when there is no roster section.
         program_archetype: Optional program archetype for fresh generation
                           (e.g. "doormat", "blue_blood"). Only used when fresh=True.
+        conference_floor: Minimum effective stat_center for this team's conference.
+                         Only used when fresh=True.  Prevents jitter from pushing
+                         team quality below the conference's minimum threshold.
     """
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -12403,6 +12407,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
             philosophy=philosophy,
             recruiting_pipeline=recruiting_pipeline,
             program_archetype=program_archetype,
+            conference_floor=conference_floor,
         )
 
     _POSITION_MIGRATION = {
@@ -12508,6 +12513,7 @@ def generate_team_on_the_fly(
     philosophy: str = "hybrid",
     recruiting_pipeline: Optional[Dict] = None,
     program_archetype: Optional[str] = None,
+    conference_floor: int = 0,
 ) -> Team:
     """
     Generate a fresh Team with unique women players using the name/attribute generators.
@@ -12584,6 +12590,19 @@ def generate_team_on_the_fly(
     # competitive roster one year or be truly abysmal, and programs can
     # grow into better tiers through recruiting and development.
     team_center_offset = int(round(random.gauss(0, 25)))
+
+    # Conference floor: even the worst team in a strong conference can't
+    # drop below the conference's minimum quality threshold.  Max potential
+    # is unconstrained — the floor only prevents jitter from pushing a team
+    # too far down.
+    if conference_floor > 0:
+        archetype_center = PROGRAM_ARCHETYPES.get(
+            program_archetype or DEFAULT_ARCHETYPE,
+            PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE],
+        )["stat_center"]
+        effective_center = archetype_center + team_center_offset
+        if effective_center < conference_floor:
+            team_center_offset = conference_floor - archetype_center
 
     for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
         number = 1 if is_viper and i == 0 else None

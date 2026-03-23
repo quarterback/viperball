@@ -3006,6 +3006,8 @@ def load_teams_from_directory(
                         Only used when fresh=True. Teams not in the dict get
                         a random archetype from a weighted distribution.
     """
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_dir = Path(directory)
     archetypes = team_archetypes or {}
@@ -3017,10 +3019,13 @@ def load_teams_from_directory(
         with open(team_file) as f:
             raw = _json.load(f)
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
 
     return teams
@@ -3044,6 +3049,8 @@ def load_teams_with_states(
         (teams_dict, team_states_dict) where team_states maps team_name -> state
     """
     import json as _json
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_states = {}
     team_dir = Path(directory)
@@ -3054,10 +3061,13 @@ def load_teams_with_states(
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
         if state:
             team_states[team.name] = state
