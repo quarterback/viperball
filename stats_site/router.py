@@ -193,6 +193,57 @@ def _conf_abbrev(name: str) -> str:
     return "".join(w[0] for w in words[:4]).upper()
 
 
+# ── season-aware cache ───────────────────────────────────────────────────
+# Keys on (id(season), completed_game_count) so results auto-invalidate
+# when new games finish but avoid re-aggregating on every page load.
+
+_season_cache: dict = {}
+_CACHE_MAX_ENTRIES = 64  # cap total entries to bound memory
+
+
+def _season_cache_key(season, label: str):
+    """Build a cache key from season identity + completion state."""
+    completed = sum(1 for g in season.schedule if g.completed)
+    # Also count playoff/bowl completions for postseason accuracy
+    playoff_done = sum(1 for g in (season.playoff_bracket or []) if g.completed)
+    bowl_done = sum(1 for bg in (season.bowl_games or []) if bg.game.completed)
+    return (id(season), completed + playoff_done + bowl_done, label)
+
+
+def _cache_get(season, label: str):
+    """Return cached value or None."""
+    key = _season_cache_key(season, label)
+    return _season_cache.get(key)
+
+
+def _cache_set(season, label: str, value):
+    """Store value in cache, evicting oldest entries if over limit."""
+    if len(_season_cache) >= _CACHE_MAX_ENTRIES:
+        # Drop the oldest half
+        keys = list(_season_cache.keys())
+        for k in keys[: len(keys) // 2]:
+            del _season_cache[k]
+    key = _season_cache_key(season, label)
+    _season_cache[key] = value
+
+
+# Pro-league cache uses (id(season), current_week)
+def _pro_cache_key(season, label: str):
+    return (id(season), getattr(season, "current_week", 0), label)
+
+
+def _pro_cache_get(season, label: str):
+    return _season_cache.get(_pro_cache_key(season, label))
+
+
+def _pro_cache_set(season, label: str, value):
+    if len(_season_cache) >= _CACHE_MAX_ENTRIES:
+        keys = list(_season_cache.keys())
+        for k in keys[: len(keys) // 2]:
+            del _season_cache[k]
+    _season_cache[_pro_cache_key(season, label)] = value
+
+
 # ── helpers ──────────────────────────────────────────────────────────────
 
 def _get_api():
@@ -432,6 +483,20 @@ def _ctx(request, **kwargs):
     return kwargs
 
 
+def _cached_season_awards(season):
+    """Return cached compute_season_awards result, computing once per season state."""
+    cached = _cache_get(season, "awards")
+    if cached is not None:
+        return cached
+    from engine.awards import compute_season_awards
+    honors = compute_season_awards(
+        season, year=2025,
+        conferences=season.conferences if hasattr(season, 'conferences') else None,
+    )
+    _cache_set(season, "awards", honors)
+    return honors
+
+
 def _compute_benchmarks(teams, keys):
     """Compute league percentile benchmarks (p25/median/p75/p90) for stat keys.
 
@@ -457,6 +522,9 @@ def _compute_benchmarks(teams, keys):
 
 def _game_benchmarks_from_season(season):
     """Collect per-game EPA/rating/VE from all completed games and return benchmarks."""
+    cached = _cache_get(season, "benchmarks")
+    if cached is not None:
+        return cached
     per_game = []
     all_games = list(season.schedule) + list(season.playoff_bracket or []) + [
         bg.game for bg in (season.bowl_games or [])
@@ -489,10 +557,13 @@ def _game_benchmarks_from_season(season):
                 entry["explosive_plays"] = ep
             per_game.append(entry)
     if len(per_game) < 4:
+        _cache_set(season, "benchmarks", {})
         return {}
-    return _compute_benchmarks(per_game, [
+    result = _compute_benchmarks(per_game, [
         "epa", "team_rating", "ppd", "viper_efficiency", "explosive_plays",
     ])
+    _cache_set(season, "benchmarks", result)
+    return result
 
 
 # ── HOME ─────────────────────────────────────────────────────────────────
@@ -1100,11 +1171,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             # Individual national awards
             for a in honors.individual_awards:
                 if a.team_name == team_name:
@@ -1272,11 +1339,7 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             # National Coach of the Year
             if honors.coach_of_year and (team_name in honors.coach_of_year):
                 coach_awards.append({"award": "National Coach of the Year", "detail": "Season", "stat_line": season_record})
@@ -1560,11 +1623,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             for a in honors.individual_awards:
                 if a.player_name == player_name and a.team_name == team_name:
                     player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "national"})
@@ -1606,13 +1665,12 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     ))
 
 
-@router.get("/college/{session_id}/players", response_class=HTMLResponse)
-def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    season = api["require_season"](sess)
+def _cached_college_player_agg(season):
+    """Aggregate all player stats from completed games, with derived stats. Cached."""
+    cached = _cache_get(season, "college_player_agg")
+    if cached is not None:
+        return cached
 
-    # Aggregate player stats from completed games (including postseason)
     player_agg = {}
     for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
@@ -1621,8 +1679,6 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         ps = fr.get("player_stats", {})
         for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
             conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
             for p in ps.get(side, []):
                 key = f"{t_name}|{p['name']}"
                 if key not in player_agg:
@@ -1704,6 +1760,23 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         r["zbr"] = calculate_zbr(r)
         r["vpr"] = calculate_vpr(r)
 
+    _cache_set(season, "college_player_agg", players)
+    return players
+
+
+@router.get("/college/{session_id}/players", response_class=HTMLResponse)
+def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Use cached aggregation, then filter by conference
+    all_players = _cached_college_player_agg(season)
+    if conference:
+        players = [p for p in all_players if p.get("conference") == conference]
+    else:
+        players = list(all_players)
+
     # Sort
     valid_sorts = {
         # Offense
@@ -1753,68 +1826,19 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    from engine.viperball_metrics import calculate_war, calculate_zbr, calculate_vpr
+    # Reuse cached player aggregation (already has WAR/ZBR/VPR)
+    all_players = _cached_college_player_agg(season)
+    if conference:
+        all_players = [p for p in all_players if p.get("conference") == conference]
 
-    # Aggregate player stats from completed games (same as players route)
-    player_agg = {}
-    for game in season.schedule:
-        if not game.completed or not getattr(game, "full_result", None):
-            continue
-        fr = game.full_result
-        ps = fr.get("player_stats", {})
-        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
-            conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
-            for p in ps.get(side, []):
-                key = f"{t_name}|{p['name']}"
-                if key not in player_agg:
-                    player_agg[key] = {
-                        "name": p["name"], "team": t_name, "conference": conf,
-                        "tag": p.get("tag", ""), "position": p.get("position", ""),
-                        "archetype": p.get("archetype", ""),
-                        "games_played": 0, "touches": 0, "yards": 0,
-                        "rushing_yards": 0, "lateral_yards": 0, "tds": 0,
-                        "fumbles": 0, "laterals_thrown": 0, "lateral_assists": 0,
-                        "kick_return_yards": 0, "punt_return_yards": 0,
-                        "kick_pass_yards": 0,
-                        "wpa": 0.0, "plays_involved": 0,
-                    }
-                agg = player_agg[key]
-                agg["games_played"] += 1
-                if not agg["tag"]:
-                    agg["tag"] = p.get("tag", "")
-                if not agg["position"]:
-                    agg["position"] = p.get("position", "")
-                if not agg["archetype"] or agg["archetype"] == "—":
-                    agg["archetype"] = p.get("archetype", "")
-                for stat in [
-                    "touches", "yards", "rushing_yards", "lateral_yards",
-                    "tds", "fumbles", "laterals_thrown", "lateral_assists",
-                    "kick_return_yards", "punt_return_yards", "kick_pass_yards",
-                    "plays_involved",
-                ]:
-                    agg[stat] += p.get(stat, 0)
-                agg["wpa"] += p.get("wpa", 0.0)
-
-    players = list(player_agg.values())
-    for r in players:
-        r["yards"] = int(round(r.get("yards", 0)))
-        r["rushing_yards"] = int(round(r.get("rushing_yards", 0)))
-        r["lateral_yards"] = int(round(r.get("lateral_yards", 0)))
-        r["kick_pass_yards"] = int(round(r.get("kick_pass_yards", 0)))
-        r["kick_return_yards"] = int(round(r.get("kick_return_yards", 0)))
-        r["punt_return_yards"] = int(round(r.get("punt_return_yards", 0)))
-        r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
-        r["all_purpose_yards"] = r["rushing_yards"] + r["kick_return_yards"] + r["punt_return_yards"] + r["kick_pass_yards"]
-        r["wpa"] = round(r["wpa"], 2)
-        r["wpa_per_play"] = round(r["wpa"] / max(1, r["plays_involved"]), 2)
-        r["war"] = calculate_war(r, r.get("position", ""))
-        r["zbr"] = calculate_zbr(r)
-        r["vpr"] = calculate_vpr(r)
-
-    # Filter to players with meaningful activity
-    players = [p for p in players if p["touches"] >= 5 or p["plays_involved"] >= 10]
+    # Add all_purpose_yards and filter to meaningful activity
+    players = []
+    for r in all_players:
+        r.setdefault("all_purpose_yards",
+                      r.get("rushing_yards", 0) + r.get("kick_return_yards", 0)
+                      + r.get("punt_return_yards", 0) + r.get("kick_pass_yards", 0))
+        if r.get("touches", 0) >= 5 or r.get("plays_involved", 0) >= 10:
+            players.append(r)
 
     valid_sorts = {
         "war": "war", "zbr": "zbr", "vpr": "vpr",
@@ -1834,54 +1858,54 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
     ))
 
 
-@router.get("/college/{session_id}/team-stats", response_class=HTMLResponse)
-def college_team_stats(request: Request, session_id: str, sort: str = "total_yards", conference: str = ""):
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    season = api["require_season"](sess)
+_TEAM_INIT_FIELDS = {
+    "games": 0,
+    # Scoring
+    "points_for": 0.0, "points_against": 0.0,
+    "q1_pf": 0.0, "q2_pf": 0.0, "q3_pf": 0.0, "q4_pf": 0.0,
+    "q1_pa": 0.0, "q2_pa": 0.0, "q3_pa": 0.0, "q4_pa": 0.0,
+    # Offense
+    "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+    "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+    "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+    "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+    "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+    # Special teams offense
+    "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+    "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
+    "muffs": 0,
+    # Defense (opponent stats)
+    "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+    "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+    "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+    "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+    # Special teams defense (opponent returns)
+    "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+    "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+    # Turnovers
+    "fumbles": 0, "tod": 0,
+    "opp_fumbles": 0, "opp_tod": 0,
+    # Penalties
+    "penalties": 0, "penalty_yards": 0,
+    "opp_penalties": 0, "opp_penalty_yards": 0,
+    # Efficiency / Delta / Bonus
+    "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+    "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
+    "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+    "viper_eff_n": 0, "team_rating_n": 0,
+    "down_4_att": 0, "down_4_conv": 0,
+    "down_5_att": 0, "down_5_conv": 0,
+    "down_6_att": 0, "down_6_conv": 0,
+}
 
-    # Aggregate team stats from completed games (including postseason)
-    # Collects both offensive (own) and defensive (opponent) stats
+
+def _cached_college_team_agg(season):
+    """Aggregate team stats from all completed games (including postseason). Cached."""
+    cached = _cache_get(season, "college_team_agg")
+    if cached is not None:
+        return cached
+
     team_agg = {}
-    _INIT_FIELDS = {
-        "games": 0,
-        # Scoring
-        "points_for": 0.0, "points_against": 0.0,
-        "q1_pf": 0.0, "q2_pf": 0.0, "q3_pf": 0.0, "q4_pf": 0.0,
-        "q1_pa": 0.0, "q2_pa": 0.0, "q3_pa": 0.0, "q4_pa": 0.0,
-        # Offense
-        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-        # Special teams offense
-        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
-        "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
-        "muffs": 0,
-        # Defense (opponent stats)
-        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
-        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
-        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
-        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
-        # Special teams defense (opponent returns)
-        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
-        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
-        # Turnovers
-        "fumbles": 0, "tod": 0,
-        "opp_fumbles": 0, "opp_tod": 0,
-        # Penalties
-        "penalties": 0, "penalty_yards": 0,
-        "opp_penalties": 0, "opp_penalty_yards": 0,
-        # Efficiency / Delta / Bonus
-        "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
-        "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
-        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-        "viper_eff_n": 0, "team_rating_n": 0,
-        "down_4_att": 0, "down_4_conv": 0,
-        "down_5_att": 0, "down_5_conv": 0,
-        "down_6_att": 0, "down_6_conv": 0,
-    }
 
     for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
@@ -1909,14 +1933,12 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
 
         for side, opp_side, t_name in [("home", "away", game.home_team), ("away", "home", game.away_team)]:
             conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
             s = stats.get(side)
             opp_s = stats.get(opp_side)
             if not s:
                 continue
             if t_name not in team_agg:
-                team_agg[t_name] = {"team": t_name, "conference": conf, **{k: v for k, v in _INIT_FIELDS.items()}}
+                team_agg[t_name] = {"team": t_name, "conference": conf, **{k: v for k, v in _TEAM_INIT_FIELDS.items()}}
             a = team_agg[t_name]
             a["games"] += 1
 
@@ -2094,6 +2116,23 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
         else:
             t["wins"] = 0
             t["losses"] = 0
+
+    _cache_set(season, "college_team_agg", teams)
+    return teams
+
+
+@router.get("/college/{session_id}/team-stats", response_class=HTMLResponse)
+def college_team_stats(request: Request, session_id: str, sort: str = "total_yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Use cached aggregation, then filter by conference
+    all_teams = _cached_college_team_agg(season)
+    if conference:
+        teams = [t for t in all_teams if t.get("conference") == conference]
+    else:
+        teams = list(all_teams)
 
     # ── Sorting ──
     # Some defensive categories are "lower is better" — reverse=False for those
