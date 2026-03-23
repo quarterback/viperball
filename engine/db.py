@@ -1288,6 +1288,13 @@ def serialize_dynasty(dynasty) -> dict:
     if next_rosters:
         data["next_season_rosters"] = next_rosters
 
+    # Career tracker (alumni / hall-of-fame data)
+    tracker = getattr(dynasty, 'career_tracker', None)
+    if tracker and tracker.careers:
+        data["career_tracker"] = {
+            k: v.to_dict() for k, v in tracker.careers.items()
+        }
+
     return data
 
 
@@ -1366,6 +1373,14 @@ def deserialize_dynasty(data: dict):
     next_rosters = data.get("next_season_rosters")
     if next_rosters:
         dynasty._next_season_rosters = next_rosters
+
+    # Career tracker (alumni / hall-of-fame data)
+    if data.get("career_tracker"):
+        from engine.player_career_tracker import PlayerCareerTracker, PlayerCareerRecord
+        tracker = PlayerCareerTracker()
+        for key, record_data in data["career_tracker"].items():
+            tracker.careers[key] = PlayerCareerRecord.from_dict(record_data)
+        dynasty.career_tracker = tracker
 
     return dynasty
 

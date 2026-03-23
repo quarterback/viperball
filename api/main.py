@@ -4115,6 +4115,10 @@ def fiv_new_cycle(req: FIVCycleRequest):
         seed=req.seed,
     )
 
+    # Link cycle to CVL session for auto-sync on completion
+    if req.cvl_session_id:
+        cycle.cvl_season_id = req.cvl_session_id
+
     _fiv_active_cycle = cycle
     # Persist initial rankings so Rankings tab works immediately
     if cycle.rankings:
@@ -4352,10 +4356,105 @@ async def fiv_sim_world_cup_stage():
     save_fiv_cycle(_fiv_active_cycle)
     _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
 
+    # Auto-sync FIV results to linked CVL dynasty career tracker
+    if _fiv_active_cycle.phase == "completed" and _fiv_active_cycle.cvl_season_id:
+        try:
+            _auto_sync_fiv_to_dynasty(_fiv_active_cycle)
+        except Exception:
+            pass  # Best-effort — don't break the FIV flow
+
     return {
         "phase": wc.phase,
         "champion": wc.champion,
         "total_matches": len(wc.all_results),
+    }
+
+
+def _auto_sync_fiv_to_dynasty(cycle):
+    """Auto-sync completed FIV cycle stats to the linked CVL dynasty."""
+    sid = cycle.cvl_season_id
+    if sid not in sessions:
+        return
+    sess = sessions[sid]
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        return
+
+    from engine.player_career_tracker import PlayerCareerTracker
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        tracker = PlayerCareerTracker()
+        dynasty.career_tracker = tracker
+
+    player_stats = {}
+    for nation_code, nt in cycle.national_teams.items():
+        for ntp in nt.roster:
+            pname = ntp.player.name
+            player_stats[pname] = {
+                "nation": nation_code,
+                "caps": ntp.caps,
+                "games": ntp.caps,
+                "yards": ntp.career_international_stats.get("yards", 0),
+                "tds": ntp.career_international_stats.get("tds", 0),
+                "competition": "FIV",
+                "world_cup": True,
+            }
+
+    tracker.record_fiv_cycle(player_stats, dynasty.current_year)
+
+    from engine.db import save_dynasty as db_save_dynasty
+    db_save_dynasty(dynasty, save_key=sid)
+
+
+@app.post("/api/fiv/sync-to-dynasty/{session_id}")
+def fiv_sync_to_dynasty(session_id: str):
+    """Record FIV cycle player stats into a dynasty's career tracker.
+
+    Call after an FIV cycle completes to update alumni profiles with
+    international career data (caps, yards, TDs, national team).
+    """
+    if not _fiv_active_cycle:
+        raise HTTPException(404, "No active FIV cycle")
+
+    sess = _get_session(session_id)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(400, "Session has no dynasty")
+
+    from engine.player_career_tracker import PlayerCareerTracker
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        tracker = PlayerCareerTracker()
+        dynasty.career_tracker = tracker
+
+    cycle = _fiv_active_cycle
+    year = dynasty.current_year
+
+    # Build player stats from national team rosters and game results
+    player_stats = {}
+    for nation_code, nt in cycle.national_teams.items():
+        for ntp in nt.roster:
+            pname = ntp.player.name
+            player_stats[pname] = {
+                "nation": nation_code,
+                "caps": ntp.caps,
+                "games": ntp.caps,
+                "yards": ntp.career_international_stats.get("yards", 0),
+                "tds": ntp.career_international_stats.get("tds", 0),
+                "competition": "FIV",
+                "world_cup": cycle.world_cup is not None and cycle.phase == "completed",
+            }
+
+    tracker.record_fiv_cycle(player_stats, year)
+
+    # Persist
+    from engine.db import save_dynasty as db_save_dynasty
+    db_save_dynasty(dynasty, save_key=session_id)
+
+    return {
+        "synced_players": len(player_stats),
+        "dynasty": dynasty.dynasty_name,
+        "year": year,
     }
 
 

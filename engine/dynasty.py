@@ -26,6 +26,7 @@ from engine.injuries import InjuryTracker
 from engine.development import apply_team_development, apply_redshirt_decisions, get_preseason_breakout_candidates, DevelopmentReport
 from engine.ai_coach import auto_assign_all_teams
 from engine.player_card import PlayerCard, player_to_card
+from engine.player_career_tracker import PlayerCareerTracker
 from engine.recruiting import (
     generate_recruit_class,
     RecruitingBoard,
@@ -309,6 +310,9 @@ class Dynasty:
 
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
+
+    # Career tracker — tracks players across college, pro, and international phases
+    career_tracker: PlayerCareerTracker = field(default_factory=PlayerCareerTracker)
 
     def add_conference(self, name: str, teams: List[str]):
         """Add a conference to the dynasty"""
@@ -902,6 +906,9 @@ class Dynasty:
         # Publish graduates to CVL→WVL bridge (before roster maintenance removes them)
         self._publish_graduates_to_bridge(season, year)
 
+        # Record graduates in career tracker for alumni/hall-of-fame pages
+        self._record_graduates_in_tracker(season, year)
+
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))
 
@@ -947,6 +954,26 @@ class Dynasty:
         except Exception:
             # Bridge DB not available — silently skip
             return 0
+
+    def _record_graduates_in_tracker(self, season: Season, year: int):
+        """Feed graduating players into the career tracker for alumni pages.
+
+        Captures full career stats so they survive after roster maintenance
+        removes them from team rosters.
+        """
+        try:
+            for team_name, team in season.teams.items():
+                for player in team.players:
+                    py = getattr(player, "year", "")
+                    if py in ("Senior", "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        d["graduating_from"] = team_name
+                        d["conference"] = self.get_team_conference(team_name)
+                        d["college_prestige"] = self.team_prestige.get(team_name, 50)
+                        self.career_tracker.ingest_cvl_graduates([d], year)
+        except Exception:
+            pass
 
     def run_offseason(
         self,
