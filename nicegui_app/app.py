@@ -194,14 +194,12 @@ def index():
 
     # Validate stored session — if the API server restarted, the in-memory
     # session is gone but the cookie still has the stale session_id.
+    # Check the in-process sessions dict directly instead of making an HTTP
+    # call to ourselves, which deadlocks the single uvicorn worker.
     if state.session_id:
-        try:
-            api_client.get_season_status(state.session_id)
-        except api_client.APIError as e:
-            if e.status_code == 404:
-                state.clear_session()
-        except Exception:
-            pass  # Connection error — don't clear, API might just be slow
+        from api.main import sessions as _api_sessions
+        if state.session_id not in _api_sessions:
+            state.clear_session()
 
     # Check if we should auto-navigate to a section (one-shot flags)
     pending_pro = app.storage.user.get("pro_league_pending_nav")
