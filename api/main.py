@@ -2268,6 +2268,10 @@ def dynasty_team_histories(session_id: str):
             "best_season_wins": history.best_season_wins,
             "best_season_year": history.best_season_year,
             "championship_years": history.championship_years,
+            "finalist_years": getattr(history, 'finalist_years', []),
+            "final_four_years": getattr(history, 'final_four_years', []),
+            "sweet_16_years": getattr(history, 'sweet_16_years', []),
+            "conference_title_years": getattr(history, 'conference_title_years', []),
             "season_records": history.season_records,
         }
 

@@ -11,6 +11,21 @@
 {% if stadium_url %}
 <div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
 {% endif %}
+<style>
+.championship-banners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 11px; font-weight: bold; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+.banner .banner-count { font-size: 13px; }
+.banner .banner-years { font-size: 10px; font-weight: normal; opacity: 0.8; text-transform: none; letter-spacing: 0; }
+.banner-champion { background: linear-gradient(135deg, #78350f, #92400e); color: #fbbf24; border: 1px solid #fbbf24; }
+.banner-finalist { background: linear-gradient(135deg, #1e293b, #334155); color: #cbd5e1; border: 1px solid #94a3b8; }
+.banner-final_four { background: linear-gradient(135deg, #451a03, #78350f); color: #d97706; border: 1px solid #b45309; }
+.banner-sweet_16 { background: linear-gradient(135deg, #1c1917, #44403c); color: #a8a29e; border: 1px solid #78716c; }
+.banner-playoff { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+.banner-conference { background: linear-gradient(135deg, #1e3a5f, #1e40af); color: #93c5fd; border: 1px solid #60a5fa; }
+.banner-bowl_win { background: #14532d; color: #4ade80; border: 1px solid #22c55e; }
+.banner-bowl_appearance { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+</style>
+
 <div class="page-header">
   <h1>{{ team.name }} {{ team.mascot }}</h1>
   <div class="subtitle">
@@ -18,6 +33,17 @@
     {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span>{% if record.ties %}-<span class="t">{{ record.ties }}</span>{% endif %}</span> ({{ record.conference }}){% endif %}
     {% if prestige %} &middot; Prestige: {{ prestige }}{% endif %}
   </div>
+  {% if banners %}
+  <div class="championship-banners">
+    {% for b in banners %}
+    <div class="banner banner-{{ b.type }}">
+      {% if b.count > 1 %}<span class="banner-count">{{ b.count }}x</span>{% endif %}
+      {{ b.label }}
+      {% if b.years %}<span class="banner-years">{{ b.years|join(', ') }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 
 {% if record %}

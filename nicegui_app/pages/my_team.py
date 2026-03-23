@@ -1196,6 +1196,44 @@ async def _render_history(session_id: str):
         team_hist = {}
 
     if team_hist:
+        # ── Championship Banners ──
+        _banner_config = [
+            ("championship_years", "National Champions", "#78350f", "#fbbf24", "#fbbf24"),
+            ("finalist_years", "National Finalist", "#1e293b", "#cbd5e1", "#94a3b8"),
+            ("final_four_years", "Final Four", "#451a03", "#d97706", "#b45309"),
+            ("sweet_16_years", "Sweet 16", "#1c1917", "#a8a29e", "#78716c"),
+            ("conference_title_years", "Conference Champions", "#1e3a5f", "#93c5fd", "#60a5fa"),
+        ]
+        _has_banners = any(team_hist.get(key, []) for key, *_ in _banner_config)
+        if _has_banners:
+            with ui.row().classes("w-full flex-wrap gap-2 mb-4"):
+                for key, label, bg_color, text_color, border_color in _banner_config:
+                    years = team_hist.get(key, [])
+                    if not years:
+                        continue
+                    count = len(years)
+                    years_str = ", ".join(str(y) for y in sorted(years))
+                    banner_text = f"{count}x {label}" if count > 1 else label
+                    with ui.element("div").style(
+                        f"display:inline-flex; align-items:center; gap:6px; padding:5px 14px; "
+                        f"font-size:11px; font-weight:bold; border-radius:4px; letter-spacing:0.5px; "
+                        f"text-transform:uppercase; background:{bg_color}; color:{text_color}; "
+                        f"border:1px solid {border_color};"
+                    ):
+                        ui.label(banner_text)
+                        ui.label(years_str).style("font-size:10px; opacity:0.8; text-transform:none; font-weight:normal;")
+
+            # Bowl wins (separate from playoff banners)
+            bowl_wins = team_hist.get("total_bowl_wins", 0)
+            if bowl_wins > 0:
+                with ui.element("div").style(
+                    "display:inline-flex; align-items:center; gap:6px; padding:5px 14px; "
+                    "font-size:11px; font-weight:bold; border-radius:4px; letter-spacing:0.5px; "
+                    "text-transform:uppercase; background:#14532d; color:#4ade80; "
+                    "border:1px solid #22c55e;"
+                ):
+                    ui.label(f"{bowl_wins}x Bowl Wins" if bowl_wins > 1 else "Bowl Win")
+
         with ui.row().classes("w-full flex-wrap gap-4"):
             with ui.column():
                 metric_card(
@@ -1212,12 +1250,6 @@ async def _render_history(session_id: str):
                 metric_card("Bowl Appearances", str(team_hist.get("total_bowl_appearances", 0)))
             with ui.column():
                 metric_card("Bowl Wins", str(team_hist.get("total_bowl_wins", 0)))
-
-        champ_years = team_hist.get("championship_years", [])
-        if champ_years:
-            ui.label(
-                f"Championship Years: {', '.join(str(y) for y in sorted(champ_years))}"
-            ).classes("text-sm text-gray-500")
 
     # Record book
     ui.separator()
