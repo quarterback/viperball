@@ -145,6 +145,12 @@ REGION_TO_ORIGIN = {
     'polish': ('polish', 'Polish'),
     'czech': ('czech', 'Czech'),
     'central_asian': ('central_asian', 'Central Asian'),
+    'ethiopian': ('ethiopian', 'Ethiopian'),
+    'east_african': ('east_african', 'East African'),
+    'malagasy': ('malagasy', 'Malagasy'),
+    'lusophone_african': ('lusophone_african', 'Angolan'),
+    'vietnamese': ('vietnamese', 'Vietnamese'),
+    'cambodian': ('cambodian', 'Cambodian'),
     'other_intl': ('irish_european', 'European'),
 }
 
@@ -320,6 +326,12 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
         'polish': 'polish',
         'czech': 'czech',
         'central_asian': 'central_asian',
+        'ethiopian': 'ethiopian',
+        'east_african': 'east_african',
+        'malagasy': 'malagasy',
+        'lusophone_african': 'lusophone_african',
+        'vietnamese': 'vietnamese',
+        'cambodian': 'cambodian',
     }
 
     if origin == 'american':
@@ -433,6 +445,18 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
         selected_pool = 'czech'
     elif origin == 'central_asian':
         selected_pool = 'central_asian'
+    elif origin == 'ethiopian':
+        selected_pool = 'ethiopian'
+    elif origin == 'east_african':
+        selected_pool = 'east_african'
+    elif origin == 'malagasy':
+        selected_pool = 'malagasy'
+    elif origin == 'lusophone_african':
+        selected_pool = 'lusophone_african'
+    elif origin == 'vietnamese':
+        selected_pool = 'vietnamese'
+    elif origin == 'cambodian':
+        selected_pool = 'cambodian'
     else:
         selected_pool = 'american_general'
 
@@ -529,6 +553,78 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         }
         country = country_map.get(country_code, 'Africa')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'african'}
+
+    elif origin == 'ethiopian':
+        ea = cities['africa']['east_africa']
+        eth_cities = [c for c in ea if c.endswith(' ETH')]
+        if not eth_cities:
+            eth_cities = ['Addis Ababa ETH']
+        city_full = random.choice(eth_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'ETH', 'country': 'Ethiopia', 'region': 'ethiopian'}
+
+    elif origin == 'east_african':
+        ea = cities['africa']['east_africa']
+        ea_codes = {'KEN', 'UGA', 'TZA', 'RWA', 'COD', 'MWI'}
+        ea_cities = [c for c in ea if any(c.endswith(' ' + code) for code in ea_codes)]
+        if not ea_cities:
+            ea_cities = ['Nairobi KEN', 'Kampala UGA']
+        city_full = random.choice(ea_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KEN'
+        country_map = {
+            'KEN': 'Kenya', 'UGA': 'Uganda', 'TZA': 'Tanzania',
+            'RWA': 'Rwanda', 'COD': 'DR Congo', 'MWI': 'Malawi'
+        }
+        country = country_map.get(country_code, 'East Africa')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'east_african'}
+
+    elif origin == 'malagasy':
+        ea = cities['africa']['east_africa']
+        mdg_cities = [c for c in ea if c.endswith(' MDG')]
+        if not mdg_cities:
+            mdg_cities = ['Antananarivo MDG']
+        city_full = random.choice(mdg_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'MDG', 'country': 'Madagascar', 'region': 'malagasy'}
+
+    elif origin == 'lusophone_african':
+        sa = cities['africa']['southern_africa']
+        ago_cities = [c for c in sa if c.endswith(' AGO')]
+        if not ago_cities:
+            ago_cities = ['Luanda AGO']
+        city_full = random.choice(ago_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'AGO', 'country': 'Angola', 'region': 'lusophone_african'}
+
+    elif origin == 'vietnamese':
+        sea = cities.get('southeast_asia', {'major': ['Hanoi VNM'], 'secondary': []})
+        all_cities = sea['major'] + sea.get('secondary', [])
+        vnm_cities = [c for c in all_cities if c.endswith(' VNM')]
+        if not vnm_cities:
+            vnm_cities = ['Hanoi VNM', 'Ho Chi Minh City VNM']
+        city_full = random.choice(vnm_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'VNM', 'country': 'Vietnam', 'region': 'vietnamese'}
+
+    elif origin == 'cambodian':
+        sea = cities.get('southeast_asia', {'major': ['Phnom Penh KHM'], 'secondary': []})
+        all_cities = sea['major'] + sea.get('secondary', [])
+        khm_lao_cities = [c for c in all_cities if c.endswith((' KHM', ' LAO'))]
+        if not khm_lao_cities:
+            khm_lao_cities = ['Phnom Penh KHM', 'Vientiane LAO']
+        city_full = random.choice(khm_lao_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KHM'
+        country_map = {'KHM': 'Cambodia', 'LAO': 'Laos'}
+        country = country_map.get(country_code, 'Cambodia')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'cambodian'}
 
     elif origin == 'nordic':
         nrd = cities['nordic']
