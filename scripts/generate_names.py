@@ -109,17 +109,18 @@ DEFAULT_PIPELINE = {
     'pacific_islander': 0.021,
     # ── New Zealand (1.4% of total) ──
     'new_zealand': 0.014,
-    # ── Caribbean (32% of intl — the sport's heartland) ──
-    'caribbean': 0.191,
+    # ── Caribbean (24% of intl — the sport's heartland) ──
+    'caribbean': 0.143,
     # ── Latin America (3% of intl) ──
     'latin_american': 0.019,
-    # ── Other International (8% of intl) ──
+    # ── Arab World / South Asia (8% of intl) ──
+    'arabic': 0.024,
+    'indian': 0.024,
+    # ── Other International (5% of intl) ──
     'southeast_asian': 0.007,
     'vietnamese': 0.007,
     'cambodian': 0.007,
     'east_asian': 0.007,
-    'indian': 0.007,
-    'arabic': 0.007,
     'central_asian': 0.006,
 }
 
@@ -153,17 +154,18 @@ INTERNATIONAL_BASELINE = {
     'pacific_islander': 0.021,
     # New Zealand (1.4%)
     'new_zealand': 0.014,
-    # Caribbean (~19.1%)
-    'caribbean': 0.191,
+    # Caribbean (~14.3%)
+    'caribbean': 0.143,
     # Latin America (~1.9%)
     'latin_american': 0.019,
-    # Other International (~4.8%)
+    # Arab World / South Asia (~4.8%)
+    'arabic': 0.024,
+    'indian': 0.024,
+    # Other International (~3.4%)
     'southeast_asian': 0.007,
     'vietnamese': 0.007,
     'cambodian': 0.007,
     'east_asian': 0.007,
-    'indian': 0.007,
-    'arabic': 0.007,
     'central_asian': 0.006,
 }
 
