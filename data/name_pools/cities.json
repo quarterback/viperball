@@ -368,7 +368,17 @@
       "Montevideo URU",
       "Asunci\u00f3n PAR",
       "Quito ECU",
-      "Guayaquil ECU"
+      "Guayaquil ECU",
+      "Managua NIC",
+      "León NIC",
+      "Granada NIC",
+      "San Salvador SLV",
+      "Santa Ana SLV",
+      "San Miguel SLV",
+      "La Paz BOL",
+      "Santa Cruz BOL",
+      "Cochabamba BOL",
+      "Sucre BOL"
     ]
   },
   "africa": {
@@ -384,7 +394,9 @@
       "Conakry GIN",
       "Abidjan CIV",
       "Lom\u00e9 TOG",
-      "Bamako MLI"
+      "Bamako MLI",
+      "Bangui CAF",
+      "Bimbo CAF"
     ],
     "east_africa": [
       "Nairobi KEN",
@@ -392,7 +404,16 @@
       "Kampala UGA",
       "Dar es Salaam TZA",
       "Addis Ababa ETH",
-      "Kigali RWA"
+      "Kigali RWA",
+      "Kinshasa COD",
+      "Lubumbashi COD",
+      "Mbuji-Mayi COD",
+      "Kisangani COD",
+      "Antananarivo MDG",
+      "Toamasina MDG",
+      "Antsirabe MDG",
+      "Lilongwe MWI",
+      "Blantyre MWI"
     ],
     "southern_africa": [
       "Johannesburg ZAF",
@@ -401,7 +422,10 @@
       "Pretoria ZAF",
       "Harare ZWE",
       "Lusaka ZMB",
-      "Gaborone BWA"
+      "Gaborone BWA",
+      "Luanda AGO",
+      "Huambo AGO",
+      "Lobito AGO"
     ]
   },
   "caribbean": [
@@ -556,7 +580,13 @@
       "Makassar IDN",
       "Yogyakarta IDN",
       "Malacca MYS",
-      "Ipoh MYS"
+      "Ipoh MYS",
+      "Phnom Penh KHM",
+      "Siem Reap KHM",
+      "Battambang KHM",
+      "Vientiane LAO",
+      "Luang Prabang LAO",
+      "Savannakhet LAO"
     ]
   },
   "middle_east": {
@@ -598,6 +628,12 @@
       "Fez MAR",
       "Tangier MAR",
       "Agadir MAR"
+    ],
+    "yemen": [
+      "Sana'a YEM",
+      "Aden YEM",
+      "Taiz YEM",
+      "Al Hudaydah YEM"
     ]
   },
   "india": {

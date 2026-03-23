@@ -503,7 +503,8 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
             'BRA': 'Brazil', 'ARG': 'Argentina', 'COL': 'Colombia',
             'PER': 'Peru', 'CHI': 'Chile', 'MEX': 'Mexico',
             'VEN': 'Venezuela', 'URU': 'Uruguay', 'PAR': 'Paraguay',
-            'ECU': 'Ecuador', 'CRC': 'Costa Rica', 'GTM': 'Guatemala', 'PAN': 'Panama'
+            'ECU': 'Ecuador', 'CRC': 'Costa Rica', 'GTM': 'Guatemala', 'PAN': 'Panama',
+            'NIC': 'Nicaragua', 'SLV': 'El Salvador', 'BOL': 'Bolivia'
         }
         country = country_map.get(country_code, 'Latin America')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'latin_american'}
@@ -522,7 +523,9 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
             'GIN': 'Guinea', 'MLI': 'Mali', 'TOG': 'Togo',
             'KEN': 'Kenya', 'UGA': 'Uganda', 'TZA': 'Tanzania',
             'ETH': 'Ethiopia', 'RWA': 'Rwanda',
-            'ZAF': 'South Africa', 'ZWE': 'Zimbabwe', 'ZMB': 'Zambia', 'BWA': 'Botswana'
+            'ZAF': 'South Africa', 'ZWE': 'Zimbabwe', 'ZMB': 'Zambia', 'BWA': 'Botswana',
+            'COD': 'DR Congo', 'MDG': 'Madagascar', 'AGO': 'Angola',
+            'MWI': 'Malawi', 'CAF': 'Central African Republic'
         }
         country = country_map.get(country_code, 'Africa')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'african'}
@@ -580,6 +583,7 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         country_map = {
             'THA': 'Thailand', 'VNM': 'Vietnam', 'PHL': 'Philippines',
             'IDN': 'Indonesia', 'SGP': 'Singapore', 'MYS': 'Malaysia',
+            'KHM': 'Cambodia', 'LAO': 'Laos',
         }
         country = country_map.get(country_code, 'Southeast Asia')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'southeast_asian'}
@@ -663,7 +667,7 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         country_code = parts[1] if len(parts) > 1 else 'KSA'
         country_map = {
             'KSA': 'Saudi Arabia', 'UAE': 'United Arab Emirates',
-            'IRN': 'Iran', 'EGY': 'Egypt', 'MAR': 'Morocco',
+            'IRN': 'Iran', 'EGY': 'Egypt', 'MAR': 'Morocco', 'YEM': 'Yemen',
         }
         country = country_map.get(country_code, 'Middle East')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'arabic'}
