@@ -277,59 +277,84 @@ class WVLCommissionerDynasty:
         Returns cycle results summary.
         """
         try:
-            from engine.fiv import FIVCycle
+            from engine.fiv import (
+                create_fiv_cycle, run_continental_phase,
+                run_playoff_phase, run_world_cup_phase,
+            )
         except ImportError:
             return {"error": "FIV module not available"}
 
         if rng is None:
             rng = random.Random(self.current_year)
 
-        cycle = FIVCycle(host_nation=host)
+        # Collect WVL players converted to engine.Player for CVL pipeline
+        cvl_players = self._collect_wvl_players_for_fiv()
 
-        # Route WVL players to national teams
-        self._route_wvl_players_to_fiv(cycle)
+        cycle = create_fiv_cycle(
+            cycle_number=self.current_year,
+            host_nation=host,
+            cvl_players=cvl_players or None,
+            seed=self.current_year,
+        )
 
-        # Run the full cycle
-        cycle.sim_continental_all()
-        cycle.sim_playoff()
-        cycle.draw_world_cup()
-        cycle.sim_world_cup_all()
+        run_continental_phase(cycle, rng=rng)
+        run_playoff_phase(cycle, rng=rng)
+        run_world_cup_phase(cycle, rng=rng)
+
+        # Record career stats for WVL players who participated
+        self._record_fiv_careers(cycle)
 
         # Record results
         result = {
             "year": self.current_year,
             "champion": cycle.world_cup.champion if cycle.world_cup else None,
-            "golden_boot": cycle.world_cup.golden_boot if cycle.world_cup else None,
-            "mvp": cycle.world_cup.mvp if cycle.world_cup else None,
             "host": host,
         }
+        # Extract golden boot / MVP if available
+        if cycle.world_cup:
+            for attr in ("golden_boot", "mvp"):
+                val = getattr(cycle.world_cup, attr, None)
+                if val:
+                    result[attr] = val
         self.fiv_history.append(result)
 
         return result
 
-    def _route_wvl_players_to_fiv(self, cycle):
-        """Assign WVL players to their national teams in the FIV cycle."""
-        try:
-            from engine.fiv import _resolve_fiv_code
-        except ImportError:
-            return
-
+    def _collect_wvl_players_for_fiv(self) -> list:
+        """Convert WVL PlayerCards to engine.Player for FIV roster generation."""
+        from engine.player_card import card_to_player
+        players = []
         for team_key, roster in self._team_rosters.items():
             for card in roster:
-                nationality = getattr(card, 'nationality', '')
-                if not nationality:
+                try:
+                    player = card_to_player(card)
+                    players.append(player)
+                except Exception:
+                    pass
+        return players
+
+    def _record_fiv_careers(self, cycle):
+        """Record international stats from a completed FIV cycle."""
+        for code, national_team in cycle.national_teams.items():
+            for ntp in national_team.roster:
+                player = ntp.player
+                name = getattr(player, 'name', '')
+                if not name:
                     continue
-                fiv_code = _resolve_fiv_code(nationality)
-                if fiv_code and fiv_code in cycle.teams:
-                    national_team = cycle.teams[fiv_code]
-                    # Add player to national team if slot available and good enough
-                    if len(national_team.players) < 36:
-                        from engine.player_card import card_to_player
-                        try:
-                            player = card_to_player(card)
-                            national_team.players.append(player)
-                        except Exception:
-                            pass
+                career = self.career_tracker.get_career(name)
+                if career is None:
+                    continue  # only track players we already know from WVL
+                career.national_team = code
+                career.international_caps += ntp.caps
+                career.international_seasons.append({
+                    "year": self.current_year,
+                    "nation": code,
+                    "competition": "FIV World Cup",
+                    "games": ntp.caps,
+                })
+                wc = cycle.world_cup
+                if wc and code in getattr(wc, 'teams', []):
+                    career.world_cup_appearances += 1
 
     # ═══════════════════════════════════════════════════════════════
     # COMMISSIONER TOOLS

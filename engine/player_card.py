@@ -779,6 +779,7 @@ def card_to_player(card: PlayerCard) -> "Player":
         player_id=card.player_id,
         nationality=card.nationality,
         hometown_city=card.hometown_city,
+        hometown_state=card.hometown_state,
         hometown_country=card.hometown_country,
         high_school=card.high_school,
         height=card.height,

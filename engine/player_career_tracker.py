@@ -212,7 +212,8 @@ class PlayerCareerTracker:
         Args:
             team_rosters: team_key -> list of PlayerCard objects
             season_stats: from ProLeagueSeason.player_season_stats
-                          team_key -> {player_id: {stat_name: value}}
+                          team_key -> {composite_key: {stat_name: value}}
+                          where composite_key is f"{team_key}_{player_name}"
             tier_assignments: team_key -> tier number
             year: season year
             team_names: optional team_key -> display name mapping
@@ -223,6 +224,19 @@ class PlayerCareerTracker:
             team_name = names.get(team_key, team_key)
             team_stats = season_stats.get(team_key, {})
 
+            # Build a name-based lookup from the composite-keyed stats dict.
+            # Keys in player_season_stats are f"{team_key}_{player_name}".
+            stats_by_name: Dict[str, dict] = {}
+            for composite_key, pdata in team_stats.items():
+                pname = pdata.get("name", "")
+                if pname:
+                    stats_by_name[pname] = pdata
+                else:
+                    # Fallback: strip team_key prefix to get name
+                    prefix = f"{team_key}_"
+                    if composite_key.startswith(prefix):
+                        stats_by_name[composite_key[len(prefix):]] = pdata
+
             for card in cards:
                 name = card.full_name if hasattr(card, 'full_name') else str(card)
                 record = self.get_or_create(
@@ -232,9 +246,8 @@ class PlayerCareerTracker:
                     nationality=getattr(card, 'nationality', ''),
                 )
 
-                # Find this player's stats
-                pid = getattr(card, 'player_id', '')
-                pstats = team_stats.get(pid, {})
+                # Match stats by player name (the actual key format)
+                pstats = stats_by_name.get(name, {})
 
                 ovr = getattr(card, 'overall', 0)
                 if ovr > record.peak_overall:
@@ -245,7 +258,7 @@ class PlayerCareerTracker:
                     "team_key": team_key,
                     "team_name": team_name,
                     "tier": tier,
-                    "games": pstats.get("games_played", 0),
+                    "games": pstats.get("games", 0),
                     "yards": pstats.get("total_yards", 0),
                     "rushing_yards": pstats.get("rushing_yards", 0),
                     "kick_pass_yards": pstats.get("kick_pass_yards", 0),
