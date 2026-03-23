@@ -36,104 +36,104 @@ PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "stat_center": 42,             # gaussian center for all stats
-        "stat_spread": 7,              # gaussian std dev
-        "hidden_gem_count": (1, 3),    # 1-3 players get large stat boosts
-        "hidden_gem_boost": (25, 40),  # 42+40=82 → a doormat gem can be legitimately good
-        "hidden_gem_stats": (3, 5),    # boost several stats to make them well-rounded
+        "stat_center": 28,             # team OVR lands ~20-35
+        "stat_spread": 5,              # tight — consistently bad
+        "hidden_gem_count": (2, 3),    # 2-3 legit players — portal bait
+        "hidden_gem_boost": (45, 58),  # 28+55=83 → gem is a legit regional-power-level player
+        "hidden_gem_stats": (5, 7),    # boost across most stats — these are REAL players
         "potential_weights": {
-            "freshman": [5, 5, 10, 35, 45],
-            "sophomore": [3, 5, 8, 34, 50],
-            "junior": [2, 3, 5, 35, 55],
-            "senior": [0, 2, 10, 33, 55],
+            "freshman": [1, 3, 8, 35, 53],
+            "sophomore": [0, 2, 6, 34, 58],
+            "junior": [0, 1, 4, 35, 60],
+            "senior": [0, 0, 5, 33, 62],
         },
-        "dev_weights": [40, 5, 45, 10],
-        "prestige_range": (5, 20),
+        "dev_weights": [30, 2, 50, 18],
+        "prestige_range": (1, 12),
     },
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 51,
-        "stat_spread": 8,
-        "hidden_gem_count": (2, 3),
-        "hidden_gem_boost": (18, 30),  # 51+30=81 → underdog gems can be very good
-        "hidden_gem_stats": (2, 4),
+        "stat_center": 50,             # team OVR lands ~40-58
+        "stat_spread": 6,
+        "hidden_gem_count": (2, 4),    # 2-4 legit players — portal targets
+        "hidden_gem_boost": (28, 38),  # 50+35=85 → gem could start at a power program
+        "hidden_gem_stats": (4, 6),    # boost across many stats
         "potential_weights": {
-            "freshman": [10, 12, 15, 30, 33],
-            "sophomore": [8, 10, 12, 32, 38],
-            "junior": [5, 8, 10, 35, 42],
-            "senior": [0, 5, 15, 35, 45],
+            "freshman": [4, 7, 14, 36, 39],
+            "sophomore": [2, 5, 10, 36, 47],
+            "junior": [1, 3, 7, 38, 51],
+            "senior": [0, 2, 10, 38, 50],
         },
-        "dev_weights": [45, 10, 35, 10],
-        "prestige_range": (18, 35),
+        "dev_weights": [38, 6, 40, 16],
+        "prestige_range": (10, 28),
     },
     "punching_above": {
         "label": "Punching Above Their Weight",
-        "description": "Mid-tier program with surprising talent. Well-coached and greater than the sum of their parts.",
-        "stat_center": 59,
-        "stat_spread": 9,
-        "hidden_gem_count": (2, 4),
-        "hidden_gem_boost": (12, 22),
-        "hidden_gem_stats": (2, 4),
+        "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
+        "stat_center": 65,             # team OVR lands ~60-72
+        "stat_spread": 6,
+        "hidden_gem_count": (3, 4),    # 3-4 standouts
+        "hidden_gem_boost": (18, 26),  # 65+22=87 → gem is national-power caliber
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
-            "freshman": [15, 20, 20, 25, 20],
-            "sophomore": [12, 18, 18, 28, 24],
-            "junior": [8, 15, 15, 32, 30],
-            "senior": [0, 10, 25, 35, 30],
+            "freshman": [10, 16, 24, 28, 22],
+            "sophomore": [7, 13, 20, 32, 28],
+            "junior": [4, 10, 16, 36, 34],
+            "senior": [0, 7, 22, 38, 33],
         },
-        "dev_weights": [50, 18, 22, 10],
-        "prestige_range": (32, 50),
+        "dev_weights": [46, 14, 28, 12],
+        "prestige_range": (24, 48),
     },
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 67,
-        "stat_spread": 9,
-        "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (8, 16),
-        "hidden_gem_stats": (2, 4),
+        "stat_center": 81,             # team OVR lands ~78-84
+        "stat_spread": 5,
+        "hidden_gem_count": (3, 5),    # 3-5 standouts
+        "hidden_gem_boost": (8, 14),   # 81+12=93 → gem is near blue-blood level
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
-            "freshman": [25, 25, 20, 18, 12],
-            "sophomore": [20, 22, 18, 22, 18],
-            "junior": [15, 20, 15, 28, 22],
-            "senior": [0, 15, 30, 30, 25],
+            "freshman": [22, 26, 22, 18, 12],
+            "sophomore": [18, 22, 20, 22, 18],
+            "junior": [12, 20, 18, 28, 22],
+            "senior": [0, 14, 30, 32, 24],
         },
-        "dev_weights": [55, 22, 15, 8],
+        "dev_weights": [50, 22, 18, 10],
         "prestige_range": (45, 68),
     },
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 77,
-        "stat_spread": 9,
-        "hidden_gem_count": (3, 5),
-        "hidden_gem_boost": (5, 12),
-        "hidden_gem_stats": (2, 3),
+        "stat_center": 89,             # team OVR lands ~85-93
+        "stat_spread": 4,
+        "hidden_gem_count": (4, 7),    # deep bench of stars
+        "hidden_gem_boost": (4, 8),    # 89+7=96 → gem is an All-American
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
-            "freshman": [35, 30, 18, 12, 5],
-            "sophomore": [30, 28, 18, 15, 9],
-            "junior": [25, 25, 15, 22, 13],
-            "senior": [0, 22, 35, 28, 15],
+            "freshman": [38, 30, 16, 11, 5],
+            "sophomore": [32, 28, 18, 14, 8],
+            "junior": [26, 26, 16, 20, 12],
+            "senior": [0, 24, 36, 26, 14],
         },
-        "dev_weights": [50, 28, 12, 10],
-        "prestige_range": (65, 82),
+        "dev_weights": [46, 30, 14, 10],
+        "prestige_range": (65, 85),
     },
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 84,
-        "stat_spread": 8,
-        "hidden_gem_count": (4, 6),
-        "hidden_gem_boost": (3, 8),
-        "hidden_gem_stats": (2, 3),
+        "stat_center": 95,             # team OVR lands ~93-99
+        "stat_spread": 3,              # very tight — wall-to-wall elite talent
+        "hidden_gem_count": (5, 8),    # stacked — stars everywhere
+        "hidden_gem_boost": (1, 4),    # 95+3=98 → already elite, gems just polish
+        "hidden_gem_stats": (3, 5),
         "potential_weights": {
-            "freshman": [42, 32, 16, 8, 2],
-            "sophomore": [38, 30, 18, 10, 4],
-            "junior": [30, 28, 18, 16, 8],
-            "senior": [0, 28, 38, 24, 10],
+            "freshman": [50, 30, 12, 6, 2],
+            "sophomore": [45, 28, 15, 8, 4],
+            "junior": [35, 28, 18, 12, 7],
+            "senior": [0, 32, 38, 20, 10],
         },
-        "dev_weights": [45, 32, 13, 10],
-        "prestige_range": (78, 99),
+        "dev_weights": [40, 36, 14, 10],
+        "prestige_range": (82, 99),
     },
 }
 
@@ -209,8 +209,8 @@ POSITIONS = [
 ]
 
 def _stat_roll(center, std):
-    """Generate a single stat using gaussian distribution, clamped 30-99."""
-    return max(30, min(99, int(round(random.gauss(center, std)))))
+    """Generate a single stat using gaussian distribution, clamped 15-99."""
+    return max(15, min(99, int(round(random.gauss(center, std)))))
 
 
 # Position-specific center offsets (added to archetype stat_center)
@@ -476,6 +476,35 @@ def generate_roster(school_data):
         for stat_key in boosted_stats:
             player['stats'][stat_key] = min(99, player['stats'][stat_key] + boost)
 
+    # ── Program Icons ──
+    # Doormats and underdogs get 1-2 players who can develop WAY beyond the
+    # team's talent level.  These aren't stat-boosted today — they have elite
+    # *ceiling* (potential 5, quick development).  They're the face of the
+    # program: the player who makes a doormat worth watching.
+    if program_arch in ("doormat", "underdog"):
+        icon_count = 1
+        if program_arch == "doormat":
+            # Doormats always get 1, 40% chance of a second
+            icon_count = 2 if random.random() < 0.40 else 1
+        else:
+            # Underdogs get 1 icon 60% of the time
+            icon_count = 1 if random.random() < 0.60 else 0
+
+        if icon_count > 0:
+            # Pick non-lineman positions for icons (they should be visible stars)
+            icon_eligible = [
+                i for i, p in enumerate(roster)
+                if p['position'] not in ('Offensive Line', 'Defensive Line')
+            ]
+            icon_indices = random.sample(
+                icon_eligible, min(icon_count, len(icon_eligible))
+            )
+            for idx in icon_indices:
+                player = roster[idx]
+                player['potential'] = 5
+                player['development'] = 'quick'
+                player['program_icon'] = True
+
     # Sort by jersey number
     roster.sort(key=lambda p: p['number'])
 
@@ -496,6 +525,23 @@ def generate_roster(school_data):
         school_name=school_name
     )
 
+    # ── Program Infrastructure ──
+    # 5 attributes (1-10) that influence recruiting attractiveness.
+    # Initialized from archetype; can be upgraded via dynasty investment.
+    _INFRA_BY_ARCHETYPE = {
+        "blue_blood":     {"facilities": (8, 10), "campus_life": (8, 10), "location": (7, 10), "coaching_development": (8, 10), "nil_program": (8, 10)},
+        "national_power": {"facilities": (7, 9),  "campus_life": (7, 9),  "location": (6, 9),  "coaching_development": (7, 9),  "nil_program": (7, 9)},
+        "regional_power": {"facilities": (5, 7),  "campus_life": (5, 7),  "location": (5, 8),  "coaching_development": (5, 7),  "nil_program": (5, 7)},
+        "punching_above": {"facilities": (3, 6),  "campus_life": (4, 7),  "location": (3, 7),  "coaching_development": (3, 6),  "nil_program": (3, 5)},
+        "underdog":       {"facilities": (2, 4),  "campus_life": (3, 6),  "location": (2, 6),  "coaching_development": (2, 4),  "nil_program": (2, 4)},
+        "doormat":        {"facilities": (1, 3),  "campus_life": (2, 5),  "location": (1, 5),  "coaching_development": (1, 3),  "nil_program": (1, 2)},
+    }
+    infra_ranges = _INFRA_BY_ARCHETYPE.get(program_arch, _INFRA_BY_ARCHETYPE["regional_power"])
+    program_infrastructure = {
+        key: random.randint(*rng)
+        for key, rng in infra_ranges.items()
+    }
+
     return {
         'team_info': {
             'school_id': school_id,
@@ -508,6 +554,7 @@ def generate_roster(school_data):
             'colors': school_data['colors']
         },
         'program_archetype': program_arch,
+        'program_infrastructure': program_infrastructure,
         'identity': identity,
         'recruiting_pipeline': recruiting_pipeline,
         'roster': {

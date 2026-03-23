@@ -306,6 +306,9 @@ class Dynasty:
 
     # Persisted roster data for next season (populated by offseason_complete)
     _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
+    # Program infrastructure per team: team_name -> {facilities, campus_life, ...}
+    # Initialised from team JSON at dynasty creation; modified by investment/decay.
+    _team_infrastructure: Dict[str, Dict[str, int]] = field(default_factory=dict, repr=False)
 
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
@@ -987,17 +990,74 @@ class Dynasty:
         result: dict = {}
 
         # ── 1. Update team prestige ──
+        # Prestige now updates per-game during the season (via Season.team_prestige).
+        # At offseason we apply regression toward mean so extreme values drift back,
+        # then give a championship bump.  If no live prestige exists yet (first
+        # season or legacy save), fall back to the old compute_team_prestige.
+        from engine.nil_system import apply_season_end_regression
         for team_name, history in self.team_histories.items():
-            recent_wins = 5
-            if prev_year in history.season_records:
-                recent_wins = history.season_records[prev_year].get("wins", 5)
-            self.team_prestige[team_name] = compute_team_prestige(
-                all_time_wins=history.total_wins,
-                all_time_losses=history.total_losses,
-                championships=history.total_championships,
-                recent_wins=recent_wins,
-            )
+            if team_name in self.team_prestige and self.team_prestige[team_name] != 50:
+                # Live prestige already moved during the season — just regress
+                self.team_prestige[team_name] = apply_season_end_regression(
+                    self.team_prestige[team_name],
+                )
+                # Championship bump (on top of whatever they earned in-season)
+                if team_name == season.champion:
+                    self.team_prestige[team_name] = min(
+                        99, self.team_prestige[team_name] + 5
+                    )
+            else:
+                # Fallback: legacy path for first season or saves without live prestige
+                recent_wins = 5
+                if prev_year in history.season_records:
+                    recent_wins = history.season_records[prev_year].get("wins", 5)
+                self.team_prestige[team_name] = compute_team_prestige(
+                    all_time_wins=history.total_wins,
+                    all_time_losses=history.total_losses,
+                    championships=history.total_championships,
+                    recent_wins=recent_wins,
+                )
         result["prestige"] = dict(self.team_prestige)
+
+        # ── 1a. Infrastructure decay + AI investment ──
+        # Lazy-init infrastructure from team JSON files if not loaded yet.
+        if not self._team_infrastructure:
+            import json
+            from pathlib import Path
+            teams_dir = Path(__file__).parent.parent / "data" / "teams"
+            for team_name in self.team_histories:
+                team_file = teams_dir / f"{team_name}.json"
+                if team_file.exists():
+                    try:
+                        with open(team_file) as f:
+                            td = json.load(f)
+                        infra = td.get("program_infrastructure")
+                        if infra:
+                            self._team_infrastructure[team_name] = dict(infra)
+                    except (json.JSONDecodeError, OSError):
+                        pass
+                if team_name not in self._team_infrastructure:
+                    # Default mid-range infrastructure
+                    self._team_infrastructure[team_name] = {
+                        "facilities": 5, "campus_life": 5, "location": 5,
+                        "coaching_development": 5, "nil_program": 5,
+                    }
+
+        # Apply yearly decay (-0.1 rounded) and AI auto-investment
+        for team_name, infra in self._team_infrastructure.items():
+            prestige = self.team_prestige.get(team_name, 50)
+            for key in list(infra.keys()):
+                # Decay: everything slowly degrades without investment
+                infra[key] = max(1, infra[key] - 1 if rng.random() < 0.15 else infra[key])
+            # AI investment: higher-prestige programs invest more
+            if team_name != human_team:
+                invest_budget = max(1, prestige // 25)  # 0-3 upgrades
+                upgradeable = [k for k, v in infra.items() if v < 10]
+                if upgradeable:
+                    targets = rng.sample(upgradeable, min(invest_budget, len(upgradeable)))
+                    for key in targets:
+                        infra[key] = min(10, infra[key] + 1)
+        result["infrastructure"] = {tn: dict(i) for tn, i in self._team_infrastructure.items()}
 
         # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
         from engine.coaching import (
@@ -1331,6 +1391,19 @@ class Dynasty:
                 if bonus > 0:
                     coaching_prestige_bonus[tn] = bonus
 
+        # Build infrastructure and roster dicts for recruiting
+        _team_infra: Dict[str, Dict[str, int]] = {}
+        _team_rosters_for_recruit: Dict[str, list] = {}
+        for tn in self.team_histories:
+            # Infrastructure: stored on team data or defaults
+            if hasattr(self, '_team_infrastructure') and tn in self._team_infrastructure:
+                _team_infra[tn] = self._team_infrastructure[tn]
+            # Roster: use player_cards if available
+            if player_cards and tn in player_cards:
+                _team_rosters_for_recruit[tn] = [
+                    {"position": getattr(c, "position", "")} for c in player_cards[tn]
+                ]
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -1345,6 +1418,8 @@ class Dynasty:
             rng=rng,
             team_coaching_scores=team_coaching_scores,
             coaching_prestige_bonus=coaching_prestige_bonus,
+            team_infrastructure=_team_infra if _team_infra else None,
+            team_rosters=_team_rosters_for_recruit if _team_rosters_for_recruit else None,
         )
 
         self.recruiting_history[year] = {
@@ -1414,6 +1489,15 @@ class Dynasty:
     def get_team_prestige(self, team_name: str) -> int:
         """Return current prestige rating for a team."""
         return self.team_prestige.get(team_name, 50)
+
+    def attach_prestige_to_season(self, season: Season) -> None:
+        """Inject live prestige tracking into a Season so it updates per-game.
+
+        Call this after creating the Season but before simulating any games.
+        The Season will mutate self.team_prestige in-place after every game
+        via adjust_prestige_postgame.
+        """
+        season.team_prestige = self.team_prestige
 
     def _record_awards_to_cards(
         self,
