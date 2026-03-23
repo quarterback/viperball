@@ -4,7 +4,7 @@
     "school_name": "Vermont",
     "abbreviation": "UVM",
     "mascot": "Catamounts",
-    "conference": "Yankee Fourteen",
+    "conference": "Northern Shield",
     "city": "Burlington",
     "state": "VT",
     "colors": [
@@ -159,7 +159,7 @@
       },
       {
         "number": 7,
-        "name": "Clémence Vaillancourt",
+        "name": "Cl\u00e9mence Vaillancourt",
         "position": "Halfback/Back",
         "height": "5-6",
         "weight": 181,
@@ -511,7 +511,7 @@
       },
       {
         "number": 40,
-        "name": "Lotte Fernández",
+        "name": "Lotte Fern\u00e1ndez",
         "position": "Shiftback/Back",
         "height": "5-6",
         "weight": 185,
@@ -703,7 +703,7 @@
       },
       {
         "number": 57,
-        "name": "Lisa Martínez",
+        "name": "Lisa Mart\u00ednez",
         "position": "Halfback/Back",
         "height": "5-8",
         "weight": 190,

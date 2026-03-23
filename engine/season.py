@@ -799,6 +799,7 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
 
 
 MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
+MIN_CONFERENCE_SIZE = 9   # conferences need ≥9 teams to guarantee 8 conf games
 
 
 def get_non_conference_slots(
@@ -1249,6 +1250,44 @@ class Season:
 
         self.schedule = games
 
+    def _consolidate_small_conferences(self):
+        """Merge conferences with fewer than MIN_CONFERENCE_SIZE teams.
+
+        Repeatedly merges the smallest conference into the next-smallest
+        until all conferences meet the minimum size.  Updates both
+        ``self.conferences`` and ``self.team_conferences``.
+        """
+        if len(self.conferences) < 2:
+            return
+
+        changed = True
+        while changed:
+            changed = False
+            small = [
+                (name, teams)
+                for name, teams in self.conferences.items()
+                if len(teams) < MIN_CONFERENCE_SIZE
+            ]
+            if not small:
+                break
+            # Sort so smallest conference is first
+            small.sort(key=lambda x: len(x[1]))
+            src_name, src_teams = small[0]
+            # Find the next-smallest conference to merge into
+            candidates = sorted(
+                ((n, t) for n, t in self.conferences.items() if n != src_name),
+                key=lambda x: len(x[1]),
+            )
+            if not candidates:
+                break
+            dst_name, dst_teams = candidates[0]
+            # Merge src into dst
+            dst_teams.extend(src_teams)
+            for t in src_teams:
+                self.team_conferences[t] = dst_name
+            del self.conferences[src_name]
+            changed = True
+
     def _generate_partial_schedule(
         self,
         team_names: List[str],
@@ -1267,6 +1306,9 @@ class Season:
         guaranteed to appear in the schedule. AI teams' remaining non-conference
         slots are auto-filled.
         """
+        # Consolidate undersized conferences so every team gets ≥8 conf games
+        self._consolidate_small_conferences()
+
         game_counts = {name: 0 for name in team_names}
         conf_game_counts = {name: 0 for name in team_names}
         scheduled_pairs = set()
