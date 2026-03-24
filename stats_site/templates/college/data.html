@@ -39,7 +39,8 @@
     <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
       Download your dynasty progress as a JSON file. This captures coaching staff, team histories,
       awards, record book, prestige, rivalries, and all other dynasty metadata.
-      Use this to back up your progress or transfer it between sessions.
+      {% if has_season %}The current season's full stats (standings, schedule, game results, rosters)
+      are also included, so you can re-import this file later to view the data.{% endif %}
     </p>
     <p style="font-size: 12px; color: var(--fg-dim); margin-bottom: 16px;">
       Dynasty: <strong>{{ dynasty_name }}</strong> &middot;
@@ -56,8 +57,10 @@
   <div class="card" style="padding: 20px;">
     <h2 style="margin-top: 0;">Upload Dynasty Save</h2>
     <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
-      Restore a previously downloaded dynasty save file. This will replace the current
-      dynasty data and rebuild a fresh season from the imported conferences and teams.
+      Upload a previously downloaded dynasty save file to view the season stats
+      (standings, schedule, players, playoffs, awards). The save is imported into
+      the <a href="/stats/archives/" style="color: var(--accent);">season archives</a>
+      for browsing.
     </p>
     <form id="upload-form" style="display: flex; align-items: center; gap: 12px;">
       <input type="file" id="dynasty-file" accept=".json"
@@ -89,7 +92,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
   formData.append('file', file);
 
   status.style.color = 'var(--fg-dim)';
-  status.textContent = 'Uploading and rebuilding season...';
+  status.textContent = 'Importing season data...';
 
   try {
     const resp = await fetch('/stats/college/{{ session_id }}/data/upload', {
@@ -99,9 +102,10 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const data = await resp.json();
     if (resp.ok) {
       status.style.color = 'var(--green)';
-      status.textContent = data.message || 'Dynasty loaded successfully.';
-      // Reload page after short delay so user sees the success message
-      setTimeout(function() { window.location.reload(); }, 1500);
+      status.textContent = data.message || 'Season imported successfully.';
+      if (data.redirect) {
+        setTimeout(function() { window.location.href = data.redirect; }, 800);
+      }
     } else {
       status.style.color = 'var(--red)';
       status.textContent = data.detail || 'Upload failed.';

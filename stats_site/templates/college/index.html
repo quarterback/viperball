@@ -51,9 +51,11 @@
 <div class="card" style="padding: 20px; margin-top: 24px;">
   <h2 style="margin-top: 0;">Import Dynasty Save</h2>
   <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
-    Upload a previously downloaded dynasty save file to create a new session.
-    This will load the dynasty data and build a fresh season from the saved
-    conferences and teams, so you can browse standings, schedules, and stats.
+    Upload a previously downloaded dynasty save file to view the season stats.
+    The save must include season data (downloaded from an active session).
+    The season is imported into the
+    <a href="/stats/archives/" style="color: var(--accent);">archives</a>
+    where you can browse standings, schedule, players, playoffs, and awards.
   </p>
   <form id="import-form" action="/stats/college/import" method="post" enctype="multipart/form-data"
         style="display: flex; align-items: center; gap: 12px;">
@@ -64,6 +66,5 @@
       Import
     </button>
   </form>
-  <div id="import-status" style="margin-top: 8px; font-size: 12px;"></div>
 </div>
 {% endblock %}
