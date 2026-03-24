@@ -3,7 +3,7 @@
 
 {% block breadcrumb %}
 <div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Data
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span>{% if has_season %}<a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>{% endif %}Data
 </div></div>
 {% endblock %}
 
@@ -13,6 +13,7 @@
   <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
 </div>
 
+{% if has_season %}
 <div class="tabs">
   <a href="/stats/college/{{ session_id }}/">Overview</a>
   <a href="/stats/college/{{ session_id }}/standings">Standings</a>
@@ -29,6 +30,7 @@
   <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
   <a href="/stats/college/{{ session_id }}/data" class="active">Data</a>
 </div>
+{% endif %}
 
 <div style="margin-top: 24px;">
 
@@ -55,7 +57,7 @@
     <h2 style="margin-top: 0;">Upload Dynasty Save</h2>
     <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
       Restore a previously downloaded dynasty save file. This will replace the current
-      dynasty data for this session.
+      dynasty data and rebuild a fresh season from the imported conferences and teams.
     </p>
     <form id="upload-form" style="display: flex; align-items: center; gap: 12px;">
       <input type="file" id="dynasty-file" accept=".json"
@@ -87,7 +89,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
   formData.append('file', file);
 
   status.style.color = 'var(--fg-dim)';
-  status.textContent = 'Uploading...';
+  status.textContent = 'Uploading and rebuilding season...';
 
   try {
     const resp = await fetch('/stats/college/{{ session_id }}/data/upload', {
@@ -97,7 +99,9 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const data = await resp.json();
     if (resp.ok) {
       status.style.color = 'var(--green)';
-      status.textContent = data.message || 'Dynasty loaded successfully. Refresh to see updated data.';
+      status.textContent = data.message || 'Dynasty loaded successfully.';
+      // Reload page after short delay so user sees the success message
+      setTimeout(function() { window.location.reload(); }, 1500);
     } else {
       status.style.color = 'var(--red)';
       status.textContent = data.detail || 'Upload failed.';
