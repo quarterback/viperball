@@ -49,6 +49,21 @@ Meta (2):
     27. Game Control             — avg share of game time in the lead
     24. CFQI (Team Coefficients) — SRS + conference-strength adjustment
 
+Eigenvector/Graph (3):
+    29. Keener Ratings      — Perron-Frobenius eigenvector on scoring ratios
+    30. Offense-Defense      — simultaneous O/D decomposition (Langville-Meyer)
+    31. Markov Random Walker — dual of PageRank (walker moves to beaten teams)
+
+Eclectic (3):
+    32. Least Violations     — greedy search for ordering with fewest upsets
+    33. Truncated Colley     — Colley Matrix on last 4 games (current form)
+    34. Win-Score            — single-pass accumulator (Dolphin method)
+
+Published (3):
+    35. LRMC                 — Logistic Regression / Markov Chain (Kvam & Sokol)
+    36. Park-Newman          — network-based generalized Bradley-Terry (JASA 2005)
+    37. Anderson-Hester      — win-based SOS (0.25×WP + 0.50×OWP + 0.25×OOWP)
+
 Pass-through (1):
     28. CVL Official  — existing Power Index from season.py
 
@@ -61,6 +76,10 @@ References:
     - Sorensen's ranking methods overview
     - Billingsley (cfrc.com)
     - PageRank (Brin & Page, 1998)
+    - James Keener, SIAM Review 35(1), 1993
+    - Langville & Meyer, "Who's #1?", Princeton, 2012
+    - Kvam & Sokol, "A Logistic Regression / Markov Chain Model", 2006
+    - Park & Newman, JASA 100(472), 2005
 """
 
 from __future__ import annotations
@@ -146,6 +165,9 @@ METHOD_KEYS = [
     "cfqi",                                                   # Meta
     "sagarin_pred", "sagarin_recent",                         # Sagarin-style (2)
     "game_control",                                           # Meta
+    "keener", "od_rating", "markov_walker",                   # Eigenvector/Graph (3)
+    "least_violations", "truncated_colley", "win_score",      # Eclectic (3)
+    "lrmc", "park_newman", "anderson_hester",                 # Published (3)
     "cvl_official",                                           # Pass-through (1)
 ]
 
@@ -158,7 +180,7 @@ class CompositeRanking:
     mean_rank: float
     median_rank: float
     std_dev: float
-    # Generic method storage (all 26 methods)
+    # Generic method storage (all 37 methods)
     method_ranks: Dict[str, int] = field(default_factory=dict)
     method_ratings: Dict[str, float] = field(default_factory=dict)
     # Legacy individual fields (Core Math 6) for backward compat
@@ -1564,6 +1586,671 @@ def calculate_cvl_official(
 
 
 # ---------------------------------------------------------------------------
+# 29. Keener Ratings (Perron-Frobenius Eigenvector)
+# ---------------------------------------------------------------------------
+
+def calculate_keener(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """Keener Ratings — eigenvector of Laplace-smoothed scoring-ratio matrix.
+
+    Builds an n×n strength matrix A where A[i][j] is the Laplace-smoothed
+    scoring fraction of team i against team j:
+        s_ij = (score_i + 1) / (score_i + score_j + 2)
+    averaged over all meetings.  The dominant eigenvector (via power
+    iteration) gives each team's rating.
+
+    Reference: James Keener, "The Perron-Frobenius Theorem and the Ranking
+    of Football Teams", SIAM Review 35(1), 1993.
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    # Accumulate scoring fractions
+    # a_sum[i][j] = sum of s_ij across all meetings
+    # a_cnt[i][j] = number of meetings
+    a_sum = [[0.0] * n for _ in range(n)]
+    a_cnt = [[0] * n for _ in range(n)]
+
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        hs, as_ = g.home_score, g.away_score
+        # Laplace-smoothed scoring fraction
+        s_h = (hs + 1.0) / (hs + as_ + 2.0)
+        s_a = (as_ + 1.0) / (hs + as_ + 2.0)
+        a_sum[hi][ai] += s_h
+        a_sum[ai][hi] += s_a
+        a_cnt[hi][ai] += 1
+        a_cnt[ai][hi] += 1
+
+    # Build strength matrix A (average scoring fraction)
+    A = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if a_cnt[i][j] > 0:
+                A[i][j] = a_sum[i][j] / a_cnt[i][j]
+            else:
+                # No meeting: neutral value
+                A[i][j] = 0.5 / n
+
+    # Normalize columns to sum to 1 (column-stochastic)
+    for j in range(n):
+        col_sum = sum(A[i][j] for i in range(n))
+        if col_sum > 0:
+            for i in range(n):
+                A[i][j] /= col_sum
+
+    # Power iteration
+    r = [1.0 / n] * n
+    for _ in range(max_iterations):
+        new_r = [0.0] * n
+        for i in range(n):
+            for j in range(n):
+                new_r[i] += A[i][j] * r[j]
+        # Normalize to unit sum
+        total = sum(new_r)
+        if total > 0:
+            new_r = [x / total for x in new_r]
+        max_delta = max(abs(new_r[i] - r[i]) for i in range(n))
+        r = new_r
+        if max_delta < 1e-10:
+            break
+
+    return {teams[i]: r[i] for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 30. Offense-Defense Rating (Langville-Meyer)
+# ---------------------------------------------------------------------------
+
+def calculate_od_rating(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """Offense-Defense Rating — simultaneous O/D decomposition from game scores.
+
+    Iteratively solves:
+        offense[i] = sum(points_scored_against_j / defense[j])
+        defense[i] = sum(points_allowed_from_j / offense[j])
+    Overall rating = offense[i] / defense[i].
+
+    Reference: Amy Langville & Carl Meyer, "Who's #1?", Princeton, 2012.
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    # Build score accumulators: scored[i][j] = points i scored against j
+    scored = [[0.0] * n for _ in range(n)]
+    allowed = [[0.0] * n for _ in range(n)]
+    has_opponent = [[False] * n for _ in range(n)]
+
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        scored[hi][ai] += g.home_score
+        scored[ai][hi] += g.away_score
+        allowed[hi][ai] += g.away_score
+        allowed[ai][hi] += g.home_score
+        has_opponent[hi][ai] = True
+        has_opponent[ai][hi] = True
+
+    # Initialize
+    offense = [1.0] * n
+    defense = [1.0] * n
+    _FLOOR = 0.01
+
+    for _ in range(max_iterations):
+        new_off = [_FLOOR] * n
+        new_def = [_FLOOR] * n
+
+        for i in range(n):
+            o_sum = 0.0
+            d_sum = 0.0
+            for j in range(n):
+                if has_opponent[i][j]:
+                    o_sum += scored[i][j] / max(defense[j], _FLOOR)
+                    d_sum += allowed[i][j] / max(offense[j], _FLOOR)
+            new_off[i] = max(o_sum, _FLOOR)
+            new_def[i] = max(d_sum, _FLOOR)
+
+        # Normalize to avg = 1.0
+        off_avg = sum(new_off) / n
+        def_avg = sum(new_def) / n
+        if off_avg > 0:
+            new_off = [x / off_avg for x in new_off]
+        if def_avg > 0:
+            new_def = [x / def_avg for x in new_def]
+
+        max_delta = max(
+            max(abs(new_off[i] - offense[i]) for i in range(n)),
+            max(abs(new_def[i] - defense[i]) for i in range(n)),
+        )
+        offense = new_off
+        defense = new_def
+        if max_delta < 1e-10:
+            break
+
+    # Overall = offense / defense (high offense, low defense = good)
+    return {teams[i]: offense[i] / max(defense[i], _FLOOR) for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 31. Markov Random Walker (Dual of PageRank)
+# ---------------------------------------------------------------------------
+
+_MARKOV_DAMPING = 0.85
+
+
+def calculate_markov_walker(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """Markov Random Walker — dual of PageRank on the win graph.
+
+    In PageRank, links go FROM losers TO winners (authority flows to winners).
+    Here, links go FROM winners TO teams they beat (the walker moves to teams
+    you defeated).  The stationary distribution rewards teams that are beaten
+    by well-connected winners — gateway teams with many quality wins.
+
+    A 1-11 team that beat the champion ranks HIGH in PageRank but LOW here.
+    An 11-1 team beating mediocre opponents ranks LOW in PageRank but HIGH here.
+    """
+    all_teams: set = set()
+    # outlinks[winner] = list of teams they beat
+    outlinks: Dict[str, List[str]] = {}
+    for g in games:
+        all_teams.add(g.home_team)
+        all_teams.add(g.away_team)
+        if g.home_score > g.away_score:
+            outlinks.setdefault(g.home_team, []).append(g.away_team)
+        elif g.away_score > g.home_score:
+            outlinks.setdefault(g.away_team, []).append(g.home_team)
+
+    teams = list(all_teams)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    pr = {t: 1.0 / n for t in teams}
+
+    for _ in range(max_iterations):
+        incoming: Dict[str, float] = {t: 0.0 for t in teams}
+        for src in teams:
+            links = outlinks.get(src, [])
+            if links:
+                share = pr[src] / len(links)
+                for dst in links:
+                    incoming[dst] += share
+
+        dangling_mass = sum(
+            pr[t] for t in teams if not outlinks.get(t)
+        )
+
+        new_pr: Dict[str, float] = {}
+        for t in teams:
+            new_pr[t] = (
+                (1.0 - _MARKOV_DAMPING) / n
+                + _MARKOV_DAMPING * (incoming[t] + dangling_mass / n)
+            )
+
+        max_delta = max(abs(new_pr[t] - pr[t]) for t in teams)
+        pr = new_pr
+        if max_delta < 1e-10:
+            break
+
+    return pr
+
+
+# ---------------------------------------------------------------------------
+# 32. Least Violations Ranking
+# ---------------------------------------------------------------------------
+
+def calculate_least_violations(
+    games: List[GameResult],
+    max_passes: int = 100,
+) -> Dict[str, float]:
+    """Least Violations — find the ordering that minimizes upsets.
+
+    An upset (violation) occurs when a lower-ranked team beat a higher-ranked
+    team.  This is NP-hard in general; we use greedy hill-climbing with
+    adjacent-pair swaps starting from a win-percentage ordering.
+
+    The only combinatorial optimization method in the composite.
+    """
+    # Build win-loss records and head-to-head results
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    wins_count = [0] * n
+    games_count = [0] * n
+    # Store results: results[winner_idx][loser_idx] = count
+    h2h_wins = [[0] * n for _ in range(n)]
+
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        games_count[hi] += 1
+        games_count[ai] += 1
+        if g.home_score > g.away_score:
+            wins_count[hi] += 1
+            h2h_wins[hi][ai] += 1
+        elif g.away_score > g.home_score:
+            wins_count[ai] += 1
+            h2h_wins[ai][hi] += 1
+
+    # Initial ordering by win pct (best first)
+    ordering = list(range(n))
+    ordering.sort(
+        key=lambda i: wins_count[i] / games_count[i] if games_count[i] > 0 else 0.0,
+        reverse=True,
+    )
+
+    def count_violations(order: List[int]) -> int:
+        """Count games where a lower-ranked team beat a higher-ranked."""
+        pos = [0] * n
+        for rank, team_i in enumerate(order):
+            pos[team_i] = rank
+        total = 0
+        for w in range(n):
+            for l in range(n):
+                if h2h_wins[w][l] > 0 and pos[w] > pos[l]:
+                    # winner is ranked lower (higher number) than loser
+                    total += h2h_wins[w][l]
+        return total
+
+    # Greedy hill-climbing: swap adjacent pairs if it reduces violations
+    for _ in range(max_passes):
+        improved = False
+        for i in range(n - 1):
+            # Try swapping ordering[i] and ordering[i+1]
+            ordering[i], ordering[i + 1] = ordering[i + 1], ordering[i]
+            new_v = count_violations(ordering)
+            ordering[i], ordering[i + 1] = ordering[i + 1], ordering[i]
+            old_v = count_violations(ordering)
+            if new_v < old_v:
+                ordering[i], ordering[i + 1] = ordering[i + 1], ordering[i]
+                improved = True
+        if not improved:
+            break
+
+    # Convert to ratings: #1 gets highest rating
+    return {teams[ordering[i]]: float(n - i) for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 33. Truncated Colley (Last N Games)
+# ---------------------------------------------------------------------------
+
+_TRUNCATED_COLLEY_WINDOW = 4
+
+
+def calculate_truncated_colley(
+    games: List[GameResult],
+    window_size: int = _TRUNCATED_COLLEY_WINDOW,
+) -> Dict[str, float]:
+    """Truncated Colley — Colley Matrix on only the last N games per team.
+
+    Creates a 'current form' snapshot using a matrix method.  A team that
+    started 0-4 but finished 4-0 will diverge wildly from full-season Colley.
+    Uses last 4 games by default (roughly a quarter of a typical season).
+    """
+    # Find each team's games in order
+    team_games: Dict[str, List[int]] = {}
+    for idx, g in enumerate(games):
+        team_games.setdefault(g.home_team, []).append(idx)
+        team_games.setdefault(g.away_team, []).append(idx)
+
+    # Collect the last window_size games for each team
+    included_indices: set = set()
+    for team, indices in team_games.items():
+        # Games are in chronological order
+        for i in indices[-window_size:]:
+            included_indices.add(i)
+
+    # Filter games
+    filtered_games = [games[i] for i in sorted(included_indices)]
+
+    if not filtered_games:
+        return {t: 0.5 for t in team_games}
+
+    # Run standard Colley on filtered games
+    return calculate_colley(filtered_games)
+
+
+# ---------------------------------------------------------------------------
+# 34. Win-Score Accumulator (Dolphin Method)
+# ---------------------------------------------------------------------------
+
+def calculate_win_score(games: List[GameResult]) -> Dict[str, float]:
+    """Win-Score — deliberately naive single-pass accumulator.
+
+    Each winner gets credit equal to the losing team's win percentage.
+    No iteration, no matrix, no convergence.  The 'naive scout' who only
+    cares about direct results, not cascading opponent quality.
+
+    Disagrees sharply with iterative methods on transitive chains.
+    """
+    # First pass: compute win percentages
+    wins: Dict[str, int] = {}
+    game_ct: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            wins.setdefault(t, 0)
+            game_ct.setdefault(t, 0)
+            game_ct[t] += 1
+        if g.home_score > g.away_score:
+            wins[g.home_team] = wins.get(g.home_team, 0) + 1
+        elif g.away_score > g.home_score:
+            wins[g.away_team] = wins.get(g.away_team, 0) + 1
+
+    win_pct = {
+        t: wins.get(t, 0) / game_ct[t] if game_ct[t] > 0 else 0.0
+        for t in game_ct
+    }
+
+    # Second pass: accumulate win-score credits
+    score: Dict[str, float] = {t: 0.0 for t in game_ct}
+    for g in games:
+        if g.home_score > g.away_score:
+            score[g.home_team] += win_pct.get(g.away_team, 0.0)
+        elif g.away_score > g.home_score:
+            score[g.away_team] += win_pct.get(g.home_team, 0.0)
+
+    # Normalize by games played
+    return {
+        t: score[t] / game_ct[t] if game_ct[t] > 0 else 0.0
+        for t in game_ct
+    }
+
+
+# ---------------------------------------------------------------------------
+# 35. LRMC (Logistic Regression / Markov Chain)
+# ---------------------------------------------------------------------------
+
+def calculate_lrmc(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """LRMC — Logistic Regression / Markov Chain ratings.
+
+    Builds a Markov chain where transition probabilities are estimated from
+    game results using logistic regression on score differentials.
+
+    The probability of transitioning from team i to team j is proportional
+    to i's probability of losing to j (estimated from margins).  The
+    stationary distribution gives ratings: teams that are hard to beat
+    accumulate mass.
+
+    Reference: Georgia Tech LRMC (Kvam & Sokol, 2006).
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    # Compute average margin between each pair
+    margin_sum: Dict[Tuple[int, int], float] = {}
+    margin_cnt: Dict[Tuple[int, int], int] = {}
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        diff = g.home_score - g.away_score
+        # Store margin from i's perspective vs j
+        margin_sum[(hi, ai)] = margin_sum.get((hi, ai), 0.0) + diff
+        margin_cnt[(hi, ai)] = margin_cnt.get((hi, ai), 0) + 1
+        margin_sum[(ai, hi)] = margin_sum.get((ai, hi), 0.0) - diff
+        margin_cnt[(ai, hi)] = margin_cnt.get((ai, hi), 0) + 1
+
+    # Build transition matrix using logistic function on margins
+    # P(i -> j) proportional to P(i loses to j) = 1 / (1 + exp(avg_margin_i_vs_j / scale))
+    _SCALE = 10.0  # controls sensitivity to margin
+    T = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        row_sum = 0.0
+        for j in range(n):
+            if i == j:
+                continue
+            key = (i, j)
+            if key in margin_sum:
+                avg_m = margin_sum[key] / margin_cnt[key]
+                # Probability i loses to j (transition away from i to j)
+                p_loss = 1.0 / (1.0 + math.exp(avg_m / _SCALE))
+            else:
+                p_loss = 0.5 / n  # no data — small uniform
+            T[i][j] = p_loss
+            row_sum += p_loss
+        # Normalize row
+        if row_sum > 0:
+            for j in range(n):
+                T[i][j] /= row_sum
+
+    # Find stationary distribution via power iteration
+    # The stationary dist of the TRANSPOSED transition matrix
+    # r = T^T * r
+    r = [1.0 / n] * n
+    for _ in range(max_iterations):
+        new_r = [0.0] * n
+        for j in range(n):
+            for i in range(n):
+                new_r[j] += T[i][j] * r[i]
+        total = sum(new_r)
+        if total > 0:
+            new_r = [x / total for x in new_r]
+        max_delta = max(abs(new_r[i] - r[i]) for i in range(n))
+        r = new_r
+        if max_delta < 1e-10:
+            break
+
+    return {teams[i]: r[i] for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 36. Park-Newman (Network-Based Bradley-Terry)
+# ---------------------------------------------------------------------------
+
+def calculate_park_newman(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """Park-Newman — network-based generalized Bradley-Terry model.
+
+    Maximum likelihood estimation on the game network.  Like standard BT
+    but weights contributions by the number of games between pairs and uses
+    a network-aware normalization.
+
+    For each pair (i,j) with n_ij games and w_ij wins for i:
+        P(i beats j) = pi_i / (pi_i + pi_j)
+    Solve via iterative fixed-point:
+        pi_i = sum_j(w_ij) / sum_j(n_ij / (pi_i + pi_j))
+
+    Reference: Park & Newman, JASA 100(472), 2005.
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    # Build pairwise counts
+    # wins_pair[i][j] = number of times i beat j
+    # games_pair[i][j] = number of games between i and j
+    wins_pair = [[0] * n for _ in range(n)]
+    games_pair = [[0] * n for _ in range(n)]
+
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        games_pair[hi][ai] += 1
+        games_pair[ai][hi] += 1
+        if g.home_score > g.away_score:
+            wins_pair[hi][ai] += 1
+        elif g.away_score > g.home_score:
+            wins_pair[ai][hi] += 1
+        else:
+            # Tie: half win each
+            wins_pair[hi][ai] += 0  # no credit for ties in BT
+            wins_pair[ai][hi] += 0
+
+    # Total wins for each team
+    total_wins = [sum(wins_pair[i]) for i in range(n)]
+
+    # Iterative fixed-point
+    pi = [1.0] * n
+    _FLOOR = 1e-6
+
+    for _ in range(max_iterations):
+        new_pi = [_FLOOR] * n
+        for i in range(n):
+            if total_wins[i] == 0:
+                new_pi[i] = _FLOOR
+                continue
+            denom = 0.0
+            for j in range(n):
+                if i != j and games_pair[i][j] > 0:
+                    denom += games_pair[i][j] / max(pi[i] + pi[j], _FLOOR)
+            if denom > 0:
+                new_pi[i] = total_wins[i] / denom
+            else:
+                new_pi[i] = _FLOOR
+
+        # Normalize so avg = 1.0
+        avg = sum(new_pi) / n
+        if avg > 0:
+            new_pi = [x / avg for x in new_pi]
+
+        max_delta = max(abs(new_pi[i] - pi[i]) for i in range(n))
+        pi = new_pi
+        if max_delta < 1e-10:
+            break
+
+    return {teams[i]: pi[i] for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 37. Anderson-Hester (Pure Win-Based SOS)
+# ---------------------------------------------------------------------------
+
+def calculate_anderson_hester(games: List[GameResult]) -> Dict[str, float]:
+    """Anderson-Hester — win-based rating using opponent and opponents' opponent W%.
+
+    Rating = 0.25 × WP + 0.50 × OWP + 0.25 × OOWP
+    where:
+        WP = team's win percentage
+        OWP = average win% of opponents (excluding games vs this team)
+        OOWP = average of opponents' OWP values
+
+    This is the old Seattle Times BCS computer poll formula — purely wins-
+    based, no margins involved.  Historical significance in the BCS era.
+    """
+    # Build records and opponent lists
+    all_teams: set = set()
+    team_wins: Dict[str, int] = {}
+    team_games: Dict[str, int] = {}
+    opponents: Dict[str, List[str]] = {}
+
+    # Per-opponent records for OWP calculation (exclude mutual games)
+    # h2h[a][b] = (wins_for_a_vs_b, total_games_a_vs_b)
+    h2h: Dict[str, Dict[str, List[int]]] = {}
+
+    for g in games:
+        h, a = g.home_team, g.away_team
+        all_teams.add(h)
+        all_teams.add(a)
+        for t in (h, a):
+            team_wins.setdefault(t, 0)
+            team_games.setdefault(t, 0)
+            team_games[t] += 1
+        opponents.setdefault(h, []).append(a)
+        opponents.setdefault(a, []).append(h)
+
+        # Track head-to-head
+        h2h.setdefault(h, {}).setdefault(a, [0, 0])
+        h2h.setdefault(a, {}).setdefault(h, [0, 0])
+        h2h[h][a][1] += 1
+        h2h[a][h][1] += 1
+
+        if g.home_score > g.away_score:
+            team_wins[h] = team_wins.get(h, 0) + 1
+            h2h[h][a][0] += 1
+        elif g.away_score > g.home_score:
+            team_wins[a] = team_wins.get(a, 0) + 1
+            h2h[a][h][0] += 1
+
+    # WP
+    wp: Dict[str, float] = {}
+    for t in all_teams:
+        wp[t] = team_wins.get(t, 0) / team_games[t] if team_games.get(t, 0) > 0 else 0.0
+
+    # OWP: opponent win% excluding games vs this team
+    owp: Dict[str, float] = {}
+    for t in all_teams:
+        opp_list = opponents.get(t, [])
+        if not opp_list:
+            owp[t] = 0.0
+            continue
+        owp_sum = 0.0
+        owp_count = 0
+        for opp in opp_list:
+            # Opponent's record excluding games vs t
+            opp_total = team_games.get(opp, 0)
+            opp_wins = team_wins.get(opp, 0)
+            mutual = h2h.get(opp, {}).get(t, [0, 0])
+            adj_wins = opp_wins - mutual[0]
+            adj_games = opp_total - mutual[1]
+            if adj_games > 0:
+                owp_sum += adj_wins / adj_games
+            owp_count += 1
+        owp[t] = owp_sum / owp_count if owp_count > 0 else 0.0
+
+    # OOWP: average of opponents' OWP
+    oowp: Dict[str, float] = {}
+    for t in all_teams:
+        opp_list = opponents.get(t, [])
+        if not opp_list:
+            oowp[t] = 0.0
+            continue
+        oowp[t] = sum(owp.get(opp, 0.0) for opp in opp_list) / len(opp_list)
+
+    # Final rating = 0.25*WP + 0.50*OWP + 0.25*OOWP
+    return {
+        t: 0.25 * wp[t] + 0.50 * owp[t] + 0.25 * oowp[t]
+        for t in all_teams
+    }
+
+
+# ---------------------------------------------------------------------------
 # SOS (Elo-based, not RPI)
 # ---------------------------------------------------------------------------
 
@@ -1717,6 +2404,21 @@ def calculate_composite(
     # ── Game Control (27) — computed from game quarter scores ────────────
     game_control = calculate_game_control(games, stats if stats else None)
 
+    # ── Eigenvector/Graph (29-31) ─────────────────────────────────────────
+    keener = calculate_keener(games)
+    od_rating = calculate_od_rating(games)
+    markov_walker = calculate_markov_walker(games)
+
+    # ── Eclectic (32-34) ───────────────────────────────────────────────────
+    least_violations = calculate_least_violations(games)
+    truncated_colley = calculate_truncated_colley(games)
+    win_score = calculate_win_score(games)
+
+    # ── Published (35-37) ──────────────────────────────────────────────────
+    lrmc = calculate_lrmc(games)
+    park_newman = calculate_park_newman(games)
+    anderson_hester = calculate_anderson_hester(games)
+
     # ── SOS (metadata, not a ranking method) ─────────────────────────────
     sos_data = calculate_sos(games, elos)
 
@@ -1745,6 +2447,15 @@ def calculate_composite(
         "sagarin_recent": sagarin_recent,
         "comeback": comeback,
         "game_control": game_control,
+        "keener": keener,
+        "od_rating": od_rating,
+        "markov_walker": markov_walker,
+        "least_violations": least_violations,
+        "truncated_colley": truncated_colley,
+        "win_score": win_score,
+        "lrmc": lrmc,
+        "park_newman": park_newman,
+        "anderson_hester": anderson_hester,
     }
 
     # ── Season-stats methods (only if team_stats provided) ───────────────

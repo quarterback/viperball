@@ -1,6 +1,6 @@
-# CVL Ranking Composite: 28 Systems Glossary
+# CVL Ranking Composite: 37 Systems Glossary
 
-The CVL Ranking Composite runs **28 independent ranking algorithms** against the same season of game results, inspired by Kenneth Massey's college football ranking composite. Each method produces its own 1-to-N team ordering. The composite ranking is the average rank across all methods — and the **variance between systems IS the product**.
+The CVL Ranking Composite runs **37 independent ranking algorithms** against the same season of game results, inspired by Kenneth Massey's college football ranking composite. Each method produces its own 1-to-N team ordering. The composite ranking is the average rank across all methods — and the **variance between systems IS the product**.
 
 A team ranked #3 by every single method is a consensus top team. A team ranked #1 by half the methods and #40 by the other half is the most controversial team in the league. Both facts are interesting.
 
@@ -253,6 +253,77 @@ Computed from per-quarter cumulative scores. Each quarter where a team leads cou
 
 ---
 
+## Eigenvector / Graph Methods (3 systems)
+
+These use eigenvector decomposition or graph-theoretic models on the game network, distinct from PageRank and the core math systems.
+
+### 29. Keener Ratings (`keener`)
+**What it measures:** Team strength via the dominant eigenvector of a scoring-ratio matrix.
+
+Builds an n×n matrix where entry A[i][j] is the Laplace-smoothed fraction of total points team i scored against team j: `(score_i + 1) / (score_i + score_j + 2)`. Unlike PageRank (binary win/loss links), Keener uses *how much* you won by in a continuous way. A 35-7 win contributes differently from a 14-10 win. Power iteration finds the dominant eigenvector.
+
+*Based on:* James Keener, "The Perron-Frobenius Theorem and the Ranking of Football Teams", SIAM Review, 1993. One of the foundational academic sports-ranking papers.
+
+### 30. Offense-Defense Rating (`od_rating`)
+**What it measures:** Overall team quality by decomposing into separate offense and defense ratings.
+
+Iteratively solves: offense[i] = Σ(points scored against j / defense[j]) and defense[i] = Σ(points allowed from j / offense[j]). Scoring against a bad defense (high d) earns less credit. Allowing points from a bad offense (low o) is more damning. Overall rating = offense / defense. The only system that decomposes O/D from game results alone.
+
+*Based on:* Amy Langville & Carl Meyer, "Who's #1?", Princeton University Press, 2012.
+
+### 31. Markov Random Walker (`markov_walker`)
+**What it measures:** Prestige through breadth of quality victories — the mathematical dual of PageRank.
+
+In PageRank, links go from losers to winners (authority flows upward). Here, the walker moves from a team to teams they *beat*. The stationary distribution rewards "gateway" teams with many wins against well-connected opponents. A 1-11 team that upset the champion ranks HIGH in PageRank but LOW here. An 11-1 team beating mediocre opponents ranks LOW in PageRank but HIGH here.
+
+---
+
+## Eclectic Methods (3 systems)
+
+Philosophically distinctive approaches that don't fit neatly into any other category.
+
+### 32. Least Violations (`least_violations`)
+**What it measures:** The ordering of teams that best explains the observed results.
+
+Searches for the ranking where the fewest upsets occur (a lower-ranked team beating a higher-ranked team). This is NP-hard in general; the algorithm uses greedy hill-climbing with adjacent-pair swaps starting from a win-percentage ordering. The *only* combinatorial optimization method in the composite — every other system computes ratings and derives ranks; this one directly searches for the best ordering.
+
+### 33. Truncated Colley (`truncated_colley`)
+**What it measures:** Current form via Colley Matrix on only the last 4 games per team.
+
+Runs the standard Colley Matrix method but only considers each team's most recent 4 games. A team that started 0-4 but finished 4-0 will diverge wildly from full-season Colley. Unlike Recency Elo (which is sequential), this is a simultaneous matrix method — everyone's recent-form rating depends on everyone else's.
+
+### 34. Win-Score Accumulator (`win_score`)
+**What it measures:** Strength of victories in a deliberately naive, non-iterative way.
+
+Each winner gets credit equal to the losing team's win percentage. Beat a .833 team → get 0.833 points. No iteration, no matrix, no convergence — just one pass through the results. The "naive scout" counterpoint to sophisticated iterative methods. Disagrees sharply when transitive chains create cycles (A beats B beats C beats A).
+
+---
+
+## Published Methods (3 systems)
+
+Well-known published ranking systems from sports analytics literature.
+
+### 35. LRMC (`lrmc`)
+**What it measures:** Team strength via a Markov chain with logistic-regression transition probabilities.
+
+Builds a Markov chain where the probability of transitioning from team i to team j is proportional to i's probability of losing to j (estimated via logistic function on score differentials). The stationary distribution rates teams — those that are hard to transition away from (hard to beat) accumulate mass. Different iterative structure from Massey/Colley because it uses nonlinear logistic modeling.
+
+*Based on:* Kvam & Sokol, "A Logistic Regression / Markov Chain Model for NCAA Basketball", 2006. Popular in college basketball analytics (Georgia Tech group).
+
+### 36. Park-Newman (`park_newman`)
+**What it measures:** Team strength via maximum likelihood on the game network topology.
+
+A generalized Bradley-Terry model that weights pairwise contributions by the number of games between each pair and uses network-aware normalization. Iterative fixed-point: π_i = Σ(wins_ij) / Σ(games_ij / (π_i + π_j)). More principled than standard BT when some pairs play multiple times and the schedule is unbalanced.
+
+*Based on:* Park & Newman, "A Network-Based Ranking System for US College Football", JASA 100(472), 2005.
+
+### 37. Anderson-Hester (`anderson_hester`)
+**What it measures:** Team quality using only wins, opponent win%, and opponents' opponents' win%.
+
+Rating = 0.25 × WP + 0.50 × OWP + 0.25 × OOWP. Purely wins-based — no margins of victory at all. OWP excludes games against the team being rated (so you can't pad your opponents' records). The formula used by the old Seattle Times BCS computer poll. Historical significance in the BCS era.
+
+---
+
 ## Pass-Through (1 system)
 
 ### 28. CVL Official (`cvl_official`)
@@ -266,11 +337,11 @@ This is the league's official ranking formula, included as one more column in th
 
 The **Composite Rank** is each team's average rank across all available methods. The **Median Rank** is the middle value (more robust to a single system being an outlier). The **Standard Deviation** measures how much the systems disagree.
 
-**Key insight:** When all 28 systems agree a team is #1, they're #1. When Elo says #3 but Colley says #40 and Resume says #1, that team is *interesting* — and the disagreement tells you something real about their profile.
+**Key insight:** When all 37 systems agree a team is #1, they're #1. When Elo says #3 but Colley says #40 and Resume says #1, that team is *interesting* — and the disagreement tells you something real about their profile.
 
 ### Which systems need season stats?
 
-Most systems (23 of 28) run from game results alone. Five require season-level statistics passed in separately:
+Most systems (32 of 37) run from game results alone. Five require season-level statistics passed in separately:
 
 | System | Why it needs stats |
 |--------|-------------------|
