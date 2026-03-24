@@ -1,6 +1,6 @@
-# CVL Ranking Composite: 37 Systems Glossary
+# CVL Ranking Composite: 38 Systems Glossary
 
-The CVL Ranking Composite runs **37 independent ranking algorithms** against the same season of game results, inspired by Kenneth Massey's college football ranking composite. Each method produces its own 1-to-N team ordering. The composite ranking is the average rank across all methods — and the **variance between systems IS the product**.
+The CVL Ranking Composite runs **38 independent ranking algorithms** against the same season of game results, inspired by Kenneth Massey's college football ranking composite. Each method produces its own 1-to-N team ordering. The composite ranking is the average rank across all methods — and the **variance between systems IS the product**.
 
 A team ranked #3 by every single method is a consensus top team. A team ranked #1 by half the methods and #40 by the other half is the most controversial team in the league. Both facts are interesting.
 
@@ -322,6 +322,17 @@ A generalized Bradley-Terry model that weights pairwise contributions by the num
 
 Rating = 0.25 × WP + 0.50 × OWP + 0.25 × OOWP. Purely wins-based — no margins of victory at all. OWP excludes games against the team being rated (so you can't pad your opponents' records). The formula used by the old Seattle Times BCS computer poll. Historical significance in the BCS era.
 
+### 38. MJS Standings (`mjs`)
+**What it measures:** Team quality via win percentage plus iterative strength of schedule.
+
+Rating = win_pct + SOS, where SOS = 0.7 × (avg_opponent_rating − 0.5). This is iterative because each opponent's rating includes their own SOS. A positive SOS means the schedule is harder than average. The 0.7 coefficient prevents SOS from dominating win percentage. The formula used by the MJS College Football Standings, a published BCS-era computer ranking system.
+
+---
+
+## Conference Rankings
+
+The composite includes **conference rankings** in the same style as the Massey Composite. For each ranking method, conferences are ranked by the average team rank within that conference. A conference whose teams average rank #15 across all its members is stronger than one averaging #50. The conference composite rank is the average of all per-method conference ranks — and like the team grid, disagreement between methods reveals which conferences are controversial.
+
 ---
 
 ## Pass-Through (1 system)
@@ -337,11 +348,11 @@ This is the league's official ranking formula, included as one more column in th
 
 The **Composite Rank** is each team's average rank across all available methods. The **Median Rank** is the middle value (more robust to a single system being an outlier). The **Standard Deviation** measures how much the systems disagree.
 
-**Key insight:** When all 37 systems agree a team is #1, they're #1. When Elo says #3 but Colley says #40 and Resume says #1, that team is *interesting* — and the disagreement tells you something real about their profile.
+**Key insight:** When all 38 systems agree a team is #1, they're #1. When Elo says #3 but Colley says #40 and Resume says #1, that team is *interesting* — and the disagreement tells you something real about their profile.
 
 ### Which systems need season stats?
 
-Most systems (32 of 37) run from game results alone. Five require season-level statistics passed in separately:
+Most systems (33 of 38) run from game results alone. Five require season-level statistics passed in separately:
 
 | System | Why it needs stats |
 |--------|-------------------|
