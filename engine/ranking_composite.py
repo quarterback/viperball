@@ -59,10 +59,11 @@ Eclectic (3):
     33. Truncated Colley     — Colley Matrix on last 4 games (current form)
     34. Win-Score            — single-pass accumulator (Dolphin method)
 
-Published (3):
+Published (4):
     35. LRMC                 — Logistic Regression / Markov Chain (Kvam & Sokol)
     36. Park-Newman          — network-based generalized Bradley-Terry (JASA 2005)
     37. Anderson-Hester      — win-based SOS (0.25×WP + 0.50×OWP + 0.25×OOWP)
+    38. MJS Standings         — win% + iterative SOS (BCS-era published system)
 
 Pass-through (1):
     28. CVL Official  — existing Power Index from season.py
@@ -168,6 +169,7 @@ METHOD_KEYS = [
     "keener", "od_rating", "markov_walker",                   # Eigenvector/Graph (3)
     "least_violations", "truncated_colley", "win_score",      # Eclectic (3)
     "lrmc", "park_newman", "anderson_hester",                 # Published (3)
+    "mjs",                                                    # Published (MJS Standings)
     "cvl_official",                                           # Pass-through (1)
 ]
 
@@ -204,6 +206,25 @@ class CompositeRanking:
     wins: int = 0
     losses: int = 0
     conference: str = ""
+
+
+@dataclass
+class ConferenceRanking:
+    """A conference's composite ranking across all methods.
+
+    Mirrors the conference grid at the bottom of Massey's composite:
+    each method ranks conferences by average team rank within the conference.
+    """
+    conference: str
+    composite_rank: int
+    mean_rank: float          # average of per-method conference ranks
+    median_rank: float
+    std_dev: float
+    avg_team_rank: float      # average team composite rank in this conference
+    n_teams: int              # number of teams in this conference
+    method_ranks: Dict[str, int] = field(default_factory=dict)
+    # Per-method average team rank (the raw value before ranking conferences)
+    method_avg_team_ranks: Dict[str, float] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -2251,6 +2272,77 @@ def calculate_anderson_hester(games: List[GameResult]) -> Dict[str, float]:
 
 
 # ---------------------------------------------------------------------------
+# 38. MJS Standings (Win% + SOS)
+# ---------------------------------------------------------------------------
+
+def calculate_mjs(
+    games: List[GameResult],
+    max_iterations: int = 200,
+) -> Dict[str, float]:
+    """MJS College Football Standings — win% + iterative SOS.
+
+    Rating = win_pct + SOS, where:
+        SOS = 0.7 × (avg_opponent_rating - 0.5)
+
+    This is iterative because opponent ratings depend on their own SOS.
+    A positive SOS means the schedule is harder than average; negative means
+    easier.  The 0.7 weight prevents SOS from overwhelming win%.
+
+    Reference: MJS College Football Standings (published BCS-era system).
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    # Compute win percentages
+    wins = [0] * n
+    game_count = [0] * n
+    opponents: List[List[int]] = [[] for _ in range(n)]
+
+    for g in games:
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        game_count[hi] += 1
+        game_count[ai] += 1
+        opponents[hi].append(ai)
+        opponents[ai].append(hi)
+        if g.home_score > g.away_score:
+            wins[hi] += 1
+        elif g.away_score > g.home_score:
+            wins[ai] += 1
+        else:
+            # Ties: 0.5 win each
+            pass
+
+    wp = [wins[i] / game_count[i] if game_count[i] > 0 else 0.0
+          for i in range(n)]
+
+    # Iterative: rating = wp + 0.7 * (avg_opp_rating - 0.5)
+    rating = list(wp)  # initial: just win%
+    for _ in range(max_iterations):
+        new_rating = [0.0] * n
+        for i in range(n):
+            if not opponents[i]:
+                new_rating[i] = wp[i]
+                continue
+            avg_opp = sum(rating[j] for j in opponents[i]) / len(opponents[i])
+            sos = 0.7 * (avg_opp - 0.5)
+            new_rating[i] = wp[i] + sos
+        max_delta = max(abs(new_rating[i] - rating[i]) for i in range(n))
+        rating = new_rating
+        if max_delta < 1e-10:
+            break
+
+    return {teams[i]: rating[i] for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
 # SOS (Elo-based, not RPI)
 # ---------------------------------------------------------------------------
 
@@ -2414,10 +2506,11 @@ def calculate_composite(
     truncated_colley = calculate_truncated_colley(games)
     win_score = calculate_win_score(games)
 
-    # ── Published (35-37) ──────────────────────────────────────────────────
+    # ── Published (35-38) ──────────────────────────────────────────────────
     lrmc = calculate_lrmc(games)
     park_newman = calculate_park_newman(games)
     anderson_hester = calculate_anderson_hester(games)
+    mjs = calculate_mjs(games)
 
     # ── SOS (metadata, not a ranking method) ─────────────────────────────
     sos_data = calculate_sos(games, elos)
@@ -2456,6 +2549,7 @@ def calculate_composite(
         "lrmc": lrmc,
         "park_newman": park_newman,
         "anderson_hester": anderson_hester,
+        "mjs": mjs,
     }
 
     # ── Season-stats methods (only if team_stats provided) ───────────────
@@ -2536,3 +2630,93 @@ def calculate_composite(
         c.composite_rank = i + 1
 
     return composites
+
+
+def calculate_conference_rankings(
+    composites: List[CompositeRanking],
+) -> List[ConferenceRanking]:
+    """Rank conferences by averaging team ranks, like the Massey composite grid.
+
+    For each ranking method, conferences are ranked by the average rank of
+    their member teams in that method.  The conference composite rank is
+    the average of its per-method conference ranks.
+
+    Args:
+        composites: Team composite rankings (output of calculate_composite).
+
+    Returns:
+        List of ConferenceRanking sorted by composite conference rank.
+    """
+    if not composites:
+        return []
+
+    # Group teams by conference
+    conf_teams: Dict[str, List[CompositeRanking]] = {}
+    for c in composites:
+        if c.conference:
+            conf_teams.setdefault(c.conference, []).append(c)
+
+    if not conf_teams:
+        return []
+
+    # Get active method keys from the first team
+    active_keys = list(composites[0].method_ranks.keys())
+
+    # For each method, compute avg team rank per conference, then rank conferences
+    conf_method_avg: Dict[str, Dict[str, float]] = {
+        conf: {} for conf in conf_teams
+    }
+    conf_method_ranks: Dict[str, Dict[str, int]] = {
+        conf: {} for conf in conf_teams
+    }
+
+    for key in active_keys:
+        # Average team rank per conference for this method
+        conf_avg: Dict[str, float] = {}
+        for conf, teams in conf_teams.items():
+            ranks = [t.method_ranks.get(key, len(composites)) for t in teams]
+            conf_avg[conf] = sum(ranks) / len(ranks)
+
+        # Rank conferences (lower avg = better = rank 1)
+        sorted_confs = sorted(conf_avg.keys(), key=lambda c: conf_avg[c])
+        for rank, conf in enumerate(sorted_confs):
+            conf_method_ranks[conf][key] = rank + 1
+            conf_method_avg[conf][key] = round(conf_avg[conf], 2)
+
+    # Build conference composite rankings
+    results: List[ConferenceRanking] = []
+    for conf, teams in conf_teams.items():
+        rank_list = list(conf_method_ranks[conf].values())
+        n_methods = len(rank_list)
+        mean_r = sum(rank_list) / n_methods if n_methods > 0 else 0.0
+        sorted_ranks = sorted(rank_list)
+        if n_methods % 2 == 0 and n_methods > 0:
+            mid = n_methods // 2
+            median_r = (sorted_ranks[mid - 1] + sorted_ranks[mid]) / 2.0
+        elif n_methods > 0:
+            median_r = float(sorted_ranks[n_methods // 2])
+        else:
+            median_r = 0.0
+        variance = sum((r - mean_r) ** 2 for r in rank_list) / n_methods if n_methods > 0 else 0.0
+        std = math.sqrt(variance)
+
+        avg_team_rank = sum(t.composite_rank for t in teams) / len(teams)
+
+        results.append(ConferenceRanking(
+            conference=conf,
+            composite_rank=0,  # filled below
+            mean_rank=round(mean_r, 2),
+            median_rank=round(median_r, 1),
+            std_dev=round(std, 2),
+            avg_team_rank=round(avg_team_rank, 2),
+            n_teams=len(teams),
+            method_ranks=conf_method_ranks[conf],
+            method_avg_team_ranks=conf_method_avg[conf],
+        ))
+
+    # Sort by mean conference rank
+    results.sort(key=lambda c: c.mean_rank)
+    for i, c in enumerate(results):
+        c.composite_rank = i + 1
+
+    return results
