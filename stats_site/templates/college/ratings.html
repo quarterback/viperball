@@ -8,9 +8,15 @@
 {% endblock %}
 
 {% block content %}
+
+{# Helper macro for sort links — builds ?sort=X&top=Y #}
+{% macro sort_link(key, label, cls="num") %}
+<th class="{{ cls }}"><a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&top={{ top }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ label }}</a></th>
+{% endmacro %}
+
 <div class="page-header">
   <h1>COMPOSITE RATINGS</h1>
-  <div class="subtitle">{{ season_name }} &middot; {{ total_teams }} teams &middot; {{ method_keys|length }} systems</div>
+  <div class="subtitle">{{ season_name }} &middot; {{ total_teams }} teams &middot; {{ method_keys|length }} systems &middot; <a href="/stats/college/ratings-glossary" style="font-size: 11px;">What are these? &rarr;</a></div>
 </div>
 
 <div class="tabs">
@@ -33,13 +39,14 @@
 {% if composites %}
 
 <p style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">
-  Each column is an independent ranking system. Composite = average rank across all systems.
-  <strong>Std Dev</strong> measures disagreement — high σ = controversial team.
+  Each column is an independent ranking system. Click any column header to sort by that system.
+  <strong>σ</strong> measures disagreement — high σ = controversial team.
   <br>
-  <a href="/stats/college/{{ session_id }}/ratings?top=25">Top 25</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?top=50">Top 50</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?top=100">Top 100</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?top={{ total_teams }}">All {{ total_teams }}</a>
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=25">Top 25</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=50">Top 50</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=100">Top 100</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top={{ total_teams }}">All {{ total_teams }}</a>
+  &middot; <a href="/stats/college/ratings-glossary">Glossary</a>
 </p>
 
 {# ── Summary table: Composite + metadata ── #}
@@ -49,20 +56,20 @@
     <tr>
       <th class="num">#</th>
       <th>Team</th>
-      <th>Record</th>
+      {{ sort_link("record", "Record") }}
       <th>Conf</th>
-      <th class="num">Mean</th>
-      <th class="num">Median</th>
-      <th class="num">σ</th>
-      <th class="num">SOS</th>
-      <th class="num">SOS(W)</th>
-      <th class="num">SOS(L)</th>
+      {{ sort_link("mean", "Mean") }}
+      {{ sort_link("median", "Median") }}
+      {{ sort_link("std", "σ") }}
+      {{ sort_link("sos", "SOS") }}
+      {{ sort_link("sos_w", "SOS(W)") }}
+      {{ sort_link("sos_l", "SOS(L)") }}
     </tr>
   </thead>
   <tbody>
   {% for c in composites %}
   <tr>
-    <td class="num rank">{{ c.composite_rank }}</td>
+    <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ c.team }}">{{ c.team }}</a></td>
     <td class="record">{{ c.wins }}-{{ c.losses }}</td>
     <td>{{ conf_abbrev(c.conference) }}</td>
@@ -80,7 +87,7 @@
 {# ── Full comparison grid: one column per ranking system ── #}
 <h2 style="margin-top: 20px;">System-by-System Ranks</h2>
 <p style="font-size: 10px; color: var(--dim); margin-bottom: 6px;">
-  Scroll right to see all {{ method_keys|length }} systems. Color: <span class="stat-elite">top 5</span>, <span class="stat-good">top 25</span>, <span class="stat-bad">below 50</span>.
+  Click any system header to re-sort the table by that system. Color: <span class="stat-elite">top 5</span>, <span class="stat-good">top 25</span>, <span class="stat-bad">below 50</span>.
 </p>
 
 {% set short_names = {
@@ -118,15 +125,17 @@
       <th colspan="{{ cat_keys|length }}" style="text-align: center; font-size: 9px; color: var(--dim); border-bottom: none; border-left: 1px solid var(--border);">{{ cat_name }}</th>
       {% endfor %}
     </tr>
-    {# System name row #}
+    {# System name row — each header is a clickable sort link #}
     <tr>
       <th class="num">#</th>
       <th>Team</th>
       <th>Rec</th>
-      <th class="num">Avg</th>
+      <th class="num"><a href="/stats/college/{{ session_id }}/ratings?sort=composite&top={{ top }}" style="{% if sort == 'composite' or sort == 'mean' %}color:var(--accent);font-weight:bold{% endif %}">Avg</a></th>
       {% for cat_name, cat_keys in categories %}
       {% for key in cat_keys %}
-      <th class="num" style="font-size: 9px;{% if loop.first %} border-left: 1px solid var(--border);{% endif %}" title="{{ key }}">{{ short_names.get(key, key) }}</th>
+      <th class="num" style="font-size: 9px;{% if loop.first %} border-left: 1px solid var(--border);{% endif %}">
+        <a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&top={{ top }}" title="{{ key }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ short_names.get(key, key) }}</a>
+      </th>
       {% endfor %}
       {% endfor %}
     </tr>
@@ -134,14 +143,14 @@
   <tbody>
   {% for c in composites %}
   <tr>
-    <td class="num rank">{{ c.composite_rank }}</td>
+    <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ c.team }}">{{ c.team }}</a></td>
     <td class="record">{{ c.wins }}-{{ c.losses }}</td>
     <td class="num" style="font-weight: bold;">{{ "%.1f"|format(c.mean_rank) }}</td>
     {% for cat_name, cat_keys in categories %}
     {% for key in cat_keys %}
     {% set r = c.method_ranks.get(key) %}
-    <td class="num {% if r and r <= 5 %}stat-elite{% elif r and r <= 25 %}stat-good{% elif r and r > 50 %}stat-bad{% endif %}" style="{% if loop.first %}border-left: 1px solid var(--border);{% endif %}">{{ r if r else '—' }}</td>
+    <td class="num {% if r and r <= 5 %}stat-elite{% elif r and r <= 25 %}stat-good{% elif r and r > 50 %}stat-bad{% endif %}" style="{% if loop.first %}border-left: 1px solid var(--border);{% endif %}{% if sort == key %} font-weight:bold;{% endif %}">{{ r if r else '—' }}</td>
     {% endfor %}
     {% endfor %}
   </tr>
@@ -165,8 +174,8 @@
       <th>Record</th>
       <th class="num">Composite</th>
       <th class="num">σ</th>
-      <th class="num">Best Rank</th>
-      <th class="num">Worst Rank</th>
+      <th class="num">Best</th>
+      <th class="num">Worst</th>
       <th class="num">Range</th>
     </tr>
   </thead>

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Ranking Systems Glossary — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span>Ratings Glossary
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>RANKING SYSTEMS GLOSSARY</h1>
+  <div class="subtitle">28 independent computer ranking algorithms</div>
+</div>
+
+<div style="max-width: 800px; line-height: 1.7; font-size: 12px;">
+{{ glossary_html|safe }}
+</div>
+
+{% endblock %}

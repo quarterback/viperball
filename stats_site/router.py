@@ -2287,25 +2287,125 @@ def _cached_composite_rankings(season):
 
 
 @router.get("/college/{session_id}/ratings", response_class=HTMLResponse)
-def college_ratings(request: Request, session_id: str, top: int = 50):
+def college_ratings(request: Request, session_id: str, top: int = 50, sort: str = "composite"):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
     composites = _cached_composite_rankings(season)
 
+    from engine.ranking_composite import METHOD_KEYS
+
+    # Sort by selected column
+    if sort == "composite" or sort == "mean":
+        composites.sort(key=lambda c: c["mean_rank"])
+    elif sort == "median":
+        composites.sort(key=lambda c: c["median_rank"])
+    elif sort == "std":
+        composites.sort(key=lambda c: c["std_dev"], reverse=True)
+    elif sort == "sos":
+        composites.sort(key=lambda c: c["sos"], reverse=True)
+    elif sort == "sos_w":
+        composites.sort(key=lambda c: c["sos_w"], reverse=True)
+    elif sort == "sos_l":
+        composites.sort(key=lambda c: c["sos_l"], reverse=True)
+    elif sort == "record":
+        composites.sort(key=lambda c: (c["wins"] / max(1, c["wins"] + c["losses"]), c["wins"]), reverse=True)
+    elif sort in METHOD_KEYS:
+        # Sort by a specific ranking system (lower rank = better = first)
+        composites.sort(key=lambda c: c["method_ranks"].get(sort, 9999))
+    # else: keep default composite order
+
     # Clamp top parameter
     top = max(10, min(len(composites), top)) if composites else 0
-
-    from engine.ranking_composite import METHOD_KEYS
 
     return templates.TemplateResponse("college/ratings.html", _ctx(
         request, section="college", session_id=session_id,
         composites=composites[:top],
         total_teams=len(composites),
         top=top,
+        sort=sort,
         method_keys=METHOD_KEYS,
         season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/ratings-glossary", response_class=HTMLResponse)
+def college_ratings_glossary(request: Request):
+    """Serve the ranking systems glossary as an HTML page."""
+    import re
+    glossary_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "RANKING_SYSTEMS.md")
+    if os.path.exists(glossary_path):
+        with open(glossary_path) as f:
+            raw_md = f.read()
+    else:
+        raw_md = "# Ranking Systems Glossary\n\nGlossary file not found."
+
+    # Simple markdown to HTML (no dependency required)
+    html_lines = []
+    in_table = False
+    in_code = False
+    for line in raw_md.split("\n"):
+        stripped = line.strip()
+
+        # Code blocks
+        if stripped.startswith("```"):
+            if in_code:
+                html_lines.append("</pre>")
+                in_code = False
+            else:
+                html_lines.append("<pre style='background:var(--bg2,#1a1a1a);padding:8px;overflow-x:auto;font-size:11px;'>")
+                in_code = True
+            continue
+        if in_code:
+            html_lines.append(line.replace("<", "&lt;").replace(">", "&gt;"))
+            continue
+
+        # Tables
+        if "|" in stripped and not stripped.startswith("#"):
+            cells = [c.strip() for c in stripped.split("|")]
+            cells = [c for c in cells if c]  # drop empty edges
+            if all(set(c) <= set("-: ") for c in cells):
+                continue  # skip separator row
+            if not in_table:
+                html_lines.append("<table style='font-size:11px;margin:8px 0;'>")
+                in_table = True
+            tag = "th" if not in_table or html_lines[-1].endswith("</table>") else "td"
+            # First table row = header
+            row_html = "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
+            html_lines.append(row_html)
+            continue
+        elif in_table:
+            html_lines.append("</table>")
+            in_table = False
+
+        # Headings
+        if stripped.startswith("### "):
+            html_lines.append(f"<h3 style='margin-top:16px;margin-bottom:4px;'>{stripped[4:]}</h3>")
+        elif stripped.startswith("## "):
+            html_lines.append(f"<h2 style='margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:4px;'>{stripped[3:]}</h2>")
+        elif stripped.startswith("# "):
+            html_lines.append(f"<h1>{stripped[2:]}</h1>")
+        elif stripped.startswith("---"):
+            html_lines.append("<hr style='border:none;border-top:1px solid var(--border);margin:16px 0;'>")
+        elif stripped == "":
+            html_lines.append("<br>")
+        else:
+            # Inline formatting
+            text = line
+            text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+            text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+            text = re.sub(r'`(.+?)`', r'<code style="background:var(--bg2,#222);padding:1px 4px;">\1</code>', text)
+            html_lines.append(f"<p style='margin:2px 0;'>{text}</p>")
+
+    if in_table:
+        html_lines.append("</table>")
+
+    glossary_html = "\n".join(html_lines)
+
+    return templates.TemplateResponse("college/ratings_glossary.html", _ctx(
+        request, section="college",
+        glossary_html=glossary_html,
     ))
 
 
