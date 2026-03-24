@@ -277,6 +277,47 @@ def analyze_game_data(game_data: dict) -> str:
             lines.append(f"    (No bonus possessions earned)")
         lines.append("")
 
+    # ── Timeout Usage ──
+    timeout_log = game_data.get('timeout_log', [])
+    if timeout_log or any(game_data['stats'][s].get('timeouts_used', 0) > 0 for s in ('home', 'away')):
+        lines.append("─── TIMEOUT USAGE ───")
+        lines.append("(Each team gets 4 timeouts per half (8 total). Timeouts do not carry over.")
+        lines.append(" Categories: strategic clock stop (defense stops clock late), offensive clock")
+        lines.append(" stop (trailing offense preserves time), fatigue rest (star player breather),")
+        lines.append(" personnel regrouping (offense resets after stalling), injury (official, not charged).)")
+        lines.append("")
+
+        for side, label in [('home', home['team']), ('away', away['team'])]:
+            stats = game_data['stats'][side]
+            used = stats.get('timeouts_used', 0)
+            remaining = stats.get('timeouts_remaining', 0)
+            by_cat = stats.get('timeouts_by_category', {})
+            h1 = stats.get('timeouts_1h', 0)
+            h2 = stats.get('timeouts_2h', 0)
+            lines.append(f"  {label}:")
+            lines.append(f"    Used: {used}  |  Remaining: {remaining}  |  1H: {h1}  2H: {h2}")
+            if by_cat:
+                cat_parts = [f"{v}× {k.replace('_', ' ')}" for k, v in by_cat.items()]
+                lines.append(f"    Breakdown: {', '.join(cat_parts)}")
+            else:
+                lines.append(f"    (No timeouts called)")
+            lines.append("")
+
+        # List individual timeout events
+        if timeout_log:
+            lines.append("  Timeout Log:")
+            for t in timeout_log:
+                q = t.get('quarter', '?')
+                time_r = t.get('time_remaining', 0)
+                mins = time_r // 60
+                secs = time_r % 60
+                team_name = t.get('team_name', '?')
+                cat = t.get('category', '?').replace('_', ' ')
+                remaining = t.get('remaining')
+                rem_str = f", {remaining} left" if remaining is not None else ""
+                lines.append(f"    Q{q} {mins}:{secs:02d} — {team_name} ({cat}{rem_str})")
+            lines.append("")
+
     lines.append("─── CONVERSION BY FIELD POSITION ───")
     lines.append("(Viperball uses 6 downs to gain 20 yards. 4D/5D/6D = conversion rate on")
     lines.append(" 4th, 5th, and 6th down — the pressure downs. Downs 1-3 are omitted because")

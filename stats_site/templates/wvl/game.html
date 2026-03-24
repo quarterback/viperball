@@ -403,6 +403,34 @@
   </tr>
   {% endif %}
 
+  {# ── Timeouts ── #}
+  {% if as_.get('timeouts_used') is not none or hs.get('timeouts_used') is not none %}
+  {{ section_header('TIMEOUTS') }}
+  <tr>
+    <td class="num">{{ as_.get('timeouts_used', 0) }} used / {{ as_.get('timeouts_remaining', 0) }} left</td>
+    <td>Timeout Usage</td>
+    <td class="num">{{ hs.get('timeouts_used', 0) }} used / {{ hs.get('timeouts_remaining', 0) }} left</td>
+  </tr>
+  <tr>
+    <td class="num" style="font-size:10px;">1H: {{ as_.get('timeouts_1h', 0) }} · 2H: {{ as_.get('timeouts_2h', 0) }}</td>
+    <td style="font-size:10px;">By Half</td>
+    <td class="num" style="font-size:10px;">1H: {{ hs.get('timeouts_1h', 0) }} · 2H: {{ hs.get('timeouts_2h', 0) }}</td>
+  </tr>
+  {% set a_cats = as_.get('timeouts_by_category', {}) %}
+  {% set h_cats = hs.get('timeouts_by_category', {}) %}
+  {% set all_cats = [] %}
+  {% for k in a_cats %}{% if k not in all_cats %}{% set _ = all_cats.append(k) %}{% endif %}{% endfor %}
+  {% for k in h_cats %}{% if k not in all_cats %}{% set _ = all_cats.append(k) %}{% endif %}{% endfor %}
+  {% for cat in all_cats %}
+  {% set cat_label = cat | replace('_', ' ') | title %}
+  <tr>
+    <td class="num" style="font-size:10px;">{{ a_cats.get(cat, 0) }}</td>
+    <td style="font-size:10px;">{{ cat_label }}</td>
+    <td class="num" style="font-size:10px;">{{ h_cats.get(cat, 0) }}</td>
+  </tr>
+  {% endfor %}
+  {% endif %}
+
   {{ section_header('EFFICIENCY') }}
   {% if as_.get('down_conversions') or hs.get('down_conversions') %}
   {% for d in [4, 5, 6] %}
