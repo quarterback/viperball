@@ -41,12 +41,16 @@ Controversial/Opaque (3):
     22. Dokter Entropy— information entropy of margin distribution
     23. PageRank      — web-graph authority model on wins
 
+Sagarin-style (2):
+    25. Sagarin Predictor — pure points (Massey without margin cap)
+    26. Sagarin Recent    — recency-weighted Massey (late-season emphasis)
+
 Meta (2):
+    27. Game Control             — avg share of game time in the lead
     24. CFQI (Team Coefficients) — SRS + conference-strength adjustment
-    25. Game Control             — avg share of game time in the lead
 
 Pass-through (1):
-    26. CVL Official  — existing Power Index from season.py
+    28. CVL Official  — existing Power Index from season.py
 
 References:
     - Kenneth Massey's Ranking Composite (masseyratings.com)
@@ -79,6 +83,10 @@ class GameResult:
     home_score: float
     away_score: float
     neutral_site: bool = False
+    # Optional per-quarter scores for Game Control / Comeback computation
+    # Each list has 4 entries: [Q1_cumulative, Q2_cumulative, Q3_cumulative, Q4_final]
+    home_q_scores: Optional[List[float]] = None
+    away_q_scores: Optional[List[float]] = None
 
 
 @dataclass
@@ -128,15 +136,17 @@ class TeamRanking:
 
 # All method keys in canonical order
 METHOD_KEYS = [
-    "elo", "colley", "massey", "bt", "sor", "srs",          # Core Math
-    "win_pct", "point_diff", "pythag", "sos_win_pct",       # Simple
-    "elo_recent", "round_robin",                              # Elo Variants
-    "isov", "resume",                                         # Resume
-    "off_eff", "def_eff", "fpi",                             # Efficiency
-    "dye_index", "comeback", "margin_comp",                   # Viperball
-    "billingsley", "entropy", "pagerank",                     # Controversial
-    "cfqi", "game_control",                                   # Meta
-    "cvl_official",                                           # Pass-through
+    "elo", "colley", "massey", "bt", "sor", "srs",          # Core Math (6)
+    "win_pct", "point_diff", "pythag", "sos_win_pct",       # Simple (4)
+    "elo_recent", "round_robin",                              # Elo Variants (2)
+    "isov", "resume",                                         # Resume (2)
+    "off_eff", "def_eff", "fpi",                             # Efficiency (3)
+    "dye_index", "comeback", "margin_comp",                   # Viperball (3)
+    "billingsley", "entropy", "pagerank",                     # Controversial (3)
+    "cfqi",                                                   # Meta
+    "sagarin_pred", "sagarin_recent",                         # Sagarin-style (2)
+    "game_control",                                           # Meta
+    "cvl_official",                                           # Pass-through (1)
 ]
 
 
@@ -1013,24 +1023,82 @@ def calculate_dye_index(
 
 
 # ---------------------------------------------------------------------------
-# 19. Comeback Success Rate (requires TeamSeasonStats)
+# 19. Comeback Success Rate
 # ---------------------------------------------------------------------------
 
 def calculate_comeback(
-    team_stats: Dict[str, TeamSeasonStats],
+    games: List[GameResult],
+    team_stats: Optional[Dict[str, TeamSeasonStats]] = None,
 ) -> Dict[str, float]:
-    """Comeback success rate — W% when trailing at half + PP scoring rate.
+    """Comeback success rate — W% when trailing at halftime.
 
-    Composite: 60% comeback win rate, 40% power play score rate.
-    Teams that never trail get comeback_rate = 1.0 (benefit of dominance).
+    Computed from game-level quarter scores (home_q_scores/away_q_scores).
+    If quarter scores aren't available, falls back to TeamSeasonStats fields.
+    If neither is available, uses 0.5 for all teams.
+
+    Combined with DYE power play scoring rate when stats available:
+    60% comeback rate + 40% PP score rate.  Without stats: 100% comeback rate.
     """
-    result: Dict[str, float] = {}
-    for t, s in team_stats.items():
-        if s.games_trailing_at_half > 0:
-            comeback_rate = s.comeback_wins / s.games_trailing_at_half
+    stats = team_stats or {}
+
+    # Try computing from game data
+    trailing_at_half: Dict[str, int] = {}
+    comeback_wins: Dict[str, int] = {}
+    all_teams: set = set()
+
+    has_q_data = False
+    for g in games:
+        all_teams.add(g.home_team)
+        all_teams.add(g.away_team)
+        trailing_at_half.setdefault(g.home_team, 0)
+        trailing_at_half.setdefault(g.away_team, 0)
+        comeback_wins.setdefault(g.home_team, 0)
+        comeback_wins.setdefault(g.away_team, 0)
+
+        if g.home_q_scores and g.away_q_scores and len(g.home_q_scores) >= 2:
+            has_q_data = True
+            # Q2 cumulative = halftime score
+            h_half = g.home_q_scores[1]
+            a_half = g.away_q_scores[1]
+
+            if h_half < a_half:
+                trailing_at_half[g.home_team] += 1
+                if g.home_score > g.away_score:
+                    comeback_wins[g.home_team] += 1
+            if a_half < h_half:
+                trailing_at_half[g.away_team] += 1
+                if g.away_score > g.home_score:
+                    comeback_wins[g.away_team] += 1
+
+    if not has_q_data:
+        # Fall back to TeamSeasonStats
+        if stats:
+            result: Dict[str, float] = {}
+            for t in all_teams:
+                s = stats.get(t)
+                if s and s.games_trailing_at_half > 0:
+                    cb_rate = s.comeback_wins / s.games_trailing_at_half
+                else:
+                    cb_rate = 1.0
+                pp_rate = s.pp_score_rate / 100.0 if s and s.pp_score_rate > 1 else (s.pp_score_rate if s else 0.0)
+                result[t] = 0.6 * cb_rate + 0.4 * pp_rate
+            return result
+        return {t: 0.5 for t in all_teams}
+
+    result = {}
+    for t in all_teams:
+        if trailing_at_half[t] > 0:
+            cb_rate = comeback_wins[t] / trailing_at_half[t]
         else:
-            comeback_rate = 1.0  # never trailed = maximum resilience credit
-        result[t] = 0.6 * comeback_rate + 0.4 * (s.pp_score_rate / 100.0 if s.pp_score_rate > 1 else s.pp_score_rate)
+            cb_rate = 1.0  # never trailed = dominance credit
+
+        s = stats.get(t)
+        if s:
+            pp_rate = s.pp_score_rate / 100.0 if s.pp_score_rate > 1 else s.pp_score_rate
+            result[t] = 0.6 * cb_rate + 0.4 * pp_rate
+        else:
+            result[t] = cb_rate
+
     return result
 
 
@@ -1337,21 +1405,155 @@ def calculate_cfqi(
 
 
 # ---------------------------------------------------------------------------
-# 25. Game Control (requires TeamSeasonStats)
+# 25. Sagarin Predictor (pure points)
+# ---------------------------------------------------------------------------
+
+def calculate_sagarin_predictor(games: List[GameResult]) -> Dict[str, float]:
+    """Sagarin Predictor — pure points-based rating without margin truncation.
+
+    Like Massey ratings but uses raw score differential (no cap).
+    Teams that win by 50 get full credit for the blowout.
+    This is the "predictive" component of Sagarin's system.
+    """
+    return calculate_massey(games, max_margin=999.0)
+
+
+# ---------------------------------------------------------------------------
+# 26. Sagarin Recent (recency-weighted)
+# ---------------------------------------------------------------------------
+
+def calculate_sagarin_recent(
+    games: List[GameResult],
+    max_margin: float = 21.0,
+) -> Dict[str, float]:
+    """Sagarin Recent — Massey-style ratings with exponential time decay.
+
+    More recent games are weighted more heavily using exponential decay.
+    Game weight = 2^(game_index / total_games), so the last game is
+    weighted ~2× the first game.  Captures late-season trajectory.
+    """
+    teams: List[str] = []
+    team_idx: Dict[str, int] = {}
+    for g in games:
+        for t in (g.home_team, g.away_team):
+            if t not in team_idx:
+                team_idx[t] = len(teams)
+                teams.append(t)
+    n = len(teams)
+    if n == 0:
+        return {}
+
+    n_games = len(games)
+
+    # Build weighted normal equations: (A^T W A) r = A^T W b
+    ata = [[0.0] * n for _ in range(n)]
+    atb = [0.0] * n
+
+    for idx, g in enumerate(games):
+        hi, ai = team_idx[g.home_team], team_idx[g.away_team]
+        margin = g.home_score - g.away_score
+        margin = max(-max_margin, min(max_margin, margin))
+
+        # Exponential recency weight: 1.0 at start, ~2.0 at end
+        weight = 2.0 ** (idx / n_games) if n_games > 0 else 1.0
+
+        ata[hi][hi] += weight
+        ata[ai][ai] += weight
+        ata[hi][ai] -= weight
+        ata[ai][hi] -= weight
+        atb[hi] += weight * margin
+        atb[ai] -= weight * margin
+
+    # Constraint: sum(r) = 0
+    for j in range(n):
+        ata[n - 1][j] = 1.0
+    atb[n - 1] = 0.0
+
+    # Gauss-Seidel
+    r = [0.0] * n
+    for _ in range(300):
+        max_delta = 0.0
+        for i in range(n):
+            s = atb[i]
+            for j in range(n):
+                if j != i:
+                    s -= ata[i][j] * r[j]
+            new_r = s / ata[i][i] if ata[i][i] != 0 else r[i]
+            max_delta = max(max_delta, abs(new_r - r[i]))
+            r[i] = new_r
+        if max_delta < 1e-10:
+            break
+
+    return {teams[i]: r[i] for i in range(n)}
+
+
+# ---------------------------------------------------------------------------
+# 27. Game Control (computed from quarter scores)
 # ---------------------------------------------------------------------------
 
 def calculate_game_control(
-    team_stats: Dict[str, TeamSeasonStats],
+    games: List[GameResult],
+    team_stats: Optional[Dict[str, TeamSeasonStats]] = None,
 ) -> Dict[str, float]:
     """Average fraction of game time spent in the lead.
 
-    Pre-computed by the Season class and passed via TeamSeasonStats.
+    Computed from per-quarter cumulative scores: each quarter where a team
+    leads counts as 25% game control.  Tied quarters split 12.5% each.
+
+    Falls back to TeamSeasonStats.game_control_avg if quarter data unavailable.
     """
-    return {t: s.game_control_avg for t, s in team_stats.items()}
+    stats = team_stats or {}
+    all_teams: set = set()
+    control_sum: Dict[str, float] = {}
+    game_count: Dict[str, int] = {}
+
+    has_q_data = False
+    for g in games:
+        all_teams.add(g.home_team)
+        all_teams.add(g.away_team)
+        control_sum.setdefault(g.home_team, 0.0)
+        control_sum.setdefault(g.away_team, 0.0)
+        game_count.setdefault(g.home_team, 0)
+        game_count.setdefault(g.away_team, 0)
+
+        if g.home_q_scores and g.away_q_scores:
+            has_q_data = True
+            n_q = min(len(g.home_q_scores), len(g.away_q_scores))
+            q_weight = 1.0 / n_q if n_q > 0 else 0.25
+
+            h_control = 0.0
+            a_control = 0.0
+            for qi in range(n_q):
+                h_q = g.home_q_scores[qi]
+                a_q = g.away_q_scores[qi]
+                if h_q > a_q:
+                    h_control += q_weight
+                elif a_q > h_q:
+                    a_control += q_weight
+                else:
+                    h_control += q_weight * 0.5
+                    a_control += q_weight * 0.5
+
+            control_sum[g.home_team] += h_control
+            control_sum[g.away_team] += a_control
+            game_count[g.home_team] += 1
+            game_count[g.away_team] += 1
+
+    if not has_q_data:
+        # Fall back to TeamSeasonStats
+        if stats:
+            return {t: stats[t].game_control_avg if t in stats else 0.5
+                    for t in all_teams}
+        return {t: 0.5 for t in all_teams}
+
+    return {
+        t: control_sum[t] / game_count[t] if game_count.get(t, 0) > 0 else 0.5
+        for t in all_teams
+    }
 
 
 # ---------------------------------------------------------------------------
-# 26. CVL Official (pass-through)
+# 28. CVL Official (pass-through)
 # ---------------------------------------------------------------------------
 
 def calculate_cvl_official(
@@ -1505,6 +1707,16 @@ def calculate_composite(
     # ── Meta (24) ────────────────────────────────────────────────────────
     cfqi = calculate_cfqi(games, team_conferences)
 
+    # ── Sagarin-style (25-26) ────────────────────────────────────────────
+    sagarin_pred = calculate_sagarin_predictor(games)
+    sagarin_recent = calculate_sagarin_recent(games)
+
+    # ── Comeback (19) — computed from game quarter scores ────────────────
+    comeback = calculate_comeback(games, stats if stats else None)
+
+    # ── Game Control (27) — computed from game quarter scores ────────────
+    game_control = calculate_game_control(games, stats if stats else None)
+
     # ── SOS (metadata, not a ranking method) ─────────────────────────────
     sos_data = calculate_sos(games, elos)
 
@@ -1529,6 +1741,10 @@ def calculate_composite(
         "pagerank": pagerank,
         "margin_comp": margin_comp,
         "cfqi": cfqi,
+        "sagarin_pred": sagarin_pred,
+        "sagarin_recent": sagarin_recent,
+        "comeback": comeback,
+        "game_control": game_control,
     }
 
     # ── Season-stats methods (only if team_stats provided) ───────────────
@@ -1537,8 +1753,6 @@ def calculate_composite(
         all_ratings["def_eff"] = calculate_def_efficiency(stats)
         all_ratings["fpi"] = calculate_fpi(stats, sos_data)
         all_ratings["dye_index"] = calculate_dye_index(stats)
-        all_ratings["comeback"] = calculate_comeback(stats)
-        all_ratings["game_control"] = calculate_game_control(stats)
         all_ratings["cvl_official"] = calculate_cvl_official(stats)
 
     # ── Convert all ratings to ranks ─────────────────────────────────────
