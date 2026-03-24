@@ -281,7 +281,7 @@ def analyze_game_data(game_data: dict) -> str:
     timeout_log = game_data.get('timeout_log', [])
     if timeout_log or any(game_data['stats'][s].get('timeouts_used', 0) > 0 for s in ('home', 'away')):
         lines.append("─── TIMEOUT USAGE ───")
-        lines.append("(Each team gets 3 timeouts per half (6 total). Timeouts do not carry over.")
+        lines.append("(Each team gets 4 timeouts per half (8 total). Timeouts do not carry over.")
         lines.append(" Categories: strategic clock stop (defense stops clock late), offensive clock")
         lines.append(" stop (trailing offense preserves time), fatigue rest (star player breather),")
         lines.append(" personnel regrouping (offense resets after stalling), injury (official, not charged).)")

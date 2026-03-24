@@ -1174,9 +1174,10 @@ class GameState:
     away_delta_drives: int = 0
     home_delta_scores: int = 0
     away_delta_scores: int = 0
-    # Timeout tracking: 3 per half per team
-    home_timeouts: int = 3
-    away_timeouts: int = 3
+    # Timeout tracking: 4 per half per team (6-down system = longer drives,
+    # so teams need more timeouts than 4-down football)
+    home_timeouts: int = 4
+    away_timeouts: int = 4
     # 3-minute warning: auto-stop once per half when clock crosses 180s
     three_min_warning_triggered: bool = False
     # 4th Down Movement: when True, team has elected kick mode (snap kick specialist)
@@ -3823,8 +3824,8 @@ class ViperballEngine:
                 # Clear halftime benches — performance-benched players get second chance
                 self._clear_halftime_benches()
                 # Reset timeouts and 3-minute warning for second half
-                self.state.home_timeouts = 3
-                self.state.away_timeouts = 3
+                self.state.home_timeouts = 4
+                self.state.away_timeouts = 4
                 self.state.three_min_warning_triggered = False
                 # V2.4: Reset half-level play-family frequency counters
                 # Solved families persist — but the frequency tracking resets
@@ -5390,6 +5391,10 @@ class ViperballEngine:
     def simulate_kneel(self) -> Play:
         """Victory formation: kneel-down that burns 35-40 seconds of clock
         and loses 1-2 yards. No risk of fumble or penalty."""
+        # Snapshot pre-play state for accurate play-by-play timestamps
+        pre_play_time = self.state.time_remaining
+        pre_play_fp = self.state.field_position
+
         yards_lost = random.randint(1, 2)
         self.state.field_position = max(1, self.state.field_position - yards_lost)
 
@@ -5407,9 +5412,9 @@ class ViperballEngine:
         play = Play(
             play_number=self.state.play_number,
             quarter=self.state.quarter,
-            time=self.state.time_remaining,
+            time=pre_play_time,
             possession=self.state.possession,
-            field_position=self.state.field_position,
+            field_position=pre_play_fp,
             down=self.state.down,
             yards_to_go=self.state.yards_to_go,
             play_type="kneel",
@@ -5450,6 +5455,47 @@ class ViperballEngine:
         return play
 
     def _simulate_play_core(self) -> Play:
+        # Run out the clock: if time remaining < play clock and offense is
+        # leading and defense has no timeouts, the game ends without a snap.
+        # The play clock expires before the game clock — no kneel needed.
+        if self.state.quarter == 4 and self._get_score_diff() > 0:
+            play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+            if self.state.time_remaining <= play_clock:
+                def_side = "away" if self.state.possession == "home" else "home"
+                def_timeouts = (self.state.home_timeouts if def_side == "home"
+                                else self.state.away_timeouts)
+                if def_timeouts <= 0:
+                    # No defensive timeouts — clock expires naturally
+                    self.state.time_remaining = 0
+                    off_team = self.get_offensive_team()
+                    zb_label = player_label(
+                        next((p for p in self._offense_skill(off_team)
+                              if p.position == "Zeroback"),
+                             self._offense_skill(off_team)[0])
+                    )
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=0,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=self.state.down,
+                        yards_to_go=self.state.yards_to_go,
+                        play_type="kneel",
+                        play_family="kneel",
+                        players_involved=[zb_label],
+                        yards_gained=0,
+                        result="kneel",
+                        description=(
+                            f"{off_team.name} lets the play clock expire. "
+                            f"Game over."
+                        ),
+                        fatigue=round(
+                            self.state.home_stamina if self.state.possession == "home"
+                            else self.state.away_stamina, 1
+                        ),
+                    )
+
         # Victory formation: kneel when leading late
         if self._should_kneel():
             return self.simulate_kneel()
