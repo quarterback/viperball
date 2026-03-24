@@ -633,13 +633,13 @@ def college_index(request: Request):
     ))
 
 
-@router.post("/college/import", response_class=HTMLResponse)
+@router.post("/college/import")
 async def college_import_dynasty(request: Request):
-    """Import a dynasty save file, create a new session, build a fresh season, and redirect."""
+    """Import a dynasty save file. If it contains a season snapshot, save it
+    as a season archive and redirect to the archive viewer for immediate stats access."""
     import json as _json
-    import random
     from starlette.responses import RedirectResponse
-    from engine.db import deserialize_dynasty
+    from engine.db import save_season_archive
 
     form = await request.form()
     file = form.get("file")
@@ -649,110 +649,27 @@ async def college_import_dynasty(request: Request):
     try:
         contents = await file.read()
         data = _json.loads(contents)
-        dynasty = deserialize_dynasty(data)
     except Exception as e:
-        raise HTTPException(400, f"Failed to parse dynasty file: {e}")
+        raise HTTPException(400, f"Failed to parse file: {e}")
 
-    # Create a new API session and attach the dynasty
-    import uuid
-    import time as _time
-    from api.main import sessions as api_sessions, TEAMS_DIR
-    session_id = str(uuid.uuid4())
-    now = _time.time()
-    api_sessions[session_id] = {
-        "season": None,
-        "dynasty": None,
-        "injury_tracker": None,
-        "dq_manager": None,
-        "phase": "setup",
-        "config": {},
-        "created_at": now,
-        "last_accessed": now,
-    }
-    sess = api_sessions[session_id]
-    sess["dynasty"] = dynasty
-    sess["phase"] = "setup"
-    sess["human_teams"] = [dynasty.coach.team_name]
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
 
-    # Build a fresh season from the dynasty's conferences/teams
-    try:
-        from engine.season import create_season
-        from engine.team_loader import load_teams_with_states
-        from engine.style_assigner import auto_assign_all_teams
-        from engine.injuries import InjuryTracker
+    if snapshot:
+        import uuid
+        archive_key = f"import_{uuid.uuid4().hex[:8]}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return RedirectResponse(f"/stats/archives/{archive_key}/", status_code=303)
 
-        teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
-        conf_dict = dynasty.get_conferences_dict()
-
-        seed = random.randint(0, 999999)
-        ai_configs = auto_assign_all_teams(
-            TEAMS_DIR,
-            human_teams=[dynasty.coach.team_name],
-            seed=seed,
-        )
-        style_configs = {}
-        for tname in teams:
-            style_configs[tname] = ai_configs.get(
-                tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
-            )
-
-        # Restore coaching staffs if available
-        if not dynasty._coaching_staffs:
-            from engine.coaching import generate_coaching_staff
-            all_team_names = list(dynasty.team_histories.keys())
-            staff_rng = random.Random(dynasty.current_year + 42)
-            for team_name in dynasty.team_histories:
-                prestige = dynasty.team_prestige.get(team_name, 50)
-                dynasty._coaching_staffs[team_name] = generate_coaching_staff(
-                    team_name=team_name, prestige=prestige,
-                    year=dynasty.current_year, rng=staff_rng,
-                    all_team_names=all_team_names,
-                )
-
-        # Restore developed rosters if available
-        next_rosters = getattr(dynasty, '_next_season_rosters', None)
-        if next_rosters:
-            from engine.player_card import PlayerCard, card_to_player
-            for team_name, team in teams.items():
-                card_dicts = next_rosters.get(team_name)
-                if card_dicts:
-                    restored = []
-                    for cd in card_dicts:
-                        try:
-                            card = PlayerCard.from_dict(cd)
-                            restored.append(card_to_player(card))
-                        except Exception:
-                            pass
-                    if restored:
-                        team.players = restored
-            dynasty._next_season_rosters = None
-
-        season = create_season(
-            f"{dynasty.current_year} CVL Season",
-            teams,
-            style_configs,
-            conferences=conf_dict,
-            games_per_team=dynasty.games_per_team,
-            team_states=team_states,
-            coaching_staffs=dynasty._coaching_staffs if dynasty._coaching_staffs else None,
-            dynasty_year=dynasty.current_year,
-        )
-        sess["season"] = season
-        season.human_teams = list(sess.get("human_teams", []))
-        dynasty.attach_prestige_to_season(season)
-        sess["phase"] = "regular"
-        sess["config"] = {
-            "playoff_size": dynasty.playoff_size,
-            "bowl_count": dynasty.bowl_count,
-            "games_per_team": dynasty.games_per_team,
-        }
-        sess["injury_tracker"] = InjuryTracker()
-        season.injury_tracker = sess["injury_tracker"]
-    except Exception:
-        # Season creation failed — still redirect to data page with dynasty-only view
-        pass
-
-    return RedirectResponse(f"/stats/college/{session_id}/data", status_code=303)
+    # No season snapshot — show an error page
+    raise HTTPException(
+        400,
+        f"No season data found in this save file. The dynasty metadata for "
+        f"'{dynasty_name}' (Year {year}) was found, but there are no game results "
+        f"to display. Re-download the save from an active season to include stats."
+    )
 
 
 @router.get("/college/{session_id}/", response_class=HTMLResponse)
@@ -2994,6 +2911,7 @@ def college_data_download(request: Request, session_id: str):
     import json as _json
     from fastapi.responses import Response
     from engine.db import serialize_dynasty
+    from api.main import _build_college_archive
 
     api = _get_api()
     sess = api["get_session"](session_id)
@@ -3002,7 +2920,16 @@ def college_data_download(request: Request, session_id: str):
         raise HTTPException(404, "No dynasty active in this session")
 
     data = serialize_dynasty(dynasty)
-    content = _json.dumps(data, indent=2)
+
+    # Include full season snapshot so importing the save lets you view stats
+    season = sess.get("season")
+    if season:
+        try:
+            data["season_snapshot"] = _build_college_archive(sess, session_id)
+        except Exception:
+            pass
+
+    content = _json.dumps(data, indent=2, default=str)
     filename = f"{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
     return Response(
         content=content,
@@ -3013,15 +2940,11 @@ def college_data_download(request: Request, session_id: str):
 
 @router.post("/college/{session_id}/data/upload")
 async def college_data_upload(request: Request, session_id: str):
+    """Upload a dynasty save file. If it contains a season snapshot, save it
+    as a season archive so the user can view full stats immediately."""
     import json as _json
-    import random
     from fastapi.responses import JSONResponse
-    from engine.db import deserialize_dynasty
-
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    if not sess.get("dynasty"):
-        raise HTTPException(404, "No dynasty active in this session")
+    from engine.db import save_season_archive
 
     form = await request.form()
     file = form.get("file")
@@ -3031,97 +2954,29 @@ async def college_data_upload(request: Request, session_id: str):
     try:
         contents = await file.read()
         data = _json.loads(contents)
-        dynasty = deserialize_dynasty(data)
     except Exception as e:
-        raise HTTPException(400, f"Failed to load dynasty file: {e}")
+        raise HTTPException(400, f"Failed to parse file: {e}")
 
-    sess["dynasty"] = dynasty
-    sess["human_teams"] = [dynasty.coach.team_name]
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
 
-    # Rebuild a fresh season from the imported dynasty's conferences/teams
-    try:
-        from api.main import TEAMS_DIR
-        from engine.season import create_season
-        from engine.team_loader import load_teams_with_states
-        from engine.style_assigner import auto_assign_all_teams
-        from engine.injuries import InjuryTracker
+    if snapshot:
+        # Save as a season archive so it's viewable through the archive pages
+        archive_key = f"import_{session_id}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return JSONResponse({
+            "message": f"Season loaded: {dynasty_name} Year {year}.",
+            "redirect": f"/stats/archives/{archive_key}/",
+        })
 
-        teams, team_states = load_teams_with_states(TEAMS_DIR, fresh=True)
-        conf_dict = dynasty.get_conferences_dict()
-
-        seed = random.randint(0, 999999)
-        ai_configs = auto_assign_all_teams(
-            TEAMS_DIR,
-            human_teams=[dynasty.coach.team_name],
-            seed=seed,
-        )
-        style_configs = {}
-        for tname in teams:
-            style_configs[tname] = ai_configs.get(
-                tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
-            )
-
-        if not dynasty._coaching_staffs:
-            from engine.coaching import generate_coaching_staff
-            all_team_names = list(dynasty.team_histories.keys())
-            staff_rng = random.Random(dynasty.current_year + 42)
-            for team_name in dynasty.team_histories:
-                prestige = dynasty.team_prestige.get(team_name, 50)
-                dynasty._coaching_staffs[team_name] = generate_coaching_staff(
-                    team_name=team_name, prestige=prestige,
-                    year=dynasty.current_year, rng=staff_rng,
-                    all_team_names=all_team_names,
-                )
-
-        next_rosters = getattr(dynasty, '_next_season_rosters', None)
-        if next_rosters:
-            from engine.player_card import PlayerCard, card_to_player
-            for team_name, team in teams.items():
-                card_dicts = next_rosters.get(team_name)
-                if card_dicts:
-                    restored = []
-                    for cd in card_dicts:
-                        try:
-                            card = PlayerCard.from_dict(cd)
-                            restored.append(card_to_player(card))
-                        except Exception:
-                            pass
-                    if restored:
-                        team.players = restored
-            dynasty._next_season_rosters = None
-
-        season = create_season(
-            f"{dynasty.current_year} CVL Season",
-            teams,
-            style_configs,
-            conferences=conf_dict,
-            games_per_team=dynasty.games_per_team,
-            team_states=team_states,
-            coaching_staffs=dynasty._coaching_staffs if dynasty._coaching_staffs else None,
-            dynasty_year=dynasty.current_year,
-        )
-        sess["season"] = season
-        season.human_teams = list(sess.get("human_teams", []))
-        dynasty.attach_prestige_to_season(season)
-        sess["phase"] = "regular"
-        sess["config"] = {
-            "playoff_size": dynasty.playoff_size,
-            "bowl_count": dynasty.bowl_count,
-            "games_per_team": dynasty.games_per_team,
-        }
-        sess["injury_tracker"] = InjuryTracker()
-        season.injury_tracker = sess["injury_tracker"]
-        rebuilt = True
-    except Exception:
-        sess["phase"] = "setup"
-        sess["season"] = None
-        sess["injury_tracker"] = None
-        rebuilt = False
-
-    msg = f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."
-    if rebuilt:
-        msg += " Season rebuilt from imported data."
-    return JSONResponse({"message": msg, "session_id": session_id})
+    return JSONResponse({
+        "message": f"No season data found in save file. "
+                   f"Dynasty metadata loaded for {dynasty_name} (Year {year}), "
+                   f"but no game results to display. "
+                   f"Re-download the save from an active season to include stats.",
+    }, status_code=400)
 
 
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
