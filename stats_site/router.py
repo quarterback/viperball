@@ -2186,7 +2186,8 @@ def _cached_composite_rankings(season):
         return cached
 
     from engine.ranking_composite import (
-        GameResult, TeamSeasonStats, calculate_composite, METHOD_KEYS,
+        GameResult, TeamSeasonStats, calculate_composite,
+        calculate_conference_rankings, METHOD_KEYS,
     )
 
     # ── Build GameResult list from completed games ──
@@ -2321,7 +2322,24 @@ def _cached_composite_rankings(season):
         }
         result.append(entry)
 
+    # ── Conference rankings (Massey-style grid) ──
+    conf_rankings = calculate_conference_rankings(composites)
+    conf_result = []
+    for cr in conf_rankings:
+        conf_result.append({
+            "conference": cr.conference,
+            "composite_rank": cr.composite_rank,
+            "mean_rank": cr.mean_rank,
+            "median_rank": cr.median_rank,
+            "std_dev": cr.std_dev,
+            "avg_team_rank": cr.avg_team_rank,
+            "n_teams": cr.n_teams,
+            "method_ranks": cr.method_ranks,
+            "method_avg_team_ranks": cr.method_avg_team_ranks,
+        })
+
     _cache_set(season, "composite_rankings", result)
+    _cache_set(season, "conference_rankings", conf_result)
     return result
 
 
@@ -2332,6 +2350,7 @@ def college_ratings(request: Request, session_id: str, top: int = 50, sort: str 
     season = api["require_season"](sess)
 
     composites = _cached_composite_rankings(season)
+    conf_rankings = _cache_get(season, "conference_rankings") or []
 
     from engine.ranking_composite import METHOD_KEYS
 
@@ -2365,6 +2384,7 @@ def college_ratings(request: Request, session_id: str, top: int = 50, sort: str 
         top=top,
         sort=sort,
         method_keys=METHOD_KEYS,
+        conference_rankings=conf_rankings,
         season_name=getattr(season, "name", "Season"),
     ))
 

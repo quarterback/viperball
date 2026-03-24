@@ -199,6 +199,47 @@
 </table>
 {% endif %}
 
+{# ── Conference Rankings (Massey-style) ── #}
+{% if conference_rankings and conference_rankings|length > 1 %}
+<h2 style="margin-top: 20px;">Conference Rankings</h2>
+<p style="font-size: 11px; color: var(--dim); margin-bottom: 6px;">
+  Each method ranks conferences by averaging team ranks within the conference. The composite is the average conference rank across all methods.
+</p>
+<div class="table-scroll-wrap">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Conference</th>
+      <th class="num">Teams</th>
+      <th class="num" style="font-weight: bold;">Avg</th>
+      {% for cat_name, cat_keys in categories %}
+      {% for key in cat_keys %}
+      <th class="num" style="font-size: 9px;{% if loop.first %} border-left: 1px solid var(--border);{% endif %}" title="{{ key }}">{{ short_names.get(key, key) }}</th>
+      {% endfor %}
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for cr in conference_rankings %}
+  <tr>
+    <td class="num rank">{{ cr.composite_rank }}</td>
+    <td>{{ cr.conference }}</td>
+    <td class="num">{{ cr.n_teams }}</td>
+    <td class="num" style="font-weight: bold;">{{ "%.1f"|format(cr.mean_rank) }}</td>
+    {% for cat_name, cat_keys in categories %}
+    {% for key in cat_keys %}
+    {% set r = cr.method_ranks.get(key) %}
+    <td class="num {% if r and r == 1 %}stat-elite{% elif r and r <= 3 %}stat-good{% endif %}" style="{% if loop.first %}border-left: 1px solid var(--border);{% endif %}">{{ r if r else '—' }}</td>
+    {% endfor %}
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
 {% else %}
 <div class="empty">Not enough games played to generate composite ratings. Play at least 4 games.</div>
 {% endif %}
