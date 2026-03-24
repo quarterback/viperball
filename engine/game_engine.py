@@ -2929,6 +2929,7 @@ class ViperballEngine:
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
+        self.timeout_log: List[Dict] = []  # Every timeout event for post-game visibility
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
@@ -4093,6 +4094,7 @@ class ViperballEngine:
         drive_plays = 0
         drive_yards = 0
         drive_result = "stall"
+        drive_timeout_log_start = len(self.timeout_log)  # snapshot for per-drive timeout count
 
         # ── V2.4: Reset per-drive play-family frequency counters ──
         if drive_team == "home":
@@ -4185,6 +4187,16 @@ class ViperballEngine:
                 def_called_to = False
                 if self.state.time_remaining > 0:
                     def_called_to = self._call_defensive_timeout_on_kneel(drive_team)
+                    if def_called_to:
+                        def_side_name = "away" if drive_team == "home" else "home"
+                        def_team_name = (self.away_team.name if drive_team == "home"
+                                         else self.home_team.name)
+                        def_to_left = (self.state.home_timeouts if def_side_name == "home"
+                                       else self.state.away_timeouts)
+                        play.description += (
+                            f" | TIMEOUT {def_team_name} (defensive,"
+                            f" {def_to_left} remaining)"
+                        )
                 if self.state.time_remaining <= 0:
                     drive_result = "kneel"
                     break
@@ -4305,7 +4317,22 @@ class ViperballEngine:
             # Coaching AI considers calling a timeout after this play
             if self.call_timeout():
                 # Timeout called — clock stops (no additional time drain)
-                pass
+                # Annotate the play description with timeout info
+                if self.timeout_log:
+                    to_entry = self.timeout_log[-1]
+                    if to_entry["team"] == "official":
+                        play.description += " | INJURY TIMEOUT (official)"
+                    else:
+                        _to_label = {
+                            "strategic_clock_stop": "defensive",
+                            "offensive_clock_stop": "offensive",
+                            "star_fatigue_rest": "fatigue",
+                            "personnel_regrouping": "regrouping",
+                        }.get(to_entry["category"], to_entry["category"])
+                        play.description += (
+                            f" | TIMEOUT {to_entry['team_name']}"
+                            f" ({_to_label}, {to_entry['remaining']} remaining)"
+                        )
 
             # Increment plays_since_last_touch for all non-involved players
             team_on_off = self.get_offensive_team()
@@ -4508,6 +4535,9 @@ class ViperballEngine:
             else:
                 self.state.away_delta_scores += 1
 
+        # Collect timeouts called during this drive
+        drive_timeouts = self.timeout_log[drive_timeout_log_start:]
+
         self.drive_log.append({
             "team": drive_team,
             "quarter": drive_quarter,
@@ -4518,6 +4548,7 @@ class ViperballEngine:
             "delta_drive": drive_delta,
             "delta_cost": drive_delta_cost,
             "bonus_drive": is_bonus_drive,
+            "timeouts": drive_timeouts,
         })
 
     FIELD_POSITION_VALUE = [
@@ -11193,14 +11224,27 @@ class ViperballEngine:
         if random.random() < call_prob:
             if def_side == "home":
                 self.state.home_timeouts -= 1
+                remaining = self.state.home_timeouts
             else:
                 self.state.away_timeouts -= 1
+                remaining = self.state.away_timeouts
 
             # Rest the defensive team during the stoppage
             def_team = (self.home_team if def_side == "home"
                         else self.away_team)
+            def_team_name = def_team.name
             for p in def_team.players:
                 p.game_energy = min(100.0, p.game_energy + 15.0)
+
+            self.timeout_log.append({
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "team": def_side,
+                "team_name": def_team_name,
+                "category": "defensive_kneel_stop",
+                "remaining": remaining,
+                "play_number": self.state.play_number,
+            })
 
             return True
 
@@ -11246,6 +11290,7 @@ class ViperballEngine:
         def_traits = def_mods.get("hidden_trait_effects", {})
 
         caller = None
+        caller_category = ""
 
         # ── Category 3: Injury timeout (official-called, no team charged) ──
         # ~0.3% chance per play.  Both teams rest.  Not a strategic decision.
@@ -11258,6 +11303,15 @@ class ViperballEngine:
             for p in def_team_obj.players:
                 p.game_energy = min(100.0, p.game_energy + 10.0)
             # No timeout charged to either team
+            self.timeout_log.append({
+                "quarter": quarter,
+                "time_remaining": time_left,
+                "team": "official",
+                "team_name": "Official",
+                "category": "injury",
+                "remaining": None,
+                "play_number": self.state.play_number,
+            })
             return True
 
         # ── Category 1: Strategic clock stop (defense) ──
@@ -11293,6 +11347,7 @@ class ViperballEngine:
                 call_prob = min(0.85, call_prob)
                 if random.random() < call_prob:
                     caller = def_side
+                    caller_category = "strategic_clock_stop"
 
         # ── Category 5: Offensive clock stop (trailing offense) ──
         # Offense uses timeout to preserve time when trailing late.
@@ -11309,6 +11364,7 @@ class ViperballEngine:
 
                 if random.random() < min(0.75, call_prob):
                     caller = off_side
+                    caller_category = "offensive_clock_stop"
 
         # ── Category 2: Star fatigue rest (offense) ──
         # Rare — only in red zone with exhausted stars.  Bad clock managers
@@ -11334,6 +11390,7 @@ class ViperballEngine:
 
                 if random.random() < call_prob:
                     caller = off_side
+                    caller_category = "star_fatigue_rest"
 
         # ── Category 4: Personnel/scheme timeout (offense, Q1-Q3) ──
         # When the DC has solved a play family and the offense is struggling.
@@ -11355,20 +11412,35 @@ class ViperballEngine:
 
                 if random.random() < call_prob:
                     caller = off_side
+                    caller_category = "personnel_regrouping"
 
         # ── Execute the timeout ──
         if caller:
             if caller == "home":
                 self.state.home_timeouts -= 1
+                remaining = self.state.home_timeouts
             else:
                 self.state.away_timeouts -= 1
+                remaining = self.state.away_timeouts
 
             # Rest the calling team
             rest_team = (self.get_offensive_team() if caller == off_side
                          else (self.home_team if def_side == "home"
                                else self.away_team))
+            caller_team_name = (self.home_team.name if caller == "home"
+                                else self.away_team.name)
             for p in rest_team.players:
                 p.game_energy = min(100.0, p.game_energy + 15.0)
+
+            self.timeout_log.append({
+                "quarter": quarter,
+                "time_remaining": time_left,
+                "team": caller,
+                "team_name": caller_team_name,
+                "category": caller_category,
+                "remaining": remaining,
+                "play_number": self.state.play_number,
+            })
 
             return True
 
@@ -11752,6 +11824,21 @@ class ViperballEngine:
             bonus_scores = sum(1 for d in bonus_drives if d.get("result") in ("touchdown", "successful_kick"))
             stats["bonus_possession_scores"] = bonus_scores
 
+        # ── Timeout usage stats ──
+        for side, stats in [("home", home_stats), ("away", away_stats)]:
+            team_tos = [t for t in self.timeout_log if t["team"] == side]
+            stats["timeouts_used"] = len(team_tos)
+            stats["timeouts_remaining"] = (self.state.home_timeouts if side == "home"
+                                           else self.state.away_timeouts)
+            # Breakdown by category
+            stats["timeouts_by_category"] = {}
+            for t in team_tos:
+                cat = t["category"]
+                stats["timeouts_by_category"][cat] = stats["timeouts_by_category"].get(cat, 0) + 1
+            # Breakdown by half
+            stats["timeouts_1h"] = len([t for t in team_tos if t["quarter"] <= 2])
+            stats["timeouts_2h"] = len([t for t in team_tos if t["quarter"] >= 3])
+
         for stats, team_obj in [(home_stats, self.home_team), (away_stats, self.away_team)]:
             keeper_deflections = sum(p.game_kick_deflections for p in team_obj.players)
             keeper_bells = sum(p.game_keeper_bells for p in team_obj.players)
@@ -12050,6 +12137,8 @@ class ViperballEngine:
             "modifier_stack": self._build_modifier_stack_summary(),
             # ── V2.4: Play-family adaptation narrative ──
             "adaptation_log": list(self._adaptation_log),
+            # ── Timeout log: every timeout event for post-game audit ──
+            "timeout_log": list(self.timeout_log),
         }
 
         return summary
