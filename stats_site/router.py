@@ -2138,6 +2138,177 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
     ))
 
 
+# ── RATINGS (Composite Rankings) ─────────────────────────────────────────
+
+def _cached_composite_rankings(season):
+    """Build composite rankings from season data. Cached per season state."""
+    cached = _cache_get(season, "composite_rankings")
+    if cached is not None:
+        return cached
+
+    from engine.ranking_composite import (
+        GameResult, TeamSeasonStats, calculate_composite, METHOD_KEYS,
+    )
+
+    # ── Build GameResult list from completed games ──
+    game_results = []
+    for game in _all_college_games(season):
+        if not game.completed or game.home_score is None:
+            continue
+
+        # Extract quarter scores from play-by-play if available
+        home_q = None
+        away_q = None
+        fr = getattr(game, "full_result", None)
+        if fr and isinstance(fr, dict):
+            pbp = fr.get("play_by_play", [])
+            if pbp and isinstance(pbp, list) and pbp and "home_score" in pbp[0]:
+                h_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                a_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                prev_h, prev_a = 0.0, 0.0
+                for play in pbp:
+                    q = play.get("quarter", 0)
+                    if q not in h_q:
+                        continue
+                    cur_h = play.get("home_score", prev_h)
+                    cur_a = play.get("away_score", prev_a)
+                    h_q[q] += cur_h - prev_h
+                    a_q[q] += cur_a - prev_a
+                    prev_h, prev_a = cur_h, cur_a
+                # Cumulative quarter scores for ranking_composite
+                home_q = [h_q[1], h_q[1]+h_q[2], h_q[1]+h_q[2]+h_q[3], h_q[1]+h_q[2]+h_q[3]+h_q[4]]
+                away_q = [a_q[1], a_q[1]+a_q[2], a_q[1]+a_q[2]+a_q[3], a_q[1]+a_q[2]+a_q[3]+a_q[4]]
+
+        game_results.append(GameResult(
+            home_team=game.home_team,
+            away_team=game.away_team,
+            home_score=game.home_score,
+            away_score=game.away_score,
+            neutral_site=False,
+            home_q_scores=home_q,
+            away_q_scores=away_q,
+        ))
+
+    if len(game_results) < 4:
+        _cache_set(season, "composite_rankings", [])
+        return []
+
+    # ── Build TeamSeasonStats from standings ──
+    team_stats = {}
+    for t_name, rec in season.standings.items():
+        if rec.games_played == 0:
+            continue
+        dye = rec.dye_season_summary
+        pk_eff = dye.get("pk_efficiency")
+        pp_eff = dye.get("pp_efficiency")
+        mess = dye.get("mess_rate")
+        pp_data = dye.get("power_play", {})
+
+        team_stats[t_name] = TeamSeasonStats(
+            team=t_name,
+            ppd=rec.avg_ppd,
+            conversion_pct=rec.avg_conversion_pct,
+            explosive_plays=int(rec.total_explosive),
+            total_drives=max(1, rec.games_played * 10),  # rough estimate
+            opp_ppd=rec.points_against / max(1, rec.games_played) / 10.0,  # rough per-drive
+            turnovers_forced=rec.total_turnovers_forced_all,
+            kill_pct=dye.get("penalty_kill", {}).get("score_rate", 0),
+            stops=rec.total_defensive_stops,
+            opp_drives=rec.total_opponent_drives,
+            pk_efficiency=pk_eff if pk_eff is not None else 0.0,
+            pp_efficiency=pp_eff if pp_eff is not None else 0.0,
+            mess_rate=mess if mess is not None else 0.0,
+            wins_despite_penalty=rec.dye_wins_despite_penalty,
+            epa_per_play=0.0,  # filled below from game aggregation
+            game_control_avg=0.0,
+            pp_score_rate=pp_data.get("score_rate", 0),
+            power_index=season.calculate_power_index(t_name),
+        )
+
+    # ── Aggregate EPA from game results ──
+    epa_sums = {}
+    play_counts = {}
+    for game in _all_college_games(season):
+        if not game.completed:
+            continue
+        fr = getattr(game, "full_result", None)
+        if not fr or not isinstance(fr, dict):
+            continue
+        stats = fr.get("stats", {})
+        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            s = stats.get(side)
+            if not s:
+                continue
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                epa_val = epa_val.get("total_epa", epa_val.get("wpa", 0))
+            if isinstance(epa_val, (int, float)):
+                epa_sums[t_name] = epa_sums.get(t_name, 0) + epa_val
+            plays = s.get("total_plays", 0)
+            play_counts[t_name] = play_counts.get(t_name, 0) + plays
+
+    for t_name, ts in team_stats.items():
+        total_plays = play_counts.get(t_name, 0)
+        if total_plays > 0:
+            ts.epa_per_play = epa_sums.get(t_name, 0) / total_plays
+
+    # ── Conference map ──
+    conferences = getattr(season, "team_conferences", {})
+
+    # ── Run composite ──
+    composites = calculate_composite(
+        game_results,
+        team_conferences=conferences,
+        team_stats=team_stats,
+    )
+
+    # ── Serialize to dicts for template ──
+    result = []
+    for c in composites:
+        entry = {
+            "composite_rank": c.composite_rank,
+            "team": c.team,
+            "conference": c.conference,
+            "wins": c.wins,
+            "losses": c.losses,
+            "mean_rank": c.mean_rank,
+            "median_rank": c.median_rank,
+            "std_dev": c.std_dev,
+            "method_ranks": c.method_ranks,
+            "method_ratings": c.method_ratings,
+            "sos": c.sos,
+            "sos_w": c.sos_w,
+            "sos_l": c.sos_l,
+        }
+        result.append(entry)
+
+    _cache_set(season, "composite_rankings", result)
+    return result
+
+
+@router.get("/college/{session_id}/ratings", response_class=HTMLResponse)
+def college_ratings(request: Request, session_id: str, top: int = 50):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    composites = _cached_composite_rankings(season)
+
+    # Clamp top parameter
+    top = max(10, min(len(composites), top)) if composites else 0
+
+    from engine.ranking_composite import METHOD_KEYS
+
+    return templates.TemplateResponse("college/ratings.html", _ctx(
+        request, section="college", session_id=session_id,
+        composites=composites[:top],
+        total_teams=len(composites),
+        top=top,
+        method_keys=METHOD_KEYS,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 _TEAM_INIT_FIELDS = {
     "games": 0,
     # Scoring
