@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Ratings — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Ratings
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>COMPOSITE RATINGS</h1>
+  <div class="subtitle">{{ season_name }} &middot; {{ total_teams }} teams &middot; {{ method_keys|length }} systems</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings" class="active">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{% if composites %}
+
+<p style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">
+  Each column is an independent ranking system. Composite = average rank across all systems.
+  <strong>Std Dev</strong> measures disagreement — high σ = controversial team.
+  <br>
+  <a href="/stats/college/{{ session_id }}/ratings?top=25">Top 25</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?top=50">Top 50</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?top=100">Top 100</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?top={{ total_teams }}">All {{ total_teams }}</a>
+</p>
+
+{# ── Summary table: Composite + metadata ── #}
+<h2>Composite Rankings (Top {{ top }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th>Record</th>
+      <th>Conf</th>
+      <th class="num">Mean</th>
+      <th class="num">Median</th>
+      <th class="num">σ</th>
+      <th class="num">SOS</th>
+      <th class="num">SOS(W)</th>
+      <th class="num">SOS(L)</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in composites %}
+  <tr>
+    <td class="num rank">{{ c.composite_rank }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ c.team }}">{{ c.team }}</a></td>
+    <td class="record">{{ c.wins }}-{{ c.losses }}</td>
+    <td>{{ conf_abbrev(c.conference) }}</td>
+    <td class="num">{{ "%.1f"|format(c.mean_rank) }}</td>
+    <td class="num">{{ "%.1f"|format(c.median_rank) }}</td>
+    <td class="num {% if c.std_dev > 20 %}stat-bad{% elif c.std_dev > 10 %}{% else %}stat-good{% endif %}">{{ "%.1f"|format(c.std_dev) }}</td>
+    <td class="num">{{ "%.0f"|format(c.sos) }}</td>
+    <td class="num">{{ "%.0f"|format(c.sos_w) if c.sos_w else '—' }}</td>
+    <td class="num">{{ "%.0f"|format(c.sos_l) if c.sos_l else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{# ── Full comparison grid: one column per ranking system ── #}
+<h2 style="margin-top: 20px;">System-by-System Ranks</h2>
+<p style="font-size: 10px; color: var(--dim); margin-bottom: 6px;">
+  Scroll right to see all {{ method_keys|length }} systems. Color: <span class="stat-elite">top 5</span>, <span class="stat-good">top 25</span>, <span class="stat-bad">below 50</span>.
+</p>
+
+{% set short_names = {
+  "elo": "Elo", "colley": "Colley", "massey": "Massey", "bt": "B-T",
+  "sor": "SOR", "srs": "SRS",
+  "win_pct": "W%", "point_diff": "PtDiff", "pythag": "Pythag", "sos_win_pct": "SOS·W%",
+  "elo_recent": "EloRec", "round_robin": "RndRbn",
+  "isov": "ISOV", "resume": "Resume",
+  "off_eff": "OffEff", "def_eff": "DefEff", "fpi": "FPI",
+  "dye_index": "DYE", "comeback": "CBack", "margin_comp": "MComp",
+  "billingsley": "Bills", "entropy": "Entrpy", "pagerank": "PgRnk",
+  "cfqi": "CFQI", "sagarin_pred": "SagP", "sagarin_recent": "SagR",
+  "game_control": "GCtrl", "cvl_official": "CVL"
+} %}
+
+{% set categories = [
+  ("Core Math", ["elo", "colley", "massey", "bt", "sor", "srs"]),
+  ("Simple", ["win_pct", "point_diff", "pythag", "sos_win_pct"]),
+  ("Elo Var.", ["elo_recent", "round_robin"]),
+  ("Resume", ["isov", "resume"]),
+  ("Effic.", ["off_eff", "def_eff", "fpi"]),
+  ("Viperball", ["dye_index", "comeback", "margin_comp"]),
+  ("Opaque", ["billingsley", "entropy", "pagerank"]),
+  ("Sagarin", ["sagarin_pred", "sagarin_recent"]),
+  ("Meta", ["cfqi", "game_control", "cvl_official"]),
+] %}
+
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table style="font-size: 10px; white-space: nowrap;">
+  <thead>
+    {# Category row #}
+    <tr style="border-bottom: none;">
+      <th colspan="4" style="border-bottom: none;"></th>
+      {% for cat_name, cat_keys in categories %}
+      <th colspan="{{ cat_keys|length }}" style="text-align: center; font-size: 9px; color: var(--dim); border-bottom: none; border-left: 1px solid var(--border);">{{ cat_name }}</th>
+      {% endfor %}
+    </tr>
+    {# System name row #}
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th>Rec</th>
+      <th class="num">Avg</th>
+      {% for cat_name, cat_keys in categories %}
+      {% for key in cat_keys %}
+      <th class="num" style="font-size: 9px;{% if loop.first %} border-left: 1px solid var(--border);{% endif %}" title="{{ key }}">{{ short_names.get(key, key) }}</th>
+      {% endfor %}
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in composites %}
+  <tr>
+    <td class="num rank">{{ c.composite_rank }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ c.team }}">{{ c.team }}</a></td>
+    <td class="record">{{ c.wins }}-{{ c.losses }}</td>
+    <td class="num" style="font-weight: bold;">{{ "%.1f"|format(c.mean_rank) }}</td>
+    {% for cat_name, cat_keys in categories %}
+    {% for key in cat_keys %}
+    {% set r = c.method_ranks.get(key) %}
+    <td class="num {% if r and r <= 5 %}stat-elite{% elif r and r <= 25 %}stat-good{% elif r and r > 50 %}stat-bad{% endif %}" style="{% if loop.first %}border-left: 1px solid var(--border);{% endif %}">{{ r if r else '—' }}</td>
+    {% endfor %}
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{# ── Most controversial teams ── #}
+{% set controversial = composites|sort(attribute='std_dev', reverse=true) %}
+{% if controversial|length > 5 %}
+<h2 style="margin-top: 20px;">Most Controversial Teams</h2>
+<p style="font-size: 11px; color: var(--dim); margin-bottom: 6px;">
+  Highest standard deviation across ranking systems — methods disagree most about these teams.
+</p>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th>Record</th>
+      <th class="num">Composite</th>
+      <th class="num">σ</th>
+      <th class="num">Best Rank</th>
+      <th class="num">Worst Rank</th>
+      <th class="num">Range</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in controversial[:10] %}
+  {% set ranks = c.method_ranks.values()|list %}
+  {% set best = ranks|min %}
+  {% set worst = ranks|max %}
+  <tr>
+    <td class="num rank">{{ c.composite_rank }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ c.team }}">{{ c.team }}</a></td>
+    <td class="record">{{ c.wins }}-{{ c.losses }}</td>
+    <td class="num">{{ "%.1f"|format(c.mean_rank) }}</td>
+    <td class="num stat-bad">{{ "%.1f"|format(c.std_dev) }}</td>
+    <td class="num stat-good">{{ best }}</td>
+    <td class="num stat-bad">{{ worst }}</td>
+    <td class="num">{{ worst - best }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% else %}
+<div class="empty">Not enough games played to generate composite ratings. Play at least 4 games.</div>
+{% endif %}
+
+{% endblock %}
