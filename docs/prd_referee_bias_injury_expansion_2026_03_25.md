@@ -24,7 +24,7 @@ The ref system should be **immersive, not game-breaking**. Across a full season 
 
 ### Referee Pool
 
-- **30 named referees** generated dynamically using the player name generator (`scripts/generate_names.py`)
+- **300 named referees** generated dynamically using the player name generator (`scripts/generate_names.py`) — enough for 100 3-person crews to cover a 200-team league
 - Pool is cached per session; call `generate_referee_pool(n, seed)` to regenerate or expand
 - Each ref has **hidden attributes** (not exposed in UI):
 

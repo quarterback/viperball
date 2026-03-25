@@ -1524,7 +1524,7 @@ _REF_TIERS = [
 _REFEREE_POOL_CACHE: Optional[List[Dict]] = None
 
 
-def generate_referee_pool(n: int = 30, seed: int = 12345) -> List[Dict]:
+def generate_referee_pool(n: int = 300, seed: int = 12345) -> List[Dict]:
     """Generate a pool of named referees using the name generator.
 
     Each ref gets a name from the player name generator and hidden
