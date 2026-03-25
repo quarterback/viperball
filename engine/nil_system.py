@@ -487,7 +487,7 @@ def compute_team_prestige(
     recent_pts = min(20, recent_wins * 2)
 
     prestige = int(base + champ_pts + recent_pts)
-    return max(10, min(99, prestige))
+    return max(1, min(99, prestige))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -561,7 +561,7 @@ def adjust_prestige_postgame(
         delta = base_loss * streak_mult
 
     new_prestige = current_prestige + delta
-    return max(10, min(99, int(round(new_prestige))))
+    return max(1, min(99, int(round(new_prestige))))
 
 
 def apply_season_end_regression(current_prestige: int, mean: int = 50) -> int:
@@ -572,4 +572,4 @@ def apply_season_end_regression(current_prestige: int, mean: int = 50) -> int:
     """
     regression = (mean - current_prestige) * 0.20
     new_prestige = current_prestige + regression
-    return max(10, min(99, int(round(new_prestige))))
+    return max(1, min(99, int(round(new_prestige))))

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Alumni — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Alumni
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Alumni &amp; Hall of Fame</h1>
+  <div class="subtitle">{{ alumni|length }} graduated players{% if dynasty %} &middot; {{ dynasty.dynasty_name }}{% endif %}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni" class="active">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{# ── Sort tabs ── #}
+<div class="tabs" style="margin-bottom:4px;">
+  <a href="/stats/college/{{ session_id }}/alumni?sort=yards{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'yards' %}class="active"{% endif %}>Yards</a>
+  <a href="/stats/college/{{ session_id }}/alumni?sort=tds{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'tds' %}class="active"{% endif %}>TDs</a>
+  <a href="/stats/college/{{ session_id }}/alumni?sort=overall{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'overall' %}class="active"{% endif %}>Overall</a>
+  <a href="/stats/college/{{ session_id }}/alumni?sort=tackles{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'tackles' %}class="active"{% endif %}>Tackles</a>
+  <a href="/stats/college/{{ session_id }}/alumni?sort=year{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'year' %}class="active"{% endif %}>Class Year</a>
+  <a href="/stats/college/{{ session_id }}/alumni?sort=name{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == 'name' %}class="active"{% endif %}>Name</a>
+</div>
+
+{# ── Conference filter ── #}
+{% if conferences %}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/alumni?sort={{ sort }}">All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/alumni?sort={{ sort }}&conference={{ c }}"{% if conference == c %} style="color:var(--accent)"{% endif %}>{{ c[:15] }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if alumni %}
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Name</th>
+      <th>Pos</th>
+      <th>Team</th>
+      <th>Conf</th>
+      <th class="num">Class</th>
+      <th class="num">Yrs</th>
+      <th class="num">OVR</th>
+      <th class="num">GP</th>
+      <th class="num">YDS</th>
+      <th class="num">TD</th>
+      <th class="num">TKL</th>
+      <th>Intl</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in alumni %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td><a href="/stats/college/{{ session_id }}/alumni/{{ a.name }}">{{ a.name }}</a></td>
+      <td><span class="tag tag-pos">{{ a.position }}</span></td>
+      <td><a href="/stats/college/{{ session_id }}/team/{{ a.college_team }}">{{ a.college_team[:20] }}</a></td>
+      <td style="font-size:11px">{{ a.conference[:12] if a.conference else '' }}</td>
+      <td class="num">{{ a.graduation_year }}</td>
+      <td class="num">{{ a.college_seasons_count }}</td>
+      <td class="num {% if a.peak_overall >= 90 %}stat-elite{% elif a.peak_overall >= 80 %}stat-good{% endif %}">{{ a.peak_overall }}</td>
+      <td class="num">{{ a.career_games }}</td>
+      <td class="num {% if a.career_yards >= 3000 %}stat-elite{% elif a.career_yards >= 1500 %}stat-good{% endif %}">{{ a.career_yards }}</td>
+      <td class="num {% if a.career_tds >= 30 %}stat-elite{% elif a.career_tds >= 15 %}stat-good{% endif %}">{{ a.career_tds }}</td>
+      <td class="num {% if a.career_tackles >= 100 %}stat-elite{% elif a.career_tackles >= 50 %}stat-good{% endif %}">{{ a.career_tackles }}</td>
+      <td>{% if a.national_team %}<span class="tag">{{ a.national_team }}</span> {{ a.international_caps }} caps{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:var(--fg-dim); margin-top:24px;">No alumni yet. Complete at least one dynasty season to see graduated players here.</p>
+{% endif %}
+{% endblock %}

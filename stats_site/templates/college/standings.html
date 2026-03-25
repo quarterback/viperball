@@ -21,9 +21,11 @@
   <a href="/stats/college/{{ session_id }}/players">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
   <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
   <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
   <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
@@ -37,6 +39,7 @@
       <th>W-L</th><th>Conf</th>
       <th class="num">PF</th><th class="num">PA</th><th class="num">Diff</th>
       <th class="num">Rating</th><th class="num">PPD</th>
+      <th class="num">5D%</th><th class="num">KILL%</th>
       <th class="num">Conv%</th><th class="num">Lat%</th>
       <th class="num">Expl</th><th class="num">TO+/-</th>
       <th>Off</th><th>Def</th>
@@ -55,6 +58,8 @@
     <td class="num {% if s.point_differential > 0 %}stat-good{% elif s.point_differential < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.point_differential) }}</td>
     <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
     <td class="num">{{ s.avg_ppd }}</td>
+    <td class="num {% if s.season_5d_pct >= 55 %}stat-good{% elif s.season_5d_pct < 35 %}stat-bad{% endif %}">{{ s.season_5d_pct }}%</td>
+    <td class="num {% if s.season_kill_pct <= 10 %}stat-good{% elif s.season_kill_pct >= 25 %}stat-bad{% endif %}">{{ s.season_kill_pct }}%</td>
     <td class="num">{{ s.avg_conversion_pct }}%</td>
     <td class="num">{{ s.avg_lateral_pct }}%</td>
     <td class="num">{{ s.avg_explosive }}</td>
@@ -67,14 +72,25 @@
 </table>
 
 {# ── Conference Standings ── #}
+<div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0">Conference Standings</h2>
+  <select id="conf-select" style="background:var(--bg-card,#1a1a2e);color:var(--fg,#e0e0e0);border:1px solid var(--border,#333);padding:6px 12px;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer">
+    <option value="">Select a conference&hellip;</option>
+    {% for conf_name in conferences.keys()|sort %}
+    <option value="{{ conf_name }}">{{ conf_name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
 {% for conf_name, conf_standings in conferences.items()|sort %}
-<h2>{{ conf_name }}</h2>
+<div class="conf-section" data-conf="{{ conf_name }}" style="display:none">
+<h3>{{ conf_name }}</h3>
 <table>
   <thead>
     <tr>
       <th class="num">#</th><th>Team</th><th>Conf</th><th>Overall</th>
       <th class="num">PF</th><th class="num">PA</th>
-      <th class="num">Rating</th><th class="num">PPD</th>
+      <th class="num">Rating</th><th class="num">PPD</th><th class="num">5D%</th><th class="num">KILL%</th>
     </tr>
   </thead>
   <tbody>
@@ -88,10 +104,23 @@
     <td class="num">{{ s.points_against }}</td>
     <td class="num">{{ s.avg_team_rating }}</td>
     <td class="num">{{ s.avg_ppd }}</td>
+    <td class="num">{{ s.season_5d_pct }}%</td>
+    <td class="num">{{ s.season_kill_pct }}%</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% endfor %}
+
+<script>
+document.getElementById('conf-select').addEventListener('change', function() {
+  document.querySelectorAll('.conf-section').forEach(function(d) { d.style.display = 'none'; });
+  if (this.value) {
+    var el = document.querySelector('.conf-section[data-conf="' + this.value + '"]');
+    if (el) el.style.display = '';
+  }
+});
+</script>
 
 {% endblock %}

@@ -211,6 +211,57 @@ def _conf_abbrev(name: str) -> str:
     return "".join(w[0] for w in words[:4]).upper()
 
 
+# ── season-aware cache ───────────────────────────────────────────────────
+# Keys on (id(season), completed_game_count) so results auto-invalidate
+# when new games finish but avoid re-aggregating on every page load.
+
+_season_cache: dict = {}
+_CACHE_MAX_ENTRIES = 64  # cap total entries to bound memory
+
+
+def _season_cache_key(season, label: str):
+    """Build a cache key from season identity + completion state."""
+    completed = sum(1 for g in season.schedule if g.completed)
+    # Also count playoff/bowl completions for postseason accuracy
+    playoff_done = sum(1 for g in (season.playoff_bracket or []) if g.completed)
+    bowl_done = sum(1 for bg in (season.bowl_games or []) if bg.game.completed)
+    return (id(season), completed + playoff_done + bowl_done, label)
+
+
+def _cache_get(season, label: str):
+    """Return cached value or None."""
+    key = _season_cache_key(season, label)
+    return _season_cache.get(key)
+
+
+def _cache_set(season, label: str, value):
+    """Store value in cache, evicting oldest entries if over limit."""
+    if len(_season_cache) >= _CACHE_MAX_ENTRIES:
+        # Drop the oldest half
+        keys = list(_season_cache.keys())
+        for k in keys[: len(keys) // 2]:
+            del _season_cache[k]
+    key = _season_cache_key(season, label)
+    _season_cache[key] = value
+
+
+# Pro-league cache uses (id(season), current_week)
+def _pro_cache_key(season, label: str):
+    return (id(season), getattr(season, "current_week", 0), label)
+
+
+def _pro_cache_get(season, label: str):
+    return _season_cache.get(_pro_cache_key(season, label))
+
+
+def _pro_cache_set(season, label: str, value):
+    if len(_season_cache) >= _CACHE_MAX_ENTRIES:
+        keys = list(_season_cache.keys())
+        for k in keys[: len(keys) // 2]:
+            del _season_cache[k]
+    _season_cache[_pro_cache_key(season, label)] = value
+
+
 # ── helpers ──────────────────────────────────────────────────────────────
 
 def _get_api():
@@ -450,6 +501,89 @@ def _ctx(request, **kwargs):
     return kwargs
 
 
+def _cached_season_awards(season):
+    """Return cached compute_season_awards result, computing once per season state."""
+    cached = _cache_get(season, "awards")
+    if cached is not None:
+        return cached
+    from engine.awards import compute_season_awards
+    honors = compute_season_awards(
+        season, year=2025,
+        conferences=season.conferences if hasattr(season, 'conferences') else None,
+    )
+    _cache_set(season, "awards", honors)
+    return honors
+
+
+def _compute_benchmarks(teams, keys):
+    """Compute league percentile benchmarks (p25/median/p75/p90) for stat keys.
+
+    Returns dict like {"epa": {"p25": -2.1, "med": 1.3, "p75": 5.0, "p90": 8.2}, ...}
+    """
+    benchmarks = {}
+    for key in keys:
+        vals = sorted(
+            [t[key] for t in teams if isinstance(t.get(key), (int, float))],
+        )
+        n = len(vals)
+        if n < 4:
+            benchmarks[key] = None
+            continue
+        benchmarks[key] = {
+            "p25": round(vals[n // 4], 2),
+            "med": round(vals[n // 2], 2),
+            "p75": round(vals[3 * n // 4], 2),
+            "p90": round(vals[int(n * 0.9)], 2),
+        }
+    return benchmarks
+
+
+def _game_benchmarks_from_season(season):
+    """Collect per-game EPA/rating/VE from all completed games and return benchmarks."""
+    cached = _cache_get(season, "benchmarks")
+    if cached is not None:
+        return cached
+    per_game = []
+    all_games = list(season.schedule) + list(season.playoff_bracket or []) + [
+        bg.game for bg in (season.bowl_games or [])
+    ]
+    for g in all_games:
+        fr = getattr(g, "full_result", None) or getattr(g, "_full_result", None)
+        if not fr or not isinstance(fr, dict):
+            continue
+        stats = fr.get("stats", {})
+        for side in ("home", "away"):
+            s = stats.get(side)
+            if not s:
+                continue
+            entry = {}
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                entry["epa"] = epa_val.get("total_epa", epa_val.get("wpa", 0))
+            elif isinstance(epa_val, (int, float)):
+                entry["epa"] = epa_val
+            vm = s.get("viperball_metrics", {})
+            if vm and vm.get("team_rating") is not None:
+                entry["team_rating"] = vm["team_rating"]
+            if vm and vm.get("ppd") is not None:
+                entry["ppd"] = vm["ppd"]
+            ve = s.get("viper_efficiency")
+            if ve is not None:
+                entry["viper_efficiency"] = ve
+            ep = vm.get("explosive_plays") if vm else None
+            if ep is not None:
+                entry["explosive_plays"] = ep
+            per_game.append(entry)
+    if len(per_game) < 4:
+        _cache_set(season, "benchmarks", {})
+        return {}
+    result = _compute_benchmarks(per_game, [
+        "epa", "team_rating", "ppd", "viper_efficiency", "explosive_plays",
+    ])
+    _cache_set(season, "benchmarks", result)
+    return result
+
+
 # ── HOME ─────────────────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
@@ -515,6 +649,45 @@ def college_index(request: Request):
     return templates.TemplateResponse("college/index.html", _ctx(
         request, section="college", sessions=sessions,
     ))
+
+
+@router.post("/college/import")
+async def college_import_dynasty(request: Request):
+    """Import a dynasty save file. If it contains a season snapshot, save it
+    as a season archive and redirect to the archive viewer for immediate stats access."""
+    import json as _json
+    from starlette.responses import RedirectResponse
+    from engine.db import save_season_archive
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        data = _json.loads(contents)
+    except Exception as e:
+        raise HTTPException(400, f"Failed to parse file: {e}")
+
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
+
+    if snapshot:
+        import uuid
+        archive_key = f"import_{uuid.uuid4().hex[:8]}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return RedirectResponse(f"/stats/archives/{archive_key}/", status_code=303)
+
+    # No season snapshot — show an error page
+    raise HTTPException(
+        400,
+        f"No season data found in this save file. The dynasty metadata for "
+        f"'{dynasty_name}' (Year {year}) was found, but there are no game results "
+        f"to display. Re-download the save from an active season to include stats."
+    )
 
 
 @router.get("/college/{session_id}/", response_class=HTMLResponse)
@@ -877,7 +1050,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "kp_tds": kp_tds,
             "kp_ints": kp_ints,
             "lateral_chains": lateral_chains,
-            "lateral_yards": lateral_yards,
+            "lateral_yards": int(round(lateral_yards)),
             "successful_laterals": successful_laterals,
             "lateral_pct": round(successful_laterals / max(1, lateral_chains) * 100, 1),
             "touchdowns": touchdowns,
@@ -888,9 +1061,9 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             "fumbles": fumbles,
             "tod": tod,
             "penalties": penalties,
-            "penalty_yards": penalty_yards,
-            "delta_yards": delta_yards,
-            "adjusted_yards": adjusted_yards,
+            "penalty_yards": int(round(penalty_yards)),
+            "delta_yards": int(round(delta_yards)),
+            "adjusted_yards": int(round(adjusted_yards)),
             "delta_drives": delta_drives,
             "delta_scores": delta_scores_total,
             "kill_rate": round(delta_scores_total / max(1, delta_drives) * 100, 1) if delta_drives > 0 else None,
@@ -1055,11 +1228,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             # Individual national awards
             for a in honors.individual_awards:
                 if a.team_name == team_name:
@@ -1120,6 +1289,179 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
                 "coaching_style": card.coaching_style,
             })
 
+    # ── Postseason history ──
+    postseason_entries = []
+
+    # Bowl games
+    for bg in getattr(season, 'bowl_games', []):
+        g = bg.game
+        if team_name in (g.home_team, g.away_team) and g.completed:
+            opp = g.away_team if g.home_team == team_name else g.home_team
+            hs, aws = (g.home_score or 0), (g.away_score or 0)
+            won = (hs > aws and g.home_team == team_name) or (aws > hs and g.away_team == team_name)
+            score_str = f"{max(hs, aws):.1f}-{min(hs, aws):.1f}" if won else f"{min(hs, aws):.1f}-{max(hs, aws):.1f}"
+            postseason_entries.append({
+                "event": bg.name,
+                "result": "W" if won else "L",
+                "opponent": opp,
+                "score": score_str,
+                "mvp": getattr(bg, 'mvp_name', None),
+            })
+
+    # Playoff bracket
+    _ROUND_NAMES = {
+        996: "First Round", 997: "Second Round", 998: "Quarterfinals",
+        999: "Semifinals", 1000: "National Championship",
+    }
+    for game in (season.playoff_bracket or []):
+        if team_name not in (game.home_team, game.away_team) or not game.completed:
+            continue
+        opp = game.away_team if game.home_team == team_name else game.home_team
+        hs, aws = (game.home_score or 0), (game.away_score or 0)
+        won = (hs > aws and game.home_team == team_name) or (aws > hs and game.away_team == team_name)
+        score_str = f"{max(hs, aws):.1f}-{min(hs, aws):.1f}" if won else f"{min(hs, aws):.1f}-{max(hs, aws):.1f}"
+        round_name = _ROUND_NAMES.get(game.week, f"Round {game.week}")
+        postseason_entries.append({
+            "event": f"National Playoff — {round_name}",
+            "result": "W" if won else "L",
+            "opponent": opp,
+            "score": score_str,
+            "mvp": getattr(game, 'mvp_name', None),
+        })
+
+    benchmarks = _game_benchmarks_from_season(season)
+
+    # ── Championship banners ──
+    # Current season achievement (from playoff bracket)
+    current_season_achievement = None
+    if season.champion == team_name:
+        current_season_achievement = "champion"
+    else:
+        # Check playoff bracket for highest round reached
+        highest_week = 0
+        for game in (season.playoff_bracket or []):
+            if team_name in (game.home_team, game.away_team):
+                highest_week = max(highest_week, game.week)
+        if highest_week == 1000:
+            current_season_achievement = "finalist"
+        elif highest_week >= 999:
+            current_season_achievement = "final_four"
+        elif highest_week == 998:
+            current_season_achievement = "sweet_16"
+        elif highest_week > 0:
+            current_season_achievement = "playoff"
+
+    # Check conference champion for current season
+    current_conf_champ = False
+    try:
+        conf_champ_map = season.get_conference_champions()
+        current_conf_champ = team_name in set(conf_champ_map.values())
+    except Exception:
+        pass
+
+    # Check bowl result for current season
+    current_bowl_win = False
+    current_bowl_appearance = False
+    for bg in getattr(season, 'bowl_games', []):
+        g = bg.game
+        if team_name in (g.home_team, g.away_team):
+            current_bowl_appearance = True
+            if g.completed and g.home_score is not None and g.away_score is not None:
+                if (g.home_score > g.away_score and team_name == g.home_team) or \
+                   (g.away_score > g.home_score and team_name == g.away_team):
+                    current_bowl_win = True
+            break
+
+    # Dynasty history banners (across all seasons)
+    banners = []
+    team_hist = None
+    if dynasty and hasattr(dynasty, 'team_histories'):
+        team_hist = dynasty.team_histories.get(team_name)
+    if team_hist:
+        # Use dataclass attributes directly
+        champ_years = getattr(team_hist, 'championship_years', [])
+        finalist_years = getattr(team_hist, 'finalist_years', [])
+        final_four_years = getattr(team_hist, 'final_four_years', [])
+        sweet_16_years = getattr(team_hist, 'sweet_16_years', [])
+        conf_title_years = getattr(team_hist, 'conference_title_years', [])
+
+        if champ_years:
+            banners.append({"type": "champion", "label": "National Champions", "years": sorted(champ_years), "count": len(champ_years)})
+        if finalist_years:
+            banners.append({"type": "finalist", "label": "National Finalist", "years": sorted(finalist_years), "count": len(finalist_years)})
+        if final_four_years:
+            banners.append({"type": "final_four", "label": "Final Four", "years": sorted(final_four_years), "count": len(final_four_years)})
+        if sweet_16_years:
+            banners.append({"type": "sweet_16", "label": "Sweet 16", "years": sorted(sweet_16_years), "count": len(sweet_16_years)})
+
+        # Playoff appearances (excluding those already covered by higher achievements)
+        total_po = getattr(team_hist, 'total_playoff_appearances', 0)
+        higher_count = len(champ_years) + len(finalist_years) + len(final_four_years) + len(sweet_16_years)
+        remaining_po = total_po - higher_count
+        if remaining_po > 0:
+            banners.append({"type": "playoff", "label": "Playoff Appearances", "years": [], "count": remaining_po})
+
+        if conf_title_years:
+            banners.append({"type": "conference", "label": "Conference Champions", "years": sorted(conf_title_years), "count": len(conf_title_years)})
+
+        # Bowl wins (only if not covered by playoff achievement)
+        bowl_wins = getattr(team_hist, 'total_bowl_wins', 0)
+        if bowl_wins > 0:
+            banners.append({"type": "bowl_win", "label": "Bowl Wins", "years": [], "count": bowl_wins})
+
+    # If no dynasty, show current season achievement
+    if not team_hist:
+        if current_season_achievement == "champion":
+            banners.append({"type": "champion", "label": "National Champions", "years": [], "count": 1})
+        elif current_season_achievement == "finalist":
+            banners.append({"type": "finalist", "label": "National Finalist", "years": [], "count": 1})
+        elif current_season_achievement == "final_four":
+            banners.append({"type": "final_four", "label": "Final Four", "years": [], "count": 1})
+        elif current_season_achievement == "sweet_16":
+            banners.append({"type": "sweet_16", "label": "Sweet 16", "years": [], "count": 1})
+        elif current_season_achievement == "playoff":
+            banners.append({"type": "playoff", "label": "Playoff Appearance", "years": [], "count": 1})
+        if current_conf_champ:
+            banners.append({"type": "conference", "label": "Conference Champion", "years": [], "count": 1})
+        if current_bowl_win:
+            banners.append({"type": "bowl_win", "label": "Bowl Win", "years": [], "count": 1})
+        elif current_bowl_appearance and not current_season_achievement:
+            banners.append({"type": "bowl_appearance", "label": "Bowl Appearance", "years": [], "count": 1})
+
+    # ── Season-by-season history (dynasty only) ──
+    season_history = []
+    if team_hist and getattr(team_hist, 'season_records', None):
+        for yr in sorted(team_hist.season_records.keys(), reverse=True):
+            sr = team_hist.season_records[yr]
+            postseason_label = ""
+            if sr.get("champion"):
+                postseason_label = "National Champion"
+            elif sr.get("finalist"):
+                postseason_label = "National Finalist"
+            elif sr.get("final_four"):
+                postseason_label = "Final Four"
+            elif sr.get("sweet_16"):
+                postseason_label = "Sweet 16"
+            elif sr.get("playoff"):
+                postseason_label = "Playoff"
+            if sr.get("bowl_win"):
+                bowl_label = f"{sr.get('bowl_name', 'Bowl')} (W)"
+                postseason_label = f"{postseason_label} · {bowl_label}" if postseason_label else bowl_label
+            elif sr.get("bowl"):
+                bowl_label = f"{sr.get('bowl_name', 'Bowl')} (L)"
+                postseason_label = f"{postseason_label} · {bowl_label}" if postseason_label else bowl_label
+            if sr.get("conference_champion") and "Champion" not in postseason_label:
+                cc = "Conf. Champ"
+                postseason_label = f"{postseason_label} · {cc}" if postseason_label else cc
+            total_games = max(1, sr.get("wins", 0) + sr.get("losses", 0))
+            season_history.append({
+                "year": yr,
+                "record": f"{sr.get('wins', 0)}-{sr.get('losses', 0)}",
+                "postseason": postseason_label,
+                "ppg": round(sr.get("points_for", 0) / total_games, 1),
+                "opp_ppg": round(sr.get("points_against", 0) / total_games, 1),
+            })
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1128,8 +1470,12 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         sorted_roster=sorted_roster, sort=sort,
         team_awards=team_awards,
         coaching_staff=coaching_staff,
+        postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
         banner_url=_banner_url_for(team_name),
+        benchmarks=benchmarks,
+        banners=banners,
+        season_history=season_history,
     ))
 
 
@@ -1184,11 +1530,7 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             # National Coach of the Year
             if honors.coach_of_year and (team_name in honors.coach_of_year):
                 coach_awards.append({"award": "National Coach of the Year", "detail": "Season", "stat_line": season_record})
@@ -1203,12 +1545,18 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     # Personality sliders for display
     sliders = card.personality_sliders or {}
 
+    # Postseason combined stats (playoff + bowl)
+    bowl_count = sum(1 for a in (card.career_awards or []) if a.get("level") == "postseason")
+    postseason_apps = card.playoff_appearances + bowl_count
+    postseason_wins = card.playoff_wins + bowl_count  # bowl award = bowl win
+
     return templates.TemplateResponse("college/coach.html", _ctx(
         request, section="college", session_id=session_id,
         coach=card, team_name=team_name, role=coach_role, role_label=role_label,
         career_history=career_history, coaching_tree=coaching_tree,
         season_record=season_record, coach_awards=coach_awards,
         sliders=sliders,
+        postseason_apps=postseason_apps, postseason_wins=postseason_wins,
     ))
 
 
@@ -1268,11 +1616,24 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     if fr:
         _normalize_box_score_stats(fr)
 
+    # Generate game analysis text if full result is available
+    analysis_text = None
+    if fr and not fr.get("_fast_sim"):
+        try:
+            from analyze_game import analyze_game_data
+            analysis_text = analyze_game_data(fr)
+        except Exception:
+            pass
+
+    benchmarks = _game_benchmarks_from_season(season)
+
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
         bowl_name=bowl_name, is_playoff=is_playoff,
+        analysis_text=analysis_text,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
+        benchmarks=benchmarks,
     ))
 
 
@@ -1331,8 +1692,12 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         "keeper_tackles": 0, "keeper_bells": 0,
         "kick_deflections": 0, "coverage_snaps": 0,
         "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
+        # Snap counts
+        "offensive_snaps": 0, "defensive_snaps": 0,
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
@@ -1377,7 +1742,10 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
                     "keeper_tackles", "keeper_bells",
                     "kick_deflections", "coverage_snaps",
                     "keeper_return_yards",
+                    "points_allowed_in_coverage",
+                    "completions_allowed_in_coverage",
                     "blocks", "pancakes",
+                    "offensive_snaps", "defensive_snaps",
                     "wpa", "plays_involved",
                 ]:
                     season_totals[stat] += pg.get(stat, 0)
@@ -1385,7 +1753,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
 
     # Ensure yard totals are integers
     for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards"):
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
         season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     # Derived season totals
     season_totals["yards_per_touch"] = round(
@@ -1409,6 +1777,14 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     season_totals["wpa_per_play"] = round(
         season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
+    # Keeper analytics — KPR (higher=better) and ERA (lower=better)
+    if season_totals["coverage_snaps"] >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
 
     # Team record for context
     record = season.standings.get(team_name)
@@ -1438,11 +1814,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     regular_season_done = season.is_regular_season_complete() if hasattr(season, 'is_regular_season_complete') else all(g.completed for g in season.schedule)
     if regular_season_done:
         try:
-            from engine.awards import compute_season_awards
-            honors = compute_season_awards(
-                season, year=2025,
-                conferences=season.conferences if hasattr(season, 'conferences') else None,
-            )
+            honors = _cached_season_awards(season)
             for a in honors.individual_awards:
                 if a.player_name == player_name and a.team_name == team_name:
                     player_awards.append({"award": a.award_name, "detail": "Season", "stat_line": "", "level": "national"})
@@ -1474,6 +1846,23 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     _pid = getattr(player, "player_id", "")
     _face_src = _face_url_for(_pid) if _pid else None
 
+    # International career data from career tracker (if available)
+    intl_data = None
+    if dynasty:
+        tracker = getattr(dynasty, "career_tracker", None)
+        if tracker:
+            key = player_name.strip().lower()
+            record = tracker.careers.get(key)
+            if record and (record.international_seasons or record.national_team):
+                intl_data = {
+                    "national_team": record.national_team,
+                    "caps": record.international_caps,
+                    "seasons": record.international_seasons,
+                    "yards": sum(s.get("yards", 0) for s in record.international_seasons),
+                    "tds": sum(s.get("tds", 0) for s in record.international_seasons),
+                    "world_cup_appearances": record.world_cup_appearances,
+                }
+
     return templates.TemplateResponse("college/player.html", _ctx(
         request, section="college", session_id=session_id,
         player=player_data, card=card, team_name=team_name,
@@ -1481,16 +1870,16 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         record=team_record, prestige=prestige, cross_links=cross_links,
         player_awards=player_awards, face_src=_face_src,
         stadium_url=_stadium_url_for(team_name),
+        intl_data=intl_data,
     ))
 
 
-@router.get("/college/{session_id}/players", response_class=HTMLResponse)
-def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    season = api["require_season"](sess)
+def _cached_college_player_agg(season):
+    """Aggregate all player stats from completed games, with derived stats. Cached."""
+    cached = _cache_get(season, "college_player_agg")
+    if cached is not None:
+        return cached
 
-    # Aggregate player stats from completed games (including postseason)
     player_agg = {}
     for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
@@ -1499,8 +1888,6 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         ps = fr.get("player_stats", {})
         for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
             conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
             for p in ps.get(side, []):
                 key = f"{t_name}|{p['name']}"
                 if key not in player_agg:
@@ -1582,6 +1969,23 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
         r["zbr"] = calculate_zbr(r)
         r["vpr"] = calculate_vpr(r)
 
+    _cache_set(season, "college_player_agg", players)
+    return players
+
+
+@router.get("/college/{session_id}/players", response_class=HTMLResponse)
+def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Use cached aggregation, then filter by conference
+    all_players = _cached_college_player_agg(season)
+    if conference:
+        players = [p for p in all_players if p.get("conference") == conference]
+    else:
+        players = list(all_players)
+
     # Sort
     valid_sorts = {
         # Offense
@@ -1625,74 +2029,154 @@ def college_players(request: Request, session_id: str, sort: str = "yards", conf
     ))
 
 
+# ── Alumni / Hall of Fame ──────────────────────────────────────
+
+
+def _build_alumni_list(dynasty) -> list:
+    """Build a list of alumni dicts from the dynasty career tracker."""
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker or not tracker.careers:
+        return []
+    alumni = []
+    for _key, record in tracker.careers.items():
+        alumni.append({
+            "name": record.full_name,
+            "position": record.position,
+            "college_team": record.college_team,
+            "conference": record.college_conference,
+            "graduation_year": record.pro_entry_year or 0,
+            "peak_overall": record.peak_overall,
+            "career_games": sum(s.get("games_played", s.get("games", 0)) for s in record.college_seasons),
+            "career_yards": sum(s.get("total_yards", s.get("yards", 0)) for s in record.college_seasons),
+            "career_tds": sum(s.get("touchdowns", s.get("tds", 0)) for s in record.college_seasons),
+            "career_tackles": sum(s.get("tackles", 0) for s in record.college_seasons),
+            "college_seasons_count": len(record.college_seasons),
+            "awards": record.career_awards,
+            "nationality": record.nationality,
+            "hometown": record.hometown,
+            "national_team": record.national_team,
+            "international_caps": record.international_caps,
+            "international_seasons": record.international_seasons,
+            "pro_seasons": record.pro_seasons,
+            "career_status": record.career_status,
+        })
+    alumni.sort(key=lambda a: (-a["career_yards"], -a["career_tds"], a["name"]))
+    return alumni
+
+
+@router.get("/college/{session_id}/alumni", response_class=HTMLResponse)
+def college_alumni(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+
+    if not dynasty:
+        raise HTTPException(404, "Alumni page requires dynasty mode")
+
+    alumni = _build_alumni_list(dynasty)
+
+    # Filter by conference
+    if conference:
+        alumni = [a for a in alumni if a["conference"] == conference]
+
+    # Sort
+    sort_keys = {
+        "yards": lambda a: -a["career_yards"],
+        "tds": lambda a: -a["career_tds"],
+        "overall": lambda a: -a["peak_overall"],
+        "tackles": lambda a: -a["career_tackles"],
+        "name": lambda a: a["name"],
+        "team": lambda a: a["college_team"],
+        "year": lambda a: -a["graduation_year"],
+    }
+    key_fn = sort_keys.get(sort, sort_keys["yards"])
+    alumni.sort(key=key_fn)
+
+    conferences = sorted(dynasty.conferences.keys()) if dynasty.conferences else []
+
+    return templates.TemplateResponse("college/alumni.html", _ctx(
+        request, section="college", session_id=session_id,
+        alumni=alumni, sort=sort, conference=conference,
+        conferences=conferences,
+        season_name=getattr(season, "name", "Season"),
+        dynasty=dynasty,
+    ))
+
+
+@router.get("/college/{session_id}/alumni/{player_name}", response_class=HTMLResponse)
+def college_alumni_profile(request: Request, session_id: str, player_name: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    dynasty = sess.get("dynasty")
+
+    if not dynasty:
+        raise HTTPException(404, "Alumni profile requires dynasty mode")
+
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        raise HTTPException(404, "No career tracker available")
+
+    # Look up player by name (case-insensitive)
+    key = player_name.strip().lower()
+    record = tracker.careers.get(key)
+    if not record:
+        # Try URL-decoded match
+        from urllib.parse import unquote
+        decoded = unquote(player_name).strip().lower()
+        record = tracker.careers.get(decoded)
+    if not record:
+        raise HTTPException(404, f"Alumni '{player_name}' not found")
+
+    # Build profile data
+    profile = record.to_dict()
+    profile["career_games"] = sum(s.get("games_played", s.get("games", 0)) for s in record.college_seasons)
+    profile["career_yards"] = sum(s.get("total_yards", s.get("yards", 0)) for s in record.college_seasons)
+    profile["career_tds"] = sum(s.get("touchdowns", s.get("tds", 0)) for s in record.college_seasons)
+    profile["career_tackles"] = sum(s.get("tackles", 0) for s in record.college_seasons)
+    profile["career_fumbles"] = sum(s.get("fumbles", 0) for s in record.college_seasons)
+    profile["career_kick_made"] = sum(s.get("kick_made", 0) for s in record.college_seasons)
+    profile["career_kick_att"] = sum(s.get("kick_att", 0) for s in record.college_seasons)
+    profile["career_sacks"] = sum(s.get("sacks", 0) for s in record.college_seasons)
+    profile["pro_teams"] = record.pro_teams_summary
+    profile["intl_career_yards"] = sum(s.get("yards", 0) for s in record.international_seasons)
+    profile["intl_career_tds"] = sum(s.get("tds", 0) for s in record.international_seasons)
+    profile["intl_career_games"] = sum(s.get("games", 0) for s in record.international_seasons)
+
+    # Face
+    face_src = None
+    pid = profile.get("player_id", "")
+    if pid:
+        face_src = _face_url_for(pid)
+
+    return templates.TemplateResponse("college/alumni_profile.html", _ctx(
+        request, section="college", session_id=session_id,
+        profile=profile, dynasty=dynasty,
+        season_name=getattr(season, "name", "Season"),
+        face_src=face_src,
+    ))
+
+
 @router.get("/college/{session_id}/analytics", response_class=HTMLResponse)
 def college_analytics(request: Request, session_id: str, sort: str = "war", conference: str = ""):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    from engine.viperball_metrics import calculate_war, calculate_zbr, calculate_vpr
+    # Reuse cached player aggregation (already has WAR/ZBR/VPR)
+    all_players = _cached_college_player_agg(season)
+    if conference:
+        all_players = [p for p in all_players if p.get("conference") == conference]
 
-    # Aggregate player stats from completed games (same as players route)
-    player_agg = {}
-    for game in season.schedule:
-        if not game.completed or not getattr(game, "full_result", None):
-            continue
-        fr = game.full_result
-        ps = fr.get("player_stats", {})
-        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
-            conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
-            for p in ps.get(side, []):
-                key = f"{t_name}|{p['name']}"
-                if key not in player_agg:
-                    player_agg[key] = {
-                        "name": p["name"], "team": t_name, "conference": conf,
-                        "tag": p.get("tag", ""), "position": p.get("position", ""),
-                        "archetype": p.get("archetype", ""),
-                        "games_played": 0, "touches": 0, "yards": 0,
-                        "rushing_yards": 0, "lateral_yards": 0, "tds": 0,
-                        "fumbles": 0, "laterals_thrown": 0, "lateral_assists": 0,
-                        "kick_return_yards": 0, "punt_return_yards": 0,
-                        "kick_pass_yards": 0,
-                        "wpa": 0.0, "plays_involved": 0,
-                    }
-                agg = player_agg[key]
-                agg["games_played"] += 1
-                if not agg["tag"]:
-                    agg["tag"] = p.get("tag", "")
-                if not agg["position"]:
-                    agg["position"] = p.get("position", "")
-                if not agg["archetype"] or agg["archetype"] == "—":
-                    agg["archetype"] = p.get("archetype", "")
-                for stat in [
-                    "touches", "yards", "rushing_yards", "lateral_yards",
-                    "tds", "fumbles", "laterals_thrown", "lateral_assists",
-                    "kick_return_yards", "punt_return_yards", "kick_pass_yards",
-                    "plays_involved",
-                ]:
-                    agg[stat] += p.get(stat, 0)
-                agg["wpa"] += p.get("wpa", 0.0)
-
-    players = list(player_agg.values())
-    for r in players:
-        r["yards"] = int(round(r.get("yards", 0)))
-        r["rushing_yards"] = int(round(r.get("rushing_yards", 0)))
-        r["lateral_yards"] = int(round(r.get("lateral_yards", 0)))
-        r["kick_pass_yards"] = int(round(r.get("kick_pass_yards", 0)))
-        r["kick_return_yards"] = int(round(r.get("kick_return_yards", 0)))
-        r["punt_return_yards"] = int(round(r.get("punt_return_yards", 0)))
-        r["yards_per_touch"] = round(r["yards"] / max(1, r["touches"]), 1)
-        r["all_purpose_yards"] = r["rushing_yards"] + r["kick_return_yards"] + r["punt_return_yards"] + r["kick_pass_yards"]
-        r["wpa"] = round(r["wpa"], 2)
-        r["wpa_per_play"] = round(r["wpa"] / max(1, r["plays_involved"]), 2)
-        r["war"] = calculate_war(r, r.get("position", ""))
-        r["zbr"] = calculate_zbr(r)
-        r["vpr"] = calculate_vpr(r)
-
-    # Filter to players with meaningful activity
-    players = [p for p in players if p["touches"] >= 5 or p["plays_involved"] >= 10]
+    # Add all_purpose_yards and filter to meaningful activity
+    players = []
+    for r in all_players:
+        r.setdefault("all_purpose_yards",
+                      r.get("rushing_yards", 0) + r.get("kick_return_yards", 0)
+                      + r.get("punt_return_yards", 0) + r.get("kick_pass_yards", 0))
+        if r.get("touches", 0) >= 5 or r.get("plays_involved", 0) >= 10:
+            players.append(r)
 
     valid_sorts = {
         "war": "war", "zbr": "zbr", "vpr": "vpr",
@@ -1712,54 +2196,345 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
     ))
 
 
-@router.get("/college/{session_id}/team-stats", response_class=HTMLResponse)
-def college_team_stats(request: Request, session_id: str, sort: str = "total_yards", conference: str = ""):
+# ── RATINGS (Composite Rankings) ─────────────────────────────────────────
+
+def _cached_composite_rankings(season):
+    """Build composite rankings from season data. Cached per season state."""
+    cached = _cache_get(season, "composite_rankings")
+    if cached is not None:
+        return cached
+
+    from engine.ranking_composite import (
+        GameResult, TeamSeasonStats, calculate_composite,
+        calculate_conference_rankings, METHOD_KEYS,
+    )
+
+    # ── Build GameResult list from completed games ──
+    game_results = []
+    for game in _all_college_games(season):
+        if not game.completed or game.home_score is None:
+            continue
+
+        # Extract quarter scores from play-by-play if available
+        home_q = None
+        away_q = None
+        fr = getattr(game, "full_result", None)
+        if fr and isinstance(fr, dict):
+            pbp = fr.get("play_by_play", [])
+            if pbp and isinstance(pbp, list) and pbp and "home_score" in pbp[0]:
+                h_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                a_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                prev_h, prev_a = 0.0, 0.0
+                for play in pbp:
+                    q = play.get("quarter", 0)
+                    if q not in h_q:
+                        continue
+                    cur_h = play.get("home_score", prev_h)
+                    cur_a = play.get("away_score", prev_a)
+                    h_q[q] += cur_h - prev_h
+                    a_q[q] += cur_a - prev_a
+                    prev_h, prev_a = cur_h, cur_a
+                # Cumulative quarter scores for ranking_composite
+                home_q = [h_q[1], h_q[1]+h_q[2], h_q[1]+h_q[2]+h_q[3], h_q[1]+h_q[2]+h_q[3]+h_q[4]]
+                away_q = [a_q[1], a_q[1]+a_q[2], a_q[1]+a_q[2]+a_q[3], a_q[1]+a_q[2]+a_q[3]+a_q[4]]
+
+        game_results.append(GameResult(
+            home_team=game.home_team,
+            away_team=game.away_team,
+            home_score=game.home_score,
+            away_score=game.away_score,
+            neutral_site=False,
+            home_q_scores=home_q,
+            away_q_scores=away_q,
+        ))
+
+    if len(game_results) < 4:
+        _cache_set(season, "composite_rankings", [])
+        return []
+
+    # ── Build TeamSeasonStats from standings ──
+    team_stats = {}
+    for t_name, rec in season.standings.items():
+        if rec.games_played == 0:
+            continue
+        dye = rec.dye_season_summary
+        pk_eff = dye.get("pk_efficiency")
+        pp_eff = dye.get("pp_efficiency")
+        mess = dye.get("mess_rate")
+        pp_data = dye.get("power_play", {})
+
+        team_stats[t_name] = TeamSeasonStats(
+            team=t_name,
+            ppd=rec.avg_ppd,
+            conversion_pct=rec.avg_conversion_pct,
+            explosive_plays=int(rec.total_explosive),
+            total_drives=max(1, rec.games_played * 10),  # rough estimate
+            opp_ppd=rec.points_against / max(1, rec.games_played) / 10.0,  # rough per-drive
+            turnovers_forced=rec.total_turnovers_forced_all,
+            kill_pct=dye.get("penalty_kill", {}).get("score_rate", 0),
+            stops=rec.total_defensive_stops,
+            opp_drives=rec.total_opponent_drives,
+            pk_efficiency=pk_eff if pk_eff is not None else 0.0,
+            pp_efficiency=pp_eff if pp_eff is not None else 0.0,
+            mess_rate=mess if mess is not None else 0.0,
+            wins_despite_penalty=rec.dye_wins_despite_penalty,
+            epa_per_play=0.0,  # filled below from game aggregation
+            game_control_avg=0.0,
+            pp_score_rate=pp_data.get("score_rate", 0),
+            power_index=season.calculate_power_index(t_name),
+        )
+
+    # ── Aggregate EPA from game results ──
+    epa_sums = {}
+    play_counts = {}
+    for game in _all_college_games(season):
+        if not game.completed:
+            continue
+        fr = getattr(game, "full_result", None)
+        if not fr or not isinstance(fr, dict):
+            continue
+        stats = fr.get("stats", {})
+        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            s = stats.get(side)
+            if not s:
+                continue
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                epa_val = epa_val.get("total_epa", epa_val.get("wpa", 0))
+            if isinstance(epa_val, (int, float)):
+                epa_sums[t_name] = epa_sums.get(t_name, 0) + epa_val
+            plays = s.get("total_plays", 0)
+            play_counts[t_name] = play_counts.get(t_name, 0) + plays
+
+    for t_name, ts in team_stats.items():
+        total_plays = play_counts.get(t_name, 0)
+        if total_plays > 0:
+            ts.epa_per_play = epa_sums.get(t_name, 0) / total_plays
+
+    # ── Conference map ──
+    conferences = getattr(season, "team_conferences", {})
+
+    # ── Run composite ──
+    composites = calculate_composite(
+        game_results,
+        team_conferences=conferences,
+        team_stats=team_stats,
+    )
+
+    # ── Serialize to dicts for template ──
+    result = []
+    for c in composites:
+        entry = {
+            "composite_rank": c.composite_rank,
+            "team": c.team,
+            "conference": c.conference,
+            "wins": c.wins,
+            "losses": c.losses,
+            "mean_rank": c.mean_rank,
+            "median_rank": c.median_rank,
+            "std_dev": c.std_dev,
+            "method_ranks": c.method_ranks,
+            "method_ratings": c.method_ratings,
+            "sos": c.sos,
+            "sos_w": c.sos_w,
+            "sos_l": c.sos_l,
+        }
+        result.append(entry)
+
+    # ── Conference rankings (Massey-style grid) ──
+    conf_rankings = calculate_conference_rankings(composites)
+    conf_result = []
+    for cr in conf_rankings:
+        conf_result.append({
+            "conference": cr.conference,
+            "composite_rank": cr.composite_rank,
+            "mean_rank": cr.mean_rank,
+            "median_rank": cr.median_rank,
+            "std_dev": cr.std_dev,
+            "avg_team_rank": cr.avg_team_rank,
+            "n_teams": cr.n_teams,
+            "method_ranks": cr.method_ranks,
+            "method_avg_team_ranks": cr.method_avg_team_ranks,
+        })
+
+    _cache_set(season, "composite_rankings", result)
+    _cache_set(season, "conference_rankings", conf_result)
+    return result
+
+
+@router.get("/college/{session_id}/ratings", response_class=HTMLResponse)
+def college_ratings(request: Request, session_id: str, top: int = 50, sort: str = "composite"):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
 
-    # Aggregate team stats from completed games (including postseason)
-    # Collects both offensive (own) and defensive (opponent) stats
+    composites = _cached_composite_rankings(season)
+    conf_rankings = _cache_get(season, "conference_rankings") or []
+
+    from engine.ranking_composite import METHOD_KEYS
+
+    # Sort by selected column
+    if sort == "composite" or sort == "mean":
+        composites.sort(key=lambda c: c["mean_rank"])
+    elif sort == "median":
+        composites.sort(key=lambda c: c["median_rank"])
+    elif sort == "std":
+        composites.sort(key=lambda c: c["std_dev"], reverse=True)
+    elif sort == "sos":
+        composites.sort(key=lambda c: c["sos"], reverse=True)
+    elif sort == "sos_w":
+        composites.sort(key=lambda c: c["sos_w"], reverse=True)
+    elif sort == "sos_l":
+        composites.sort(key=lambda c: c["sos_l"], reverse=True)
+    elif sort == "record":
+        composites.sort(key=lambda c: (c["wins"] / max(1, c["wins"] + c["losses"]), c["wins"]), reverse=True)
+    elif sort in METHOD_KEYS:
+        # Sort by a specific ranking system (lower rank = better = first)
+        composites.sort(key=lambda c: c["method_ranks"].get(sort, 9999))
+    # else: keep default composite order
+
+    # Clamp top parameter
+    top = max(10, min(len(composites), top)) if composites else 0
+
+    return templates.TemplateResponse("college/ratings.html", _ctx(
+        request, section="college", session_id=session_id,
+        composites=composites[:top],
+        total_teams=len(composites),
+        top=top,
+        sort=sort,
+        method_keys=METHOD_KEYS,
+        conference_rankings=conf_rankings,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/ratings-glossary", response_class=HTMLResponse)
+def college_ratings_glossary(request: Request):
+    """Serve the ranking systems glossary as an HTML page."""
+    import re
+    glossary_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "RANKING_SYSTEMS.md")
+    if os.path.exists(glossary_path):
+        with open(glossary_path) as f:
+            raw_md = f.read()
+    else:
+        raw_md = "# Ranking Systems Glossary\n\nGlossary file not found."
+
+    # Simple markdown to HTML (no dependency required)
+    html_lines = []
+    in_table = False
+    in_code = False
+    for line in raw_md.split("\n"):
+        stripped = line.strip()
+
+        # Code blocks
+        if stripped.startswith("```"):
+            if in_code:
+                html_lines.append("</pre>")
+                in_code = False
+            else:
+                html_lines.append("<pre style='background:var(--bg2,#1a1a1a);padding:8px;overflow-x:auto;font-size:11px;'>")
+                in_code = True
+            continue
+        if in_code:
+            html_lines.append(line.replace("<", "&lt;").replace(">", "&gt;"))
+            continue
+
+        # Tables
+        if "|" in stripped and not stripped.startswith("#"):
+            cells = [c.strip() for c in stripped.split("|")]
+            cells = [c for c in cells if c]  # drop empty edges
+            if all(set(c) <= set("-: ") for c in cells):
+                continue  # skip separator row
+            if not in_table:
+                html_lines.append("<table style='font-size:11px;margin:8px 0;'>")
+                in_table = True
+            tag = "th" if not in_table or html_lines[-1].endswith("</table>") else "td"
+            # First table row = header
+            row_html = "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
+            html_lines.append(row_html)
+            continue
+        elif in_table:
+            html_lines.append("</table>")
+            in_table = False
+
+        # Headings
+        if stripped.startswith("### "):
+            html_lines.append(f"<h3 style='margin-top:16px;margin-bottom:4px;'>{stripped[4:]}</h3>")
+        elif stripped.startswith("## "):
+            html_lines.append(f"<h2 style='margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:4px;'>{stripped[3:]}</h2>")
+        elif stripped.startswith("# "):
+            html_lines.append(f"<h1>{stripped[2:]}</h1>")
+        elif stripped.startswith("---"):
+            html_lines.append("<hr style='border:none;border-top:1px solid var(--border);margin:16px 0;'>")
+        elif stripped == "":
+            html_lines.append("<br>")
+        else:
+            # Inline formatting
+            text = line
+            text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+            text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+            text = re.sub(r'`(.+?)`', r'<code style="background:var(--bg2,#222);padding:1px 4px;">\1</code>', text)
+            html_lines.append(f"<p style='margin:2px 0;'>{text}</p>")
+
+    if in_table:
+        html_lines.append("</table>")
+
+    glossary_html = "\n".join(html_lines)
+
+    return templates.TemplateResponse("college/ratings_glossary.html", _ctx(
+        request, section="college",
+        glossary_html=glossary_html,
+    ))
+
+
+_TEAM_INIT_FIELDS = {
+    "games": 0,
+    # Scoring
+    "points_for": 0.0, "points_against": 0.0,
+    "q1_pf": 0.0, "q2_pf": 0.0, "q3_pf": 0.0, "q4_pf": 0.0,
+    "q1_pa": 0.0, "q2_pa": 0.0, "q3_pa": 0.0, "q4_pa": 0.0,
+    # Offense
+    "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+    "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+    "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+    "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+    "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+    # Special teams offense
+    "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+    "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
+    "muffs": 0,
+    # Defense (opponent stats)
+    "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+    "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+    "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+    "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+    # Special teams defense (opponent returns)
+    "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+    "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+    # Turnovers
+    "fumbles": 0, "tod": 0,
+    "opp_fumbles": 0, "opp_tod": 0,
+    # Penalties
+    "penalties": 0, "penalty_yards": 0,
+    "opp_penalties": 0, "opp_penalty_yards": 0,
+    # Efficiency / Delta / Bonus
+    "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
+    "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
+    "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+    "viper_eff_n": 0, "team_rating_n": 0,
+    "down_4_att": 0, "down_4_conv": 0,
+    "down_5_att": 0, "down_5_conv": 0,
+    "down_6_att": 0, "down_6_conv": 0,
+}
+
+
+def _cached_college_team_agg(season):
+    """Aggregate team stats from all completed games (including postseason). Cached."""
+    cached = _cache_get(season, "college_team_agg")
+    if cached is not None:
+        return cached
+
     team_agg = {}
-    _INIT_FIELDS = {
-        "games": 0,
-        # Scoring
-        "points_for": 0.0, "points_against": 0.0,
-        "q1_pf": 0.0, "q2_pf": 0.0, "q3_pf": 0.0, "q4_pf": 0.0,
-        "q1_pa": 0.0, "q2_pa": 0.0, "q3_pa": 0.0, "q4_pa": 0.0,
-        # Offense
-        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-        # Special teams offense
-        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
-        "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
-        "muffs": 0,
-        # Defense (opponent stats)
-        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
-        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
-        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
-        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
-        # Special teams defense (opponent returns)
-        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
-        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
-        # Turnovers
-        "fumbles": 0, "tod": 0,
-        "opp_fumbles": 0, "opp_tod": 0,
-        # Penalties
-        "penalties": 0, "penalty_yards": 0,
-        "opp_penalties": 0, "opp_penalty_yards": 0,
-        # Efficiency / Delta / Bonus
-        "delta_yards": 0, "bonus_possessions": 0, "bonus_scores": 0,
-        "bonus_yards": 0, "delta_drives": 0, "delta_scores": 0,
-        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-        "viper_eff_n": 0, "team_rating_n": 0,
-        "down_4_att": 0, "down_4_conv": 0,
-        "down_5_att": 0, "down_5_conv": 0,
-        "down_6_att": 0, "down_6_conv": 0,
-    }
 
     for game in _all_college_games(season):
         if not game.completed or not getattr(game, "full_result", None):
@@ -1787,14 +2562,12 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
 
         for side, opp_side, t_name in [("home", "away", game.home_team), ("away", "home", game.away_team)]:
             conf = season.team_conferences.get(t_name, "")
-            if conference and conf != conference:
-                continue
             s = stats.get(side)
             opp_s = stats.get(opp_side)
             if not s:
                 continue
             if t_name not in team_agg:
-                team_agg[t_name] = {"team": t_name, "conference": conf, **{k: v for k, v in _INIT_FIELDS.items()}}
+                team_agg[t_name] = {"team": t_name, "conference": conf, **{k: v for k, v in _TEAM_INIT_FIELDS.items()}}
             a = team_agg[t_name]
             a["games"] += 1
 
@@ -1916,6 +2689,14 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["kick_pass_yards"] = int(round(t.get("kick_pass_yards", 0) if "kick_pass_yards" in t else t.get("kp_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
+        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
         t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
@@ -1965,6 +2746,23 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
             t["wins"] = 0
             t["losses"] = 0
 
+    _cache_set(season, "college_team_agg", teams)
+    return teams
+
+
+@router.get("/college/{session_id}/team-stats", response_class=HTMLResponse)
+def college_team_stats(request: Request, session_id: str, sort: str = "total_yards", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    # Use cached aggregation, then filter by conference
+    all_teams = _cached_college_team_agg(season)
+    if conference:
+        teams = [t for t in all_teams if t.get("conference") == conference]
+    else:
+        teams = list(all_teams)
+
     # ── Sorting ──
     # Some defensive categories are "lower is better" — reverse=False for those
     _LOWER_IS_BETTER = {
@@ -2012,11 +2810,17 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
 
     conferences = sorted(season.conferences.keys())
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play", "total_yards", "avg_yards",
+    ])
+
     return templates.TemplateResponse("college/team_stats.html", _ctx(
         request, section="college", session_id=session_id,
         teams=teams, sort=sort, conference=conference,
         conferences=conferences,
         season_name=getattr(season, "name", "Season"),
+        benchmarks=benchmarks,
     ))
 
 
@@ -2225,10 +3029,10 @@ def college_draftyqueenz(request: Request, session_id: str):
 def college_data(request: Request, session_id: str):
     api = _get_api()
     sess = api["get_session"](session_id)
-    season = api["require_season"](sess)
     dynasty = sess.get("dynasty")
     if not dynasty:
         raise HTTPException(404, "No dynasty active in this session")
+    season = sess.get("season")
 
     return templates.TemplateResponse("college/data.html", _ctx(
         request, section="college", session_id=session_id,
@@ -2236,7 +3040,8 @@ def college_data(request: Request, session_id: str):
         year=dynasty.current_year,
         team_count=len(dynasty.team_histories),
         conf_count=len(dynasty.conferences),
-        season_name=getattr(season, "name", "Season"),
+        season_name=getattr(season, "name", "Season") if season else f"{dynasty.current_year} CVL Season",
+        has_season=season is not None,
     ))
 
 
@@ -2245,6 +3050,7 @@ def college_data_download(request: Request, session_id: str):
     import json as _json
     from fastapi.responses import Response
     from engine.db import serialize_dynasty
+    from api.main import _build_college_archive
 
     api = _get_api()
     sess = api["get_session"](session_id)
@@ -2253,7 +3059,16 @@ def college_data_download(request: Request, session_id: str):
         raise HTTPException(404, "No dynasty active in this session")
 
     data = serialize_dynasty(dynasty)
-    content = _json.dumps(data, indent=2)
+
+    # Include full season snapshot so importing the save lets you view stats
+    season = sess.get("season")
+    if season:
+        try:
+            data["season_snapshot"] = _build_college_archive(sess, session_id)
+        except Exception:
+            pass
+
+    content = _json.dumps(data, indent=2, default=str)
     filename = f"{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
     return Response(
         content=content,
@@ -2264,14 +3079,11 @@ def college_data_download(request: Request, session_id: str):
 
 @router.post("/college/{session_id}/data/upload")
 async def college_data_upload(request: Request, session_id: str):
+    """Upload a dynasty save file. If it contains a season snapshot, save it
+    as a season archive so the user can view full stats immediately."""
     import json as _json
     from fastapi.responses import JSONResponse
-    from engine.db import deserialize_dynasty
-
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    if not sess.get("dynasty"):
-        raise HTTPException(404, "No dynasty active in this session")
+    from engine.db import save_season_archive
 
     form = await request.form()
     file = form.get("file")
@@ -2281,11 +3093,29 @@ async def college_data_upload(request: Request, session_id: str):
     try:
         contents = await file.read()
         data = _json.loads(contents)
-        dynasty = deserialize_dynasty(data)
-        sess["dynasty"] = dynasty
-        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
     except Exception as e:
-        raise HTTPException(400, f"Failed to load dynasty file: {e}")
+        raise HTTPException(400, f"Failed to parse file: {e}")
+
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
+
+    if snapshot:
+        # Save as a season archive so it's viewable through the archive pages
+        archive_key = f"import_{session_id}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return JSONResponse({
+            "message": f"Season loaded: {dynasty_name} Year {year}.",
+            "redirect": f"/stats/archives/{archive_key}/",
+        })
+
+    return JSONResponse({
+        "message": f"No season data found in save file. "
+                   f"Dynasty metadata loaded for {dynasty_name} (Year {year}), "
+                   f"but no game results to display. "
+                   f"Re-download the save from an active season to include stats.",
+    }, status_code=400)
 
 
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
@@ -2347,12 +3177,26 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
 
     _normalize_box_score_stats(box)
 
+    # Generate game analysis if full result available
+    analysis_text = None
+    fr = box.get("result") if isinstance(box, dict) else None
+    if fr and not (fr.get("_fast_sim") if isinstance(fr, dict) else False):
+        try:
+            from analyze_game import analyze_game_data
+            analysis_text = analyze_game_data(fr)
+        except Exception:
+            pass
+
+    benchmarks = _game_benchmarks_from_season(season)
+
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("pro/game.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
         box=box, week=week, matchup=matchup,
         league_name=season.config.league_name,
+        analysis_text=analysis_text,
         stadium_url=_stadium_url_for(_home_key),
+        benchmarks=benchmarks,
     ))
 
 
@@ -2386,39 +3230,71 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         raise HTTPException(404, "Pro league session not found")
 
     # Aggregate team stats from all completed game results
+    # Collects both offensive (own) and defensive (opponent) stats
     team_agg = {}
+    _INIT_FIELDS = {
+        "games": 0,
+        # Scoring
+        "points_for": 0.0, "points_against": 0.0,
+        # Offense
+        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+        # Special teams offense
+        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+        "pr_yards": 0, "pr_count": 0, "pr_tds": 0,
+        "muffs": 0,
+        # Defense (opponent stats)
+        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+        # Special teams defense
+        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+        # Turnovers
+        "fumbles": 0, "tod": 0,
+        "opp_fumbles": 0, "opp_tod": 0,
+        # Penalties
+        "penalties": 0, "penalty_yards": 0,
+        "opp_penalties": 0, "opp_penalty_yards": 0,
+        # Efficiency / Delta / Bonus
+        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
+        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
+        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+        "viper_eff_n": 0, "team_rating_n": 0,
+        "down_4_att": 0, "down_4_conv": 0,
+        "down_5_att": 0, "down_5_conv": 0,
+        "down_6_att": 0, "down_6_conv": 0,
+    }
     for week_num, week_games in season.results.items():
         for matchup_key, game in week_games.items():
             result = game.get("result", {})
             stats = result.get("stats", {})
-            for side in ("home", "away"):
+            for side, opp_side in [("home", "away"), ("away", "home")]:
                 t_key = game.get(f"{side}_key", "")
                 t_name = game.get(f"{side}_name", t_key)
                 s = stats.get(side)
+                opp_s = stats.get(opp_side)
                 if not s or not t_key:
                     continue
                 div = season._get_division_for_key(t_key)
                 if division and div != division:
                     continue
                 if t_key not in team_agg:
-                    team_agg[t_key] = {
-                        "team_key": t_key, "team": t_name, "division": div, "games": 0,
-                        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-                        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-                        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-                        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-                        "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
-                        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
-                        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-                        "viper_eff_n": 0, "team_rating_n": 0,
-                        "down_4_att": 0, "down_4_conv": 0,
-                        "down_5_att": 0, "down_5_conv": 0,
-                        "down_6_att": 0, "down_6_conv": 0,
-                    }
+                    team_agg[t_key] = {"team_key": t_key, "team": t_name, "division": div, **{k: v for k, v in _INIT_FIELDS.items()}}
                 a = team_agg[t_key]
                 a["games"] += 1
+
+                # Scoring
+                my_score = game.get(f"{side}_score", 0) or 0
+                opp_score = game.get(f"{opp_side}_score", 0) or 0
+                a["points_for"] += my_score
+                a["points_against"] += opp_score
+
+                # ── Offensive stats ──
                 a["total_yards"] += s.get("total_yards", 0)
                 a["total_plays"] += s.get("total_plays", 0)
                 a["touchdowns"] += s.get("touchdowns", 0)
@@ -2437,10 +3313,49 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
                 a["dk_att"] += s.get("drop_kicks_attempted", 0)
                 a["pk_made"] += s.get("place_kicks_made", 0)
                 a["pk_att"] += s.get("place_kicks_attempted", 0)
+
+                # ── Special teams offense ──
+                a["kr_yards"] += s.get("kick_return_yards", 0)
+                a["kr_count"] += s.get("kick_returns", 0)
+                a["kr_tds"] += s.get("kick_return_tds", 0)
+                a["pr_yards"] += s.get("punt_return_yards", 0)
+                a["pr_count"] += s.get("punt_returns", 0)
+                a["pr_tds"] += s.get("punt_return_tds", 0)
+                a["muffs"] += s.get("muffs", 0)
+
+                # ── Defensive stats (opponent offensive numbers) ──
+                if opp_s:
+                    a["opp_total_yards"] += opp_s.get("total_yards", 0)
+                    a["opp_total_plays"] += opp_s.get("total_plays", 0)
+                    a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
+                    a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
+                    a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
+                    a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
+                    a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
+                    a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
+                    a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
+                    a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
+                    a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
+                    a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
+                    a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
+                    a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
+                    a["opp_kr_count"] += opp_s.get("kick_returns", 0)
+                    a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
+                    a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
+                    a["opp_pr_count"] += opp_s.get("punt_returns", 0)
+                    a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
+                    a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
+                    a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
+                    a["opp_penalties"] += opp_s.get("penalties", 0)
+                    a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
+
+                # ── Turnovers / Penalties ──
                 a["fumbles"] += s.get("fumbles_lost", 0)
                 a["tod"] += s.get("turnovers_on_downs", 0)
                 a["penalties"] += s.get("penalties", 0)
                 a["penalty_yards"] += s.get("penalty_yards", 0)
+
+                # ── Efficiency / Delta / Bonus ──
                 a["delta_yards"] += s.get("delta_yards", 0)
                 a["delta_drives"] += s.get("delta_drives", 0)
                 a["delta_scores"] += s.get("delta_scores", 0)
@@ -2470,17 +3385,58 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        # Scoring
+        t["ppg"] = round(t["points_for"] / n, 1)
+        t["opp_ppg"] = round(t["points_against"] / n, 1)
+        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
+        # Offense
         t["total_yards"] = int(round(t["total_yards"]))
         t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
+        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
+        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
+        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
+        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
         t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
+        # Special teams offense
+        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
+        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
+        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
+        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
+        # Defense
+        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
+        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
+        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
+        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
+        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
+        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
+        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
+        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
+        # Special teams defense
+        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
+        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
+        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
+        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
+        # Turnovers
+        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
+        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
+        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
+        # Efficiency
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
-        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
         for d in [4, 5, 6]:
             att = t[f"down_{d}_att"]
             conv = t[f"down_{d}_conv"]
@@ -2494,6 +3450,15 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
             t["wins"] = 0
             t["losses"] = 0
 
+    # Some defensive categories are "lower is better"
+    _LOWER_IS_BETTER = {
+        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
+        "opp_rushing_yards", "opp_avg_rushing", "opp_yards_per_carry",
+        "opp_kp_yards", "opp_kp_ypg", "opp_kp_comp_pct", "opp_touchdowns",
+        "opp_rushing_tds", "opp_kp_tds",
+        "opp_st_return_yards", "opp_kr_avg",
+        "turnovers_lost",
+    }
     valid_sorts = {
         "total_yards": "total_yards", "avg_yards": "avg_yards",
         "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
@@ -2503,17 +3468,34 @@ def pro_team_stats(request: Request, league: str, session_id: str, sort: str = "
         "delta_yards": "delta_yards", "fumbles": "fumbles",
         "penalties": "penalties", "yards_per_play": "yards_per_play",
         "bonus_possessions": "bonus_possessions",
+        "ppg": "ppg", "scoring_margin": "scoring_margin",
+        "opp_ppg": "opp_ppg",
+        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
+        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
+        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
+        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg", "opp_kp_comp_pct": "opp_kp_comp_pct",
+        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
+        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
+        "turnover_margin": "turnover_margin", "takeaways": "takeaways", "turnovers_lost": "turnovers_lost",
+        "penalty_yards": "penalty_yards", "opp_penalties": "opp_penalties",
     }
     sort_key = valid_sorts.get(sort, "total_yards")
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+    reverse = sort_key not in _LOWER_IS_BETTER
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
 
     divisions = sorted(season.config.divisions.keys()) if season.config.divisions else []
+
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play",
+    ])
 
     return templates.TemplateResponse("pro/team_stats.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
         teams=teams, sort=sort, division=division,
         divisions=divisions,
         league_name=season.config.league_name,
+        benchmarks=benchmarks,
     ))
 
 
@@ -2550,6 +3532,171 @@ def pro_stats(request: Request, league: str, session_id: str, category: str = "a
         request, section="pro", league=league, session_id=session_id,
         leaders=leaders, category=category,
         league_name=season.config.league_name,
+    ))
+
+
+@router.get("/pro/{league}/{session_id}/player/{team_key}/{player_name}", response_class=HTMLResponse)
+def pro_player(request: Request, league: str, session_id: str, team_key: str, player_name: str):
+    api = _get_api()
+    key = f"{league.lower()}_{session_id}"
+    season = api["pro_sessions"].get(key)
+    if not season:
+        raise HTTPException(404, "Pro league session not found")
+
+    # Find the team and player
+    team = season.teams.get(team_key)
+    if not team:
+        raise HTTPException(404, f"Team '{team_key}' not found")
+
+    player = None
+    for p in getattr(team, "players", []):
+        if p.name == player_name:
+            player = p
+            break
+    if not player:
+        raise HTTPException(404, f"Player '{player_name}' not found on {team_key}")
+
+    # Build player card
+    card = None
+    try:
+        from engine.player_card import player_to_card
+        pc = player_to_card(player, team_key)
+        card = pc.to_dict()
+    except Exception:
+        pass
+
+    # Build season stats from completed games
+    season_totals = {
+        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
+        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
+        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
+        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
+        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+        "kick_return_yards": 0, "punt_return_yards": 0,
+        "rush_carries": 0, "rushing_tds": 0,
+        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
+        "kick_pass_ints": 0,
+        "kick_returns": 0, "kick_return_tds": 0,
+        "punt_returns": 0, "punt_return_tds": 0,
+        "muffs": 0, "st_tackles": 0,
+        "keeper_tackles": 0, "keeper_bells": 0,
+        "kick_deflections": 0, "coverage_snaps": 0,
+        "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
+        "blocks": 0, "pancakes": 0,
+        "offensive_snaps": 0, "defensive_snaps": 0,
+        "wpa": 0.0, "plays_involved": 0,
+    }
+    game_log = []
+    _ACCUM_STATS = [
+        "touches", "yards", "rushing_yards", "lateral_yards",
+        "tds", "fumbles", "laterals_thrown",
+        "kick_att", "kick_made", "pk_att", "pk_made",
+        "dk_att", "dk_made", "tackles", "tfl", "sacks",
+        "hurries", "kick_pass_yards", "kick_pass_tds",
+        "kick_passes_thrown", "kick_passes_completed",
+        "kick_return_yards", "punt_return_yards",
+        "rush_carries", "rushing_tds",
+        "lateral_receptions", "lateral_assists", "lateral_tds",
+        "kick_pass_interceptions_thrown", "kick_pass_receptions",
+        "kick_pass_ints",
+        "kick_returns", "kick_return_tds",
+        "punt_returns", "punt_return_tds",
+        "muffs", "st_tackles",
+        "keeper_tackles", "keeper_bells",
+        "kick_deflections", "coverage_snaps",
+        "keeper_return_yards",
+        "points_allowed_in_coverage",
+        "completions_allowed_in_coverage",
+        "blocks", "pancakes",
+        "offensive_snaps", "defensive_snaps",
+        "wpa", "plays_involved",
+    ]
+    for week_num, week_games in season.results.items():
+        for matchup_key, game_data in week_games.items():
+            if not game_data:
+                continue
+            home_key = game_data.get("home_key", "")
+            away_key = game_data.get("away_key", "")
+            if home_key != team_key and away_key != team_key:
+                continue
+            side = "home" if home_key == team_key else "away"
+            opp_side = "away" if side == "home" else "home"
+            opponent_key = game_data.get(f"{opp_side}_key", "")
+            opponent_name = game_data.get(f"{opp_side}_name", opponent_key)
+            result = game_data.get("result", {})
+            ps = result.get("player_stats", {}).get(side, [])
+            for pg in ps:
+                if pg.get("name") == player_name:
+                    home_score = game_data.get("home_score", 0)
+                    away_score = game_data.get("away_score", 0)
+                    my_score = home_score if side == "home" else away_score
+                    opp_score = away_score if side == "home" else home_score
+                    entry = {
+                        "week": week_num,
+                        "opponent": opponent_name,
+                        "opponent_key": opponent_key,
+                        "is_home": side == "home",
+                        "won": my_score > opp_score,
+                        "team_score": my_score,
+                        "opp_score": opp_score,
+                    }
+                    entry.update(pg)
+                    game_log.append(entry)
+                    season_totals["games"] += 1
+                    for stat in _ACCUM_STATS:
+                        season_totals[stat] += pg.get(stat, 0)
+                    break
+
+    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
+        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
+    season_totals["ypc"] = round(
+        season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
+    )
+    season_totals["yards_per_touch"] = season_totals["ypc"]
+    season_totals["kp_pct"] = round(
+        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+    season_totals["kick_pct"] = round(
+        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
+    )
+    season_totals["total_return_yards"] = (
+        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+    season_totals["kick_return_avg"] = round(
+        season_totals["kick_return_yards"] / max(1, season_totals["kick_returns"]), 1
+    )
+    season_totals["punt_return_avg"] = round(
+        season_totals["punt_return_yards"] / max(1, season_totals["punt_returns"]), 1
+    )
+    # Keeper analytics
+    if season_totals.get("coverage_snaps", 0) >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
+
+    team_name = team.name
+    division = season._get_division_for_key(team_key)
+
+    _pid = getattr(player, "player_id", "")
+    _face_src = _face_url_for(_pid) if _pid else None
+
+    return templates.TemplateResponse("pro/player.html", _ctx(
+        request, section="pro", league=league, session_id=session_id,
+        player=player, card=card,
+        team_key=team_key, team_name=team_name,
+        division=division,
+        league_name=season.config.league_name,
+        game_log=sorted(game_log, key=lambda g: g["week"]),
+        season_totals=season_totals, face_src=_face_src,
+        stadium_url=_stadium_url_for(team_key),
     ))
 
 
@@ -2737,11 +3884,14 @@ def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: s
     except ImportError:
         rivalry = None
 
+    benchmarks = _game_benchmarks_from_season(tier_season)
+
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("wvl/game.html", _ctx(
         request, section="wvl", session_id=session_id,
         box=box, week=week, matchup=matchup, tier=tier,
         tier_name=_wvl_tier_label(tier),
+        benchmarks=benchmarks,
         rivalry=rivalry,
         dynasty_name=data.get("dynasty_name", "WVL"),
         year=data.get("year", "?"),
@@ -3114,8 +4264,12 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
         "keeper_tackles": 0, "keeper_bells": 0,
         "kick_deflections": 0, "coverage_snaps": 0,
         "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
         # Line play
         "blocks": 0, "pancakes": 0,
+        # Snap counts
+        "offensive_snaps": 0, "defensive_snaps": 0,
         # Impact
         "wpa": 0.0, "plays_involved": 0,
     }
@@ -3169,14 +4323,17 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
                         "keeper_tackles", "keeper_bells",
                         "kick_deflections", "coverage_snaps",
                         "keeper_return_yards",
+                        "points_allowed_in_coverage",
+                        "completions_allowed_in_coverage",
                         "blocks", "pancakes",
+                        "offensive_snaps", "defensive_snaps",
                         "wpa", "plays_involved",
                     ]:
                         season_totals[stat] += pg.get(stat, 0)
                     break
 
     for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards"):
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
         season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
     season_totals["ypc"] = round(
         season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
@@ -3200,6 +4357,14 @@ def wvl_player(request: Request, session_id: str, team_key: str, player_name: st
     season_totals["wpa_per_play"] = round(
         season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
     )
+    # Keeper analytics — KPR (higher=better) and ERA (lower=better)
+    if season_totals.get("coverage_snaps", 0) >= 10:
+        from engine.awards import _compute_kpr, _compute_keeper_era
+        season_totals["kpr"] = _compute_kpr(season_totals)
+        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
+    else:
+        season_totals["kpr"] = 0.0
+        season_totals["keeper_era"] = 0.0
 
     from engine.wvl_config import CLUBS_BY_KEY
     club = CLUBS_BY_KEY.get(team_key)
@@ -3233,33 +4398,53 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
     tier_list = sorted(season.tier_seasons.keys())
 
     # Full aggregate — same logic as pro_team_stats
+    # Collects both offensive (own) and defensive (opponent) stats
     team_agg = {}
+    _WVL_INIT = {
+        "games": 0,
+        "points_for": 0.0, "points_against": 0.0,
+        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
+        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
+        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
+        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
+        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
+        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
+        "pr_yards": 0, "pr_count": 0, "pr_tds": 0, "muffs": 0,
+        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
+        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
+        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
+        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
+        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
+        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
+        "fumbles": 0, "tod": 0, "opp_fumbles": 0, "opp_tod": 0,
+        "penalties": 0, "penalty_yards": 0, "opp_penalties": 0, "opp_penalty_yards": 0,
+        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
+        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
+        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
+        "viper_eff_n": 0, "team_rating_n": 0,
+        "down_4_att": 0, "down_4_conv": 0,
+        "down_5_att": 0, "down_5_conv": 0,
+        "down_6_att": 0, "down_6_conv": 0,
+    }
     for week_num, week_games in tier_season.results.items():
         for matchup_key, game in week_games.items():
             result = game.get("result", {})
             stats = result.get("stats", {})
-            for side in ("home", "away"):
+            for side, opp_side in [("home", "away"), ("away", "home")]:
                 t_key = game.get(f"{side}_key", "")
                 t_name = game.get(f"{side}_name", t_key)
                 s = stats.get(side)
+                opp_s = stats.get(opp_side)
                 if not s or not t_key:
                     continue
                 if t_key not in team_agg:
-                    team_agg[t_key] = {
-                        "team_key": t_key, "team": t_name, "games": 0,
-                        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-                        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-                        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-                        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-                        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-                        "fumbles": 0, "tod": 0, "penalties": 0, "penalty_yards": 0,
-                        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
-                        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
-                        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-                        "viper_eff_n": 0, "team_rating_n": 0,
-                    }
+                    team_agg[t_key] = {"team_key": t_key, "team": t_name, **{k: v for k, v in _WVL_INIT.items()}}
                 a = team_agg[t_key]
                 a["games"] += 1
+                my_score = game.get(f"{side}_score", 0) or 0
+                opp_score = game.get(f"{opp_side}_score", 0) or 0
+                a["points_for"] += my_score
+                a["points_against"] += opp_score
                 a["total_yards"] += s.get("total_yards", 0)
                 a["total_plays"] += s.get("total_plays", 0)
                 a["touchdowns"] += s.get("touchdowns", 0)
@@ -3278,6 +4463,37 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
                 a["dk_att"] += s.get("drop_kicks_attempted", 0)
                 a["pk_made"] += s.get("place_kicks_made", 0)
                 a["pk_att"] += s.get("place_kicks_attempted", 0)
+                a["kr_yards"] += s.get("kick_return_yards", 0)
+                a["kr_count"] += s.get("kick_returns", 0)
+                a["kr_tds"] += s.get("kick_return_tds", 0)
+                a["pr_yards"] += s.get("punt_return_yards", 0)
+                a["pr_count"] += s.get("punt_returns", 0)
+                a["pr_tds"] += s.get("punt_return_tds", 0)
+                a["muffs"] += s.get("muffs", 0)
+                if opp_s:
+                    a["opp_total_yards"] += opp_s.get("total_yards", 0)
+                    a["opp_total_plays"] += opp_s.get("total_plays", 0)
+                    a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
+                    a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
+                    a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
+                    a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
+                    a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
+                    a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
+                    a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
+                    a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
+                    a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
+                    a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
+                    a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
+                    a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
+                    a["opp_kr_count"] += opp_s.get("kick_returns", 0)
+                    a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
+                    a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
+                    a["opp_pr_count"] += opp_s.get("punt_returns", 0)
+                    a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
+                    a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
+                    a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
+                    a["opp_penalties"] += opp_s.get("penalties", 0)
+                    a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
                 a["fumbles"] += s.get("fumbles_lost", 0)
                 a["tod"] += s.get("turnovers_on_downs", 0)
                 a["penalties"] += s.get("penalties", 0)
@@ -3302,22 +4518,65 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
                 if tr is not None:
                     a["team_rating_sum"] += tr
                     a["team_rating_n"] += 1
+                dc = s.get("down_conversions", {})
+                for d in [4, 5, 6]:
+                    dd = dc.get(d, dc.get(str(d), {}))
+                    a[f"down_{d}_att"] += dd.get("attempts", 0)
+                    a[f"down_{d}_conv"] += dd.get("converted", 0)
 
     teams = list(team_agg.values())
     for t in teams:
         n = max(1, t["games"])
+        t["ppg"] = round(t["points_for"] / n, 1)
+        t["opp_ppg"] = round(t["points_against"] / n, 1)
+        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
         t["total_yards"] = int(round(t["total_yards"]))
         t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
         t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
         t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
         t["delta_yards"] = int(round(t.get("delta_yards", 0)))
         t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
+        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
+        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
         t["avg_yards"] = round(t["total_yards"] / n, 1)
+        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
         t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
+        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
         t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
+        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
+        t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
+        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
+        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
+        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
+        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
+        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
+        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
+        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
+        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
+        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
+        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
+        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
+        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
+        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
+        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
+        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
+        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
+        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
+        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
+        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
+        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
+        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
+        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
+        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
+        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
         t["avg_epa"] = round(t["epa"] / n, 2)
         t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
         t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
+        for d in [4, 5, 6]:
+            att = t[f"down_{d}_att"]
+            conv = t[f"down_{d}_conv"]
+            t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
+        t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
         rec = tier_season.standings.get(t["team_key"])
         if rec:
             t["wins"] = rec.wins
@@ -3326,6 +4585,12 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
             t["wins"] = 0
             t["losses"] = 0
 
+    _LOWER_IS_BETTER = {
+        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
+        "opp_rushing_yards", "opp_avg_rushing", "opp_kp_yards", "opp_kp_ypg",
+        "opp_kp_comp_pct", "opp_touchdowns", "opp_st_return_yards", "opp_kr_avg",
+        "turnovers_lost",
+    }
     valid_sorts = {
         "total_yards": "total_yards", "avg_yards": "avg_yards",
         "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
@@ -3335,9 +4600,24 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         "delta_yards": "delta_yards", "fumbles": "fumbles",
         "penalties": "penalties", "yards_per_play": "yards_per_play",
         "bonus_possessions": "bonus_possessions",
+        "ppg": "ppg", "scoring_margin": "scoring_margin", "opp_ppg": "opp_ppg",
+        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
+        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
+        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
+        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg",
+        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
+        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
+        "turnover_margin": "turnover_margin", "takeaways": "takeaways", "turnovers_lost": "turnovers_lost",
+        "penalty_yards": "penalty_yards", "opp_penalties": "opp_penalties",
     }
     sort_key = valid_sorts.get(sort, "total_yards")
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
+    reverse = sort_key not in _LOWER_IS_BETTER
+    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
+
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+        "yards_per_play",
+    ])
 
     return templates.TemplateResponse("wvl/team_stats.html", _ctx(
         request, section="wvl", session_id=session_id,
@@ -3345,6 +4625,7 @@ def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str =
         tier_name=_wvl_tier_label(tier),
         tier_list=tier_list, tier_label=_wvl_tier_label,
         dynasty_name=data.get("dynasty_name", "WVL"),
+        benchmarks=benchmarks,
         year=data.get("year", "?"),
     ))
 
@@ -3650,8 +4931,13 @@ def intl_team_stats(request: Request, sort: str = "total_yards"):
     sort_key = valid_sorts.get(sort, "total_yards")
     teams.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
 
+    benchmarks = _compute_benchmarks(teams, [
+        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
+    ])
+
     return templates.TemplateResponse("international/team_stats.html", _ctx(
         request, section="international", teams=teams, sort=sort,
+        benchmarks=benchmarks,
     ))
 
 

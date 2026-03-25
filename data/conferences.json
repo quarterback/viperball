@@ -6,15 +6,15 @@
     },
     {
       "id": "clemson",
-      "name": "Clemson University"
+      "name": "Clemson"
     },
     {
       "id": "duke",
-      "name": "Duke University"
+      "name": "Duke"
     },
     {
       "id": "florida_state",
-      "name": "Florida State University"
+      "name": "Florida State"
     },
     {
       "id": "georgia_tech",
@@ -22,23 +22,23 @@
     },
     {
       "id": "nc_state",
-      "name": "North Carolina State University"
+      "name": "NC State"
     },
     {
       "id": "maryland",
-      "name": "University of Maryland"
+      "name": "Maryland"
     },
     {
       "id": "miami",
-      "name": "University of Miami"
+      "name": "Miami"
     },
     {
       "id": "north_carolina",
-      "name": "University of North Carolina"
+      "name": "North Carolina"
     },
     {
       "id": "virginia",
-      "name": "University of Virginia"
+      "name": "Virginia"
     },
     {
       "id": "virginia_tech",
@@ -46,13 +46,13 @@
     },
     {
       "id": "wake_forest",
-      "name": "Wake Forest University"
+      "name": "Wake Forest"
     }
   ],
   "Big 12": [
     {
       "id": "baylor",
-      "name": "Baylor University"
+      "name": "Baylor"
     },
     {
       "id": "byu",
@@ -60,15 +60,15 @@
     },
     {
       "id": "iowa_state",
-      "name": "Iowa State University"
+      "name": "Iowa State"
     },
     {
       "id": "kansas_state",
-      "name": "Kansas State University"
+      "name": "Kansas State"
     },
     {
       "id": "oklahoma_state",
-      "name": "Oklahoma State University"
+      "name": "Oklahoma State"
     },
     {
       "id": "tcu",
@@ -76,7 +76,7 @@
     },
     {
       "id": "texas_tech",
-      "name": "Texas Tech University"
+      "name": "Texas Tech"
     },
     {
       "id": "ucf",
@@ -84,125 +84,125 @@
     },
     {
       "id": "cincinnati",
-      "name": "University of Cincinnati"
+      "name": "Cincinnati"
     },
     {
       "id": "houston",
-      "name": "University of Houston"
+      "name": "Houston"
     },
     {
       "id": "kansas",
-      "name": "University of Kansas"
+      "name": "Kansas"
     },
     {
       "id": "west_virginia",
-      "name": "West Virginia University"
+      "name": "West Virginia"
     }
   ],
   "Big East": [
     {
       "id": "creighton",
-      "name": "Creighton University"
+      "name": "Creighton"
     },
     {
       "id": "georgetown",
-      "name": "Georgetown University"
+      "name": "Georgetown"
     },
     {
       "id": "marquette",
-      "name": "Marquette University"
+      "name": "Marquette"
     },
     {
       "id": "providence",
-      "name": "Providence College"
+      "name": "Providence"
     },
     {
       "id": "seton_hall",
-      "name": "Seton Hall University"
+      "name": "Seton Hall"
     },
     {
       "id": "st_johns",
-      "name": "St. John's University"
+      "name": "St. John's"
     },
     {
       "id": "syracuse",
-      "name": "Syracuse University"
+      "name": "Syracuse"
     },
     {
       "id": "louisville",
-      "name": "University of Louisville"
+      "name": "Louisville"
     },
     {
       "id": "pitt",
-      "name": "University of Pittsburgh"
+      "name": "Pittsburgh"
     },
     {
       "id": "villanova",
-      "name": "Villanova University"
+      "name": "Villanova"
     },
     {
       "id": "xavier",
-      "name": "Xavier University"
+      "name": "Xavier"
     }
   ],
   "Big Ten": [
     {
       "id": "indiana",
-      "name": "Indiana University"
+      "name": "Indiana"
     },
     {
       "id": "michigan_state",
-      "name": "Michigan State University"
+      "name": "Michigan State"
     },
     {
       "id": "northwestern",
-      "name": "Northwestern University"
+      "name": "Northwestern"
     },
     {
       "id": "ohio_state",
-      "name": "Ohio State University"
+      "name": "Ohio State"
     },
     {
       "id": "purdue",
-      "name": "Purdue University"
+      "name": "Purdue"
     },
     {
       "id": "illinois",
-      "name": "University of Illinois"
+      "name": "Illinois"
     },
     {
       "id": "iowa",
-      "name": "University of Iowa"
+      "name": "Iowa"
     },
     {
       "id": "michigan",
-      "name": "University of Michigan"
+      "name": "Michigan"
     },
     {
       "id": "minnesota",
-      "name": "University of Minnesota"
+      "name": "Minnesota"
     },
     {
       "id": "nebraska",
-      "name": "University of Nebraska"
+      "name": "Nebraska"
     },
     {
       "id": "notre_dame",
-      "name": "University of Notre Dame"
+      "name": "Notre Dame"
     },
     {
       "id": "wisconsin",
-      "name": "University of Wisconsin"
+      "name": "Wisconsin"
     }
   ],
   "Border Conference": [
     {
       "id": "rice",
-      "name": "Rice University"
+      "name": "Rice"
     },
     {
-      "id": "seattle",
-      "name": "Seattle University"
+      "id": "illinois_state",
+      "name": "Illinois State"
     },
     {
       "id": "smu",
@@ -210,11 +210,11 @@
     },
     {
       "id": "texas_state",
-      "name": "Texas State University"
+      "name": "Texas State"
     },
     {
       "id": "tulane",
-      "name": "Tulane University"
+      "name": "Tulane"
     },
     {
       "id": "little_rock",
@@ -230,7 +230,7 @@
     },
     {
       "id": "north_texas",
-      "name": "University of North Texas"
+      "name": "North Texas"
     },
     {
       "id": "utep",
@@ -244,133 +244,161 @@
   "Collegiate Commonwealth": [
     {
       "id": "boston_university",
-      "name": "Boston University"
+      "name": "BU"
     },
     {
       "id": "brandeis",
-      "name": "Brandeis University"
+      "name": "Brandeis"
     },
     {
       "id": "bryn_mawr",
-      "name": "Bryn Mawr College"
+      "name": "Bryn Mawr"
     },
     {
       "id": "holy_cross",
-      "name": "College of the Holy Cross"
+      "name": "Holy Cross"
     },
     {
       "id": "harvard",
-      "name": "Harvard University"
+      "name": "Harvard"
     },
     {
       "id": "haverford",
-      "name": "Haverford College"
+      "name": "Haverford"
     },
     {
       "id": "quinnipiac",
-      "name": "Quinnipiac University"
+      "name": "Quinnipiac"
     },
     {
       "id": "swarthmore",
-      "name": "Swarthmore College"
+      "name": "Swarthmore"
     },
     {
       "id": "coast_guard",
-      "name": "United States Coast Guard Academy"
+      "name": "Coast Guard"
     },
     {
       "id": "penn",
-      "name": "University of Pennsylvania"
+      "name": "Pennsylvania"
     },
     {
       "id": "wellesley",
-      "name": "Wellesley College"
+      "name": "Wellesley"
     }
   ],
   "Galactic League": [
     {
       "id": "columbia",
-      "name": "Columbia University"
+      "name": "Columbia"
     },
     {
       "id": "nyu",
-      "name": "New York University"
+      "name": "NYU"
     },
     {
       "id": "space_force",
-      "name": "United States Space Force Academy"
+      "name": "Space Force"
     },
     {
       "id": "south_dakota",
-      "name": "University of South Dakota"
+      "name": "South Dakota"
+    },
+    {
+      "id": "missouri",
+      "name": "Missouri"
+    },
+    {
+      "id": "oklahoma",
+      "name": "Oklahoma"
+    },
+    {
+      "id": "idaho",
+      "name": "Idaho"
+    },
+    {
+      "id": "wyoming",
+      "name": "Wyoming"
+    },
+    {
+      "id": "colgate",
+      "name": "Colgate"
+    },
+    {
+      "id": "rochester",
+      "name": "Rochester"
     }
   ],
   "Interstate Athletic Association": [
     {
       "id": "alabama_state",
-      "name": "Alabama State University"
+      "name": "Alabama State"
     },
     {
       "id": "bethune_cookman",
-      "name": "Bethune-Cookman University"
+      "name": "Bethune-Cookman"
     },
     {
       "id": "delaware_state",
-      "name": "Delaware State University"
+      "name": "Delaware State"
     },
     {
       "id": "florida_am",
-      "name": "Florida A&M University"
+      "name": "Florida A&M"
     },
     {
       "id": "kentucky_state",
-      "name": "Kentucky State University"
+      "name": "Kentucky State"
     },
     {
       "id": "mississippi_valley_state",
-      "name": "Mississippi Valley State University"
+      "name": "Mississippi Valley State"
     },
     {
       "id": "spelman",
-      "name": "Spelman College"
+      "name": "Spelman"
     },
     {
       "id": "texas_southern",
-      "name": "Texas Southern University"
+      "name": "Texas Southern"
+    },
+    {
+      "id": "vanderbilt",
+      "name": "Vanderbilt"
     }
   ],
   "Midwest States Interscholastic Association": [
     {
-      "id": "belmont",
-      "name": "Belmont University"
+      "id": "umass",
+      "name": "UMass"
     },
     {
       "id": "bradley",
-      "name": "Bradley University"
+      "name": "Bradley"
     },
     {
       "id": "drake",
-      "name": "Drake University"
+      "name": "Drake"
     },
     {
       "id": "indiana_state",
-      "name": "Indiana State University"
+      "name": "Indiana State"
     },
     {
       "id": "lipscomb",
-      "name": "Lipscomb University"
+      "name": "Lipscomb"
     },
     {
       "id": "missouri_state",
-      "name": "Missouri State University"
+      "name": "Missouri State"
     },
     {
       "id": "saint_louis",
-      "name": "Saint Louis University"
+      "name": "Saint Louis"
     },
     {
       "id": "southern_illinois",
-      "name": "Southern Illinois University"
+      "name": "Southern Illinois"
     },
     {
       "id": "nebraska_omaha",
@@ -378,105 +406,105 @@
     },
     {
       "id": "northern_iowa",
-      "name": "University of Northern Iowa"
+      "name": "Northern Iowa"
     },
     {
       "id": "valparaiso",
-      "name": "Valparaiso University"
+      "name": "Valparaiso"
     },
     {
       "id": "wash_u",
-      "name": "Washington University in St. Louis"
+      "name": "Wash U"
     },
     {
       "id": "wichita_state",
-      "name": "Wichita State University"
+      "name": "Wichita State"
     }
   ],
   "Moonshine League": [
     {
       "id": "boise_state",
-      "name": "Boise State University"
+      "name": "Boise State"
     },
     {
       "id": "montana_state",
-      "name": "Montana State University"
+      "name": "Montana State"
     },
     {
       "id": "air_force",
-      "name": "United States Air Force Academy"
+      "name": "Air Force"
     },
     {
       "id": "army",
-      "name": "United States Military Academy"
+      "name": "Army"
     },
     {
       "id": "denver",
-      "name": "University of Denver"
+      "name": "Denver"
     },
     {
       "id": "montana",
-      "name": "University of Montana"
+      "name": "Montana"
     },
     {
       "id": "northern_colorado",
-      "name": "University of Northern Colorado"
+      "name": "Northern Colorado"
     },
     {
       "id": "uwrf",
-      "name": "University of Wisconsin-River Falls"
+      "name": "Wisconsin-River Falls"
     },
     {
       "id": "weber_state",
-      "name": "Weber State University"
+      "name": "Weber State"
     }
   ],
   "National Collegiate League": [
     {
       "id": "carnegie_mellon",
-      "name": "Carnegie Mellon University"
+      "name": "Carnegie Mellon"
     },
     {
       "id": "davidson",
-      "name": "Davidson College"
+      "name": "Davidson"
     },
     {
       "id": "duquesne",
-      "name": "Duquesne University"
+      "name": "Duquesne"
     },
     {
       "id": "emory",
-      "name": "Emory University"
+      "name": "Emory"
     },
     {
       "id": "fgcu",
-      "name": "Florida Gulf Coast University"
+      "name": "Florida Gulf Coast"
     },
     {
       "id": "johns_hopkins",
-      "name": "Johns Hopkins University"
+      "name": "Johns Hopkins"
     },
     {
       "id": "marine_corps",
-      "name": "United States Marine Corps Academy"
+      "name": "Marine Corps"
     },
     {
       "id": "dayton",
-      "name": "University of Dayton"
+      "name": "Dayton"
     },
     {
       "id": "delaware",
-      "name": "University of Delaware"
+      "name": "Delaware"
     },
     {
       "id": "north_florida",
-      "name": "University of North Florida"
+      "name": "North Florida"
     }
   ],
   "Northern Shield": [
     {
       "id": "middlebury",
-      "name": "Middlebury College"
+      "name": "Middlebury"
     },
     {
       "id": "oswego",
@@ -488,21 +516,37 @@
     },
     {
       "id": "alberta",
-      "name": "University of Alberta"
+      "name": "Alberta"
     },
     {
       "id": "ubc",
-      "name": "University of British Columbia"
+      "name": "UBC"
     },
     {
       "id": "calgary",
-      "name": "University of Calgary"
+      "name": "Calgary"
+    },
+    {
+      "id": "buffalo",
+      "name": "Buffalo"
+    },
+    {
+      "id": "new_hampshire",
+      "name": "New Hampshire"
+    },
+    {
+      "id": "vermont",
+      "name": "Vermont"
+    },
+    {
+      "id": "cornell",
+      "name": "Cornell"
     }
   ],
   "Pac-16": [
     {
       "id": "arizona_state",
-      "name": "Arizona State University"
+      "name": "Arizona State"
     },
     {
       "id": "cal",
@@ -510,11 +554,11 @@
     },
     {
       "id": "oregon_state",
-      "name": "Oregon State University"
+      "name": "Oregon State"
     },
     {
       "id": "stanford",
-      "name": "Stanford University"
+      "name": "Stanford"
     },
     {
       "id": "ucla",
@@ -526,95 +570,87 @@
     },
     {
       "id": "alaska_anchorage",
-      "name": "University of Alaska Anchorage"
+      "name": "Alaska Anchorage"
     },
     {
       "id": "arizona",
-      "name": "University of Arizona"
+      "name": "Arizona"
     },
     {
       "id": "colorado",
-      "name": "University of Colorado"
-    },
-    {
-      "id": "idaho",
-      "name": "University of Idaho"
+      "name": "Colorado"
     },
     {
       "id": "nevada",
-      "name": "University of Nevada"
+      "name": "Nevada"
     },
     {
       "id": "oregon",
-      "name": "University of Oregon"
+      "name": "Oregon"
     },
     {
       "id": "utah",
-      "name": "University of Utah"
+      "name": "Utah"
     },
     {
       "id": "washington",
-      "name": "University of Washington"
-    },
-    {
-      "id": "wyoming",
-      "name": "University of Wyoming"
+      "name": "Washington"
     },
     {
       "id": "washington_state",
-      "name": "Washington State University"
+      "name": "Washington State"
     }
   ],
   "Prairie Athletic Union": [
     {
       "id": "ferris_state",
-      "name": "Ferris State University"
+      "name": "Ferris State"
     },
     {
       "id": "grand_valley_state",
-      "name": "Grand Valley State University"
+      "name": "Grand Valley State"
     },
     {
       "id": "greenville",
-      "name": "Greenville University"
+      "name": "Greenville"
     },
     {
       "id": "grinnell",
-      "name": "Grinnell College"
+      "name": "Grinnell"
     },
     {
-      "id": "knox",
-      "name": "Knox College"
+      "id": "western_illinois",
+      "name": "Western Illinois"
     },
     {
       "id": "lake_forest",
-      "name": "Lake Forest College"
+      "name": "Lake Forest"
     },
     {
       "id": "lawrence",
-      "name": "Lawrence University"
+      "name": "Lawrence"
     },
     {
       "id": "monmouth_il",
-      "name": "Monmouth College"
+      "name": "Monmouth"
     },
     {
       "id": "oberlin",
-      "name": "Oberlin College"
+      "name": "Oberlin"
     },
     {
       "id": "uchicago",
-      "name": "University of Chicago"
+      "name": "Chicago"
     },
     {
       "id": "st_thomas",
-      "name": "University of St. Thomas"
+      "name": "St. Thomas"
     }
   ],
   "SEC": [
     {
       "id": "auburn",
-      "name": "Auburn University"
+      "name": "Auburn"
     },
     {
       "id": "lsu",
@@ -622,77 +658,65 @@
     },
     {
       "id": "mississippi_state",
-      "name": "Mississippi State University"
+      "name": "Mississippi State"
     },
     {
       "id": "texas_am",
-      "name": "Texas A&M University"
+      "name": "Texas A&M"
     },
     {
       "id": "alabama",
-      "name": "University of Alabama"
+      "name": "Alabama"
     },
     {
       "id": "arkansas",
-      "name": "University of Arkansas"
+      "name": "Arkansas"
     },
     {
       "id": "florida",
-      "name": "University of Florida"
+      "name": "Florida"
     },
     {
       "id": "georgia",
-      "name": "University of Georgia"
+      "name": "Georgia"
     },
     {
       "id": "kentucky",
-      "name": "University of Kentucky"
+      "name": "Kentucky"
     },
     {
       "id": "ole_miss",
       "name": "Ole Miss"
     },
     {
-      "id": "missouri",
-      "name": "University of Missouri"
-    },
-    {
-      "id": "oklahoma",
-      "name": "University of Oklahoma"
-    },
-    {
       "id": "south_carolina",
-      "name": "University of South Carolina"
+      "name": "South Carolina"
     },
     {
       "id": "tennessee",
-      "name": "University of Tennessee"
+      "name": "Tennessee"
     },
     {
       "id": "texas",
-      "name": "University of Texas"
-    },
-    {
-      "id": "vanderbilt",
-      "name": "Vanderbilt University"
+      "name": "Texas"
     }
   ],
   "West Coast Conference": [
     {
       "id": "gonzaga",
-      "name": "Gonzaga University"
+      "name": "Gonzaga"
     },
     {
       "id": "linfield",
-      "name": "Linfield University"
+      "name": "Linfield"
     },
     {
       "id": "portland_state",
-      "name": "Portland State University"
+      "name": "Portland State"
     },
     {
       "id": "santa_clara",
-      "name": "Santa Clara University"
+      "name": "Santa Clara"
     },
     {
       "id": "saint_marys",
@@ -700,37 +724,25 @@
     },
     {
       "id": "hawaii",
-      "name": "University of Hawaii"
+      "name": "Hawaii"
     },
     {
       "id": "portland",
-      "name": "University of Portland"
+      "name": "Portland"
     },
     {
       "id": "san_francisco",
-      "name": "University of San Francisco"
+      "name": "San Francisco"
     },
     {
       "id": "pacific",
-      "name": "University of the Pacific"
+      "name": "Pacific"
     }
   ],
   "Yankee Fourteen": [
     {
-      "id": "bowdoin",
-      "name": "Bowdoin College"
-    },
-    {
-      "id": "colgate",
-      "name": "Colgate University"
-    },
-    {
-      "id": "cornell",
-      "name": "Cornell University"
-    },
-    {
       "id": "ithaca",
-      "name": "Ithaca College"
+      "name": "Ithaca"
     },
     {
       "id": "njit",
@@ -738,11 +750,11 @@
     },
     {
       "id": "penn_state",
-      "name": "Penn State University"
+      "name": "Penn State"
     },
     {
       "id": "princeton",
-      "name": "Princeton University"
+      "name": "Princeton"
     },
     {
       "id": "rpi",
@@ -750,45 +762,33 @@
     },
     {
       "id": "rutgers",
-      "name": "Rutgers University"
+      "name": "Rutgers"
     },
     {
       "id": "merchant_marine",
-      "name": "United States Merchant Marine Academy"
+      "name": "Merchant Marine"
     },
     {
       "id": "navy",
-      "name": "United States Naval Academy"
+      "name": "Navy"
     },
     {
       "id": "umbc",
       "name": "UMBC"
     },
     {
-      "id": "new_hampshire",
-      "name": "University of New Hampshire"
-    },
-    {
-      "id": "rochester",
-      "name": "University of Rochester"
-    },
-    {
-      "id": "vermont",
-      "name": "University of Vermont"
-    },
-    {
       "id": "yale",
-      "name": "Yale University"
+      "name": "Yale"
     }
   ],
   "Mountain West": [
     {
       "id": "caltech",
-      "name": "California Institute of Technology"
+      "name": "Caltech"
     },
     {
       "id": "claremont_mckenna",
-      "name": "Claremont McKenna College"
+      "name": "Claremont McKenna"
     },
     {
       "id": "colorado_state",
@@ -796,7 +796,7 @@
     },
     {
       "id": "east_texas_am",
-      "name": "East Texas A&M University"
+      "name": "East Texas A&M"
     },
     {
       "id": "fresno_state",
@@ -804,15 +804,15 @@
     },
     {
       "id": "loyola_marymount",
-      "name": "Loyola Marymount University"
+      "name": "Loyola Marymount"
     },
     {
       "id": "nw_missouri_state",
-      "name": "Northwest Missouri State University"
+      "name": "Northwest Missouri State"
     },
     {
       "id": "pepperdine",
-      "name": "Pepperdine University"
+      "name": "Pepperdine"
     },
     {
       "id": "san_diego_state",
@@ -828,7 +828,7 @@
     },
     {
       "id": "san_diego",
-      "name": "University of San Diego"
+      "name": "San Diego"
     }
   ]
 }

@@ -1,21 +1,20 @@
 """
-WPA — Win Probability Added
+EPA — Expected Points Added
 
-Analytics engine for Viperball, modeled after real sports analytics
-concepts fans already know (WPA from baseball/NFL, WAR from baseball).
+Analytics engine for Viperball, modeled after real NFL analytics.
 
 Key concepts:
   - EP (Expected Points): How many points a league-average offense would
-    score from a given field position + down. Calibrated for 5-down,
-    9-point TD Viperball.
-  - WPA (Win Probability Added): How much each play shifts the team's
-    expected win probability. Derived from EP swings scaled to game
-    context (score, time remaining). Positive = helped your team win,
-    negative = hurt your team's chances.
-  - Success Rate: % of plays that moved the offense forward (positive
-    EP change). Healthy offenses: 45-55%.
-  - Explosiveness: Average EP gain on successful plays only. Measures
-    big-play ability.
+    score from a given field position + down. Calibrated for 6-down,
+    20-yards-to-gain, 9-point TD Viperball.
+  - EPA (Expected Points Added): How much each play changes the offense's
+    expected point output. Positive = moved closer to scoring, negative =
+    lost ground or turned it over. A TD from midfield is a huge EPA
+    because you scored 9 points when only ~2 were expected.
+  - Success Rate: % of plays with positive EPA (moved the chains).
+    Healthy offenses: 45-55%.
+  - Explosiveness: Average EPA on successful plays only. Measures
+    big-play ability independent of consistency.
 """
 
 EP_TABLE = {
@@ -86,11 +85,7 @@ def calculate_ep(yardline: int, down: int) -> float:
 
 
 def calculate_epa(play_data: dict) -> float:
-    """Calculate the EP change for a single play (internal engine use).
-
-    Still called 'epa' in per-play dicts for backward compat with
-    play-by-play data, but the user-facing name is WPA.
-    """
+    """Calculate the EP change (EPA) for a single play."""
     ep_before = play_data["ep_before"]
     result = play_data.get("result", "")
 
@@ -123,10 +118,10 @@ def calculate_drive_epa(plays: list) -> float:
 
 
 def calculate_game_epa(all_plays: list, team: str) -> dict:
-    """Aggregate WPA / success-rate / explosiveness for one team in a game.
+    """Aggregate EPA / success-rate / explosiveness for one team in a game.
 
-    Returns dict with both legacy keys (total_epa, etc.) and new
-    fan-facing keys (wpa, success_rate, explosiveness).
+    Returns dict with both legacy keys (total_vpa, etc.) and primary
+    keys (wpa/epa, success_rate, explosiveness).
     """
     team_plays = [p for p in all_plays if p.get("possession") == team]
     if not team_plays:

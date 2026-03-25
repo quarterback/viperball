@@ -217,6 +217,19 @@ def _open_edit_player_dialog(player_name: str, dynasty, team_key: str):
                 for attr, inp in inputs.items():
                     val = int(inp.value or 0)
                     setattr(target, attr, max(0, min(99, val)))
+                # Sync edits back to the live season's ViperballPlayer objects
+                if d._current_season:
+                    for ts in d._current_season.tier_seasons.values():
+                        team_obj = ts.teams.get(team_key)
+                        if not team_obj:
+                            continue
+                        for vp in getattr(team_obj, "players", []):
+                            if vp.name == player_name:
+                                for attr, inp in inputs.items():
+                                    val = int(inp.value or 0)
+                                    if hasattr(vp, attr):
+                                        setattr(vp, attr, max(0, min(99, val)))
+                                break
                 _set_dynasty(d)
                 ui.notify(f"{player_name} attributes saved!", type="positive")
                 dlg.close()
@@ -239,7 +252,39 @@ def _render_setup(container):
             "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); padding: 32px; border-radius: 12px;"
         ):
             ui.label("Women's Viperball League").classes("text-3xl font-bold text-white")
-            ui.label("Galactic Premiership — Owner Mode").classes("text-lg text-indigo-200")
+            ui.label("Galactic Premiership").classes("text-lg text-indigo-200")
+
+        # Mode selector
+        with ui.row().classes("w-full gap-4 mt-4"):
+            with ui.card().classes("flex-1 p-4 cursor-pointer hover:ring-2 ring-blue-400").style(
+                "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);"
+            ):
+                ui.label("Commissioner Mode").classes("text-lg font-bold text-white")
+                ui.label(
+                    "Run the entire league. Simulate seasons, track careers from college to retirement, "
+                    "manage the Hall of Fame. No team to manage — you control everything."
+                ).classes("text-xs text-blue-200 mt-1")
+
+                async def _start_commish():
+                    app.storage.user["_wvl_commish_phase"] = "setup"
+                    app.storage.user["_wvl_pending_nav"] = True
+                    ui.navigate.to("/")
+
+                ui.button("Start Commissioner Mode", icon="gavel", on_click=_start_commish).classes(
+                    "bg-white text-blue-800 mt-3"
+                ).props("no-caps")
+
+            with ui.card().classes("flex-1 p-4").style(
+                "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);"
+            ):
+                ui.label("Owner Mode").classes("text-lg font-bold text-white")
+                ui.label(
+                    "Pick a club and run it as owner. Manage finances, sign free agents, "
+                    "invest in facilities. Deep team management simulation."
+                ).classes("text-xs text-indigo-200 mt-1")
+
+        ui.separator().classes("my-2")
+        ui.label("Owner Mode Setup").classes("text-lg font-semibold text-slate-700")
 
         with ui.card().classes("w-full p-6 mt-4"):
             ui.label("Step 1: Create Your Owner").classes("text-lg font-semibold")
@@ -497,7 +542,7 @@ def _render_draft(container, dynasty):
 # MAIN TAB LAYOUT
 # ═══════════════════════════════════════════════════════════════
 
-def _render_main(container):
+def _render_main(container, state):
     dynasty = _get_dynasty()
     if not dynasty:
         _render_setup(container)
@@ -568,7 +613,7 @@ def _render_main(container):
             with ui.tab_panel(tab_history):
                 containers["history"] = ui.column().classes("w-full")
 
-    _fill_dashboard(containers, dynasty)
+    _fill_dashboard(containers, dynasty, state)
     _fill_roster(containers, dynasty)
     _fill_schedule(containers, dynasty)
     _fill_playoffs(containers, dynasty)
@@ -585,7 +630,7 @@ def _render_main(container):
                 containers[key].clear()
             except Exception:
                 pass
-        _fill_dashboard(containers, dynasty_fresh)
+        _fill_dashboard(containers, dynasty_fresh, state)
         _fill_roster(containers, dynasty_fresh)
         _fill_schedule(containers, dynasty_fresh)
         _fill_playoffs(containers, dynasty_fresh)
@@ -600,7 +645,7 @@ def _render_main(container):
 # DASHBOARD TAB
 # ═══════════════════════════════════════════════════════════════
 
-def _fill_dashboard(containers, dynasty):
+def _fill_dashboard(containers, dynasty, state):
     c = containers.get("dashboard")
     if not c:
         return
@@ -2209,23 +2254,35 @@ def _fill_finance(containers, dynasty):
 
             with ui.card().classes("flex-1 min-w-[300px] p-4"):
                 ui.label("Investment Allocation").classes("text-sm font-semibold text-slate-700 mb-2")
+                budget = getattr(dynasty, "investment_budget", 5.0)
+                ui.label(f"Annual Budget: ₯{budget:.0f}M").classes("text-xs text-indigo-600 font-semibold mb-2")
                 inv = dynasty.investment
-                allocs = [
-                    ("Training", inv.training),
-                    ("Coaching", inv.coaching),
-                    ("Stadium", inv.stadium),
-                    ("Youth Academy", inv.youth),
-                    ("Sports Science", inv.science),
-                    ("Marketing", inv.marketing),
+                _inv_details = [
+                    ("Training", inv.training, "fitness_center",
+                     "Speed, stamina, agility boosts for all players"),
+                    ("Coaching", inv.coaching, "school",
+                     "Awareness & tackling gains across the roster"),
+                    ("Youth Academy", inv.youth, "child_care",
+                     "Accelerated development for players under 25"),
+                    ("Sports Science", inv.science, "science",
+                     "Stamina & power resilience, injury prevention"),
+                    ("Stadium", inv.stadium, "stadium",
+                     "Attracts better free agents, boosts ticket revenue"),
+                    ("Marketing", inv.marketing, "campaign",
+                     "Grows fanbase, sponsorship revenue & FA appeal"),
                 ]
-                for label, val in allocs:
-                    with ui.row().classes("items-center gap-2 w-full"):
-                        ui.label(label).classes("text-xs text-slate-600 w-28")
-                        pct = val * 100
-                        ui.linear_progress(value=val, size="12px").classes("flex-1").props(
-                            f"color={'green' if val > 0.2 else 'blue'}"
-                        )
-                        ui.label(f"{pct:.0f}%").classes("text-xs text-slate-500 w-10 text-right")
+                for label, val, icon, desc in _inv_details:
+                    spend = val * budget
+                    with ui.row().classes("items-center gap-2 w-full mb-1"):
+                        ui.icon(icon, size="xs").classes("text-slate-400 w-4")
+                        with ui.column().classes("flex-1 gap-0"):
+                            with ui.row().classes("items-center gap-2"):
+                                ui.label(label).classes("text-xs font-semibold text-slate-700")
+                                ui.label(f"₯{spend:.1f}M ({val*100:.0f}%)").classes("text-[10px] text-slate-400")
+                            ui.linear_progress(value=val, size="8px").classes("w-full").props(
+                                f"color={'green' if val > 0.2 else 'blue'}"
+                            )
+                            ui.label(desc).classes("text-[10px] text-slate-400 leading-tight")
 
         # ── Fanbase Tracker ─────────────────────────────────────────
         fanbase_val = int(getattr(dynasty, "fanbase", 0))
@@ -2291,36 +2348,51 @@ def _fill_finance(containers, dynasty):
         if infra:
             with ui.card().classes("w-full p-4 mb-2"):
                 ui.label("Club Infrastructure").classes("text-sm font-semibold text-slate-700 mb-1")
-                ui.label("Grows from sustained investment each season (max level 10).").classes(
-                    "text-xs text-slate-400 mb-3"
-                )
-                infra_labels = {
-                    "training": "Training",
-                    "coaching": "Coaching",
-                    "stadium": "Stadium",
-                    "youth": "Youth Academy",
-                    "science": "Sports Science",
-                    "marketing": "Marketing",
+                ui.label(
+                    "Infrastructure compounds over time. Sustained investment builds permanent facilities "
+                    "that multiply your returns — neglect causes decay."
+                ).classes("text-xs text-slate-400 mb-3")
+                _infra_details = {
+                    "training":  ("Training Facilities", "fitness_center",
+                                  "Multiplies offseason physical attribute gains for all players"),
+                    "coaching":  ("Coaching Complex", "school",
+                                  "Multiplies awareness & tackling development each offseason"),
+                    "stadium":   ("Stadium", "stadium",
+                                  "Higher capacity → more ticket revenue, attracts free agents"),
+                    "youth":     ("Youth Academy", "child_care",
+                                  "Multiplies development speed for players under 25 (up to 2x at Lv10)"),
+                    "science":   ("Sports Science Lab", "science",
+                                  "Better stamina & power retention, reduces age-related decline"),
+                    "marketing": ("Marketing & Brand", "campaign",
+                                  "Accelerates fanbase growth and sponsorship deals"),
                 }
-                infra_tooltips = {
-                    "training": "+player development",
-                    "science": "-injury probability",
-                    "scouting": "+free agent quality",
-                    "youth": "+academy prospects",
-                    "marketing": "+fanbase growth",
-                    "stadium": "+attendance",
-                    "coaching": "+mental attributes",
-                }
-                for key, label in infra_labels.items():
+                inv = dynasty.investment
+                budget = getattr(dynasty, "investment_budget", 5.0)
+                for key, (label, icon, effect) in _infra_details.items():
                     level = infra.get(key, 1.0)
-                    tip = infra_tooltips.get(key, "")
-                    with ui.row().classes("items-center gap-2 w-full mb-1"):
-                        ui.label(label).classes("text-xs text-slate-600 w-28").tooltip(tip)
-                        bar = ui.linear_progress(value=level / 10.0, size="10px").classes("flex-1").props(
-                            f"color={'indigo' if level > 5 else 'blue'}"
-                        )
-                        bar.tooltip(f"{label}: {tip} (Level {level:.1f}/10)")
-                        ui.label(f"{level:.1f}").classes("text-xs font-semibold text-indigo-700 w-8 text-right")
+                    alloc_pct = getattr(inv, key, 0.0)
+                    spend = alloc_pct * budget
+                    # Project growth: min(0.5, spend / 10.0) per season
+                    growth = min(0.5, spend / 10.0) if spend > 0 else -0.05
+                    projected = min(10.0, max(1.0, level + growth))
+                    with ui.column().classes("w-full mb-2 gap-0"):
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon(icon, size="xs").classes("text-indigo-500")
+                            ui.label(label).classes("text-xs font-semibold text-slate-700")
+                            tier_label = "Elite" if level >= 8 else "Advanced" if level >= 6 else "Developing" if level >= 3 else "Basic"
+                            tier_color = "amber" if level >= 8 else "green" if level >= 6 else "blue" if level >= 3 else "gray"
+                            ui.badge(tier_label, color=tier_color).props("outline dense")
+                        with ui.row().classes("items-center gap-2 w-full"):
+                            bar = ui.linear_progress(value=level / 10.0, size="12px").classes("flex-1").props(
+                                f"color={'amber' if level >= 8 else 'indigo' if level > 5 else 'blue'}"
+                            )
+                            ui.label(f"{level:.1f}").classes("text-sm font-bold text-indigo-700 w-8 text-right")
+                        with ui.row().classes("items-center gap-2"):
+                            ui.label(effect).classes("text-[10px] text-slate-400")
+                            if growth > 0:
+                                ui.label(f"→ {projected:.1f} next season (+{growth:.2f})").classes("text-[10px] text-green-600 font-semibold")
+                            else:
+                                ui.label(f"→ {projected:.1f} next season (decaying)").classes("text-[10px] text-red-500 font-semibold")
 
         # ── Active Loans ─────────────────────────────────────────────
         loans = getattr(dynasty, "loans", [])
@@ -2654,6 +2726,14 @@ def _render_offseason_start(container, dynasty):
             app.storage.user["wvl_last_offseason_data"] = offseason
             app.storage.user["_wvl_offseason_step"] = 0
 
+            # Notify about bridge imports
+            bridge = offseason.get("bridge_import")
+            if bridge:
+                ui.notify(
+                    f"Imported {bridge['players_imported']} CVL graduates from {bridge['pools_consumed']} class(es)!",
+                    type="positive", position="top", timeout=5000,
+                )
+
             refresh = app.storage.user.get("_wvl_refresh")
             if refresh:
                 refresh()
@@ -2886,11 +2966,22 @@ def _offseason_step_import(dynasty, data):
         if len(cached_graduates) > 15:
             ui.label(f"... and {len(cached_graduates) - 15} more").classes("text-xs text-slate-400 italic mt-1")
     else:
-        ui.label("No CVL graduates available.").classes("text-sm text-slate-400 italic mb-2")
-        ui.label(
-            "To import college players, run a CVL season first and use "
-            "Export > Export Graduating Class before starting WVL offseason."
-        ).classes("text-xs text-slate-500")
+        # Check if bridge DB auto-imported graduates
+        bridge = data.get("bridge_import")
+        if bridge:
+            ui.label(
+                f"Auto-imported {bridge['players_imported']} CVL graduates "
+                f"from {bridge['pools_consumed']} graduating class(es)."
+            ).classes("text-sm text-green-700 font-semibold mb-2")
+            ui.label(
+                "These players were automatically added to this offseason's free agency pool."
+            ).classes("text-xs text-slate-500")
+        else:
+            ui.label("No CVL graduates available.").classes("text-sm text-slate-400 italic mb-2")
+            ui.label(
+                "CVL graduates are automatically imported when available. "
+                "Run a CVL dynasty season to generate graduating players."
+            ).classes("text-xs text-slate-500")
 
     ui.separator().classes("mt-3 mb-3")
     ui.label("Custom Player Import").classes("text-sm font-semibold text-slate-600")
@@ -3015,27 +3106,61 @@ def _offseason_step_development(dynasty, data):
 
 
 def _offseason_step_investment(dynasty, data):
-    ui.label("Investment Allocation").classes("text-lg font-semibold text-slate-700 mb-3")
-    ui.label("Adjust how your budget is distributed for next season.").classes("text-xs text-slate-500 mb-3")
+    ui.label("Investment Allocation").classes("text-lg font-semibold text-slate-700 mb-1")
+    budget = getattr(dynasty, "investment_budget", 5.0)
+    ui.label(
+        f"Total annual budget: ₯{budget:.0f}M — Distribute spending across categories. "
+        "Higher allocation = faster improvement in that area."
+    ).classes("text-xs text-slate-500 mb-3")
 
     inv = dynasty.investment
+    infra = getattr(dynasty, "infrastructure", {})
     sliders = {}
 
-    for label_text, attr in [
-        ("Training", "training"),
-        ("Coaching", "coaching"),
-        ("Stadium", "stadium"),
-        ("Youth Academy", "youth"),
-        ("Sports Science", "science"),
-        ("Marketing", "marketing"),
-    ]:
+    _categories = [
+        ("Training", "training", "fitness_center",
+         "Boost speed, stamina & agility for all players each offseason",
+         "+1-3 attribute points per player per season"),
+        ("Coaching", "coaching", "school",
+         "Improve awareness & tackling across the roster",
+         "+1-3 attribute points per player per season"),
+        ("Youth Academy", "youth", "child_care",
+         "Accelerate development for players under 25",
+         f"Up to +5 pts/season — infra multiplier: {1.0 + infra.get('youth', 1.0) / 10.0:.1f}x"),
+        ("Sports Science", "science", "science",
+         "Build stamina & power, reduce age decline",
+         "+1-2 attribute points per player per season"),
+        ("Stadium", "stadium", "stadium",
+         "Attract better free agents, increase ticket revenue",
+         "Grows FA appeal & attendance capacity"),
+        ("Marketing", "marketing", "campaign",
+         "Grow your fanbase and sponsorship revenue",
+         "Up to +8% fanbase growth per season"),
+    ]
+
+    for label_text, attr, icon, desc, impact in _categories:
         current_val = getattr(inv, attr, 0.0)
-        with ui.row().classes("items-center gap-3 w-full mb-2"):
-            ui.label(label_text).classes("text-sm text-slate-600 w-32")
-            slider = ui.slider(min=0, max=50, value=int(current_val * 100), step=5).classes("flex-1")
-            pct_label = ui.label(f"{int(current_val * 100)}%").classes("text-sm text-slate-500 w-10 text-right")
-            slider.on("update:model-value", lambda e, lbl=pct_label: lbl.set_text(f"{int(e.args)}%"))
-            sliders[attr] = slider
+        infra_level = infra.get(attr, 1.0)
+        with ui.column().classes("w-full mb-3 gap-0"):
+            with ui.row().classes("items-center gap-2 mb-1"):
+                ui.icon(icon, size="xs").classes("text-indigo-500")
+                ui.label(label_text).classes("text-sm font-semibold text-slate-700")
+                tier_label = "Lv" + f"{infra_level:.0f}"
+                ui.badge(tier_label, color="indigo").props("outline dense")
+            ui.label(desc).classes("text-[10px] text-slate-500 mb-1")
+            with ui.row().classes("items-center gap-3 w-full"):
+                slider = ui.slider(min=0, max=50, value=int(current_val * 100), step=5).classes("flex-1")
+                pct_label = ui.label(f"{int(current_val * 100)}%").classes("text-sm font-semibold text-slate-600 w-10 text-right")
+                spend_label = ui.label(f"₯{current_val * budget:.1f}M").classes("text-xs text-green-600 w-16 text-right")
+
+                def _on_change(e, lbl=pct_label, slbl=spend_label, b=budget):
+                    v = int(e.args)
+                    lbl.set_text(f"{v}%")
+                    slbl.set_text(f"₯{v / 100 * b:.1f}M")
+
+                slider.on("update:model-value", _on_change)
+                sliders[attr] = slider
+            ui.label(f"Effect: {impact}").classes("text-[10px] text-indigo-500")
 
     async def _save_investment():
         d = _get_dynasty()
@@ -3050,7 +3175,7 @@ def _offseason_step_investment(dynasty, data):
         _set_dynasty(d)
         ui.notify("Investment allocation saved!", type="positive")
 
-    ui.button("Save Allocation", icon="save", on_click=_save_investment).props("no-caps").classes("mt-2")
+    ui.button("Save Allocation", icon="save", on_click=_save_investment).props("no-caps color=indigo").classes("mt-2")
 
 
 def _offseason_step_financials(dynasty, data):
@@ -3160,6 +3285,13 @@ def _offseason_step_financials(dynasty, data):
 # ═══════════════════════════════════════════════════════════════
 
 async def render_wvl_section(state, shared):
+    # Check for commissioner mode first
+    commish_phase = app.storage.user.get("_wvl_commish_phase")
+    if commish_phase:
+        from nicegui_app.pages.wvl_commissioner import render_commissioner_section
+        render_commissioner_section()
+        return
+
     container = ui.column().classes("w-full max-w-5xl mx-auto p-4")
 
     dynasty = _get_dynasty()
@@ -3167,6 +3299,24 @@ async def render_wvl_section(state, shared):
     if dynasty and phase == "draft":
         _render_draft(container, dynasty)
     elif dynasty:
-        _render_main(container)
+        _render_main(container, state)
     else:
+        # Check if a commissioner dynasty exists (offer to resume)
+        from engine.db import load_commissioner_dynasty
+        commish = load_commissioner_dynasty()
+        if commish:
+            with container:
+                with ui.card().classes("w-full p-4 mb-4 bg-blue-50"):
+                    ui.label(f"Commissioner Dynasty: {commish.dynasty_name} (Year {commish.current_year})").classes(
+                        "text-sm font-semibold text-blue-800"
+                    )
+                    async def _resume_commish():
+                        app.storage.user["_wvl_commish_phase"] = "dashboard"
+                        app.storage.user["_wvl_pending_nav"] = True
+                        ui.navigate.to("/")
+                    ui.button("Resume Commissioner Mode", icon="gavel", on_click=_resume_commish).classes(
+                        "bg-blue-600 text-white"
+                    )
+                ui.separator().classes("mb-4")
+
         _render_setup(container)

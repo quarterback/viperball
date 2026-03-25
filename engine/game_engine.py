@@ -43,8 +43,8 @@ V2_ENGINE_CONFIG = {
     "prestige_decay_enabled": True,
     # Narrative generation: YAR, headlines, composure graph
     "narrative_enabled": True,
-    # Power ratio exponent: tune between 1.5 (mild) and 2.0 (spec)
-    "power_ratio_exponent": 1.8,
+    # Power ratio exponent: higher = bigger talent gap advantage
+    "power_ratio_exponent": 2.2,
     # V2.4: Starting yard line for drives (20 = standard, 15 = tighter field)
     "starting_yard_line": 20,
     # V2.4: Minimum combined suppression multiplier — prevents degenerate 0-yard drives
@@ -59,6 +59,10 @@ V2_ENGINE_CONFIG = {
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
     # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
     "base_yards_multiplier": 2.3,
+    # V2.8: Play clock limit (seconds).  If a team's computed play clock
+    # exceeds this, the coach risks a delay-of-game penalty (5 yards,
+    # replay the down).  Higher clock_management coaches snap in time.
+    "play_clock_limit": 40,
 }
 
 
@@ -157,7 +161,7 @@ COMPOSURE_EVENTS = {
 
 COMPOSURE_PREGAME = {
     "rivalry": 0.15,        # +15% variance (both teams)
-    "playoff": 0.25,        # +25% variance
+    "playoff": 0.08,        # Reduced variance — playoffs reward consistency
     "trap_game_favorite": -0.15,   # Favorite starts lower composure
     "trap_game_underdog": +0.15,   # Underdog gets composure boost
 }
@@ -1170,9 +1174,10 @@ class GameState:
     away_delta_drives: int = 0
     home_delta_scores: int = 0
     away_delta_scores: int = 0
-    # Timeout tracking: 3 per half per team
-    home_timeouts: int = 3
-    away_timeouts: int = 3
+    # Timeout tracking: 4 per half per team (6-down system = longer drives,
+    # so teams need more timeouts than 4-down football)
+    home_timeouts: int = 4
+    away_timeouts: int = 4
     # 3-minute warning: auto-stop once per half when clock crosses 180s
     three_min_warning_triggered: bool = False
     # 4th Down Movement: when True, team has elected kick mode (snap kick specialist)
@@ -1290,6 +1295,12 @@ class Player:
     game_fake_td_allowed: int = 0
     game_keeper_tackles: int = 0
     game_keeper_return_yards: int = 0
+    # ERA tracking — points/completions allowed while in coverage
+    game_points_allowed_in_coverage: float = 0.0
+    game_completions_allowed_in_coverage: int = 0
+    # Snap counts
+    game_offensive_snaps: int = 0
+    game_defensive_snaps: int = 0
     game_lateral_receptions: int = 0
     game_lateral_assists: int = 0
     game_lateral_tds: int = 0
@@ -1409,6 +1420,8 @@ class Team:
     offense_style: str = "balanced"
     defense_style: str = "swarm"
     st_scheme: str = "aces"
+    city: str = ""
+    state: str = ""
     # --- V2: Prestige and Halo ---
     prestige: int = 50               # 0-99, drives halo derivation
     halo_offense: float = 68.0       # Derived from prestige via derive_halo()
@@ -1428,7 +1441,7 @@ PENALTY_CATALOG = {
     "pre_snap": [
         {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.014},
         {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.012},
-        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.005},
+        {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.0},  # V2.8: mechanically driven by play clock
         {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.004},
         {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
         {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
@@ -2919,6 +2932,7 @@ class ViperballEngine:
         self.state = GameState()
         self.play_log: List[Play] = []
         self.drive_log: List[Dict] = []
+        self.timeout_log: List[Dict] = []  # Every timeout event for post-game visibility
         self.viper_position = "free"
         self.seed = seed
         self.drive_play_count = 0
@@ -2947,6 +2961,13 @@ class ViperballEngine:
         self.in_game_injuries: List = []       # InGameInjuryEvent objects
         self._home_injured_in_game: set = set()
         self._away_injured_in_game: set = set()
+
+        # --- Coaching substitution state ---
+        # Benched players are temporarily removed from play selection
+        # (like injured, but reversible). Maps player_name -> reason string.
+        self._home_benched: dict = {}   # {name: reason}
+        self._away_benched: dict = {}
+        self._substitution_log: List = []  # list of substitution event dicts
 
         # Filter out unavailable players (weekly injuries) and mark DTD
         _unavailable_home = unavailable_home or set()
@@ -3465,45 +3486,73 @@ class ViperballEngine:
             return self._home_injured_in_game
         return self._away_injured_in_game
 
+    def _unavailable_in_game(self, team) -> set:
+        """Return set of player names unavailable (injured OR benched)."""
+        return self._injured_in_game(team) | self._benched_names(team)
+
     def _offense_skill(self, team):
         """Return offensive skill-position players (ball carriers, receivers).
 
-        Excludes players injured during this game so backups step in immediately.
+        Excludes players injured or benched during this game so backups step in.
         """
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         skill = [p for p in team.players if p.position in
                  ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
-                 and p.name not in injured]
+                 and p.name not in unavailable]
         if skill:
             return skill
-        # Fallback: any non-injured players
-        fallback = [p for p in team.players if p.name not in injured]
+        # Fallback: any available players
+        fallback = [p for p in team.players if p.name not in unavailable]
         return fallback[:8] if fallback else team.players[:8]
 
     def _offense_all(self, team):
         """Return all offensive players including OL."""
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
-               and p.name not in injured]
-        return off if off else team.players[:8]
+               and p.name not in unavailable]
+        if off:
+            return off
+        # Fallback: any available player (avoids returning injured/benched)
+        fallback = [p for p in team.players if p.name not in unavailable]
+        return fallback[:8] if fallback else team.players[:8]
+
+    def _credit_snap_counts(self):
+        """Credit offensive and defensive snap counts to all on-field players."""
+        off_team = self.get_offensive_team()
+        def_team = self.get_defensive_team()
+        off_unavail = self._unavailable_in_game(off_team)
+        def_unavail = self._unavailable_in_game(def_team)
+        for p in off_team.players:
+            if p.name not in off_unavail:
+                p.game_offensive_snaps += 1
+        for p in def_team.players:
+            if p.name not in def_unavail:
+                p.game_defensive_snaps += 1
+                # Keepers get coverage snap credit on every defensive snap
+                if p.position in ("Keeper",):
+                    p.game_coverage_snaps += 1
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
-        injured = self._injured_in_game(team)
+        unavailable = self._unavailable_in_game(team)
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
-                and p.name not in injured]
-        return defs if defs else team.players[:5]
+                and p.name not in unavailable]
+        if defs:
+            return defs
+        # Fallback: any available player on defense side
+        fallback = [p for p in team.players if p.name not in unavailable]
+        return fallback[:5] if fallback else team.players[:5]
 
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
-        injured = self._injured_in_game(team)
-        zbs = [p for p in team.players if p.position == "Zeroback" and p.name not in injured]
+        unavailable = self._unavailable_in_game(team)
+        zbs = [p for p in team.players if p.position == "Zeroback" and p.name not in unavailable]
         if zbs:
             return zbs
-        vps = [p for p in team.players if p.position == "Viper" and p.name not in injured]
+        vps = [p for p in team.players if p.position == "Viper" and p.name not in unavailable]
         if vps:
             return vps
-        sbs = [p for p in team.players if p.position == "Slotback" and p.name not in injured]
+        sbs = [p for p in team.players if p.position == "Slotback" and p.name not in unavailable]
         if sbs:
             return sbs
         return self._offense_skill(team)
@@ -3517,7 +3566,7 @@ class ViperballEngine:
         """
         ol_players = [p for p in team.players
                       if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if not ol_players:
             return
 
@@ -3531,6 +3580,7 @@ class ViperballEngine:
             if b.name not in seen:
                 b.game_blocks += 1
                 b.game_plays_involved += 1
+                self.drain_player_energy(b, "lineman")
                 seen.add(b.name)
 
         if yards_gained >= 5 and random.random() < 0.35:
@@ -3773,9 +3823,11 @@ class ViperballEngine:
             if quarter == 3:
                 self._apply_halftime_coaching_adjustments()
                 self.recover_energy_halftime()
+                # Clear halftime benches — performance-benched players get second chance
+                self._clear_halftime_benches()
                 # Reset timeouts and 3-minute warning for second half
-                self.state.home_timeouts = 3
-                self.state.away_timeouts = 3
+                self.state.home_timeouts = 4
+                self.state.away_timeouts = 4
                 self.state.three_min_warning_triggered = False
                 # V2.4: Reset half-level play-family frequency counters
                 # Solved families persist — but the frequency tracking resets
@@ -3989,7 +4041,9 @@ class ViperballEngine:
             opp_score = self.state.home_score
 
         point_differential = their_score - opp_score  # positive = leading
-        start_position = max(1, int(baseline - point_differential))
+        # Cap at opponent's 20 (field position 80) — even in a blowout,
+        # the trailing team never starts past the opp 20.
+        start_position = max(1, min(80, int(baseline - point_differential)))
 
         # Track delta yards — field position cost of the score-differential kickoff system
         # Leading teams start drives further back; delta yards = yards lost to this mechanic
@@ -4043,6 +4097,7 @@ class ViperballEngine:
         drive_plays = 0
         drive_yards = 0
         drive_result = "stall"
+        drive_timeout_log_start = len(self.timeout_log)  # snapshot for per-drive timeout count
 
         # ── V2.4: Reset per-drive play-family frequency counters ──
         if drive_team == "home":
@@ -4059,6 +4114,13 @@ class ViperballEngine:
 
         # Between-drive recovery: players get a brief rest
         self.recover_energy_between_drives()
+
+        # ── Coaching substitutions: evaluate benching/resting between drives ──
+        # Process bench expirations first (1-drive rests return to active)
+        just_returned = self._process_bench_expirations(self.home_team)
+        just_returned |= self._process_bench_expirations(self.away_team)
+        # Then evaluate new substitutions (skip players who just came off bench)
+        self.evaluate_coaching_substitutions(just_returned)
 
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
@@ -4123,7 +4185,31 @@ class ViperballEngine:
 
             # Kneel plays manage their own clock — skip normal time deduction
             if play.play_type == "kneel":
+                # V2.8: Defense calls timeout after kneel to preserve clock
+                # and force the offense to run more plays.
+                def_called_to = False
+                if self.state.time_remaining > 0:
+                    def_called_to = self._call_defensive_timeout_on_kneel(drive_team)
+                    if def_called_to:
+                        def_side_name = "away" if drive_team == "home" else "home"
+                        def_team_name = (self.away_team.name if drive_team == "home"
+                                         else self.home_team.name)
+                        def_to_left = (self.state.home_timeouts if def_side_name == "home"
+                                       else self.state.away_timeouts)
+                        play.description += (
+                            f" | TIMEOUT {def_team_name} (defensive,"
+                            f" {def_to_left} remaining)"
+                        )
                 if self.state.time_remaining <= 0:
+                    drive_result = "kneel"
+                    break
+                # If the defense did NOT call timeout, the game clock is
+                # running.  When the remaining game clock is less than the
+                # play clock (40s), the play clock will expire before the
+                # next snap is required — the game is over.
+                play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+                if not def_called_to and self.state.time_remaining < play_clock:
+                    self.state.time_remaining = 0
                     drive_result = "kneel"
                     break
                 continue
@@ -4190,7 +4276,35 @@ class ViperballEngine:
                     else:
                         tempo_mult *= 1.2 * clock_burn
 
-            time_elapsed = max(8, int(base_time * tempo_mult))
+            # ── V2.8: Play clock enforcement ──
+            # If computed base_time exceeds the play clock limit, the coach
+            # must snap in time or face a delay-of-game penalty (5 yards,
+            # replay the down).  Better clock managers almost always avoid it.
+            play_clock_limit = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+            final_time = max(8, int(base_time * tempo_mult))
+            if final_time > play_clock_limit and play.result != "penalty":
+                off_mods = self.home_coaching_mods if drive_team == "home" else self.away_coaching_mods
+                clock_mgmt = off_mods.get("clock_management", 0.5)
+                # avoidance_chance: 0.55 at clock_mgmt=0.0, 0.95 at clock_mgmt=1.0
+                avoidance_chance = 0.55 + 0.40 * clock_mgmt
+                if random.random() > avoidance_chance:
+                    # Delay of game — 5 yards, replay the down
+                    self.state.field_position = max(1, self.state.field_position - 5)
+                    play.description += " | DELAY OF GAME — play clock expired. 5-yard penalty, replay the down."
+                    play.penalty = Penalty(
+                        name="Delay of Game", yards=5, on_team=drive_team,
+                        player="", declined=False, phase="pre_snap",
+                    )
+                    # Don't advance the down — it's replayed
+                    self.state.down = getattr(self, '_pre_play_down', self.state.down)
+                    self.state.yards_to_go = getattr(self, '_pre_play_ytg', self.state.yards_to_go) + 5
+                    # Still deduct the play clock limit worth of time (they burned 40s doing nothing)
+                    final_time = play_clock_limit
+                else:
+                    # Coach snapped just in time — clamp to the limit
+                    final_time = play_clock_limit
+
+            time_elapsed = final_time
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
@@ -4206,7 +4320,22 @@ class ViperballEngine:
             # Coaching AI considers calling a timeout after this play
             if self.call_timeout():
                 # Timeout called — clock stops (no additional time drain)
-                pass
+                # Annotate the play description with timeout info
+                if self.timeout_log:
+                    to_entry = self.timeout_log[-1]
+                    if to_entry["team"] == "official":
+                        play.description += " | INJURY TIMEOUT (official)"
+                    else:
+                        _to_label = {
+                            "strategic_clock_stop": "defensive",
+                            "offensive_clock_stop": "offensive",
+                            "star_fatigue_rest": "fatigue",
+                            "personnel_regrouping": "regrouping",
+                        }.get(to_entry["category"], to_entry["category"])
+                        play.description += (
+                            f" | TIMEOUT {to_entry['team_name']}"
+                            f" ({_to_label}, {to_entry['remaining']} remaining)"
+                        )
 
             # Increment plays_since_last_touch for all non-involved players
             team_on_off = self.get_offensive_team()
@@ -4265,48 +4394,58 @@ class ViperballEngine:
                         else:
                             self._away_momentum_plays = mom_plays
 
-                # ── Defensive Bonus Possession (pesäpallo-inspired) ──
-                # Interceptions (only) grant the intercepting team a bonus
-                # possession after their current drive ends, giving them
-                # back-to-back drives as a reward for the turnover.
-                # If this drive ends in an INT and there was already a
-                # bonus pending, the INT-back cancels it.
+                # ── Defensive Bonus Possession (pesäpallo / hockey power-play) ──
+                # Interceptions grant the intercepting team a bonus
+                # possession (back-to-back drives).  Any turnover
+                # (fumble OR interception) while a bonus is pending or
+                # active cancels/waives it — like a power-play goal
+                # releasing the man from the penalty box.
                 is_interception = play.result in ("lateral_intercepted", "kick_pass_intercepted", "int_return_td")
+                is_fumble = play.result == "fumble"
+                has_pending_bonus = (
+                    (self._bonus_recipient and self._bonus_drives_remaining >= 0)
+                    or bool(self.state.bonus_possession_team)
+                )
 
-                if is_interception:
-                    if self._bonus_recipient and self._bonus_drives_remaining >= 0:
-                        # INT back — cancel the pending bonus possession.
-                        # Per pesäpallo rule: an interception back neutralizes
-                        # the bonus. No new bonus is created.
-                        self._bonus_recipient = ""
-                        self._bonus_drives_remaining = -1
-                        self.state.bonus_possession_team = ""
-                    else:
-                        # Fresh INT (no pending bonus) — grant bonus
-                        # possession to the team that made the interception
-                        # (the defense), not the team that threw it.
-                        intercepting_team = "away" if drive_team == "home" else "home"
-                        self.state.bonus_possession_team = intercepting_team
+                if (is_fumble or is_interception) and (has_pending_bonus or self._is_bonus_drive):
+                    # Any turnover (fumble or INT) cancels a pending
+                    # bonus *and* suppresses creating a new one.
+                    # An INT during a bonus drive just ends the drive
+                    # cleanly — no chain of bonus possessions.
+                    self._bonus_recipient = ""
+                    self._bonus_drives_remaining = -1
+                    self.state.bonus_possession_team = ""
+                elif is_interception:
+                    # Fresh INT with no bonus context — grant bonus
+                    # possession to the intercepting team (defense).
+                    intercepting_team = "away" if drive_team == "home" else "home"
+                    self.state.bonus_possession_team = intercepting_team
 
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    # Possession reset consumes clock (celebration, setup)
+                    self.state.time_remaining = max(0, self.state.time_remaining - 10)
                     self.kickoff(receiving)
                 elif play.result == "successful_kick":
                     kicking_team = self.state.possession
                     receiving = "away" if kicking_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "punt_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "int_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
+                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
@@ -4347,12 +4486,12 @@ class ViperballEngine:
             dk_viable = stall_deficit <= 5  # Drop kick (5 pts) can tie
             dk_in_range = final_fg_dist <= min(58, dk_range)
 
-            if fp >= 55 and pk_viable:
+            if fp >= 60 and final_fg_dist <= 50 and pk_viable:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif fp >= 55 and dk_viable and dk_in_range:
+            elif fp >= 55 and dk_viable and dk_in_range and final_fg_dist <= 55:
                 # Deficit too large for FG but drop kick can do it
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
-            elif dk_in_range and dk_viable:
+            elif dk_in_range and dk_viable and final_fg_dist <= 55:
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             elif stall_deficit == 0:
                 # Leading or tied — punt for field position
@@ -4399,6 +4538,9 @@ class ViperballEngine:
             else:
                 self.state.away_delta_scores += 1
 
+        # Collect timeouts called during this drive
+        drive_timeouts = self.timeout_log[drive_timeout_log_start:]
+
         self.drive_log.append({
             "team": drive_team,
             "quarter": drive_quarter,
@@ -4409,6 +4551,7 @@ class ViperballEngine:
             "delta_drive": drive_delta,
             "delta_cost": drive_delta_cost,
             "bonus_drive": is_bonus_drive,
+            "timeouts": drive_timeouts,
         })
 
     FIELD_POSITION_VALUE = [
@@ -4452,32 +4595,36 @@ class ViperballEngine:
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
         """Field goal accuracy — kicker-range model.
 
-        In a sport that evolved around kicking (no forward pass), kickers
-        are far more developed than NFL kickers.  50-yard FGs are routine.
-        60-70 yarders are competitive.  The kicker's skill determines
-        their COMFORTABLE RANGE — within it, makes are near-automatic.
-        Beyond it, success drops off steeply.
-
-        60-skill → comfortable to ~45 yards
-        75-skill → comfortable to ~58 yards
-        85-skill → comfortable to ~67 yards
-        95-skill → comfortable to ~76 yards
+        Realistic probability model:
+        - Under 40 yards: near-automatic for good kickers
+        - 40-54 yards: competitive range, skill-dependent
+        - 55-58 yards: 0.3% (extremely rare)
+        - 59-65 yards: 0.1% (once-in-a-lifetime)
+        - 65+ yards: impossible (handled by caller)
         """
-        comfortable_range = 45 + (kicker_skill - 60) * 0.9
+        if distance > 65:
+            return 0.0
+        if distance >= 59:
+            return 0.001  # 0.1% — near-impossible
+        if distance >= 55:
+            return 0.003  # 0.3% — extremely rare
+
+        # Normal range: skill-dependent comfort zone
+        comfortable_range = 30 + (kicker_skill - 60) * 0.5  # 60-skill→30yd, 90-skill→45yd
 
         if distance <= 20:
-            return 0.99  # Chip shot
+            return 0.97  # Chip shot
         elif distance <= comfortable_range:
             frac = (distance - 20) / max(1, comfortable_range - 20)
-            return 0.98 - frac * 0.10  # 0.98 close → 0.88 at edge
-        elif distance <= comfortable_range + 10:
+            return 0.95 - frac * 0.10  # 0.95 close → 0.85 at edge
+        elif distance <= comfortable_range + 8:
             over = distance - comfortable_range
-            return max(0.10, 0.85 - over * 0.05)
-        elif distance <= comfortable_range + 20:
-            over = distance - comfortable_range - 10
-            return max(0.05, 0.30 - over * 0.02)
+            return max(0.15, 0.80 - over * 0.08)  # 0.80 → 0.16
+        elif distance <= 54:
+            over = distance - comfortable_range - 8
+            return max(0.05, 0.15 - over * 0.01)
         else:
-            return max(0.03, 0.08 - (distance - comfortable_range - 20) * 0.01)
+            return 0.003
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
@@ -4569,8 +4716,9 @@ class ViperballEngine:
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         kicker_skill = kicker.kicking
 
+        # Place kicks beyond 54 yards are near-impossible; never attempt beyond 65
+        pk_success = self._place_kick_success(fg_distance, kicker_skill) if fg_distance <= 54 else 0.0
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
-        pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
         if fp >= 90:
@@ -4734,7 +4882,7 @@ class ViperballEngine:
     # Elite defense (90+) can push these ~10-12% higher.
     # Weak defense (60-) drops them ~8-10% lower.
 
-    def _late_down_defensive_clamp(self, yards: float) -> float:
+    def _late_down_defensive_clamp(self, yards: float) -> int:
         """Apply defensive intensity ramp on downs 4-6.
 
         Returns modified yards.  On early downs (1-3) this is a no-op.
@@ -4747,9 +4895,9 @@ class ViperballEngine:
             return yards
 
         # Compute defensive quality from the unit on the field.
-        # Blend of tackling, awareness, and speed across non-injured defenders.
+        # Blend of tackling, awareness, and speed across non-injured/benched defenders.
         def_team = self.get_defensive_team()
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         defenders = [p for p in def_team.players
                      if p.position in ("Keeper", "Defensive Line")
                      and p.name not in injured]
@@ -4769,7 +4917,7 @@ class ViperballEngine:
 
         # Average offensive talent on the field
         off_team = self.get_offensive_team()
-        off_injured = self._injured_in_game(off_team)
+        off_injured = self._unavailable_in_game(off_team)
         attackers = [p for p in off_team.players if p.name not in off_injured][:11]
         if not attackers:
             attackers = off_team.players[:5]
@@ -4808,9 +4956,9 @@ class ViperballEngine:
 
         if random.random() < clamp_prob:
             # Defense squelches — yards reduced to stuff or minimal gain
-            return max(-2.0, round(yards * random.uniform(*yard_range), 1))
+            return int(round(max(-2.0, yards * random.uniform(*yard_range))))
 
-        return yards
+        return int(round(yards))
 
     def _get_score_diff(self) -> float:
         if self.state.possession == "home":
@@ -5181,25 +5329,74 @@ class ViperballEngine:
         """Victory formation check: kneel instead of running plays when
         the leading team can run out the clock safely.
 
-        Triggers:
-        - Q4, under 90s, lead > 5 points
-        - Q4, under 45s, any lead
+        V2.8: Accounts for opponent's remaining timeouts.  Each defensive
+        timeout can stop the clock after a kneel, so the offense needs
+        enough kneels to burn through the remaining time *plus* the time
+        the defense can reclaim by forcing additional plays.
+
+        In the 6-down system each kneel burns ~37s and costs 1 down.
+        With 6 downs available per set, the offense can kneel up to 6 times
+        before a turnover on downs (which would be catastrophic).  Safe
+        kneeling means running out the clock within a single set of downs.
         """
         if self.state.quarter != 4:
             return False
-        time_left = self.state.time_remaining
         score_diff = self._get_score_diff()
         if score_diff <= 0:
             return False
-        if time_left <= 90 and score_diff > 5:
-            return True
-        if time_left <= 45 and score_diff > 0:
-            return True
-        return False
+
+        time_left = self.state.time_remaining
+        seconds_per_kneel = 37  # average of 35-40
+
+        # How many downs remain in this set before turnover?
+        downs_left = max(1, 7 - self.state.down)  # downs 1-6, turnover on 7th
+
+        # Defensive timeouts: each one stops the clock after a kneel,
+        # but the kneel itself still burns its 37s.  The timeout just
+        # means the clock doesn't run between plays (normally ~0s for
+        # kneels anyway).  The real cost is that the offense burns a
+        # down for each timeout + each kneel.  So the offense needs
+        # enough downs to cover kneels.
+        def_side = "away" if self.state.possession == "home" else "home"
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+
+        # Each kneel burns 37s.  Defense can call timeout after each of
+        # their remaining TOs, but the kneel still consumed its time.
+        # The offense needs ceil(time_left / 37) kneels total.
+        # However, the final sub-40s of game clock doesn't require a snap:
+        # the play clock (40s) will expire before the game clock does,
+        # so the last "kneel" is free — just let the clock run out.
+        play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+        effective_time = max(0, time_left - play_clock)  # free burn at the end
+        kneels_needed = max(1, -(-effective_time // seconds_per_kneel))  # ceiling division
+        # Edge case: if time_left <= play_clock, one kneel suffices (or zero,
+        # but we need at least one to trigger victory formation).
+        if time_left <= play_clock:
+            kneels_needed = 1
+
+        # Can we kneel it out within the remaining downs?
+        can_kneel_out = kneels_needed <= downs_left
+
+        # Safety margin: don't kneel unless lead is big enough relative
+        # to remaining time (prevents kneeling away a 1-point lead with
+        # 2 minutes left where a fumbled snap could be disaster).
+        if time_left > 90:
+            safe_lead = score_diff > 9  # need double-digit lead
+        elif time_left > 45:
+            safe_lead = score_diff > 5
+        else:
+            safe_lead = score_diff > 0
+
+        return can_kneel_out and safe_lead
 
     def simulate_kneel(self) -> Play:
         """Victory formation: kneel-down that burns 35-40 seconds of clock
         and loses 1-2 yards. No risk of fumble or penalty."""
+        # Snapshot pre-play state for accurate play-by-play timestamps
+        pre_play_time = self.state.time_remaining
+        pre_play_fp = self.state.field_position
+
         yards_lost = random.randint(1, 2)
         self.state.field_position = max(1, self.state.field_position - yards_lost)
 
@@ -5217,9 +5414,9 @@ class ViperballEngine:
         play = Play(
             play_number=self.state.play_number,
             quarter=self.state.quarter,
-            time=self.state.time_remaining,
+            time=pre_play_time,
             possession=self.state.possession,
-            field_position=self.state.field_position,
+            field_position=pre_play_fp,
             down=self.state.down,
             yards_to_go=self.state.yards_to_go,
             play_type="kneel",
@@ -5260,6 +5457,47 @@ class ViperballEngine:
         return play
 
     def _simulate_play_core(self) -> Play:
+        # Run out the clock: if time remaining < play clock and offense is
+        # leading and defense has no timeouts, the game ends without a snap.
+        # The play clock expires before the game clock — no kneel needed.
+        if self.state.quarter == 4 and self._get_score_diff() > 0:
+            play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
+            if self.state.time_remaining <= play_clock:
+                def_side = "away" if self.state.possession == "home" else "home"
+                def_timeouts = (self.state.home_timeouts if def_side == "home"
+                                else self.state.away_timeouts)
+                if def_timeouts <= 0:
+                    # No defensive timeouts — clock expires naturally
+                    self.state.time_remaining = 0
+                    off_team = self.get_offensive_team()
+                    zb_label = player_label(
+                        next((p for p in self._offense_skill(off_team)
+                              if p.position == "Zeroback"),
+                             self._offense_skill(off_team)[0])
+                    )
+                    return Play(
+                        play_number=self.state.play_number,
+                        quarter=self.state.quarter,
+                        time=0,
+                        possession=self.state.possession,
+                        field_position=self.state.field_position,
+                        down=self.state.down,
+                        yards_to_go=self.state.yards_to_go,
+                        play_type="kneel",
+                        play_family="kneel",
+                        players_involved=[zb_label],
+                        yards_gained=0,
+                        result="kneel",
+                        description=(
+                            f"{off_team.name} lets the play clock expire. "
+                            f"Game over."
+                        ),
+                        fatigue=round(
+                            self.state.home_stamina if self.state.possession == "home"
+                            else self.state.away_stamina, 1
+                        ),
+                    )
+
         # Victory formation: kneel when leading late
         if self._should_kneel():
             return self.simulate_kneel()
@@ -5321,6 +5559,11 @@ class ViperballEngine:
         self._current_formation = self.select_formation()
         play_family = self.select_play_family(formation=self._current_formation)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
+
+        # Track who started with possession for ERA attribution
+        self._play_start_possession = self.state.possession
+        # Credit snap counts before the play resolves
+        self._credit_snap_counts()
 
         play = self._dispatch_play(play_type, play_family)
         # Stamp formation on the play object and prepend to description
@@ -5730,6 +5973,27 @@ class ViperballEngine:
                     weights[rk] = weights.get(rk, 0.05) * max(0.3, 1.0 - suppress * 0.5)
                 weights["snap_kick"] = weights.get("snap_kick", 0.08) * (1.0 + suppress * 1.5)
                 weights["field_goal"] = weights.get("field_goal", 0.06) * (1.0 + suppress * 1.5)
+
+        # ── V2.8: Clock-run mode ──
+        # When leading in Q4 but not in kneel range, grind the clock with
+        # run-heavy play calling.  Turnovers here are catastrophic — suppress
+        # risky plays aggressively.  Coach clock_management skill scales it.
+        if (quarter == 4 and score_diff > 0
+                and time_left > 60 and not self._is_blowout()):
+            off_mods_cr = self._coaching_mods()
+            clock_mgmt = off_mods_cr.get("clock_management", 0.5)
+            # Scale: low clock_mgmt → modest changes, high → very conservative
+            cr_intensity = 0.30 + 0.70 * clock_mgmt  # 0.30 to 1.0
+
+            # Boost run plays (clock keeps running on ground plays)
+            for rk in ("dive_option", "power", "sweep_option", "counter", "draw"):
+                weights[rk] = weights.get(rk, 0.05) * (1.0 + 0.60 * cr_intensity)
+            # Suppress risky plays
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * max(0.25, 1.0 - 0.50 * cr_intensity)
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * max(0.20, 1.0 - 0.40 * cr_intensity)
+            weights["trick_play"] = weights.get("trick_play", 0.05) * max(0.15, 1.0 - 0.60 * cr_intensity)
+            # Keep punt weight normal — punting for field position is fine
+            # Keep snap_kick/field_goal — safe points are good
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
@@ -6526,10 +6790,13 @@ class ViperballEngine:
         (via assign_game_roles), so this concentrates returns on depth
         players who earn their field time on special teams.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")]
+                    ("Halfback", "Wingback", "Slotback", "Viper", "Keeper")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")]
+            eligible = [p for p in team.players if p.position not in ("Offensive Line", "Defensive Line")
+                        and p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6560,10 +6827,12 @@ class ViperballEngine:
         Special teams coverage is where backup defenders earn playing time.
         Defensive starters are resting; rotation guys make the tackle.
         """
+        unavailable = self._unavailable_in_game(team)
         eligible = [p for p in team.players if p.position in
-                    ("Keeper", "Defensive Line")]
+                    ("Keeper", "Defensive Line")
+                    and p.name not in unavailable]
         if not eligible:
-            eligible = team.players
+            eligible = [p for p in team.players if p.name not in unavailable]
         if not eligible:
             return None
 
@@ -6614,7 +6883,7 @@ class ViperballEngine:
         return max(0, int(base_return * returner_modifier))
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
         kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
         if yards_gained <= 0:
@@ -6672,7 +6941,7 @@ class ViperballEngine:
         Returns dict with keys: 'dl' (Defensive Line), 'keeper' (Keepers),
         'all' (combined eligible pool).
         """
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         dl = [p for p in def_team.players
               if p.position == "Defensive Line" and p.name not in injured]
         kp = [p for p in def_team.players
@@ -6827,7 +7096,7 @@ class ViperballEngine:
 
         # ── Get blocker ──
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players:
             blocker = max(ol_players,
                           key=lambda p: p.power * 0.50 + getattr(p, 'awareness', 70) * 0.30
@@ -6935,6 +7204,12 @@ class ViperballEngine:
         off_chance -= turnover_bonus * 0.10
         off_chance = max(0.0, off_chance)
         if random.random() >= off_chance:
+            # Credit bell to a specific defender (keepers get priority)
+            unavail = self._unavailable_in_game(def_team)
+            keepers = [p for p in def_team.players if p.position == "Keeper" and p.name not in unavail]
+            if keepers:
+                bell_player = random.choice(keepers)
+                bell_player.game_keeper_bells += 1
             return 'defense', True
         else:
             return 'offense', False
@@ -7052,17 +7327,11 @@ class ViperballEngine:
         return max(raw_yards, floor)
 
     def _should_use_halo(self, carrier) -> bool:
-        """Determine if this play uses team halo or individual ratings.
+        """Halo system disabled — individual player ratings always used.
 
-        V2 Rule: 90% of plays use halo.  Star-designated players at
-        Critical Contest Points always use individual ratings.
+        This ensures talent gaps between teams are reflected in play outcomes.
         """
-        if not V2_ENGINE_CONFIG.get("halo_enabled", False):
-            return False
-        if carrier.star_designated:
-            return False  # Stars always use individual ratings
-        # 90% halo, 10% individual (for non-star plays)
-        return random.random() < 0.90
+        return False
 
     def _contest_run_yards(self, carrier, tackler, play_config,
                            play_family: "PlayFamily | None" = None) -> float:
@@ -7114,10 +7383,10 @@ class ViperballEngine:
             play_shift = ((base_low + base_high) / 2.0) - 3.0
             center = base_yards + play_shift
 
-            # Variance: closer matchups = more volatile
+            # Variance: closer matchups = more volatile, but talent gaps tighten variance
             ratio_distance = abs(ratio - 1.0)
             proximity = 1.0 - min(1.0, ratio_distance / 0.5)
-            variance = 0.8 + proximity * 1.4
+            variance = 0.7 + proximity * 1.0
 
             # ── V2.5: Film Study Escalation ──
             # Later drives can produce more yards via dice roll + carrier ability
@@ -7333,11 +7602,7 @@ class ViperballEngine:
         # ── V2: Apply star override (performance floor) ──
         yards = self._apply_star_override(yards, carrier)
 
-        # ── V2.5: Micro-jitter — break up round-number clustering ──
-        # Adds ±0.3 yards of noise so results don't always land on .0 or .5
-        yards += random.uniform(-0.3, 0.3)
-
-        return max(-2.0, round(yards, 1))
+        return max(-2, int(round(yards)))
 
     def _pick_kick_pass_defender(self, def_team, subfamily: "KickPassSubFamily"):
         """Pick an individual defender for the kick pass H2H contest.
@@ -7348,7 +7613,7 @@ class ViperballEngine:
         of the contest — a defense stacked with awareness but lacking speed
         will struggle to field a Bomb defender.
         """
-        injured = self._injured_in_game(def_team)
+        injured = self._unavailable_in_game(def_team)
         eligible = [p for p in def_team.players
                     if p.position in ("Keeper", "Defensive Line")
                     and p.name not in injured]
@@ -7701,6 +7966,8 @@ class ViperballEngine:
         def_team_for_tackle = self.get_defensive_team()
         tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
         tackler.game_tackles += 1
+        if tackler.position == "Keeper":
+            tackler.game_keeper_tackles += 1
 
         # Assist tackle: ~30% of run plays involve a second defender
         if random.random() < 0.30:
@@ -7708,6 +7975,7 @@ class ViperballEngine:
             if assist_tackler != tackler:
                 assist_tackler.game_tackles += 1
                 assist_tackler.game_plays_involved += 1
+                self.drain_player_energy(assist_tackler, "tackler")
 
         yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
         yards_gained = max(-5, yards_gained)
@@ -8110,6 +8378,10 @@ class ViperballEngine:
         tackler = self._pick_def_tackler(def_team, yards_gained)
         tackler.game_tackles += 1
 
+        # Drain energy: trick play carrier and tackler
+        self.drain_player_energy(carrier, "carrier")
+        self.drain_player_energy(tackler, "tackler")
+
         trick_tackle_red = self._tackle_reduction(tackler, yards_gained)
         yards_gained = max(-5, int(yards_gained - trick_tackle_red))
         new_position = min(100, fp + yards_gained)
@@ -8256,8 +8528,8 @@ class ViperballEngine:
                 self.change_possession()
                 raw_fp = max(1, 100 - int_spot)
 
-                # Pick the interceptor (exclude injured defenders)
-                _inj_set = self._injured_in_game(def_team)
+                # Pick the interceptor (exclude injured/benched defenders)
+                _inj_set = self._unavailable_in_game(def_team)
                 int_candidates = [p for p in def_team.players[:8] if p.name not in _inj_set]
                 if not int_candidates:
                     int_candidates = def_team.players[:6]
@@ -8265,6 +8537,7 @@ class ViperballEngine:
                 int_weights = self._spread_the_love_defense(int_candidates, int_weights)
                 interceptor = random.choices(int_candidates, weights=int_weights, k=1)[0]
                 interceptor.game_lateral_interceptions += 1
+                self.drain_player_energy(interceptor, "carrier")
                 int_tag = player_tag(interceptor)
 
                 # INT return — laterals intercepted in the open field.
@@ -8453,6 +8726,7 @@ class ViperballEngine:
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
         lat_tackler.game_tackles += 1
+        self.drain_player_energy(lat_tackler, "tackler")
 
         # Tackling reduces lateral chain yards
         lat_tackle_red = self._tackle_reduction(lat_tackler, yards_gained)
@@ -8682,6 +8956,8 @@ class ViperballEngine:
             sacker.game_sacks += 1
             sacker.game_tackles += 1
             sacker.game_plays_involved += 1
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(sacker, "tackler")
 
             new_fp = max(1, self.state.field_position - sack_yards)
             if new_fp <= 0:
@@ -8732,7 +9008,7 @@ class ViperballEngine:
         # ── OL Protection Credits on KP ──
         # Even on non-sack plays, OL earns block credits for protection
         ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._injured_names(team)]
+                      and p.name not in self._unavailable_in_game(team)]
         if ol_players and random.random() < 0.35:
             self._credit_ol_blocks(team, 3)
 
@@ -9069,14 +9345,23 @@ class ViperballEngine:
             # Kick pass "floor-spacing": successful completion spreads
             # the defense thin, reducing tackle effectiveness next play
             self._spread_thin_next_play = True
+            # ERA tracking: attribute completion to coverage defender
+            if matched_defender and ("keeper" in matched_defender.position.lower()
+                                     or "safety" in matched_defender.position.lower()):
+                matched_defender.game_completions_allowed_in_coverage += 1
             kp_def_team = self.get_defensive_team()
             kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
             kp_tackler.game_tackles += 1
+            if kp_tackler.position == "Keeper":
+                kp_tackler.game_keeper_tackles += 1
             if random.random() < 0.25:
                 kp_assist = self._pick_def_tackler(kp_def_team, total_yards)
                 if kp_assist != kp_tackler:
                     kp_assist.game_tackles += 1
+                    if kp_assist.position == "Keeper":
+                        kp_assist.game_keeper_tackles += 1
                     kp_assist.game_plays_involved += 1
+                    self.drain_player_energy(kp_assist, "tackler")
             kp_tackle_red = self._tackle_reduction(kp_tackler, total_yards)
             yards_gained = max(1, int(total_yards - kp_tackle_red))
             if yards_gained <= 0:
@@ -9123,6 +9408,11 @@ class ViperballEngine:
             receiver.game_kick_pass_yards += yards_gained
             receiver.game_yards += yards_gained
 
+            # Drain energy: kicker, receiver, and tackler all exerted
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(receiver, "carrier")
+            self.drain_player_energy(kp_tackler, "tackler")
+
             injury_note = ""
             recv_inj = self.check_in_game_injury(receiver, play_type="kick_pass")
             if recv_inj:
@@ -9161,7 +9451,7 @@ class ViperballEngine:
             hurry_def_team = self.get_defensive_team()
             hurry_eligible = [p for p in hurry_def_team.players
                               if p.position in ("Defensive Line", "Keeper")
-                              and p.name not in self._injured_names(hurry_def_team)]
+                              and p.name not in self._unavailable_in_game(hurry_def_team)]
             if hurry_eligible:
                 hurry_weights = []
                 for hp in hurry_eligible:
@@ -9218,6 +9508,10 @@ class ViperballEngine:
             interceptor = matched_defender
             interceptor.game_kick_pass_ints += 1
             int_tag = player_tag(interceptor)
+
+            # Drain: kicker threw, interceptor ran it back
+            self.drain_player_energy(kicker, "kick_pass")
+            self.drain_player_energy(interceptor, "carrier")
 
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
@@ -9276,6 +9570,13 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
 
+        # Incompletion — kicker and matched defender still exerted
+        self.drain_player_energy(kicker, "kick_pass")
+        self.drain_player_energy(matched_defender, "tackler")
+        # Kick deflection credit: ~40% of incompletions are defender-caused
+        if matched_defender and matched_defender.position == "Keeper" and random.random() < 0.40:
+            matched_defender.game_kick_deflections += 1
+
         throwing_team_inc = self.state.possession
         self.state.down += 1
 
@@ -9333,6 +9634,7 @@ class ViperballEngine:
             if style_name in ("ghost", "chain_gang", "lateral_spread"):
                 success_roll -= 0.08  # Lower = better
             self.apply_stamina_drain(3)
+            self.drain_player_energy(playmaker, "carrier")
             if success_roll < 0.45:
                 # Fake works! Gain 8-22 yards
                 fake_gain = random.randint(8, 22)
@@ -9395,6 +9697,9 @@ class ViperballEngine:
                     description=f"FAKE PUNT! {ftag} stuffed — TURNOVER ON DOWNS!",
                     fatigue=round(stamina, 1),
                 )
+
+        # Punter exerts on every actual punt attempt
+        self.drain_player_energy(punter, "kick_pass")
 
         # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
         block_prob = self.calculate_block_probability(kick_type="punt")
@@ -9674,6 +9979,7 @@ class ViperballEngine:
             td_returner.game_punt_return_tds += 1
             new_pos = 100 - min(99, self.state.field_position + distance)
             td_returner.game_punt_return_yards += new_pos
+            self.drain_player_energy(td_returner, "carrier")
             self.change_possession()
             self.add_score(9)
             self.apply_stamina_drain(2)
@@ -9751,6 +10057,7 @@ class ViperballEngine:
             final_position = max(1, landing_spot - return_yards)
             returner.game_punt_returns += 1
             returner.game_punt_return_yards += return_yards
+            self.drain_player_energy(returner, "carrier")
             rtag = player_tag(returner)
             if return_yards > 0:
                 returner_desc = f", {rtag} returns {return_yards} yards"
@@ -10229,6 +10536,31 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
+        # ── Max field goal distance: 65 yards ──
+        # Beyond 65 yards is physically impossible for a place kick.
+        # If they're too far, punt instead (handled by kick decision logic).
+        if distance > 65:
+            # Too far for a place kick — treat as missed/punt-like
+            self.change_possession()
+            self.state.field_position = 100 - self.state.field_position
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+            return Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=self.state.field_position,
+                down=1, yards_to_go=20,
+                play_type="place_kick", play_family=family.value,
+                players_involved=[player_label(kicker)],
+                yards_gained=0,
+                result=PlayResult.MISSED_KICK.value,
+                description=f"{ptag} field goal {distance}yd — NO GOOD! (out of range)",
+                fatigue=round(stamina, 1),
+            )
+
         # ── Kicker-range success model ──
         # Uses the same model as _place_kick_success: the kicker determines
         # a comfortable range.  Within range, kicks are near-automatic.
@@ -10382,6 +10714,25 @@ class ViperballEngine:
             self.state.home_score += points
         else:
             self.state.away_score += points
+        # ERA tracking: only attribute to keeper when the scoring team
+        # is the one that started the play with possession (offensive score).
+        # Defensive scores (INT return TDs, safeties) change possession first,
+        # so self.state.possession != self._play_start_possession.
+        play_start = getattr(self, '_play_start_possession', None)
+        if play_start and self.state.possession == play_start:
+            self._attribute_points_to_keeper(points)
+
+    def _attribute_points_to_keeper(self, points: float):
+        """Attribute points scored against the defense to all keepers on the field."""
+        def_team = self.get_defensive_team()
+        unavail = self._unavailable_in_game(def_team)
+        active_keepers = [p for p in def_team.players
+                          if p.position == "Keeper" and p.name not in unavail]
+        if not active_keepers:
+            return
+        share = points / len(active_keepers)
+        for p in active_keepers:
+            p.game_points_allowed_in_coverage += share
 
     def change_possession(self):
         self.state.possession = "away" if self.state.possession == "home" else "home"
@@ -10623,12 +10974,255 @@ class ViperballEngine:
         else:
             return 4.0  # +300% injury risk — reckless to keep playing
 
+    # ── Coaching Substitution System ────────────────────────────────
+    # Between drives, coaches evaluate whether to bench struggling or
+    # exhausted starters and sub in backups.  Triggers:
+    #   1. Performance: starter with 2+ fumbles or terrible YPC gets pulled
+    #   2. Fatigue: starter with <30 energy gets rested for a drive
+    #   3. Blowout: 25+ point lead in Q3/Q4, starters get pulled
+    # Benched players can return (unlike injured players) — fatigue rests
+    # last 1 drive, performance benches last until halftime or end of game.
+
+    def _benched_names(self, team) -> set:
+        """Return set of player names currently benched on this team."""
+        if team == self.home_team:
+            return set(self._home_benched.keys())
+        return set(self._away_benched.keys())
+
+    def _bench_player(self, team, player, reason: str, duration: str = "drive"):
+        """Bench a player. duration: 'drive' (1 drive rest), 'half' (until halftime/end),
+        'game' (rest of game, e.g. blowout protection)."""
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        benched[player.name] = {"reason": reason, "duration": duration, "drive_count": 0}
+
+        # Find the backup who replaces them
+        injured = self._injured_in_game(team)
+        excluded = injured | set(benched.keys())
+        same_pos = [p for p in team.players if p.position == player.position
+                    and p.name not in excluded]
+        sub_name = None
+        if same_pos:
+            sub = max(same_pos, key=lambda p: p.overall)
+            sub_name = sub.name
+
+        self._substitution_log.append({
+            "team": team.name,
+            "quarter": self.state.quarter,
+            "time_remaining": self.state.time_remaining,
+            "benched_player": player.name,
+            "benched_position": player.position,
+            "reason": reason,
+            "duration": duration,
+            "substitute": sub_name,
+        })
+
+    def _unbench_player(self, team, player_name: str):
+        """Return a benched player to active duty."""
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        benched.pop(player_name, None)
+
+    def _process_bench_expirations(self, team) -> set:
+        """Check if any benched players should return (drive-based rest expired).
+
+        Returns set of player names just returned from the bench so they
+        can be excluded from immediate re-benching (prevents bounce loop).
+        """
+        benched = self._home_benched if team == self.home_team else self._away_benched
+        expired = []
+        for name, info in benched.items():
+            info["drive_count"] = info.get("drive_count", 0) + 1
+            if info["duration"] == "drive" and info["drive_count"] >= 1:
+                expired.append(name)
+        for name in expired:
+            benched.pop(name, None)
+        return set(expired)
+
+    def _is_last_kicker(self, team, player, already_out: set) -> bool:
+        """Return True if benching this player would leave the team with no kicker."""
+        if player.position != "Zeroback":
+            return False
+        other_kickers = [p for p in team.players
+                         if p.position == "Zeroback"
+                         and p.name != player.name
+                         and p.name not in already_out]
+        return len(other_kickers) == 0
+
+    def evaluate_coaching_substitutions(self, just_returned: set = None):
+        """Between drives, coaches evaluate performance and fatigue to decide subs.
+
+        Called at the start of each drive (after energy recovery). Coaches on
+        BOTH teams evaluate their personnel — offense evaluates their own
+        players, defense evaluates theirs.
+
+        just_returned: players who just came off the bench this drive — skip
+        them to prevent immediate re-benching (bounce loop).
+        """
+        if just_returned is None:
+            just_returned = set()
+        for team in (self.home_team, self.away_team):
+            benched = self._home_benched if team == self.home_team else self._away_benched
+            injured = self._injured_in_game(team)
+            already_out = injured | set(benched.keys()) | just_returned
+
+            # ── 1. Blowout protection: pull starters when up big ──
+            score_diff = self.state.home_score - self.state.away_score
+            if team == self.away_team:
+                score_diff = -score_diff
+            is_winning_blowout = score_diff >= 25 and self.state.quarter >= 3
+
+            if is_winning_blowout:
+                skill = [p for p in team.players
+                         if p.position in ("Zeroback", "Halfback", "Wingback",
+                                           "Slotback", "Viper")
+                         and p.name not in already_out
+                         and getattr(p, 'game_role', '') == "STARTER"]
+                for p in skill:
+                    if self._is_last_kicker(team, p, already_out):
+                        continue  # Never bench the team's last available kicker
+                    # Only bench if there's a backup available
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, "blowout_rest", "game")
+                        already_out.add(p.name)
+                continue  # Skip other checks during blowout — just rest starters
+
+            # ── 2. Performance-based benching ──
+            # Bench starters who are actively hurting the team
+            skill = [p for p in team.players
+                     if p.position in ("Zeroback", "Halfback", "Wingback",
+                                       "Slotback", "Viper")
+                     and p.name not in already_out
+                     and getattr(p, 'game_role', '') == "STARTER"]
+
+            for p in skill:
+                should_bench = False
+                reason = ""
+
+                # 2a. Multiple fumbles — coaches lose trust
+                fumbles = getattr(p, 'game_fumbles', 0)
+                if fumbles >= 2:
+                    should_bench = True
+                    reason = "fumbles"
+
+                # 2b. Zeroback with multiple turnovers (fumbles + INTs thrown)
+                if p.position == "Zeroback":
+                    kp_ints = getattr(p, 'game_kick_pass_interceptions', 0)
+                    total_turnovers = fumbles + kp_ints
+                    if total_turnovers >= 3:
+                        should_bench = True
+                        reason = "turnovers"
+
+                # 2c. Ball carrier with lots of carries but terrible YPC
+                carries = getattr(p, 'game_rush_carries', 0)
+                rush_yards = getattr(p, 'game_rushing_yards', 0)
+                if carries >= 8 and carries > 0:
+                    ypc = rush_yards / carries
+                    if ypc < 1.5:
+                        # ~40% chance coach pulls them — coaches give leeway
+                        if random.random() < 0.40:
+                            should_bench = True
+                            reason = "ineffective"
+
+                if should_bench and not self._is_last_kicker(team, p, already_out):
+                    # Check that a backup exists
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, reason, "half")
+                        already_out.add(p.name)
+
+            # ── 3. Fatigue / workload rotation ──
+            # Coaches rest workhorse players who've been carrying the load.
+            # Two triggers:
+            #   a) Energy below threshold (rarely happens due to recovery)
+            #   b) Heavy usage: 12+ carries by Q3, or 18+ by Q4 — coaches
+            #      want to keep their starter fresh for the next game.
+            # Also gives backups reps, which is realistic.
+            active_skill = [p for p in team.players
+                            if p.position in ("Zeroback", "Halfback", "Wingback",
+                                              "Slotback", "Viper")
+                            and p.name not in already_out
+                            and getattr(p, 'game_role', '') == "STARTER"]
+
+            for p in active_skill:
+                should_rest = False
+                # a) Energy-based rest
+                energy_threshold = 45 if self.state.quarter >= 3 else 30
+                if p.game_energy < energy_threshold:
+                    should_rest = True
+
+                # b) Workload-based rest — high-usage backs get a breather
+                carries = getattr(p, 'game_rush_carries', 0)
+                touches = getattr(p, 'game_touches', 0)
+                if self.state.quarter >= 3 and carries >= 12:
+                    # More likely to rest as carries pile up
+                    rest_prob = min(0.40, 0.15 + (carries - 12) * 0.05)
+                    if random.random() < rest_prob:
+                        should_rest = True
+                elif self.state.quarter >= 4 and touches >= 18:
+                    if random.random() < 0.30:
+                        should_rest = True
+
+                if should_rest and not self._is_last_kicker(team, p, already_out):
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        self._bench_player(team, p, "fatigue_rest", "drive")
+                        already_out.add(p.name)
+
+            # ── 4. Defensive rotation (less frequent) ──
+            defenders = [p for p in team.players
+                         if p.position in ("Keeper", "Defensive Line")
+                         and p.name not in already_out
+                         and getattr(p, 'game_def_role', '') == "STARTER"]
+
+            for p in defenders:
+                should_rest = False
+                if p.game_energy < (40 if self.state.quarter >= 3 else 25):
+                    should_rest = True
+                # Defensive players with 10+ tackles get rested
+                tackles = getattr(p, 'game_tackles', 0)
+                if self.state.quarter >= 3 and tackles >= 10:
+                    if random.random() < 0.25:
+                        should_rest = True
+                if should_rest:
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups and random.random() < 0.50:
+                        self._bench_player(team, p, "fatigue_rest", "drive")
+                        already_out.add(p.name)
+
+    def _clear_halftime_benches(self):
+        """At halftime, players benched for 'half' duration return."""
+        for benched in (self._home_benched, self._away_benched):
+            expired = [name for name, info in benched.items()
+                       if info["duration"] == "half"]
+            for name in expired:
+                benched.pop(name, None)
+
     def recover_energy_between_drives(self):
-        """Between drives, involved players recover a small amount of energy."""
-        team = self.get_offensive_team()
-        for p in team.players:
+        """Between drives, both sides recover energy.
+
+        The offense (about to start a new drive) gets a full recovery bump.
+        The defense (just finished a shift) gets a smaller bump — they were
+        exerting themselves on the previous drive and the changeover is brief.
+        """
+        off_team = self.get_offensive_team()
+        def_team = self.get_defensive_team()
+        for p in off_team.players:
             p.game_energy = min(100.0, p.game_energy + 5.0)
             p.plays_since_last_touch += 1
+        for p in def_team.players:
+            p.game_energy = min(100.0, p.game_energy + 3.0)
 
     def recover_energy_halftime(self):
         """At halftime, all players recover 30 energy."""
@@ -10637,72 +11231,264 @@ class ViperballEngine:
         for p in self.away_team.players:
             p.game_energy = min(100.0, p.game_energy + 30.0)
 
-    def call_timeout(self) -> bool:
-        """Coaching AI decides whether to call a timeout.
+    def _call_defensive_timeout_on_kneel(self, off_side: str) -> bool:
+        """Defense calls a timeout after a victory-formation kneel to stop
+        the clock and force the offense to keep running plays.
 
-        Considers: star player fatigue, clock management, momentum.
-        Returns True if timeout was called (by either offense or defense).
+        Only triggers when the defense is trailing and has timeouts left.
+        High clock_management coaches call this nearly every time.
+        """
+        def_side = "away" if off_side == "home" else "home"
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+        if def_timeouts <= 0:
+            return False
+
+        # Only call if trailing
+        if def_side == "home":
+            def_score_diff = self.state.home_score - self.state.away_score
+        else:
+            def_score_diff = self.state.away_score - self.state.home_score
+        if def_score_diff >= 0:
+            return False  # winning or tied — no reason to call TO on a kneel
+
+        # Coach clock_management gates the probability
+        def_mods = (self.home_coaching_mods if def_side == "home"
+                    else self.away_coaching_mods)
+        clock_mgmt = def_mods.get("clock_management", 0.5)
+
+        # Base probability is very high — any competent coach calls TO here.
+        # 0.70 at clock_mgmt=0.0, 0.95 at clock_mgmt=1.0
+        call_prob = 0.70 + 0.25 * clock_mgmt
+
+        # timeout_hoarder / timeout_sprinter trait adjustments
+        sub_arch = def_mods.get("sub_archetype", "")
+        hidden_traits = def_mods.get("hidden_trait_effects", {})
+        if "timeout_hoarder" in hidden_traits:
+            call_prob *= 0.80  # hoarders are reluctant even in obvious spots
+        if "timeout_sprinter" in hidden_traits:
+            call_prob = min(0.98, call_prob * 1.10)
+
+        if random.random() < call_prob:
+            if def_side == "home":
+                self.state.home_timeouts -= 1
+                remaining = self.state.home_timeouts
+            else:
+                self.state.away_timeouts -= 1
+                remaining = self.state.away_timeouts
+
+            # Rest the defensive team during the stoppage
+            def_team = (self.home_team if def_side == "home"
+                        else self.away_team)
+            def_team_name = def_team.name
+            for p in def_team.players:
+                p.game_energy = min(100.0, p.game_energy + 15.0)
+
+            self.timeout_log.append({
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "team": def_side,
+                "team_name": def_team_name,
+                "category": "defensive_kneel_stop",
+                "remaining": remaining,
+                "play_number": self.state.play_number,
+            })
+
+            return True
+
+        return False
+
+    def call_timeout(self) -> bool:
+        """V2.8: Realistic timeout decision engine.
+
+        Five categories of timeout calls, each with situational triggers
+        and coach-skill gating.  Good coaches hoard timeouts for Q4;
+        bad coaches may waste them on fatigue or personnel issues.
+
+        Categories:
+        1. Strategic clock stop (defense, Q4/Q2) — stop clock to get ball back
+        2. Star fatigue rest (offense, any quarter) — rare, red-zone only
+        3. Injury timeout (official, any quarter) — not charged to either team
+        4. Personnel/scheme regrouping (offense, Q1-Q3) — regroup after solved play
+        5. Offensive clock stop (offense, Q2/Q4 trailing) — preserve time to score
+
+        Returns True if any timeout was called.
         """
         off_side = self.state.possession
         def_side = "away" if off_side == "home" else "home"
 
-        off_timeouts = self.state.home_timeouts if off_side == "home" else self.state.away_timeouts
-        def_timeouts = self.state.home_timeouts if def_side == "home" else self.state.away_timeouts
+        off_timeouts = (self.state.home_timeouts if off_side == "home"
+                        else self.state.away_timeouts)
+        def_timeouts = (self.state.home_timeouts if def_side == "home"
+                        else self.state.away_timeouts)
+
+        off_mods = (self.home_coaching_mods if off_side == "home"
+                    else self.away_coaching_mods)
+        def_mods = (self.home_coaching_mods if def_side == "home"
+                    else self.away_coaching_mods)
 
         quarter = self.state.quarter
         time_left = self.state.time_remaining
+        score_diff = self._get_score_diff()  # positive = offense leading
 
-        off_team = self.get_offensive_team()
-        should_call = False
+        off_clock_mgmt = off_mods.get("clock_management", 0.5)
+        def_clock_mgmt = def_mods.get("clock_management", 0.5)
+
+        off_traits = off_mods.get("hidden_trait_effects", {})
+        def_traits = def_mods.get("hidden_trait_effects", {})
+
         caller = None
+        caller_category = ""
 
-        if off_timeouts > 0:
+        # ── Category 3: Injury timeout (official-called, no team charged) ──
+        # ~0.3% chance per play.  Both teams rest.  Not a strategic decision.
+        if random.random() < 0.003:
+            off_team = self.get_offensive_team()
+            def_team_obj = (self.home_team if def_side == "home"
+                            else self.away_team)
+            for p in off_team.players:
+                p.game_energy = min(100.0, p.game_energy + 10.0)
+            for p in def_team_obj.players:
+                p.game_energy = min(100.0, p.game_energy + 10.0)
+            # No timeout charged to either team
+            self.timeout_log.append({
+                "quarter": quarter,
+                "time_remaining": time_left,
+                "team": "official",
+                "team_name": "Official",
+                "category": "injury",
+                "remaining": None,
+                "play_number": self.state.play_number,
+            })
+            return True
+
+        # ── Category 1: Strategic clock stop (defense) ──
+        # Trailing defense stops the clock to preserve time for a comeback.
+        if def_timeouts > 0:
+            def_score_diff = -score_diff  # negative = defense trailing
+            can_stop = False
+            call_prob = 0.0
+
+            if quarter == 4 and def_score_diff < 0 and def_score_diff >= -14:
+                # Q4 with <5 min left, trailing by ≤14
+                if time_left < 300:
+                    # Urgency ramps as clock ticks down
+                    urgency = min(1.0, (300 - time_left) / 300.0)
+                    deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
+                    call_prob = 0.20 + 0.50 * urgency + 0.15 * deficit_factor
+                    # Clock management skill amplifies good decisions
+                    call_prob *= (0.60 + 0.40 * def_clock_mgmt)
+                    can_stop = True
+
+            elif quarter == 2 and def_score_diff < 0 and time_left < 60:
+                # Q2 with <1 min: try to get ball back before halftime
+                call_prob = 0.25 * (0.50 + 0.50 * def_clock_mgmt)
+                can_stop = True
+
+            if can_stop:
+                # Trait adjustments
+                if "timeout_hoarder" in def_traits:
+                    call_prob *= 0.70  # hoarders are reluctant
+                if "timeout_sprinter" in def_traits:
+                    call_prob = min(0.90, call_prob * 1.25)
+
+                call_prob = min(0.85, call_prob)
+                if random.random() < call_prob:
+                    caller = def_side
+                    caller_category = "strategic_clock_stop"
+
+        # ── Category 5: Offensive clock stop (trailing offense) ──
+        # Offense uses timeout to preserve time when trailing late.
+        if caller is None and off_timeouts > 0 and score_diff < 0:
+            if quarter in (2, 4) and time_left < 120:
+                call_prob = 0.35 * (0.50 + 0.50 * off_clock_mgmt)
+                if quarter == 4:
+                    call_prob *= 1.5  # more urgent in Q4
+
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.70
+                if "timeout_sprinter" in off_traits:
+                    call_prob = min(0.85, call_prob * 1.25)
+
+                if random.random() < min(0.75, call_prob):
+                    caller = off_side
+                    caller_category = "offensive_clock_stop"
+
+        # ── Category 2: Star fatigue rest (offense) ──
+        # Rare — only in red zone with exhausted stars.  Bad clock managers
+        # are more likely to waste one here instead of saving for late game.
+        if caller is None and off_timeouts > 0:
+            off_team = self.get_offensive_team()
             skill_players = self._offense_skill(off_team)
             fatigued_stars = [p for p in skill_players
                              if p.game_energy < 50 and p.overall >= 75]
 
             if fatigued_stars and self.state.field_position >= 50:
-                should_call = random.random() < 0.40
-                caller = off_side
+                # Good clock managers resist: 15% at clock_mgmt=1.0, 30% at 0.0
+                call_prob = 0.30 - 0.15 * off_clock_mgmt
 
-            if quarter in (2, 4) and time_left < 120:
-                score_diff = self._get_score_diff()
-                if score_diff < 0:
-                    should_call = random.random() < 0.60
+                # Don't waste TOs in Q4 if you have a good clock manager
+                if quarter == 4 and off_clock_mgmt > 0.6:
+                    call_prob *= 0.3
+
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.50
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.40
+
+                if random.random() < call_prob:
                     caller = off_side
+                    caller_category = "star_fatigue_rest"
 
-        if not should_call and def_timeouts > 0:
-            if quarter == 4 and time_left < 180:
-                if off_side == "home":
-                    def_score_diff = self.state.away_score - self.state.home_score
-                else:
-                    def_score_diff = self.state.home_score - self.state.away_score
+        # ── Category 4: Personnel/scheme timeout (offense, Q1-Q3) ──
+        # When the DC has solved a play family and the offense is struggling.
+        # Only if team has 2+ timeouts (preserve last one for emergencies).
+        if (caller is None and off_timeouts >= 2
+                and quarter <= 3
+                and self.drive_play_count >= 3):
+            # Check if offense has been shut down on this drive (no gains)
+            recent_stall = (self.drive_play_count >= 4
+                            and getattr(self, '_drive_yards', 0) <= 2)
+            if recent_stall:
+                # Bad clock managers burn TOs here more often
+                call_prob = 0.05 + 0.03 * (1.0 - off_clock_mgmt)
 
-                if def_score_diff < 0 and def_score_diff >= -14:
-                    urgency = min(1.0, (180 - time_left) / 180.0)
-                    deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
-                    call_prob = 0.35 + 0.45 * urgency + 0.15 * deficit_factor
-                    call_prob = min(0.85, call_prob)
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.50
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.30
 
-                    def_mods = self.home_coaching_mods if def_side == "home" else self.away_coaching_mods
-                    awareness = def_mods.get("personality_factors", {}).get("clock_awareness", 1.0)
-                    call_prob *= awareness
+                if random.random() < call_prob:
+                    caller = off_side
+                    caller_category = "personnel_regrouping"
 
-                    if random.random() < call_prob:
-                        should_call = True
-                        caller = def_side
-
-        if should_call and caller:
+        # ── Execute the timeout ──
+        if caller:
             if caller == "home":
                 self.state.home_timeouts -= 1
+                remaining = self.state.home_timeouts
             else:
                 self.state.away_timeouts -= 1
+                remaining = self.state.away_timeouts
 
-            rest_team = off_team if caller == off_side else (
-                self.home_team if def_side == "home" else self.away_team
-            )
+            # Rest the calling team
+            rest_team = (self.get_offensive_team() if caller == off_side
+                         else (self.home_team if def_side == "home"
+                               else self.away_team))
+            caller_team_name = (self.home_team.name if caller == "home"
+                                else self.away_team.name)
             for p in rest_team.players:
                 p.game_energy = min(100.0, p.game_energy + 15.0)
+
+            self.timeout_log.append({
+                "quarter": quarter,
+                "time_remaining": time_left,
+                "team": caller,
+                "team_name": caller_team_name,
+                "category": caller_category,
+                "remaining": remaining,
+                "play_number": self.state.play_number,
+            })
 
             return True
 
@@ -10807,13 +11593,17 @@ class ViperballEngine:
         self.state.away_composure = max(COMPOSURE_MIN, min(COMPOSURE_MAX, self.state.away_composure))
 
     def _check_underdog_surge(self):
-        """Underdog Surge: if the underdog is leading in Q4, reduce their
-        fatigue drain by 15% (crowd energy, adrenaline).
+        """Underdog Surge: if the underdog is leading in Q4, small composure bump.
+
+        Reduced in playoffs — better teams should close out games.
         """
         if not V2_ENGINE_CONFIG.get("composure_enabled", False):
             return
         if self.state.quarter != 4:
             return
+
+        # Reduce surge in playoffs — talent should win out
+        surge_amount = 1 if getattr(self, '_is_playoff', False) else 2
 
         home_prestige = self.home_team.prestige
         away_prestige = self.away_team.prestige
@@ -10822,11 +11612,11 @@ class ViperballEngine:
         # Home is underdog and leading
         if home_prestige < away_prestige - 10 and score_diff > 0:
             self.state.home_composure = min(COMPOSURE_MAX,
-                self.state.home_composure + 2)  # Steady composure boost
+                self.state.home_composure + surge_amount)
         # Away is underdog and leading
         elif away_prestige < home_prestige - 10 and score_diff < 0:
             self.state.away_composure = min(COMPOSURE_MAX,
-                self.state.away_composure + 2)
+                self.state.away_composure + surge_amount)
 
     # ═══════════════════════════════════════════════════════════
     # V2: HERO BALL + DEFENSIVE KEYING
@@ -11082,6 +11872,21 @@ class ViperballEngine:
             bonus_scores = sum(1 for d in bonus_drives if d.get("result") in ("touchdown", "successful_kick"))
             stats["bonus_possession_scores"] = bonus_scores
 
+        # ── Timeout usage stats ──
+        for side, stats in [("home", home_stats), ("away", away_stats)]:
+            team_tos = [t for t in self.timeout_log if t["team"] == side]
+            stats["timeouts_used"] = len(team_tos)
+            stats["timeouts_remaining"] = (self.state.home_timeouts if side == "home"
+                                           else self.state.away_timeouts)
+            # Breakdown by category
+            stats["timeouts_by_category"] = {}
+            for t in team_tos:
+                cat = t["category"]
+                stats["timeouts_by_category"][cat] = stats["timeouts_by_category"].get(cat, 0) + 1
+            # Breakdown by half
+            stats["timeouts_1h"] = len([t for t in team_tos if t["quarter"] <= 2])
+            stats["timeouts_2h"] = len([t for t in team_tos if t["quarter"] >= 3])
+
         for stats, team_obj in [(home_stats, self.home_team), (away_stats, self.away_team)]:
             keeper_deflections = sum(p.game_kick_deflections for p in team_obj.players)
             keeper_bells = sum(p.game_keeper_bells for p in team_obj.players)
@@ -11260,6 +12065,8 @@ class ViperballEngine:
                         "coverage_snaps": p.game_coverage_snaps,
                         "keeper_tackles": p.game_keeper_tackles,
                         "keeper_return_yards": p.game_keeper_return_yards,
+                        "points_allowed_in_coverage": p.game_points_allowed_in_coverage,
+                        "completions_allowed_in_coverage": p.game_completions_allowed_in_coverage,
                         "kick_returns": p.game_kick_returns,
                         "kick_return_yards": p.game_kick_return_yards,
                         "kick_return_tds": p.game_kick_return_tds,
@@ -11280,6 +12087,8 @@ class ViperballEngine:
                         "hurries": p.game_hurries,
                         "blocks": p.game_blocks,
                         "pancakes": p.game_pancakes,
+                        "offensive_snaps": p.game_offensive_snaps,
+                        "defensive_snaps": p.game_defensive_snaps,
                         "kick_pass_ints": p.game_kick_pass_ints,
                         "wpa": round(p.game_wpa, 2),
                         "plays_involved": p.game_plays_involved,
@@ -11347,6 +12156,7 @@ class ViperballEngine:
                 }
                 for e in self.in_game_injuries
             ],
+            "coaching_substitutions": self._substitution_log,
             # ── V2: Engine metadata ──
             "v2_engine": {
                 "contest_model": V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid"),
@@ -11375,6 +12185,8 @@ class ViperballEngine:
             "modifier_stack": self._build_modifier_stack_summary(),
             # ── V2.4: Play-family adaptation narrative ──
             "adaptation_log": list(self._adaptation_log),
+            # ── Timeout log: every timeout event for post-game audit ──
+            "timeout_log": list(self.timeout_log),
         }
 
         return summary
@@ -11618,13 +12430,13 @@ class ViperballEngine:
             "quarter": play.quarter,
             "time_remaining": play.time,
             "possession": play.possession,
-            "field_position": play.field_position,
+            "field_position": int(round(play.field_position)) if play.field_position is not None else None,
             "down": play.down,
-            "yards_to_go": play.yards_to_go,
+            "yards_to_go": int(round(play.yards_to_go)) if play.yards_to_go is not None else None,
             "play_type": play.play_type,
             "play_family": play.play_family,
             "players": play.players_involved,
-            "yards": play.yards_gained,
+            "yards": int(round(play.yards_gained)) if play.yards_gained is not None else None,
             "result": play.result,
             "description": play.description,
             "fatigue": play.fatigue,
@@ -11665,9 +12477,9 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
     overalls = sorted(p.overall for p in players)
     worst_3_avg = sum(overalls[:3]) / 3.0
 
-    # Map: overall 40 → prestige 15, overall 80 → prestige 95
-    # Linear: prestige = (worst_3_avg - 40) * 2.0 + 15
-    prestige = (worst_3_avg - 40) * 2.0 + 15
+    # Map: overall 20 → prestige 10, overall 85 → prestige 95
+    # Linear: prestige = (worst_3_avg - 20) * 1.3 + 10
+    prestige = (worst_3_avg - 20) * 1.3 + 10
 
     # Add some noise so identical rosters don't all land on the same prestige
     prestige += random.gauss(0, 3)
@@ -11676,7 +12488,8 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
 
 
 def load_team_from_json(filepath: str, fresh: bool = False,
-                        program_archetype: Optional[str] = None) -> Team:
+                        program_archetype: Optional[str] = None,
+                        conference_floor: int = 0) -> Team:
     """Load a team from its JSON metadata file.
 
     Args:
@@ -11687,6 +12500,9 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                dynamic generation when there is no roster section.
         program_archetype: Optional program archetype for fresh generation
                           (e.g. "doormat", "blue_blood"). Only used when fresh=True.
+        conference_floor: Minimum effective stat_center for this team's conference.
+                         Only used when fresh=True.  Prevents jitter from pushing
+                         team quality below the conference's minimum threshold.
     """
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -11694,12 +12510,13 @@ def load_team_from_json(filepath: str, fresh: bool = False,
     team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
     abbreviation = data["team_info"]["abbreviation"]
     mascot = data["team_info"]["mascot"]
+    city = data["team_info"].get("city", "")
+    state = data["team_info"].get("state", "")
     style = data.get("style", {}).get("offense_style", "balanced")
     defense_style = data.get("style", {}).get("defense_style", "base_defense")
     st_scheme = data.get("style", {}).get("st_scheme", "aces")
     identity = data.get("identity", {})
     philosophy = identity.get("philosophy", "hybrid")
-    state = data["team_info"].get("state", "")
 
     # Build geo-aware pipeline from school location; this is blended with the
     # international baseline inside generate_player_name's select_origin().
@@ -11718,7 +12535,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
 
     if fresh or not has_roster:
         # Generate a completely fresh roster — each call produces unique players
-        return generate_team_on_the_fly(
+        team = generate_team_on_the_fly(
             team_name=team_name,
             abbreviation=abbreviation,
             mascot=mascot,
@@ -11728,7 +12545,11 @@ def load_team_from_json(filepath: str, fresh: bool = False,
             philosophy=philosophy,
             recruiting_pipeline=recruiting_pipeline,
             program_archetype=program_archetype,
+            conference_floor=conference_floor,
         )
+        team.city = city
+        team.state = state
+        return team
 
     _POSITION_MIGRATION = {
         "Zeroback/Back": "Zeroback",
@@ -11812,6 +12633,8 @@ def load_team_from_json(filepath: str, fresh: bool = False,
         offense_style=style,
         defense_style=defense_style,
         st_scheme=st_scheme,
+        city=city,
+        state=state,
         prestige=prestige,
     )
 
@@ -11833,6 +12656,7 @@ def generate_team_on_the_fly(
     philosophy: str = "hybrid",
     recruiting_pipeline: Optional[Dict] = None,
     program_archetype: Optional[str] = None,
+    conference_floor: int = 0,
 ) -> Team:
     """
     Generate a fresh Team with unique women players using the name/attribute generators.
@@ -11903,6 +12727,26 @@ def generate_team_on_the_fly(
     players = []
     used_numbers: set = set()
 
+    # Per-team center jitter: shifts the whole roster up or down so teams
+    # within the same archetype tier aren't all identical OVR.
+    # ±25 points creates massive differentiation — a doormat can field a
+    # competitive roster one year or be truly abysmal, and programs can
+    # grow into better tiers through recruiting and development.
+    team_center_offset = int(round(random.gauss(0, 25)))
+
+    # Conference floor: even the worst team in a strong conference can't
+    # drop below the conference's minimum quality threshold.  Max potential
+    # is unconstrained — the floor only prevents jitter from pushing a team
+    # too far down.
+    if conference_floor > 0:
+        archetype_center = PROGRAM_ARCHETYPES.get(
+            program_archetype or DEFAULT_ARCHETYPE,
+            PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE],
+        )["stat_center"]
+        effective_center = archetype_center + team_center_offset
+        if effective_center < conference_floor:
+            team_center_offset = conference_floor - archetype_center
+
     for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
         number = 1 if is_viper and i == 0 else None
         while number is None or number in used_numbers:
@@ -11916,7 +12760,8 @@ def generate_team_on_the_fly(
             year=year,
         )
         attrs = generate_player_attributes(position, philosophy, year, is_viper,
-                                           program_archetype=program_archetype)
+                                           program_archetype=program_archetype,
+                                           team_center_offset=team_center_offset)
         archetype = assign_archetype(
             position,
             attrs["speed"], attrs["stamina"],

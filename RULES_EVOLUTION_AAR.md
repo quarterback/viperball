@@ -55,7 +55,7 @@ The Primer does not mention lateral interceptions. The engine has a `LATERAL_INT
 ### 5. Timeouts and 3-Minute Warning
 
 **Not in the Primer.** The engine has:
-- **3 timeouts per half per team** (`home_timeouts`, `away_timeouts`, reset at halftime)
+- **4 timeouts per half per team** (`home_timeouts`, `away_timeouts`, reset at halftime)
 - **3-minute warning:** Auto clock-stop once per half when the clock crosses 180 seconds remaining (in Q2 and Q4)
 - **AI timeout usage:** Coaching AI calls timeouts based on game situation — trailing teams use them to stop the clock, leading teams use them defensively
 

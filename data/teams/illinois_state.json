@@ -1,14 +1,14 @@
 {
   "team_info": {
-    "school_id": "seattle",
-    "school_name": "Seattle University",
-    "abbreviation": "SU",
-    "mascot": "Redhawks",
+    "school_id": "illinois_state",
+    "school_name": "Illinois State",
+    "abbreviation": "ILST",
+    "mascot": "Redbirds",
     "conference": "Border Conference",
-    "city": "Seattle",
-    "state": "WA",
+    "city": "Normal",
+    "state": "IL",
     "colors": [
-      "Scarlet",
+      "Red",
       "White"
     ]
   },

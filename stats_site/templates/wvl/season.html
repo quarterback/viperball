@@ -50,7 +50,6 @@
     <td>
       <a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a>
       {% if t.get('is_owner_club') %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOU</span>{% endif %}
-      {% if t.get('narrative_tag') %} <span style="color:var(--fg-dim);font-size:10px">[{{ t.narrative_tag }}]</span>{% endif %}
     </td>
     <td style="color:var(--fg-dim);font-size:10px">{{ t.get('country', '') }}</td>
     <td class="num" style="font-weight:bold;color:var(--fg-bright)">{{ t.get('points', t.get('wins', 0) * 3) }}</td>

@@ -259,7 +259,7 @@ class BoxScoreGenerator:
         lines.append("## ADVANCED METRICS")
         lines.append("")
         lines.append("### Viper Efficiency")
-        lines.append("*Formula: (Total Yards / Plays) x (1 + Lateral Success Rate) x Viper Impact*")
+        lines.append("*Yards per play boosted by lateral success. Higher = better. Think of it as 'how well does this team use Viperball mechanics?' Average ~5, elite 8+.*")
         lines.append("")
         lines.append(f"| Team | Viper Efficiency |")
         lines.append(f"|------|------------------|")
@@ -267,19 +267,28 @@ class BoxScoreGenerator:
         lines.append(f"| {self.home['team']} | {self.home_stats['viper_efficiency']:.2f} |")
         lines.append("")
 
-        lines.append("### Micro-Scoring Differential")
-        lines.append("*Formula: (Snap Kicks Made x 5) - (Field Goals Made x 3)*")
+        lines.append("### Kicking Aggression Index")
+        lines.append("*Snap Kick share of total kick attempts — higher = more aggressive kicking*")
+        lines.append("*DKs risk return TDs on misses but pay 5 pts vs 3 for safe FGs*")
         lines.append("")
-        away_msd = self.away_stats['drop_kicks_made'] * 5 - self.away_stats['place_kicks_made'] * 3
-        home_msd = self.home_stats['drop_kicks_made'] * 5 - self.home_stats['place_kicks_made'] * 3
-        lines.append(f"| Team | Micro-Scoring Diff |")
-        lines.append(f"|------|-------------------|")
-        lines.append(f"| {self.away['team']} | {away_msd:+d} |")
-        lines.append(f"| {self.home['team']} | {home_msd:+d} |")
+        away_dk_att = self.away_stats.get('drop_kicks_attempted', 0)
+        away_pk_att = self.away_stats.get('place_kicks_attempted', 0)
+        home_dk_att = self.home_stats.get('drop_kicks_attempted', 0)
+        home_pk_att = self.home_stats.get('place_kicks_attempted', 0)
+        away_total_kicks = away_dk_att + away_pk_att
+        home_total_kicks = home_dk_att + home_pk_att
+        away_kai = round(away_dk_att / max(1, away_total_kicks) * 100, 1)
+        home_kai = round(home_dk_att / max(1, home_total_kicks) * 100, 1)
+        away_kick_pts = self.away_stats['drop_kicks_made'] * 5 + self.away_stats['place_kicks_made'] * 3
+        home_kick_pts = self.home_stats['drop_kicks_made'] * 5 + self.home_stats['place_kicks_made'] * 3
+        lines.append(f"| Team | DK/Total Kicks | Kick Points |")
+        lines.append(f"|------|----------------|-------------|")
+        lines.append(f"| {self.away['team']} | {away_dk_att}/{away_total_kicks} ({away_kai}%) | {away_kick_pts} |")
+        lines.append(f"| {self.home['team']} | {home_dk_att}/{home_total_kicks} ({home_kai}%) | {home_kick_pts} |")
         lines.append("")
 
         lines.append("### Lateral Efficiency")
-        lines.append("*Formula: (Successful Lateral Chains / Total Lateral Attempts) x 100%*")
+        lines.append("*How often lateral chains succeed without turnovers. 70%+ is solid, below 50% means too many fumbles.*")
         lines.append("")
         lines.append(f"| Team | Lateral Efficiency |")
         lines.append(f"|------|--------------------|")

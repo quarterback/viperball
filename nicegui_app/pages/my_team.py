@@ -413,6 +413,15 @@ def _render_game_detail_nicegui(result: dict, key_prefix: str = "gd"):
             })
         stat_table(play_rows)
 
+    # Game Analysis
+    with ui.expansion("Game Analysis").classes("w-full"):
+        try:
+            from analyze_game import analyze_game_data
+            analysis_text = analyze_game_data(result)
+            ui.code(analysis_text).classes("w-full").style("white-space: pre-wrap; font-size: 12px;")
+        except Exception as e:
+            ui.label(f"Analysis unavailable: {e}").classes("text-sm text-gray-500")
+
 
 # ---------------------------------------------------------------------------
 # Dashboard tab
@@ -469,31 +478,46 @@ async def _render_dashboard(session_id: str, mode: str, team_name: str, standing
     # Row 3: viperball metrics
     with ui.row().classes("w-full flex-wrap gap-4"):
         with ui.column():
-            metric_card("Team Rating", f"{record.get('avg_opi', 0):.1f}")
+            metric_card("Team Rating", f"{record.get('avg_team_rating', record.get('avg_opi', 0)):.1f}")
         with ui.column():
-            metric_card("Avg Start", f"{record.get('avg_territory', 0):.1f}")
+            metric_card("PPD", f"{record.get('avg_ppd', 0):.2f}")
         with ui.column():
-            metric_card("Conv %", f"{record.get('avg_pressure', 0):.1f}")
+            metric_card("5D%", f"{record.get('season_5d_pct', 0):.0f}%")
         with ui.column():
-            metric_card("Lateral %", f"{record.get('avg_chaos', 0):.1f}")
+            metric_card("KILL%", f"{record.get('season_kill_pct', 0):.0f}%")
         with ui.column():
-            metric_card("Kick Rating", f"{record.get('avg_kicking', 0):.1f}")
+            to_margin = record.get('avg_to_margin', 0)
+            metric_card("TO Margin", f"{to_margin:+.1f}")
+
+    # Row 4: secondary analytics
+    with ui.row().classes("w-full flex-wrap gap-4"):
+        with ui.column():
+            metric_card("Conv %", f"{record.get('avg_conversion_pct', record.get('avg_pressure', 0)):.1f}%")
+        with ui.column():
+            metric_card("Lateral %", f"{record.get('avg_lateral_pct', record.get('avg_chaos', 0)):.1f}%")
+        with ui.column():
+            delta_yds = record.get('avg_delta_yds', 0)
+            metric_card("Net YPG", f"{delta_yds:+.0f}")
+        with ui.column():
+            metric_card("5D% Own Deep", f"{record.get('season_5d_own_deep_pct', 0):.0f}%")
 
     # Radar chart
     if standings:
         n = len(standings)
         avgs = {
-            "Team Rating": sum(r.get("avg_opi", 0) for r in standings) / n,
-            "Avg Start": sum(r.get("avg_territory", 0) for r in standings) / n,
-            "Conv %": sum(r.get("avg_pressure", 0) for r in standings) / n,
-            "Lateral %": sum(r.get("avg_chaos", 0) for r in standings) / n,
-            "Kick Rating": sum(r.get("avg_kicking", 0) for r in standings) / n,
+            "Team Rating": sum(r.get("avg_team_rating", r.get("avg_opi", 0)) for r in standings) / n,
+            "PPD (×10)": sum(r.get("avg_ppd", 0) for r in standings) / n * 10,
+            "Conv %": sum(r.get("avg_conversion_pct", r.get("avg_pressure", 0)) for r in standings) / n,
+            "Lateral %": sum(r.get("avg_lateral_pct", r.get("avg_chaos", 0)) for r in standings) / n,
+            "5D%": sum(r.get("season_5d_pct", 0) for r in standings) / n,
         }
         categories = list(avgs.keys())
         team_values = [
-            record.get("avg_opi", 0), record.get("avg_territory", 0),
-            record.get("avg_pressure", 0), record.get("avg_chaos", 0),
-            record.get("avg_kicking", 0),
+            record.get("avg_team_rating", record.get("avg_opi", 0)),
+            record.get("avg_ppd", 0) * 10,
+            record.get("avg_conversion_pct", record.get("avg_pressure", 0)),
+            record.get("avg_lateral_pct", record.get("avg_chaos", 0)),
+            record.get("season_5d_pct", 0),
         ]
         avg_values = [avgs[c] for c in categories]
 
@@ -1072,6 +1096,14 @@ async def _render_history(session_id: str):
             metric_card("Championships", str(coach.get("championships", 0)))
         with ui.column():
             metric_card("Seasons", str(coach.get("years_experience", 0)))
+        with ui.column():
+            metric_card("Conf. Titles", str(coach.get("conference_titles", 0)))
+        with ui.column():
+            ps_apps = coach.get("playoff_appearances", 0) + coach.get("bowl_appearances", 0)
+            metric_card("Postseason Apps", str(ps_apps))
+        with ui.column():
+            ps_wins = coach.get("playoff_wins", 0) + coach.get("bowl_wins", 0)
+            metric_card("Postseason Wins", str(ps_wins))
 
     season_records = coach.get("season_records", {})
     if season_records:
@@ -1164,6 +1196,44 @@ async def _render_history(session_id: str):
         team_hist = {}
 
     if team_hist:
+        # ── Championship Banners ──
+        _banner_config = [
+            ("championship_years", "National Champions", "#78350f", "#fbbf24", "#fbbf24"),
+            ("finalist_years", "National Finalist", "#1e293b", "#cbd5e1", "#94a3b8"),
+            ("final_four_years", "Final Four", "#451a03", "#d97706", "#b45309"),
+            ("sweet_16_years", "Sweet 16", "#1c1917", "#a8a29e", "#78716c"),
+            ("conference_title_years", "Conference Champions", "#1e3a5f", "#93c5fd", "#60a5fa"),
+        ]
+        _has_banners = any(team_hist.get(key, []) for key, *_ in _banner_config)
+        if _has_banners:
+            with ui.row().classes("w-full flex-wrap gap-2 mb-4"):
+                for key, label, bg_color, text_color, border_color in _banner_config:
+                    years = team_hist.get(key, [])
+                    if not years:
+                        continue
+                    count = len(years)
+                    years_str = ", ".join(str(y) for y in sorted(years))
+                    banner_text = f"{count}x {label}" if count > 1 else label
+                    with ui.element("div").style(
+                        f"display:inline-flex; align-items:center; gap:6px; padding:5px 14px; "
+                        f"font-size:11px; font-weight:bold; border-radius:4px; letter-spacing:0.5px; "
+                        f"text-transform:uppercase; background:{bg_color}; color:{text_color}; "
+                        f"border:1px solid {border_color};"
+                    ):
+                        ui.label(banner_text)
+                        ui.label(years_str).style("font-size:10px; opacity:0.8; text-transform:none; font-weight:normal;")
+
+            # Bowl wins (separate from playoff banners)
+            bowl_wins = team_hist.get("total_bowl_wins", 0)
+            if bowl_wins > 0:
+                with ui.element("div").style(
+                    "display:inline-flex; align-items:center; gap:6px; padding:5px 14px; "
+                    "font-size:11px; font-weight:bold; border-radius:4px; letter-spacing:0.5px; "
+                    "text-transform:uppercase; background:#14532d; color:#4ade80; "
+                    "border:1px solid #22c55e;"
+                ):
+                    ui.label(f"{bowl_wins}x Bowl Wins" if bowl_wins > 1 else "Bowl Win")
+
         with ui.row().classes("w-full flex-wrap gap-4"):
             with ui.column():
                 metric_card(
@@ -1180,12 +1250,6 @@ async def _render_history(session_id: str):
                 metric_card("Bowl Appearances", str(team_hist.get("total_bowl_appearances", 0)))
             with ui.column():
                 metric_card("Bowl Wins", str(team_hist.get("total_bowl_wins", 0)))
-
-        champ_years = team_hist.get("championship_years", [])
-        if champ_years:
-            ui.label(
-                f"Championship Years: {', '.join(str(y) for y in sorted(champ_years))}"
-            ).classes("text-sm text-gray-500")
 
     # Record book
     ui.separator()

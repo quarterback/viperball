@@ -248,6 +248,43 @@ class TeamRecord:
     bonus_poss_yards: int = 0
     opponent_bonus_poss_scores: int = 0
 
+    # Conversion-by-zone season accumulators (4D/5D/6D × 4 zones)
+    conv_zone_own_deep_4d_att: int = 0
+    conv_zone_own_deep_4d_conv: int = 0
+    conv_zone_own_deep_5d_att: int = 0
+    conv_zone_own_deep_5d_conv: int = 0
+    conv_zone_own_deep_6d_att: int = 0
+    conv_zone_own_deep_6d_conv: int = 0
+    conv_zone_own_half_4d_att: int = 0
+    conv_zone_own_half_4d_conv: int = 0
+    conv_zone_own_half_5d_att: int = 0
+    conv_zone_own_half_5d_conv: int = 0
+    conv_zone_own_half_6d_att: int = 0
+    conv_zone_own_half_6d_conv: int = 0
+    conv_zone_opp_half_4d_att: int = 0
+    conv_zone_opp_half_4d_conv: int = 0
+    conv_zone_opp_half_5d_att: int = 0
+    conv_zone_opp_half_5d_conv: int = 0
+    conv_zone_opp_half_6d_att: int = 0
+    conv_zone_opp_half_6d_conv: int = 0
+    conv_zone_opp_deep_4d_att: int = 0
+    conv_zone_opp_deep_4d_conv: int = 0
+    conv_zone_opp_deep_5d_att: int = 0
+    conv_zone_opp_deep_5d_conv: int = 0
+    conv_zone_opp_deep_6d_att: int = 0
+    conv_zone_opp_deep_6d_conv: int = 0
+
+    # Delta profile season accumulators
+    total_delta_yds: float = 0.0
+    total_team_kill_drives: int = 0
+    total_team_drives_for_kill: int = 0
+    total_opp_kill_drives: int = 0
+    total_opp_drives_for_kill: int = 0
+
+    # Streak tracking (for dynamic prestige)
+    win_streak: int = 0
+    loss_streak: int = 0
+
     def add_game_result(self, won: Optional[bool], points_for: float, points_against: float,
                         metrics: Dict, is_conference_game: bool = False,
                         defensive_ints: int = 0,
@@ -259,14 +296,20 @@ class TeamRecord:
                         opponent_bonus_data: Optional[Dict] = None):
         if won is None:
             self.ties += 1
+            self.win_streak = 0
+            self.loss_streak = 0
             if is_conference_game:
                 self.conf_ties += 1
         elif won:
             self.wins += 1
+            self.win_streak += 1
+            self.loss_streak = 0
             if is_conference_game:
                 self.conf_wins += 1
         else:
             self.losses += 1
+            self.loss_streak += 1
+            self.win_streak = 0
             if is_conference_game:
                 self.conf_losses += 1
 
@@ -336,6 +379,33 @@ class TeamRecord:
 
         self.dye_total_delta_yards += metrics.get("delta_yards_raw", 0)
 
+        # Conversion-by-zone accumulators
+        conv_zones = metrics.get('conversion_by_zone', {})
+        for zone_key in ('own_deep', 'own_half', 'opp_half', 'opp_deep'):
+            zd = conv_zones.get(zone_key, {})
+            for down in (4, 5, 6):
+                att_key = f"d{down}_att"
+                conv_key = f"d{down}_conv"
+                field_att = f"conv_zone_{zone_key}_{down}d_att"
+                field_conv = f"conv_zone_{zone_key}_{down}d_conv"
+                setattr(self, field_att, getattr(self, field_att, 0) + zd.get(att_key, 0))
+                setattr(self, field_conv, getattr(self, field_conv, 0) + zd.get(conv_key, 0))
+
+        # Delta profile accumulators
+        delta = metrics.get('delta_profile', {})
+        self.total_delta_yds += delta.get('delta_yds', 0)
+        team_drives_count = delta.get('team_drives', 0)
+        opp_drives_count = delta.get('opp_drives', 0)
+        team_kill_pct = delta.get('team_kill_pct', 0)
+        opp_kill_pct = delta.get('opp_kill_pct', 0)
+        # Convert % back to raw counts for accurate season totals
+        if team_drives_count > 0:
+            self.total_team_kill_drives += round(team_kill_pct / 100 * team_drives_count)
+            self.total_team_drives_for_kill += team_drives_count
+        if opp_drives_count > 0:
+            self.total_opp_kill_drives += round(opp_kill_pct / 100 * opp_drives_count)
+            self.total_opp_drives_for_kill += opp_drives_count
+
         if bonus_data:
             self.bonus_poss_total += bonus_data.get("count", 0)
             self.bonus_poss_scores += bonus_data.get("scores", 0)
@@ -390,6 +460,55 @@ class TeamRecord:
     @property
     def stop_rate(self) -> float:
         return round(self.total_defensive_stops / max(1, self.total_opponent_drives) * 100, 1) if self.total_opponent_drives else 0.0
+
+    # ── Conversion by field zone (season-level) ──
+
+    @property
+    def season_conversion_by_zone(self) -> Dict:
+        """Season-aggregate conversion rates by field zone and down."""
+        zones = {}
+        for zone_key in ('own_deep', 'own_half', 'opp_half', 'opp_deep'):
+            zone = {}
+            for down in (4, 5, 6):
+                att = getattr(self, f"conv_zone_{zone_key}_{down}d_att", 0)
+                conv = getattr(self, f"conv_zone_{zone_key}_{down}d_conv", 0)
+                pct = round(conv / att * 100, 1) if att > 0 else 0.0
+                zone[f"d{down}_att"] = att
+                zone[f"d{down}_conv"] = conv
+                zone[f"d{down}_pct"] = pct
+            zones[zone_key] = zone
+        return zones
+
+    @property
+    def season_5d_pct(self) -> float:
+        """Overall 5th-down conversion rate across all zones."""
+        total_att = sum(getattr(self, f"conv_zone_{z}_5d_att", 0)
+                        for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        total_conv = sum(getattr(self, f"conv_zone_{z}_5d_conv", 0)
+                         for z in ('own_deep', 'own_half', 'opp_half', 'opp_deep'))
+        return round(total_conv / total_att * 100, 1) if total_att > 0 else 0.0
+
+    @property
+    def season_5d_own_deep_pct(self) -> float:
+        """5th-down conversion rate from own deep (1-25) — the survival metric."""
+        att = self.conv_zone_own_deep_5d_att
+        conv = self.conv_zone_own_deep_5d_conv
+        return round(conv / att * 100, 1) if att > 0 else 0.0
+
+    @property
+    def season_kill_pct(self) -> float:
+        """Season KILL% — drives ending in total failure."""
+        return round(self.total_team_kill_drives / max(1, self.total_team_drives_for_kill) * 100, 1)
+
+    @property
+    def season_opp_kill_pct(self) -> float:
+        """Season opponent KILL%."""
+        return round(self.total_opp_kill_drives / max(1, self.total_opp_drives_for_kill) * 100, 1)
+
+    @property
+    def avg_delta_yds(self) -> float:
+        """Net yards per game (team yards minus opponent yards). Displayed as 'Net YPG'."""
+        return round(self.total_delta_yds / self.games_played, 1) if self.games_played > 0 else 0.0
 
     # ── Legacy property aliases (backward compat) ──
 
@@ -566,7 +685,7 @@ class PollRanking:
     poll_score: float
     prev_rank: Optional[int] = None
     power_index: float = 0.0
-    quality_wins: int = 0
+    quality_wins: float = 0.0
     sos_rank: int = 0
     bid_type: str = ""
 
@@ -680,6 +799,7 @@ def get_recommended_bowl_count(league_size: int, playoff_size: int) -> int:
 
 
 MAX_CONFERENCE_GAMES = 8  # hard cap on conference games per team per season
+MIN_CONFERENCE_SIZE = 9   # conferences need ≥9 teams to guarantee 8 conf games
 
 
 def get_non_conference_slots(
@@ -876,6 +996,10 @@ class Season:
 
     # Human-controlled teams — fast-sim skips these games
     human_teams: List[str] = field(default_factory=list)
+
+    # Live prestige — updated after every game via adjust_prestige_postgame.
+    # Set by Dynasty at season start; None means prestige tracking is off.
+    team_prestige: Optional[Dict[str, int]] = None
 
     def __post_init__(self):
         for team_name, team in self.teams.items():
@@ -1126,6 +1250,44 @@ class Season:
 
         self.schedule = games
 
+    def _consolidate_small_conferences(self):
+        """Merge conferences with fewer than MIN_CONFERENCE_SIZE teams.
+
+        Repeatedly merges the smallest conference into the next-smallest
+        until all conferences meet the minimum size.  Updates both
+        ``self.conferences`` and ``self.team_conferences``.
+        """
+        if len(self.conferences) < 2:
+            return
+
+        changed = True
+        while changed:
+            changed = False
+            small = [
+                (name, teams)
+                for name, teams in self.conferences.items()
+                if len(teams) < MIN_CONFERENCE_SIZE
+            ]
+            if not small:
+                break
+            # Sort so smallest conference is first
+            small.sort(key=lambda x: len(x[1]))
+            src_name, src_teams = small[0]
+            # Find the next-smallest conference to merge into
+            candidates = sorted(
+                ((n, t) for n, t in self.conferences.items() if n != src_name),
+                key=lambda x: len(x[1]),
+            )
+            if not candidates:
+                break
+            dst_name, dst_teams = candidates[0]
+            # Merge src into dst
+            dst_teams.extend(src_teams)
+            for t in src_teams:
+                self.team_conferences[t] = dst_name
+            del self.conferences[src_name]
+            changed = True
+
     def _generate_partial_schedule(
         self,
         team_names: List[str],
@@ -1144,6 +1306,9 @@ class Season:
         guaranteed to appear in the schedule. AI teams' remaining non-conference
         slots are auto-filled.
         """
+        # Consolidate undersized conferences so every team gets ≥8 conf games
+        self._consolidate_small_conferences()
+
         game_counts = {name: 0 for name in team_names}
         conf_game_counts = {name: 0 for name in team_names}
         scheduled_pairs = set()
@@ -1575,8 +1740,70 @@ class Season:
                 opponent_bonus_data=home_bonus,
             )
 
+        # ── Dynamic prestige: update after every game ──
+        if self.team_prestige is not None and not is_tie:
+            from engine.nil_system import adjust_prestige_postgame
+
+            home_record = self.standings.get(game.home_team)
+            away_record = self.standings.get(game.away_team)
+
+            if fcs_side != "home" and game.home_team in self.team_prestige:
+                h_win_streak = getattr(home_record, 'win_streak', 0) if home_record else 0
+                h_loss_streak = getattr(home_record, 'loss_streak', 0) if home_record else 0
+                self.team_prestige[game.home_team] = adjust_prestige_postgame(
+                    current_prestige=self.team_prestige[game.home_team],
+                    won=(home_won is True),
+                    opponent_prestige=self.team_prestige.get(game.away_team, 50),
+                    win_streak=h_win_streak,
+                    loss_streak=h_loss_streak,
+                )
+
+            if fcs_side != "away" and game.away_team in self.team_prestige:
+                a_win_streak = getattr(away_record, 'win_streak', 0) if away_record else 0
+                a_loss_streak = getattr(away_record, 'loss_streak', 0) if away_record else 0
+                self.team_prestige[game.away_team] = adjust_prestige_postgame(
+                    current_prestige=self.team_prestige[game.away_team],
+                    won=(away_won is True),
+                    opponent_prestige=self.team_prestige.get(game.home_team, 50),
+                    win_streak=a_win_streak,
+                    loss_streak=a_loss_streak,
+                )
+
+    def _weekly_award_prior_wins(self, award_category: str):
+        """Count prior weekly award wins per recipient for diversification.
+
+        Returns a dict mapping (player_name, team_name) -> win_count.
+        ``award_category`` should be ``"Player"`` or ``"Coach"`` – it is
+        matched against the award name substring so national and conference
+        awards both contribute to the same history.
+        """
+        counts: Dict[str, int] = {}
+        for a in self.weekly_awards:
+            if award_category in a.get("award", ""):
+                key = (a["player_name"], a["team_name"])
+                counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    @staticmethod
+    def _apply_repeat_penalty(raw_score: float, prior_wins: int) -> float:
+        """Discount a weekly-award score for prior winners to encourage diversity.
+
+        Each previous win applies a 10% cumulative penalty (compounding).
+        A one-time winner is scored at 90% of raw, two-time at 81%, etc.
+        This means a repeat candidate must be meaningfully better than
+        alternatives to win again, but a truly elite performance still can.
+        """
+        if prior_wins <= 0:
+            return raw_score
+        return raw_score * (0.90 ** prior_wins)
+
     def _compute_weekly_awards(self, week: int, week_games: List[Game]):
         """Compute Player of the Week awards after a week's games."""
+
+        # Build prior-win counts for diversification (players & coaches)
+        player_prior = self._weekly_award_prior_wins("Player")
+        coach_prior = self._weekly_award_prior_wins("Coach")
+
         # Collect all player performances this week
         performances = []  # (player_name, team_name, position, score, stat_line)
         for game in week_games:
@@ -1614,11 +1841,11 @@ class Season:
                             stat_parts.append(f"{tfl} TFL")
                     else:
                         score = off_score
-                        stat_parts = [f"{yards} yds"]
+                        stat_parts = [f"{int(round(yards))} yds"]
                         if tds:
                             stat_parts.append(f"{tds} TD")
                         if kp_yds:
-                            stat_parts.append(f"{kp_yds} KP yds")
+                            stat_parts.append(f"{int(round(kp_yds))} KP yds")
                         if kp_tds:
                             stat_parts.append(f"{kp_tds} KP TD")
                     stat_line = ", ".join(stat_parts)
@@ -1627,8 +1854,13 @@ class Season:
         if not performances:
             return
 
-        # National Player of the Week - best overall
-        performances.sort(key=lambda x: x[3], reverse=True)
+        # National Player of the Week – apply repeat-winner penalty for ranking
+        performances.sort(
+            key=lambda x: self._apply_repeat_penalty(
+                x[3], player_prior.get((x[0], x[1]), 0)
+            ),
+            reverse=True,
+        )
         best = performances[0]
         self.weekly_awards.append({
             "week": week,
@@ -1639,16 +1871,19 @@ class Season:
             "stat_line": best[4],
         })
 
-        # Conference Players of the Week
-        conf_best = {}
+        # Conference Players of the Week – also penalise repeats
+        conf_best: Dict[str, tuple] = {}
         for name, team_name, pos, score, stat_line in performances:
             conf = self.team_conferences.get(team_name, "")
             if not conf:
                 continue
-            if conf not in conf_best or score > conf_best[conf][3]:
-                conf_best[conf] = (name, team_name, pos, score, stat_line)
+            adj = self._apply_repeat_penalty(
+                score, player_prior.get((name, team_name), 0)
+            )
+            if conf not in conf_best or adj > conf_best[conf][5]:
+                conf_best[conf] = (name, team_name, pos, score, stat_line, adj)
 
-        for conf, (name, team_name, pos, _, stat_line) in conf_best.items():
+        for conf, (name, team_name, pos, _, stat_line, _adj) in conf_best.items():
             # Don't duplicate if same as national winner
             if name == best[0] and team_name == best[1]:
                 continue
@@ -1699,7 +1934,13 @@ class Season:
             coach_performances.append((coach_display, win_team, coach_score, stat_line))
 
         if coach_performances:
-            coach_performances.sort(key=lambda x: x[2], reverse=True)
+            # Apply repeat-winner penalty for coach ranking
+            coach_performances.sort(
+                key=lambda x: self._apply_repeat_penalty(
+                    x[2], coach_prior.get((x[0], x[1]), 0)
+                ),
+                reverse=True,
+            )
             best_coach = coach_performances[0]
             self.weekly_awards.append({
                 "week": week,
@@ -1709,15 +1950,18 @@ class Season:
                 "position": "Coach",
                 "stat_line": best_coach[3],
             })
-            # Conference Coach of the Week
-            conf_best_coach = {}
+            # Conference Coach of the Week – also penalise repeats
+            conf_best_coach: Dict[str, tuple] = {}
             for coach_display, team_name, score, stat_line in coach_performances:
                 conf = self.team_conferences.get(team_name, "")
                 if not conf:
                     continue
-                if conf not in conf_best_coach or score > conf_best_coach[conf][2]:
-                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line)
-            for conf, (coach_display, team_name, _, stat_line) in conf_best_coach.items():
+                adj = self._apply_repeat_penalty(
+                    score, coach_prior.get((coach_display, team_name), 0)
+                )
+                if conf not in conf_best_coach or adj > conf_best_coach[conf][4]:
+                    conf_best_coach[conf] = (coach_display, team_name, score, stat_line, adj)
+            for conf, (coach_display, team_name, _, stat_line, _adj) in conf_best_coach.items():
                 if coach_display == best_coach[0] and team_name == best_coach[1]:
                     continue
                 self.weekly_awards.append({
@@ -1758,6 +2002,20 @@ class Season:
             self.injury_tracker.process_week(week, self.teams, self.standings)
 
         week_games = [g for g in self.schedule if g.week == week and not g.completed]
+
+        # Bye week recovery: teams not playing this week get enhanced healing.
+        # Identifies bye teams and gives them an extra resolve pass (double
+        # recovery chance) plus no new practice injuries.
+        playing_teams = set()
+        for g in week_games:
+            playing_teams.add(g.home_team)
+            playing_teams.add(g.away_team)
+        if self.injury_tracker is not None:
+            bye_teams = [name for name in self.teams if name not in playing_teams]
+            for team_name in bye_teams:
+                # Extra recovery pass — bye week rest accelerates healing
+                self.injury_tracker.resolve_week_bye(week, team_name)
+
         for game in week_games:
             self.simulate_game(game, verbose=verbose, dq_team_boosts=dq_team_boosts,
                                use_fast_sim=use_fast_sim)
@@ -1829,8 +2087,39 @@ class Season:
             if not games:
                 break
 
+    def _win_pct_excluding(self, team_name: str, exclude_team: str) -> float:
+        """Win percentage for team_name excluding all games against exclude_team.
+
+        This prevents circular dependencies in SOS: an undefeated team no longer
+        drags down its own opponents' records (and thus its own SOS).
+        """
+        wins = 0
+        total = 0
+        for game in self.schedule:
+            if not game.completed:
+                continue
+            # Skip head-to-head games against the excluded team
+            if game.home_team == team_name and game.away_team == exclude_team:
+                continue
+            if game.away_team == team_name and game.home_team == exclude_team:
+                continue
+            if game.home_team == team_name:
+                total += 1
+                if (game.home_score or 0) > (game.away_score or 0):
+                    wins += 1
+            elif game.away_team == team_name:
+                total += 1
+                if (game.away_score or 0) > (game.home_score or 0):
+                    wins += 1
+        return wins / total if total > 0 else 0.5
+
     def _calculate_sos(self, team_name: str) -> float:
-        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts"""
+        """Calculate strength of schedule based on opponent win pcts and opponent-opponent win pcts.
+
+        Uses adjusted win percentages that exclude head-to-head games against
+        the team being evaluated (standard RPI approach) so that dominant teams
+        don't artificially deflate their own SOS.
+        """
         opponents = set()
         for game in self.schedule:
             if game.completed:
@@ -1846,7 +2135,7 @@ class Season:
         opp_opp_win_pcts = []
         for opp in opponents:
             if opp in self.standings:
-                opp_wp = self.standings[opp].win_percentage
+                opp_wp = self._win_pct_excluding(opp, team_name)
                 opp_win_pcts.append(opp_wp)
                 opp_opps = set()
                 for g in self.schedule:
@@ -1857,7 +2146,7 @@ class Season:
                             opp_opps.add(g.home_team)
                 for oo in opp_opps:
                     if oo in self.standings:
-                        opp_opp_win_pcts.append(self.standings[oo].win_percentage)
+                        opp_opp_win_pcts.append(self._win_pct_excluding(oo, team_name))
 
         direct = sum(opp_win_pcts) / len(opp_win_pcts) if opp_win_pcts else 0.5
         indirect = sum(opp_opp_win_pcts) / len(opp_opp_win_pcts) if opp_opp_win_pcts else 0.5
@@ -1867,6 +2156,10 @@ class Season:
         """Get current team rankings from latest poll, or by win pct if no poll exists"""
         if self.weekly_polls:
             return {r.team_name: r.rank for r in self.weekly_polls[-1].rankings}
+        return self._rankings_by_record()
+
+    def _rankings_by_record(self) -> Dict[str, int]:
+        """Fallback rankings based on win pct and point differential"""
         ranked = sorted(
             [(n, r) for n, r in self.standings.items() if r.games_played > 0],
             key=lambda x: (x[1].win_percentage, x[1].point_differential),
@@ -1874,8 +2167,25 @@ class Season:
         )
         return {name: i + 1 for i, (name, _) in enumerate(ranked)}
 
+    def _get_rankings_at_week(self, week: int) -> Dict[str, int]:
+        """Get team rankings from the most recent poll on or before the given week.
+
+        Uses the poll closest to (but not after) the game week so that quality
+        wins reflect opponent strength at the time of the matchup, not
+        retroactively.
+        """
+        best_poll = None
+        for poll in self.weekly_polls:
+            if poll.week <= week:
+                best_poll = poll
+            else:
+                break
+        if best_poll is not None:
+            return {r.team_name: r.rank for r in best_poll.rankings}
+        return self._rankings_by_record()
+
     def _count_quality_wins(self, team_name: str, rankings: Dict[str, int]) -> int:
-        """Count wins against teams ranked in top 50"""
+        """Count wins against teams ranked in top 100 at time of the game."""
         quality = 0
         for game in self.schedule:
             if not game.completed:
@@ -1886,14 +2196,24 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
                 quality += 1
         return quality
 
     def _quality_win_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Score for wins against ranked teams, weighted higher for beating higher-ranked opponents.
+        """Score for wins against ranked teams, weighted by opponent rank tier at time of game.
 
-        Expanded to top-50 so teams outside the top 25 still contribute to resume quality.
+        Uses the poll from the week the game was played (not retroactive rankings)
+        so teams are rewarded for beating opponents who were strong when they
+        actually played them.
+
+        Tiers (expanded to top-100):
+          Top 5:   10 pts   — elite wins rewarded heavily
+          Top 10:   5 pts   — marquee wins
+          Top 25:   3 pts   — strong wins
+          Top 50:   2 pts   — solid wins
+          Top 100:  1 pt    — respectable wins
         """
         score = 0.0
         for game in self.schedule:
@@ -1905,26 +2225,26 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings and rankings[opp] <= 50:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings and week_rankings[opp] <= 100:
+                rank = week_rankings[opp]
                 if rank <= 5:
-                    score += 5.0
+                    score += 10.0
                 elif rank <= 10:
-                    score += 3.5
-                elif rank <= 15:
-                    score += 2.5
-                elif rank <= 20:
-                    score += 1.5
+                    score += 5.0
                 elif rank <= 25:
-                    score += 1.0
-                elif rank <= 35:
-                    score += 0.6
+                    score += 3.0
+                elif rank <= 50:
+                    score += 2.0
                 else:
-                    score += 0.3
+                    score += 1.0
         return score
 
     def _loss_quality_score(self, team_name: str, rankings: Dict[str, int]) -> float:
-        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily"""
+        """Losses to top-10 teams penalized less; losses to unranked/weak teams penalized heavily.
+
+        Uses rankings at time of game, not retroactive.
+        """
         penalty = 0.0
         for game in self.schedule:
             if not game.completed:
@@ -1935,8 +2255,9 @@ class Season:
                 opp = game.home_team
             else:
                 continue
-            if opp in rankings:
-                rank = rankings[opp]
+            week_rankings = self._get_rankings_at_week(game.week)
+            if opp in week_rankings:
+                rank = week_rankings[opp]
                 if rank <= 5:
                     penalty += 0.5
                 elif rank <= 10:
@@ -1996,7 +2317,7 @@ class Season:
         Components (100-point scale):
         - Win percentage:       40 pts  (primary driver — winning matters most)
         - Strength of schedule: 15 pts
-        - Quality wins:         20 pts  (weighted by opponent rank, expanded to top-50)
+        - Quality wins:         20 pts max (weighted by opponent rank tier, expanded to top-100)
         - Loss quality:        -penalty (bad losses hurt more)
         - Non-conf record:      10 pts
         - Conference strength:   5 pts  (reduced — being in a good league ≠ being good)
@@ -2014,7 +2335,7 @@ class Season:
         sos_component = sos * 15.0
 
         qw_score = self._quality_win_score(team_name, rankings)
-        qw_component = min(20.0, qw_score * 4.0)
+        qw_component = min(20.0, qw_score)
 
         loss_penalty = self._loss_quality_score(team_name, rankings)
 
@@ -2035,14 +2356,14 @@ class Season:
                  conf_component + diff_component - loss_penalty)
         return max(0.0, round(power, 2))
 
-    def get_all_power_rankings(self) -> List[Tuple[str, float, int]]:
-        """Get all teams sorted by power index. Returns [(team_name, power_index, quality_wins)]"""
+    def get_all_power_rankings(self) -> List[Tuple[str, float, float]]:
+        """Get all teams sorted by power index. Returns [(team_name, power_index, quality_win_score)]"""
         rankings = self._get_current_rankings()
         results = []
         for team_name, record in self.standings.items():
             if record.games_played > 0:
                 pi = self.calculate_power_index(team_name)
-                qw = self._count_quality_wins(team_name, rankings)
+                qw = self._quality_win_score(team_name, rankings)
                 results.append((team_name, pi, qw))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
@@ -2380,6 +2701,42 @@ class Season:
     def _get_winner(self, game: Game) -> str:
         return game.home_team if (game.home_score or 0) > (game.away_score or 0) else game.away_team
 
+    @staticmethod
+    def _pick_game_mvp(game: Game) -> Optional[Tuple[str, str, str]]:
+        """Pick MVP from a completed game. Returns (player_name, team_name, reason) or None."""
+        fr = getattr(game, "full_result", None)
+        if not fr:
+            return None
+        ps = fr.get("player_stats", {})
+        best_score = -1.0
+        best = None
+        for side, team_name in [("home", game.home_team), ("away", game.away_team)]:
+            for p in ps.get(side, []):
+                name = p.get("name", "")
+                if not name:
+                    continue
+                yards = p.get("yards", 0)
+                tds = p.get("tds", 0)
+                kp_yds = p.get("kick_pass_yards", 0)
+                kp_tds = p.get("kick_pass_tds", 0)
+                tackles = p.get("tackles", 0)
+                sacks = p.get("sacks", 0)
+                wpa = p.get("wpa", 0.0)
+                score = yards * 0.3 + tds * 25 + kp_yds * 0.25 + kp_tds * 20 + tackles * 3 + sacks * 15 + wpa * 15
+                if score > best_score:
+                    best_score = score
+                    parts = []
+                    if yards:
+                        parts.append(f"{yards} yds")
+                    if tds:
+                        parts.append(f"{tds} TD")
+                    if kp_yds:
+                        parts.append(f"{kp_yds} KP yds")
+                    if tackles:
+                        parts.append(f"{tackles} TKL")
+                    best = (name, team_name, ", ".join(parts) if parts else "")
+        return best
+
     def _play_round(self, matchups: list, week: int, verbose: bool = False) -> list:
         games = []
         for home, away in matchups:
@@ -2388,6 +2745,11 @@ class Season:
             games.append(game)
         for game in games:
             self.simulate_game(game, verbose=verbose)
+            mvp = self._pick_game_mvp(game)
+            if mvp:
+                game.mvp_name = mvp[0]
+                game.mvp_team = mvp[1]
+                game.mvp_reason = mvp[2]
         return games
 
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
@@ -2600,6 +2962,7 @@ class Season:
             a_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_a.team_name), 0)
             b_seed = next((idx + 1 for idx, t in enumerate(standings) if t.team_name == team_b.team_name), 0)
 
+            mvp = self._pick_game_mvp(game)
             bowl = BowlGame(
                 name=names[i],
                 tier=tier,
@@ -2609,6 +2972,10 @@ class Season:
                 team_1_record=team_a.record_str,
                 team_2_record=team_b.record_str,
             )
+            if mvp:
+                bowl.mvp_name = mvp[0]
+                bowl.mvp_team = mvp[1]
+                bowl.mvp_reason = mvp[2]
             self.bowl_games.append(bowl)
 
 
@@ -2639,6 +3006,8 @@ def load_teams_from_directory(
                         Only used when fresh=True. Teams not in the dict get
                         a random archetype from a weighted distribution.
     """
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_dir = Path(directory)
     archetypes = team_archetypes or {}
@@ -2650,10 +3019,13 @@ def load_teams_from_directory(
         with open(team_file) as f:
             raw = _json.load(f)
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
 
     return teams
@@ -2677,6 +3049,8 @@ def load_teams_with_states(
         (teams_dict, team_states_dict) where team_states maps team_name -> state
     """
     import json as _json
+    from scripts.generate_rosters import CONFERENCE_FLOORS
+
     teams = {}
     team_states = {}
     team_dir = Path(directory)
@@ -2687,10 +3061,13 @@ def load_teams_with_states(
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
+        conference = raw.get("team_info", {}).get("conference", "")
+        conf_floor = CONFERENCE_FLOORS.get(conference, 0)
         arch = archetypes.get(team_name)
         if arch is None and fresh:
             arch = _pick_ai_archetype()
-        team = load_team_from_json(str(team_file), fresh=fresh, program_archetype=arch)
+        team = load_team_from_json(str(team_file), fresh=fresh,
+                                   program_archetype=arch, conference_floor=conf_floor)
         teams[team.name] = team
         if state:
             team_states[team.name] = state
@@ -3113,6 +3490,7 @@ def fast_sim_season(
         "final_four": final_four,
         "_records": records,
         "_playoff_teams": set(playoff_list),
+        "_conf_champs": set(conf_champs.values()),
     }
 
 

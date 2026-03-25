@@ -2,7 +2,11 @@
 <html lang="en" data-theme="bloomberg">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
 <title>{% block title %}Viperball Stats{% endblock %}</title>
 <style>
 /* Bloomberg (default dark) */
@@ -174,6 +178,91 @@
   --cyan: #6a9a8a;
   --border: #352d25;
   --row-hover: #2a2218;
+}
+/* Latte — warm cream inspired by Catppuccin Latte */
+[data-theme="latte"] {
+  --bg: #eff1f5;
+  --bg-alt: #e6e9ef;
+  --fg: #4c4f69;
+  --fg-dim: #8c8fa1;
+  --fg-bright: #1e1e2e;
+  --accent: #8839ef;
+  --accent-dim: #7029c9;
+  --green: #40a02b;
+  --red: #d20f39;
+  --yellow: #df8e1d;
+  --blue: #1e66f5;
+  --cyan: #179299;
+  --border: #ccd0da;
+  --row-hover: #dce0e8;
+}
+/* Paper — clean newsprint, high contrast */
+[data-theme="paper"] {
+  --bg: #ffffff;
+  --bg-alt: #f4f4f4;
+  --fg: #2e2e2e;
+  --fg-dim: #888888;
+  --fg-bright: #111111;
+  --accent: #1a56db;
+  --accent-dim: #1045b5;
+  --green: #137333;
+  --red: #c5221f;
+  --yellow: #9a6700;
+  --blue: #1a56db;
+  --cyan: #0e7490;
+  --border: #d9d9d9;
+  --row-hover: #f0f0f0;
+}
+/* Sakura — soft rose and warm gray */
+[data-theme="sakura"] {
+  --bg: #faf4f4;
+  --bg-alt: #f2e8e8;
+  --fg: #5c4a4a;
+  --fg-dim: #9b8585;
+  --fg-bright: #2d1f1f;
+  --accent: #c4476a;
+  --accent-dim: #a63758;
+  --green: #3a8a5c;
+  --red: #c5221f;
+  --yellow: #a07028;
+  --blue: #4466aa;
+  --cyan: #2e8b8b;
+  --border: #e0d2d2;
+  --row-hover: #f0e4e4;
+}
+/* Mint — cool green-tinted light */
+[data-theme="mint"] {
+  --bg: #f2f7f5;
+  --bg-alt: #e4ede9;
+  --fg: #3b4a44;
+  --fg-dim: #7a8e86;
+  --fg-bright: #1a2b25;
+  --accent: #0d7d5f;
+  --accent-dim: #06604a;
+  --green: #1a8c42;
+  --red: #c43030;
+  --yellow: #9a7a1c;
+  --blue: #2b6cb0;
+  --cyan: #0c7792;
+  --border: #c8d9d2;
+  --row-hover: #dde9e4;
+}
+/* Sand — warm beige, desert light */
+[data-theme="sand"] {
+  --bg: #f5f0e8;
+  --bg-alt: #ebe4d8;
+  --fg: #4a4035;
+  --fg-dim: #8a7e70;
+  --fg-bright: #2a2018;
+  --accent: #b06020;
+  --accent-dim: #8f4e18;
+  --green: #4a7a3a;
+  --red: #b83c2a;
+  --yellow: #9a7a1c;
+  --blue: #3a6898;
+  --cyan: #2a7a7a;
+  --border: #d4cab8;
+  --row-hover: #e8e0d0;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -398,6 +487,36 @@ td.rank {
 .change-down { color: var(--red); }
 .change-none { color: var(--fg-dim); }
 
+/* Stat tooltips — hover for explanation */
+.stat-tip {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted var(--fg-dim);
+}
+.stat-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-alt);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: normal;
+  white-space: normal;
+  width: max-content;
+  max-width: 260px;
+  line-height: 1.4;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.stat-tip:hover::after { opacity: 1; }
+
 /* Badges / tags */
 .tag {
   display: inline-block;
@@ -511,34 +630,140 @@ td.rank {
   text-align: center;
 }
 
-/* Responsive */
+/* ── Mobile nav toggle ── */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 18px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  line-height: 1;
+}
+.nav-toggle:hover { color: var(--fg-bright); border-color: var(--fg-dim); }
+
+/* ── Responsive ── */
+
+/* Large tablets / narrow desktops */
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: 1fr 1fr; }
+  .container.wide { max-width: 100%; }
 }
+
+/* Tablets */
 @media (max-width: 768px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  table { font-size: 10px; }
-  thead th, tbody td { padding: 2px 4px; }
-  .topbar nav a { font-size: 10px; padding: 2px 4px; }
-  .box-score-header { flex-direction: column; gap: 8px; }
-  .box-team .name { font-size: 12px; }
-  .box-score-final { font-size: 18px; }
-  .box-score-vs { padding: 4px 0; }
-  .metric .value { font-size: 14px; }
-  /* Tabs: horizontal scroll instead of wrap to prevent overlap */
+  body { font-size: 12px; }
+  .container { padding: 0 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+
+  /* Topbar: hamburger nav */
+  .nav-toggle { display: block; }
+  .topbar .container { flex-wrap: nowrap; }
+  .topbar nav {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+    order: 10;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+  .topbar nav.open { display: flex; }
+  .topbar .container { flex-wrap: wrap; }
+  .topbar nav a {
+    font-size: 13px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar nav a:last-child { border-bottom: none; }
+
+  /* Theme switcher stays in topbar row */
+  .theme-switcher { margin-left: auto; }
+  .theme-btn { font-size: 10px; padding: 4px 8px; }
+  .theme-menu { right: 0; left: auto; min-width: 180px; }
+  .theme-menu button { padding: 10px 12px; font-size: 12px; }
+
+  /* Grids */
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+
+  /* Tables: scrollable */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; font-size: 11px; }
+  thead th, tbody td { padding: 4px 6px; }
+
+  /* Tabs */
   .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tabs a { padding: 4px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
-  /* Make all tables horizontally scrollable on mobile */
-  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-  .page-header h1 { font-size: 14px; }
-  .container { padding: 0 8px; }
-  body { font-size: 11px; }
-  .theme-btn { font-size: 9px; padding: 2px 6px; }
-  .theme-menu { right: 0; left: auto; }
+  .tabs a { padding: 8px 12px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Box scores */
+  .box-score-header { flex-direction: column; gap: 8px; }
+  .box-team .name { font-size: 13px; }
+  .box-score-final { font-size: 20px; }
+  .box-score-vs { padding: 4px 0; }
+
+  /* Page header */
+  .page-header h1 { font-size: 16px; }
+  .page-header { padding: 12px 0 10px; }
+
+  /* Metrics */
+  .metric .value { font-size: 15px; }
+  .metric-card .metric-value { font-size: 15px; }
+
+  /* Player card header */
+  .page-header[style*="display:flex"] { flex-wrap: wrap; }
+  .player-card-frame { width: 72px; height: 72px; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 11px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .breadcrumb::-webkit-scrollbar { display: none; }
 }
+
+/* Small phones */
+@media (max-width: 480px) {
+  body { font-size: 12px; }
+  .container { padding: 0 8px; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 10px; }
+
+  table { font-size: 10px; }
+  thead th, tbody td { padding: 3px 4px; }
+  thead th { font-size: 9px; }
+
+  .tabs a { padding: 8px 10px; font-size: 10px; }
+
+  .page-header h1 { font-size: 14px; }
+  .page-header .subtitle { font-size: 11px; }
+
+  .metric .value { font-size: 14px; }
+  .metric-card { padding: 8px; }
+  .metric-card .metric-value { font-size: 14px; }
+
+  .box-score-final { font-size: 18px; }
+  .box-team .name { font-size: 12px; }
+
+  h2 { font-size: 12px; margin: 12px 0 6px; }
+
+  .player-card-frame { width: 64px; height: 64px; }
+
+  .footer { margin-top: 20px; }
+
+  /* Topbar brand smaller */
+  .topbar .brand { font-size: 13px; }
+}
+
 /* Horizontal scroll wrapper for wide tables on small screens */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* PWA overscroll feel */
+html { overscroll-behavior-y: contain; }
+
+/* Safe area padding for notched devices */
+.topbar { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
 /* Theme switcher */
 .theme-switcher {
@@ -631,6 +856,12 @@ td.rank {
 (function(){
   var saved = localStorage.getItem('vb-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
+  // Update theme-color meta to match current theme bg
+  var tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) {
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-alt').trim();
+    if (bg) tc.setAttribute('content', bg);
+  }
 })();
 </script>
 </head>
@@ -638,7 +869,8 @@ td.rank {
 <div class="topbar">
   <div class="container wide">
     <a class="brand" href="/stats/">VIPERBALL</a>
-    <nav>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
+    <nav id="main-nav">
       <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
       <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
       <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
@@ -660,6 +892,11 @@ td.rank {
         <button data-theme="ocean-light"><span class="theme-swatch" style="background:#d26937"></span>Ocean Light</button>
         <button data-theme="solarized"><span class="theme-swatch" style="background:#cb4b16"></span>Solarized Dark</button>
         <button data-theme="solarized-light"><span class="theme-swatch" style="background:#cb4b16"></span>Solarized Light</button>
+        <button data-theme="latte"><span class="theme-swatch" style="background:#8839ef"></span>Latte</button>
+        <button data-theme="paper"><span class="theme-swatch" style="background:#1a56db"></span>Paper</button>
+        <button data-theme="sakura"><span class="theme-swatch" style="background:#c4476a"></span>Sakura</button>
+        <button data-theme="mint"><span class="theme-swatch" style="background:#0d7d5f"></span>Mint</button>
+        <button data-theme="sand"><span class="theme-swatch" style="background:#b06020"></span>Sand</button>
         <button data-theme="amber"><span class="theme-swatch" style="background:#ffbf00"></span>Amber CRT</button>
       </div>
     </div>
@@ -691,12 +928,35 @@ td.rank {
       menu.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
       this.classList.add('active');
       menu.classList.remove('open');
+      // Update theme-color meta for mobile browser chrome
+      var tc = document.querySelector('meta[name="theme-color"]');
+      if (tc) { setTimeout(function(){ var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-alt').trim(); if (bg) tc.setAttribute('content', bg); }, 10); }
     });
   });
   // Close menu on outside click
   document.addEventListener('click', function(e){
     if (!e.target.closest('.theme-switcher')) menu.classList.remove('open');
   });
+})();
+// Mobile nav toggle
+(function(){
+  var btn = document.getElementById('nav-toggle');
+  var nav = document.getElementById('main-nav');
+  if (btn && nav) {
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      btn.innerHTML = open ? '&#10005;' : '&#9776;';
+    });
+    document.addEventListener('click', function(e){
+      if (!e.target.closest('.topbar')) {
+        nav.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.innerHTML = '&#9776;';
+      }
+    });
+  }
 })();
 </script>
 <script>

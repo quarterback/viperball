@@ -25,6 +25,10 @@ INDIVIDUAL TROPHIES
 
   Best Kicker               – Outstanding kicker.
 
+  Diamond Gloves            – Outstanding defensive backfield player (keeper/safety).
+                              Awarded to the player with the lowest KPR (Keeper Rating),
+                              an ERA-style stat measuring defensive impact per coverage snap.
+
   Venus Award                   – Offensive Player of the Year.
   Bellona Award                  – Defensive Player of the Year.
 
@@ -259,8 +263,12 @@ def _pos_group(position: str) -> str:
         return "back"
     if "lineman" in pos or "line" in pos or "wedge" in pos:
         return "lineman"
-    if "safety" in pos or "keeper" in pos:
+    if "keeper" in pos:
+        return "keeper_def"
+    if "safety" in pos:
         return "safety"
+    if "kicker" in pos:
+        return "kicker"
     return "other"
 
 
@@ -323,7 +331,11 @@ _AGG_COUNTING_STATS = [
     "kick_pass_interceptions",
     "tackles", "tfl", "sacks", "hurries",
     "keeper_bells", "kick_deflections",
+    "keeper_tackles", "coverage_snaps", "muffs",
+    "points_allowed_in_coverage", "completions_allowed_in_coverage",
     "kick_return_yards", "punt_return_yards",
+    "blocks", "pancakes",
+    "offensive_snaps", "defensive_snaps",
     "plays_involved",
 ]
 
@@ -361,14 +373,12 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         kp_tds = stats.get("kick_pass_tds", 0)
         rush_yds = stats.get("rushing_yards", 0)
         tds = stats.get("tds", 0)
-        lat_yds = stats.get("lateral_yards", 0)
-        raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+        raw = (kp_yds * 0.45 + rush_yds * 0.35
                + tds * 15 + kp_tds * 12) / games
     elif group == "viper":
         yds = stats.get("yards", 0)
-        lat_yds = stats.get("lateral_yards", 0)
         tds = stats.get("tds", 0)
-        raw = (yds * 0.4 + lat_yds * 0.3 + tds * 20) / games
+        raw = (yds * 0.5 + tds * 20) / games
     elif group == "back":
         rush_yds = stats.get("rushing_yards", 0)
         carries = max(1, stats.get("rush_carries", 1))
@@ -376,15 +386,39 @@ def _stat_score_for_group(stats: dict, group: str, team_perf_mult: float = 1.0) 
         ypc = rush_yds / carries
         raw = (rush_yds * 0.4 + ypc * 8 + tds * 20) / games
     elif group == "lineman":
+        # Two-way players: blend offensive line production with defensive disruption
+        # Offensive: blocks per snap + pancake rate
+        blocks = stats.get("blocks", 0)
+        pancakes = stats.get("pancakes", 0)
+        off_snaps = max(1, stats.get("offensive_snaps", 1))
+        block_rate = blocks / off_snaps  # typically 0.15-0.35
+        pancake_rate = pancakes / off_snaps  # typically 0.01-0.05
+        ol_score = (block_rate * 30 + pancake_rate * 80) * (games / max(1, games))
+        # Defensive: tackles, sacks, TFL per game
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
-        raw = (tackles * 2 + sacks * 12 + tfl * 6) / games
+        dl_score = (tackles * 2 + sacks * 12 + tfl * 6) / games
+        # 40/60 blend: defensive disruption matters more but OL production
+        # ensures linemen who dominate the trenches on both sides are rewarded
+        raw = ol_score * 0.40 + dl_score * 0.60
+    elif group == "keeper_def":
+        # Blend of KPR (0-10), inverted ERA (0-10), and WPA impact
+        kpr = _compute_kpr(stats)
+        era = _compute_keeper_era(stats)
+        inv_era = max(0.0, 10.0 - era)
+        wpa = min(10.0, max(-5.0, stats.get("wpa", 0.0)))
+        raw = kpr * 0.30 + inv_era * 0.35 + wpa * 0.35
     elif group == "safety":
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
         raw = (tackles * 2.5 + sacks * 10 + tfl * 5) / games
+    elif group == "kicker":
+        kick_made = stats.get("kick_made", 0)
+        kick_att = max(1, stats.get("kick_att", 1))
+        pct = kick_made / kick_att
+        raw = (kick_made * 8 + pct * 30) / games
     else:
         raw = stats.get("yards", 0) / games
     return round(raw * team_perf_mult, 2)
@@ -398,30 +432,49 @@ def _format_stat_line(stats: dict, group: str) -> str:
     if group in ("zeroback",):
         kp_comp = stats.get("kick_passes_completed", 0)
         kp_att = stats.get("kick_passes_thrown", 0)
-        kp_yds = stats.get("kick_pass_yards", 0)
+        kp_yds = int(round(stats.get("kick_pass_yards", 0)))
         kp_tds = stats.get("kick_pass_tds", 0)
-        rush_yds = stats.get("rushing_yards", 0)
+        rush_yds = int(round(stats.get("rushing_yards", 0)))
         tds = stats.get("tds", 0)
         parts.append(f"{kp_comp}/{kp_att} KP {kp_yds} yds {kp_tds} KP TD")
         parts.append(f"{rush_yds} rush yds, {tds} TD")
     elif group == "viper":
-        yds = stats.get("yards", 0)
-        lat_yds = stats.get("lateral_yards", 0)
+        yds = int(round(stats.get("yards", 0)))
         tds = stats.get("tds", 0)
-        parts.append(f"{yds} yds, {lat_yds} lat yds, {tds} TD")
+        parts.append(f"{yds} yds, {tds} TD")
     elif group == "back":
-        rush_yds = stats.get("rushing_yards", 0)
+        rush_yds = int(round(stats.get("rushing_yards", 0)))
         carries = stats.get("rush_carries", 0)
         tds = stats.get("tds", 0)
         ypc = round(rush_yds / max(1, carries), 1)
         parts.append(f"{rush_yds} yds, {carries} car, {ypc} YPC, {tds} TD")
-    elif group in ("lineman", "safety"):
+    elif group == "keeper_def":
+        k_tackles = stats.get("keeper_tackles", 0)
+        bells = stats.get("keeper_bells", 0)
+        deflections = stats.get("kick_deflections", 0)
+        coverage = stats.get("coverage_snaps", 0)
+        kpr = _compute_kpr(stats)
+        era = _compute_keeper_era(stats)
+        parts.append(f"{deflections} DEFL, {k_tackles} TKL, {bells} BLL, {coverage} COV | {kpr} KPR, {era:.2f} ERA")
+    elif group == "lineman":
+        blocks = stats.get("blocks", 0)
+        pancakes = stats.get("pancakes", 0)
+        tackles = stats.get("tackles", 0)
+        sacks = stats.get("sacks", 0)
+        tfl = stats.get("tfl", 0)
+        parts.append(f"{blocks} BLK, {pancakes} PAN, {tackles} TKL, {sacks} sacks, {tfl} TFL")
+    elif group == "safety":
         tackles = stats.get("tackles", 0)
         sacks = stats.get("sacks", 0)
         tfl = stats.get("tfl", 0)
         parts.append(f"{tackles} TKL, {sacks} sacks, {tfl} TFL")
+    elif group == "kicker":
+        kick_made = stats.get("kick_made", 0)
+        kick_att = stats.get("kick_att", 0)
+        pct = round(100 * kick_made / max(1, kick_att), 1)
+        parts.append(f"{kick_made}/{kick_att} kicks ({pct}%)")
     else:
-        yds = stats.get("yards", 0)
+        yds = int(round(stats.get("yards", 0)))
         tds = stats.get("tds", 0)
         parts.append(f"{yds} yds, {tds} TD")
 
@@ -438,24 +491,42 @@ def _build_season_stats_dict(stats: dict, group: str) -> dict:
     if group in ("zeroback",):
         d["kick_passes_completed"] = stats.get("kick_passes_completed", 0)
         d["kick_passes_thrown"] = stats.get("kick_passes_thrown", 0)
-        d["kick_pass_yards"] = stats.get("kick_pass_yards", 0)
+        d["kick_pass_yards"] = int(round(stats.get("kick_pass_yards", 0)))
         d["kick_pass_tds"] = stats.get("kick_pass_tds", 0)
-        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["rushing_yards"] = int(round(stats.get("rushing_yards", 0)))
         d["tds"] = stats.get("tds", 0)
     elif group == "viper":
-        d["yards"] = stats.get("yards", 0)
-        d["lateral_yards"] = stats.get("lateral_yards", 0)
+        d["yards"] = int(round(stats.get("yards", 0)))
         d["tds"] = stats.get("tds", 0)
     elif group == "back":
-        d["rushing_yards"] = stats.get("rushing_yards", 0)
+        d["rushing_yards"] = int(round(stats.get("rushing_yards", 0)))
         d["rush_carries"] = stats.get("rush_carries", 0)
         d["tds"] = stats.get("tds", 0)
-    elif group in ("lineman", "safety"):
+    elif group == "keeper_def":
+        d["keeper_tackles"] = stats.get("keeper_tackles", 0)
+        d["keeper_bells"] = stats.get("keeper_bells", 0)
+        d["kick_deflections"] = stats.get("kick_deflections", 0)
+        d["coverage_snaps"] = stats.get("coverage_snaps", 0)
+        d["muffs"] = stats.get("muffs", 0)
+        d["kpr"] = _compute_kpr(stats)
+        d["keeper_era"] = _compute_keeper_era(stats)
+    elif group == "lineman":
+        d["blocks"] = stats.get("blocks", 0)
+        d["pancakes"] = stats.get("pancakes", 0)
         d["tackles"] = stats.get("tackles", 0)
         d["sacks"] = stats.get("sacks", 0)
         d["tfl"] = stats.get("tfl", 0)
+        d["offensive_snaps"] = stats.get("offensive_snaps", 0)
+        d["defensive_snaps"] = stats.get("defensive_snaps", 0)
+    elif group == "safety":
+        d["tackles"] = stats.get("tackles", 0)
+        d["sacks"] = stats.get("sacks", 0)
+        d["tfl"] = stats.get("tfl", 0)
+    elif group == "kicker":
+        d["kick_made"] = stats.get("kick_made", 0)
+        d["kick_att"] = stats.get("kick_att", 0)
     else:
-        d["yards"] = stats.get("yards", 0)
+        d["yards"] = int(round(stats.get("yards", 0)))
         d["tds"] = stats.get("tds", 0)
     wpa = stats.get("wpa", 0.0)
     if wpa:
@@ -479,9 +550,12 @@ def _player_score(player: Player, team_perf_mult: float = 1.0) -> float:
         raw = (player.speed * 1.2 + player.lateral_skill * 1.1 + player.agility * 1.1
                + player.power * 0.9 + player.stamina * 0.9) / 5.2
     elif "lineman" in pos or "line" in pos or "wedge" in pos:
-        raw = (player.tackling * 1.6 + player.power * 1.5 + player.stamina * 1.2
-               + player.awareness * 0.9) / 5.2
-    elif "safety" in pos or "keeper" in pos:
+        raw = (player.tackling * 1.4 + player.power * 1.4 + player.stamina * 1.0
+               + player.awareness * 1.0) / 4.8
+    elif "keeper" in pos:
+        raw = (player.speed * 1.0 + player.tackling * 1.4 + player.hands * 1.2
+               + player.awareness * 1.4 + player.stamina * 0.8) / 5.8
+    elif "safety" in pos:
         raw = (player.speed * 1.1 + player.tackling * 1.3 + player.lateral_skill * 1.0
                + player.awareness * 1.3 + player.stamina * 0.9) / 5.6
     else:
@@ -501,6 +575,48 @@ def _national_poy_score(player: Player, team_perf_mult: float = 1.0) -> float:
     if any(p in pos for p in ["zeroback", "zero", "viper", "halfback", "wingback"]):
         base *= 1.04
     return round(base * team_perf_mult, 2)
+
+
+def _compute_kpr(stats: dict) -> float:
+    """Compute Keeper Rating (KPR) — a composite defensive analytics stat.
+
+    Higher is better. Measures a keeper's value as captain of the
+    defensive backfield: deflections (disrupting the aerial attack),
+    keeper tackles (last-line stops), bells (loose ball recoveries),
+    minus mistakes (muffs).
+
+    Scaled to roughly 0-10 range for a typical season.
+    """
+    games = max(1, stats.get("games", 1))
+    deflections = stats.get("kick_deflections", 0)
+    k_tackles = stats.get("keeper_tackles", 0)
+    bells = stats.get("keeper_bells", 0)
+    muffs = stats.get("muffs", 0)
+    # Per-game composite weighted toward disruptive plays
+    raw = (deflections * 6 + k_tackles * 3 + bells * 8 - muffs * 5) / games
+    # Scale to 0-10 range: a keeper averaging 5 impact plays/game ≈ 5.0 KPR
+    return round(min(10.0, max(0.0, raw)), 1)
+
+
+def _compute_keeper_era(stats: dict) -> float:
+    """Compute Keeper ERA — an ERA-style rate stat. Lower is better.
+
+    Like a pitcher's ERA tracks earned runs allowed per 9 innings,
+    Keeper ERA tracks points scored against the keeper's coverage
+    per 9 coverage snaps. Built from actual per-play attribution:
+    the game engine tracks points_allowed_in_coverage and
+    completions_allowed_in_coverage on each keeper/safety.
+
+    ERA = (points_allowed_in_coverage / coverage_snaps) * 9
+
+    Elite: < 2.50 | Good: 2.50-4.00 | Average: 4.00-5.50 | Poor: > 5.50
+    """
+    coverage = stats.get("coverage_snaps", 0)
+    if coverage < 10:
+        return 9.99  # insufficient sample
+    pts_allowed = stats.get("points_allowed_in_coverage", 0)
+    era = (pts_allowed / coverage) * 9.0
+    return round(max(0.0, min(9.99, era)), 2)
 
 
 def _kicker_score(player: Player, team_perf_mult: float = 1.0) -> float:
@@ -580,6 +696,36 @@ def _wpa_tiebreak(
     return candidate_wpa > best_wpa
 
 
+def _passes_volume_gate(pstats: dict, group: str, standings: dict, team_name: str) -> bool:
+    """Check that a player played enough games and had enough volume.
+
+    Requires 80% of team games played AND position-specific minimum
+    touch/attempt thresholds to prevent tiny-sample-size rate inflation.
+    """
+    games = pstats.get("games", 0)
+    if games == 0:
+        return False
+    team_rec = standings.get(team_name)
+    team_gp = team_rec.games_played if team_rec else 0
+    if team_gp > 0 and games < team_gp * 0.8:
+        return False
+    # Minimum volume thresholds per position group
+    if group == "back":
+        if pstats.get("rush_carries", 0) < games * 2:
+            return False
+    elif group == "viper":
+        if pstats.get("yards", 0) == 0 and pstats.get("tds", 0) == 0:
+            return False
+    elif group == "zeroback":
+        if pstats.get("kick_passes_thrown", 0) < games * 2:
+            return False
+    elif group == "keeper_def":
+        # Keepers must have meaningful coverage snaps (at least ~20/game)
+        if pstats.get("coverage_snaps", 0) < games * 15:
+            return False
+    return True
+
+
 # ──────────────────────────────────────────────
 # POSITION SLOT SELECTORS
 # ──────────────────────────────────────────────
@@ -607,13 +753,20 @@ def _best_in_position(
             uid = f"{team_name}::{player.name}"
             if uid in exclude:
                 continue
-            if _pos_group(player.position) != group_filter:
+            if group_filter == "kicker":
+                # Kicker is role-based, not position-based — any player who kicks
+                if use_stats and player.name in team_stats:
+                    if team_stats[player.name].get("kick_att", 0) == 0:
+                        continue
+                elif player.kicking < 60:
+                    continue
+            elif _pos_group(player.position) != group_filter:
                 continue
             if freshman_only and getattr(player, "year", "") != "Freshman":
                 continue
             if use_stats and player.name in team_stats:
                 pstats = team_stats[player.name]
-                if pstats.get("games", 0) == 0:
+                if not _passes_volume_gate(pstats, group_filter, standings, team_name):
                     continue
                 score = _stat_score_for_group(pstats, group_filter, mult)
                 wpa = pstats.get("wpa", 0.0)
@@ -627,17 +780,18 @@ def _best_in_position(
     return best_pair
 
 
-# Canonical All-CVL position slots
+# Canonical All-CVL position slots (skill positions + kicker only)
 _AA_SLOTS = [
     ("zeroback", "Zeroback",              _player_score),
     ("viper",    "Viper (1)",             _player_score),
     ("viper",    "Viper (2)",             _player_score),
+    ("viper",    "Viper (3)",             _player_score),
     ("back",     "Halfback/Wingback (1)", _player_score),
     ("back",     "Halfback/Wingback (2)", _player_score),
     ("back",     "Halfback/Wingback (3)", _player_score),
-    ("lineman",  "Lineman (1)",           _player_score),
-    ("lineman",  "Lineman (2)",           _player_score),
-    ("safety",   "Safety/Keeper",         _player_score),
+    ("safety",   "Safety",                _player_score),
+    ("keeper_def", "Keeper",             _player_score),
+    ("kicker",   "Kicker",               _player_score),
 ]
 
 
@@ -693,15 +847,14 @@ def _stat_score_any_offense(stats: dict, team_perf_mult: float = 1.0) -> float:
     tds = stats.get("tds", 0)
     kp_yds = stats.get("kick_pass_yards", 0)
     kp_tds = stats.get("kick_pass_tds", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
-    raw = (yds * 0.35 + kp_yds * 0.3 + lat_yds * 0.15
+    raw = (yds * 0.4 + kp_yds * 0.35
            + tds * 18 + kp_tds * 14 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Zeroback — kick passing + rushing + lateral play.
+    """Score a Zeroback — kick passing + rushing.
     Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     kp_yds = stats.get("kick_pass_yards", 0)
@@ -710,26 +863,24 @@ def _stat_score_zeroback(stats: dict, team_perf_mult: float = 1.0) -> float:
     kp_att = max(1, stats.get("kick_passes_thrown", 1))
     rush_yds = stats.get("rushing_yards", 0)
     tds = stats.get("tds", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     fumbles = stats.get("fumbles", 0)
     kp_pct = kp_comp / kp_att
-    raw = (kp_yds * 0.4 + rush_yds * 0.3 + lat_yds * 0.2
+    raw = (kp_yds * 0.45 + rush_yds * 0.35
            + tds * 15 + kp_tds * 12 + kp_pct * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
 def _stat_score_viper(stats: dict, team_perf_mult: float = 1.0) -> float:
-    """Score a Viper — all-purpose yards, laterals, TDs.
+    """Score a Viper — all-purpose yards, TDs.
     Pure stats — WPA is used as tiebreaker externally."""
     games = max(1, stats.get("games", 1))
     yds = stats.get("yards", 0)
-    lat_yds = stats.get("lateral_yards", 0)
     tds = stats.get("tds", 0)
     fumbles = stats.get("fumbles", 0)
     kr_yds = stats.get("kick_return_yards", 0)
     pr_yds = stats.get("punt_return_yards", 0)
     all_purpose = yds + kr_yds + pr_yds
-    raw = (all_purpose * 0.35 + lat_yds * 0.3 + tds * 20 - fumbles * 8) / games
+    raw = (all_purpose * 0.5 + tds * 20 - fumbles * 8) / games
     return round(raw * team_perf_mult, 2)
 
 
@@ -832,11 +983,11 @@ def _select_individual_awards(
                 if position_groups and _pos_group(p.position) not in position_groups:
                     continue
                 pstats = _get_stats(t_name, p.name)
-                if pstats and pstats.get("games", 0) > 0:
-                    s = stat_score_fn(pstats, mult)
-                    wpa = pstats.get("wpa", 0.0)
-                else:
-                    continue  # require actual stats for major awards
+                group = _pos_group(p.position)
+                if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                    continue
+                s = stat_score_fn(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
                 if _wpa_tiebreak(s, wpa, best_score, best_wpa):
                     best_score = s
                     best_wpa = wpa
@@ -856,16 +1007,14 @@ def _select_individual_awards(
             if f"{t_name}::{p.name}" in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                if group in ("lineman", "safety"):
-                    s = _stat_score_defense(pstats, mult)
-                else:
-                    s = _stat_score_any_offense(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
+            group = _pos_group(p.position)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if group in ("lineman", "safety", "keeper_def"):
+                s = _stat_score_defense(pstats, mult)
             else:
-                s = _national_poy_score(p, mult)
-                wpa = 0.0
+                s = _stat_score_any_offense(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
                 best_poy_wpa = wpa
@@ -931,15 +1080,14 @@ def _select_individual_awards(
                 uid = f"{t_name}::{p.name}"
                 if uid in seen:
                     continue
-                if _pos_group(p.position) not in ("lineman", "safety"):
+                group = _pos_group(p.position)
+                if group not in ("lineman", "safety", "keeper_def"):
                     continue
                 pstats = _get_stats(t_name, p.name)
-                if pstats and pstats.get("games", 0) > 0:
-                    s = _stat_score_defense(pstats, mult)
-                    wpa = pstats.get("wpa", 0.0)
-                else:
-                    s = _defensive_score(p, mult)
-                    wpa = 0.0
+                if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                    continue
+                s = _stat_score_defense(pstats, mult)
+                wpa = pstats.get("wpa", 0.0)
                 if _wpa_tiebreak(s, wpa, best_minerva_score, best_minerva_wpa):
                     best_minerva_score = s
                     best_minerva_wpa = wpa
@@ -962,12 +1110,12 @@ def _select_individual_awards(
             if uid in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0 and pstats.get("kick_att", 0) > 0:
-                s = _stat_score_kicker(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _kicker_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, "kicker", standings, t_name):
+                continue
+            if pstats.get("kick_att", 0) == 0:
+                continue
+            s = _stat_score_kicker(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_k_score, best_k_wpa):
                 best_k_score = s
                 best_k_wpa = wpa
@@ -975,6 +1123,42 @@ def _select_individual_awards(
     if best_k:
         _add(best_k[0], best_k[1], "Best Kicker",
              f"Nation's outstanding kicker ({best_k[1]})")
+
+    # ── Diamond Gloves (best defensive backfield player by KPR + ERA + WPA) ──
+    # Keepers and safeties eligible. Composite score: KPR, inverted ERA, WPA.
+    # Minimum .500 team record required, must have meaningful coverage snaps.
+    best_dg = None
+    best_dg_score = -999.0
+    for t_name, t in teams.items():
+        if _team_win_pct(t_name, standings) < _MIN_WIN_PCT_POSITIONAL:
+            continue
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen:
+                continue
+            group = _pos_group(p.position)
+            if group not in ("keeper_def", "safety"):
+                continue
+            pstats = _get_stats(t_name, p.name)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if pstats.get("coverage_snaps", 0) < 20:
+                continue
+            kpr = _compute_kpr(pstats)
+            era = _compute_keeper_era(pstats)
+            inv_era = max(0.0, 10.0 - era)
+            wpa = pstats.get("wpa", 0.0)
+            # Composite: KPR (0-10), inverted ERA (0-10), WPA scaled
+            dg_score = kpr * 0.35 + inv_era * 0.35 + min(10.0, max(-5.0, wpa)) * 0.30
+            if dg_score > best_dg_score:
+                best_dg_score = dg_score
+                best_dg = (p, t_name, pstats)
+    if best_dg:
+        p, t, pstats = best_dg
+        kpr = _compute_kpr(pstats)
+        era = _compute_keeper_era(pstats)
+        _add(p, t, "Diamond Gloves",
+             f"Nation's outstanding defensive back — {kpr} KPR, {era:.2f} ERA ({t})")
 
     # ── Offensive Player of the Year ──────────────────────────────────────
     # Minimum .600 team record required
@@ -992,14 +1176,12 @@ def _select_individual_awards(
                 continue
             if _pos_group(p.position) not in off_groups:
                 continue
+            group = _pos_group(p.position)
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
                 best_off_wpa = wpa
@@ -1010,7 +1192,7 @@ def _select_individual_awards(
 
     # ── Defensive Player of the Year ──────────────────────────────────────
     # Minimum .600 team record required
-    def_groups = {"lineman", "safety"}
+    def_groups = {"lineman", "safety", "keeper_def"}
     best_def = None
     best_def_score = -1.0
     best_def_wpa = -999.0
@@ -1022,16 +1204,14 @@ def _select_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in def_groups:
+            group = _pos_group(p.position)
+            if group not in def_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _defensive_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
                 best_def_wpa = wpa
@@ -1141,16 +1321,14 @@ def _select_conference_individual_awards(
             if f"{t_name}::{p.name}" in seen:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                if group in ("lineman", "safety"):
-                    s = _stat_score_defense(pstats, mult)
-                else:
-                    s = _stat_score_any_offense(pstats, mult)
-                wpa = pstats.get("wpa", 0.0)
+            group = _pos_group(p.position)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if group in ("lineman", "safety", "keeper_def"):
+                s = _stat_score_defense(pstats, mult)
             else:
-                s = _national_poy_score(p, mult)
-                wpa = 0.0
+                s = _stat_score_any_offense(pstats, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_poy_score, best_poy_wpa):
                 best_poy_score = s
                 best_poy_wpa = wpa
@@ -1170,16 +1348,14 @@ def _select_conference_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in off_groups:
+            group = _pos_group(p.position)
+            if group not in off_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_off_score, best_off_wpa):
                 best_off_score = s
                 best_off_wpa = wpa
@@ -1189,7 +1365,7 @@ def _select_conference_individual_awards(
              f"{conference_name} Offensive Player of the Year ({best_off[1]})")
 
     # Conference Defensive Player of the Year — no min record, team mult handles it
-    def_groups = {"lineman", "safety"}
+    def_groups = {"lineman", "safety", "keeper_def"}
     best_def = None
     best_def_score = -1.0
     best_def_wpa = -999.0
@@ -1199,16 +1375,14 @@ def _select_conference_individual_awards(
             uid = f"{t_name}::{p.name}"
             if uid in seen:
                 continue
-            if _pos_group(p.position) not in def_groups:
+            group = _pos_group(p.position)
+            if group not in def_groups:
                 continue
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _defensive_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_def_score, best_def_wpa):
                 best_def_score = s
                 best_def_wpa = wpa
@@ -1216,6 +1390,33 @@ def _select_conference_individual_awards(
     if best_def:
         _add(best_def[0], best_def[1], f"{conference_name} Defensive POY",
              f"{conference_name} Defensive Player of the Year ({best_def[1]})")
+
+    # Conference Diamond Gloves — best keeper/safety by KPR (highest wins)
+    best_conf_dg = None
+    best_conf_dg_kpr = -1.0
+    for t_name, t in conf_team_objs.items():
+        for p in t.players:
+            uid = f"{t_name}::{p.name}"
+            if uid in seen:
+                continue
+            group = _pos_group(p.position)
+            if group not in ("keeper_def", "safety"):
+                continue
+            pstats = _get_stats(t_name, p.name)
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            if pstats.get("coverage_snaps", 0) < 20:
+                continue
+            kpr = _compute_kpr(pstats)
+            if kpr > best_conf_dg_kpr:
+                best_conf_dg_kpr = kpr
+                best_conf_dg = (p, t_name, pstats)
+    if best_conf_dg:
+        p, t, pstats = best_conf_dg
+        kpr = _compute_kpr(pstats)
+        era = _compute_keeper_era(pstats)
+        _add(p, t, f"{conference_name} Diamond Gloves",
+             f"{conference_name} outstanding defensive back — {kpr} KPR, {era:.2f} ERA ({t})")
 
     # Conference Freshman of the Year — no min record
     best_fresh = None
@@ -1229,14 +1430,12 @@ def _select_conference_individual_awards(
                 continue
             if getattr(p, "year", "") != "Freshman":
                 continue
+            group = _pos_group(p.position)
             pstats = _get_stats(t_name, p.name)
-            if pstats and pstats.get("games", 0) > 0:
-                group = _pos_group(p.position)
-                s = _stat_score_for_group(pstats, group, mult)
-                wpa = pstats.get("wpa", 0.0)
-            else:
-                s = _player_score(p, mult)
-                wpa = 0.0
+            if not pstats or not _passes_volume_gate(pstats, group, standings, t_name):
+                continue
+            s = _stat_score_for_group(pstats, group, mult)
+            wpa = pstats.get("wpa", 0.0)
             if _wpa_tiebreak(s, wpa, best_fresh_score, best_fresh_wpa):
                 best_fresh_score = s
                 best_fresh_wpa = wpa

@@ -123,13 +123,15 @@ def _get_league_configs() -> dict:
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint for Fly.io deployment monitoring."""
+    """Health check endpoint for Fly.io deployment monitoring.
+
+    Avoids calling get_available_teams() which reads ~199 JSON files from disk,
+    blocking the single uvicorn worker and causing request timeouts.
+    """
     import resource
-    team_count = len(get_available_teams())
     mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return {
         "status": "ok",
-        "teams": team_count,
         "sessions": len(sessions),
         "pro_sessions": len(pro_sessions),
         "wvl_sessions": len(wvl_sessions),
@@ -362,6 +364,12 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "offense_style": getattr(rec, 'offense_style', ''),
         "defense_style": getattr(rec, 'defense_style', ''),
         "dye": rec.dye_season_summary if hasattr(rec, 'dye_season_summary') else None,
+        # Conversion-by-zone and delta analytics
+        "season_5d_pct": round(rec.season_5d_pct, 1) if hasattr(rec, 'season_5d_pct') else 0.0,
+        "season_5d_own_deep_pct": round(rec.season_5d_own_deep_pct, 1) if hasattr(rec, 'season_5d_own_deep_pct') else 0.0,
+        "season_kill_pct": round(rec.season_kill_pct, 1) if hasattr(rec, 'season_kill_pct') else 0.0,
+        "avg_delta_yds": round(rec.avg_delta_yds, 1) if hasattr(rec, 'avg_delta_yds') else 0.0,
+        "conversion_by_zone": rec.season_conversion_by_zone if hasattr(rec, 'season_conversion_by_zone') else {},
     }
 
 
@@ -484,6 +492,10 @@ def _serialize_dynasty_status(session: dict) -> dict:
             "win_percentage": round(coach.win_percentage, 4),
             "championships": coach.championships,
             "playoff_appearances": coach.playoff_appearances,
+            "playoff_wins": getattr(coach, "playoff_wins", 0),
+            "conference_titles": getattr(coach, "conference_titles", 0),
+            "bowl_wins": getattr(coach, "bowl_wins", 0),
+            "bowl_appearances": getattr(coach, "bowl_appearances", 0),
             "years_coached": len(coach.years_coached),
             "years_experience": coach.years_experience,
             "season_records": sr,
@@ -1517,6 +1529,27 @@ def bowl_results(session_id: str):
     return {"bowl_results": results}
 
 
+def _apply_awards_to_players(season, honors) -> None:
+    """Write computed awards onto Player objects so roster endpoints include them."""
+    # Build player lookup: (team_name, player_name) -> Player
+    player_lookup = {}
+    for team_name, team in season.teams.items():
+        for p in team.players:
+            player_lookup[(team_name, p.name)] = p
+
+    for winner, level in honors.all_winners():
+        key = (winner.team_name, winner.player_name)
+        player = player_lookup.get(key)
+        if player is not None:
+            if not hasattr(player, "career_awards"):
+                player.career_awards = []
+            # Avoid duplicates on repeated endpoint calls
+            entry = {"year": honors.year, "award": winner.award_name, "level": level,
+                     "team": winner.team_name, "position": winner.position}
+            if entry not in player.career_awards:
+                player.career_awards.append(entry)
+
+
 @app.get("/sessions/{session_id}/season/awards")
 def season_awards(session_id: str):
     from engine.awards import compute_season_awards
@@ -1524,10 +1557,23 @@ def season_awards(session_id: str):
     season = _require_season(session)
 
     try:
+        conf_dict = season.conferences if hasattr(season, 'conferences') else None
         season_honors = compute_season_awards(
             season, year=2025,
-            conferences=season.conferences if hasattr(season, 'conferences') else None,
+            conferences=conf_dict,
         )
+        # Compute media awards (AP, UPI, The Lateral, TSN)
+        try:
+            from engine.media_awards import compute_media_awards
+            media = compute_media_awards(season=season, year=2025, conferences=conf_dict)
+            season_honors.media_awards = media
+        except Exception:
+            pass  # media awards are non-critical
+
+        # Append awards to Player objects so roster/player-card endpoints can
+        # display them (single-season mode has no dynasty card sync).
+        _apply_awards_to_players(season, season_honors)
+
         result = season_honors.to_dict()
         return result
     except Exception as e:
@@ -1697,6 +1743,57 @@ def remove_archive(archive_key: str):
     return {"message": "Archive deleted"}
 
 
+# ═══════════════════════════════════════════════════════════════
+# SAVE HISTORY — browse / restore previous versions of any save
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/history")
+def list_history(save_type: Optional[str] = None, limit: int = 100):
+    """List all historical save versions, optionally filtered by save_type."""
+    from engine.db import list_all_save_history
+    entries = list_all_save_history(save_type=save_type, limit=limit)
+    return {"history": entries}
+
+
+@app.get("/history/{save_type}/{save_key}")
+def get_save_history(save_type: str, save_key: str, limit: int = 50):
+    """List previous versions of a specific save."""
+    from engine.db import list_save_history
+    entries = list_save_history(save_type, save_key, limit=limit)
+    return {"history": entries, "save_type": save_type, "save_key": save_key}
+
+
+@app.get("/history/entry/{history_id}")
+def get_history_entry(history_id: int):
+    """Load the full data of a historical save version."""
+    from engine.db import load_save_history_entry
+    data = load_save_history_entry(history_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return data
+
+
+@app.post("/history/restore/{history_id}")
+def restore_history_entry(history_id: int):
+    """Restore a historical save version as the current save.
+
+    The current save is snapshotted to history first, so nothing is lost.
+    """
+    from engine.db import restore_save_from_history
+    ok = restore_save_from_history(history_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return {"message": "Save restored from history", "restored_history_id": history_id}
+
+
+@app.post("/history/prune")
+def prune_history(keep_per_key: int = 20):
+    """Delete old history entries, keeping the newest `keep_per_key` per save."""
+    from engine.db import prune_save_history
+    prune_save_history(keep_per_key=keep_per_key)
+    return {"message": f"Pruned history, kept newest {keep_per_key} per save"}
+
+
 @app.post("/sessions/{session_id}/dynasty")
 def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     from engine.geography import get_geographic_conference_defaults
@@ -1823,6 +1920,26 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         team_archetypes=dyn_archetypes,
     )
 
+    # ── Roster continuity: restore developed rosters from previous season ──
+    # If offseason_complete() persisted roster data, replace the fresh-loaded
+    # players with the developed ones (preserving team metadata like state).
+    next_rosters = getattr(dynasty, '_next_season_rosters', None)
+    if next_rosters:
+        from engine.player_card import PlayerCard, card_to_player
+        for team_name, team in teams.items():
+            card_dicts = next_rosters.get(team_name)
+            if card_dicts:
+                restored_players = []
+                for cd in card_dicts:
+                    try:
+                        card = PlayerCard.from_dict(cd)
+                        restored_players.append(card_to_player(card))
+                    except Exception:
+                        pass
+                if restored_players:
+                    team.players = restored_players
+        dynasty._next_season_rosters = None
+
     seed = req.ai_seed if req.ai_seed is not None else random.randint(0, 999999)
     ai_configs = auto_assign_all_teams(
         TEAMS_DIR,
@@ -1857,6 +1974,18 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     )
     dynasty.rivalries = rivalries_dict
 
+    # Generate coaching staffs if not yet created (first dynasty season)
+    if not dynasty._coaching_staffs:
+        from engine.coaching import generate_coaching_staff
+        all_team_names = list(dynasty.team_histories.keys())
+        staff_rng = random.Random(dynasty.current_year + 42)
+        for team_name in dynasty.team_histories:
+            prestige = dynasty.team_prestige.get(team_name, 50)
+            dynasty._coaching_staffs[team_name] = generate_coaching_staff(
+                team_name=team_name, prestige=prestige, year=dynasty.current_year, rng=staff_rng,
+                all_team_names=all_team_names,
+            )
+
     season = create_season(
         f"{dynasty.current_year} CVL Season",
         teams,
@@ -1872,6 +2001,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
     session["season"] = season
     season.human_teams = list(session.get("human_teams", []))
+    # Attach live prestige tracking so it updates after every game
+    dynasty.attach_prestige_to_season(season)
     session["phase"] = "regular"
     session["config"] = {
         "playoff_size": playoff_size,
@@ -2020,10 +2151,34 @@ def dynasty_advance(session_id: str):
     portal = TransferPortal(year=year)
     populate_portal(portal, offseason_player_cards, team_records, rng=rng)
 
-    recruit_pool = generate_recruit_class(year=year, size=300, rng=random.Random(year))
+    # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
+    from engine.recruiting import HSRecruitingPipeline
+    pool_size = 300
+    if dynasty._hs_pipeline is None:
+        dynasty._hs_pipeline = HSRecruitingPipeline()
+        dynasty._hs_pipeline.generate_initial_pipeline(
+            base_seed=year, size_per_class=pool_size,
+        )
+        # First year: no graduates yet, fall back to fresh generation
+        recruit_pool = generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
+    else:
+        graduates = dynasty._hs_pipeline.advance_year(
+            new_9th_seed=year, size=pool_size, rng=rng,
+        )
+        # Use pipeline graduates (12th graders) as the recruit pool
+        recruit_pool = [g.recruit for g in graduates] if graduates else generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
+
     recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
 
     human_nil = dynasty._nil_programs.get(human_team)
+    try:
+        from engine.db import save_hs_pipeline
+        save_hs_pipeline(
+            dynasty_name=dynasty.dynasty_name,
+            pipeline_data=dynasty._hs_pipeline.to_dict(),
+        )
+    except Exception:
+        pass
 
     session["offseason"] = {
         "portal": portal,
@@ -2116,6 +2271,10 @@ def dynasty_team_histories(session_id: str):
             "best_season_wins": history.best_season_wins,
             "best_season_year": history.best_season_year,
             "championship_years": history.championship_years,
+            "finalist_years": getattr(history, 'finalist_years', []),
+            "final_four_years": getattr(history, 'final_four_years', []),
+            "sweet_16_years": getattr(history, 'sweet_16_years', []),
+            "conference_title_years": getattr(history, 'conference_title_years', []),
             "season_records": history.season_records,
         }
 
@@ -2691,9 +2850,36 @@ def offseason_recruiting_resolve(session_id: str):
 @app.post("/sessions/{session_id}/offseason/complete")
 def offseason_complete(session_id: str):
     from engine.db import save_dynasty as db_save_dynasty
+    from engine.player_card import card_to_player
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
-    _require_offseason(session)
+    offseason = _require_offseason(session)
+
+    # ── Persist roster state for next season ──
+    # Apply portal transfers and recruiting results to player_cards,
+    # then save them so dynasty_start_season() can rebuild teams from
+    # developed rosters instead of loading fresh from disk.
+    player_cards = offseason.get("player_cards", {})
+
+    if player_cards:
+        # Apply portal transfers
+        portal = offseason.get("portal")
+        if portal:
+            for entry in portal.entries:
+                if entry.committed_to and entry.origin_team and entry.origin_team != entry.committed_to:
+                    origin_cards = player_cards.get(entry.origin_team, [])
+                    transferred = [c for c in origin_cards if c.full_name == entry.player_name]
+                    player_cards[entry.origin_team] = [
+                        c for c in origin_cards if c.full_name != entry.player_name
+                    ]
+                    dest_cards = player_cards.get(entry.committed_to, [])
+                    dest_cards.extend(transferred)
+                    player_cards[entry.committed_to] = dest_cards
+
+        # Serialize rosters for persistence
+        dynasty._next_season_rosters = {}
+        for team_name, cards in player_cards.items():
+            dynasty._next_season_rosters[team_name] = [c.to_dict() for c in cards]
 
     session.pop("offseason", None)
     session["phase"] = "setup"
@@ -3940,6 +4126,10 @@ def fiv_new_cycle(req: FIVCycleRequest):
         seed=req.seed,
     )
 
+    # Link cycle to CVL session for auto-sync on completion
+    if req.cvl_session_id:
+        cycle.cvl_season_id = req.cvl_session_id
+
     _fiv_active_cycle = cycle
     # Persist initial rankings so Rankings tab works immediately
     if cycle.rankings:
@@ -4177,10 +4367,105 @@ async def fiv_sim_world_cup_stage():
     save_fiv_cycle(_fiv_active_cycle)
     _fiv_active_cycle_data = _fiv_active_cycle.to_dict()
 
+    # Auto-sync FIV results to linked CVL dynasty career tracker
+    if _fiv_active_cycle.phase == "completed" and _fiv_active_cycle.cvl_season_id:
+        try:
+            _auto_sync_fiv_to_dynasty(_fiv_active_cycle)
+        except Exception:
+            pass  # Best-effort — don't break the FIV flow
+
     return {
         "phase": wc.phase,
         "champion": wc.champion,
         "total_matches": len(wc.all_results),
+    }
+
+
+def _auto_sync_fiv_to_dynasty(cycle):
+    """Auto-sync completed FIV cycle stats to the linked CVL dynasty."""
+    sid = cycle.cvl_season_id
+    if sid not in sessions:
+        return
+    sess = sessions[sid]
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        return
+
+    from engine.player_career_tracker import PlayerCareerTracker
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        tracker = PlayerCareerTracker()
+        dynasty.career_tracker = tracker
+
+    player_stats = {}
+    for nation_code, nt in cycle.national_teams.items():
+        for ntp in nt.roster:
+            pname = ntp.player.name
+            player_stats[pname] = {
+                "nation": nation_code,
+                "caps": ntp.caps,
+                "games": ntp.caps,
+                "yards": ntp.career_international_stats.get("yards", 0),
+                "tds": ntp.career_international_stats.get("tds", 0),
+                "competition": "FIV",
+                "world_cup": True,
+            }
+
+    tracker.record_fiv_cycle(player_stats, dynasty.current_year)
+
+    from engine.db import save_dynasty as db_save_dynasty
+    db_save_dynasty(dynasty, save_key=sid)
+
+
+@app.post("/api/fiv/sync-to-dynasty/{session_id}")
+def fiv_sync_to_dynasty(session_id: str):
+    """Record FIV cycle player stats into a dynasty's career tracker.
+
+    Call after an FIV cycle completes to update alumni profiles with
+    international career data (caps, yards, TDs, national team).
+    """
+    if not _fiv_active_cycle:
+        raise HTTPException(404, "No active FIV cycle")
+
+    sess = _get_session(session_id)
+    dynasty = sess.get("dynasty")
+    if not dynasty:
+        raise HTTPException(400, "Session has no dynasty")
+
+    from engine.player_career_tracker import PlayerCareerTracker
+    tracker = getattr(dynasty, "career_tracker", None)
+    if not tracker:
+        tracker = PlayerCareerTracker()
+        dynasty.career_tracker = tracker
+
+    cycle = _fiv_active_cycle
+    year = dynasty.current_year
+
+    # Build player stats from national team rosters and game results
+    player_stats = {}
+    for nation_code, nt in cycle.national_teams.items():
+        for ntp in nt.roster:
+            pname = ntp.player.name
+            player_stats[pname] = {
+                "nation": nation_code,
+                "caps": ntp.caps,
+                "games": ntp.caps,
+                "yards": ntp.career_international_stats.get("yards", 0),
+                "tds": ntp.career_international_stats.get("tds", 0),
+                "competition": "FIV",
+                "world_cup": cycle.world_cup is not None and cycle.phase == "completed",
+            }
+
+    tracker.record_fiv_cycle(player_stats, year)
+
+    # Persist
+    from engine.db import save_dynasty as db_save_dynasty
+    db_save_dynasty(dynasty, save_key=session_id)
+
+    return {
+        "synced_players": len(player_stats),
+        "dynasty": dynasty.dynasty_name,
+        "year": year,
     }
 
 

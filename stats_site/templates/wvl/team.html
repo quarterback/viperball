@@ -29,7 +29,6 @@
     {{ tier_name }}
     {% if team.get('country') %} &middot; {{ team.country }}{% endif %}
     {% if team.get('city') %} &middot; {{ team.city }}{% endif %}
-    {% if team.get('narrative_tag') %} &middot; <span style="color:var(--yellow)">[{{ team.narrative_tag }}]</span>{% endif %}
     {% if team.get('prestige') %} &middot; Prestige: {{ team.prestige }}{% endif %}
   </div>
   {% if team_achievement %}

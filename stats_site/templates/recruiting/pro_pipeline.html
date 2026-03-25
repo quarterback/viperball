@@ -76,7 +76,7 @@
     <td>{{ p.first_name }} {{ p.last_name }}</td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.stars >= 5 %}stat-elite{% elif p.stars >= 4 %}stat-good{% elif p.stars <= 2 %}stat-bad{% endif %}">
-      {{ "&#9733;" * p.stars }}{{ "&#9734;" * (5 - p.stars) }}
+      {{ ("&#9733;" * p.stars ~ "&#9734;" * (5 - p.stars))|safe }}
     </td>
     <td>{{ p.hometown }}</td>
     <td>{{ p.high_school }}</td>
@@ -116,7 +116,7 @@
     <td>{{ p.full_name }}</td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 75 %}stat-good{% endif %}">{{ p.overall }}</td>
-    <td class="num">{{ "&#9733;" * p.potential }}</td>
+    <td class="num">{{ ("&#9733;" * p.potential)|safe }}</td>
     <td>{{ p.college_team }}</td>
     <td>{{ conf_abbrev(p.conference) }}</td>
     <td class="num">{{ p.speed }}</td>

@@ -203,7 +203,6 @@ class WVLDynasty:
 
     def _inject_investment_modifiers(self, season: WVLMultiTierSeason):
         """Set investment_modifier attribute on each Team object before simming."""
-        from engine.wvl_config import CLUBS_BY_KEY
         owner_modifier = compute_investment_modifier(self.investment, self.investment_budget)
         for tier_season in season.tier_seasons.values():
             for team_key, team in tier_season.teams.items():
@@ -473,7 +472,6 @@ class WVLDynasty:
         summary["investment_boosts"] = boosts
 
         # 4b. Apply AI investment boosts to all other teams
-        from engine.wvl_config import CLUBS_BY_KEY
         for team_key, roster in self._team_rosters.items():
             if team_key == self.owner.club_key:
                 continue

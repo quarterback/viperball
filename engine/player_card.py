@@ -45,6 +45,8 @@ class GameLog:
     kick_deflections: int = 0
     keeper_tackles: int = 0
     keeper_bells: int = 0
+    points_allowed_in_coverage: float = 0.0
+    completions_allowed_in_coverage: int = 0
     return_yards: int = 0
     tackles: int = 0
     tfl: int = 0
@@ -77,6 +79,9 @@ class GameLog:
     # Line play
     blocks: int = 0
     pancakes: int = 0
+    # Snap counts
+    offensive_snaps: int = 0
+    defensive_snaps: int = 0
     # Impact
     wpa: float = 0.0
     plays_involved: int = 0
@@ -102,6 +107,8 @@ class GameLog:
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
+            "points_allowed_in_coverage": self.points_allowed_in_coverage,
+            "completions_allowed_in_coverage": self.completions_allowed_in_coverage,
             "return_yards": self.return_yards,
             "tackles": self.tackles,
             "tfl": self.tfl,
@@ -129,6 +136,8 @@ class GameLog:
             "muffs": self.muffs,
             "blocks": self.blocks,
             "pancakes": self.pancakes,
+            "offensive_snaps": self.offensive_snaps,
+            "defensive_snaps": self.defensive_snaps,
             "wpa": self.wpa,
             "plays_involved": self.plays_involved,
         }
@@ -167,6 +176,8 @@ class SeasonStats:
     kick_deflections: int = 0
     keeper_tackles: int = 0
     keeper_bells: int = 0
+    points_allowed_in_coverage: float = 0.0
+    completions_allowed_in_coverage: int = 0
     return_yards: int = 0
     tackles: int = 0
     tfl: int = 0
@@ -199,6 +210,9 @@ class SeasonStats:
     # Line play
     blocks: int = 0
     pancakes: int = 0
+    # Snap counts
+    offensive_snaps: int = 0
+    defensive_snaps: int = 0
     # Impact
     wpa: float = 0.0
     plays_involved: int = 0
@@ -263,6 +277,8 @@ class SeasonStats:
         self.kick_deflections += log.kick_deflections
         self.keeper_tackles += log.keeper_tackles
         self.keeper_bells += log.keeper_bells
+        self.points_allowed_in_coverage += log.points_allowed_in_coverage
+        self.completions_allowed_in_coverage += log.completions_allowed_in_coverage
         self.return_yards += log.return_yards
         self.tackles += log.tackles
         self.tfl += log.tfl
@@ -290,6 +306,8 @@ class SeasonStats:
         self.muffs += log.muffs
         self.blocks += log.blocks
         self.pancakes += log.pancakes
+        self.offensive_snaps += log.offensive_snaps
+        self.defensive_snaps += log.defensive_snaps
         self.wpa += log.wpa
         self.plays_involved += log.plays_involved
 
@@ -315,6 +333,8 @@ class SeasonStats:
             "kick_deflections": self.kick_deflections,
             "keeper_tackles": self.keeper_tackles,
             "keeper_bells": self.keeper_bells,
+            "points_allowed_in_coverage": self.points_allowed_in_coverage,
+            "completions_allowed_in_coverage": self.completions_allowed_in_coverage,
             "return_yards": self.return_yards,
             "tackles": self.tackles,
             "tfl": self.tfl,
@@ -738,6 +758,41 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
     )
 
 
+def card_to_player(card: PlayerCard) -> "Player":
+    """Convert a PlayerCard back to a game_engine.Player for season simulation."""
+    from engine.game_engine import Player
+    return Player(
+        number=card.number,
+        name=card.full_name,
+        position=card.position,
+        speed=card.speed,
+        stamina=card.stamina,
+        kicking=card.kicking,
+        lateral_skill=card.lateral_skill,
+        tackling=card.tackling,
+        agility=card.agility,
+        power=card.power,
+        awareness=card.awareness,
+        hands=card.hands,
+        kick_power=card.kick_power,
+        kick_accuracy=card.kick_accuracy,
+        player_id=card.player_id,
+        nationality=card.nationality,
+        hometown_city=card.hometown_city,
+        hometown_state=card.hometown_state,
+        hometown_country=card.hometown_country,
+        high_school=card.high_school,
+        height=card.height,
+        weight=card.weight,
+        year=card.year,
+        potential=card.potential,
+        development=card.development,
+        redshirt=card.redshirt,
+        redshirt_used=card.redshirt_used,
+        archetype=card.archetype,
+    )
+
+
 def game_result_to_log(player, opponent: str, week: int) -> GameLog:
     """Snapshot a Player's in-game counters into a GameLog after a game."""
     return GameLog(
@@ -760,6 +815,8 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         kick_deflections=player.game_kick_deflections,
         keeper_tackles=player.game_keeper_tackles,
         keeper_bells=player.game_keeper_bells,
+        points_allowed_in_coverage=player.game_points_allowed_in_coverage,
+        completions_allowed_in_coverage=player.game_completions_allowed_in_coverage,
         return_yards=player.game_keeper_return_yards,
         tackles=player.game_tackles,
         tfl=player.game_tfl,
@@ -787,6 +844,8 @@ def game_result_to_log(player, opponent: str, week: int) -> GameLog:
         muffs=getattr(player, 'game_muffs', 0),
         blocks=getattr(player, 'game_blocks', 0),
         pancakes=getattr(player, 'game_pancakes', 0),
+        offensive_snaps=getattr(player, 'game_offensive_snaps', 0),
+        defensive_snaps=getattr(player, 'game_defensive_snaps', 0),
         wpa=round(getattr(player, 'game_wpa', 0.0), 2),
         plays_involved=getattr(player, 'game_plays_involved', 0),
     )

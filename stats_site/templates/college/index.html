@@ -45,6 +45,26 @@
   </tbody>
 </table>
 {% else %}
-<div class="empty">No active college seasons. Start one from the main app.</div>
+<div class="empty">No active college seasons. Start one from the main app or import a dynasty save below.</div>
 {% endif %}
+
+<div class="card" style="padding: 20px; margin-top: 24px;">
+  <h2 style="margin-top: 0;">Import Dynasty Save</h2>
+  <p style="font-size: 13px; color: var(--fg-dim); margin-bottom: 16px;">
+    Upload a previously downloaded dynasty save file to view the season stats.
+    The save must include season data (downloaded from an active session).
+    The season is imported into the
+    <a href="/stats/archives/" style="color: var(--accent);">archives</a>
+    where you can browse standings, schedule, players, playoffs, and awards.
+  </p>
+  <form id="import-form" action="/stats/college/import" method="post" enctype="multipart/form-data"
+        style="display: flex; align-items: center; gap: 12px;">
+    <input type="file" name="file" accept=".json"
+           style="font-family: inherit; font-size: 12px; color: var(--fg);" />
+    <button type="submit"
+            style="background: var(--accent); color: var(--bg); border: none; padding: 8px 20px; font-family: inherit; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">
+      Import
+    </button>
+  </form>
+</div>
 {% endblock %}

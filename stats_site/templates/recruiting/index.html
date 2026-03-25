@@ -63,7 +63,7 @@
     <td>{{ p.name }}</td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}">
-      {{ "&#9733;" * p.scouted_stars }}
+      {{ ("&#9733;" * p.scouted_stars)|safe }}
     </td>
     <td>{{ p.grade }}</td>
     <td>{{ p.hometown }}</td>

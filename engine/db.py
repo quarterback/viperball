@@ -78,6 +78,20 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_saves_updated
                 ON saves(updated_at DESC);
+
+            CREATE TABLE IF NOT EXISTS save_history (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     TEXT    NOT NULL DEFAULT 'default',
+                save_type   TEXT    NOT NULL,
+                save_key    TEXT    NOT NULL,
+                label       TEXT    NOT NULL DEFAULT '',
+                data        TEXT    NOT NULL,
+                saved_at    REAL    NOT NULL,
+                superseded_at REAL  NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_history_lookup
+                ON save_history(user_id, save_type, save_key, superseded_at DESC);
         """)
         conn.commit()
         _log.info(f"Database initialized at {_db_path}")
@@ -89,6 +103,10 @@ def init_db():
 # CORE CRUD
 # ═══════════════════════════════════════════════════════════════
 
+# Save types that should NOT generate history (high-volume, low-value)
+_NO_HISTORY_TYPES = frozenset({"box_score", "season_archive_meta"})
+
+
 def save_blob(
     save_type: str,
     save_key: str,
@@ -96,11 +114,23 @@ def save_blob(
     label: str = "",
     user_id: str = "default",
 ):
-    """Upsert a JSON blob. Overwrites if the (user_id, save_type, save_key) already exists."""
+    """Upsert a JSON blob. Snapshots the old version to save_history before overwriting."""
     now = time.time()
     blob = json.dumps(data, default=str)
     conn = _connect()
     try:
+        # Snapshot the existing row into save_history before overwriting
+        # (skip for high-volume types like box scores)
+        if save_type not in _NO_HISTORY_TYPES:
+            conn.execute(
+                """
+                INSERT INTO save_history (user_id, save_type, save_key, label, data, saved_at, superseded_at)
+                SELECT user_id, save_type, save_key, label, data, created_at, ?
+                FROM saves
+                WHERE user_id=? AND save_type=? AND save_key=?
+                """,
+                (now, user_id, save_type, save_key),
+            )
         conn.execute(
             """
             INSERT INTO saves (user_id, save_type, save_key, label, data, created_at, updated_at)
@@ -190,6 +220,153 @@ def delete_all_for_user(user_id: str = "default"):
     try:
         conn.execute("DELETE FROM saves WHERE user_id=?", (user_id,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# SAVE HISTORY — browse and restore previous versions
+# ═══════════════════════════════════════════════════════════════
+
+def list_save_history(
+    save_type: str,
+    save_key: str,
+    user_id: str = "default",
+    limit: int = 50,
+) -> list[dict]:
+    """List previous versions of a save (metadata only, newest first)."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, save_type, save_key, label, saved_at, superseded_at,
+                   length(data) as data_size
+            FROM save_history
+            WHERE user_id=? AND save_type=? AND save_key=?
+            ORDER BY superseded_at DESC
+            LIMIT ?
+            """,
+            (user_id, save_type, save_key, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def load_save_history_entry(history_id: int) -> Optional[dict]:
+    """Load a specific historical save by its history row id."""
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT data FROM save_history WHERE id=?",
+            (history_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return json.loads(row["data"])
+    finally:
+        conn.close()
+
+
+def restore_save_from_history(history_id: int) -> bool:
+    """Restore a historical version as the current save.
+
+    The current save is first snapshotted to history (via save_blob),
+    then replaced with the historical data.
+    Returns True on success, False if history_id not found.
+    """
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT user_id, save_type, save_key, label, data FROM save_history WHERE id=?",
+            (history_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        data = json.loads(row["data"])
+    finally:
+        conn.close()
+    # save_blob will snapshot the current version before overwriting
+    save_blob(row["save_type"], row["save_key"], data,
+              label=row["label"], user_id=row["user_id"])
+    _log.info(f"Restored history id={history_id} as current {row['save_type']}/{row['save_key']}")
+    return True
+
+
+def list_all_save_history(
+    user_id: str = "default",
+    save_type: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """List all historical saves for a user, optionally filtered by type."""
+    conn = _connect()
+    try:
+        if save_type:
+            rows = conn.execute(
+                """
+                SELECT id, save_type, save_key, label, saved_at, superseded_at,
+                       length(data) as data_size
+                FROM save_history
+                WHERE user_id=? AND save_type=?
+                ORDER BY superseded_at DESC
+                LIMIT ?
+                """,
+                (user_id, save_type, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, save_type, save_key, label, saved_at, superseded_at,
+                       length(data) as data_size
+                FROM save_history
+                WHERE user_id=?
+                ORDER BY superseded_at DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def prune_save_history(
+    keep_per_key: int = 20,
+    user_id: str = "default",
+):
+    """Delete old history entries, keeping the most recent `keep_per_key` per (save_type, save_key).
+
+    Prevents unbounded history growth.
+    """
+    conn = _connect()
+    try:
+        # Find distinct (save_type, save_key) combos
+        combos = conn.execute(
+            "SELECT DISTINCT save_type, save_key FROM save_history WHERE user_id=?",
+            (user_id,),
+        ).fetchall()
+        total_deleted = 0
+        for combo in combos:
+            # Keep the newest `keep_per_key` rows, delete the rest
+            deleted = conn.execute(
+                """
+                DELETE FROM save_history
+                WHERE user_id=? AND save_type=? AND save_key=?
+                  AND id NOT IN (
+                    SELECT id FROM save_history
+                    WHERE user_id=? AND save_type=? AND save_key=?
+                    ORDER BY superseded_at DESC
+                    LIMIT ?
+                  )
+                """,
+                (user_id, combo["save_type"], combo["save_key"],
+                 user_id, combo["save_type"], combo["save_key"],
+                 keep_per_key),
+            ).rowcount
+            total_deleted += deleted
+        conn.commit()
+        if total_deleted:
+            _log.info(f"Pruned {total_deleted} old history entries for user={user_id}")
     finally:
         conn.close()
 
@@ -1106,6 +1283,18 @@ def serialize_dynasty(dynasty) -> dict:
     else:
         data["coaching_staffs"] = {}
 
+    # Next-season rosters (persisted by offseason_complete for roster continuity)
+    next_rosters = getattr(dynasty, '_next_season_rosters', None)
+    if next_rosters:
+        data["next_season_rosters"] = next_rosters
+
+    # Career tracker (alumni / hall-of-fame data)
+    tracker = getattr(dynasty, 'career_tracker', None)
+    if tracker and tracker.careers:
+        data["career_tracker"] = {
+            k: v.to_dict() for k, v in tracker.careers.items()
+        }
+
     return data
 
 
@@ -1179,6 +1368,19 @@ def deserialize_dynasty(data: dict):
     for conf in dynasty.conferences.values():
         if conf.championship_history:
             conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
+
+    # Next-season rosters (roster continuity across seasons)
+    next_rosters = data.get("next_season_rosters")
+    if next_rosters:
+        dynasty._next_season_rosters = next_rosters
+
+    # Career tracker (alumni / hall-of-fame data)
+    if data.get("career_tracker"):
+        from engine.player_career_tracker import PlayerCareerTracker, PlayerCareerRecord
+        tracker = PlayerCareerTracker()
+        for key, record_data in data["career_tracker"].items():
+            tracker.careers[key] = PlayerCareerRecord.from_dict(record_data)
+        dynasty.career_tracker = tracker
 
     return dynasty
 
@@ -1300,6 +1502,58 @@ def save_box_scores_bulk(
             _log.debug(f"Bulk-saved {len(rows)} box scores for session {session_id}")
     finally:
         conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMMISSIONER MODE PERSISTENCE
+# ═══════════════════════════════════════════════════════════════
+
+def save_commissioner_dynasty(dynasty, save_key: str = "current", user_id: str = "default"):
+    """Save a WVLCommissionerDynasty to the database."""
+    data = dynasty.to_dict()
+    save_blob("wvl_commissioner", save_key, data,
+              label=dynasty.dynasty_name, user_id=user_id)
+    _log.info(f"Saved commissioner dynasty '{dynasty.dynasty_name}' for user={user_id}")
+
+
+def load_commissioner_dynasty(save_key: str = "current", user_id: str = "default"):
+    """Load a WVLCommissionerDynasty. Returns the dynasty or None."""
+    data = load_blob("wvl_commissioner", save_key, user_id=user_id)
+    if data is None:
+        return None
+    try:
+        from engine.wvl_commissioner import WVLCommissionerDynasty
+        return WVLCommissionerDynasty.from_dict(data)
+    except Exception as e:
+        _log.warning(f"Failed to deserialize commissioner dynasty: {e}")
+        return None
+
+
+def delete_commissioner_dynasty(save_key: str = "current", user_id: str = "default"):
+    """Delete a saved commissioner dynasty."""
+    delete_blob("wvl_commissioner", save_key, user_id=user_id)
+
+
+def list_commissioner_dynasties(user_id: str = "default") -> list:
+    """List saved commissioner dynasties."""
+    return list_saves("wvl_commissioner", user_id=user_id)
+
+
+def save_hall_of_fame_entry(entry_data: dict, player_key: str, user_id: str = "default"):
+    """Save an individual Hall of Fame entry as a permanent artifact."""
+    save_blob("hall_of_fame", player_key, entry_data,
+              label=entry_data.get("full_name", player_key), user_id=user_id)
+
+
+def load_hall_of_fame(user_id: str = "default") -> list:
+    """Load all Hall of Fame entries."""
+    metas = list_saves("hall_of_fame", user_id=user_id)
+    entries = []
+    for meta in metas:
+        data = load_blob("hall_of_fame", meta["save_key"], user_id=user_id)
+        if data:
+            entries.append(data)
+    return entries
 
 
 # ═══════════════════════════════════════════════════════════════

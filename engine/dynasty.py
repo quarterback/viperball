@@ -26,6 +26,7 @@ from engine.injuries import InjuryTracker
 from engine.development import apply_team_development, apply_redshirt_decisions, get_preseason_breakout_candidates, DevelopmentReport
 from engine.ai_coach import auto_assign_all_teams
 from engine.player_card import PlayerCard, player_to_card
+from engine.player_career_tracker import PlayerCareerTracker
 from engine.recruiting import (
     generate_recruit_class,
     RecruitingBoard,
@@ -111,8 +112,12 @@ class TeamHistory:
     best_season_wins: int = 0
     best_season_year: Optional[int] = None
 
-    # Championships
+    # Championships & postseason milestones
     championship_years: List[int] = field(default_factory=list)
+    finalist_years: List[int] = field(default_factory=list)
+    final_four_years: List[int] = field(default_factory=list)
+    sweet_16_years: List[int] = field(default_factory=list)
+    conference_title_years: List[int] = field(default_factory=list)
 
     @property
     def win_percentage(self) -> float:
@@ -193,6 +198,10 @@ class Coach:
     career_losses: int = 0
     championships: int = 0
     playoff_appearances: int = 0
+    playoff_wins: int = 0
+    conference_titles: int = 0
+    bowl_wins: int = 0
+    bowl_appearances: int = 0
 
     # Years coached
     years_coached: List[int] = field(default_factory=list)
@@ -300,8 +309,17 @@ class Dynasty:
     # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
     _hs_pipeline: Optional[object] = field(default=None, repr=False)
 
+    # Persisted roster data for next season (populated by offseason_complete)
+    _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
+    # Program infrastructure per team: team_name -> {facilities, campus_life, ...}
+    # Initialised from team JSON at dynasty creation; modified by investment/decay.
+    _team_infrastructure: Dict[str, Dict[str, int]] = field(default_factory=dict, repr=False)
+
     # Records
     record_book: RecordBook = field(default_factory=RecordBook)
+
+    # Career tracker — tracks players across college, pro, and international phases
+    career_tracker: PlayerCareerTracker = field(default_factory=PlayerCareerTracker)
 
     def add_conference(self, name: str, teams: List[str]):
         """Add a conference to the dynasty"""
@@ -487,6 +505,30 @@ class Dynasty:
             for t, r in self.seasons[year - 1].standings.items():
                 prev_wins[t] = r.wins
 
+        # ── Determine playoff round reached per team ──
+        # Week 1000 = championship, 999 = semifinals (Final Four),
+        # 998 = quarterfinals (Sweet 16), 997/996 = earlier rounds
+        _playoff_round_reached: Dict[str, int] = {}  # team -> highest week they played in
+        for game in season.playoff_bracket:
+            for t in (game.home_team, game.away_team):
+                if t not in _playoff_round_reached or game.week > _playoff_round_reached[t]:
+                    _playoff_round_reached[t] = game.week
+
+        # Determine finalist (loser of week 1000 championship game)
+        _finalist = None
+        for game in season.playoff_bracket:
+            if game.week == 1000 and game.completed and game.home_score is not None:
+                if game.home_score > game.away_score:
+                    _finalist = game.away_team
+                else:
+                    _finalist = game.home_team
+                break
+
+        # Pre-compute conference champions and playoff teams once
+        playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
+        conf_champs = season.get_conference_champions() if self.conferences else {}
+        conf_champ_set = set(conf_champs.values())
+
         # Update team histories
         for team_name, record in season.standings.items():
             history = self.team_histories[team_name]
@@ -498,7 +540,6 @@ class Dynasty:
             history.total_points_against += record.points_against
 
             # Check if playoff team
-            playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
             if team_name in playoff_teams:
                 history.total_playoff_appearances += 1
 
@@ -507,9 +548,22 @@ class Dynasty:
                 history.total_championships += 1
                 history.championship_years.append(year)
 
+            # Track postseason milestones (highest round only)
+            if team_name == _finalist:
+                history.finalist_years.append(year)
+            elif team_name != season.champion:
+                highest_week = _playoff_round_reached.get(team_name, 0)
+                if highest_week >= 999:
+                    # Reached Final Four (semifinalist) but lost in semis
+                    history.final_four_years.append(year)
+                elif highest_week == 998:
+                    # Reached quarterfinals (Sweet 16) but lost there
+                    history.sweet_16_years.append(year)
+
             # Conference champion check
-            conf_champs = season.get_conference_champions() if self.conferences else {}
-            is_conf_champ = team_name in set(conf_champs.values())
+            is_conf_champ = team_name in conf_champ_set
+            if is_conf_champ:
+                history.conference_title_years.append(year)
 
             # Bowl game tracking
             bowl_team = False
@@ -538,7 +592,20 @@ class Dynasty:
                 "points_for": record.points_for,
                 "points_against": record.points_against,
                 "avg_opi": record.avg_opi,
+                "avg_ppd": record.avg_ppd,
+                "avg_conversion_pct": record.avg_conversion_pct,
+                "avg_lateral_pct": record.avg_lateral_pct,
+                "avg_explosive": record.avg_explosive,
+                "avg_to_margin": record.avg_to_margin,
+                "season_5d_pct": record.season_5d_pct,
+                "season_5d_own_deep_pct": record.season_5d_own_deep_pct,
+                "season_kill_pct": record.season_kill_pct,
+                "avg_delta_yds": record.avg_delta_yds,
+                "conversion_by_zone": record.season_conversion_by_zone,
                 "champion": (team_name == season.champion),
+                "finalist": (team_name == _finalist),
+                "final_four": (team_name != season.champion and team_name != _finalist and _playoff_round_reached.get(team_name, 0) >= 999),
+                "sweet_16": (_playoff_round_reached.get(team_name, 0) == 998),
                 "playoff": (team_name in playoff_teams),
                 "conference_champion": is_conf_champ,
                 "bowl": bowl_team,
@@ -552,6 +619,7 @@ class Dynasty:
                 history.best_season_year = year
 
         # ── Update coaching staff postseason stats & coaching trees ──
+        playoff_wins_by_team: Dict[str, int] = {}
         if hasattr(self, '_coaching_staffs') and self._coaching_staffs:
             # Conference champions
             conf_champions = season.get_conference_champions() if self.conferences else {}
@@ -593,6 +661,15 @@ class Dynasty:
                 if hc is None:
                     continue
 
+                # Season W/L
+                rec = season.standings.get(team_name)
+                if rec:
+                    hc.career_wins += rec.wins
+                    hc.career_losses += rec.losses
+                    hc.seasons_coached += 1
+                # Championship
+                if team_name == season.champion:
+                    hc.championships += 1
                 # Conference title
                 if team_name in conf_champ_teams:
                     hc.conference_titles += 1
@@ -605,6 +682,18 @@ class Dynasty:
                 # Championship game appearance
                 if team_name in championship_game_teams:
                     hc.championship_appearances += 1
+                # Bowl game
+                for bg in getattr(season, 'bowl_games', []):
+                    g = bg.game
+                    if team_name in (g.home_team, g.away_team):
+                        if g.completed and g.home_score is not None and g.away_score is not None:
+                            if (g.home_score > g.away_score and team_name == g.home_team) or \
+                               (g.away_score > g.home_score and team_name == g.away_team):
+                                hc.career_awards.append({
+                                    "year": year, "award": f"{bg.name} Champion",
+                                    "level": "postseason", "team": team_name,
+                                })
+                        break
 
                 # Update coaching tree for all assistant coaches
                 for role, card in staff.items():
@@ -645,6 +734,33 @@ class Dynasty:
             if self.coach.team_name in playoff_teams:
                 self.coach.playoff_appearances += 1
 
+            # Playoff wins
+            coach_pw = playoff_wins_by_team.get(self.coach.team_name, 0)
+            self.coach.playoff_wins += coach_pw
+
+            # Conference title
+            conf_champions = season.get_conference_champions() if self.conferences else {}
+            coach_conf_champ_teams = set(conf_champions.values())
+            if self.coach.team_name in coach_conf_champ_teams:
+                self.coach.conference_titles += 1
+
+            # Bowl game
+            coach_bowl = False
+            coach_bowl_win = False
+            for bg in getattr(season, 'bowl_games', []):
+                g = bg.game
+                if self.coach.team_name in (g.home_team, g.away_team):
+                    coach_bowl = True
+                    if g.completed and g.home_score is not None and g.away_score is not None:
+                        if (g.home_score > g.away_score and self.coach.team_name == g.home_team) or \
+                           (g.away_score > g.home_score and self.coach.team_name == g.away_team):
+                            coach_bowl_win = True
+                    break
+            if coach_bowl:
+                self.coach.bowl_appearances += 1
+            if coach_bowl_win:
+                self.coach.bowl_wins += 1
+
             # Store coach season record
             self.coach.season_records[year] = {
                 "wins": coach_record.wins,
@@ -653,6 +769,9 @@ class Dynasty:
                 "points_against": coach_record.points_against,
                 "champion": (self.coach.team_name == season.champion),
                 "playoff": (self.coach.team_name in playoff_teams),
+                "conference_champion": (self.coach.team_name in coach_conf_champ_teams),
+                "bowl": coach_bowl,
+                "bowl_win": coach_bowl_win,
             }
 
         # Team-level standings
@@ -833,6 +952,9 @@ class Dynasty:
         # Publish graduates to CVL→WVL bridge (before roster maintenance removes them)
         self._publish_graduates_to_bridge(season, year)
 
+        # Record graduates in career tracker for alumni/hall-of-fame pages
+        self._record_graduates_in_tracker(season, year)
+
         # Roster maintenance: graduate seniors, recruit freshmen
         self._roster_maintenance(season, rng=rng or random.Random(year + 99))
 
@@ -879,6 +1001,26 @@ class Dynasty:
             # Bridge DB not available — silently skip
             return 0
 
+    def _record_graduates_in_tracker(self, season: Season, year: int):
+        """Feed graduating players into the career tracker for alumni pages.
+
+        Captures full career stats so they survive after roster maintenance
+        removes them from team rosters.
+        """
+        try:
+            for team_name, team in season.teams.items():
+                for player in team.players:
+                    py = getattr(player, "year", "")
+                    if py in ("Senior", "Graduate"):
+                        card = player_to_card(player, team_name)
+                        d = card.to_dict()
+                        d["graduating_from"] = team_name
+                        d["conference"] = self.get_team_conference(team_name)
+                        d["college_prestige"] = self.team_prestige.get(team_name, 50)
+                        self.career_tracker.ingest_cvl_graduates([d], year)
+        except Exception:
+            pass
+
     def run_offseason(
         self,
         season: Season,
@@ -918,17 +1060,74 @@ class Dynasty:
         result: dict = {}
 
         # ── 1. Update team prestige ──
+        # Prestige now updates per-game during the season (via Season.team_prestige).
+        # At offseason we apply regression toward mean so extreme values drift back,
+        # then give a championship bump.  If no live prestige exists yet (first
+        # season or legacy save), fall back to the old compute_team_prestige.
+        from engine.nil_system import apply_season_end_regression
         for team_name, history in self.team_histories.items():
-            recent_wins = 5
-            if prev_year in history.season_records:
-                recent_wins = history.season_records[prev_year].get("wins", 5)
-            self.team_prestige[team_name] = compute_team_prestige(
-                all_time_wins=history.total_wins,
-                all_time_losses=history.total_losses,
-                championships=history.total_championships,
-                recent_wins=recent_wins,
-            )
+            if team_name in self.team_prestige and self.team_prestige[team_name] != 50:
+                # Live prestige already moved during the season — just regress
+                self.team_prestige[team_name] = apply_season_end_regression(
+                    self.team_prestige[team_name],
+                )
+                # Championship bump (on top of whatever they earned in-season)
+                if team_name == season.champion:
+                    self.team_prestige[team_name] = min(
+                        99, self.team_prestige[team_name] + 5
+                    )
+            else:
+                # Fallback: legacy path for first season or saves without live prestige
+                recent_wins = 5
+                if prev_year in history.season_records:
+                    recent_wins = history.season_records[prev_year].get("wins", 5)
+                self.team_prestige[team_name] = compute_team_prestige(
+                    all_time_wins=history.total_wins,
+                    all_time_losses=history.total_losses,
+                    championships=history.total_championships,
+                    recent_wins=recent_wins,
+                )
         result["prestige"] = dict(self.team_prestige)
+
+        # ── 1a. Infrastructure decay + AI investment ──
+        # Lazy-init infrastructure from team JSON files if not loaded yet.
+        if not self._team_infrastructure:
+            import json
+            from pathlib import Path
+            teams_dir = Path(__file__).parent.parent / "data" / "teams"
+            for team_name in self.team_histories:
+                team_file = teams_dir / f"{team_name}.json"
+                if team_file.exists():
+                    try:
+                        with open(team_file) as f:
+                            td = json.load(f)
+                        infra = td.get("program_infrastructure")
+                        if infra:
+                            self._team_infrastructure[team_name] = dict(infra)
+                    except (json.JSONDecodeError, OSError):
+                        pass
+                if team_name not in self._team_infrastructure:
+                    # Default mid-range infrastructure
+                    self._team_infrastructure[team_name] = {
+                        "facilities": 5, "campus_life": 5, "location": 5,
+                        "coaching_development": 5, "nil_program": 5,
+                    }
+
+        # Apply yearly decay (-0.1 rounded) and AI auto-investment
+        for team_name, infra in self._team_infrastructure.items():
+            prestige = self.team_prestige.get(team_name, 50)
+            for key in list(infra.keys()):
+                # Decay: everything slowly degrades without investment
+                infra[key] = max(1, infra[key] - 1 if rng.random() < 0.15 else infra[key])
+            # AI investment: higher-prestige programs invest more
+            if team_name != human_team:
+                invest_budget = max(1, prestige // 25)  # 0-3 upgrades
+                upgradeable = [k for k, v in infra.items() if v < 10]
+                if upgradeable:
+                    targets = rng.sample(upgradeable, min(invest_budget, len(upgradeable)))
+                    for key in targets:
+                        infra[key] = min(10, infra[key] + 1)
+        result["infrastructure"] = {tn: dict(i) for tn, i in self._team_infrastructure.items()}
 
         # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
         from engine.coaching import (
@@ -1262,6 +1461,19 @@ class Dynasty:
                 if bonus > 0:
                     coaching_prestige_bonus[tn] = bonus
 
+        # Build infrastructure and roster dicts for recruiting
+        _team_infra: Dict[str, Dict[str, int]] = {}
+        _team_rosters_for_recruit: Dict[str, list] = {}
+        for tn in self.team_histories:
+            # Infrastructure: stored on team data or defaults
+            if hasattr(self, '_team_infrastructure') and tn in self._team_infrastructure:
+                _team_infra[tn] = self._team_infrastructure[tn]
+            # Roster: use player_cards if available
+            if player_cards and tn in player_cards:
+                _team_rosters_for_recruit[tn] = [
+                    {"position": getattr(c, "position", "")} for c in player_cards[tn]
+                ]
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -1276,6 +1488,8 @@ class Dynasty:
             rng=rng,
             team_coaching_scores=team_coaching_scores,
             coaching_prestige_bonus=coaching_prestige_bonus,
+            team_infrastructure=_team_infra if _team_infra else None,
+            team_rosters=_team_rosters_for_recruit if _team_rosters_for_recruit else None,
         )
 
         self.recruiting_history[year] = {
@@ -1345,6 +1559,15 @@ class Dynasty:
     def get_team_prestige(self, team_name: str) -> int:
         """Return current prestige rating for a team."""
         return self.team_prestige.get(team_name, 50)
+
+    def attach_prestige_to_season(self, season: Season) -> None:
+        """Inject live prestige tracking into a Season so it updates per-game.
+
+        Call this after creating the Season but before simulating any games.
+        The Season will mutate self.team_prestige in-place after every game
+        via adjust_prestige_postgame.
+        """
+        season.team_prestige = self.team_prestige
 
     def _record_awards_to_cards(
         self,
@@ -1726,9 +1949,16 @@ class Dynasty:
                 if team_name == champion:
                     history.total_championships += 1
                     history.championship_years.append(year)
+                elif team_name == result.get("runner_up"):
+                    history.finalist_years.append(year)
+                elif team_name in result.get("final_four", []):
+                    history.final_four_years.append(year)
 
                 if team_name in result.get("_playoff_teams", set()):
                     history.total_playoff_appearances += 1
+
+                if team_name in result.get("_conf_champs", set()):
+                    history.conference_title_years.append(year)
 
             if progress_callback:
                 progress_callback(i + 1, num_years)

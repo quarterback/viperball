@@ -21,9 +21,11 @@
   <a href="/stats/college/{{ session_id }}/players" class="active">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
   <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
   <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
   <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
@@ -193,7 +195,7 @@
     <th class="num">#</th><th>Name</th><th>Team</th><th>Pos</th><th class="num">GP</th>
     <th class="num">COMP</th><th class="num">ATT</th><th class="num">KP%</th>
     <th class="num">KP YDS</th><th class="num">KP TD</th><th class="num">KP INT</th>
-    <th class="num">REC</th>
+    <th class="num">REC</th><th class="num">REC YDS</th><th class="num">REC TD</th>
   </tr></thead>
   <tbody>
   {% for p in players %}
@@ -206,6 +208,8 @@
     <td class="num {% if p.kick_pass_tds >= 3 %}stat-elite{% endif %}">{{ p.kick_pass_tds }}</td>
     <td class="num {% if p.kick_pass_interceptions > 3 %}stat-bad{% endif %}">{{ p.kick_pass_interceptions }}</td>
     <td class="num">{{ p.kick_pass_receptions }}</td>
+    <td class="num {% if p.kick_pass_receptions > 0 and p.kick_pass_yards >= 200 %}stat-good{% endif %}">{% if p.kick_pass_receptions > 0 %}{{ p.kick_pass_yards }}{% else %}&mdash;{% endif %}</td>
+    <td class="num {% if p.kick_pass_receptions > 0 and p.kick_pass_tds >= 3 %}stat-elite{% endif %}">{% if p.kick_pass_receptions > 0 %}{{ p.kick_pass_tds }}{% else %}&mdash;{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>

@@ -1,10 +1,10 @@
 {
   "team_info": {
     "school_id": "new_hampshire",
-    "school_name": "University of New Hampshire",
+    "school_name": "New Hampshire",
     "abbreviation": "UNH",
     "mascot": "Wildcats",
-    "conference": "Yankee Fourteen",
+    "conference": "Northern Shield",
     "city": "Durham",
     "state": "NH",
     "colors": [
@@ -383,7 +383,7 @@
       },
       {
         "number": 24,
-        "name": "Xavière Richard",
+        "name": "Xavi\u00e8re Richard",
         "position": "Lineman",
         "height": "6-2",
         "weight": 201,
@@ -927,7 +927,7 @@
       },
       {
         "number": 68,
-        "name": "Birgit González",
+        "name": "Birgit Gonz\u00e1lez",
         "position": "Shiftback/Back",
         "height": "5-9",
         "weight": 184,

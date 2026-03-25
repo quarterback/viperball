@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "xavier",
-    "school_name": "Xavier University",
+    "school_name": "Xavier",
     "abbreviation": "XU",
     "mascot": "Musketeers",
     "conference": "Big East",
@@ -933,12 +933,12 @@
         "weight": 168,
         "year": "Sophomore",
         "hometown": {
-          "city": "M\u00e1laga",
+          "city": "Málaga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "M\u00e1laga Academy",
+        "high_school": "Málaga Academy",
         "nationality": "European",
         "archetype": "hybrid_viper",
         "potential": 3,

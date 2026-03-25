@@ -1,15 +1,15 @@
 {
   "team_info": {
-    "school_id": "belmont",
-    "school_name": "Belmont University",
-    "abbreviation": "BEL",
-    "mascot": "Bruins",
+    "school_id": "umass",
+    "school_name": "UMass",
+    "abbreviation": "UMASS",
+    "mascot": "Minutemen",
     "conference": "Midwest States Interscholastic Association",
-    "city": "Nashville",
-    "state": "TN",
+    "city": "Amherst",
+    "state": "MA",
     "colors": [
-      "Navy",
-      "Red"
+      "Maroon",
+      "White"
     ]
   },
   "identity": {

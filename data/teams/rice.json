@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "rice",
-    "school_name": "Rice University",
+    "school_name": "Rice",
     "abbreviation": "RICE",
     "mascot": "Owls",
     "conference": "Border Conference",
@@ -479,7 +479,7 @@
       },
       {
         "number": 36,
-        "name": "Renee T\u016bkiata",
+        "name": "Renee Tūkiata",
         "position": "Viper/Back",
         "height": "5-10",
         "weight": 172,
@@ -671,7 +671,7 @@
       },
       {
         "number": 48,
-        "name": "M\u00e9lanie Lapointe",
+        "name": "Mélanie Lapointe",
         "position": "Back/Safety",
         "height": "5-6",
         "weight": 169,
@@ -959,7 +959,7 @@
       },
       {
         "number": 68,
-        "name": "Grace Fern\u00e1ndez",
+        "name": "Grace Fernández",
         "position": "Wingback/End",
         "height": "5-10",
         "weight": 197,

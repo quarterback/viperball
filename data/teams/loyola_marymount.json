@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "loyola_marymount",
-    "school_name": "Loyola Marymount University",
+    "school_name": "Loyola Marymount",
     "abbreviation": "LMU",
     "mascot": "Lions",
     "conference": "Mountain West",
@@ -37,12 +37,12 @@
         "weight": 184,
         "year": "Freshman",
         "hometown": {
-          "city": "M\u00e1laga",
+          "city": "Málaga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "M\u00e1laga Academy",
+        "high_school": "Málaga Academy",
         "nationality": "European",
         "archetype": "hybrid_viper",
         "potential": 5,
@@ -741,12 +741,12 @@
         "weight": 161,
         "year": "Junior",
         "hometown": {
-          "city": "M\u00e1laga",
+          "city": "Málaga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "M\u00e1laga Academy",
+        "high_school": "Málaga Academy",
         "nationality": "European",
         "archetype": "return_keeper",
         "potential": 5,
@@ -927,7 +927,7 @@
       },
       {
         "number": 79,
-        "name": "\u00c9lodie Desch\u00eanes",
+        "name": "Élodie Deschênes",
         "position": "Zeroback/Back",
         "height": "5-11",
         "weight": 189,

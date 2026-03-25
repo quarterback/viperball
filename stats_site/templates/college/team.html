@@ -14,13 +14,39 @@
 {% if banner_url %}
 <div class="team-banner"><img src="{{ banner_url }}" alt=""></div>
 {% endif %}
+<style>
+.championship-banners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 11px; font-weight: bold; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+.banner .banner-count { font-size: 13px; }
+.banner .banner-years { font-size: 10px; font-weight: normal; opacity: 0.8; text-transform: none; letter-spacing: 0; }
+.banner-champion { background: linear-gradient(135deg, #78350f, #92400e); color: #fbbf24; border: 1px solid #fbbf24; }
+.banner-finalist { background: linear-gradient(135deg, #1e293b, #334155); color: #cbd5e1; border: 1px solid #94a3b8; }
+.banner-final_four { background: linear-gradient(135deg, #451a03, #78350f); color: #d97706; border: 1px solid #b45309; }
+.banner-sweet_16 { background: linear-gradient(135deg, #1c1917, #44403c); color: #a8a29e; border: 1px solid #78716c; }
+.banner-playoff { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+.banner-conference { background: linear-gradient(135deg, #1e3a5f, #1e40af); color: #93c5fd; border: 1px solid #60a5fa; }
+.banner-bowl_win { background: #14532d; color: #4ade80; border: 1px solid #22c55e; }
+.banner-bowl_appearance { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+</style>
+
 <div class="page-header">
   <h1>{{ team.name }} {{ team.mascot }}</h1>
   <div class="subtitle">
-    {{ team.abbreviation }}
+    {% if team.city and team.state %}{{ team.city }}, {{ team.state }}{% endif %}
     {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span>{% if record.ties %}-<span class="t">{{ record.ties }}</span>{% endif %}</span> ({{ record.conference }}){% endif %}
     {% if prestige %} &middot; Prestige: {{ prestige }}{% endif %}
   </div>
+  {% if banners %}
+  <div class="championship-banners">
+    {% for b in banners %}
+    <div class="banner banner-{{ b.type }}">
+      {% if b.count > 1 %}<span class="banner-count">{{ b.count }}x</span>{% endif %}
+      {{ b.label }}
+      {% if b.years %}<span class="banner-years">{{ b.years|join(', ') }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 
 {% if record %}
@@ -62,6 +88,49 @@
     <div class="value">{{ record.avg_lateral_pct }}%</div>
   </div>
 </div>
+
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">5th Down Conv %</div>
+    <div class="value {% if record.season_5d_pct >= 55 %}stat-good{% elif record.season_5d_pct < 35 %}stat-bad{% endif %}">{{ record.season_5d_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">5D% Own Deep</div>
+    <div class="value">{{ record.season_5d_own_deep_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">KILL%</div>
+    <div class="value {% if record.season_kill_pct <= 10 %}stat-good{% elif record.season_kill_pct >= 25 %}stat-bad{% endif %}">{{ record.season_kill_pct }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label">Net YPG</div>
+    <div class="value {% if record.avg_delta_yds > 0 %}stat-good{% elif record.avg_delta_yds < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(record.avg_delta_yds) }}</div>
+  </div>
+</div>
+
+{% if record.conversion_by_zone %}
+<h3 style="margin-bottom:8px; color:var(--accent);">Late-Down Conversion by Field Zone</h3>
+<table style="margin-bottom:16px;">
+  <thead>
+    <tr><th>Zone</th><th class="num">4D Att</th><th class="num">4D%</th><th class="num">5D Att</th><th class="num">5D%</th><th class="num">6D Att</th><th class="num">6D%</th></tr>
+  </thead>
+  <tbody>
+    {% set zones = [('own_deep', 'Own 1-25'), ('own_half', 'Own 26-50'), ('opp_half', 'Opp 49-25'), ('opp_deep', 'Opp 24-1')] %}
+    {% for key, label in zones %}
+    {% set z = record.conversion_by_zone.get(key, {}) %}
+    <tr>
+      <td>{{ label }}</td>
+      <td class="num">{{ z.get('d4_att', 0) }}</td>
+      <td class="num">{% if z.get('d4_att', 0) > 0 %}{{ z.d4_pct }}%{% else %}&mdash;{% endif %}</td>
+      <td class="num">{{ z.get('d5_att', 0) }}</td>
+      <td class="num">{% if z.get('d5_att', 0) > 0 %}{{ z.d5_pct }}%{% else %}&mdash;{% endif %}</td>
+      <td class="num">{{ z.get('d6_att', 0) }}</td>
+      <td class="num">{% if z.get('d6_att', 0) > 0 %}{{ z.d6_pct }}%{% else %}&mdash;{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endif %}
 
 {% if team_stats %}
@@ -109,26 +178,30 @@
 </table>
 
 {# ── Efficiency ── #}
+{% set bm = benchmarks if benchmarks is defined else {} %}
 <h3 style="margin-bottom:8px; color:var(--accent);">Efficiency</h3>
 <div class="grid-4" style="margin-bottom:16px;">
   {% if team_stats.avg_viper_eff is not none %}
+  {% set bve = bm.get('viper_efficiency') if bm else none %}
   <div class="metric">
-    <div class="label">Viper Efficiency</div>
+    <div class="label stat-tip" data-tip="Yards per play boosted by lateral success rate.{{ ' League median: ' ~ bve.med ~ ', top 25%: ' ~ bve.p75 if bve else '' }}">Viper Efficiency</div>
     <div class="value accent">{{ team_stats.avg_viper_eff }}</div>
   </div>
   {% endif %}
+  {% set bepa = bm.get('epa') if bm else none %}
   <div class="metric">
-    <div class="label">EPA (Total)</div>
-    <div class="value {% if team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
+    <div class="label stat-tip" data-tip="Expected Points Added. Total points above/below what an average team would produce.{{ ' League median: ' ~ bepa.med ~ ', top 25%: ' ~ bepa.p75 if bepa else '' }}">EPA (Total)</div>
+    <div class="value {% if bepa %}{% if team_stats.total_epa >= bepa.p75 %}stat-good{% elif team_stats.total_epa < bepa.p25 %}stat-bad{% endif %}{% elif team_stats.total_epa > 0 %}stat-good{% elif team_stats.total_epa < 0 %}stat-bad{% endif %}">{{ team_stats.total_epa }}</div>
   </div>
   <div class="metric">
-    <div class="label">EPA / Game</div>
+    <div class="label stat-tip" data-tip="EPA per game average.{{ ' League median: ' ~ bepa.med ~ ', top 25%: ' ~ bepa.p75 if bepa else '' }}">EPA / Game</div>
     <div class="value {% if team_stats.avg_epa > 0 %}stat-good{% elif team_stats.avg_epa < 0 %}stat-bad{% endif %}">{{ team_stats.avg_epa }}</div>
   </div>
   {% if team_stats.avg_team_rating is not none %}
+  {% set btr = bm.get('team_rating') if bm else none %}
   <div class="metric">
-    <div class="label">Avg Team Rating</div>
-    <div class="value">{{ team_stats.avg_team_rating }}</div>
+    <div class="label stat-tip" data-tip="Overall team grade 0-100.{{ ' League median: ' ~ btr.med ~ ', top 25%: ' ~ btr.p75 if btr else '' }}">Avg Team Rating</div>
+    <div class="value {% if btr %}{% if team_stats.avg_team_rating >= btr.p90 %}stat-elite{% elif team_stats.avg_team_rating >= btr.p75 %}stat-good{% endif %}{% endif %}">{{ team_stats.avg_team_rating }}</div>
   </div>
   {% endif %}
 </div>
@@ -185,7 +258,7 @@
 <div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Delta Yards</div>
-    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards }}</div>
+    <div class="value {% if team_stats.delta_yards > 0 %}stat-good{% elif team_stats.delta_yards < 0 %}stat-bad{% endif %}">{{ team_stats.delta_yards|round(0)|int }}</div>
   </div>
   <div class="metric">
     <div class="label">Adjusted Yards</div>
@@ -294,6 +367,52 @@
   {% if coaching_staff[0].coaching_style %} &mdash; <em>{{ coaching_staff[0].coaching_style }}</em>{% endif %}
 </div>
 {% endif %}
+</div>
+{% endif %}
+
+{# ── Postseason ── #}
+{% if postseason %}
+<div>
+<h2>Bowls &amp; Playoff Appearances</h2>
+<table>
+  <thead>
+    <tr><th>Event</th><th>Result</th><th>Opponent</th><th class="num">Score</th>{% if postseason|selectattr('mvp')|list %}<th>MVP</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+  {% for p in postseason %}
+  <tr>
+    <td>{{ p.event }}</td>
+    <td><span class="tag {% if p.result == 'W' %}stat-elite{% else %}stat-bad{% endif %}">{{ p.result }}</span></td>
+    <td>{{ p.opponent }}</td>
+    <td class="num">{{ p.score }}</td>
+    {% if postseason|selectattr('mvp')|list %}<td>{{ p.mvp or '' }}</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{# ── Program History (dynasty year-by-year) ── #}
+{% if season_history %}
+<div>
+<h2>Program History</h2>
+<table>
+  <thead>
+    <tr><th>Year</th><th>Record</th><th>Postseason</th><th class="num">PPG</th><th class="num">Opp PPG</th></tr>
+  </thead>
+  <tbody>
+  {% for s in season_history %}
+  <tr>
+    <td>{{ s.year }}</td>
+    <td><strong>{{ s.record }}</strong></td>
+    <td>{% if s.postseason %}<span class="tag stat-good">{{ s.postseason }}</span>{% endif %}</td>
+    <td class="num">{{ s.ppg }}</td>
+    <td class="num">{{ s.opp_ppg }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
 </div>
 {% endif %}
 

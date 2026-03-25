@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "gonzaga",
-    "school_name": "Gonzaga University",
+    "school_name": "Gonzaga",
     "abbreviation": "GU",
     "mascot": "Bulldogs",
     "conference": "West Coast Conference",
@@ -65,7 +65,7 @@
       },
       {
         "number": 3,
-        "name": "Eduarda Rodr\u00edguez",
+        "name": "Eduarda Rodríguez",
         "position": "Slotback",
         "height": "5-6",
         "weight": 186,
@@ -161,7 +161,7 @@
       },
       {
         "number": 17,
-        "name": "Waim\u0101rie Wilson",
+        "name": "Waimārie Wilson",
         "position": "Wingback",
         "height": "5-10",
         "weight": 176,

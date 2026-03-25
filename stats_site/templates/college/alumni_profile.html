@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.full_name }} — Alumni — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/alumni">Alumni</a><span class="sep">/</span>{{ profile.full_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
+  {% if face_src %}
+  <div class="player-card-frame">
+    <img src="{{ face_src }}" alt="{{ profile.full_name }}" class="player-card-face">
+  </div>
+  {% endif %}
+  <div style="flex:1; min-width:0;">
+    <h1 style="margin:0">{{ profile.full_name }}</h1>
+    <div class="subtitle">
+      <a href="/stats/college/{{ session_id }}/team/{{ profile.college_team }}">{{ profile.college_team }}</a>
+      &middot; <span class="tag tag-pos">{{ profile.position }}</span>
+      &middot; Class of {{ profile.pro_entry_year or '?' }}
+      {% if profile.college_conference %}&middot; {{ profile.college_conference }}{% endif %}
+      {% if profile.national_team %}&middot; <span class="tag">{{ profile.national_team }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+
+  {# ── Left column: Bio + Attributes ── #}
+  <div>
+    <h2>Player Info</h2>
+    <table>
+      <tbody>
+        <tr><td style="color:var(--fg-dim)">Position</td><td>{{ profile.position }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">College Team</td><td>{{ profile.college_team }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Conference</td><td>{{ profile.college_conference or 'Independent' }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Graduation Year</td><td>{{ profile.pro_entry_year or 'N/A' }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Nationality</td><td>{{ profile.nationality or 'Unknown' }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ profile.hometown or 'Unknown' }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Peak Overall</td><td class="{% if profile.peak_overall >= 90 %}stat-elite{% elif profile.peak_overall >= 80 %}stat-good{% endif %}">{{ profile.peak_overall }}</td></tr>
+        <tr><td style="color:var(--fg-dim)">Status</td><td>{{ profile.career_status|title }}</td></tr>
+      </tbody>
+    </table>
+
+    {% if profile.peak_ratings %}
+    <h2>Attributes (at Graduation)</h2>
+    <table>
+      <tbody>
+        {% for attr, val in profile.peak_ratings.items() %}
+        <tr>
+          <td style="color:var(--fg-dim)">{{ attr|title }}</td>
+          <td class="num">{{ val }}</td>
+          <td style="width:120px">
+            <div style="background:var(--bg-alt,var(--bg));height:8px;width:100%;position:relative;">
+              <div style="background:{% if val >= 90 %}var(--yellow){% elif val >= 75 %}var(--green){% elif val >= 60 %}var(--accent){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%;"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if profile.career_awards %}
+    <h2>Career Awards</h2>
+    <table>
+      <tbody>
+        {% for award in profile.career_awards %}
+        <tr><td>{{ award }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+
+  {# ── Right column: Career Stats ── #}
+  <div>
+    <h2>College Career Summary</h2>
+    <div class="grid-4" style="margin-bottom:12px">
+      <div class="metric"><div class="label">Games</div><div class="value">{{ profile.career_games }}</div></div>
+      <div class="metric"><div class="label">Yards</div><div class="value accent">{{ profile.career_yards }}</div></div>
+      <div class="metric"><div class="label">TDs</div><div class="value">{{ profile.career_tds }}</div></div>
+      <div class="metric"><div class="label">Peak OVR</div><div class="value {% if profile.peak_overall >= 90 %}stat-elite{% endif %}">{{ profile.peak_overall }}</div></div>
+    </div>
+
+    {% if profile.college_seasons %}
+    <h3>Season-by-Season</h3>
+    <table>
+      <thead>
+        <tr>
+          <th class="num">Year</th>
+          <th>Team</th>
+          <th class="num">GP</th>
+          <th class="num">YDS</th>
+          <th class="num">TD</th>
+          <th class="num">FUM</th>
+          <th class="num">TKL</th>
+          <th class="num">SCK</th>
+          <th class="num">K%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in profile.college_seasons %}
+        <tr>
+          <td class="num">{{ s.season_year or s.year or '—' }}</td>
+          <td>{{ s.team or profile.college_team }}</td>
+          <td class="num">{{ s.games_played or s.games or 0 }}</td>
+          <td class="num">{{ s.total_yards or s.yards or 0 }}</td>
+          <td class="num">{{ s.touchdowns or s.tds or 0 }}</td>
+          <td class="num">{{ s.fumbles or 0 }}</td>
+          <td class="num">{{ s.tackles or 0 }}</td>
+          <td class="num">{{ s.sacks or 0 }}</td>
+          <td class="num">{% if (s.kick_att or 0) > 0 %}{{ ((s.kick_made or 0) / s.kick_att * 100)|round(0)|int }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; border-top:2px solid var(--fg-dim);">
+          <td>Career</td>
+          <td></td>
+          <td class="num">{{ profile.career_games }}</td>
+          <td class="num">{{ profile.career_yards }}</td>
+          <td class="num">{{ profile.career_tds }}</td>
+          <td class="num">{{ profile.career_fumbles }}</td>
+          <td class="num">{{ profile.career_tackles }}</td>
+          <td class="num">{{ profile.career_sacks }}</td>
+          <td class="num">{% if profile.career_kick_att > 0 %}{{ (profile.career_kick_made / profile.career_kick_att * 100)|round(0)|int }}%{% else %}—{% endif %}</td>
+        </tr>
+      </tfoot>
+    </table>
+    {% endif %}
+
+    {# ── International Career ── #}
+    {% if profile.national_team or profile.international_seasons %}
+    <h2>International Career</h2>
+    <div class="grid-4" style="margin-bottom:12px">
+      <div class="metric"><div class="label">Nation</div><div class="value">{{ profile.national_team or '—' }}</div></div>
+      <div class="metric"><div class="label">Caps</div><div class="value accent">{{ profile.international_caps }}</div></div>
+      <div class="metric"><div class="label">Intl Yards</div><div class="value">{{ profile.intl_career_yards }}</div></div>
+      <div class="metric"><div class="label">Intl TDs</div><div class="value">{{ profile.intl_career_tds }}</div></div>
+    </div>
+
+    {% if profile.international_seasons %}
+    <h3>International Seasons</h3>
+    <table>
+      <thead>
+        <tr>
+          <th class="num">Year</th>
+          <th>Competition</th>
+          <th>Nation</th>
+          <th class="num">GP</th>
+          <th class="num">YDS</th>
+          <th class="num">TD</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in profile.international_seasons %}
+        <tr>
+          <td class="num">{{ s.year }}</td>
+          <td>{{ s.competition or 'FIV' }}</td>
+          <td>{{ s.nation }}</td>
+          <td class="num">{{ s.games }}</td>
+          <td class="num">{{ s.yards }}</td>
+          <td class="num">{{ s.tds }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% endif %}
+
+    {# ── Pro Career ── #}
+    {% if profile.pro_seasons %}
+    <h2>Professional Career</h2>
+    {% if profile.pro_teams %}
+    <div style="margin-bottom:8px; font-size:12px; color:var(--fg-dim);">
+      {% for team_str in profile.pro_teams %}{{ team_str }}{% if not loop.last %} &rarr; {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <table>
+      <thead>
+        <tr>
+          <th class="num">Year</th>
+          <th>Team</th>
+          <th class="num">Tier</th>
+          <th class="num">GP</th>
+          <th class="num">YDS</th>
+          <th class="num">TD</th>
+          <th class="num">TKL</th>
+          <th class="num">OVR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in profile.pro_seasons %}
+        <tr>
+          <td class="num">{{ s.year }}</td>
+          <td>{{ s.team_name }}</td>
+          <td class="num">{{ s.tier }}</td>
+          <td class="num">{{ s.games }}</td>
+          <td class="num">{{ s.yards }}</td>
+          <td class="num">{{ s.tds }}</td>
+          <td class="num">{{ s.tackles or 0 }}</td>
+          <td class="num">{{ s.overall or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

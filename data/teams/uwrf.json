@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "uwrf",
-    "school_name": "University of Wisconsin-River Falls",
+    "school_name": "Wisconsin-River Falls",
     "abbreviation": "UWRF",
     "mascot": "Falcons",
     "conference": "Moonshine League",
@@ -95,7 +95,7 @@
       },
       {
         "number": 5,
-        "name": "Veronique Rodr\u00edguez",
+        "name": "Veronique Rodríguez",
         "position": "Back/Safety",
         "height": "5-9",
         "weight": 187,
@@ -997,12 +997,12 @@
         "weight": 190,
         "year": "Freshman",
         "hometown": {
-          "city": "Bras\u00edlia",
+          "city": "Brasília",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio Bras\u00edlia",
+        "high_school": "Colegio Brasília",
         "nationality": "Latin American",
         "archetype": "reliable_flanker",
         "potential": 3,

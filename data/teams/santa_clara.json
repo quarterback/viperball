@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "santa_clara",
-    "school_name": "Santa Clara University",
+    "school_name": "Santa Clara",
     "abbreviation": "SCU",
     "mascot": "Broncos",
     "conference": "West Coast Conference",
@@ -101,12 +101,12 @@
         "weight": 189,
         "year": "Senior",
         "hometown": {
-          "city": "M\u00e1laga",
+          "city": "Málaga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "M\u00e1laga Academy",
+        "high_school": "Málaga Academy",
         "nationality": "European",
         "archetype": "speed_flanker",
         "potential": 4,
