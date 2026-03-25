@@ -1436,6 +1436,70 @@ class Penalty:
     player: str = ""
     declined: bool = False
     phase: str = "pre_snap"
+    blown_call: bool = False  # True if this penalty was a referee error
+
+
+# ═══════════════════════════════════════════════════════════════
+# REFEREE BIAS SYSTEM
+# Models the human element of officiating.  Real referees are
+# 91-98% accurate (per UmpScorecards-style analysis).  Most
+# blown calls are inconsequential, but ~0.5-0.9% of games will
+# have one that materially shifts the outcome.
+#
+# Three blown-call types:
+#   1. Phantom flag  — penalty called when no infraction occurred
+#   2. Swallowed whistle — clear infraction goes uncalled
+#   3. Spot error — ball spotted 1-3 yards from correct position
+# ═══════════════════════════════════════════════════════════════
+
+@dataclass
+class RefereeCrew:
+    """A game's officiating crew with accuracy and tendencies."""
+    accuracy: float = 0.95       # 0.91-0.98, like real refs
+    home_favor: float = 0.0      # -0.5 to +0.5 run-favor toward home team
+    consistency: float = 0.94    # How consistent the zone/calls are
+    phantom_flag_rate: float = 0.003   # Chance per play of a bad flag
+    swallowed_whistle_rate: float = 0.004  # Chance per play of missing a real call
+    spot_error_rate: float = 0.006  # Chance per play of a 1-3 yard spot error
+    blown_calls: int = 0         # Running count this game
+    blown_call_log: list = field(default_factory=list)  # Detailed log
+
+
+def generate_referee_crew(rng: random.Random) -> RefereeCrew:
+    """Generate a referee crew with randomized tendencies.
+
+    Accuracy distribution mirrors real-world data:
+    - Most refs are 93-96% accurate
+    - Elite refs reach 97-98%
+    - Below-average refs dip to 91-93%
+    """
+    # Accuracy: normal distribution centered at 0.95, clipped to [0.91, 0.98]
+    accuracy = max(0.91, min(0.98, rng.gauss(0.95, 0.015)))
+
+    # Home favor: slight bias is common in real sports (~0.1-0.2 run favor)
+    # Negative = favors away, positive = favors home
+    home_favor = rng.gauss(0.05, 0.12)  # Slight home lean on average
+    home_favor = max(-0.5, min(0.5, home_favor))
+
+    # Consistency: how stable the crew's zone/calls are game-to-game
+    consistency = max(0.88, min(0.99, rng.gauss(0.94, 0.02)))
+
+    # Blown call rates scale inversely with accuracy
+    # A 98% accurate crew barely misses; a 91% crew misses more
+    inaccuracy = 1.0 - accuracy  # 0.02 to 0.09
+    phantom_flag_rate = 0.001 + inaccuracy * 0.03    # 0.0016 - 0.0037
+    swallowed_whistle_rate = 0.002 + inaccuracy * 0.03  # 0.0026 - 0.0047
+    spot_error_rate = 0.003 + inaccuracy * 0.04       # 0.0038 - 0.0066
+
+    return RefereeCrew(
+        accuracy=round(accuracy, 3),
+        home_favor=round(home_favor, 3),
+        consistency=round(consistency, 3),
+        phantom_flag_rate=round(phantom_flag_rate, 4),
+        swallowed_whistle_rate=round(swallowed_whistle_rate, 4),
+        spot_error_rate=round(spot_error_rate, 4),
+    )
+
 
 PENALTY_CATALOG = {
     "pre_snap": [
@@ -2934,6 +2998,10 @@ class ViperballEngine:
         self.drive_log: List[Dict] = []
         self.timeout_log: List[Dict] = []  # Every timeout event for post-game visibility
         self.viper_position = "free"
+
+        # ── Referee crew: human element of officiating ──
+        _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
+        self.referee_crew = generate_referee_crew(_ref_rng)
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
@@ -5179,6 +5247,22 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
+                # ── Referee: swallowed whistle ──
+                # Crew might miss a legitimate penalty call
+                if random.random() < self.referee_crew.swallowed_whistle_rate:
+                    self.referee_crew.blown_calls += 1
+                    self.referee_crew.blown_call_log.append({
+                        "type": "swallowed_whistle",
+                        "quarter": self.state.quarter,
+                        "time_remaining": self.state.time_remaining,
+                        "penalty_missed": pen_def["name"],
+                        "on_team": team_name,
+                        "player": ptag,
+                        "yards": pen_def["yards"],
+                        "field_position": self.state.field_position,
+                    })
+                    return None  # Ref missed the call
+
                 return Penalty(
                     name=pen_def["name"],
                     yards=pen_def["yards"],
@@ -5186,7 +5270,76 @@ class ViperballEngine:
                     player=ptag,
                     phase=phase,
                 )
+
+        # ── Referee: phantom flag ──
+        # No real penalty occurred, but the crew might throw a bad flag.
+        # Home favor nudges which team gets hit: positive favor = away
+        # team more likely to get the phantom call (benefits home).
+        if random.random() < self.referee_crew.phantom_flag_rate:
+            phantom_penalties = PENALTY_CATALOG.get(catalog_key, [])
+            if phantom_penalties:
+                pen_def = random.choice(phantom_penalties)
+                # Home favor: if positive, phantom more likely on away team
+                if random.random() < 0.5 + self.referee_crew.home_favor * 0.3:
+                    team_name = "away" if self.state.possession == "home" else "home"
+                else:
+                    team_name = self.state.possession
+
+                team_obj = self.home_team if team_name == "home" else self.away_team
+                pen_pool = team_obj.players[:10]
+                player = random.choice(pen_pool)
+                ptag = player_tag(player)
+
+                self.referee_crew.blown_calls += 1
+                self.referee_crew.blown_call_log.append({
+                    "type": "phantom_flag",
+                    "quarter": self.state.quarter,
+                    "time_remaining": self.state.time_remaining,
+                    "penalty_called": pen_def["name"],
+                    "on_team": team_name,
+                    "player": ptag,
+                    "yards": pen_def["yards"],
+                    "field_position": self.state.field_position,
+                })
+
+                return Penalty(
+                    name=pen_def["name"],
+                    yards=pen_def["yards"],
+                    on_team=team_name,
+                    player=ptag,
+                    phase=phase,
+                    blown_call=True,
+                )
+
         return None
+
+    def _check_spot_error(self, yards_gained: int) -> int:
+        """Referee spot error: occasionally the ball is spotted 1-3 yards off.
+
+        Returns the adjusted yards gained.  Most of the time returns the
+        input unchanged.  ~0.3-0.7% of plays get a small spot error.
+        """
+        if random.random() < self.referee_crew.spot_error_rate:
+            error = random.choice([-3, -2, -1, 1, 2, 3])
+            # Home favor nudges spot errors toward benefiting the home team
+            if self.state.possession == "home" and self.referee_crew.home_favor > 0:
+                error = abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+            elif self.state.possession == "away" and self.referee_crew.home_favor > 0:
+                error = -abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+
+            self.referee_crew.blown_calls += 1
+            self.referee_crew.blown_call_log.append({
+                "type": "spot_error",
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "original_yards": yards_gained,
+                "error_yards": error,
+                "adjusted_yards": yards_gained + error,
+                "field_position": self.state.field_position,
+                "possession": self.state.possession,
+            })
+            return yards_gained + error
+        return yards_gained
 
     def _should_decline_penalty(self, penalty: Penalty, play: Play) -> bool:
         on_offense = (penalty.on_team == self.state.possession)
@@ -5447,6 +5600,21 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+
+        # ── Referee: spot error on non-scoring, non-penalty plays ──
+        if (play.result not in ("touchdown", "safety", "penalty", "kneel",
+                                "punt_return_td", "int_return_td",
+                                "missed_dk_return_td", "successful_kick",
+                                "bonus_possession")
+                and play.play_type not in ("penalty", "kneel", "bonus_possession")
+                and play.yards_gained != 0):
+            adjusted = self._check_spot_error(play.yards_gained)
+            if adjusted != play.yards_gained:
+                spot_diff = adjusted - play.yards_gained
+                # Adjust field position by the spot error delta
+                self.state.field_position = max(1, min(99,
+                    self.state.field_position + spot_diff))
+                play.yards_gained = adjusted
 
         # Stamp pre-play state on the Play so the play-by-play always
         # shows "3rd & 5 at the 50" as the starting situation.
@@ -12187,6 +12355,14 @@ class ViperballEngine:
             "adaptation_log": list(self._adaptation_log),
             # ── Timeout log: every timeout event for post-game audit ──
             "timeout_log": list(self.timeout_log),
+            # ── Referee crew: officiating quality and blown calls ──
+            "referee": {
+                "accuracy": self.referee_crew.accuracy,
+                "home_favor": self.referee_crew.home_favor,
+                "consistency": self.referee_crew.consistency,
+                "blown_calls": self.referee_crew.blown_calls,
+                "blown_call_log": list(self.referee_crew.blown_call_log),
+            },
         }
 
         return summary
