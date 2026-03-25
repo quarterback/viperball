@@ -4,7 +4,7 @@
     "school_name": "Indiana State",
     "abbreviation": "ISU",
     "mascot": "Sycamores",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Terre Haute",
     "state": "IN",
     "colors": [
@@ -549,12 +549,12 @@
         "weight": 166,
         "year": "Freshman",
         "hometown": {
-          "city": "Düsseldorf",
+          "city": "D\u00fcsseldorf",
           "state": "GER",
           "country": "Germany",
           "region": "uk_european"
         },
-        "high_school": "Düsseldorf Academy",
+        "high_school": "D\u00fcsseldorf Academy",
         "nationality": "European",
         "archetype": "return_keeper",
         "potential": 4,

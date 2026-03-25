@@ -4,7 +4,7 @@
     "school_name": "Dayton",
     "abbreviation": "UD",
     "mascot": "Flyers",
-    "conference": "National Collegiate League",
+    "conference": "Galactic League",
     "city": "Dayton",
     "state": "OH",
     "colors": [
@@ -159,7 +159,7 @@
       },
       {
         "number": 12,
-        "name": "Anaïs Fischer",
+        "name": "Ana\u00efs Fischer",
         "position": "Lineman",
         "height": "6-3",
         "weight": 187,
@@ -447,7 +447,7 @@
       },
       {
         "number": 32,
-        "name": "Xavière Leclerc",
+        "name": "Xavi\u00e8re Leclerc",
         "position": "Back/Corner",
         "height": "5-7",
         "weight": 175,

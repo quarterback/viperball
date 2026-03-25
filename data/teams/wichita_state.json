@@ -4,7 +4,7 @@
     "school_name": "Wichita State",
     "abbreviation": "WSU",
     "mascot": "Shockers",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Wichita",
     "state": "KS",
     "colors": [
@@ -63,7 +63,7 @@
       },
       {
         "number": 2,
-        "name": "Chloé González",
+        "name": "Chlo\u00e9 Gonz\u00e1lez",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 181,

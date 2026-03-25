@@ -4,7 +4,7 @@
     "school_name": "Missouri State",
     "abbreviation": "MSU",
     "mascot": "Bears",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Springfield",
     "state": "MO",
     "colors": [
@@ -639,7 +639,7 @@
       },
       {
         "number": 52,
-        "name": "Maëlle Ouellet",
+        "name": "Ma\u00eblle Ouellet",
         "position": "Zeroback/Back",
         "height": "6-0",
         "weight": 182,
@@ -671,7 +671,7 @@
       },
       {
         "number": 53,
-        "name": "Mia López",
+        "name": "Mia L\u00f3pez",
         "position": "Wingback/End",
         "height": "5-8",
         "weight": 186,

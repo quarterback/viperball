@@ -4,7 +4,7 @@
     "school_name": "Southern Illinois",
     "abbreviation": "SIU",
     "mascot": "Salukis",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Carbondale",
     "state": "IL",
     "colors": [
@@ -191,18 +191,18 @@
       },
       {
         "number": 24,
-        "name": "Yasmin Díaz",
+        "name": "Yasmin D\u00edaz",
         "position": "Halfback/Back",
         "height": "6-0",
         "weight": 179,
         "year": "Freshman",
         "hometown": {
-          "city": "Brasília",
+          "city": "Bras\u00edlia",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio Brasília",
+        "high_school": "Colegio Bras\u00edlia",
         "nationality": "Latin American",
         "archetype": "reliable_flanker",
         "potential": 3,
@@ -863,7 +863,7 @@
       },
       {
         "number": 77,
-        "name": "Ophélie Arsenault",
+        "name": "Oph\u00e9lie Arsenault",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 181,

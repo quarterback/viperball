@@ -4,7 +4,7 @@
     "school_name": "UMass",
     "abbreviation": "UMASS",
     "mascot": "Minutemen",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Amherst",
     "state": "MA",
     "colors": [
@@ -1119,7 +1119,7 @@
       },
       {
         "number": 95,
-        "name": "Inés Rodrigues",
+        "name": "In\u00e9s Rodrigues",
         "position": "Shiftback/Back",
         "height": "5-5",
         "weight": 161,

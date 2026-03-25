@@ -4,7 +4,7 @@
     "school_name": "Bradley",
     "abbreviation": "BU",
     "mascot": "Braves",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Peoria",
     "state": "IL",
     "colors": [
@@ -773,12 +773,12 @@
         "weight": 188,
         "year": "Senior",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "power_flanker",
         "potential": 3,
