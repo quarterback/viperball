@@ -33,7 +33,8 @@ PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-pixflux"
 PIXELLAB_TIMEOUT = 120
 PIXELLAB_MAX_RETRIES = 4
 PIXELLAB_RETRY_BACKOFF = 2
-STADIUM_SIZE = 64  # 64x64 — bigger than faces to show field detail
+STADIUM_WIDTH = 200   # wider panoramic view
+STADIUM_HEIGHT = 200  # max pixflux supports well
 
 _DEFAULT_STADIUMS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "stats_site", "static", "stadiums"
@@ -42,32 +43,48 @@ _DEFAULT_STADIUMS_DIR = os.path.join(
 # ── Stadium trait pools ──
 
 STADIUM_TYPES = [
-    "open-air football stadium",
-    "domed football stadium",
-    "retro brick football stadium",
-    "modern glass football stadium",
-    "small-town football field",
-    "college football stadium",
-    "large professional football arena",
-    "outdoor football field with bleachers",
+    "open-air football stadium with tall stands",
+    "domed football stadium with glass roof",
+    "retro brick football stadium with ivy walls",
+    "modern glass football stadium with LED lights",
+    "small-town football field with wooden bleachers",
+    "college football stadium with scoreboard",
+    "large professional football arena with luxury boxes",
+    "outdoor football field with metal bleachers and press box",
+    "historic football stadium with stone archways",
+    "futuristic football stadium with curved steel roof",
 ]
 
 WEATHER_CONDITIONS = [
-    "sunny day", "cloudy sky", "overcast", "golden sunset",
-    "night game with floodlights", "light rain", "snow flurries",
-    "clear blue sky", "dramatic orange sky", "foggy evening",
+    "bright sunny day with blue sky", "cloudy sky with dramatic clouds",
+    "overcast with soft diffused light", "golden sunset with warm light",
+    "night game with bright floodlights and dark sky",
+    "light rain with puddles on sidelines", "snow flurries with white dusting",
+    "clear blue sky with wispy clouds", "dramatic orange and purple sunset sky",
+    "foggy evening with glowing lights", "autumn afternoon with warm colors",
+    "crisp winter day with clear sky",
 ]
 
 FIELD_FEATURES = [
-    "green grass field", "pristine turf field",
-    "worn grass field", "artificial turf",
-    "freshly painted yard lines", "muddy field",
+    "lush green grass field with painted yard lines",
+    "pristine turf field with team logo at midfield",
+    "worn grass field with patches of dirt",
+    "bright green artificial turf with white lines",
+    "freshly painted yard lines and end zones",
+    "muddy rain-soaked field",
+    "striped mowed grass field pattern",
+    "field with colorful painted end zones",
 ]
 
 CROWD_SIZES = [
-    "packed crowd", "half-full stands",
-    "sold-out crowd with banners", "sparse crowd",
-    "roaring fans with confetti", "standing-room-only crowd",
+    "packed crowd waving flags and banners",
+    "half-full stands with scattered fans",
+    "sold-out crowd with confetti and streamers",
+    "sparse crowd in a small venue",
+    "roaring fans holding team signs",
+    "standing-room-only crowd with energy",
+    "electric crowd with colored sections",
+    "enthusiastic student section crowd",
 ]
 
 ACCENT_COLORS = [
@@ -75,6 +92,11 @@ ACCENT_COLORS = [
     "purple and yellow", "orange and black", "navy and silver",
     "crimson and gray", "teal and white", "maroon and gold",
     "black and gold", "royal blue and white", "scarlet and cream",
+]
+
+TIME_OF_DAY = [
+    "midday", "late afternoon", "early evening",
+    "twilight", "night", "golden hour", "dawn",
 ]
 
 
@@ -91,10 +113,11 @@ def build_stadium_prompt(index: int) -> str:
     field = _pick(FIELD_FEATURES, h, 16)
     crowd = _pick(CROWD_SIZES, h, 24)
     colors = _pick(ACCENT_COLORS, h, 32)
+    tod = _pick(TIME_OF_DAY, h, 40)
 
     return (
-        f"pixel art {stadium_type}, {weather}, {field}, "
-        f"{crowd}, {colors} team colors, top-down isometric view"
+        f"16-bit pixel art {stadium_type}, {weather}, {tod}, {field}, "
+        f"{crowd}, {colors} team colors, side view, detailed scene"
     )
 
 
@@ -131,9 +154,10 @@ def get_stadium_url(team_id: str, pool_size: int = 0,
 def _call_pixellab(prompt: str, seed: int, api_key: str) -> bytes:
     payload = {
         "description": prompt,
-        "image_size": {"width": STADIUM_SIZE, "height": STADIUM_SIZE},
-        "outline": "single color black outline",
-        "detail": "low detail",
+        "image_size": {"width": STADIUM_WIDTH, "height": STADIUM_HEIGHT},
+        "outline": "selective outline",
+        "detail": "highly detailed",
+        "shading": "detailed shading",
         "no_background": False,
         "direction": "south",
         "seed": seed,

@@ -4672,3 +4672,163 @@ def download_face_pool():
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=faces.zip"},
     )
+
+
+# ── Pixel-art stadium pool generation ─────────────────────────────────
+
+@app.get("/generate-stadium-pool")
+@app.post("/generate-stadium-pool")
+async def generate_stadium_pool(count: int = 75, force: bool = False):
+    """
+    Generate the reusable pixel-art stadium pool via PixelLab API.
+
+    Creates stadium_000.png … stadium_N.png in stats_site/static/stadiums/.
+    Now generates at 200x200 with highly detailed 16-bit style art.
+
+    GET-friendly:
+      http://localhost:5000/generate-stadium-pool
+      http://localhost:5000/generate-stadium-pool?count=75&force=true
+    """
+    from engine.stadium_generator import generate_pool, get_pool_size
+
+    api_key = _load_pixellab_key()
+    if not api_key:
+        raise HTTPException(400,
+            "No PixelLab API key found. "
+            "Set PIXELLAB_API_KEY via: fly secrets set PIXELLAB_API_KEY=your-key")
+
+    stadium_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                               "stats_site", "static", "stadiums")
+    existing = get_pool_size(stadium_dir)
+
+    results = await generate_pool(
+        count=count, stadiums_dir=stadium_dir, api_key=api_key, force=force,
+    )
+
+    try:
+        import stats_site.router as _sr
+        _sr._stadium_pool_size = None
+    except Exception:
+        pass
+
+    return {
+        "message": f"Stadium pool: {existing} existed, now generating up to {count}",
+        "generated": len(results["generated"]),
+        "skipped": len(results["skipped"]),
+        "failed": len(results["failed"]),
+        "errors": results["failed"][:10],
+    }
+
+
+@app.get("/stadium-pool-status")
+def stadium_pool_status():
+    """Check how many stadiums are in the pool."""
+    from engine.stadium_generator import get_pool_size
+    stadium_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                               "stats_site", "static", "stadiums")
+    return {"pool_size": get_pool_size(stadium_dir)}
+
+
+@app.get("/download-stadium-pool")
+def download_stadium_pool():
+    """Download all generated stadium PNGs as a zip file."""
+    import io
+    import zipfile
+    from pathlib import Path
+
+    stadium_dir = Path(os.path.dirname(os.path.dirname(__file__))) / "stats_site" / "static" / "stadiums"
+    pngs = sorted(stadium_dir.glob("stadium_*.png"))
+    if not pngs:
+        raise HTTPException(404, "No stadiums generated yet. Call /generate-stadium-pool first.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pngs:
+            zf.write(p, p.name)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=stadiums.zip"},
+    )
+
+
+# ── Pixel-art team banner pool generation ──────────────────────────────
+
+@app.get("/generate-banner-pool")
+@app.post("/generate-banner-pool")
+async def generate_banner_pool(count: int = 100, force: bool = False):
+    """
+    Generate the reusable pixel-art team banner pool via PixelLab API.
+
+    Creates banner_000.png … banner_N.png in stats_site/static/banners/.
+    Banners are 320x128 wide panoramic images for team page headers.
+
+    GET-friendly:
+      http://localhost:5000/generate-banner-pool
+      http://localhost:5000/generate-banner-pool?count=100&force=true
+    """
+    from engine.banner_generator import generate_pool, get_pool_size
+
+    api_key = _load_pixellab_key()
+    if not api_key:
+        raise HTTPException(400,
+            "No PixelLab API key found. "
+            "Set PIXELLAB_API_KEY via: fly secrets set PIXELLAB_API_KEY=your-key")
+
+    banner_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                              "stats_site", "static", "banners")
+    existing = get_pool_size(banner_dir)
+
+    results = await generate_pool(
+        count=count, banners_dir=banner_dir, api_key=api_key, force=force,
+    )
+
+    try:
+        import stats_site.router as _sr
+        _sr._banner_pool_size = None
+    except Exception:
+        pass
+
+    return {
+        "message": f"Banner pool: {existing} existed, now generating up to {count}",
+        "generated": len(results["generated"]),
+        "skipped": len(results["skipped"]),
+        "failed": len(results["failed"]),
+        "errors": results["failed"][:10],
+    }
+
+
+@app.get("/banner-pool-status")
+def banner_pool_status():
+    """Check how many banners are in the pool."""
+    from engine.banner_generator import get_pool_size
+    banner_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                              "stats_site", "static", "banners")
+    return {"pool_size": get_pool_size(banner_dir)}
+
+
+@app.get("/download-banner-pool")
+def download_banner_pool():
+    """Download all generated banner PNGs as a zip file."""
+    import io
+    import zipfile
+    from pathlib import Path
+
+    banner_dir = Path(os.path.dirname(os.path.dirname(__file__))) / "stats_site" / "static" / "banners"
+    pngs = sorted(banner_dir.glob("banner_*.png"))
+    if not pngs:
+        raise HTTPException(404, "No banners generated yet. Call /generate-banner-pool first.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pngs:
+            zf.write(p, p.name)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=banners.zip"},
+    )

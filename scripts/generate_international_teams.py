@@ -149,7 +149,7 @@ AL_TEAMS = {
     "nai": {
         "city": "Nairobi", "name": "Harambee", "abbr": "NAI",
         "state": "KEN", "country": "Kenya", "division": "East",
-        "franchise_rating": 74, "origins": ["african", "caribbean"],
+        "franchise_rating": 74, "origins": ["east_african", "african"],
     },
     "joh": {
         "city": "Johannesburg", "name": "Springboks", "abbr": "JOH",
@@ -164,17 +164,17 @@ AL_TEAMS = {
     "dar": {
         "city": "Dar es Salaam", "name": "Dhows", "abbr": "DAR",
         "state": "TZA", "country": "Tanzania", "division": "East",
-        "franchise_rating": 63, "origins": ["african", "caribbean"],
+        "franchise_rating": 63, "origins": ["east_african", "african"],
     },
     "add": {
         "city": "Addis Ababa", "name": "Runners", "abbr": "ADD",
         "state": "ETH", "country": "Ethiopia", "division": "East",
-        "franchise_rating": 66, "origins": ["african", "caribbean"],
+        "franchise_rating": 66, "origins": ["ethiopian", "east_african"],
     },
     "kam": {
         "city": "Kampala", "name": "Cranes", "abbr": "KAM",
         "state": "UGA", "country": "Uganda", "division": "East",
-        "franchise_rating": 61, "origins": ["african", "caribbean"],
+        "franchise_rating": 61, "origins": ["east_african", "african"],
     },
 }
 
@@ -217,7 +217,7 @@ PL_TEAMS = {
     "hcm": {
         "city": "Ho Chi Minh City", "name": "Phoenix", "abbr": "HCM",
         "state": "VNM", "country": "Vietnam", "division": "South",
-        "franchise_rating": 64, "origins": ["southeast_asian"],
+        "franchise_rating": 64, "origins": ["vietnamese", "southeast_asian"],
     },
     "sgp": {
         "city": "Singapore", "name": "Merlions", "abbr": "SGP",

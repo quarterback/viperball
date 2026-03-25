@@ -104,14 +104,18 @@ CVL_STATE_TO_FIV_CODE: Dict[str, str] = {
     # East Asian
     "JPN": "JPN", "KOR": "KOR", "TWN": "CHN",  # Taiwan → China team
     # Southeast Asian
-    "THA": "THA", "VNM": "VEN",  # no Vietnam in FIV, skip — handled below
-    "PHL": "PHI", "IDN": "INA", "SGP": "CHN", "MYS": "CHN",
+    "THA": "THA", "VNM": "VNM",
+    "PHL": "PHI", "IDN": "INA", "SGP": "CHN", "MYS": "MYS",
+    "LAO": "LAO", "KHM": "KHM",
     # African
     "NGA": "NGA", "GHA": "GHA", "SEN": "SEN", "CIV": "CIV",
-    "GIN": "SEN", "MLI": "SEN", "TOG": "GHA",  # small → nearest FIV nation
-    "KEN": "KEN", "UGA": "KEN", "TZA": "TAN",
-    "ETH": "KEN", "RWA": "KEN",
+    "GIN": "GIN", "MLI": "SEN", "TOG": "TOG",
+    "KEN": "KEN", "UGA": "UGA", "TZA": "TAN",
+    "ETH": "ETH", "RWA": "RWA",
+    "COD": "COD", "MDG": "MDG", "AGO": "AGO", "MWI": "MWI", "CAF": "CAF",
     "ZAF": "RSA", "ZWE": "RSA", "ZMB": "RSA", "BWA": "RSA",
+    # Middle East (IFAV)
+    "YEM": "YEM",
     # Caribbean
     "JAM": "JAM", "TTO": "TTO", "BRB": "JAM", "BAH": "JAM",
     "HAI": "HAI", "DOM": "DOM", "PRI": "USA",  # Puerto Rico → USA
@@ -121,6 +125,7 @@ CVL_STATE_TO_FIV_CODE: Dict[str, str] = {
     "BRA": "BRA", "ARG": "ARG", "COL": "COL", "PER": "PER",
     "CHI": "CHI", "MEX": "MEX", "VEN": "VEN", "URU": "URU",
     "PAR": "PAR", "ECU": "ECU", "CRC": "CRC", "GTM": "GUA", "PAN": "PAN",
+    "NIC": "NIC", "SLV": "SLV", "BOL": "BOL",
     # UK / European
     "ENG": "GBR", "SCO": "GBR", "WAL": "GBR", "NIR": "GBR",
     "FRA": "FRA", "GER": "GER", "ESP": "ESP", "NED": "NED",
@@ -166,6 +171,14 @@ CVL_COUNTRY_TO_FIV_CODE: Dict[str, str] = {
     "Mongolia": "MGL", "Kazakhstan": "KAZ", "Uzbekistan": "UZB",
     "Poland": "POL", "Czech Republic": "CZE", "Ukraine": "UKR",
     "Honduras": "HON",
+    "Ethiopia": "ETH", "Uganda": "UGA",
+    "DR Congo": "COD", "Democratic Republic of the Congo": "COD",
+    "Madagascar": "MDG", "Rwanda": "RWA", "Togo": "TOG",
+    "Angola": "AGO", "Malawi": "MWI",
+    "Central African Republic": "CAF", "Guinea": "GIN",
+    "Yemen": "YEM",
+    "Vietnam": "VNM", "Laos": "LAO", "Cambodia": "KHM", "Malaysia": "MYS",
+    "Nicaragua": "NIC", "El Salvador": "SLV", "Bolivia": "BOL",
 }
 
 
@@ -772,6 +785,42 @@ def _compute_team_rating(roster: List[NationalTeamPlayer]) -> int:
     avg = sum(top_20) / len(top_20)
     # Scale from ~40-95 attribute range to 0-99 rating
     return max(0, min(99, int(avg)))
+
+
+# ── Public helpers for Quick Game international mode ──
+
+
+def get_fiv_nation_list() -> List[Dict[str, str]]:
+    """Return nation list for UI dropdowns.
+
+    Returns a sorted list of ``{"key": "<CODE>", "name": "<Country Name>"}``
+    dicts, matching the format used by ``get_available_teams()`` for CVL teams.
+    """
+    nations = _load_all_nations()
+    return sorted(
+        [{"key": code, "name": info.name} for code, info in nations.items()],
+        key=lambda x: x["name"],
+    )
+
+
+def generate_single_national_team(
+    code: str,
+    rng: Optional[random.Random] = None,
+) -> NationalTeam:
+    """Generate a single national team by nation code (e.g. ``"USA"``).
+
+    Builds a full 36-player roster and computes team rating.  Intended for
+    quick-game / exhibition use where a full FIV cycle is not needed.
+    """
+    nations = _load_all_nations()
+    if code not in nations:
+        raise ValueError(f"Unknown FIV nation code: {code}")
+    nation_info = nations[code]
+    if rng is None:
+        rng = random.Random()
+    roster = _generate_full_roster(nation_info, rng)
+    rating = _compute_team_rating(roster)
+    return NationalTeam(nation=nation_info, roster=roster, rating=rating)
 
 
 def generate_national_teams(

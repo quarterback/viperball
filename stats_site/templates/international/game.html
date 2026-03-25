@@ -30,6 +30,9 @@
     <div class="box-score-final {% if match.get('home_score', 0) > match.get('away_score', 0) %}score-win{% else %}score-loss{% endif %}">{{ match.get('home_score', 0) }}</div>
   </div>
 </div>
+<div style="text-align:right;margin:-8px 0 8px;">
+  <button class="copy-boxscore-btn" onclick="copyBoxScore(this)">Copy Box Score</button>
+</div>
 
 {% if gr %}
 {% set stats = gr.get('stats', {}) %}

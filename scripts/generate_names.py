@@ -71,42 +71,102 @@ def load_name_pools(gender: str = 'female'):
     _name_pools_cache[cache_key] = pools
     return pools
 
-# Default pipeline: 66% domestic (US), 34% international
+# Default pipeline: 41% domestic (US), 59% international
+# Reflects viperball's global expansion — comparable to college tennis (61-68% intl)
 DEFAULT_PIPELINE = {
-    # Domestic US (66%)
-    'northeast': 0.12,
-    'mid_atlantic': 0.10,
-    'south': 0.12,
-    'midwest': 0.12,
-    'west_coast': 0.10,
-    'texas_southwest': 0.10,
-    # International (34%)
-    'australian': 0.062,
-    'canadian_english': 0.021,
-    'canadian_french': 0.021,
+    # Domestic US (41%)
+    'northeast': 0.075,
+    'mid_atlantic': 0.065,
+    'south': 0.075,
+    'midwest': 0.070,
+    'west_coast': 0.065,
+    'texas_southwest': 0.060,
+    # ── Africa (15% of intl) ──
+    'african': 0.019,             # West Africa (Nigeria, Ghana, Senegal, etc.)
+    'ethiopian': 0.019,           # Ethiopia
+    'east_african': 0.027,        # Uganda, Rwanda, DR Congo, Kenya, Tanzania, Malawi
+    'lusophone_african': 0.012,   # Angola
+    'malagasy': 0.012,            # Madagascar
+    # ── Canada (11% of intl) ──
+    'canadian_english': 0.039,
+    'canadian_french': 0.026,
+    # ── Europe (18% of intl — UK & Nordic dominant) ──
+    'nordic': 0.022,             # Scandinavia — dominant
+    'uk_european': 0.022,        # UK — dominant
+    'irish_european': 0.012,     # Ireland
+    'french': 0.008,
+    'german': 0.008,
+    'spanish': 0.006,
+    'italian': 0.006,
+    'dutch': 0.006,
+    'portuguese': 0.006,
+    'polish': 0.006,
+    'czech': 0.006,
+    'russian': 0.006,
+    'turkish': 0.006,
+    # ── Pacific / Australia (10% of intl) ──
+    'australian': 0.038,
+    'pacific_islander': 0.021,
+    # ── New Zealand (1.4% of total) ──
     'new_zealand': 0.014,
-    'pacific_islander': 0.004,
-    'uk_european': 0.035,
-    'latin_american': 0.012,
-    'african': 0.019,
-    'nordic': 0.100,
-    'caribbean': 0.050,
-    'other_intl': 0.003,
+    # ── Caribbean (24% of intl — the sport's heartland) ──
+    'caribbean': 0.143,
+    # ── Latin America (3% of intl) ──
+    'latin_american': 0.019,
+    # ── Arab World / South Asia (8% of intl) ──
+    'arabic': 0.024,
+    'indian': 0.024,
+    # ── Other International (5% of intl) ──
+    'southeast_asian': 0.007,
+    'vietnamese': 0.007,
+    'cambodian': 0.007,
+    'east_asian': 0.007,
+    'central_asian': 0.006,
 }
 
-# International baseline (sums to 0.34) — applied on top of any school's domestic pipeline
+# International baseline (sums to 0.59) — applied on top of any school's domestic pipeline
 INTERNATIONAL_BASELINE = {
-    'australian': 0.062,
-    'canadian_english': 0.021,
-    'canadian_french': 0.021,
-    'new_zealand': 0.014,
-    'pacific_islander': 0.004,
-    'uk_european': 0.035,
-    'latin_american': 0.012,
+    # Africa (~8.9%)
     'african': 0.019,
-    'nordic': 0.100,
-    'caribbean': 0.050,
-    'other_intl': 0.003,
+    'ethiopian': 0.019,
+    'east_african': 0.027,
+    'lusophone_african': 0.012,
+    'malagasy': 0.012,
+    # Canada (~6.5%)
+    'canadian_english': 0.039,
+    'canadian_french': 0.026,
+    # Europe (~10.6% — UK & Nordic dominant)
+    'nordic': 0.022,
+    'uk_european': 0.022,
+    'irish_european': 0.012,
+    'french': 0.008,
+    'german': 0.008,
+    'spanish': 0.006,
+    'italian': 0.006,
+    'dutch': 0.006,
+    'portuguese': 0.006,
+    'polish': 0.006,
+    'czech': 0.006,
+    'russian': 0.006,
+    'turkish': 0.006,
+    # Pacific / Australia (~5.9%)
+    'australian': 0.038,
+    'pacific_islander': 0.021,
+    # New Zealand (1.4%)
+    'new_zealand': 0.014,
+    # Caribbean (~14.3%)
+    'caribbean': 0.143,
+    # Latin America (~1.9%)
+    'latin_american': 0.019,
+    # Arab World / South Asia (~4.8%)
+    'arabic': 0.024,
+    'indian': 0.024,
+    # Other International (~3.4%)
+    'southeast_asian': 0.007,
+    'vietnamese': 0.007,
+    'cambodian': 0.007,
+    'east_asian': 0.007,
+    'central_asian': 0.006,
 }
 
 # Keys considered domestic (US) regions
@@ -145,6 +205,13 @@ REGION_TO_ORIGIN = {
     'polish': ('polish', 'Polish'),
     'czech': ('czech', 'Czech'),
     'central_asian': ('central_asian', 'Central Asian'),
+    'irish_european': ('irish_european', 'Irish'),
+    'ethiopian': ('ethiopian', 'Ethiopian'),
+    'east_african': ('east_african', 'East African'),
+    'malagasy': ('malagasy', 'Malagasy'),
+    'lusophone_african': ('lusophone_african', 'Angolan'),
+    'vietnamese': ('vietnamese', 'Vietnamese'),
+    'cambodian': ('cambodian', 'Cambodian'),
     'other_intl': ('irish_european', 'European'),
 }
 
@@ -242,14 +309,14 @@ def select_origin(recruiting_pipeline: Optional[Dict[str, float]] = None) -> Tup
         # Separate domestic keys from any legacy international keys
         domestic = {k: v for k, v in recruiting_pipeline.items() if k in DOMESTIC_KEYS}
         if domestic:
-            # Normalize domestic portion to 66% of total
+            # Normalize domestic portion to 41% of total
             dom_total = sum(domestic.values())
-            domestic_norm = {k: v / dom_total * 0.66 for k, v in domestic.items()}
+            domestic_norm = {k: v / dom_total * 0.41 for k, v in domestic.items()}
         else:
-            # Fallback: use default domestic distribution at 66%
+            # Fallback: use default domestic distribution at 41%
             default_dom = {k: v for k, v in DEFAULT_PIPELINE.items() if k in DOMESTIC_KEYS}
             dom_total = sum(default_dom.values())
-            domestic_norm = {k: v / dom_total * 0.66 for k, v in default_dom.items()}
+            domestic_norm = {k: v / dom_total * 0.50 for k, v in default_dom.items()}
         # Always use the global international baseline (34%)
         pipeline = {**domestic_norm, **INTERNATIONAL_BASELINE}
 
@@ -320,6 +387,12 @@ def select_first_name(origin: str, region: str, pools: Dict) -> str:
         'polish': 'polish',
         'czech': 'czech',
         'central_asian': 'central_asian',
+        'ethiopian': 'ethiopian',
+        'east_african': 'east_african',
+        'malagasy': 'malagasy',
+        'lusophone_african': 'lusophone_african',
+        'vietnamese': 'vietnamese',
+        'cambodian': 'cambodian',
     }
 
     if origin == 'american':
@@ -433,6 +506,18 @@ def select_surname(origin: str, region: str, pools: Dict) -> str:
         selected_pool = 'czech'
     elif origin == 'central_asian':
         selected_pool = 'central_asian'
+    elif origin == 'ethiopian':
+        selected_pool = 'ethiopian'
+    elif origin == 'east_african':
+        selected_pool = 'east_african'
+    elif origin == 'malagasy':
+        selected_pool = 'malagasy'
+    elif origin == 'lusophone_african':
+        selected_pool = 'lusophone_african'
+    elif origin == 'vietnamese':
+        selected_pool = 'vietnamese'
+    elif origin == 'cambodian':
+        selected_pool = 'cambodian'
     else:
         selected_pool = 'american_general'
 
@@ -503,7 +588,8 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
             'BRA': 'Brazil', 'ARG': 'Argentina', 'COL': 'Colombia',
             'PER': 'Peru', 'CHI': 'Chile', 'MEX': 'Mexico',
             'VEN': 'Venezuela', 'URU': 'Uruguay', 'PAR': 'Paraguay',
-            'ECU': 'Ecuador', 'CRC': 'Costa Rica', 'GTM': 'Guatemala', 'PAN': 'Panama'
+            'ECU': 'Ecuador', 'CRC': 'Costa Rica', 'GTM': 'Guatemala', 'PAN': 'Panama',
+            'NIC': 'Nicaragua', 'SLV': 'El Salvador', 'BOL': 'Bolivia'
         }
         country = country_map.get(country_code, 'Latin America')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'latin_american'}
@@ -522,10 +608,84 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
             'GIN': 'Guinea', 'MLI': 'Mali', 'TOG': 'Togo',
             'KEN': 'Kenya', 'UGA': 'Uganda', 'TZA': 'Tanzania',
             'ETH': 'Ethiopia', 'RWA': 'Rwanda',
-            'ZAF': 'South Africa', 'ZWE': 'Zimbabwe', 'ZMB': 'Zambia', 'BWA': 'Botswana'
+            'ZAF': 'South Africa', 'ZWE': 'Zimbabwe', 'ZMB': 'Zambia', 'BWA': 'Botswana',
+            'COD': 'DR Congo', 'MDG': 'Madagascar', 'AGO': 'Angola',
+            'MWI': 'Malawi', 'CAF': 'Central African Republic'
         }
         country = country_map.get(country_code, 'Africa')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'african'}
+
+    elif origin == 'ethiopian':
+        ea = cities['africa']['east_africa']
+        eth_cities = [c for c in ea if c.endswith(' ETH')]
+        if not eth_cities:
+            eth_cities = ['Addis Ababa ETH']
+        city_full = random.choice(eth_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'ETH', 'country': 'Ethiopia', 'region': 'ethiopian'}
+
+    elif origin == 'east_african':
+        ea = cities['africa']['east_africa']
+        ea_codes = {'KEN', 'UGA', 'TZA', 'RWA', 'COD', 'MWI'}
+        ea_cities = [c for c in ea if any(c.endswith(' ' + code) for code in ea_codes)]
+        if not ea_cities:
+            ea_cities = ['Nairobi KEN', 'Kampala UGA']
+        city_full = random.choice(ea_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KEN'
+        country_map = {
+            'KEN': 'Kenya', 'UGA': 'Uganda', 'TZA': 'Tanzania',
+            'RWA': 'Rwanda', 'COD': 'DR Congo', 'MWI': 'Malawi'
+        }
+        country = country_map.get(country_code, 'East Africa')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'east_african'}
+
+    elif origin == 'malagasy':
+        ea = cities['africa']['east_africa']
+        mdg_cities = [c for c in ea if c.endswith(' MDG')]
+        if not mdg_cities:
+            mdg_cities = ['Antananarivo MDG']
+        city_full = random.choice(mdg_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'MDG', 'country': 'Madagascar', 'region': 'malagasy'}
+
+    elif origin == 'lusophone_african':
+        sa = cities['africa']['southern_africa']
+        ago_cities = [c for c in sa if c.endswith(' AGO')]
+        if not ago_cities:
+            ago_cities = ['Luanda AGO']
+        city_full = random.choice(ago_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'AGO', 'country': 'Angola', 'region': 'lusophone_african'}
+
+    elif origin == 'vietnamese':
+        sea = cities.get('southeast_asia', {'major': ['Hanoi VNM'], 'secondary': []})
+        all_cities = sea['major'] + sea.get('secondary', [])
+        vnm_cities = [c for c in all_cities if c.endswith(' VNM')]
+        if not vnm_cities:
+            vnm_cities = ['Hanoi VNM', 'Ho Chi Minh City VNM']
+        city_full = random.choice(vnm_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        return {'city': city, 'state': 'VNM', 'country': 'Vietnam', 'region': 'vietnamese'}
+
+    elif origin == 'cambodian':
+        sea = cities.get('southeast_asia', {'major': ['Phnom Penh KHM'], 'secondary': []})
+        all_cities = sea['major'] + sea.get('secondary', [])
+        khm_lao_cities = [c for c in all_cities if c.endswith((' KHM', ' LAO'))]
+        if not khm_lao_cities:
+            khm_lao_cities = ['Phnom Penh KHM', 'Vientiane LAO']
+        city_full = random.choice(khm_lao_cities)
+        parts = city_full.rsplit(' ', 1)
+        city = parts[0]
+        country_code = parts[1] if len(parts) > 1 else 'KHM'
+        country_map = {'KHM': 'Cambodia', 'LAO': 'Laos'}
+        country = country_map.get(country_code, 'Cambodia')
+        return {'city': city, 'state': country_code, 'country': country, 'region': 'cambodian'}
 
     elif origin == 'nordic':
         nrd = cities['nordic']
@@ -580,6 +740,7 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         country_map = {
             'THA': 'Thailand', 'VNM': 'Vietnam', 'PHL': 'Philippines',
             'IDN': 'Indonesia', 'SGP': 'Singapore', 'MYS': 'Malaysia',
+            'KHM': 'Cambodia', 'LAO': 'Laos',
         }
         country = country_map.get(country_code, 'Southeast Asia')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'southeast_asian'}
@@ -663,7 +824,7 @@ def select_hometown(origin: str, region: str, pools: Dict) -> Dict[str, str]:
         country_code = parts[1] if len(parts) > 1 else 'KSA'
         country_map = {
             'KSA': 'Saudi Arabia', 'UAE': 'United Arab Emirates',
-            'IRN': 'Iran', 'EGY': 'Egypt', 'MAR': 'Morocco',
+            'IRN': 'Iran', 'EGY': 'Egypt', 'MAR': 'Morocco', 'YEM': 'Yemen',
         }
         country = country_map.get(country_code, 'Middle East')
         return {'city': city, 'state': country_code, 'country': country, 'region': 'arabic'}

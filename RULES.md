@@ -341,7 +341,7 @@ The clock stops for:
 
 ### Timeouts
 
-- Each team receives 3 timeouts per half
+- Each team receives 4 timeouts per half
 - Timeouts do not carry over between halves
 - Each timeout lasts 90 seconds
 - Officials may grant additional timeouts for injuries

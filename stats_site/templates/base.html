@@ -2,7 +2,11 @@
 <html lang="en" data-theme="bloomberg">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
 <title>{% block title %}Viperball Stats{% endblock %}</title>
 <style>
 /* Bloomberg (default dark) */
@@ -363,6 +367,50 @@ a:hover { text-decoration: underline; color: var(--fg-bright); }
   background: linear-gradient(to bottom, transparent 0%, var(--bg) 85%);
 }
 
+/* Team banner header */
+.team-banner {
+  width: 100%;
+  max-height: 100px;
+  overflow: hidden;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 0;
+  position: relative;
+}
+.team-banner img {
+  display: block;
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  opacity: 0.6;
+}
+.team-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 30%, var(--bg) 100%);
+}
+
+/* Copy box score button */
+.copy-boxscore-btn {
+  background: var(--bg-alt);
+  color: var(--fg-dim);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+.copy-boxscore-btn:hover {
+  color: var(--fg-bright);
+  border-color: var(--accent);
+}
+.copy-boxscore-btn.copied {
+  color: var(--green);
+  border-color: var(--green);
+}
+
 /* Section headers */
 h2 {
   font-size: 13px;
@@ -582,34 +630,140 @@ td.rank {
   text-align: center;
 }
 
-/* Responsive */
+/* ── Mobile nav toggle ── */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 18px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  line-height: 1;
+}
+.nav-toggle:hover { color: var(--fg-bright); border-color: var(--fg-dim); }
+
+/* ── Responsive ── */
+
+/* Large tablets / narrow desktops */
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: 1fr 1fr; }
+  .container.wide { max-width: 100%; }
 }
+
+/* Tablets */
 @media (max-width: 768px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  table { font-size: 10px; }
-  thead th, tbody td { padding: 2px 4px; }
-  .topbar nav a { font-size: 10px; padding: 2px 4px; }
-  .box-score-header { flex-direction: column; gap: 8px; }
-  .box-team .name { font-size: 12px; }
-  .box-score-final { font-size: 18px; }
-  .box-score-vs { padding: 4px 0; }
-  .metric .value { font-size: 14px; }
-  /* Tabs: horizontal scroll instead of wrap to prevent overlap */
+  body { font-size: 12px; }
+  .container { padding: 0 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+
+  /* Topbar: hamburger nav */
+  .nav-toggle { display: block; }
+  .topbar .container { flex-wrap: nowrap; }
+  .topbar nav {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+    order: 10;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+  .topbar nav.open { display: flex; }
+  .topbar .container { flex-wrap: wrap; }
+  .topbar nav a {
+    font-size: 13px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar nav a:last-child { border-bottom: none; }
+
+  /* Theme switcher stays in topbar row */
+  .theme-switcher { margin-left: auto; }
+  .theme-btn { font-size: 10px; padding: 4px 8px; }
+  .theme-menu { right: 0; left: auto; min-width: 180px; }
+  .theme-menu button { padding: 10px 12px; font-size: 12px; }
+
+  /* Grids */
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+
+  /* Tables: scrollable */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; font-size: 11px; }
+  thead th, tbody td { padding: 4px 6px; }
+
+  /* Tabs */
   .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tabs a { padding: 4px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
-  /* Make all tables horizontally scrollable on mobile */
-  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-  .page-header h1 { font-size: 14px; }
-  .container { padding: 0 8px; }
-  body { font-size: 11px; }
-  .theme-btn { font-size: 9px; padding: 2px 6px; }
-  .theme-menu { right: 0; left: auto; }
+  .tabs a { padding: 8px 12px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Box scores */
+  .box-score-header { flex-direction: column; gap: 8px; }
+  .box-team .name { font-size: 13px; }
+  .box-score-final { font-size: 20px; }
+  .box-score-vs { padding: 4px 0; }
+
+  /* Page header */
+  .page-header h1 { font-size: 16px; }
+  .page-header { padding: 12px 0 10px; }
+
+  /* Metrics */
+  .metric .value { font-size: 15px; }
+  .metric-card .metric-value { font-size: 15px; }
+
+  /* Player card header */
+  .page-header[style*="display:flex"] { flex-wrap: wrap; }
+  .player-card-frame { width: 72px; height: 72px; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 11px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .breadcrumb::-webkit-scrollbar { display: none; }
 }
+
+/* Small phones */
+@media (max-width: 480px) {
+  body { font-size: 12px; }
+  .container { padding: 0 8px; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 10px; }
+
+  table { font-size: 10px; }
+  thead th, tbody td { padding: 3px 4px; }
+  thead th { font-size: 9px; }
+
+  .tabs a { padding: 8px 10px; font-size: 10px; }
+
+  .page-header h1 { font-size: 14px; }
+  .page-header .subtitle { font-size: 11px; }
+
+  .metric .value { font-size: 14px; }
+  .metric-card { padding: 8px; }
+  .metric-card .metric-value { font-size: 14px; }
+
+  .box-score-final { font-size: 18px; }
+  .box-team .name { font-size: 12px; }
+
+  h2 { font-size: 12px; margin: 12px 0 6px; }
+
+  .player-card-frame { width: 64px; height: 64px; }
+
+  .footer { margin-top: 20px; }
+
+  /* Topbar brand smaller */
+  .topbar .brand { font-size: 13px; }
+}
+
 /* Horizontal scroll wrapper for wide tables on small screens */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* PWA overscroll feel */
+html { overscroll-behavior-y: contain; }
+
+/* Safe area padding for notched devices */
+.topbar { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
 /* Theme switcher */
 .theme-switcher {
@@ -702,6 +856,12 @@ td.rank {
 (function(){
   var saved = localStorage.getItem('vb-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
+  // Update theme-color meta to match current theme bg
+  var tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) {
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-alt').trim();
+    if (bg) tc.setAttribute('content', bg);
+  }
 })();
 </script>
 </head>
@@ -709,7 +869,8 @@ td.rank {
 <div class="topbar">
   <div class="container wide">
     <a class="brand" href="/stats/">VIPERBALL</a>
-    <nav>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
+    <nav id="main-nav">
       <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
       <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
       <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
@@ -767,6 +928,9 @@ td.rank {
       menu.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
       this.classList.add('active');
       menu.classList.remove('open');
+      // Update theme-color meta for mobile browser chrome
+      var tc = document.querySelector('meta[name="theme-color"]');
+      if (tc) { setTimeout(function(){ var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-alt').trim(); if (bg) tc.setAttribute('content', bg); }, 10); }
     });
   });
   // Close menu on outside click
@@ -774,6 +938,116 @@ td.rank {
     if (!e.target.closest('.theme-switcher')) menu.classList.remove('open');
   });
 })();
+// Mobile nav toggle
+(function(){
+  var btn = document.getElementById('nav-toggle');
+  var nav = document.getElementById('main-nav');
+  if (btn && nav) {
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      btn.innerHTML = open ? '&#10005;' : '&#9776;';
+    });
+    document.addEventListener('click', function(e){
+      if (!e.target.closest('.topbar')) {
+        nav.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.innerHTML = '&#9776;';
+      }
+    });
+  }
+})();
+</script>
+<script>
+/* Copy Box Score as text — scrapes tables from the rendered page */
+function copyBoxScore(btn) {
+  var lines = [];
+  /* Score header */
+  var hdr = document.querySelector('.box-score-header');
+  if (hdr) {
+    var teams = hdr.querySelectorAll('.box-team');
+    var vs = hdr.querySelector('.box-score-vs');
+    if (teams.length >= 2) {
+      var aN = teams[0].querySelector('.name').textContent.trim();
+      var aS = teams[0].querySelector('.box-score-final').textContent.trim();
+      var hN = teams[1].querySelector('.name').textContent.trim();
+      var hS = teams[1].querySelector('.box-score-final').textContent.trim();
+      var ctx = vs ? vs.textContent.trim().replace(/\s+/g, ' ') : '';
+      lines.push(aN + ' ' + aS + '  @  ' + hN + ' ' + hS);
+      if (ctx) lines.push(ctx);
+      lines.push('');
+    }
+  }
+  /* Each h2 section + its table */
+  var sections = document.querySelectorAll('.container.wide > h2, .container.wide > table, .container.wide > .grid-4, .container.wide > .grid-3');
+  var curSection = '';
+  sections.forEach(function(el) {
+    if (el.tagName === 'H2') {
+      curSection = el.textContent.trim();
+      /* Skip play-by-play and drive summary to keep it concise */
+      return;
+    }
+    if (curSection.indexOf('Play-by-Play') !== -1 || curSection.indexOf('Drive Summary') !== -1 ||
+        curSection.indexOf('Play Distribution') !== -1 || curSection.indexOf('Plays Per Quarter') !== -1) return;
+
+    if (el.tagName === 'TABLE') {
+      var thead = el.querySelector('thead');
+      var tbody = el.querySelector('tbody');
+      if (!tbody) return;
+      var rows = tbody.querySelectorAll('tr');
+      if (rows.length === 0) return;
+
+      /* Section label */
+      if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
+
+      rows.forEach(function(tr) {
+        var cells = tr.querySelectorAll('td, th');
+        if (cells.length === 0) return;
+        var vals = [];
+        cells.forEach(function(td) {
+          var t = td.textContent.trim().replace(/\s+/g, ' ');
+          if (t) vals.push(t);
+        });
+        /* Section headers inside table (OFFENSE, RUSHING, etc) */
+        if (cells.length === 1 && vals.length === 1) {
+          lines.push('');
+          lines.push('[' + vals[0] + ']');
+        } else if (vals.length >= 2) {
+          /* 3-col: away | stat | home  or  2-col formats */
+          if (vals.length === 3) {
+            lines.push(padR(vals[1], 28) + padL(vals[0], 12) + padL(vals[2], 12));
+          } else {
+            lines.push(vals.join('  '));
+          }
+        }
+      });
+      lines.push('');
+    }
+    /* Grid metrics */
+    if (el.classList.contains('grid-4') || el.classList.contains('grid-3')) {
+      if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
+      var metrics = el.querySelectorAll('.metric');
+      var parts = [];
+      metrics.forEach(function(m) {
+        var lbl = m.querySelector('.label');
+        var val = m.querySelector('.value');
+        if (lbl && val) parts.push(lbl.textContent.trim() + ': ' + val.textContent.trim().replace(/\s+/g, '/'));
+      });
+      if (parts.length) lines.push(parts.join('  |  '));
+      lines.push('');
+    }
+  });
+
+  var text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = 'Copy Box Score'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+function padR(s, n) { while (s.length < n) s += ' '; return s; }
+function padL(s, n) { while (s.length < n) s = ' ' + s; return s; }
 </script>
 </body>
 </html>
