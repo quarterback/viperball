@@ -5752,66 +5752,20 @@ class ViperballEngine:
         """Victory formation check: kneel instead of running plays when
         the leading team can run out the clock safely.
 
-        V2.8: Accounts for opponent's remaining timeouts.  Each defensive
-        timeout can stop the clock after a kneel, so the offense needs
-        enough kneels to burn through the remaining time *plus* the time
-        the defense can reclaim by forcing additional plays.
-
-        In the 6-down system each kneel burns ~37s and costs 1 down.
-        With 6 downs available per set, the offense can kneel up to 6 times
-        before a turnover on downs (which would be catastrophic).  Safe
-        kneeling means running out the clock within a single set of downs.
+        HARD RULE: Victory formation is ONLY available when there are
+        50 seconds or less remaining in the game.  Never before that.
+        This prevents absurd 4-minute kneel-fests.
         """
         if self.state.quarter != 4:
+            return False
+        if self.state.time_remaining > 50:
             return False
         score_diff = self._get_score_diff()
         if score_diff <= 0:
             return False
 
-        time_left = self.state.time_remaining
-        seconds_per_kneel = 37  # average of 35-40
-
-        # How many downs remain in this set before turnover?
-        downs_left = max(1, 7 - self.state.down)  # downs 1-6, turnover on 7th
-
-        # Defensive timeouts: each one stops the clock after a kneel,
-        # but the kneel itself still burns its 37s.  The timeout just
-        # means the clock doesn't run between plays (normally ~0s for
-        # kneels anyway).  The real cost is that the offense burns a
-        # down for each timeout + each kneel.  So the offense needs
-        # enough downs to cover kneels.
-        def_side = "away" if self.state.possession == "home" else "home"
-        def_timeouts = (self.state.home_timeouts if def_side == "home"
-                        else self.state.away_timeouts)
-
-        # Each kneel burns 37s.  Defense can call timeout after each of
-        # their remaining TOs, but the kneel still consumed its time.
-        # The offense needs ceil(time_left / 37) kneels total.
-        # However, the final sub-40s of game clock doesn't require a snap:
-        # the play clock (40s) will expire before the game clock does,
-        # so the last "kneel" is free — just let the clock run out.
-        play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
-        effective_time = max(0, time_left - play_clock)  # free burn at the end
-        kneels_needed = max(1, -(-effective_time // seconds_per_kneel))  # ceiling division
-        # Edge case: if time_left <= play_clock, one kneel suffices (or zero,
-        # but we need at least one to trigger victory formation).
-        if time_left <= play_clock:
-            kneels_needed = 1
-
-        # Can we kneel it out within the remaining downs?
-        can_kneel_out = kneels_needed <= downs_left
-
-        # Safety margin: don't kneel unless lead is big enough relative
-        # to remaining time (prevents kneeling away a 1-point lead with
-        # 2 minutes left where a fumbled snap could be disaster).
-        if time_left > 90:
-            safe_lead = score_diff > 9  # need double-digit lead
-        elif time_left > 45:
-            safe_lead = score_diff > 5
-        else:
-            safe_lead = score_diff > 0
-
-        return can_kneel_out and safe_lead
+        # With <=50 seconds left, any lead is enough to kneel
+        return True
 
     def simulate_kneel(self) -> Play:
         """Victory formation: kneel-down that burns 35-40 seconds of clock
