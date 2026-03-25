@@ -9,9 +9,11 @@
 
 {% block content %}
 
-{# Helper macro for sort links — builds ?sort=X&top=Y #}
+{# Helper macro for sort links — clicking same column toggles asc/desc #}
 {% macro sort_link(key, label, cls="num") %}
-<th class="{{ cls }}"><a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&top={{ top }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ label }}</a></th>
+{% set next_dir = "asc" if sort == key and sort_dir == "desc" else "desc" %}
+{% set arrow = " ▲" if sort == key and sort_dir == "asc" else (" ▼" if sort == key else "") %}
+<th class="{{ cls }}"><a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&dir={{ next_dir }}&top={{ top }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ label }}{{ arrow }}</a></th>
 {% endmacro %}
 
 <div class="page-header">
@@ -42,10 +44,10 @@
   Each column is an independent ranking system. Click any column header to sort by that system.
   <strong>σ</strong> measures disagreement — high σ = controversial team.
   <br>
-  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=25">Top 25</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=50">Top 50</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top=100">Top 100</a> &middot;
-  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&top={{ total_teams }}">All {{ total_teams }}</a>
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&dir={{ sort_dir }}&top=25">Top 25</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&dir={{ sort_dir }}&top=50">Top 50</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&dir={{ sort_dir }}&top=100">Top 100</a> &middot;
+  <a href="/stats/college/{{ session_id }}/ratings?sort={{ sort }}&dir={{ sort_dir }}&top={{ total_teams }}">All {{ total_teams }}</a>
   &middot; <a href="/stats/college/ratings-glossary">Glossary</a>
 </p>
 
@@ -76,9 +78,9 @@
     <td class="num">{{ "%.1f"|format(c.mean_rank) }}</td>
     <td class="num">{{ "%.1f"|format(c.median_rank) }}</td>
     <td class="num {% if c.std_dev > 20 %}stat-bad{% elif c.std_dev > 10 %}{% else %}stat-good{% endif %}">{{ "%.1f"|format(c.std_dev) }}</td>
-    <td class="num">{{ "%.0f"|format(c.sos) }}</td>
-    <td class="num">{{ "%.0f"|format(c.sos_w) if c.sos_w else '—' }}</td>
-    <td class="num">{{ "%.0f"|format(c.sos_l) if c.sos_l else '—' }}</td>
+    <td class="num">#{{ c.sos }}</td>
+    <td class="num">{{ "#%d"|format(c.sos_w) if c.sos_w else '—' }}</td>
+    <td class="num">{{ "#%d"|format(c.sos_l) if c.sos_l else '—' }}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -130,11 +132,15 @@
       <th class="num">#</th>
       <th>Team</th>
       <th>Rec</th>
-      <th class="num"><a href="/stats/college/{{ session_id }}/ratings?sort=composite&top={{ top }}" style="{% if sort == 'composite' or sort == 'mean' %}color:var(--accent);font-weight:bold{% endif %}">Avg</a></th>
+      {% set avg_next = "asc" if (sort == 'composite' or sort == 'mean') and sort_dir == "desc" else "desc" %}
+      {% set avg_arrow = " ▲" if (sort == 'composite' or sort == 'mean') and sort_dir == "asc" else (" ▼" if (sort == 'composite' or sort == 'mean') else "") %}
+      <th class="num"><a href="/stats/college/{{ session_id }}/ratings?sort=composite&dir={{ avg_next }}&top={{ top }}" style="{% if sort == 'composite' or sort == 'mean' %}color:var(--accent);font-weight:bold{% endif %}">Avg{{ avg_arrow }}</a></th>
       {% for cat_name, cat_keys in categories %}
       {% for key in cat_keys %}
+      {% set k_next = "asc" if sort == key and sort_dir == "desc" else "desc" %}
+      {% set k_arrow = " ▲" if sort == key and sort_dir == "asc" else (" ▼" if sort == key else "") %}
       <th class="num" style="font-size: 9px;{% if loop.first %} border-left: 1px solid var(--border);{% endif %}">
-        <a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&top={{ top }}" title="{{ key }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ short_names.get(key, key) }}</a>
+        <a href="/stats/college/{{ session_id }}/ratings?sort={{ key }}&dir={{ k_next }}&top={{ top }}" title="{{ key }}" style="{% if sort == key %}color:var(--accent);font-weight:bold{% endif %}">{{ short_names.get(key, key) }}{{ k_arrow }}</a>
       </th>
       {% endfor %}
       {% endfor %}

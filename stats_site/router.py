@@ -2335,11 +2335,27 @@ def _cached_composite_rankings(season):
             "std_dev": c.std_dev,
             "method_ranks": c.method_ranks,
             "method_ratings": c.method_ratings,
-            "sos": c.sos,
-            "sos_w": c.sos_w,
-            "sos_l": c.sos_l,
+            "sos_elo": c.sos,
+            "sos_w_elo": c.sos_w,
+            "sos_l_elo": c.sos_l,
         }
         result.append(entry)
+
+    # ── Convert SOS Elo values to ordinal ranks (1 = hardest schedule) ──
+    result.sort(key=lambda c: c["sos_elo"], reverse=True)
+    for i, c in enumerate(result):
+        c["sos"] = i + 1
+    result.sort(key=lambda c: c["sos_w_elo"], reverse=True)
+    for i, c in enumerate(result):
+        c["sos_w"] = i + 1
+    # SOS(L) — rank by highest avg Elo of teams lost to (0 = undefeated, rank last)
+    result.sort(key=lambda c: c["sos_l_elo"] if c["sos_l_elo"] else -1, reverse=True)
+    for i, c in enumerate(result):
+        c["sos_l"] = i + 1 if c["sos_l_elo"] else 0
+    # Re-sort by composite rank
+    result.sort(key=lambda c: c["mean_rank"])
+    for i, c in enumerate(result):
+        c["composite_rank"] = i + 1
 
     # ── Conference rankings (Massey-style grid) ──
     conf_rankings = calculate_conference_rankings(composites)
@@ -2363,7 +2379,7 @@ def _cached_composite_rankings(season):
 
 
 @router.get("/college/{session_id}/ratings", response_class=HTMLResponse)
-def college_ratings(request: Request, session_id: str, top: int = 50, sort: str = "composite"):
+def college_ratings(request: Request, session_id: str, top: int = 50, sort: str = "composite", dir: str = ""):
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
@@ -2373,24 +2389,34 @@ def college_ratings(request: Request, session_id: str, top: int = 50, sort: str 
 
     from engine.ranking_composite import METHOD_KEYS
 
+    # Determine default sort direction per column type
+    # "desc" means best-first for most columns; ranks are ascending-best
+    if dir not in ("asc", "desc"):
+        # Default: ranks sort ascending (lower=better), values sort descending (higher=better)
+        if sort in METHOD_KEYS or sort in ("composite", "mean", "median", "sos", "sos_w", "sos_l"):
+            dir = "desc"  # default: best first
+        else:
+            dir = "desc"
+    user_reverse = (dir == "desc")
+
     # Sort by selected column
     if sort == "composite" or sort == "mean":
-        composites.sort(key=lambda c: c["mean_rank"])
+        composites.sort(key=lambda c: c["mean_rank"], reverse=not user_reverse)
     elif sort == "median":
-        composites.sort(key=lambda c: c["median_rank"])
+        composites.sort(key=lambda c: c["median_rank"], reverse=not user_reverse)
     elif sort == "std":
-        composites.sort(key=lambda c: c["std_dev"], reverse=True)
+        composites.sort(key=lambda c: c["std_dev"], reverse=user_reverse)
     elif sort == "sos":
-        composites.sort(key=lambda c: c["sos"], reverse=True)
+        composites.sort(key=lambda c: c["sos"], reverse=not user_reverse)
     elif sort == "sos_w":
-        composites.sort(key=lambda c: c["sos_w"], reverse=True)
+        composites.sort(key=lambda c: c["sos_w"], reverse=not user_reverse)
     elif sort == "sos_l":
-        composites.sort(key=lambda c: c["sos_l"], reverse=True)
+        composites.sort(key=lambda c: c["sos_l"], reverse=not user_reverse)
     elif sort == "record":
-        composites.sort(key=lambda c: (c["wins"] / max(1, c["wins"] + c["losses"]), c["wins"]), reverse=True)
+        composites.sort(key=lambda c: (c["wins"] / max(1, c["wins"] + c["losses"]), c["wins"]), reverse=user_reverse)
     elif sort in METHOD_KEYS:
-        # Sort by a specific ranking system (lower rank = better = first)
-        composites.sort(key=lambda c: c["method_ranks"].get(sort, 9999))
+        # Ranks: lower = better; desc means best-first = ascending rank numbers
+        composites.sort(key=lambda c: c["method_ranks"].get(sort, 9999), reverse=not user_reverse)
     # else: keep default composite order
 
     # Clamp top parameter
@@ -2402,6 +2428,7 @@ def college_ratings(request: Request, session_id: str, top: int = 50, sort: str 
         total_teams=len(composites),
         top=top,
         sort=sort,
+        sort_dir=dir,
         method_keys=METHOD_KEYS,
         conference_rankings=conf_rankings,
         season_name=getattr(season, "name", "Season"),
