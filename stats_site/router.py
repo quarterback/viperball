@@ -149,6 +149,24 @@ def _stadium_url_for(team_id: str) -> str | None:
     from engine.stadium_generator import get_stadium_url
     return get_stadium_url(team_id, pool_size=n, stadiums_dir=_STADIUMS_DIR)
 
+# ── Pixel-art banner pool ──
+_BANNERS_DIR = os.path.join(os.path.dirname(__file__), "static", "banners")
+_banner_pool_size: int | None = None
+
+def _get_banner_pool_size() -> int:
+    global _banner_pool_size
+    if _banner_pool_size is None:
+        from engine.banner_generator import get_pool_size
+        _banner_pool_size = get_pool_size(_BANNERS_DIR)
+    return _banner_pool_size
+
+def _banner_url_for(team_id: str) -> str | None:
+    n = _get_banner_pool_size()
+    if n == 0:
+        return None
+    from engine.banner_generator import get_banner_url
+    return get_banner_url(team_id, pool_size=n, banners_dir=_BANNERS_DIR)
+
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
@@ -631,6 +649,45 @@ def college_index(request: Request):
     return templates.TemplateResponse("college/index.html", _ctx(
         request, section="college", sessions=sessions,
     ))
+
+
+@router.post("/college/import")
+async def college_import_dynasty(request: Request):
+    """Import a dynasty save file. If it contains a season snapshot, save it
+    as a season archive and redirect to the archive viewer for immediate stats access."""
+    import json as _json
+    from starlette.responses import RedirectResponse
+    from engine.db import save_season_archive
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file provided")
+
+    try:
+        contents = await file.read()
+        data = _json.loads(contents)
+    except Exception as e:
+        raise HTTPException(400, f"Failed to parse file: {e}")
+
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
+
+    if snapshot:
+        import uuid
+        archive_key = f"import_{uuid.uuid4().hex[:8]}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return RedirectResponse(f"/stats/archives/{archive_key}/", status_code=303)
+
+    # No season snapshot — show an error page
+    raise HTTPException(
+        400,
+        f"No season data found in this save file. The dynasty metadata for "
+        f"'{dynasty_name}' (Year {year}) was found, but there are no game results "
+        f"to display. Re-download the save from an active season to include stats."
+    )
 
 
 @router.get("/college/{session_id}/", response_class=HTMLResponse)
@@ -1415,6 +1472,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         coaching_staff=coaching_staff,
         postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
+        banner_url=_banner_url_for(team_name),
         benchmarks=benchmarks,
         banners=banners,
         season_history=season_history,
@@ -2138,6 +2196,324 @@ def college_analytics(request: Request, session_id: str, sort: str = "war", conf
     ))
 
 
+# ── RATINGS (Composite Rankings) ─────────────────────────────────────────
+
+def _cached_composite_rankings(season):
+    """Build composite rankings from season data. Cached per season state."""
+    cached = _cache_get(season, "composite_rankings")
+    if cached is not None:
+        return cached
+
+    from engine.ranking_composite import (
+        GameResult, TeamSeasonStats, calculate_composite,
+        calculate_conference_rankings, METHOD_KEYS,
+    )
+
+    # ── Build GameResult list from completed games ──
+    game_results = []
+    for game in _all_college_games(season):
+        if not game.completed or game.home_score is None:
+            continue
+
+        # Extract quarter scores from play-by-play if available
+        home_q = None
+        away_q = None
+        fr = getattr(game, "full_result", None)
+        if fr and isinstance(fr, dict):
+            pbp = fr.get("play_by_play", [])
+            if pbp and isinstance(pbp, list) and pbp and "home_score" in pbp[0]:
+                h_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                a_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+                prev_h, prev_a = 0.0, 0.0
+                for play in pbp:
+                    q = play.get("quarter", 0)
+                    if q not in h_q:
+                        continue
+                    cur_h = play.get("home_score", prev_h)
+                    cur_a = play.get("away_score", prev_a)
+                    h_q[q] += cur_h - prev_h
+                    a_q[q] += cur_a - prev_a
+                    prev_h, prev_a = cur_h, cur_a
+                # Cumulative quarter scores for ranking_composite
+                home_q = [h_q[1], h_q[1]+h_q[2], h_q[1]+h_q[2]+h_q[3], h_q[1]+h_q[2]+h_q[3]+h_q[4]]
+                away_q = [a_q[1], a_q[1]+a_q[2], a_q[1]+a_q[2]+a_q[3], a_q[1]+a_q[2]+a_q[3]+a_q[4]]
+
+        game_results.append(GameResult(
+            home_team=game.home_team,
+            away_team=game.away_team,
+            home_score=game.home_score,
+            away_score=game.away_score,
+            neutral_site=False,
+            home_q_scores=home_q,
+            away_q_scores=away_q,
+        ))
+
+    if len(game_results) < 4:
+        _cache_set(season, "composite_rankings", [])
+        return []
+
+    # ── Build TeamSeasonStats from standings ──
+    team_stats = {}
+    for t_name, rec in season.standings.items():
+        if rec.games_played == 0:
+            continue
+        dye = rec.dye_season_summary
+        pk_eff = dye.get("pk_efficiency")
+        pp_eff = dye.get("pp_efficiency")
+        mess = dye.get("mess_rate")
+        pp_data = dye.get("power_play", {})
+
+        team_stats[t_name] = TeamSeasonStats(
+            team=t_name,
+            ppd=rec.avg_ppd,
+            conversion_pct=rec.avg_conversion_pct,
+            explosive_plays=int(rec.total_explosive),
+            total_drives=max(1, rec.games_played * 10),  # rough estimate
+            opp_ppd=rec.points_against / max(1, rec.games_played) / 10.0,  # rough per-drive
+            turnovers_forced=rec.total_turnovers_forced_all,
+            kill_pct=dye.get("penalty_kill", {}).get("score_rate", 0),
+            stops=rec.total_defensive_stops,
+            opp_drives=rec.total_opponent_drives,
+            pk_efficiency=pk_eff if pk_eff is not None else 0.0,
+            pp_efficiency=pp_eff if pp_eff is not None else 0.0,
+            mess_rate=mess if mess is not None else 0.0,
+            wins_despite_penalty=rec.dye_wins_despite_penalty,
+            epa_per_play=0.0,  # filled below from game aggregation
+            game_control_avg=0.0,
+            pp_score_rate=pp_data.get("score_rate", 0),
+            power_index=season.calculate_power_index(t_name),
+        )
+
+    # ── Aggregate EPA from game results ──
+    epa_sums = {}
+    play_counts = {}
+    for game in _all_college_games(season):
+        if not game.completed:
+            continue
+        fr = getattr(game, "full_result", None)
+        if not fr or not isinstance(fr, dict):
+            continue
+        stats = fr.get("stats", {})
+        for side, t_name in [("home", game.home_team), ("away", game.away_team)]:
+            s = stats.get(side)
+            if not s:
+                continue
+            epa_val = s.get("epa", 0)
+            if isinstance(epa_val, dict):
+                epa_val = epa_val.get("total_epa", epa_val.get("wpa", 0))
+            if isinstance(epa_val, (int, float)):
+                epa_sums[t_name] = epa_sums.get(t_name, 0) + epa_val
+            plays = s.get("total_plays", 0)
+            play_counts[t_name] = play_counts.get(t_name, 0) + plays
+
+    for t_name, ts in team_stats.items():
+        total_plays = play_counts.get(t_name, 0)
+        if total_plays > 0:
+            ts.epa_per_play = epa_sums.get(t_name, 0) / total_plays
+
+    # ── Conference map ──
+    conferences = getattr(season, "team_conferences", {})
+
+    # ── Run composite ──
+    composites = calculate_composite(
+        game_results,
+        team_conferences=conferences,
+        team_stats=team_stats,
+    )
+
+    # ── Serialize to dicts for template ──
+    result = []
+    for c in composites:
+        entry = {
+            "composite_rank": c.composite_rank,
+            "team": c.team,
+            "conference": c.conference,
+            "wins": c.wins,
+            "losses": c.losses,
+            "mean_rank": c.mean_rank,
+            "median_rank": c.median_rank,
+            "std_dev": c.std_dev,
+            "method_ranks": c.method_ranks,
+            "method_ratings": c.method_ratings,
+            "sos_elo": c.sos,
+            "sos_w_elo": c.sos_w,
+            "sos_l_elo": c.sos_l,
+        }
+        result.append(entry)
+
+    # ── Convert SOS Elo values to ordinal ranks (1 = hardest schedule) ──
+    result.sort(key=lambda c: c["sos_elo"], reverse=True)
+    for i, c in enumerate(result):
+        c["sos"] = i + 1
+    result.sort(key=lambda c: c["sos_w_elo"], reverse=True)
+    for i, c in enumerate(result):
+        c["sos_w"] = i + 1
+    # SOS(L) — rank by highest avg Elo of teams lost to (0 = undefeated, rank last)
+    result.sort(key=lambda c: c["sos_l_elo"] if c["sos_l_elo"] else -1, reverse=True)
+    for i, c in enumerate(result):
+        c["sos_l"] = i + 1 if c["sos_l_elo"] else 0
+    # Re-sort by composite rank
+    result.sort(key=lambda c: c["mean_rank"])
+    for i, c in enumerate(result):
+        c["composite_rank"] = i + 1
+
+    # ── Conference rankings (Massey-style grid) ──
+    conf_rankings = calculate_conference_rankings(composites)
+    conf_result = []
+    for cr in conf_rankings:
+        conf_result.append({
+            "conference": cr.conference,
+            "composite_rank": cr.composite_rank,
+            "mean_rank": cr.mean_rank,
+            "median_rank": cr.median_rank,
+            "std_dev": cr.std_dev,
+            "avg_team_rank": cr.avg_team_rank,
+            "n_teams": cr.n_teams,
+            "method_ranks": cr.method_ranks,
+            "method_avg_team_ranks": cr.method_avg_team_ranks,
+        })
+
+    _cache_set(season, "composite_rankings", result)
+    _cache_set(season, "conference_rankings", conf_result)
+    return result
+
+
+@router.get("/college/{session_id}/ratings", response_class=HTMLResponse)
+def college_ratings(request: Request, session_id: str, top: int = 50, sort: str = "composite", dir: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    composites = _cached_composite_rankings(season)
+    conf_rankings = _cache_get(season, "conference_rankings") or []
+
+    from engine.ranking_composite import METHOD_KEYS
+
+    # Determine default sort direction per column type
+    # "desc" means best-first for most columns; ranks are ascending-best
+    if dir not in ("asc", "desc"):
+        # Default: ranks sort ascending (lower=better), values sort descending (higher=better)
+        if sort in METHOD_KEYS or sort in ("composite", "mean", "median", "sos", "sos_w", "sos_l"):
+            dir = "desc"  # default: best first
+        else:
+            dir = "desc"
+    user_reverse = (dir == "desc")
+
+    # Sort by selected column
+    if sort == "composite" or sort == "mean":
+        composites.sort(key=lambda c: c["mean_rank"], reverse=not user_reverse)
+    elif sort == "median":
+        composites.sort(key=lambda c: c["median_rank"], reverse=not user_reverse)
+    elif sort == "std":
+        composites.sort(key=lambda c: c["std_dev"], reverse=user_reverse)
+    elif sort == "sos":
+        composites.sort(key=lambda c: c["sos"], reverse=not user_reverse)
+    elif sort == "sos_w":
+        composites.sort(key=lambda c: c["sos_w"], reverse=not user_reverse)
+    elif sort == "sos_l":
+        composites.sort(key=lambda c: c["sos_l"], reverse=not user_reverse)
+    elif sort == "record":
+        composites.sort(key=lambda c: (c["wins"] / max(1, c["wins"] + c["losses"]), c["wins"]), reverse=user_reverse)
+    elif sort in METHOD_KEYS:
+        # Ranks: lower = better; desc means best-first = ascending rank numbers
+        composites.sort(key=lambda c: c["method_ranks"].get(sort, 9999), reverse=not user_reverse)
+    # else: keep default composite order
+
+    # Clamp top parameter
+    top = max(10, min(len(composites), top)) if composites else 0
+
+    return templates.TemplateResponse("college/ratings.html", _ctx(
+        request, section="college", session_id=session_id,
+        composites=composites[:top],
+        total_teams=len(composites),
+        top=top,
+        sort=sort,
+        sort_dir=dir,
+        method_keys=METHOD_KEYS,
+        conference_rankings=conf_rankings,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
+@router.get("/college/ratings-glossary", response_class=HTMLResponse)
+def college_ratings_glossary(request: Request):
+    """Serve the ranking systems glossary as an HTML page."""
+    import re
+    glossary_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "RANKING_SYSTEMS.md")
+    if os.path.exists(glossary_path):
+        with open(glossary_path) as f:
+            raw_md = f.read()
+    else:
+        raw_md = "# Ranking Systems Glossary\n\nGlossary file not found."
+
+    # Simple markdown to HTML (no dependency required)
+    html_lines = []
+    in_table = False
+    in_code = False
+    for line in raw_md.split("\n"):
+        stripped = line.strip()
+
+        # Code blocks
+        if stripped.startswith("```"):
+            if in_code:
+                html_lines.append("</pre>")
+                in_code = False
+            else:
+                html_lines.append("<pre style='background:var(--bg2,#1a1a1a);padding:8px;overflow-x:auto;font-size:11px;'>")
+                in_code = True
+            continue
+        if in_code:
+            html_lines.append(line.replace("<", "&lt;").replace(">", "&gt;"))
+            continue
+
+        # Tables
+        if "|" in stripped and not stripped.startswith("#"):
+            cells = [c.strip() for c in stripped.split("|")]
+            cells = [c for c in cells if c]  # drop empty edges
+            if all(set(c) <= set("-: ") for c in cells):
+                continue  # skip separator row
+            if not in_table:
+                html_lines.append("<table style='font-size:11px;margin:8px 0;'>")
+                in_table = True
+            tag = "th" if not in_table or html_lines[-1].endswith("</table>") else "td"
+            # First table row = header
+            row_html = "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
+            html_lines.append(row_html)
+            continue
+        elif in_table:
+            html_lines.append("</table>")
+            in_table = False
+
+        # Headings
+        if stripped.startswith("### "):
+            html_lines.append(f"<h3 style='margin-top:16px;margin-bottom:4px;'>{stripped[4:]}</h3>")
+        elif stripped.startswith("## "):
+            html_lines.append(f"<h2 style='margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:4px;'>{stripped[3:]}</h2>")
+        elif stripped.startswith("# "):
+            html_lines.append(f"<h1>{stripped[2:]}</h1>")
+        elif stripped.startswith("---"):
+            html_lines.append("<hr style='border:none;border-top:1px solid var(--border);margin:16px 0;'>")
+        elif stripped == "":
+            html_lines.append("<br>")
+        else:
+            # Inline formatting
+            text = line
+            text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+            text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+            text = re.sub(r'`(.+?)`', r'<code style="background:var(--bg2,#222);padding:1px 4px;">\1</code>', text)
+            html_lines.append(f"<p style='margin:2px 0;'>{text}</p>")
+
+    if in_table:
+        html_lines.append("</table>")
+
+    glossary_html = "\n".join(html_lines)
+
+    return templates.TemplateResponse("college/ratings_glossary.html", _ctx(
+        request, section="college",
+        glossary_html=glossary_html,
+    ))
+
+
 _TEAM_INIT_FIELDS = {
     "games": 0,
     # Scoring
@@ -2680,10 +3056,10 @@ def college_draftyqueenz(request: Request, session_id: str):
 def college_data(request: Request, session_id: str):
     api = _get_api()
     sess = api["get_session"](session_id)
-    season = api["require_season"](sess)
     dynasty = sess.get("dynasty")
     if not dynasty:
         raise HTTPException(404, "No dynasty active in this session")
+    season = sess.get("season")
 
     return templates.TemplateResponse("college/data.html", _ctx(
         request, section="college", session_id=session_id,
@@ -2691,7 +3067,8 @@ def college_data(request: Request, session_id: str):
         year=dynasty.current_year,
         team_count=len(dynasty.team_histories),
         conf_count=len(dynasty.conferences),
-        season_name=getattr(season, "name", "Season"),
+        season_name=getattr(season, "name", "Season") if season else f"{dynasty.current_year} CVL Season",
+        has_season=season is not None,
     ))
 
 
@@ -2700,6 +3077,7 @@ def college_data_download(request: Request, session_id: str):
     import json as _json
     from fastapi.responses import Response
     from engine.db import serialize_dynasty
+    from api.main import _build_college_archive
 
     api = _get_api()
     sess = api["get_session"](session_id)
@@ -2708,7 +3086,16 @@ def college_data_download(request: Request, session_id: str):
         raise HTTPException(404, "No dynasty active in this session")
 
     data = serialize_dynasty(dynasty)
-    content = _json.dumps(data, indent=2)
+
+    # Include full season snapshot so importing the save lets you view stats
+    season = sess.get("season")
+    if season:
+        try:
+            data["season_snapshot"] = _build_college_archive(sess, session_id)
+        except Exception:
+            pass
+
+    content = _json.dumps(data, indent=2, default=str)
     filename = f"{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
     return Response(
         content=content,
@@ -2719,14 +3106,11 @@ def college_data_download(request: Request, session_id: str):
 
 @router.post("/college/{session_id}/data/upload")
 async def college_data_upload(request: Request, session_id: str):
+    """Upload a dynasty save file. If it contains a season snapshot, save it
+    as a season archive so the user can view full stats immediately."""
     import json as _json
     from fastapi.responses import JSONResponse
-    from engine.db import deserialize_dynasty
-
-    api = _get_api()
-    sess = api["get_session"](session_id)
-    if not sess.get("dynasty"):
-        raise HTTPException(404, "No dynasty active in this session")
+    from engine.db import save_season_archive
 
     form = await request.form()
     file = form.get("file")
@@ -2736,11 +3120,29 @@ async def college_data_upload(request: Request, session_id: str):
     try:
         contents = await file.read()
         data = _json.loads(contents)
-        dynasty = deserialize_dynasty(data)
-        sess["dynasty"] = dynasty
-        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
     except Exception as e:
-        raise HTTPException(400, f"Failed to load dynasty file: {e}")
+        raise HTTPException(400, f"Failed to parse file: {e}")
+
+    dynasty_name = data.get("dynasty_name", "Dynasty")
+    year = data.get("current_year", "?")
+    snapshot = data.get("season_snapshot")
+
+    if snapshot:
+        # Save as a season archive so it's viewable through the archive pages
+        archive_key = f"import_{session_id}_{year}"
+        snapshot["label"] = f"{dynasty_name} ({year})"
+        save_season_archive(archive_key, snapshot)
+        return JSONResponse({
+            "message": f"Season loaded: {dynasty_name} Year {year}.",
+            "redirect": f"/stats/archives/{archive_key}/",
+        })
+
+    return JSONResponse({
+        "message": f"No season data found in save file. "
+                   f"Dynasty metadata loaded for {dynasty_name} (Year {year}), "
+                   f"but no game results to display. "
+                   f"Re-download the save from an active season to include stats.",
+    }, status_code=400)
 
 
 # ── PRO LEAGUES ──────────────────────────────────────────────────────────
@@ -2842,6 +3244,7 @@ def pro_team(request: Request, league: str, session_id: str, team_key: str):
         team=detail, team_key=team_key,
         league_name=season.config.league_name,
         stadium_url=_stadium_url_for(team_key),
+        banner_url=_banner_url_for(team_key),
     ))
 
 
@@ -3598,6 +4001,7 @@ def wvl_team(request: Request, session_id: str, team_key: str):
         financial=financial,
         team_achievement=team_achievement,
         stadium_url=_stadium_url_for(team_key),
+        banner_url=_banner_url_for(team_key),
     ))
 
 
@@ -4620,6 +5024,21 @@ def face_pool_page(request: Request):
     ))
 
 
+@router.get("/sprites", response_class=HTMLResponse)
+def sprite_pools_page(request: Request):
+    """Overview page for all sprite pools: faces, stadiums, banners."""
+    from engine.face_generator import get_pool_size as face_count
+    from engine.stadium_generator import get_pool_size as stadium_count
+    from engine.banner_generator import get_pool_size as banner_count
+    has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
+    return templates.TemplateResponse("sprites.html", _ctx(
+        request, section="sprites", has_key=has_key,
+        face_pool=face_count(_FACES_DIR),
+        stadium_pool=stadium_count(_STADIUMS_DIR),
+        banner_pool=banner_count(_BANNERS_DIR),
+    ))
+
+
 # ── SEARCH ───────────────────────────────────────────────────────────────
 
 @router.get("/search", response_class=HTMLResponse)
@@ -4732,6 +5151,7 @@ def intl_team(request: Request, nation_code: str):
     return templates.TemplateResponse("international/team.html", _ctx(
         request, section="international", team=team, nation_code=nation_code,
         stadium_url=_stadium_url_for(nation_code),
+        banner_url=_banner_url_for(nation_code),
     ))
 
 
