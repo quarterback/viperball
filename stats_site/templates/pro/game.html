@@ -36,6 +36,9 @@
     <div class="box-score-final {% if home_score > away_score %}score-win{% else %}score-loss{% endif %}">{{ home_score }}</div>
   </div>
 </div>
+<div style="text-align:right;margin:-8px 0 8px;">
+  <button class="copy-boxscore-btn" onclick="copyBoxScore(this)">Copy Box Score</button>
+</div>
 
 {% set stats = box.get('stats', {}) %}
 {% set hs = stats.get('home', {}) %}

@@ -11,6 +11,9 @@
 {% if stadium_url %}
 <div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
 {% endif %}
+{% if banner_url %}
+<div class="team-banner"><img src="{{ banner_url }}" alt=""></div>
+{% endif %}
 <style>
 .championship-banners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 11px; font-weight: bold; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }

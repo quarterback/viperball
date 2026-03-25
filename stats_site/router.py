@@ -149,6 +149,24 @@ def _stadium_url_for(team_id: str) -> str | None:
     from engine.stadium_generator import get_stadium_url
     return get_stadium_url(team_id, pool_size=n, stadiums_dir=_STADIUMS_DIR)
 
+# ── Pixel-art banner pool ──
+_BANNERS_DIR = os.path.join(os.path.dirname(__file__), "static", "banners")
+_banner_pool_size: int | None = None
+
+def _get_banner_pool_size() -> int:
+    global _banner_pool_size
+    if _banner_pool_size is None:
+        from engine.banner_generator import get_pool_size
+        _banner_pool_size = get_pool_size(_BANNERS_DIR)
+    return _banner_pool_size
+
+def _banner_url_for(team_id: str) -> str | None:
+    n = _get_banner_pool_size()
+    if n == 0:
+        return None
+    from engine.banner_generator import get_banner_url
+    return get_banner_url(team_id, pool_size=n, banners_dir=_BANNERS_DIR)
+
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
@@ -1454,6 +1472,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         coaching_staff=coaching_staff,
         postseason=postseason_entries,
         stadium_url=_stadium_url_for(team_name),
+        banner_url=_banner_url_for(team_name),
         benchmarks=benchmarks,
         banners=banners,
         season_history=season_history,
@@ -3198,6 +3217,7 @@ def pro_team(request: Request, league: str, session_id: str, team_key: str):
         team=detail, team_key=team_key,
         league_name=season.config.league_name,
         stadium_url=_stadium_url_for(team_key),
+        banner_url=_banner_url_for(team_key),
     ))
 
 
@@ -3954,6 +3974,7 @@ def wvl_team(request: Request, session_id: str, team_key: str):
         financial=financial,
         team_achievement=team_achievement,
         stadium_url=_stadium_url_for(team_key),
+        banner_url=_banner_url_for(team_key),
     ))
 
 
@@ -4976,6 +4997,21 @@ def face_pool_page(request: Request):
     ))
 
 
+@router.get("/sprites", response_class=HTMLResponse)
+def sprite_pools_page(request: Request):
+    """Overview page for all sprite pools: faces, stadiums, banners."""
+    from engine.face_generator import get_pool_size as face_count
+    from engine.stadium_generator import get_pool_size as stadium_count
+    from engine.banner_generator import get_pool_size as banner_count
+    has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
+    return templates.TemplateResponse("sprites.html", _ctx(
+        request, section="sprites", has_key=has_key,
+        face_pool=face_count(_FACES_DIR),
+        stadium_pool=stadium_count(_STADIUMS_DIR),
+        banner_pool=banner_count(_BANNERS_DIR),
+    ))
+
+
 # ── SEARCH ───────────────────────────────────────────────────────────────
 
 @router.get("/search", response_class=HTMLResponse)
@@ -5088,6 +5124,7 @@ def intl_team(request: Request, nation_code: str):
     return templates.TemplateResponse("international/team.html", _ctx(
         request, section="international", team=team, nation_code=nation_code,
         stadium_url=_stadium_url_for(nation_code),
+        banner_url=_banner_url_for(nation_code),
     ))
 
 
