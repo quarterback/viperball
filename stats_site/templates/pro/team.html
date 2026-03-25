@@ -11,6 +11,9 @@
 {% if stadium_url %}
 <div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
 {% endif %}
+{% if banner_url %}
+<div class="team-banner"><img src="{{ banner_url }}" alt=""></div>
+{% endif %}
 <div class="page-header">
   <h1>{{ team.get('team_name', team_key) }}</h1>
   <div class="subtitle">

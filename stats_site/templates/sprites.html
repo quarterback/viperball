@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Sprite Pools — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Sprite Pools
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>PixelLab Sprite Pools</h1>
+  <div class="subtitle">Generate pixel-art assets via PixelLab API</div>
+</div>
+
+<div style="max-width:700px;">
+
+<table>
+  <tbody>
+  <tr>
+    <td style="color:var(--fg-dim);width:160px">API key</td>
+    <td>{% if has_key %}<span style="color:var(--green,#4caf50)">configured</span>{% else %}<span style="color:var(--red,#f44336)">missing — set PIXELLAB_API_KEY</span>{% endif %}</td>
+  </tr>
+  </tbody>
+</table>
+
+{# ── Faces ── #}
+<h2>Player Faces <span style="color:var(--fg-dim);font-weight:normal">(32x32, retro style)</span></h2>
+<div class="grid-3" style="margin-bottom:12px;">
+  <div class="metric"><div class="label">In Pool</div><div class="value" id="face-count">{{ face_pool }}</div></div>
+  <div class="metric"><div class="label">Size</div><div class="value">32x32</div></div>
+  <div class="metric"><div class="label">Style</div><div class="value">8-bit</div></div>
+</div>
+<div style="margin-bottom:8px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Generate count</label>
+  <input type="number" id="face-gen-count" value="200" min="10" max="500"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+  <button onclick="generate('face')" id="face-btn"
+          style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;">
+    Generate Faces
+  </button>
+</div>
+<div id="face-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
+
+{# ── Stadiums ── #}
+<h2>Stadium Backgrounds <span style="color:var(--fg-dim);font-weight:normal">(200x200, 16-bit style)</span></h2>
+<div class="grid-3" style="margin-bottom:12px;">
+  <div class="metric"><div class="label">In Pool</div><div class="value" id="stadium-count">{{ stadium_pool }}</div></div>
+  <div class="metric"><div class="label">Size</div><div class="value">200x200</div></div>
+  <div class="metric"><div class="label">Style</div><div class="value">16-bit</div></div>
+</div>
+{% if stadium_pool > 0 %}
+<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+  {% for i in range([stadium_pool, 8]|min) %}
+  <div style="width:100px;height:100px;border:1px solid var(--border);overflow:hidden;">
+    <img src="/stats/static/stadiums/stadium_{{ '%03d'|format(i) }}.png" alt="stadium {{ i }}"
+         style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated;">
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div style="margin-bottom:8px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Generate count</label>
+  <input type="number" id="stadium-gen-count" value="75" min="10" max="200"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+  <button onclick="generate('stadium')" id="stadium-btn"
+          style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;">
+    Generate Stadiums
+  </button>
+  <label style="margin-left:12px;">
+    <input type="checkbox" id="stadium-force"> Force regenerate (upgrade existing to 16-bit)
+  </label>
+</div>
+<div id="stadium-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
+
+{# ── Banners ── #}
+<h2>Team Banners <span style="color:var(--fg-dim);font-weight:normal">(320x128, panoramic)</span></h2>
+<div class="grid-3" style="margin-bottom:12px;">
+  <div class="metric"><div class="label">In Pool</div><div class="value" id="banner-count">{{ banner_pool }}</div></div>
+  <div class="metric"><div class="label">Size</div><div class="value">320x128</div></div>
+  <div class="metric"><div class="label">Style</div><div class="value">16-bit</div></div>
+</div>
+{% if banner_pool > 0 %}
+<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+  {% for i in range([banner_pool, 4]|min) %}
+  <div style="width:320px;height:100px;border:1px solid var(--border);overflow:hidden;">
+    <img src="/stats/static/banners/banner_{{ '%03d'|format(i) }}.png" alt="banner {{ i }}"
+         style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated;">
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div style="margin-bottom:8px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Generate count</label>
+  <input type="number" id="banner-gen-count" value="100" min="10" max="200"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+  <button onclick="generate('banner')" id="banner-btn"
+          style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;">
+    Generate Banners
+  </button>
+</div>
+<div id="banner-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
+
+</div>
+
+<script>
+async function generate(type) {
+  var btn = document.getElementById(type + '-btn');
+  var status = document.getElementById(type + '-status');
+  var count = document.getElementById(type + '-gen-count').value;
+  var forceEl = document.getElementById(type + '-force');
+  var force = forceEl ? forceEl.checked : false;
+  var url = '/generate-' + type + '-pool?count=' + count;
+  if (force) url += '&force=true';
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  status.textContent = 'Calling PixelLab API — this may take a few minutes...\n';
+  try {
+    var resp = await fetch(url, {method: 'POST'});
+    var data = await resp.json();
+    if (!resp.ok) {
+      status.textContent = 'Error: ' + (data.detail || JSON.stringify(data));
+    } else {
+      status.textContent = 'Done! Generated: ' + data.generated +
+        ', Skipped: ' + data.skipped + ', Failed: ' + data.failed;
+      if (data.errors && data.errors.length) {
+        status.textContent += '\n' + data.errors.slice(0, 3).map(function(e){
+          return '  ' + type + '_' + String(e.index).padStart(3,'0') + ': ' + e.error;
+        }).join('\n');
+      }
+      document.getElementById(type + '-count').textContent = data.generated + data.skipped;
+      if (data.generated > 0) setTimeout(function(){ location.reload(); }, 1500);
+    }
+  } catch(e) {
+    status.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate ' + type.charAt(0).toUpperCase() + type.slice(1) + 's';
+}
+</script>
+{% endblock %}
