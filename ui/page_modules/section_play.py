@@ -675,8 +675,8 @@ def _render_rivalry_picker(
             nc_rival = nc_rival_options[nc_rival_idx] if nc_rival_idx > 0 else None
 
         rivalries[user_team] = {
-            "conference": conf_rival,
-            "non_conference": nc_rival,
+            "conference": [conf_rival] if conf_rival else [],
+            "non_conference": [nc_rival] if nc_rival else [],
         }
 
     return rivalries

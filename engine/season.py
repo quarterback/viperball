@@ -1173,16 +1173,23 @@ class Season:
 
         return best_selected
 
+    @staticmethod
+    def _rivalry_list(val) -> List[str]:
+        """Normalise a rivalry value to a list of team names."""
+        if not val:
+            return []
+        if isinstance(val, str):
+            return [val]
+        return list(val)
+
     def _mark_rivalry_games(self):
         """Mark games involving rivalry pairs with is_rivalry_game flag."""
         rivalry_pairs = set()
         for team, rivals in self.rivalries.items():
-            conf_rival = rivals.get("conference")
-            nc_rival = rivals.get("non_conference")
-            if conf_rival:
-                rivalry_pairs.add(tuple(sorted([team, conf_rival])))
-            if nc_rival:
-                rivalry_pairs.add(tuple(sorted([team, nc_rival])))
+            for r in self._rivalry_list(rivals.get("conference")):
+                rivalry_pairs.add(tuple(sorted([team, r])))
+            for r in self._rivalry_list(rivals.get("non_conference")):
+                rivalry_pairs.add(tuple(sorted([team, r])))
         for game in self.schedule:
             pair = tuple(sorted([game.home_team, game.away_team]))
             if pair in rivalry_pairs:
@@ -1348,18 +1355,18 @@ class Season:
         for team, rivals in self.rivalries.items():
             if team not in self.teams:
                 continue
-            conf_rival = rivals.get("conference")
-            if conf_rival and conf_rival in self.teams:
-                pair = tuple(sorted([team, conf_rival]))
-                if pair not in scheduled_pairs:
-                    if game_counts[team] < games_per_team and game_counts[conf_rival] < games_per_team:
-                        _add_game(team, conf_rival, True)
-            nc_rival = rivals.get("non_conference")
-            if nc_rival and nc_rival in self.teams:
-                pair = tuple(sorted([team, nc_rival]))
-                if pair not in scheduled_pairs:
-                    if game_counts[team] < games_per_team and game_counts[nc_rival] < games_per_team:
-                        _add_game(team, nc_rival, False)
+            for conf_rival in self._rivalry_list(rivals.get("conference")):
+                if conf_rival in self.teams:
+                    pair = tuple(sorted([team, conf_rival]))
+                    if pair not in scheduled_pairs:
+                        if game_counts[team] < games_per_team and game_counts[conf_rival] < games_per_team:
+                            _add_game(team, conf_rival, True)
+            for nc_rival in self._rivalry_list(rivals.get("non_conference")):
+                if nc_rival in self.teams:
+                    pair = tuple(sorted([team, nc_rival]))
+                    if pair not in scheduled_pairs:
+                        if game_counts[team] < games_per_team and game_counts[nc_rival] < games_per_team:
+                            _add_game(team, nc_rival, False)
 
         # ── Step 2: Conference games (capped at MAX_CONFERENCE_GAMES per team) ──
         if has_conferences:
@@ -3144,7 +3151,12 @@ def create_season(
         coaching_staffs=coaching_staffs or {},
     )
 
-    season.rivalries = rivalries or {}
+    if rivalries:
+        season.rivalries = rivalries
+    elif conf_map:
+        season.rivalries = auto_assign_rivalries(conf_map, team_states or {})
+    else:
+        season.rivalries = {}
 
     season.generate_schedule(
         games_per_team=games_per_team,
@@ -3240,10 +3252,11 @@ def _state_distance(s1: str, s2: str) -> int:
     return 99
 
 
-def _load_protected_rivalries() -> Dict[str, Dict[str, Optional[str]]]:
+def _load_protected_rivalries() -> Dict[str, Dict[str, List[str]]]:
     """Load protected rivalries from data/rivalries.json.
 
-    These are permanent OOC rivalry games that are always scheduled.
+    These are permanent rivalry games that are always scheduled.
+    Each team maps to {"conference": [rivals], "non_conference": [rivals]}.
     """
     import pathlib
     rivalries_path = pathlib.Path(__file__).resolve().parent.parent / "data" / "rivalries.json"
@@ -3252,48 +3265,65 @@ def _load_protected_rivalries() -> Dict[str, Dict[str, Optional[str]]]:
     import json as _json
     with open(rivalries_path) as f:
         data = _json.load(f)
-    result: Dict[str, Dict[str, Optional[str]]] = {}
+    result: Dict[str, Dict[str, List[str]]] = {}
     for entry in data.get("protected_rivalries", []):
         team_a = entry["team_a"]
         team_b = entry["team_b"]
         rtype = entry.get("type", "non_conference")
-        result.setdefault(team_a, {"conference": None, "non_conference": None})
-        result.setdefault(team_b, {"conference": None, "non_conference": None})
-        result[team_a][rtype] = team_b
-        result[team_b][rtype] = team_a
+        result.setdefault(team_a, {"conference": [], "non_conference": []})
+        result.setdefault(team_b, {"conference": [], "non_conference": []})
+        if team_b not in result[team_a][rtype]:
+            result[team_a][rtype].append(team_b)
+        if team_a not in result[team_b][rtype]:
+            result[team_b][rtype].append(team_a)
     return result
+
+
+def _ensure_rivalry_lists(entry: dict) -> Dict[str, List[str]]:
+    """Normalise a rivalry entry so both slots are always lists."""
+    for key in ("conference", "non_conference"):
+        val = entry.get(key)
+        if val is None:
+            entry[key] = []
+        elif isinstance(val, str):
+            entry[key] = [val]
+    return entry
 
 
 def auto_assign_rivalries(
     conferences: Dict[str, List[str]],
     team_states: Dict[str, str],
     human_team: Optional[str] = None,
-    existing_rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
-) -> Dict[str, Dict[str, Optional[str]]]:
+    existing_rivalries: Optional[Dict[str, Dict[str, List[str]]]] = None,
+) -> Dict[str, Dict[str, List[str]]]:
     """Auto-assign conference and non-conference rivals for AI teams.
 
     Uses state-based geographic proximity. Human team rivalries are preserved
     from existing_rivalries (not overwritten). Protected rivalries from
     data/rivalries.json are always included.
 
-    Returns dict of team_name -> {"conference": rival_or_None, "non_conference": rival_or_None}
+    Returns dict of team_name -> {"conference": [rivals], "non_conference": [rivals]}
     """
-    rivalries: Dict[str, Dict[str, Optional[str]]] = {}
+    rivalries: Dict[str, Dict[str, List[str]]] = {}
 
     # Load protected rivalries first (always scheduled)
     protected = _load_protected_rivalries()
     for t, r in protected.items():
-        rivalries.setdefault(t, {"conference": None, "non_conference": None})
+        rivalries.setdefault(t, {"conference": [], "non_conference": []})
         for key in ("conference", "non_conference"):
-            if r.get(key):
-                rivalries[t][key] = r[key]
+            for rival in r.get(key, []):
+                if rival not in rivalries[t][key]:
+                    rivalries[t][key].append(rival)
 
     if existing_rivalries:
         for t, r in existing_rivalries.items():
-            rivalries.setdefault(t, {"conference": None, "non_conference": None})
+            rivalries.setdefault(t, {"conference": [], "non_conference": []})
+            _ensure_rivalry_lists(rivalries[t])
+            r = _ensure_rivalry_lists(dict(r))
             for key in ("conference", "non_conference"):
-                if r.get(key):
-                    rivalries[t][key] = r[key]
+                for rival in r.get(key, []):
+                    if rival not in rivalries[t][key]:
+                        rivalries[t][key].append(rival)
 
     team_conf: Dict[str, str] = {}
     for conf_name, members in conferences.items():
@@ -3310,12 +3340,11 @@ def auto_assign_rivalries(
 
     for t, r in rivalries.items():
         conf = team_conf.get(t, "")
-        cr = r.get("conference")
-        nr = r.get("non_conference")
-        if cr and conf:
-            claimed_conf.setdefault(conf, set()).add(cr)
-            claimed_conf.setdefault(conf, set()).add(t)
-        if nr:
+        for cr in r.get("conference", []):
+            if conf:
+                claimed_conf.setdefault(conf, set()).add(cr)
+                claimed_conf.setdefault(conf, set()).add(t)
+        for nr in r.get("non_conference", []):
             claimed_nc.setdefault(t, set()).add(nr)
             claimed_nc.setdefault(nr, set()).add(t)
 
@@ -3350,13 +3379,13 @@ def auto_assign_rivalries(
                 best_rival = candidate
 
         if best_rival:
-            rivalries.setdefault(team, {"conference": None, "non_conference": None})
-            rivalries[team]["conference"] = best_rival
+            rivalries.setdefault(team, {"conference": [], "non_conference": []})
+            rivalries[team]["conference"].append(best_rival)
             claimed_conf.setdefault(conf, set()).add(team)
             claimed_conf[conf].add(best_rival)
-            rivalries.setdefault(best_rival, {"conference": None, "non_conference": None})
-            if not rivalries[best_rival].get("conference"):
-                rivalries[best_rival]["conference"] = team
+            rivalries.setdefault(best_rival, {"conference": [], "non_conference": []})
+            if team not in rivalries[best_rival]["conference"]:
+                rivalries[best_rival]["conference"].append(team)
 
     for team in all_teams:
         if team == human_team:
@@ -3389,13 +3418,13 @@ def auto_assign_rivalries(
                 best_rival = candidate
 
         if best_rival:
-            rivalries.setdefault(team, {"conference": None, "non_conference": None})
-            rivalries[team]["non_conference"] = best_rival
+            rivalries.setdefault(team, {"conference": [], "non_conference": []})
+            rivalries[team]["non_conference"].append(best_rival)
             claimed_nc.setdefault(team, set()).add(best_rival)
             claimed_nc.setdefault(best_rival, set()).add(team)
-            rivalries.setdefault(best_rival, {"conference": None, "non_conference": None})
-            if not rivalries[best_rival].get("non_conference"):
-                rivalries[best_rival]["non_conference"] = team
+            rivalries.setdefault(best_rival, {"conference": [], "non_conference": []})
+            if team not in rivalries[best_rival]["non_conference"]:
+                rivalries[best_rival]["non_conference"].append(team)
 
     return rivalries
 

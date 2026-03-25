@@ -33,6 +33,8 @@
     {"team_a": "Colorado", "team_b": "Utah", "name": "Rumble in the Rockies", "type": "conference"},
 
     {"team_a": "Army", "team_b": "Navy", "name": "Army-Navy Game", "type": "conference"},
+    {"team_a": "Army", "team_b": "Air Force", "name": "Commander-in-Chief's Trophy", "type": "non_conference"},
+    {"team_a": "Navy", "team_b": "Air Force", "name": "Commander-in-Chief's Trophy", "type": "non_conference"},
     {"team_a": "Harvard", "team_b": "Yale", "name": "The Game", "type": "conference"},
     {"team_a": "Princeton", "team_b": "Penn", "name": "Quaker Classic", "type": "conference"},
 
@@ -53,6 +55,10 @@
     {"team_a": "Kentucky", "team_b": "Louisville", "name": "Governor's Cup", "type": "non_conference"},
     {"team_a": "Iowa", "team_b": "Iowa State", "name": "Cy-Hawk Trophy", "type": "non_conference"},
     {"team_a": "Oklahoma", "team_b": "Oklahoma State", "name": "Bedlam Series", "type": "non_conference"},
-    {"team_a": "Notre Dame", "team_b": "USC", "name": "Notre Dame-USC Rivalry", "type": "non_conference"}
+    {"team_a": "Notre Dame", "team_b": "USC", "name": "Notre Dame-USC Rivalry", "type": "non_conference"},
+    {"team_a": "Notre Dame", "team_b": "Navy", "name": "Notre Dame-Navy Game", "type": "non_conference"},
+    {"team_a": "Notre Dame", "team_b": "Stanford", "name": "Legends Trophy", "type": "non_conference"},
+    {"team_a": "Notre Dame", "team_b": "Purdue", "name": "Shillelagh Trophy", "type": "conference"},
+    {"team_a": "Notre Dame", "team_b": "Michigan State", "name": "Megaphone Trophy", "type": "conference"}
   ]
 }

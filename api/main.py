@@ -3236,21 +3236,29 @@ def set_rivalries(session_id: str, req: SetRivalriesRequest):
     dynasty = session.get("dynasty")
     season = session.get("season")
 
-    rivalry_update = {}
-    if req.conference_rival is not None:
-        rivalry_update["conference"] = req.conference_rival
-    if req.non_conference_rival is not None:
-        rivalry_update["non_conference"] = req.non_conference_rival
-
     if dynasty:
         if req.team not in dynasty.rivalries:
-            dynasty.rivalries[req.team] = {"conference": None, "non_conference": None}
-        dynasty.rivalries[req.team].update(rivalry_update)
+            dynasty.rivalries[req.team] = {"conference": [], "non_conference": []}
+        entry = dynasty.rivalries[req.team]
+        for key in ("conference", "non_conference"):
+            if isinstance(entry.get(key), str) or entry.get(key) is None:
+                entry[key] = [entry[key]] if isinstance(entry.get(key), str) and entry[key] else []
+        if req.conference_rival is not None:
+            entry["conference"] = [req.conference_rival] if req.conference_rival else []
+        if req.non_conference_rival is not None:
+            entry["non_conference"] = [req.non_conference_rival] if req.non_conference_rival else []
 
     if season:
         if req.team not in season.rivalries:
-            season.rivalries[req.team] = {"conference": None, "non_conference": None}
-        season.rivalries[req.team].update(rivalry_update)
+            season.rivalries[req.team] = {"conference": [], "non_conference": []}
+        entry = season.rivalries[req.team]
+        for key in ("conference", "non_conference"):
+            if isinstance(entry.get(key), str) or entry.get(key) is None:
+                entry[key] = [entry[key]] if isinstance(entry.get(key), str) and entry[key] else []
+        if req.conference_rival is not None:
+            entry["conference"] = [req.conference_rival] if req.conference_rival else []
+        if req.non_conference_rival is not None:
+            entry["non_conference"] = [req.non_conference_rival] if req.non_conference_rival else []
 
     updated = {}
     if dynasty:
