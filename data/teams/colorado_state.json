@@ -1,7 +1,7 @@
 {
   "team_info": {
     "school_id": "colorado_state",
-    "school": "Colorado",
+    "school_name": "Colorado State",
     "abbreviation": "CSU",
     "mascot": "Rams",
     "conference": "Mountain West",
@@ -10,8 +10,7 @@
     "colors": [
       "Green",
       "Gold"
-    ],
-    "school_name": "Colorado State"
+    ]
   },
   "identity": {
     "style": "aggressive",

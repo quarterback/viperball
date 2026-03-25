@@ -71,7 +71,7 @@ def load_team_data(teams_dir: str) -> Dict[str, dict]:
             with open(fpath) as f:
                 data = json.load(f)
                 ti = data.get("team_info", {})
-                name = ti.get("school_name", fname.replace(".json", ""))
+                name = ti.get("school") or ti.get("school_name", fname.replace(".json", ""))
                 result[name] = {
                     "state": ti.get("state", ""),
                     "conference": ti.get("conference", ""),
