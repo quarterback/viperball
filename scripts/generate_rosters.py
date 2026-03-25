@@ -36,8 +36,8 @@ PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "stat_center": 28,             # team OVR lands ~20-35
-        "stat_spread": 5,              # tight — consistently bad
+        "stat_center": 28,             # team OVR lands ~15-42
+        "stat_spread": 12,             # wide — individual stats swing wildly
         "hidden_gem_count": (1, 2),    # 1-2 legit players — portal bait
         "hidden_gem_boost": (30, 42),  # 28+36=64 → gem is a solid mid-tier player, not elite
         "hidden_gem_stats": (3, 5),    # boost across some stats
@@ -53,8 +53,8 @@ PROGRAM_ARCHETYPES = {
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 50,             # team OVR lands ~44-56
-        "stat_spread": 6,
+        "stat_center": 50,             # team OVR lands ~36-64
+        "stat_spread": 12,
         "hidden_gem_count": (1, 3),    # 1-3 legit players — portal targets
         "hidden_gem_boost": (20, 30),  # 52+25=77 → gem reaches regional-power caliber
         "hidden_gem_stats": (3, 5),    # boost across some stats
@@ -70,8 +70,8 @@ PROGRAM_ARCHETYPES = {
     "punching_above": {
         "label": "Punching Above Their Weight",
         "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
-        "stat_center": 65,             # team OVR lands ~59-71
-        "stat_spread": 6,
+        "stat_center": 65,             # team OVR lands ~51-79
+        "stat_spread": 12,
         "hidden_gem_count": (2, 3),    # 2-3 standouts
         "hidden_gem_boost": (15, 22),  # 63+18=81 → gem is regional-power caliber
         "hidden_gem_stats": (3, 5),
@@ -87,8 +87,8 @@ PROGRAM_ARCHETYPES = {
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 74,             # team OVR lands ~68-80
-        "stat_spread": 5,
+        "stat_center": 74,             # team OVR lands ~60-88
+        "stat_spread": 12,
         "hidden_gem_count": (3, 5),    # 3-5 standouts
         "hidden_gem_boost": (8, 14),   # 74+11=85 → gem is national-power caliber
         "hidden_gem_stats": (3, 5),
@@ -104,8 +104,8 @@ PROGRAM_ARCHETYPES = {
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 82,             # team OVR lands ~77-87
-        "stat_spread": 5,
+        "stat_center": 82,             # team OVR lands ~68-96
+        "stat_spread": 12,
         "hidden_gem_count": (3, 5),    # deep bench of stars
         "hidden_gem_boost": (4, 8),    # 82+6=88 → gem approaches All-American
         "hidden_gem_stats": (3, 5),
@@ -121,8 +121,8 @@ PROGRAM_ARCHETYPES = {
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 87,             # team OVR lands ~83-91
-        "stat_spread": 4,              # tight but not uniform — some variance
+        "stat_center": 87,             # team OVR lands ~73-99
+        "stat_spread": 12,             # wide — elite in one stat, average in another
         "hidden_gem_count": (4, 6),    # stacked — stars everywhere
         "hidden_gem_boost": (3, 6),    # 87+5=92 → gems are genuine All-Americans
         "hidden_gem_stats": (3, 5),
