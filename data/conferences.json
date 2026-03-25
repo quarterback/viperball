@@ -201,8 +201,8 @@
       "name": "Rice"
     },
     {
-      "id": "seattle",
-      "name": "Seattle"
+      "id": "illinois_state",
+      "name": "Illinois State"
     },
     {
       "id": "smu",
@@ -369,8 +369,8 @@
   ],
   "Midwest States Interscholastic Association": [
     {
-      "id": "belmont",
-      "name": "Belmont"
+      "id": "umass",
+      "name": "UMass"
     },
     {
       "id": "bradley",
@@ -527,8 +527,8 @@
       "name": "Calgary"
     },
     {
-      "id": "bowdoin",
-      "name": "Bowdoin"
+      "id": "buffalo",
+      "name": "Buffalo"
     },
     {
       "id": "new_hampshire",
@@ -619,8 +619,8 @@
       "name": "Grinnell"
     },
     {
-      "id": "knox",
-      "name": "Knox"
+      "id": "western_illinois",
+      "name": "Western Illinois"
     },
     {
       "id": "lake_forest",
