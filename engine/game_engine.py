@@ -1420,6 +1420,8 @@ class Team:
     offense_style: str = "balanced"
     defense_style: str = "swarm"
     st_scheme: str = "aces"
+    city: str = ""
+    state: str = ""
     # --- V2: Prestige and Halo ---
     prestige: int = 50               # 0-99, drives halo derivation
     halo_offense: float = 68.0       # Derived from prestige via derive_halo()
@@ -12508,12 +12510,13 @@ def load_team_from_json(filepath: str, fresh: bool = False,
     team_name = data["team_info"].get("school") or data["team_info"].get("school_name", "Unknown")
     abbreviation = data["team_info"]["abbreviation"]
     mascot = data["team_info"]["mascot"]
+    city = data["team_info"].get("city", "")
+    state = data["team_info"].get("state", "")
     style = data.get("style", {}).get("offense_style", "balanced")
     defense_style = data.get("style", {}).get("defense_style", "base_defense")
     st_scheme = data.get("style", {}).get("st_scheme", "aces")
     identity = data.get("identity", {})
     philosophy = identity.get("philosophy", "hybrid")
-    state = data["team_info"].get("state", "")
 
     # Build geo-aware pipeline from school location; this is blended with the
     # international baseline inside generate_player_name's select_origin().
@@ -12532,7 +12535,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
 
     if fresh or not has_roster:
         # Generate a completely fresh roster — each call produces unique players
-        return generate_team_on_the_fly(
+        team = generate_team_on_the_fly(
             team_name=team_name,
             abbreviation=abbreviation,
             mascot=mascot,
@@ -12544,6 +12547,9 @@ def load_team_from_json(filepath: str, fresh: bool = False,
             program_archetype=program_archetype,
             conference_floor=conference_floor,
         )
+        team.city = city
+        team.state = state
+        return team
 
     _POSITION_MIGRATION = {
         "Zeroback/Back": "Zeroback",
@@ -12627,6 +12633,8 @@ def load_team_from_json(filepath: str, fresh: bool = False,
         offense_style=style,
         defense_style=defense_style,
         st_scheme=st_scheme,
+        city=city,
+        state=state,
         prestige=prestige,
     )
 
