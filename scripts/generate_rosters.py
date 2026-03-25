@@ -87,10 +87,10 @@ PROGRAM_ARCHETYPES = {
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 78,             # team OVR lands ~72-84
+        "stat_center": 74,             # team OVR lands ~68-80
         "stat_spread": 5,
         "hidden_gem_count": (3, 5),    # 3-5 standouts
-        "hidden_gem_boost": (8, 14),   # 75+11=86 → gem is national-power caliber
+        "hidden_gem_boost": (8, 14),   # 74+11=85 → gem is national-power caliber
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [22, 26, 22, 18, 12],
@@ -104,10 +104,10 @@ PROGRAM_ARCHETYPES = {
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 89,             # team OVR lands ~85-93
-        "stat_spread": 4,
-        "hidden_gem_count": (4, 7),    # deep bench of stars
-        "hidden_gem_boost": (4, 8),    # 89+7=96 → gem is an All-American
+        "stat_center": 82,             # team OVR lands ~77-87
+        "stat_spread": 5,
+        "hidden_gem_count": (3, 5),    # deep bench of stars
+        "hidden_gem_boost": (4, 8),    # 82+6=88 → gem approaches All-American
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [38, 30, 16, 11, 5],
@@ -121,10 +121,10 @@ PROGRAM_ARCHETYPES = {
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 95,             # team OVR lands ~93-99
-        "stat_spread": 3,              # very tight — wall-to-wall elite talent
-        "hidden_gem_count": (5, 8),    # stacked — stars everywhere
-        "hidden_gem_boost": (1, 4),    # 95+3=98 → already elite, gems just polish
+        "stat_center": 87,             # team OVR lands ~83-91
+        "stat_spread": 4,              # tight but not uniform — some variance
+        "hidden_gem_count": (4, 6),    # stacked — stars everywhere
+        "hidden_gem_boost": (3, 6),    # 87+5=92 → gems are genuine All-Americans
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [50, 30, 12, 6, 2],
@@ -155,13 +155,13 @@ AI_ARCHETYPE_WEIGHTS = {
 # Format: "Conference Name" -> minimum stat_center (after archetype + jitter).
 # Conferences not listed have no floor (teams can be as bad as their archetype allows).
 CONFERENCE_FLOORS = {
-    "SEC": 60,           # range ~93-60 — worst SEC team is still solid
-    "Big Ten": 55,       # range ~90-55
-    "ACC": 69,           # range ~84-69 — tight, consistently good
-    "Big East": 53,      # range ~80-53
-    "Yankee Fourteen": 65,  # range ~85-65 — high floor
-    "Pac-12": 65,        # range ~88-65
-    "Pac-16": 65,        # alias — Pac-12 may be renamed Pac-16
+    "SEC": 55,           # range ~87-55 — worst SEC team is still solid
+    "Big Ten": 50,       # range ~84-50
+    "ACC": 62,           # range ~80-62 — tight, consistently good
+    "Big East": 48,      # range ~76-48
+    "Yankee Fourteen": 58,  # range ~80-58 — high floor
+    "Pac-12": 58,        # range ~82-58
+    "Pac-16": 58,        # alias — Pac-12 may be renamed Pac-16
 }
 
 # Default archetype (matches existing generation behavior)
