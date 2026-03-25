@@ -51,12 +51,12 @@
   ],
   "Big 12": [
     {
-      "id": "baylor",
-      "name": "Baylor"
-    },
-    {
       "id": "byu",
       "name": "BYU"
+    },
+    {
+      "id": "baylor",
+      "name": "Baylor"
     },
     {
       "id": "cincinnati",
@@ -205,10 +205,6 @@
       "name": "Illinois State"
     },
     {
-      "id": "little_rock",
-      "name": "UALR"
-    },
-    {
       "id": "north_texas",
       "name": "North Texas"
     },
@@ -229,16 +225,20 @@
       "name": "Tulane"
     },
     {
+      "id": "little_rock",
+      "name": "UALR"
+    },
+    {
       "id": "unlv",
       "name": "UNLV"
     },
     {
-      "id": "ut_san_antonio",
-      "name": "UTSA"
-    },
-    {
       "id": "utep",
       "name": "UTEP"
+    },
+    {
+      "id": "ut_san_antonio",
+      "name": "UTSA"
     }
   ],
   "Galactic League": [
@@ -281,10 +281,6 @@
     {
       "id": "rhode_island",
       "name": "Rhode Island"
-    },
-    {
-      "id": "sacramento_state",
-      "name": "Sacramento State"
     }
   ],
   "Heritage League": [
@@ -327,6 +323,10 @@
     {
       "id": "mississippi_valley_state",
       "name": "Mississippi Valley State"
+    },
+    {
+      "id": "north_carolina_central",
+      "name": "North Carolina Central"
     },
     {
       "id": "south_carolina_state",
@@ -393,6 +393,10 @@
       "name": "Indiana State"
     },
     {
+      "id": "lafayette",
+      "name": "Lafayette"
+    },
+    {
       "id": "missouri_state",
       "name": "Missouri State"
     },
@@ -403,10 +407,6 @@
     {
       "id": "northern_iowa",
       "name": "Northern Iowa"
-    },
-    {
-      "id": "saint_louis",
-      "name": "Saint Louis"
     },
     {
       "id": "southern_illinois",
@@ -447,16 +447,20 @@
       "name": "Northern Colorado"
     },
     {
+      "id": "sacramento_state",
+      "name": "Sacramento State"
+    },
+    {
       "id": "south_dakota",
       "name": "South Dakota"
     },
     {
-      "id": "uwrf",
-      "name": "Wisconsin-River Falls"
-    },
-    {
       "id": "weber_state",
       "name": "Weber State"
+    },
+    {
+      "id": "uwrf",
+      "name": "Wisconsin-River Falls"
     }
   ],
   "Mountain West": [
@@ -487,10 +491,6 @@
     {
       "id": "nw_missouri_state",
       "name": "Northwest Missouri State"
-    },
-    {
-      "id": "pepperdine",
-      "name": "Pepperdine"
     },
     {
       "id": "san_diego",
@@ -543,12 +543,12 @@
       "name": "Oswego State"
     },
     {
-      "id": "plattsburgh",
-      "name": "SUNY Plattsburgh"
-    },
-    {
       "id": "quinnipiac",
       "name": "Quinnipiac"
+    },
+    {
+      "id": "plattsburgh",
+      "name": "SUNY Plattsburgh"
     },
     {
       "id": "sdsu",
@@ -627,6 +627,10 @@
   ],
   "Prairie Athletic Union": [
     {
+      "id": "uchicago",
+      "name": "Chicago"
+    },
+    {
       "id": "ferris_state",
       "name": "Ferris State"
     },
@@ -661,10 +665,6 @@
     {
       "id": "st_thomas",
       "name": "St. Thomas"
-    },
-    {
-      "id": "uchicago",
-      "name": "Chicago"
     },
     {
       "id": "wash_u",
@@ -809,20 +809,20 @@
       "name": "Merchant Marine"
     },
     {
-      "id": "new_hampshire",
-      "name": "New Hampshire"
-    },
-    {
       "id": "njit",
       "name": "NJIT"
     },
     {
-      "id": "rochester",
-      "name": "Rochester"
+      "id": "new_hampshire",
+      "name": "New Hampshire"
     },
     {
       "id": "rpi",
       "name": "RPI"
+    },
+    {
+      "id": "rochester",
+      "name": "Rochester"
     },
     {
       "id": "umbc",

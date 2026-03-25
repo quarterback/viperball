@@ -1,11 +1,58 @@
 {
-  "_comment": "Protected rivalries that are always scheduled as OOC games every season.",
+  "_comment": "Protected rivalries that are always scheduled. Conference rivalries pair teams in the same conference; non-conference rivalries guarantee an annual OOC matchup. Team names must match the 'school' or 'school_name' field in team JSON files.",
   "protected_rivalries": [
-    {
-      "team_a": "Colorado State",
-      "team_b": "University of Wyoming",
-      "name": "Border War",
-      "type": "non_conference"
-    }
+    {"team_a": "Ohio State", "team_b": "Michigan", "name": "The Game", "type": "conference"},
+    {"team_a": "Penn State", "team_b": "Rutgers", "name": "Land Grant Trophy", "type": "conference"},
+    {"team_a": "Indiana", "team_b": "Purdue", "name": "Old Oaken Bucket", "type": "conference"},
+    {"team_a": "Minnesota", "team_b": "Wisconsin", "name": "Paul Bunyan's Axe", "type": "conference"},
+    {"team_a": "Iowa", "team_b": "Nebraska", "name": "Heroes Trophy", "type": "conference"},
+
+    {"team_a": "Alabama", "team_b": "Auburn", "name": "Iron Bowl", "type": "conference"},
+    {"team_a": "Florida", "team_b": "Georgia", "name": "World's Largest Outdoor Cocktail Party", "type": "conference"},
+    {"team_a": "Ole Miss", "team_b": "Mississippi State", "name": "Egg Bowl", "type": "conference"},
+    {"team_a": "Texas", "team_b": "Oklahoma", "name": "Red River Rivalry", "type": "conference"},
+    {"team_a": "Texas A&M", "team_b": "LSU", "name": "Southwest Classic", "type": "conference"},
+    {"team_a": "Tennessee", "team_b": "Vanderbilt", "name": "Battle for the Volunteer State", "type": "conference"},
+    {"team_a": "Arkansas", "team_b": "Missouri", "name": "Battle Line Rivalry", "type": "conference"},
+    {"team_a": "South Carolina", "team_b": "Kentucky", "name": "Fort Hill Classic", "type": "conference"},
+
+    {"team_a": "Duke", "team_b": "North Carolina", "name": "Tobacco Road", "type": "conference"},
+    {"team_a": "Virginia", "team_b": "Virginia Tech", "name": "Commonwealth Cup", "type": "conference"},
+    {"team_a": "Florida State", "team_b": "Miami", "name": "Sunshine Showdown", "type": "conference"},
+    {"team_a": "Clemson", "team_b": "Georgia Tech", "name": "SEC-ACC Border War", "type": "conference"},
+    {"team_a": "NC State", "team_b": "Wake Forest", "name": "Tobacco Road Side B", "type": "conference"},
+
+    {"team_a": "Kansas", "team_b": "Kansas State", "name": "Sunflower Showdown", "type": "conference"},
+    {"team_a": "Baylor", "team_b": "TCU", "name": "Revivalry", "type": "conference"},
+
+    {"team_a": "Oregon", "team_b": "Oregon State", "name": "Civil War", "type": "conference"},
+    {"team_a": "UCLA", "team_b": "USC", "name": "Crosstown Rivalry", "type": "conference"},
+    {"team_a": "Washington", "team_b": "Washington State", "name": "Apple Cup", "type": "conference"},
+    {"team_a": "Arizona", "team_b": "Arizona State", "name": "Territorial Cup", "type": "conference"},
+    {"team_a": "Stanford", "team_b": "California", "name": "The Big Game", "type": "conference"},
+    {"team_a": "Colorado", "team_b": "Utah", "name": "Rumble in the Rockies", "type": "conference"},
+
+    {"team_a": "Army", "team_b": "Navy", "name": "Army-Navy Game", "type": "conference"},
+    {"team_a": "Harvard", "team_b": "Yale", "name": "The Game", "type": "conference"},
+    {"team_a": "Princeton", "team_b": "Penn", "name": "Quaker Classic", "type": "conference"},
+
+    {"team_a": "Pittsburgh", "team_b": "Syracuse", "name": "Northeast Clash", "type": "conference"},
+
+    {"team_a": "Montana", "team_b": "Montana State", "name": "Brawl of the Wild", "type": "conference"},
+
+    {"team_a": "Fresno State", "team_b": "San Jose State", "name": "Valley Rivalry", "type": "conference"},
+
+    {"team_a": "Ferris State", "team_b": "Grand Valley State", "name": "Anchor-Bone Classic", "type": "conference"},
+
+    {"team_a": "Kansas", "team_b": "Missouri", "name": "Border War", "type": "non_conference"},
+    {"team_a": "Colorado", "team_b": "Colorado State", "name": "Rocky Mountain Showdown", "type": "non_conference"},
+    {"team_a": "Pittsburgh", "team_b": "West Virginia", "name": "Backyard Brawl", "type": "non_conference"},
+    {"team_a": "Florida", "team_b": "Florida State", "name": "Sunshine State Rivalry", "type": "non_conference"},
+    {"team_a": "Georgia", "team_b": "Georgia Tech", "name": "Clean Old-Fashioned Hate", "type": "non_conference"},
+    {"team_a": "South Carolina", "team_b": "Clemson", "name": "Palmetto Bowl", "type": "non_conference"},
+    {"team_a": "Kentucky", "team_b": "Louisville", "name": "Governor's Cup", "type": "non_conference"},
+    {"team_a": "Iowa", "team_b": "Iowa State", "name": "Cy-Hawk Trophy", "type": "non_conference"},
+    {"team_a": "Oklahoma", "team_b": "Oklahoma State", "name": "Bedlam Series", "type": "non_conference"},
+    {"team_a": "Notre Dame", "team_b": "USC", "name": "Notre Dame-USC Rivalry", "type": "non_conference"}
   ]
 }

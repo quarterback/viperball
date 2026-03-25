@@ -82,7 +82,7 @@ BORDER CONFERENCE (10 teams)
    10. UTSA (UTSA) — Roadrunners — San Antonio, TX
 
 ----------------------------------------------------------------------
-GALACTIC LEAGUE (11 teams)
+GALACTIC LEAGUE (10 teams)
 ----------------------------------------------------------------------
     1. Carnegie Mellon (CMU) — Tartans — Pittsburgh, PA
     2. Davidson (DAV) — Wildcats — Davidson, NC
@@ -94,10 +94,9 @@ GALACTIC LEAGUE (11 teams)
     8. Johns Hopkins (JHU) — Blue Jays — Baltimore, MD
     9. North Florida (UNF) — Ospreys — Jacksonville, FL
    10. Rhode Island (URI) — Rams — Kingston, RI
-   11. Sacramento State (SACST) — Hornets — Sacramento, CA
 
 ----------------------------------------------------------------------
-HERITAGE LEAGUE (12 teams)
+HERITAGE LEAGUE (13 teams)
 ----------------------------------------------------------------------
     1. Alabama State (ALST) — Hornets — Montgomery, AL
     2. Bethune-Cookman (BCU) — Wildcats — Daytona Beach, FL
@@ -109,8 +108,9 @@ HERITAGE LEAGUE (12 teams)
     8. Jackson State (JKST) — Tigers — Jackson, MS
     9. Kentucky State (KYSU) — Thorobreds — Frankfort, KY
    10. Mississippi Valley State (MVSU) — Delta Devils — Itta Bena, MS
-   11. South Carolina State (SCSU) — Bulldogs — Orangeburg, SC
-   12. Texas Southern (TXSO) — Tigers — Houston, TX
+   11. North Carolina Central (NCCU) — Eagles — Durham, NC
+   12. South Carolina State (SCSU) — Bulldogs — Orangeburg, SC
+   13. Texas Southern (TXSO) — Tigers — Houston, TX
 
 ----------------------------------------------------------------------
 IVY LEAGUE (10 teams)
@@ -132,16 +132,16 @@ MIDWEST STATES (10 teams)
     1. Bradley (BU) — Braves — Peoria, IL
     2. Drake (DU) — Bulldogs — Des Moines, IA
     3. Indiana State (ISU) — Sycamores — Terre Haute, IN
-    4. Missouri State (MSU) — Bears — Springfield, MO
-    5. Nebraska Omaha (UNO) — Mavericks — Omaha, NE
-    6. Northern Iowa (UNI) — Panthers — Cedar Falls, IA
-    7. Saint Louis (SLU) — Billikens — St. Louis, MO
+    4. Lafayette (LAF) — Leopards — Easton, PA
+    5. Missouri State (MSU) — Bears — Springfield, MO
+    6. Nebraska Omaha (UNO) — Mavericks — Omaha, NE
+    7. Northern Iowa (UNI) — Panthers — Cedar Falls, IA
     8. Southern Illinois (SIU) — Salukis — Carbondale, IL
     9. UMass (UMASS) — Minutemen — Amherst, MA
    10. Wichita State (WSU) — Shockers — Wichita, KS
 
 ----------------------------------------------------------------------
-MOONSHINE LEAGUE (9 teams)
+MOONSHINE LEAGUE (10 teams)
 ----------------------------------------------------------------------
     1. Air Force (AFA) — Falcons — Colorado Springs, CO
     2. Boise State (BSU) — Broncos — Boise, ID
@@ -149,12 +149,13 @@ MOONSHINE LEAGUE (9 teams)
     4. Montana (UM) — Grizzlies — Missoula, MT
     5. Montana State (MSU) — Bobcats — Bozeman, MT
     6. Northern Colorado (UNC) — Bears — Greeley, CO
-    7. South Dakota (USD) — Coyotes — Vermillion, SD
-    8. Weber State (WSU) — Wildcats — Ogden, UT
-    9. Wisconsin-River Falls (UWRF) — Falcons — River Falls, WI
+    7. Sacramento State (SACST) — Hornets — Sacramento, CA
+    8. South Dakota (USD) — Coyotes — Vermillion, SD
+    9. Weber State (WSU) — Wildcats — Ogden, UT
+   10. Wisconsin-River Falls (UWRF) — Falcons — River Falls, WI
 
 ----------------------------------------------------------------------
-MOUNTAIN WEST (12 teams)
+MOUNTAIN WEST (11 teams)
 ----------------------------------------------------------------------
     1. Cal Poly (CPOLY) — Mustangs — San Luis Obispo, CA
     2. Colorado Mines (MINES) — Orediggers — Golden, CO
@@ -163,11 +164,10 @@ MOUNTAIN WEST (12 teams)
     5. Fresno State (FRES) — Bulldogs — Fresno, CA
     6. Loyola Marymount (LMU) — Lions — Los Angeles, CA
     7. Northwest Missouri State (NWMSU) — Bearcats — Maryville, MO
-    8. Pepperdine (PU) — Waves — Malibu, CA
-    9. San Diego (USD) — Toreros — San Diego, CA
-   10. San Diego State (SDSU) — Aztecs — San Diego, CA
-   11. San Jose State (SJSU) — Spartans — San Jose, CA
-   12. UC Davis (UCD) — Aggies — Davis, CA
+    8. San Diego (USD) — Toreros — San Diego, CA
+    9. San Diego State (SDSU) — Aztecs — San Diego, CA
+   10. San Jose State (SJSU) — Spartans — San Jose, CA
+   11. UC Davis (UCD) — Aggies — Davis, CA
 
 ----------------------------------------------------------------------
 NORTHERN SHIELD (12 teams)
@@ -274,7 +274,44 @@ YANKEE FOURTEEN (11 teams)
 ======================================================================
 PROTECTED RIVALRIES (played every year as OOC games)
 ======================================================================
-    * Colorado State (CSU) vs. University of Wyoming (WYO) — "Border War"
+Conference Rivalries:
+    * Ohio State vs. Michigan — "The Game"
+    * Penn State vs. Rutgers — "Land Grant Trophy"
+    * Indiana vs. Purdue — "Old Oaken Bucket"
+    * Minnesota vs. Wisconsin — "Paul Bunyan's Axe"
+    * Iowa vs. Nebraska — "Heroes Trophy"
+    * Alabama vs. Auburn — "Iron Bowl"
+    * Florida vs. Georgia — "World's Largest Outdoor Cocktail Party"
+    * Ole Miss vs. Mississippi State — "Egg Bowl"
+    * Texas vs. Oklahoma — "Red River Rivalry"
+    * Texas A&M vs. LSU — "Southwest Classic"
+    * Tennessee vs. Vanderbilt — "Battle for the Volunteer State"
+    * Arkansas vs. Missouri — "Battle Line Rivalry"
+    * Duke vs. North Carolina — "Tobacco Road"
+    * Virginia vs. Virginia Tech — "Commonwealth Cup"
+    * Florida State vs. Miami — "Sunshine Showdown"
+    * Kansas vs. Kansas State — "Sunflower Showdown"
+    * Oregon vs. Oregon State — "Civil War"
+    * UCLA vs. USC — "Crosstown Rivalry"
+    * Washington vs. Washington State — "Apple Cup"
+    * Arizona vs. Arizona State — "Territorial Cup"
+    * Stanford vs. California — "The Big Game"
+    * Army vs. Navy — "Army-Navy Game"
+    * Harvard vs. Yale — "The Game"
+    * Montana vs. Montana State — "Brawl of the Wild"
+    * Ferris State vs. Grand Valley State — "Anchor-Bone Classic"
+
+Non-Conference Rivalries:
+    * Kansas vs. Missouri — "Border War"
+    * Colorado vs. Colorado State — "Rocky Mountain Showdown"
+    * Pittsburgh vs. West Virginia — "Backyard Brawl"
+    * Florida vs. Florida State — "Sunshine State Rivalry"
+    * Georgia vs. Georgia Tech — "Clean, Old-Fashioned Hate"
+    * South Carolina vs. Clemson — "Palmetto Bowl"
+    * Kentucky vs. Louisville — "Governor's Cup"
+    * Iowa vs. Iowa State — "Cy-Hawk Trophy"
+    * Oklahoma vs. Oklahoma State — "Bedlam Series"
+    * Notre Dame vs. USC — "Notre Dame-USC Rivalry"
 
 ======================================================================
 TOTAL: 200 teams across 17 conferences
