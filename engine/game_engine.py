@@ -3169,9 +3169,14 @@ class ViperballEngine:
         self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
         self.drive_play_count = 0
-        self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
+        self._drive_chain_positive = 0
+        self._drive_yards = 0  # Track drive yards for timeout decisions
+        self._drive_consecutive_negative = 0  # Consecutive negative/zero yard plays
         self._drive_consecutive_completions = 0  # Consecutive kick pass completions (for rhythm_escalation)
         self._current_formation = "split"  # Current snap formation shell
+        # Timeout-related tracking
+        self._consecutive_opponent_scores = {"home": 0, "away": 0}  # Consecutive scoring drives by opponent
+        self._last_play_yards = 0  # Yards gained on last play (for scheme reset logic)
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -4310,6 +4315,7 @@ class ViperballEngine:
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
+        self._drive_yards = 0
         self._drive_consecutive_completions = 0
         self.state.kick_mode = False
 
@@ -4400,11 +4406,16 @@ class ViperballEngine:
             if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False):
                 self._decay_solved_families(drive_team, _pf_dc_type)
 
+            self._last_play_yards = play.yards_gained
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
+                self._drive_yards = drive_yards
                 self._drive_chain_positive += 1
+                self._drive_consecutive_negative = 0
             else:
                 self._drive_chain_positive = 0
+                if play.play_type not in ("penalty", "kneel", "bonus_possession", "punt"):
+                    self._drive_consecutive_negative += 1
 
             # ── Shock & Awe: tempo_fatigue_export — drain opponent stamina ──
             tfe = style.get("tempo_fatigue_export", 0.0)
@@ -4564,6 +4575,10 @@ class ViperballEngine:
                             "offensive_clock_stop": "offensive",
                             "star_fatigue_rest": "fatigue",
                             "personnel_regrouping": "regrouping",
+                            "momentum_stop": "momentum",
+                            "scheme_reset": "scheme reset",
+                            "icing_the_kicker": "icing the kicker",
+                            "fresh_legs": "fresh legs",
                         }.get(to_entry["category"], to_entry["category"])
                         play.description += (
                             f" | TIMEOUT {to_entry['team_name']}"
@@ -4786,6 +4801,14 @@ class ViperballEngine:
             "bonus_drive": is_bonus_drive,
             "timeouts": drive_timeouts,
         })
+
+        # Track consecutive opponent scoring drives for momentum timeout logic
+        opponent = "away" if drive_team == "home" else "home"
+        if is_score:
+            self._consecutive_opponent_scores[opponent] += 1
+            # Reset own team's streak (they just got scored on)
+        else:
+            self._consecutive_opponent_scores[opponent] = 0
 
     FIELD_POSITION_VALUE = [
         (10, 0.3), (20, 0.6), (35, 1.0), (50, 1.5),
@@ -11691,18 +11714,22 @@ class ViperballEngine:
         return False
 
     def call_timeout(self) -> bool:
-        """V2.8: Realistic timeout decision engine.
+        """Realistic timeout decision engine.
 
-        Five categories of timeout calls, each with situational triggers
-        and coach-skill gating.  Good coaches hoard timeouts for Q4;
-        bad coaches may waste them on fatigue or personnel issues.
+        Teams use timeouts throughout the game, not just at the end.
+        Coaches treat the 3-minute warning as a "free timeout" and
+        budget accordingly — a well-coached team typically enters the
+        final 3 minutes with 1-2 timeouts remaining per half.
 
-        Categories:
-        1. Strategic clock stop (defense, Q4/Q2) — stop clock to get ball back
-        2. Star fatigue rest (offense, any quarter) — rare, red-zone only
-        3. Injury timeout (official, any quarter) — not charged to either team
-        4. Personnel/scheme regrouping (offense, Q1-Q3) — regroup after solved play
-        5. Offensive clock stop (offense, Q2/Q4 trailing) — preserve time to score
+        Categories (checked in priority order):
+        1. Injury timeout (official, any Q) — not charged
+        2. Momentum stop (defense, any Q) — after opponent's hot streak
+        3. Scheme reset (offense, any Q) — after sack/big loss/consecutive bad plays
+        4. Strategic clock stop (defense, Q2/Q4) — preserve time for comeback
+        5. Offensive clock stop (offense, Q2/Q4) — preserve time when trailing
+        6. Icing the kicker (defense, any Q) — before opponent kick attempt
+        7. Fresh legs (either, Q1-Q3) — key players exhausted mid-drive
+        8. Personnel regrouping (offense, any Q) — stalled drive, scheme change
 
         Returns True if any timeout was called.
         """
@@ -11732,8 +11759,13 @@ class ViperballEngine:
         caller = None
         caller_category = ""
 
-        # ── Category 3: Injury timeout (official-called, no team charged) ──
-        # ~0.3% chance per play.  Both teams rest.  Not a strategic decision.
+        # How many timeouts should a team ideally save for the final stretch?
+        # Good coaches save 1-2 for Q4, bad coaches burn them all early.
+        # The 3-minute warning acts as a "free timeout" so teams can afford
+        # to use more TOs during the game than in traditional football.
+        _ideal_reserve = 1 if off_clock_mgmt > 0.5 else 0
+
+        # ── Category 1: Injury timeout (official-called, no team charged) ──
         if random.random() < 0.003:
             off_team = self.get_offensive_team()
             def_team_obj = (self.home_team if def_side == "home"
@@ -11742,7 +11774,6 @@ class ViperballEngine:
                 p.game_energy = min(100.0, p.game_energy + 10.0)
             for p in def_team_obj.players:
                 p.game_energy = min(100.0, p.game_energy + 10.0)
-            # No timeout charged to either team
             self.timeout_log.append({
                 "quarter": quarter,
                 "time_remaining": time_left,
@@ -11754,103 +11785,162 @@ class ViperballEngine:
             })
             return True
 
-        # ── Category 1: Strategic clock stop (defense) ──
+        # ── Category 2: Momentum stop (defense) ──
+        # After the opponent scores 2+ consecutive TDs or has a big play,
+        # the defensive coach calls timeout to settle the team down.
+        # This happens in ANY quarter, not just late game.
+        if caller is None and def_timeouts > _ideal_reserve:
+            opp_streak = self._consecutive_opponent_scores.get(def_side, 0)
+            # After 2+ consecutive opponent scoring drives
+            if opp_streak >= 2:
+                # Base 10% chance, ramps with streak length
+                call_prob = 0.08 + 0.06 * min(3, opp_streak - 1)
+                call_prob *= (0.70 + 0.30 * def_clock_mgmt)
+                if "timeout_hoarder" in def_traits:
+                    call_prob *= 0.50
+                if "timeout_sprinter" in def_traits:
+                    call_prob *= 1.40
+                # Don't burn momentum TOs in Q4 with <3 min — save for clock
+                if quarter == 4 and time_left < 180:
+                    call_prob *= 0.20
+                if random.random() < min(0.45, call_prob):
+                    caller = def_side
+                    caller_category = "momentum_stop"
+
+        # ── Category 3: Scheme reset (offense) ──
+        # After a sack, big loss, or 2+ consecutive negative plays,
+        # the offensive coach calls timeout to regroup and change the play.
+        if caller is None and off_timeouts > _ideal_reserve:
+            consecutive_bad = getattr(self, '_drive_consecutive_negative', 0)
+            last_yards = getattr(self, '_last_play_yards', 0)
+
+            should_reset = False
+            call_prob = 0.0
+
+            # After a sack or big loss (>= 5 yards lost)
+            if last_yards <= -5:
+                call_prob = 0.18 + 0.07 * (1.0 - off_clock_mgmt)
+                should_reset = True
+            # After 2+ consecutive negative/zero-yard plays
+            elif consecutive_bad >= 2:
+                call_prob = 0.12 + 0.08 * min(3, consecutive_bad - 1)
+                call_prob *= (0.60 + 0.40 * (1.0 - off_clock_mgmt))
+                should_reset = True
+
+            if should_reset:
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.40
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.50
+                # Save TOs in Q4 crunch time if leading
+                if quarter == 4 and time_left < 180 and score_diff > 0:
+                    call_prob *= 0.15
+                if random.random() < min(0.35, call_prob):
+                    caller = off_side
+                    caller_category = "scheme_reset"
+
+        # ── Category 4: Strategic clock stop (defense) ──
         # Trailing defense stops the clock to preserve time for a comeback.
-        if def_timeouts > 0:
+        if caller is None and def_timeouts > 0:
             def_score_diff = -score_diff  # negative = defense trailing
             can_stop = False
             call_prob = 0.0
 
             if quarter == 4 and def_score_diff < 0 and def_score_diff >= -14:
-                # Q4 with <5 min left, trailing by ≤14
                 if time_left < 300:
-                    # Urgency ramps as clock ticks down
                     urgency = min(1.0, (300 - time_left) / 300.0)
                     deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
-                    call_prob = 0.20 + 0.50 * urgency + 0.15 * deficit_factor
-                    # Clock management skill amplifies good decisions
+                    call_prob = 0.25 + 0.50 * urgency + 0.15 * deficit_factor
                     call_prob *= (0.60 + 0.40 * def_clock_mgmt)
                     can_stop = True
 
-            elif quarter == 2 and def_score_diff < 0 and time_left < 60:
-                # Q2 with <1 min: try to get ball back before halftime
-                call_prob = 0.25 * (0.50 + 0.50 * def_clock_mgmt)
+            elif quarter == 2 and def_score_diff < 0 and time_left < 90:
+                call_prob = 0.20 * (0.50 + 0.50 * def_clock_mgmt)
                 can_stop = True
 
             if can_stop:
-                # Trait adjustments
                 if "timeout_hoarder" in def_traits:
-                    call_prob *= 0.70  # hoarders are reluctant
+                    call_prob *= 0.70
                 if "timeout_sprinter" in def_traits:
                     call_prob = min(0.90, call_prob * 1.25)
-
                 call_prob = min(0.85, call_prob)
                 if random.random() < call_prob:
                     caller = def_side
                     caller_category = "strategic_clock_stop"
 
         # ── Category 5: Offensive clock stop (trailing offense) ──
-        # Offense uses timeout to preserve time when trailing late.
         if caller is None and off_timeouts > 0 and score_diff < 0:
-            if quarter in (2, 4) and time_left < 120:
-                call_prob = 0.35 * (0.50 + 0.50 * off_clock_mgmt)
+            if quarter in (2, 4) and time_left < 180:
+                call_prob = 0.25 * (0.50 + 0.50 * off_clock_mgmt)
                 if quarter == 4:
-                    call_prob *= 1.5  # more urgent in Q4
-
+                    call_prob *= 1.5
                 if "timeout_hoarder" in off_traits:
                     call_prob *= 0.70
                 if "timeout_sprinter" in off_traits:
                     call_prob = min(0.85, call_prob * 1.25)
-
                 if random.random() < min(0.75, call_prob):
                     caller = off_side
                     caller_category = "offensive_clock_stop"
 
-        # ── Category 2: Star fatigue rest (offense) ──
-        # Rare — only in red zone with exhausted stars.  Bad clock managers
-        # are more likely to waste one here instead of saving for late game.
-        if caller is None and off_timeouts > 0:
-            off_team = self.get_offensive_team()
-            skill_players = self._offense_skill(off_team)
-            fatigued_stars = [p for p in skill_players
-                             if p.game_energy < 50 and p.overall >= 75]
+        # ── Category 6: Icing the kicker (defense) ──
+        # Right before a snap kick or place kick attempt on 6th down.
+        if (caller is None and def_timeouts > 0
+                and self.state.down >= 5 and self.state.kick_mode):
+            # 20-35% chance depending on coach clock management
+            call_prob = 0.20 + 0.15 * def_clock_mgmt
+            if "timeout_hoarder" in def_traits:
+                call_prob *= 0.50
+            # More likely in close games
+            if abs(score_diff) <= 5:
+                call_prob *= 1.4
+            if random.random() < min(0.40, call_prob):
+                caller = def_side
+                caller_category = "icing_the_kicker"
 
-            if fatigued_stars and self.state.field_position >= 50:
-                # Good clock managers resist: 15% at clock_mgmt=1.0, 30% at 0.0
-                call_prob = 0.30 - 0.15 * off_clock_mgmt
+        # ── Category 7: Fresh legs (either team, Q1-Q3) ──
+        # When key starters are exhausted mid-drive.  Teams use this
+        # as a natural breather, especially in humid/hot weather.
+        if caller is None and quarter <= 3:
+            for side, side_tos, mods, traits in [
+                (off_side, off_timeouts, off_mods, off_traits),
+                (def_side, def_timeouts, def_mods, def_traits),
+            ]:
+                if side_tos > _ideal_reserve + 1:  # Only if well-stocked on TOs
+                    team_obj = (self.home_team if side == "home"
+                                else self.away_team)
+                    gassed_starters = sum(1 for p in team_obj.players[:8]
+                                         if p.game_energy < 40)
+                    if gassed_starters >= 3:
+                        clock_mgmt = mods.get("clock_management", 0.5)
+                        call_prob = 0.10 + 0.05 * (1.0 - clock_mgmt)
+                        # Weather boost: hot/humid games drain more
+                        if self.weather in ("heat",):
+                            call_prob *= 1.6
+                        if "timeout_hoarder" in traits:
+                            call_prob *= 0.30
+                        if "timeout_sprinter" in traits:
+                            call_prob *= 1.50
+                        if random.random() < min(0.20, call_prob):
+                            caller = side
+                            caller_category = "fresh_legs"
+                            break
 
-                # Don't waste TOs in Q4 if you have a good clock manager
-                if quarter == 4 and off_clock_mgmt > 0.6:
-                    call_prob *= 0.3
-
-                if "timeout_hoarder" in off_traits:
-                    call_prob *= 0.50
-                if "timeout_sprinter" in off_traits:
-                    call_prob *= 1.40
-
-                if random.random() < call_prob:
-                    caller = off_side
-                    caller_category = "star_fatigue_rest"
-
-        # ── Category 4: Personnel/scheme timeout (offense, Q1-Q3) ──
-        # When the DC has solved a play family and the offense is struggling.
-        # Only if team has 2+ timeouts (preserve last one for emergencies).
-        if (caller is None and off_timeouts >= 2
-                and quarter <= 3
+        # ── Category 8: Personnel regrouping (offense) ──
+        # Stalled drive — offense needs a scheme change.
+        # Available any quarter (not just Q1-Q3), but less likely in Q4 crunch.
+        if (caller is None and off_timeouts > _ideal_reserve
                 and self.drive_play_count >= 3):
-            # Check if offense has been shut down on this drive (no gains)
-            recent_stall = (self.drive_play_count >= 4
-                            and getattr(self, '_drive_yards', 0) <= 2)
+            drive_yds = getattr(self, '_drive_yards', 0)
+            recent_stall = (self.drive_play_count >= 4 and drive_yds <= 3)
             if recent_stall:
-                # Bad clock managers burn TOs here more often
-                call_prob = 0.05 + 0.03 * (1.0 - off_clock_mgmt)
-
+                call_prob = 0.10 + 0.05 * (1.0 - off_clock_mgmt)
+                if quarter == 4 and time_left < 180:
+                    call_prob *= 0.30  # save TOs late
                 if "timeout_sprinter" in off_traits:
                     call_prob *= 1.50
                 if "timeout_hoarder" in off_traits:
                     call_prob *= 0.30
-
-                if random.random() < call_prob:
+                if random.random() < min(0.20, call_prob):
                     caller = off_side
                     caller_category = "personnel_regrouping"
 
