@@ -1446,6 +1446,11 @@ class Penalty:
 # blown calls are inconsequential, but ~0.5-0.9% of games will
 # have one that materially shifts the outcome.
 #
+# A fixed pool of named referees is generated once per league.
+# Each has hidden attributes (accuracy, tendencies) that the
+# user never sees — they only see the name.  Most refs are good;
+# a few are notably worse.
+#
 # Three blown-call types:
 #   1. Phantom flag  — penalty called when no infraction occurred
 #   2. Swallowed whistle — clear infraction goes uncalled
@@ -1454,47 +1459,84 @@ class Penalty:
 
 @dataclass
 class RefereeCrew:
-    """A game's officiating crew with accuracy and tendencies."""
-    accuracy: float = 0.95       # 0.91-0.98, like real refs
-    home_favor: float = 0.0      # -0.5 to +0.5 run-favor toward home team
-    consistency: float = 0.94    # How consistent the zone/calls are
-    phantom_flag_rate: float = 0.003   # Chance per play of a bad flag
-    swallowed_whistle_rate: float = 0.004  # Chance per play of missing a real call
-    spot_error_rate: float = 0.006  # Chance per play of a 1-3 yard spot error
-    blown_calls: int = 0         # Running count this game
-    blown_call_log: list = field(default_factory=list)  # Detailed log
+    """A game's officiating crew — named ref with hidden attributes."""
+    name: str = "Unknown"
+    accuracy: float = 0.95       # 0.91-0.98, hidden from user
+    home_favor: float = 0.0      # -0.5 to +0.5, hidden from user
+    consistency: float = 0.94    # hidden from user
+    phantom_flag_rate: float = 0.003   # hidden
+    swallowed_whistle_rate: float = 0.004  # hidden
+    spot_error_rate: float = 0.006  # hidden
+    blown_calls: int = 0         # running count this game
+    blown_call_log: list = field(default_factory=list)
 
 
-def generate_referee_crew(rng: random.Random) -> RefereeCrew:
-    """Generate a referee crew with randomized tendencies.
+# ── Named Referee Pool ──────────────────────────────────────────
+# 30 referees with pre-baked hidden attributes.  The user only
+# ever sees the name.  Distribution:
+#   ~20 good (accuracy 94-98%)
+#   ~7 average (accuracy 92-94%)
+#   ~3 below-average (accuracy 91-93%) — the "Angel Hernandezes"
 
-    Accuracy distribution mirrors real-world data:
-    - Most refs are 93-96% accurate
-    - Elite refs reach 97-98%
-    - Below-average refs dip to 91-93%
+REFEREE_POOL = [
+    # --- Elite tier (97-98%) ---
+    {"name": "Marcus Bell",        "accuracy": 0.98, "home_favor": 0.01, "consistency": 0.97},
+    {"name": "Diane Okoro",        "accuracy": 0.975, "home_favor": -0.02, "consistency": 0.96},
+    {"name": "James Whitfield",    "accuracy": 0.97, "home_favor": 0.03, "consistency": 0.96},
+    # --- Good tier (95-97%) ---
+    {"name": "Carla Munoz",        "accuracy": 0.965, "home_favor": 0.02, "consistency": 0.95},
+    {"name": "Ray Patterson",      "accuracy": 0.96, "home_favor": -0.01, "consistency": 0.95},
+    {"name": "Tomoko Sato",        "accuracy": 0.96, "home_favor": 0.04, "consistency": 0.94},
+    {"name": "Andre Kimball",      "accuracy": 0.955, "home_favor": 0.00, "consistency": 0.95},
+    {"name": "Lisa Brandt",        "accuracy": 0.955, "home_favor": -0.03, "consistency": 0.94},
+    {"name": "Kevin O'Malley",     "accuracy": 0.95, "home_favor": 0.06, "consistency": 0.93},
+    {"name": "Priya Deshmukh",     "accuracy": 0.95, "home_favor": -0.01, "consistency": 0.95},
+    {"name": "Robert Tran",        "accuracy": 0.95, "home_favor": 0.02, "consistency": 0.94},
+    {"name": "Monica Reeves",      "accuracy": 0.945, "home_favor": 0.01, "consistency": 0.94},
+    {"name": "David Nyström",      "accuracy": 0.945, "home_favor": -0.02, "consistency": 0.93},
+    # --- Solid tier (94-95%) ---
+    {"name": "Gloria Hutchins",    "accuracy": 0.94, "home_favor": 0.05, "consistency": 0.93},
+    {"name": "Sam Kowalski",       "accuracy": 0.94, "home_favor": 0.00, "consistency": 0.94},
+    {"name": "Terrence Miles",     "accuracy": 0.94, "home_favor": -0.04, "consistency": 0.92},
+    {"name": "Rosa Delgado",       "accuracy": 0.94, "home_favor": 0.03, "consistency": 0.93},
+    {"name": "Franklin Yu",        "accuracy": 0.935, "home_favor": 0.01, "consistency": 0.93},
+    {"name": "Barbara Hess",       "accuracy": 0.935, "home_favor": -0.01, "consistency": 0.92},
+    {"name": "Jerome Washington",  "accuracy": 0.93, "home_favor": 0.02, "consistency": 0.93},
+    # --- Average tier (92-94%) ---
+    {"name": "Bill Strickland",    "accuracy": 0.93, "home_favor": 0.08, "consistency": 0.91},
+    {"name": "Anita Flores",       "accuracy": 0.925, "home_favor": -0.03, "consistency": 0.92},
+    {"name": "Donald Marsh",       "accuracy": 0.925, "home_favor": 0.06, "consistency": 0.90},
+    {"name": "Helen Novak",        "accuracy": 0.92, "home_favor": 0.04, "consistency": 0.91},
+    {"name": "Greg Fontaine",      "accuracy": 0.92, "home_favor": -0.05, "consistency": 0.90},
+    {"name": "Yuki Tanaka",        "accuracy": 0.92, "home_favor": 0.01, "consistency": 0.91},
+    {"name": "Charles Pruitt",     "accuracy": 0.915, "home_favor": 0.07, "consistency": 0.89},
+    # --- Below-average tier (91-92%) — the controversial ones ---
+    {"name": "Hank Durkin",        "accuracy": 0.91, "home_favor": 0.12, "consistency": 0.88},
+    {"name": "Marge Tillotson",    "accuracy": 0.91, "home_favor": -0.08, "consistency": 0.89},
+    {"name": "Lou Crenshaw",       "accuracy": 0.905, "home_favor": 0.10, "consistency": 0.87},
+]
+
+
+def assign_referee(rng: random.Random) -> RefereeCrew:
+    """Pick a referee from the pool and build a RefereeCrew for one game.
+
+    The referee's hidden attributes drive blown-call rates.  The user
+    only sees the name in the box score.
     """
-    # Accuracy: normal distribution centered at 0.95, clipped to [0.91, 0.98]
-    accuracy = max(0.91, min(0.98, rng.gauss(0.95, 0.015)))
-
-    # Home favor: slight bias is common in real sports (~0.1-0.2 run favor)
-    # Negative = favors away, positive = favors home
-    home_favor = rng.gauss(0.05, 0.12)  # Slight home lean on average
-    home_favor = max(-0.5, min(0.5, home_favor))
-
-    # Consistency: how stable the crew's zone/calls are game-to-game
-    consistency = max(0.88, min(0.99, rng.gauss(0.94, 0.02)))
+    ref_data = rng.choice(REFEREE_POOL)
+    accuracy = ref_data["accuracy"]
+    inaccuracy = 1.0 - accuracy
 
     # Blown call rates scale inversely with accuracy
-    # A 98% accurate crew barely misses; a 91% crew misses more
-    inaccuracy = 1.0 - accuracy  # 0.02 to 0.09
-    phantom_flag_rate = 0.001 + inaccuracy * 0.03    # 0.0016 - 0.0037
-    swallowed_whistle_rate = 0.002 + inaccuracy * 0.03  # 0.0026 - 0.0047
-    spot_error_rate = 0.003 + inaccuracy * 0.04       # 0.0038 - 0.0066
+    phantom_flag_rate = 0.001 + inaccuracy * 0.03
+    swallowed_whistle_rate = 0.002 + inaccuracy * 0.03
+    spot_error_rate = 0.003 + inaccuracy * 0.04
 
     return RefereeCrew(
-        accuracy=round(accuracy, 3),
-        home_favor=round(home_favor, 3),
-        consistency=round(consistency, 3),
+        name=ref_data["name"],
+        accuracy=accuracy,
+        home_favor=ref_data["home_favor"],
+        consistency=ref_data["consistency"],
         phantom_flag_rate=round(phantom_flag_rate, 4),
         swallowed_whistle_rate=round(swallowed_whistle_rate, 4),
         spot_error_rate=round(spot_error_rate, 4),
@@ -3001,7 +3043,7 @@ class ViperballEngine:
 
         # ── Referee crew: human element of officiating ──
         _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
-        self.referee_crew = generate_referee_crew(_ref_rng)
+        self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
@@ -12355,11 +12397,9 @@ class ViperballEngine:
             "adaptation_log": list(self._adaptation_log),
             # ── Timeout log: every timeout event for post-game audit ──
             "timeout_log": list(self.timeout_log),
-            # ── Referee crew: officiating quality and blown calls ──
+            # ── Referee crew: name visible, attributes hidden ──
             "referee": {
-                "accuracy": self.referee_crew.accuracy,
-                "home_favor": self.referee_crew.home_favor,
-                "consistency": self.referee_crew.consistency,
+                "name": self.referee_crew.name,
                 "blown_calls": self.referee_crew.blown_calls,
                 "blown_call_log": list(self.referee_crew.blown_call_log),
             },

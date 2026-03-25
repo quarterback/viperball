@@ -54,20 +54,15 @@ class BoxScoreGenerator:
             lines.append("")
 
         # Big scoreboard-style header
-        lines.append(f"## {away_name} {_fmt_pts(away_score)}  —  {home_name} {_fmt_pts(home_score)}")
-        lines.append("")
-        lines.append(f"| | **{away_name}** | | **{home_name}** |")
-        lines.append("|---|---|---|---|")
-        lines.append(f"| Role | AWAY | | HOME |")
-        lines.append(f"| Final | **{_fmt_pts(away_score)}** | | **{_fmt_pts(home_score)}** |")
+        lines.append(f"## {away_name} {_fmt_pts(away_score)}  @  {home_name} {_fmt_pts(home_score)}")
         lines.append("")
 
         # Determine winner
         margin = abs(home_score - away_score)
         if home_score > away_score:
-            winner = f"**{home_name}** (HOME) wins by {_fmt_pts(margin)}"
+            winner = f"**{home_name}** wins by {_fmt_pts(margin)}"
         elif away_score > home_score:
-            winner = f"**{away_name}** (AWAY) wins by {_fmt_pts(margin)}"
+            winner = f"**{away_name}** wins by {_fmt_pts(margin)}"
         else:
             winner = "Game ended in a tie"
         lines.append(winner)
@@ -107,8 +102,8 @@ class BoxScoreGenerator:
 
         lines.append("| Team | Q1 | Q2 | Q3 | Q4 | Final |")
         lines.append("|------|----|----|----|----|-------|")
-        lines.append(f"| {away_name} (AWAY) | {_fmt_pts(away_q[1])} | {_fmt_pts(away_q[2])} | {_fmt_pts(away_q[3])} | {_fmt_pts(away_q[4])} | **{_fmt_pts(away_score)}** |")
-        lines.append(f"| {home_name} (HOME) | {_fmt_pts(home_q[1])} | {_fmt_pts(home_q[2])} | {_fmt_pts(home_q[3])} | {_fmt_pts(home_q[4])} | **{_fmt_pts(home_score)}** |")
+        lines.append(f"| {away_name} | {_fmt_pts(away_q[1])} | {_fmt_pts(away_q[2])} | {_fmt_pts(away_q[3])} | {_fmt_pts(away_q[4])} | **{_fmt_pts(away_score)}** |")
+        lines.append(f"| {home_name} | {_fmt_pts(home_q[1])} | {_fmt_pts(home_q[2])} | {_fmt_pts(home_q[3])} | {_fmt_pts(home_q[4])} | **{_fmt_pts(home_score)}** |")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -150,8 +145,8 @@ class BoxScoreGenerator:
                 else:
                     away_bells += 1
 
-        lines.append(f"| Category | {away_name} (AWAY) | {home_name} (HOME) |")
-        lines.append(f"|----------|" + "-" * (len(away_name) + 9) + "|" + "-" * (len(home_name) + 9) + "|")
+        lines.append(f"| Category | {away_name} | {home_name} |")
+        lines.append(f"|----------|" + "-" * (len(away_name) + 2) + "|" + "-" * (len(home_name) + 2) + "|")
         lines.append(f"| Touchdowns (9 pts) | {away_all_td} ({away_all_td * 9} pts) | {home_all_td} ({home_all_td * 9} pts) |")
         lines.append(f"| Snap Kicks (5 pts) | {self.away_stats['drop_kicks_made']} ({self.away_stats['drop_kicks_made'] * 5} pts) | {self.home_stats['drop_kicks_made']} ({self.home_stats['drop_kicks_made'] * 5} pts) |")
         lines.append(f"| Field Goals (3 pts) | {self.away_stats['place_kicks_made']} ({self.away_stats['place_kicks_made'] * 3} pts) | {self.home_stats['place_kicks_made']} ({self.home_stats['place_kicks_made'] * 3} pts) |")
@@ -170,8 +165,8 @@ class BoxScoreGenerator:
         # ══════════════════════════════════════════════════════════
         lines.append("## TEAM STATISTICS")
         lines.append("")
-        hdr = f"| Statistic | {away_name} (AWAY) | {home_name} (HOME) |"
-        sep = f"|-----------|" + "-" * (len(away_name) + 9) + "|" + "-" * (len(home_name) + 9) + "|"
+        hdr = f"| Statistic | {away_name} | {home_name} |"
+        sep = f"|-----------|" + "-" * (len(away_name) + 2) + "|" + "-" * (len(home_name) + 2) + "|"
         lines.append(hdr)
         lines.append(sep)
         lines.append(f"| Total Yards | {self.away_stats['total_yards']} | {self.home_stats['total_yards']} |")
@@ -384,8 +379,8 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append(f"| Team | Viper Efficiency |")
         lines.append(f"|------|------------------|")
-        lines.append(f"| {away_name} (AWAY) | {self.away_stats['viper_efficiency']:.2f} |")
-        lines.append(f"| {home_name} (HOME) | {self.home_stats['viper_efficiency']:.2f} |")
+        lines.append(f"| {away_name} | {self.away_stats['viper_efficiency']:.2f} |")
+        lines.append(f"| {home_name} | {self.home_stats['viper_efficiency']:.2f} |")
         lines.append("")
 
         lines.append("### Kicking Aggression Index")
@@ -440,32 +435,17 @@ class BoxScoreGenerator:
         # ══════════════════════════════════════════════════════════
         referee = self.game_data.get('referee', {})
         if referee:
-            lines.append("## REFEREE SCORECARD")
-            lines.append("")
-            accuracy_pct = round(referee.get('accuracy', 0.95) * 100, 1)
-            consistency_pct = round(referee.get('consistency', 0.94) * 100, 1)
-            home_favor = referee.get('home_favor', 0)
+            ref_name = referee.get('name', 'Unknown')
             blown_calls = referee.get('blown_calls', 0)
 
-            # Favor label
-            if abs(home_favor) < 0.05:
-                favor_label = "Neutral"
-            elif home_favor > 0:
-                favor_label = f"+{round(home_favor, 2)} toward {home_name}"
-            else:
-                favor_label = f"+{round(abs(home_favor), 2)} toward {away_name}"
-
-            lines.append(f"| Metric | Value |")
-            lines.append(f"|--------|-------|")
-            lines.append(f"| Overall Accuracy | {accuracy_pct}% |")
-            lines.append(f"| Consistency | {consistency_pct}% |")
-            lines.append(f"| Favor | {favor_label} |")
-            lines.append(f"| Blown Calls | {blown_calls} |")
+            lines.append("## OFFICIALS")
+            lines.append("")
+            lines.append(f"**Head Referee:** {ref_name}")
             lines.append("")
 
             blown_call_log = referee.get('blown_call_log', [])
             if blown_call_log:
-                lines.append("### Blown Call Details")
+                lines.append(f"*{len(blown_call_log)} questionable call(s) identified in post-game review:*")
                 lines.append("")
                 for bc in blown_call_log:
                     q = bc.get('quarter', '?')
@@ -475,18 +455,21 @@ class BoxScoreGenerator:
                         pen_name = bc.get('penalty_called', '?')
                         on_team = bc.get('on_team', '?')
                         team_label = home_name if on_team == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — Phantom flag: {pen_name} called on {team_label} ({bc.get('player', '?')}). No actual infraction.")
+                        lines.append(f"- **Q{q} {_fmt_time(time)}** — {pen_name} called on {team_label} ({bc.get('player', '?')}); replay shows no infraction")
                     elif bc_type == "swallowed_whistle":
                         pen_name = bc.get('penalty_missed', '?')
                         on_team = bc.get('on_team', '?')
                         team_label = home_name if on_team == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — Swallowed whistle: {pen_name} on {team_label} ({bc.get('player', '?')}) went uncalled.")
+                        lines.append(f"- **Q{q} {_fmt_time(time)}** — {pen_name} on {team_label} ({bc.get('player', '?')}) went uncalled")
                     elif bc_type == "spot_error":
                         error = bc.get('error_yards', 0)
                         direction = "forward" if error > 0 else "back"
                         poss = bc.get('possession', '?')
                         team_label = home_name if poss == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — Spot error: Ball spotted {abs(error)} yd(s) {direction} of correct position ({team_label} possession).")
+                        lines.append(f"- **Q{q} {_fmt_time(time)}** — Ball spotted {abs(error)} yd(s) {direction} of correct position ({team_label} possession)")
+                lines.append("")
+            else:
+                lines.append("*Clean game — no questionable calls identified in post-game review.*")
                 lines.append("")
 
             lines.append("---")
@@ -514,9 +497,8 @@ class BoxScoreGenerator:
                 quarter = play['quarter']
                 time = play['time_remaining']
                 pos = play['possession']
-                team_label = f"{home_name}" if pos == 'home' else f"{away_name}"
-                side_label = "HOME" if pos == 'home' else "AWAY"
-                lines.append(f"- **Q{quarter} {_fmt_time(time)}** [{side_label} — {team_label}] {play['description']}")
+                team_label = home_name if pos == 'home' else away_name
+                lines.append(f"- **Q{quarter} {_fmt_time(time)}** [{team_label}] {play['description']}")
         else:
             lines.append("*No significant plays recorded*")
 
@@ -555,7 +537,7 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append("---")
         lines.append("")
-        lines.append(f"*Collegiate Viperball League (CVL) Official Box Score — {away_name} (AWAY) at {home_name} (HOME)*")
+        lines.append(f"*Collegiate Viperball League (CVL) Official Box Score — {away_name} at {home_name}*")
 
         return "\n".join(lines)
 
