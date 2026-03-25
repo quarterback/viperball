@@ -13,16 +13,16 @@
     {"team_a": "Texas", "team_b": "Oklahoma", "name": "Red River Rivalry", "type": "conference"},
     {"team_a": "Texas A&M", "team_b": "LSU", "name": "Southwest Classic", "type": "conference"},
     {"team_a": "Tennessee", "team_b": "Vanderbilt", "name": "Battle for the Volunteer State", "type": "conference"},
-    {"team_a": "Arkansas", "team_b": "Missouri", "name": "Battle Line Rivalry", "type": "conference"},
+    {"team_a": "Arkansas", "team_b": "Missouri", "name": "Battle Line Rivalry", "type": "non_conference"},
     {"team_a": "South Carolina", "team_b": "Kentucky", "name": "Fort Hill Classic", "type": "conference"},
 
     {"team_a": "Duke", "team_b": "North Carolina", "name": "Tobacco Road", "type": "conference"},
     {"team_a": "Virginia", "team_b": "Virginia Tech", "name": "Commonwealth Cup", "type": "conference"},
-    {"team_a": "Florida State", "team_b": "Miami", "name": "Sunshine Showdown", "type": "conference"},
-    {"team_a": "Clemson", "team_b": "Georgia Tech", "name": "SEC-ACC Border War", "type": "conference"},
+    {"team_a": "Florida State", "team_b": "Miami", "name": "Sunshine Showdown", "type": "non_conference"},
+    {"team_a": "Clemson", "team_b": "Georgia Tech", "name": "SEC-ACC Border War", "type": "non_conference"},
     {"team_a": "NC State", "team_b": "Wake Forest", "name": "Tobacco Road Side B", "type": "conference"},
 
-    {"team_a": "Kansas", "team_b": "Kansas State", "name": "Sunflower Showdown", "type": "conference"},
+    {"team_a": "Kansas", "team_b": "Kansas State", "name": "Sunflower Showdown", "type": "non_conference"},
     {"team_a": "Baylor", "team_b": "TCU", "name": "Revivalry", "type": "conference"},
 
     {"team_a": "Oregon", "team_b": "Oregon State", "name": "Civil War", "type": "conference"},
@@ -46,12 +46,12 @@
 
     {"team_a": "Ferris State", "team_b": "Grand Valley State", "name": "Anchor-Bone Classic", "type": "conference"},
 
-    {"team_a": "Kansas", "team_b": "Missouri", "name": "Border War", "type": "non_conference"},
+    {"team_a": "Kansas", "team_b": "Missouri", "name": "Border War", "type": "conference"},
     {"team_a": "Colorado", "team_b": "Colorado State", "name": "Rocky Mountain Showdown", "type": "non_conference"},
     {"team_a": "Pittsburgh", "team_b": "West Virginia", "name": "Backyard Brawl", "type": "non_conference"},
-    {"team_a": "Florida", "team_b": "Florida State", "name": "Sunshine State Rivalry", "type": "non_conference"},
+    {"team_a": "Florida", "team_b": "Florida State", "name": "Sunshine State Rivalry", "type": "conference"},
     {"team_a": "Georgia", "team_b": "Georgia Tech", "name": "Clean Old-Fashioned Hate", "type": "non_conference"},
-    {"team_a": "South Carolina", "team_b": "Clemson", "name": "Palmetto Bowl", "type": "non_conference"},
+    {"team_a": "South Carolina", "team_b": "Clemson", "name": "Palmetto Bowl", "type": "conference"},
     {"team_a": "Kentucky", "team_b": "Louisville", "name": "Governor's Cup", "type": "non_conference"},
     {"team_a": "Iowa", "team_b": "Iowa State", "name": "Cy-Hawk Trophy", "type": "non_conference"},
     {"team_a": "Oklahoma", "team_b": "Oklahoma State", "name": "Bedlam Series", "type": "non_conference"},

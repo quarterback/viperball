@@ -4,96 +4,94 @@ Conference Directory — 200 Teams, 17 Conferences
 ======================================================================
 
 ----------------------------------------------------------------------
-ACC (12 teams)
+ACC (11 teams)
+----------------------------------------------------------------------
+    1. Cincinnati (CIN) — Bearcats — Cincinnati, OH
+    2. Duke (DUKE) — Blue Devils — Durham, NC
+    3. Georgia Tech (GT) — Yellow Jackets — Atlanta, GA
+    4. Maryland (UMD) — Terrapins — College Park, MD
+    5. Miami (MIA) — Hurricanes — Coral Gables, FL
+    6. NC State (NCST) — Wolfpack — Raleigh, NC
+    7. North Carolina (UNC) — Tar Heels — Chapel Hill, NC
+    8. Virginia (UVA) — Cavaliers — Charlottesville, VA
+    9. Virginia Tech (VT) — Hokies — Blacksburg, VA
+   10. Wake Forest (WAKE) — Demon Deacons — Winston-Salem, NC
+   11. West Virginia (WVU) — Mountaineers — Morgantown, WV
+
+----------------------------------------------------------------------
+BIG 12 (10 teams)
+----------------------------------------------------------------------
+    1. Baylor (BAY) — Bears — Waco, TX
+    2. BYU (BYU) — Cougars — Provo, UT
+    3. Houston (UH) — Cougars — Houston, TX
+    4. Iowa State (ISU) — Cyclones — Ames, IA
+    5. Kansas State (KST) — Wildcats — Manhattan, KS
+    6. Oklahoma State (OKST) — Cowboys — Stillwater, OK
+    7. SMU (SMU) — Mustangs — Dallas, TX
+    8. TCU (TCU) — Horned Frogs — Fort Worth, TX
+    9. Texas Tech (TTU) — Red Raiders — Lubbock, TX
+   10. UCF (UCF) — Knights — Orlando, FL
+
+----------------------------------------------------------------------
+BIG EAST (11 teams)
 ----------------------------------------------------------------------
     1. Boston College (BC) — Eagles — Chestnut Hill, MA
-    2. Clemson (CLEM) — Tigers — Clemson, SC
-    3. Duke (DUKE) — Blue Devils — Durham, NC
-    4. Florida State (FSU) — Seminoles — Tallahassee, FL
-    5. Georgia Tech (GT) — Yellow Jackets — Atlanta, GA
-    6. Maryland (UMD) — Terrapins — College Park, MD
-    7. Miami (MIA) — Hurricanes — Coral Gables, FL
-    8. NC State (NCST) — Wolfpack — Raleigh, NC
-    9. North Carolina (UNC) — Tar Heels — Chapel Hill, NC
-   10. Virginia (UVA) — Cavaliers — Charlottesville, VA
-   11. Virginia Tech (VT) — Hokies — Blacksburg, VA
-   12. Wake Forest (WAKE) — Demon Deacons — Winston-Salem, NC
+    2. Butler (BUT) — Bulldogs — Indianapolis, IN
+    3. Creighton (CU) — Bluejays — Omaha, NE
+    4. Georgetown (GTWN) — Hoyas — Washington, DC
+    5. Louisville (LOU) — Cardinals — Louisville, KY
+    6. Marquette (MU) — Golden Eagles — Milwaukee, WI
+    7. NYU (NYU) — Violets — New York, NY
+    8. Pittsburgh (PITT) — Panthers — Pittsburgh, PA
+    9. Providence (PC) — Friars — Providence, RI
+   10. Syracuse (SYR) — Orange — Syracuse, NY
+   11. Villanova (NOVA) — Wildcats — Villanova, PA
 
 ----------------------------------------------------------------------
-BIG 12 (12 teams)
-----------------------------------------------------------------------
-    1. BYU (BYU) — Cougars — Provo, UT
-    2. Baylor (BAY) — Bears — Waco, TX
-    3. Cincinnati (CIN) — Bearcats — Cincinnati, OH
-    4. Houston (UH) — Cougars — Houston, TX
-    5. Iowa State (ISU) — Cyclones — Ames, IA
-    6. Kansas (KU) — Jayhawks — Lawrence, KS
-    7. Kansas State (KST) — Wildcats — Manhattan, KS
-    8. Oklahoma State (OKST) — Cowboys — Stillwater, OK
-    9. TCU (TCU) — Horned Frogs — Fort Worth, TX
-   10. Texas Tech (TTU) — Red Raiders — Lubbock, TX
-   11. UCF (UCF) — Knights — Orlando, FL
-   12. West Virginia (WVU) — Mountaineers — Morgantown, WV
-
-----------------------------------------------------------------------
-BIG EAST (10 teams)
-----------------------------------------------------------------------
-    1. Butler (BUT) — Bulldogs — Indianapolis, IN
-    2. Creighton (CU) — Bluejays — Omaha, NE
-    3. Georgetown (GTWN) — Hoyas — Washington, DC
-    4. Louisville (LOU) — Cardinals — Louisville, KY
-    5. Marquette (MU) — Golden Eagles — Milwaukee, WI
-    6. NYU (NYU) — Violets — New York, NY
-    7. Pittsburgh (PITT) — Panthers — Pittsburgh, PA
-    8. Providence (PC) — Friars — Providence, RI
-    9. Syracuse (SYR) — Orange — Syracuse, NY
-   10. Villanova (NOVA) — Wildcats — Villanova, PA
-
-----------------------------------------------------------------------
-BIG TEN (14 teams)
+BIG TEN (16 teams)
 ----------------------------------------------------------------------
     1. Illinois (ILL) — Fighting Illini — Champaign, IL
     2. Indiana (IND) — Hoosiers — Bloomington, IN
     3. Iowa (IOWA) — Hawkeyes — Iowa City, IA
-    4. Michigan (MICH) — Wolverines — Ann Arbor, MI
-    5. Michigan State (MSU) — Spartans — East Lansing, MI
-    6. Minnesota (MINN) — Golden Gophers — Minneapolis, MN
-    7. Nebraska (NEB) — Cornhuskers — Lincoln, NE
-    8. Northwestern (NW) — Wildcats — Evanston, IL
-    9. Notre Dame (ND) — Fighting Irish — Notre Dame, IN
-   10. Ohio State (OSU) — Buckeyes — Columbus, OH
-   11. Penn State (PSU) — Nittany Lions — University Park, PA
-   12. Purdue (PUR) — Boilermakers — West Lafayette, IN
-   13. Rutgers (RUTG) — Scarlet Knights — New Brunswick, NJ
-   14. Wisconsin (WIS) — Badgers — Madison, WI
+    4. Kansas (KU) — Jayhawks — Lawrence, KS
+    5. Michigan (MICH) — Wolverines — Ann Arbor, MI
+    6. Michigan State (MSU) — Spartans — East Lansing, MI
+    7. Minnesota (MINN) — Golden Gophers — Minneapolis, MN
+    8. Missouri (MIZ) — Tigers — Columbia, MO
+    9. Nebraska (NEB) — Cornhuskers — Lincoln, NE
+   10. Northwestern (NW) — Wildcats — Evanston, IL
+   11. Notre Dame (ND) — Fighting Irish — Notre Dame, IN
+   12. Ohio State (OSU) — Buckeyes — Columbus, OH
+   13. Penn State (PSU) — Nittany Lions — University Park, PA
+   14. Purdue (PUR) — Boilermakers — West Lafayette, IN
+   15. Rutgers (RUTG) — Scarlet Knights — New Brunswick, NJ
+   16. Wisconsin (WIS) — Badgers — Madison, WI
 
 ----------------------------------------------------------------------
-BORDER CONFERENCE (10 teams)
+BORDER CONFERENCE (9 teams)
 ----------------------------------------------------------------------
     1. Illinois State (ILST) — Redbirds — Normal, IL
     2. North Texas (UNT) — Mean Green — Denton, TX
     3. Rice (RICE) — Owls — Houston, TX
-    4. SMU (SMU) — Mustangs — Dallas, TX
-    5. Texas State (TXST) — Bobcats — San Marcos, TX
-    6. Tulane (TLNE) — Green Wave — New Orleans, LA
-    7. UALR (UALR) — Trojans — Little Rock, AR
-    8. UNLV (UNLV) — Rebels — Las Vegas, NV
-    9. UTEP (UTEP) — Miners — El Paso, TX
-   10. UTSA (UTSA) — Roadrunners — San Antonio, TX
+    4. Texas State (TXST) — Bobcats — San Marcos, TX
+    5. Tulane (TLNE) — Green Wave — New Orleans, LA
+    6. UALR (UALR) — Trojans — Little Rock, AR
+    7. UNLV (UNLV) — Rebels — Las Vegas, NV
+    8. UTEP (UTEP) — Miners — El Paso, TX
+    9. UTSA (UTSA) — Roadrunners — San Antonio, TX
 
 ----------------------------------------------------------------------
-GALACTIC LEAGUE (10 teams)
+GALACTIC LEAGUE (9 teams)
 ----------------------------------------------------------------------
     1. Carnegie Mellon (CMU) — Tartans — Pittsburgh, PA
-    2. Davidson (DAV) — Wildcats — Davidson, NC
-    3. Dayton (UD) — Flyers — Dayton, OH
-    4. Delaware (DEL) — Fightin' Blue Hens — Newark, DE
-    5. Duquesne (DUQ) — Dukes — Pittsburgh, PA
-    6. Florida Gulf Coast (FGCU) — Eagles — Fort Myers, FL
-    7. Georgia State (GSU) — Panthers — Atlanta, GA
-    8. Johns Hopkins (JHU) — Blue Jays — Baltimore, MD
-    9. North Florida (UNF) — Ospreys — Jacksonville, FL
-   10. Rhode Island (URI) — Rams — Kingston, RI
+    2. Dayton (UD) — Flyers — Dayton, OH
+    3. Georgia State (GSU) — Panthers — Atlanta, GA
+    4. Johns Hopkins (JHU) — Blue Jays — Baltimore, MD
+    5. Memphis (MEM) — Tigers — Memphis, TN
+    6. North Florida (UNF) — Ospreys — Jacksonville, FL
+    7. Rhode Island (URI) — Rams — Kingston, RI
+    8. Tennessee State (TNST) — Tigers — Nashville, TN
+    9. Toledo (TOL) — Rockets — Toledo, OH
 
 ----------------------------------------------------------------------
 HERITAGE LEAGUE (13 teams)
@@ -170,20 +168,19 @@ MOUNTAIN WEST (11 teams)
    11. UC Davis (UCD) — Aggies — Davis, CA
 
 ----------------------------------------------------------------------
-NORTHERN SHIELD (12 teams)
+NORTHERN SHIELD (11 teams)
 ----------------------------------------------------------------------
-    1. BU (BU) — Terriers — Boston, MA
-    2. Brandeis (BRND) — Judges — Waltham, MA
-    3. Coast Guard (USCG) — Bears — New London, CT
-    4. Haverford (HAVR) — Fords — Haverford, PA
-    5. Holy Cross (HC) — Crusaders — Worcester, MA
-    6. Middlebury (MIDD) — Panthers — Middlebury, VT
-    7. North Dakota State (NDSU) — Bison — Fargo, ND
-    8. Oswego State (OSWE) — Lakers — Oswego, NY
-    9. Quinnipiac (QU) — Bobcats — Hamden, CT
-   10. SUNY Plattsburgh (PLAT) — Cardinals — Plattsburgh, NY
-   11. South Dakota State (SDSU) — Jackrabbits — Brookings, SD
-   12. Swarthmore (SWAT) — Garnet — Swarthmore, PA
+    1. Brandeis (BRND) — Judges — Waltham, MA
+    2. Coast Guard (USCG) — Bears — New London, CT
+    3. Haverford (HAVR) — Fords — Haverford, PA
+    4. Holy Cross (HC) — Crusaders — Worcester, MA
+    5. Middlebury (MIDD) — Panthers — Middlebury, VT
+    6. North Dakota State (NDSU) — Bison — Fargo, ND
+    7. Oswego State (OSWE) — Lakers — Oswego, NY
+    8. SUNY Plattsburgh (PLAT) — Cardinals — Plattsburgh, NY
+    9. South Dakota State (SDSU) — Jackrabbits — Brookings, SD
+   10. Swarthmore (SWAT) — Garnet — Swarthmore, PA
+   11. Western Michigan (WMU) — Broncos — Kalamazoo, MI
 
 ----------------------------------------------------------------------
 PAC-16 (16 teams)
@@ -222,24 +219,25 @@ PRAIRIE ATHLETIC UNION (12 teams)
    12. Western Illinois (WIU) — Leathernecks — Macomb, IL
 
 ----------------------------------------------------------------------
-SEC (16 teams)
+SEC (17 teams)
 ----------------------------------------------------------------------
     1. Alabama (BAMA) — Crimson Tide — Tuscaloosa, AL
     2. Arkansas (ARK) — Razorbacks — Fayetteville, AR
     3. Auburn (AUB) — Tigers — Auburn, AL
-    4. Florida (UF) — Gators — Gainesville, FL
-    5. Georgia (UGA) — Bulldogs — Athens, GA
-    6. Kentucky (UK) — Wildcats — Lexington, KY
-    7. LSU (LSU) — Tigers — Baton Rouge, LA
-    8. Mississippi State (MSST) — Bulldogs — Starkville, MS
-    9. Missouri (MIZ) — Tigers — Columbia, MO
-   10. Oklahoma (OU) — Sooners — Norman, OK
-   11. Ole Miss (MISS) — Rebels — Oxford, MS
-   12. South Carolina (SC) — Gamecocks — Columbia, SC
-   13. Tennessee (TENN) — Volunteers — Knoxville, TN
-   14. Texas (TEX) — Longhorns — Austin, TX
-   15. Texas A&M (TAMU) — Aggies — College Station, TX
-   16. Vanderbilt (VAN) — Commodores — Nashville, TN
+    4. Clemson (CLEM) — Tigers — Clemson, SC
+    5. Florida (UF) — Gators — Gainesville, FL
+    6. Florida State (FSU) — Seminoles — Tallahassee, FL
+    7. Georgia (UGA) — Bulldogs — Athens, GA
+    8. Kentucky (UK) — Wildcats — Lexington, KY
+    9. LSU (LSU) — Tigers — Baton Rouge, LA
+   10. Mississippi State (MSST) — Bulldogs — Starkville, MS
+   11. Oklahoma (OU) — Sooners — Norman, OK
+   12. Ole Miss (MISS) — Rebels — Oxford, MS
+   13. South Carolina (SC) — Gamecocks — Columbia, SC
+   14. Tennessee (TENN) — Volunteers — Knoxville, TN
+   15. Texas (TEX) — Longhorns — Austin, TX
+   16. Texas A&M (TAMU) — Aggies — College Station, TX
+   17. Vanderbilt (VAN) — Commodores — Nashville, TN
 
 ----------------------------------------------------------------------
 WEST COAST CONFERENCE (11 teams)
@@ -257,19 +255,21 @@ WEST COAST CONFERENCE (11 teams)
    11. Western Washington (WWU) — Vikings — Bellingham, WA
 
 ----------------------------------------------------------------------
-YANKEE FOURTEEN (11 teams)
+YANKEE CONFERENCE (13 teams)
 ----------------------------------------------------------------------
-    1. Buffalo (BUFF) — Bulls — Buffalo, NY
-    2. Colgate (COLG) — Raiders — Hamilton, NY
-    3. Ithaca (ITHA) — Bombers — Ithaca, NY
-    4. Maine (ME) — Black Bears — Orono, ME
-    5. Merchant Marine (USMM) — Mariners — Kings Point, NY
-    6. NJIT (NJIT) — Highlanders — Newark, NJ
-    7. New Hampshire (UNH) — Wildcats — Durham, NH
-    8. RPI (RPI) — Engineers — Troy, NY
-    9. Rochester (ROCH) — Yellowjackets — Rochester, NY
-   10. UMBC (UMBC) — Retrievers — Baltimore, MD
-   11. Vermont (UVM) — Catamounts — Burlington, VT
+    1. BU (BU) — Terriers — Boston, MA
+    2. Buffalo (BUFF) — Bulls — Buffalo, NY
+    3. Colgate (COLG) — Raiders — Hamilton, NY
+    4. Delaware (DEL) — Fightin' Blue Hens — Newark, DE
+    5. Ithaca (ITHA) — Bombers — Ithaca, NY
+    6. Lehigh (LEH) — Mountain Hawks — Bethlehem, PA
+    7. Maine (ME) — Black Bears — Orono, ME
+    8. Merchant Marine (USMM) — Mariners — Kings Point, NY
+    9. New Hampshire (UNH) — Wildcats — Durham, NH
+   10. RPI (RPI) — Engineers — Troy, NY
+   11. Rochester (ROCH) — Yellowjackets — Rochester, NY
+   12. UMBC (UMBC) — Retrievers — Baltimore, MD
+   13. Vermont (UVM) — Catamounts — Burlington, VT
 
 ======================================================================
 PROTECTED RIVALRIES (played every year as OOC games)
@@ -280,38 +280,52 @@ Conference Rivalries:
     * Indiana vs. Purdue — "Old Oaken Bucket"
     * Minnesota vs. Wisconsin — "Paul Bunyan's Axe"
     * Iowa vs. Nebraska — "Heroes Trophy"
+    * Kansas vs. Missouri — "Border War"
     * Alabama vs. Auburn — "Iron Bowl"
     * Florida vs. Georgia — "World's Largest Outdoor Cocktail Party"
     * Ole Miss vs. Mississippi State — "Egg Bowl"
     * Texas vs. Oklahoma — "Red River Rivalry"
     * Texas A&M vs. LSU — "Southwest Classic"
     * Tennessee vs. Vanderbilt — "Battle for the Volunteer State"
-    * Arkansas vs. Missouri — "Battle Line Rivalry"
+    * South Carolina vs. Clemson — "Palmetto Bowl"
+    * Florida vs. Florida State — "Sunshine State Rivalry"
+    * South Carolina vs. Kentucky — "Fort Hill Classic"
     * Duke vs. North Carolina — "Tobacco Road"
     * Virginia vs. Virginia Tech — "Commonwealth Cup"
-    * Florida State vs. Miami — "Sunshine Showdown"
-    * Kansas vs. Kansas State — "Sunflower Showdown"
+    * NC State vs. Wake Forest — "Tobacco Road Side B"
+    * Baylor vs. TCU — "Revivalry"
     * Oregon vs. Oregon State — "Civil War"
     * UCLA vs. USC — "Crosstown Rivalry"
     * Washington vs. Washington State — "Apple Cup"
     * Arizona vs. Arizona State — "Territorial Cup"
     * Stanford vs. California — "The Big Game"
+    * Colorado vs. Utah — "Rumble in the Rockies"
     * Army vs. Navy — "Army-Navy Game"
     * Harvard vs. Yale — "The Game"
+    * Princeton vs. Penn — "Quaker Classic"
+    * Pittsburgh vs. Syracuse — "Northeast Clash"
     * Montana vs. Montana State — "Brawl of the Wild"
+    * Fresno State vs. San Jose State — "Valley Rivalry"
     * Ferris State vs. Grand Valley State — "Anchor-Bone Classic"
+    * Notre Dame vs. Purdue — "Shillelagh Trophy"
+    * Notre Dame vs. Michigan State — "Megaphone Trophy"
 
 Non-Conference Rivalries:
-    * Kansas vs. Missouri — "Border War"
+    * Arkansas vs. Missouri — "Battle Line Rivalry"
+    * Kansas vs. Kansas State — "Sunflower Showdown"
+    * Florida State vs. Miami — "Sunshine Showdown"
+    * Clemson vs. Georgia Tech — "SEC-ACC Border War"
     * Colorado vs. Colorado State — "Rocky Mountain Showdown"
     * Pittsburgh vs. West Virginia — "Backyard Brawl"
-    * Florida vs. Florida State — "Sunshine State Rivalry"
     * Georgia vs. Georgia Tech — "Clean, Old-Fashioned Hate"
-    * South Carolina vs. Clemson — "Palmetto Bowl"
     * Kentucky vs. Louisville — "Governor's Cup"
     * Iowa vs. Iowa State — "Cy-Hawk Trophy"
     * Oklahoma vs. Oklahoma State — "Bedlam Series"
     * Notre Dame vs. USC — "Notre Dame-USC Rivalry"
+    * Notre Dame vs. Navy — "Notre Dame-Navy Game"
+    * Notre Dame vs. Stanford — "Legends Trophy"
+    * Army vs. Air Force — "Commander-in-Chief's Trophy"
+    * Navy vs. Air Force — "Commander-in-Chief's Trophy"
 
 ======================================================================
 TOTAL: 200 teams across 17 conferences

@@ -93,7 +93,7 @@ TARGET = {
         "hawaii", "portland", "san_francisco", "pacific", "southern_oregon",
         "western_washington",
     ],
-    "Yankee Fourteen": [
+    "Yankee Conference": [
         "ithaca", "njit", "rpi", "merchant_marine", "umbc", "buffalo",
         "colgate", "rochester", "new_hampshire", "vermont", "maine",
     ],

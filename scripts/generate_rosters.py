@@ -159,7 +159,7 @@ CONFERENCE_FLOORS = {
     "Big Ten": 55,       # range ~90-55
     "ACC": 69,           # range ~84-69 — tight, consistently good
     "Big East": 53,      # range ~80-53
-    "Yankee Fourteen": 65,  # range ~85-65 — high floor
+    "Yankee Conference": 65,  # range ~85-65 — high floor
     "Pac-12": 65,        # range ~88-65
     "Pac-16": 65,        # alias — Pac-12 may be renamed Pac-16
 }

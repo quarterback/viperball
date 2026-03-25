@@ -489,15 +489,15 @@ NEW_SCHOOLS = [
     # SERVICE ACADEMIES (3 new)
     # ══════════════════════════════════════════════════════════════════
     {"id": "army", "name": "Army", "abbrev": "ARMY", "mascot": "Black Knights", "city": "West Point", "state": "NY", "colors": ["Black", "Gold"], "conference": "Pioneer Athletic Association", "tier": 78},
-    {"id": "navy", "name": "Navy", "abbrev": "NAVY", "mascot": "Midshipmen", "city": "Annapolis", "state": "MD", "colors": ["Navy", "Gold"], "conference": "Yankee Fourteen", "tier": 78},
-    {"id": "merchant_marine", "name": "Merchant Marine", "abbrev": "USMM", "mascot": "Mariners", "city": "Kings Point", "state": "NY", "colors": ["Blue", "Gray"], "conference": "Yankee Fourteen", "tier": 72},
+    {"id": "navy", "name": "Navy", "abbrev": "NAVY", "mascot": "Midshipmen", "city": "Annapolis", "state": "MD", "colors": ["Navy", "Gold"], "conference": "Yankee Conference", "tier": 78},
+    {"id": "merchant_marine", "name": "Merchant Marine", "abbrev": "USMM", "mascot": "Mariners", "city": "Kings Point", "state": "NY", "colors": ["Blue", "Gray"], "conference": "Yankee Conference", "tier": 72},
     # ══════════════════════════════════════════════════════════════════
     # IVY LEAGUE & NESCAC (6 new)
     # ══════════════════════════════════════════════════════════════════
     {"id": "harvard", "name": "Harvard", "abbrev": "HARV", "mascot": "Crimson", "city": "Cambridge", "state": "MA", "colors": ["Crimson", "Black", "White"], "conference": "Collegiate Commonwealth", "tier": 82},
-    {"id": "yale", "name": "Yale", "abbrev": "YALE", "mascot": "Bulldogs", "city": "New Haven", "state": "CT", "colors": ["Yale Blue", "White"], "conference": "Yankee Fourteen", "tier": 80},
+    {"id": "yale", "name": "Yale", "abbrev": "YALE", "mascot": "Bulldogs", "city": "New Haven", "state": "CT", "colors": ["Yale Blue", "White"], "conference": "Yankee Conference", "tier": 80},
     {"id": "columbia", "name": "Columbia", "abbrev": "CLMB", "mascot": "Lions", "city": "New York", "state": "NY", "colors": ["Columbia Blue", "White"], "conference": "Galactic League", "tier": 78},
-    {"id": "princeton", "name": "Princeton", "abbrev": "PRIN", "mascot": "Tigers", "city": "Princeton", "state": "NJ", "colors": ["Orange", "Black"], "conference": "Yankee Fourteen", "tier": 80},
+    {"id": "princeton", "name": "Princeton", "abbrev": "PRIN", "mascot": "Tigers", "city": "Princeton", "state": "NJ", "colors": ["Orange", "Black"], "conference": "Yankee Conference", "tier": 80},
     {"id": "penn", "name": "Pennsylvania", "abbrev": "PENN", "mascot": "Quakers", "city": "Philadelphia", "state": "PA", "colors": ["Red", "Blue"], "conference": "Collegiate Commonwealth", "tier": 79},
     {"id": "middlebury", "name": "Middlebury", "abbrev": "MIDD", "mascot": "Panthers", "city": "Middlebury", "state": "VT", "colors": ["Blue", "White"], "conference": "Northern Shield", "tier": 76},
     # ══════════════════════════════════════════════════════════════════

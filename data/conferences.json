@@ -1,20 +1,12 @@
 {
   "ACC": [
     {
-      "id": "boston_college",
-      "name": "Boston College"
-    },
-    {
-      "id": "clemson",
-      "name": "Clemson"
+      "id": "cincinnati",
+      "name": "Cincinnati"
     },
     {
       "id": "duke",
       "name": "Duke"
-    },
-    {
-      "id": "florida_state",
-      "name": "Florida State"
     },
     {
       "id": "georgia_tech",
@@ -47,20 +39,20 @@
     {
       "id": "wake_forest",
       "name": "Wake Forest"
+    },
+    {
+      "id": "west_virginia",
+      "name": "West Virginia"
     }
   ],
   "Big 12": [
-    {
-      "id": "byu",
-      "name": "BYU"
-    },
     {
       "id": "baylor",
       "name": "Baylor"
     },
     {
-      "id": "cincinnati",
-      "name": "Cincinnati"
+      "id": "byu",
+      "name": "BYU"
     },
     {
       "id": "houston",
@@ -71,16 +63,16 @@
       "name": "Iowa State"
     },
     {
-      "id": "kansas",
-      "name": "Kansas"
-    },
-    {
       "id": "kansas_state",
       "name": "Kansas State"
     },
     {
       "id": "oklahoma_state",
       "name": "Oklahoma State"
+    },
+    {
+      "id": "smu",
+      "name": "SMU"
     },
     {
       "id": "tcu",
@@ -93,13 +85,13 @@
     {
       "id": "ucf",
       "name": "UCF"
-    },
-    {
-      "id": "west_virginia",
-      "name": "West Virginia"
     }
   ],
   "Big East": [
+    {
+      "id": "boston_college",
+      "name": "Boston College"
+    },
     {
       "id": "butler",
       "name": "Butler"
@@ -155,6 +147,10 @@
       "name": "Iowa"
     },
     {
+      "id": "kansas",
+      "name": "Kansas"
+    },
+    {
       "id": "michigan",
       "name": "Michigan"
     },
@@ -165,6 +161,10 @@
     {
       "id": "minnesota",
       "name": "Minnesota"
+    },
+    {
+      "id": "missouri",
+      "name": "Missouri"
     },
     {
       "id": "nebraska",
@@ -213,10 +213,6 @@
       "name": "Rice"
     },
     {
-      "id": "smu",
-      "name": "SMU"
-    },
-    {
       "id": "texas_state",
       "name": "Texas State"
     },
@@ -247,24 +243,8 @@
       "name": "Carnegie Mellon"
     },
     {
-      "id": "davidson",
-      "name": "Davidson"
-    },
-    {
       "id": "dayton",
       "name": "Dayton"
-    },
-    {
-      "id": "delaware",
-      "name": "Delaware"
-    },
-    {
-      "id": "duquesne",
-      "name": "Duquesne"
-    },
-    {
-      "id": "fgcu",
-      "name": "Florida Gulf Coast"
     },
     {
       "id": "georgia_state",
@@ -275,12 +255,24 @@
       "name": "Johns Hopkins"
     },
     {
+      "id": "memphis",
+      "name": "Memphis"
+    },
+    {
       "id": "north_florida",
       "name": "North Florida"
     },
     {
       "id": "rhode_island",
       "name": "Rhode Island"
+    },
+    {
+      "id": "tennessee_state",
+      "name": "Tennessee State"
+    },
+    {
+      "id": "toledo",
+      "name": "Toledo"
     }
   ],
   "Heritage League": [
@@ -511,10 +503,6 @@
   ],
   "Northern Shield": [
     {
-      "id": "boston_university",
-      "name": "BU"
-    },
-    {
       "id": "brandeis",
       "name": "Brandeis"
     },
@@ -543,10 +531,6 @@
       "name": "Oswego State"
     },
     {
-      "id": "quinnipiac",
-      "name": "Quinnipiac"
-    },
-    {
       "id": "plattsburgh",
       "name": "SUNY Plattsburgh"
     },
@@ -557,6 +541,10 @@
     {
       "id": "swarthmore",
       "name": "Swarthmore"
+    },
+    {
+      "id": "western_michigan",
+      "name": "Western Michigan"
     }
   ],
   "Pac-16": [
@@ -689,8 +677,16 @@
       "name": "Auburn"
     },
     {
+      "id": "clemson",
+      "name": "Clemson"
+    },
+    {
       "id": "florida",
       "name": "Florida"
+    },
+    {
+      "id": "florida_state",
+      "name": "Florida State"
     },
     {
       "id": "georgia",
@@ -707,10 +703,6 @@
     {
       "id": "mississippi_state",
       "name": "Mississippi State"
-    },
-    {
-      "id": "missouri",
-      "name": "Missouri"
     },
     {
       "id": "oklahoma",
@@ -787,7 +779,11 @@
       "name": "Western Washington"
     }
   ],
-  "Yankee Fourteen": [
+  "Yankee Conference": [
+    {
+      "id": "boston_university",
+      "name": "BU"
+    },
     {
       "id": "buffalo",
       "name": "Buffalo"
@@ -797,8 +793,16 @@
       "name": "Colgate"
     },
     {
+      "id": "delaware",
+      "name": "Delaware"
+    },
+    {
       "id": "ithaca",
       "name": "Ithaca"
+    },
+    {
+      "id": "lehigh",
+      "name": "Lehigh"
     },
     {
       "id": "maine",
@@ -807,10 +811,6 @@
     {
       "id": "merchant_marine",
       "name": "Merchant Marine"
-    },
-    {
-      "id": "njit",
-      "name": "NJIT"
     },
     {
       "id": "new_hampshire",

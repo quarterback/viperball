@@ -152,7 +152,7 @@ def _stadium_url_for(team_id: str) -> str | None:
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
-    "Yankee Fourteen": "Y14",
+    "Yankee Conference": "Y14",
     "Big Pacific": "BP",
     "Giant 14": "G14",
     "Collegiate Commonwealth": "CC",

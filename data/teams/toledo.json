@@ -1,30 +1,30 @@
 {
   "team_info": {
-    "school_id": "njit",
-    "school_name": "NJIT",
-    "abbreviation": "NJIT",
-    "mascot": "Highlanders",
-    "conference": "Yankee Conference",
-    "city": "Newark",
-    "state": "NJ",
+    "school_id": "toledo",
+    "school_name": "Toledo",
+    "abbreviation": "TOL",
+    "mascot": "Rockets",
+    "conference": "Galactic League",
+    "city": "Toledo",
+    "state": "OH",
     "colors": [
-      "Red",
-      "Blue"
+      "Midnight Blue",
+      "Gold"
     ]
   },
   "identity": {
-    "style": "conservative",
+    "style": "balanced",
     "philosophy": "lateral_heavy",
     "tempo": "fast",
-    "two_way_emphasis": "high"
+    "two_way_emphasis": "medium"
   },
   "recruiting_pipeline": {
-    "northeast": 0.5,
-    "mid_atlantic": 0.2,
-    "midwest": 0.15,
-    "west_coast": 0.049999999999999996,
-    "south": 0.049999999999999996,
-    "texas_southwest": 0.049999999999999996
+    "midwest": 0.55,
+    "mid_atlantic": 0.15,
+    "south": 0.1,
+    "northeast": 0.1,
+    "texas_southwest": 0.05,
+    "west_coast": 0.05
   },
   "roster": {
     "size": 36,
@@ -40,7 +40,7 @@
           "city": "Worcester",
           "state": "MA",
           "country": "USA",
-          "region": "northeast"
+          "region": "south"
         },
         "high_school": "Worcester High School",
         "nationality": "American",
@@ -48,17 +48,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 87,
-          "stamina": 87,
-          "kicking": 70,
-          "lateral_skill": 94,
-          "tackling": 85,
+          "speed": 93,
+          "stamina": 93,
+          "kicking": 75,
+          "lateral_skill": 99,
+          "tackling": 77,
           "agility": 100,
-          "power": 67,
-          "awareness": 72,
+          "power": 65,
+          "awareness": 74,
           "hands": 87,
-          "kick_power": 76,
-          "kick_accuracy": 62
+          "kick_power": 80,
+          "kick_accuracy": 65
         }
       },
       {
@@ -72,7 +72,7 @@
           "city": "Modesto",
           "state": "CA",
           "country": "USA",
-          "region": "west_coast"
+          "region": "midwest"
         },
         "high_school": "Modesto South High School",
         "nationality": "American",
@@ -80,17 +80,17 @@
         "potential": 2,
         "development": "late_bloomer",
         "stats": {
-          "speed": 98,
-          "stamina": 88,
-          "kicking": 85,
+          "speed": 94,
+          "stamina": 84,
+          "kicking": 90,
           "lateral_skill": 100,
-          "tackling": 81,
-          "agility": 80,
-          "power": 74,
-          "awareness": 85,
-          "hands": 78,
-          "kick_power": 77,
-          "kick_accuracy": 73
+          "tackling": 75,
+          "agility": 83,
+          "power": 66,
+          "awareness": 80,
+          "hands": 85,
+          "kick_power": 74,
+          "kick_accuracy": 78
         }
       },
       {
@@ -104,7 +104,7 @@
           "city": "Worcester",
           "state": "MA",
           "country": "USA",
-          "region": "northeast"
+          "region": "midwest"
         },
         "high_school": "Worcester Central High School",
         "nationality": "American",
@@ -112,17 +112,17 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 80,
-          "stamina": 83,
-          "kicking": 63,
-          "lateral_skill": 74,
-          "tackling": 64,
+          "speed": 87,
+          "stamina": 86,
+          "kicking": 68,
+          "lateral_skill": 69,
+          "tackling": 60,
           "agility": 80,
-          "power": 67,
-          "awareness": 79,
-          "hands": 69,
-          "kick_power": 81,
-          "kick_accuracy": 65
+          "power": 71,
+          "awareness": 75,
+          "hands": 77,
+          "kick_power": 77,
+          "kick_accuracy": 70
         }
       },
       {
@@ -136,7 +136,7 @@
           "city": "Wellington",
           "state": "",
           "country": "New Zealand",
-          "region": "new_zealand"
+          "region": "midwest"
         },
         "high_school": "Wellington Girls' High School",
         "nationality": "New Zealander",
@@ -144,17 +144,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 84,
-          "stamina": 78,
-          "kicking": 60,
-          "lateral_skill": 78,
-          "tackling": 69,
-          "agility": 87,
-          "power": 82,
-          "awareness": 73,
-          "hands": 80,
-          "kick_power": 74,
-          "kick_accuracy": 62
+          "speed": 88,
+          "stamina": 74,
+          "kicking": 62,
+          "lateral_skill": 72,
+          "tackling": 61,
+          "agility": 81,
+          "power": 81,
+          "awareness": 74,
+          "hands": 82,
+          "kick_power": 75,
+          "kick_accuracy": 69
         }
       },
       {
@@ -168,7 +168,7 @@
           "city": "Brisbane",
           "state": "QLD",
           "country": "Australia",
-          "region": "australian"
+          "region": "mid_atlantic"
         },
         "high_school": "Carlton - AFLW Academy",
         "nationality": "Australian",
@@ -176,17 +176,17 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 83,
-          "stamina": 83,
-          "kicking": 73,
-          "lateral_skill": 89,
-          "tackling": 60,
-          "agility": 91,
-          "power": 64,
-          "awareness": 70,
-          "hands": 66,
-          "kick_power": 68,
-          "kick_accuracy": 76
+          "speed": 78,
+          "stamina": 76,
+          "kicking": 68,
+          "lateral_skill": 90,
+          "tackling": 64,
+          "agility": 86,
+          "power": 57,
+          "awareness": 73,
+          "hands": 71,
+          "kick_power": 62,
+          "kick_accuracy": 81
         }
       },
       {
@@ -200,7 +200,7 @@
           "city": "Sudbury",
           "state": "ON",
           "country": "Canada",
-          "region": "canadian_english"
+          "region": "midwest"
         },
         "high_school": "Sudbury Secondary School",
         "nationality": "Canadian",
@@ -208,17 +208,17 @@
         "potential": 3,
         "development": "slow",
         "stats": {
-          "speed": 91,
-          "stamina": 83,
-          "kicking": 83,
-          "lateral_skill": 83,
-          "tackling": 66,
+          "speed": 95,
+          "stamina": 77,
+          "kicking": 88,
+          "lateral_skill": 75,
+          "tackling": 62,
           "agility": 81,
-          "power": 78,
-          "awareness": 86,
-          "hands": 86,
-          "kick_power": 72,
-          "kick_accuracy": 70
+          "power": 83,
+          "awareness": 82,
+          "hands": 91,
+          "kick_power": 74,
+          "kick_accuracy": 62
         }
       },
       {
@@ -232,7 +232,7 @@
           "city": "Hartford",
           "state": "CT",
           "country": "USA",
-          "region": "northeast"
+          "region": "mid_atlantic"
         },
         "high_school": "Hartford South High School",
         "nationality": "American",
@@ -240,17 +240,17 @@
         "potential": 3,
         "development": "late_bloomer",
         "stats": {
-          "speed": 93,
-          "stamina": 84,
-          "kicking": 68,
-          "lateral_skill": 91,
-          "tackling": 82,
-          "agility": 96,
-          "power": 68,
-          "awareness": 84,
-          "hands": 89,
-          "kick_power": 81,
-          "kick_accuracy": 65
+          "speed": 87,
+          "stamina": 77,
+          "kicking": 73,
+          "lateral_skill": 92,
+          "tackling": 85,
+          "agility": 95,
+          "power": 72,
+          "awareness": 82,
+          "hands": 91,
+          "kick_power": 78,
+          "kick_accuracy": 57
         }
       },
       {
@@ -264,7 +264,7 @@
           "city": "Gaborone",
           "state": "BWA",
           "country": "Botswana",
-          "region": "african"
+          "region": "texas_southwest"
         },
         "high_school": "Gaborone Secondary School",
         "nationality": "African",
@@ -272,17 +272,17 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 83,
+          "speed": 84,
           "stamina": 76,
-          "kicking": 63,
-          "lateral_skill": 80,
-          "tackling": 64,
-          "agility": 76,
-          "power": 62,
-          "awareness": 76,
-          "hands": 77,
-          "kick_power": 64,
-          "kick_accuracy": 60
+          "kicking": 61,
+          "lateral_skill": 73,
+          "tackling": 58,
+          "agility": 78,
+          "power": 57,
+          "awareness": 68,
+          "hands": 84,
+          "kick_power": 61,
+          "kick_accuracy": 66
         }
       },
       {
@@ -296,7 +296,7 @@
           "city": "Gatineau",
           "state": "QC",
           "country": "Canada",
-          "region": "canadian_english"
+          "region": "midwest"
         },
         "high_school": "Gatineau Secondary School",
         "nationality": "Canadian",
@@ -304,17 +304,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 81,
-          "stamina": 85,
-          "kicking": 78,
-          "lateral_skill": 100,
-          "tackling": 76,
-          "agility": 84,
-          "power": 72,
-          "awareness": 86,
-          "hands": 81,
-          "kick_power": 66,
-          "kick_accuracy": 73
+          "speed": 88,
+          "stamina": 80,
+          "kicking": 74,
+          "lateral_skill": 95,
+          "tackling": 84,
+          "agility": 76,
+          "power": 73,
+          "awareness": 93,
+          "hands": 85,
+          "kick_power": 58,
+          "kick_accuracy": 80
         }
       },
       {
@@ -328,7 +328,7 @@
           "city": "Portland",
           "state": "ME",
           "country": "USA",
-          "region": "northeast"
+          "region": "south"
         },
         "high_school": "Jesuit High School",
         "nationality": "American",
@@ -337,16 +337,16 @@
         "development": "quick",
         "stats": {
           "speed": 88,
-          "stamina": 82,
-          "kicking": 79,
-          "lateral_skill": 97,
-          "tackling": 67,
-          "agility": 84,
-          "power": 61,
-          "awareness": 78,
-          "hands": 68,
-          "kick_power": 65,
-          "kick_accuracy": 73
+          "stamina": 78,
+          "kicking": 73,
+          "lateral_skill": 100,
+          "tackling": 73,
+          "agility": 79,
+          "power": 60,
+          "awareness": 79,
+          "hands": 65,
+          "kick_power": 59,
+          "kick_accuracy": 74
         }
       },
       {
@@ -360,7 +360,7 @@
           "city": "Alexandria",
           "state": "VA",
           "country": "USA",
-          "region": "mid_atlantic"
+          "region": "midwest"
         },
         "high_school": "Alexandria Central High School",
         "nationality": "American",
@@ -368,17 +368,17 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 90,
-          "stamina": 85,
-          "kicking": 67,
-          "lateral_skill": 86,
-          "tackling": 73,
-          "agility": 81,
-          "power": 76,
-          "awareness": 72,
-          "hands": 87,
-          "kick_power": 66,
-          "kick_accuracy": 78
+          "speed": 93,
+          "stamina": 88,
+          "kicking": 59,
+          "lateral_skill": 79,
+          "tackling": 67,
+          "agility": 75,
+          "power": 80,
+          "awareness": 76,
+          "hands": 83,
+          "kick_power": 64,
+          "kick_accuracy": 81
         }
       },
       {
@@ -401,16 +401,16 @@
         "development": "slow",
         "stats": {
           "speed": 86,
-          "stamina": 89,
-          "kicking": 79,
-          "lateral_skill": 82,
-          "tackling": 78,
-          "agility": 71,
-          "power": 98,
-          "awareness": 77,
-          "hands": 71,
-          "kick_power": 81,
-          "kick_accuracy": 71
+          "stamina": 84,
+          "kicking": 80,
+          "lateral_skill": 76,
+          "tackling": 76,
+          "agility": 63,
+          "power": 93,
+          "awareness": 78,
+          "hands": 68,
+          "kick_power": 79,
+          "kick_accuracy": 70
         }
       },
       {
@@ -424,7 +424,7 @@
           "city": "New York",
           "state": "NY",
           "country": "USA",
-          "region": "northeast"
+          "region": "midwest"
         },
         "high_school": "Brooklyn Tech",
         "nationality": "American",
@@ -432,17 +432,17 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 93,
-          "stamina": 86,
-          "kicking": 76,
+          "speed": 97,
+          "stamina": 83,
+          "kicking": 79,
           "lateral_skill": 82,
           "tackling": 80,
-          "agility": 83,
-          "power": 68,
-          "awareness": 80,
-          "hands": 70,
-          "kick_power": 70,
-          "kick_accuracy": 60
+          "agility": 91,
+          "power": 75,
+          "awareness": 78,
+          "hands": 66,
+          "kick_power": 62,
+          "kick_accuracy": 67
         }
       },
       {
@@ -464,17 +464,17 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 86,
-          "stamina": 87,
-          "kicking": 78,
-          "lateral_skill": 87,
-          "tackling": 73,
-          "agility": 86,
-          "power": 76,
-          "awareness": 82,
-          "hands": 77,
-          "kick_power": 62,
-          "kick_accuracy": 68
+          "speed": 84,
+          "stamina": 80,
+          "kicking": 84,
+          "lateral_skill": 86,
+          "tackling": 79,
+          "agility": 93,
+          "power": 83,
+          "awareness": 85,
+          "hands": 72,
+          "kick_power": 59,
+          "kick_accuracy": 70
         }
       },
       {
@@ -488,7 +488,7 @@
           "city": "Boston",
           "state": "MA",
           "country": "USA",
-          "region": "northeast"
+          "region": "west_coast"
         },
         "high_school": "Lexington High",
         "nationality": "American",
@@ -496,17 +496,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 75,
-          "stamina": 91,
-          "kicking": 83,
-          "lateral_skill": 80,
-          "tackling": 92,
-          "agility": 83,
-          "power": 94,
-          "awareness": 79,
-          "hands": 78,
-          "kick_power": 73,
-          "kick_accuracy": 64
+          "speed": 73,
+          "stamina": 95,
+          "kicking": 90,
+          "lateral_skill": 72,
+          "tackling": 94,
+          "agility": 91,
+          "power": 86,
+          "awareness": 82,
+          "hands": 72,
+          "kick_power": 77,
+          "kick_accuracy": 67
         }
       },
       {
@@ -528,17 +528,17 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 90,
-          "stamina": 82,
-          "kicking": 77,
-          "lateral_skill": 77,
-          "tackling": 78,
-          "agility": 74,
-          "power": 77,
-          "awareness": 60,
+          "speed": 93,
+          "stamina": 78,
+          "kicking": 82,
+          "lateral_skill": 71,
+          "tackling": 75,
+          "agility": 67,
+          "power": 78,
+          "awareness": 55,
           "hands": 73,
-          "kick_power": 59,
-          "kick_accuracy": 60
+          "kick_power": 55,
+          "kick_accuracy": 58
         }
       },
       {
@@ -552,7 +552,7 @@
           "city": "New York",
           "state": "NY",
           "country": "USA",
-          "region": "northeast"
+          "region": "mid_atlantic"
         },
         "high_school": "Stuyvesant",
         "nationality": "American",
@@ -560,17 +560,17 @@
         "potential": 2,
         "development": "quick",
         "stats": {
-          "speed": 94,
-          "stamina": 83,
-          "kicking": 63,
-          "lateral_skill": 88,
-          "tackling": 65,
-          "agility": 80,
-          "power": 67,
-          "awareness": 78,
-          "hands": 73,
-          "kick_power": 82,
-          "kick_accuracy": 75
+          "speed": 97,
+          "stamina": 79,
+          "kicking": 56,
+          "lateral_skill": 91,
+          "tackling": 58,
+          "agility": 72,
+          "power": 74,
+          "awareness": 71,
+          "hands": 78,
+          "kick_power": 86,
+          "kick_accuracy": 74
         }
       },
       {
@@ -584,7 +584,7 @@
           "city": "Albany",
           "state": "NY",
           "country": "USA",
-          "region": "northeast"
+          "region": "midwest"
         },
         "high_school": "Albany East High School",
         "nationality": "American",
@@ -592,17 +592,17 @@
         "potential": 1,
         "development": "quick",
         "stats": {
-          "speed": 68,
-          "stamina": 84,
-          "kicking": 70,
-          "lateral_skill": 91,
-          "tackling": 66,
-          "agility": 68,
+          "speed": 70,
+          "stamina": 80,
+          "kicking": 66,
+          "lateral_skill": 93,
+          "tackling": 73,
+          "agility": 63,
           "power": 88,
-          "awareness": 79,
-          "hands": 60,
-          "kick_power": 70,
-          "kick_accuracy": 68
+          "awareness": 76,
+          "hands": 56,
+          "kick_power": 67,
+          "kick_accuracy": 72
         }
       },
       {
@@ -616,7 +616,7 @@
           "city": "Wollongong",
           "state": "NSW",
           "country": "Australia",
-          "region": "australian"
+          "region": "texas_southwest"
         },
         "high_school": "Fremantle - AFLW Academy",
         "nationality": "Australian",
@@ -624,17 +624,17 @@
         "potential": 4,
         "development": "quick",
         "stats": {
-          "speed": 88,
-          "stamina": 89,
-          "kicking": 74,
-          "lateral_skill": 85,
-          "tackling": 68,
-          "agility": 83,
-          "power": 81,
-          "awareness": 89,
-          "hands": 84,
-          "kick_power": 64,
-          "kick_accuracy": 73
+          "speed": 84,
+          "stamina": 96,
+          "kicking": 82,
+          "lateral_skill": 93,
+          "tackling": 63,
+          "agility": 84,
+          "power": 88,
+          "awareness": 86,
+          "hands": 88,
+          "kick_power": 61,
+          "kick_accuracy": 66
         }
       },
       {
@@ -648,7 +648,7 @@
           "city": "Newcastle",
           "state": "NSW",
           "country": "Australia",
-          "region": "australian"
+          "region": "texas_southwest"
         },
         "high_school": "Melbourne FC - AFLW Academy",
         "nationality": "Australian",
@@ -656,17 +656,17 @@
         "potential": 4,
         "development": "slow",
         "stats": {
-          "speed": 97,
-          "stamina": 89,
-          "kicking": 78,
-          "lateral_skill": 99,
-          "tackling": 80,
-          "agility": 90,
-          "power": 90,
-          "awareness": 84,
-          "hands": 85,
-          "kick_power": 73,
-          "kick_accuracy": 75
+          "speed": 100,
+          "stamina": 96,
+          "kicking": 73,
+          "lateral_skill": 93,
+          "tackling": 79,
+          "agility": 86,
+          "power": 87,
+          "awareness": 80,
+          "hands": 79,
+          "kick_power": 71,
+          "kick_accuracy": 77
         }
       },
       {
@@ -680,7 +680,7 @@
           "city": "Newcastle",
           "state": "NSW",
           "country": "Australia",
-          "region": "australian"
+          "region": "midwest"
         },
         "high_school": "Carlton - AFLW Academy",
         "nationality": "Australian",
@@ -688,17 +688,17 @@
         "potential": 1,
         "development": "normal",
         "stats": {
-          "speed": 77,
-          "stamina": 92,
-          "kicking": 83,
-          "lateral_skill": 86,
-          "tackling": 89,
-          "agility": 92,
-          "power": 76,
-          "awareness": 82,
-          "hands": 84,
-          "kick_power": 76,
-          "kick_accuracy": 86
+          "speed": 74,
+          "stamina": 89,
+          "kicking": 76,
+          "lateral_skill": 81,
+          "tackling": 87,
+          "agility": 86,
+          "power": 77,
+          "awareness": 89,
+          "hands": 92,
+          "kick_power": 70,
+          "kick_accuracy": 79
         }
       },
       {
@@ -712,7 +712,7 @@
           "city": "Canberra",
           "state": "ACT",
           "country": "Australia",
-          "region": "australian"
+          "region": "texas_southwest"
         },
         "high_school": "Canberra Secondary College",
         "nationality": "Australian",
@@ -720,17 +720,17 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 81,
-          "stamina": 77,
-          "kicking": 66,
-          "lateral_skill": 96,
-          "tackling": 77,
-          "agility": 91,
-          "power": 67,
-          "awareness": 67,
-          "hands": 85,
-          "kick_power": 67,
-          "kick_accuracy": 62
+          "speed": 87,
+          "stamina": 76,
+          "kicking": 67,
+          "lateral_skill": 94,
+          "tackling": 75,
+          "agility": 83,
+          "power": 65,
+          "awareness": 71,
+          "hands": 81,
+          "kick_power": 64,
+          "kick_accuracy": 61
         }
       },
       {
@@ -744,7 +744,7 @@
           "city": "Barcelona",
           "state": "ESP",
           "country": "Spain",
-          "region": "uk_european"
+          "region": "northeast"
         },
         "high_school": "Barcelona Academy",
         "nationality": "European",
@@ -752,17 +752,17 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 82,
-          "stamina": 76,
-          "kicking": 66,
-          "lateral_skill": 71,
-          "tackling": 69,
-          "agility": 93,
-          "power": 82,
-          "awareness": 65,
-          "hands": 68,
-          "kick_power": 72,
-          "kick_accuracy": 58
+          "speed": 87,
+          "stamina": 74,
+          "kicking": 70,
+          "lateral_skill": 70,
+          "tackling": 65,
+          "agility": 87,
+          "power": 78,
+          "awareness": 69,
+          "hands": 66,
+          "kick_power": 71,
+          "kick_accuracy": 63
         }
       },
       {
@@ -776,7 +776,7 @@
           "city": "Hartford",
           "state": "CT",
           "country": "USA",
-          "region": "northeast"
+          "region": "midwest"
         },
         "high_school": "Hartford South High School",
         "nationality": "American",
@@ -784,17 +784,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 88,
-          "stamina": 80,
-          "kicking": 82,
-          "lateral_skill": 100,
-          "tackling": 80,
-          "agility": 80,
-          "power": 63,
-          "awareness": 86,
-          "hands": 64,
-          "kick_power": 67,
-          "kick_accuracy": 78
+          "speed": 84,
+          "stamina": 77,
+          "kicking": 80,
+          "lateral_skill": 92,
+          "tackling": 72,
+          "agility": 83,
+          "power": 64,
+          "awareness": 93,
+          "hands": 59,
+          "kick_power": 74,
+          "kick_accuracy": 81
         }
       },
       {
@@ -808,7 +808,7 @@
           "city": "Portland",
           "state": "ME",
           "country": "USA",
-          "region": "northeast"
+          "region": "mid_atlantic"
         },
         "high_school": "Jesuit High School",
         "nationality": "American",
@@ -816,17 +816,17 @@
         "potential": 4,
         "development": "quick",
         "stats": {
-          "speed": 95,
-          "stamina": 87,
-          "kicking": 72,
-          "lateral_skill": 95,
-          "tackling": 66,
-          "agility": 85,
-          "power": 74,
-          "awareness": 81,
-          "hands": 71,
-          "kick_power": 75,
-          "kick_accuracy": 81
+          "speed": 89,
+          "stamina": 84,
+          "kicking": 80,
+          "lateral_skill": 97,
+          "tackling": 60,
+          "agility": 91,
+          "power": 71,
+          "awareness": 82,
+          "hands": 69,
+          "kick_power": 77,
+          "kick_accuracy": 82
         }
       },
       {
@@ -848,17 +848,17 @@
         "potential": 2,
         "development": "slow",
         "stats": {
-          "speed": 80,
-          "stamina": 86,
-          "kicking": 83,
-          "lateral_skill": 86,
-          "tackling": 77,
-          "agility": 72,
-          "power": 85,
-          "awareness": 71,
-          "hands": 75,
-          "kick_power": 70,
-          "kick_accuracy": 65
+          "speed": 77,
+          "stamina": 83,
+          "kicking": 91,
+          "lateral_skill": 91,
+          "tackling": 76,
+          "agility": 78,
+          "power": 80,
+          "awareness": 76,
+          "hands": 73,
+          "kick_power": 72,
+          "kick_accuracy": 63
         }
       },
       {
@@ -872,7 +872,7 @@
           "city": "Boston",
           "state": "MA",
           "country": "USA",
-          "region": "northeast"
+          "region": "mid_atlantic"
         },
         "high_school": "Brookline High",
         "nationality": "American",
@@ -880,17 +880,17 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 86,
-          "stamina": 87,
-          "kicking": 81,
-          "lateral_skill": 95,
-          "tackling": 64,
-          "agility": 88,
-          "power": 68,
-          "awareness": 77,
+          "speed": 83,
+          "stamina": 82,
+          "kicking": 75,
+          "lateral_skill": 100,
+          "tackling": 60,
+          "agility": 86,
+          "power": 70,
+          "awareness": 80,
           "hands": 81,
-          "kick_power": 67,
-          "kick_accuracy": 80
+          "kick_power": 69,
+          "kick_accuracy": 73
         }
       },
       {
@@ -912,16 +912,16 @@
         "potential": 4,
         "development": "late_bloomer",
         "stats": {
-          "speed": 84,
-          "stamina": 85,
-          "kicking": 79,
-          "lateral_skill": 99,
-          "tackling": 71,
-          "agility": 83,
-          "power": 84,
-          "awareness": 73,
-          "hands": 77,
-          "kick_power": 66,
+          "speed": 82,
+          "stamina": 80,
+          "kicking": 85,
+          "lateral_skill": 96,
+          "tackling": 66,
+          "agility": 88,
+          "power": 83,
+          "awareness": 78,
+          "hands": 81,
+          "kick_power": 62,
           "kick_accuracy": 81
         }
       },
@@ -936,7 +936,7 @@
           "city": "Medell\u00edn",
           "state": "COL",
           "country": "Colombia",
-          "region": "latin_american"
+          "region": "midwest"
         },
         "high_school": "Colegio Medell\u00edn",
         "nationality": "Latin American",
@@ -944,17 +944,17 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 78,
-          "stamina": 86,
-          "kicking": 73,
-          "lateral_skill": 90,
-          "tackling": 72,
-          "agility": 79,
-          "power": 77,
-          "awareness": 68,
-          "hands": 70,
-          "kick_power": 78,
-          "kick_accuracy": 82
+          "speed": 79,
+          "stamina": 83,
+          "kicking": 81,
+          "lateral_skill": 95,
+          "tackling": 73,
+          "agility": 75,
+          "power": 69,
+          "awareness": 64,
+          "hands": 69,
+          "kick_power": 76,
+          "kick_accuracy": 85
         }
       },
       {
@@ -968,7 +968,7 @@
           "city": "Kingston",
           "state": "ON",
           "country": "Canada",
-          "region": "canadian_english"
+          "region": "midwest"
         },
         "high_school": "Kingston Secondary School",
         "nationality": "Canadian",
@@ -976,17 +976,17 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 88,
-          "stamina": 88,
-          "kicking": 62,
-          "lateral_skill": 96,
-          "tackling": 73,
-          "agility": 78,
-          "power": 80,
-          "awareness": 68,
-          "hands": 91,
-          "kick_power": 68,
-          "kick_accuracy": 77
+          "speed": 93,
+          "stamina": 93,
+          "kicking": 67,
+          "lateral_skill": 100,
+          "tackling": 80,
+          "agility": 70,
+          "power": 72,
+          "awareness": 61,
+          "hands": 86,
+          "kick_power": 71,
+          "kick_accuracy": 79
         }
       },
       {
@@ -1000,7 +1000,7 @@
           "city": "Harare",
           "state": "ZWE",
           "country": "Zimbabwe",
-          "region": "african"
+          "region": "mid_atlantic"
         },
         "high_school": "Harare Secondary School",
         "nationality": "African",
@@ -1008,17 +1008,17 @@
         "potential": 4,
         "development": "late_bloomer",
         "stats": {
-          "speed": 87,
-          "stamina": 83,
-          "kicking": 77,
-          "lateral_skill": 81,
-          "tackling": 78,
-          "agility": 86,
-          "power": 76,
+          "speed": 85,
+          "stamina": 75,
+          "kicking": 75,
+          "lateral_skill": 86,
+          "tackling": 81,
+          "agility": 88,
+          "power": 77,
           "awareness": 83,
-          "hands": 85,
-          "kick_power": 67,
-          "kick_accuracy": 61
+          "hands": 81,
+          "kick_power": 60,
+          "kick_accuracy": 59
         }
       },
       {
@@ -1040,17 +1040,17 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 75,
-          "stamina": 83,
-          "kicking": 68,
-          "lateral_skill": 86,
-          "tackling": 75,
-          "agility": 90,
-          "power": 91,
-          "awareness": 64,
-          "hands": 74,
-          "kick_power": 79,
-          "kick_accuracy": 83
+          "speed": 82,
+          "stamina": 79,
+          "kicking": 64,
+          "lateral_skill": 93,
+          "tackling": 70,
+          "agility": 94,
+          "power": 95,
+          "awareness": 57,
+          "hands": 68,
+          "kick_power": 77,
+          "kick_accuracy": 78
         }
       },
       {
@@ -1064,7 +1064,7 @@
           "city": "Hartford",
           "state": "CT",
           "country": "USA",
-          "region": "northeast"
+          "region": "midwest"
         },
         "high_school": "Hartford Central High School",
         "nationality": "American",
@@ -1072,17 +1072,17 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 83,
-          "stamina": 77,
-          "kicking": 79,
-          "lateral_skill": 77,
-          "tackling": 72,
-          "agility": 77,
-          "power": 60,
-          "awareness": 83,
-          "hands": 60,
+          "speed": 89,
+          "stamina": 72,
+          "kicking": 77,
+          "lateral_skill": 71,
+          "tackling": 74,
+          "agility": 75,
+          "power": 55,
+          "awareness": 85,
+          "hands": 55,
           "kick_power": 68,
-          "kick_accuracy": 59
+          "kick_accuracy": 55
         }
       },
       {
@@ -1096,7 +1096,7 @@
           "city": "Kingston",
           "state": "ON",
           "country": "Canada",
-          "region": "canadian_english"
+          "region": "northeast"
         },
         "high_school": "Kingston Secondary School",
         "nationality": "Canadian",
@@ -1104,17 +1104,17 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 86,
-          "stamina": 83,
-          "kicking": 67,
-          "lateral_skill": 83,
-          "tackling": 79,
-          "agility": 78,
-          "power": 71,
-          "awareness": 83,
-          "hands": 66,
+          "speed": 93,
+          "stamina": 82,
+          "kicking": 63,
+          "lateral_skill": 90,
+          "tackling": 73,
+          "agility": 79,
+          "power": 79,
+          "awareness": 78,
+          "hands": 65,
           "kick_power": 68,
-          "kick_accuracy": 82
+          "kick_accuracy": 84
         }
       },
       {
@@ -1128,7 +1128,7 @@
           "city": "Roanoke",
           "state": "VA",
           "country": "USA",
-          "region": "mid_atlantic"
+          "region": "midwest"
         },
         "high_school": "Roanoke High School",
         "nationality": "American",
@@ -1136,17 +1136,17 @@
         "potential": 2,
         "development": "quick",
         "stats": {
-          "speed": 99,
-          "stamina": 89,
-          "kicking": 84,
-          "lateral_skill": 94,
-          "tackling": 84,
-          "agility": 83,
-          "power": 84,
-          "awareness": 83,
-          "hands": 71,
+          "speed": 100,
+          "stamina": 90,
+          "kicking": 87,
+          "lateral_skill": 96,
+          "tackling": 90,
+          "agility": 81,
+          "power": 78,
+          "awareness": 91,
+          "hands": 76,
           "kick_power": 64,
-          "kick_accuracy": 81
+          "kick_accuracy": 73
         }
       },
       {
@@ -1160,7 +1160,7 @@
           "city": "London",
           "state": "ON",
           "country": "Canada",
-          "region": "canadian_french"
+          "region": "mid_atlantic"
         },
         "high_school": "London Secondary School",
         "nationality": "Canadian",
@@ -1168,28 +1168,28 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 87,
-          "stamina": 89,
-          "kicking": 69,
-          "lateral_skill": 91,
-          "tackling": 83,
-          "agility": 87,
-          "power": 91,
-          "awareness": 73,
-          "hands": 82,
-          "kick_power": 63,
-          "kick_accuracy": 73
+          "speed": 86,
+          "stamina": 85,
+          "kicking": 75,
+          "lateral_skill": 97,
+          "tackling": 86,
+          "agility": 90,
+          "power": 86,
+          "awareness": 76,
+          "hands": 74,
+          "kick_power": 69,
+          "kick_accuracy": 68
         }
       }
     ]
   },
   "team_stats": {
-    "avg_speed": 85,
-    "avg_weight": 182,
-    "avg_stamina": 84,
-    "kicking_strength": 73,
-    "lateral_proficiency": 88,
-    "defensive_strength": 74
+    "avg_speed": 88.0,
+    "avg_weight": 180.9,
+    "avg_stamina": 81.6,
+    "kicking_strength": 76.0,
+    "lateral_proficiency": 90.2,
+    "defensive_strength": 71.8
   },
   "coaching": {
     "head_coach": "Cameron Lombardi",

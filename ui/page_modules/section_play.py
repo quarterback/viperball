@@ -410,7 +410,7 @@ CONFERENCE_TIERS = {
     "Collegiate Commonwealth": 78,
     "Interstate Athletic Association": 75,
     "Southern Sun Conference": 73,
-    "Yankee Fourteen": 70,
+    "Yankee Conference": 70,
     "Potomac Athletic Conference": 67,
     "Metropolitan Athletic Union": 65,
     "Midwest States Interscholastic Association": 62,
