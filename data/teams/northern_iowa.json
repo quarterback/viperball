@@ -4,7 +4,7 @@
     "school_name": "Northern Iowa",
     "abbreviation": "UNI",
     "mascot": "Panthers",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "Cedar Falls",
     "state": "IA",
     "colors": [
@@ -255,7 +255,7 @@
       },
       {
         "number": 17,
-        "name": "Lucía Meyer",
+        "name": "Luc\u00eda Meyer",
         "position": "Viper/Back",
         "height": "5-10",
         "weight": 166,
@@ -415,7 +415,7 @@
       },
       {
         "number": 26,
-        "name": "Hayley Tūhoe",
+        "name": "Hayley T\u016bhoe",
         "position": "Viper/Back",
         "height": "5-5",
         "weight": 160,
@@ -479,7 +479,7 @@
       },
       {
         "number": 35,
-        "name": "Amélie Laurent",
+        "name": "Am\u00e9lie Laurent",
         "position": "Back/Safety",
         "height": "5-11",
         "weight": 176,

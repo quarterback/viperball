@@ -14,7 +14,7 @@ from nicegui import ui, run
 
 from engine.season import load_teams_from_directory
 from engine.conference_names import generate_conference_names
-from engine.geography import get_geographic_conference_defaults
+from engine.geography import get_geographic_conference_defaults, read_conferences_from_team_files
 from engine.ai_coach import load_team_identity
 from scripts.generate_rosters import PROGRAM_ARCHETYPES
 from ui import api_client
@@ -205,87 +205,53 @@ def render_dynasty_mode(state: UserState, shared: dict):
     ui.separator().classes("my-4")
     ui.label("Conference Setup").classes("text-lg font-semibold text-slate-700")
 
+    # Load stock conferences from team files
+    stock_conferences = read_conferences_from_team_files(TEAMS_DIR, all_team_names_sorted) or {}
+
+    # Track editable conference assignments (team → conference name)
+    _conf_assignments: dict[str, str] = {}
+    for conf_name, members in stock_conferences.items():
+        for t in members:
+            _conf_assignments[t] = conf_name
+    for t in all_team_names_sorted:
+        if t not in _conf_assignments:
+            _conf_assignments[t] = "Independent"
+
     total_teams = len(all_team_names_sorted)
-    max_conf = max(1, total_teams // 9)
-    conf_max = min(max_conf, 20)
-    conf_options = {i: str(i) for i in range(1, conf_max + 1)}
-    conf_default = min(16, conf_max)
+    num_stock = len(stock_conferences)
+    ui.label(f"{num_stock} conferences, {total_teams} teams").classes("text-sm text-gray-500")
 
-    ui.label(f"Number of Conferences ({total_teams} teams available)").classes("text-sm text-slate-600")
-    num_conferences = ui.select(
-        conf_options, value=conf_default, label="Conferences",
-    ).classes("w-40")
-
-    teams_per_label = ui.label("").classes("text-sm text-gray-500")
-
-    def _update_conf_label():
-        n = int(num_conferences.value)
-        per = total_teams // max(1, n)
-        rem = total_teams % max(1, n)
-        if rem == 0:
-            teams_per_label.set_text(f"~{per} teams per conference")
-        else:
-            teams_per_label.set_text(f"~{per}-{per + 1} teams per conference")
-
-    num_conferences.on_value_change(lambda _: _update_conf_label())
-    _update_conf_label()
-
-    # Conference name editing + geographic defaults
-    _conf_state = {
-        "seed": random.randint(0, 999999),
-        "use_geo": True,
-    }
-
-    conf_names_container = ui.column().classes("w-full mt-2")
-
-    # Track conference name inputs
-    _conf_name_inputs: list = []
+    conf_container = ui.column().classes("w-full")
 
     @ui.refreshable
-    def _render_conf_names():
-        _conf_name_inputs.clear()
-        n = int(num_conferences.value)
+    def _render_conferences():
+        conf_map: dict[str, list[str]] = {}
+        for t, c in sorted(_conf_assignments.items()):
+            conf_map.setdefault(c, []).append(t)
 
-        # Generate names
-        if _conf_state["use_geo"]:
-            geo_clusters = get_geographic_conference_defaults(TEAMS_DIR, all_team_names_sorted, n)
-            generated = list(geo_clusters.keys())
-            if len(generated) < n:
-                generated.extend(generate_conference_names(
-                    count=n - len(generated), seed=_conf_state["seed"]
-                ))
-        else:
-            generated = generate_conference_names(count=n, seed=_conf_state["seed"])
+        with ui.expansion("View / Edit Conferences", icon="groups").classes("w-full"):
+            for conf_name in sorted(conf_map.keys()):
+                members = sorted(conf_map[conf_name])
+                with ui.expansion(f"{conf_name} ({len(members)} teams)").classes("w-full"):
+                    for t in members:
+                        with ui.row().classes("items-center gap-2"):
+                            ui.label(t).classes("text-sm flex-1")
+                            all_conf_names = sorted(set(_conf_assignments.values()))
+                            conf_opts = {c: c for c in all_conf_names}
 
-        # Pad if needed
-        while len(generated) < n:
-            generated.append(f"Conference {len(generated) + 1}")
+                            def _make_reassign(team_name):
+                                def _reassign(e):
+                                    _conf_assignments[team_name] = e.value
+                                    _render_conferences.refresh()
+                                return _reassign
 
-        # "New Names" button
-        with ui.row().classes("w-full justify-end"):
-            def _regen():
-                _conf_state["seed"] = random.randint(0, 999999)
-                _conf_state["use_geo"] = False
-                _render_conf_names.refresh()
+                            ui.select(
+                                conf_opts, value=conf_name,
+                                on_change=_make_reassign(t),
+                            ).classes("w-48").props("dense")
 
-            ui.button("New Names", on_click=_regen, icon="casino")
-
-        # Editable conference name grid (4 per row)
-        cols_per_row = min(n, 4)
-        for row_start in range(0, n, cols_per_row):
-            row_end = min(row_start + cols_per_row, n)
-            with ui.row().classes("w-full gap-4"):
-                for ci in range(row_start, row_end):
-                    inp = ui.input(
-                        f"Conference {ci + 1}",
-                        value=generated[ci],
-                    ).classes("flex-1")
-                    _conf_name_inputs.append(inp)
-
-    num_conferences.on_value_change(lambda _: _render_conf_names.refresh())
-
-    with conf_names_container:
-        _render_conf_names()
+    with conf_container:
+        _render_conferences()
 
     # ── League History ──
     ui.separator().classes("my-4")
@@ -353,6 +319,12 @@ def render_dynasty_mode(state: UserState, shared: dict):
 
         creating_spinner.classes(remove="hidden")
 
+        # Build conferences dict from current assignments
+        conf_dict: dict[str, list[str]] = {}
+        for tname, cname in _conf_assignments.items():
+            if cname and cname != "Independent":
+                conf_dict.setdefault(cname, []).append(tname)
+
         try:
             await run.io_bound(
                 api_client.create_dynasty,
@@ -361,7 +333,8 @@ def render_dynasty_mode(state: UserState, shared: dict):
                 coach_name=coach_name.value,
                 coach_team=selected_team,
                 starting_year=int(start_year.value or 2026),
-                num_conferences=int(num_conferences.value or 10),
+                num_conferences=len(conf_dict) or 18,
+                conferences=conf_dict if conf_dict else None,
                 history_years=int(history_years.value or 0),
                 program_archetype=arch_select.value,
                 games_per_team=int(season_games_per.value),

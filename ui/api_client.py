@@ -330,6 +330,7 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
                    num_conferences: int = 10, history_years: int = 0,
                    program_archetype: Optional[str] = None,
                    rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None,
+                   conferences: Optional[Dict[str, List[str]]] = None,
                    games_per_team: int = 12, playoff_size: int = 8,
                    bowl_count: int = 4) -> dict:
     body = {
@@ -347,6 +348,8 @@ def create_dynasty(session_id: str, dynasty_name: str, coach_name: str,
         body["program_archetype"] = program_archetype
     if rivalries is not None:
         body["rivalries"] = rivalries
+    if conferences:
+        body["conferences"] = conferences
     return _post(f"/sessions/{session_id}/dynasty", json=body)
 
 

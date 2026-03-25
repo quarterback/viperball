@@ -4,7 +4,7 @@
     "school_name": "Saint Louis",
     "abbreviation": "SLU",
     "mascot": "Billikens",
-    "conference": "Midwest States Interscholastic Association",
+    "conference": "Midwest States",
     "city": "St. Louis",
     "state": "MO",
     "colors": [
@@ -415,7 +415,7 @@
       },
       {
         "number": 23,
-        "name": "Diana González",
+        "name": "Diana Gonz\u00e1lez",
         "position": "Halfback/Back",
         "height": "6-0",
         "weight": 169,

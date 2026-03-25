@@ -221,6 +221,7 @@ class CreateDynastyRequest(BaseModel):
     history_years: int = 0
     program_archetype: Optional[str] = None  # archetype for coach's team
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+    conferences: Optional[Dict[str, List[str]]] = None
     games_per_team: int = 12
     playoff_size: int = 8
     bowl_count: int = 4
@@ -1816,7 +1817,10 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         bowl_count=req.bowl_count,
     )
 
-    conferences = get_geographic_conference_defaults(TEAMS_DIR, team_names, req.num_conferences)
+    if req.conferences:
+        conferences = req.conferences
+    else:
+        conferences = get_geographic_conference_defaults(TEAMS_DIR, team_names, req.num_conferences)
     for conf_name, conf_teams in conferences.items():
         dynasty.add_conference(conf_name, conf_teams)
 

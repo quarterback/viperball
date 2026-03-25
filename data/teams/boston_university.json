@@ -4,7 +4,7 @@
     "school_name": "BU",
     "abbreviation": "BU",
     "mascot": "Terriers",
-    "conference": "Collegiate Commonwealth",
+    "conference": "Northern Shield",
     "city": "Boston",
     "state": "MA",
     "colors": [
@@ -831,7 +831,7 @@
       },
       {
         "number": 67,
-        "name": "Adèle Lavoie",
+        "name": "Ad\u00e8le Lavoie",
         "position": "Lineman",
         "height": "5-11",
         "weight": 199,
@@ -1087,7 +1087,7 @@
       },
       {
         "number": 88,
-        "name": "Georgia González",
+        "name": "Georgia Gonz\u00e1lez",
         "position": "Back/Corner",
         "height": "5-8",
         "weight": 179,
