@@ -34,6 +34,9 @@
     <div class="box-score-final {% if game.home_score > game.away_score %}score-win{% elif game.home_score == game.away_score %}score-tie{% else %}score-loss{% endif %}">{{ game.home_score }}</div>
   </div>
 </div>
+<div style="text-align:right;margin:-8px 0 8px;">
+  <button class="copy-boxscore-btn" onclick="copyBoxScore(this)">Copy Box Score</button>
+</div>
 
 {% if game.full_result %}
 {% set fr = game.full_result %}

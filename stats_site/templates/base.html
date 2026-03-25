@@ -302,6 +302,26 @@ a:hover { text-decoration: underline; color: var(--fg-bright); }
   background: linear-gradient(to bottom, transparent 30%, var(--bg) 100%);
 }
 
+/* Copy box score button */
+.copy-boxscore-btn {
+  background: var(--bg-alt);
+  color: var(--fg-dim);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+.copy-boxscore-btn:hover {
+  color: var(--fg-bright);
+  border-color: var(--accent);
+}
+.copy-boxscore-btn.copied {
+  color: var(--green);
+  border-color: var(--green);
+}
+
 /* Section headers */
 h2 {
   font-size: 13px;
@@ -678,6 +698,96 @@ td.rank {
     if (!e.target.closest('.theme-switcher')) menu.classList.remove('open');
   });
 })();
+</script>
+<script>
+/* Copy Box Score as text — scrapes tables from the rendered page */
+function copyBoxScore(btn) {
+  var lines = [];
+  /* Score header */
+  var hdr = document.querySelector('.box-score-header');
+  if (hdr) {
+    var teams = hdr.querySelectorAll('.box-team');
+    var vs = hdr.querySelector('.box-score-vs');
+    if (teams.length >= 2) {
+      var aN = teams[0].querySelector('.name').textContent.trim();
+      var aS = teams[0].querySelector('.box-score-final').textContent.trim();
+      var hN = teams[1].querySelector('.name').textContent.trim();
+      var hS = teams[1].querySelector('.box-score-final').textContent.trim();
+      var ctx = vs ? vs.textContent.trim().replace(/\s+/g, ' ') : '';
+      lines.push(aN + ' ' + aS + '  @  ' + hN + ' ' + hS);
+      if (ctx) lines.push(ctx);
+      lines.push('');
+    }
+  }
+  /* Each h2 section + its table */
+  var sections = document.querySelectorAll('.container.wide > h2, .container.wide > table, .container.wide > .grid-4, .container.wide > .grid-3');
+  var curSection = '';
+  sections.forEach(function(el) {
+    if (el.tagName === 'H2') {
+      curSection = el.textContent.trim();
+      /* Skip play-by-play and drive summary to keep it concise */
+      return;
+    }
+    if (curSection.indexOf('Play-by-Play') !== -1 || curSection.indexOf('Drive Summary') !== -1 ||
+        curSection.indexOf('Play Distribution') !== -1 || curSection.indexOf('Plays Per Quarter') !== -1) return;
+
+    if (el.tagName === 'TABLE') {
+      var thead = el.querySelector('thead');
+      var tbody = el.querySelector('tbody');
+      if (!tbody) return;
+      var rows = tbody.querySelectorAll('tr');
+      if (rows.length === 0) return;
+
+      /* Section label */
+      if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
+
+      rows.forEach(function(tr) {
+        var cells = tr.querySelectorAll('td, th');
+        if (cells.length === 0) return;
+        var vals = [];
+        cells.forEach(function(td) {
+          var t = td.textContent.trim().replace(/\s+/g, ' ');
+          if (t) vals.push(t);
+        });
+        /* Section headers inside table (OFFENSE, RUSHING, etc) */
+        if (cells.length === 1 && vals.length === 1) {
+          lines.push('');
+          lines.push('[' + vals[0] + ']');
+        } else if (vals.length >= 2) {
+          /* 3-col: away | stat | home  or  2-col formats */
+          if (vals.length === 3) {
+            lines.push(padR(vals[1], 28) + padL(vals[0], 12) + padL(vals[2], 12));
+          } else {
+            lines.push(vals.join('  '));
+          }
+        }
+      });
+      lines.push('');
+    }
+    /* Grid metrics */
+    if (el.classList.contains('grid-4') || el.classList.contains('grid-3')) {
+      if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
+      var metrics = el.querySelectorAll('.metric');
+      var parts = [];
+      metrics.forEach(function(m) {
+        var lbl = m.querySelector('.label');
+        var val = m.querySelector('.value');
+        if (lbl && val) parts.push(lbl.textContent.trim() + ': ' + val.textContent.trim().replace(/\s+/g, '/'));
+      });
+      if (parts.length) lines.push(parts.join('  |  '));
+      lines.push('');
+    }
+  });
+
+  var text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = 'Copy Box Score'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+function padR(s, n) { while (s.length < n) s += ' '; return s; }
+function padL(s, n) { while (s.length < n) s = ' ' + s; return s; }
 </script>
 </body>
 </html>
