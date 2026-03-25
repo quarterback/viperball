@@ -1207,6 +1207,10 @@ class GameState:
     home_stars: List[str] = field(default_factory=list)
     away_stars: List[str] = field(default_factory=list)
 
+    # --- Coach challenge system (3 per game total) ---
+    home_challenges: int = 3
+    away_challenges: int = 3
+
     # --- V2: Composure timeline for post-game narrative ---
     home_composure_timeline: List[float] = field(default_factory=list)
     away_composure_timeline: List[float] = field(default_factory=list)
@@ -1441,105 +1445,224 @@ class Penalty:
 
 # ═══════════════════════════════════════════════════════════════
 # REFEREE BIAS SYSTEM
-# Models the human element of officiating.  Real referees are
-# 91-98% accurate (per UmpScorecards-style analysis).  Most
-# blown calls are inconsequential, but ~0.5-0.9% of games will
-# have one that materially shifts the outcome.
+# Models the human element of officiating.  Calibrated so that
+# across a full season (~120 games), 0.5-3% of total calls are
+# wrong — meaning most games are clean, and maybe 1-3 games per
+# season have a blown call that meaningfully shifts the outcome.
 #
-# A fixed pool of named referees is generated once per league.
-# Each has hidden attributes (accuracy, tendencies) that the
-# user never sees — they only see the name.  Most refs are good;
-# a few are notably worse.
+# Referee attributes (visible in code, not exposed in UI):
+#   accuracy     — 0.91-0.98.  How often the ref gets calls right.
+#                  Elite refs (0.97+) rarely miss.  Below-average
+#                  refs (0.91-0.92) miss noticeably more.
+#   home_favor   — -0.5 to +0.5.  Positive = slight lean toward
+#                  home team on 50/50 calls.  Most refs are near 0.
+#   consistency  — 0.87-0.97.  How stable the ref's zone/calls are
+#                  within a game.  Lower = more erratic.
 #
 # Three blown-call types:
-#   1. Phantom flag  — penalty called when no infraction occurred
+#   1. Phantom flag     — penalty called when no infraction occurred
 #   2. Swallowed whistle — clear infraction goes uncalled
-#   3. Spot error — ball spotted 1-3 yards from correct position
+#   3. Spot error       — ball spotted 1-3 yards from correct position
+#
+# Coach challenge system:
+#   Each team gets 2 challenges per half (reset on correct challenge).
+#   ~75% of challenged blown calls are overturned, leaving a small
+#   residual human element (~0.5-1% of calls across a season).
 # ═══════════════════════════════════════════════════════════════
 
 @dataclass
 class RefereeCrew:
-    """A game's officiating crew — named ref with hidden attributes."""
+    """A game's officiating crew — named ref with attributes.
+
+    Attributes (visible in code for understanding, not exposed in UI):
+        accuracy:     0.91-0.98 — how often the ref gets calls right
+        home_favor:   -0.5 to +0.5 — lean toward home on close calls
+        consistency:  0.87-0.97 — stability of calls within a game
+    """
     name: str = "Unknown"
-    accuracy: float = 0.95       # 0.91-0.98, hidden from user
-    home_favor: float = 0.0      # -0.5 to +0.5, hidden from user
-    consistency: float = 0.94    # hidden from user
-    phantom_flag_rate: float = 0.003   # hidden
-    swallowed_whistle_rate: float = 0.004  # hidden
-    spot_error_rate: float = 0.006  # hidden
-    blown_calls: int = 0         # running count this game
+    accuracy: float = 0.95
+    home_favor: float = 0.0
+    consistency: float = 0.94
+    # Per-play blown call rates — calibrated LOW so season-wide
+    # error rate lands at 0.5-3% of total penalty situations.
+    # With ~60 plays/game and ~10% involving a penalty check,
+    # that's ~6 penalty-eligible plays/game.  A 0.1% phantom rate
+    # means ~0.006 phantom flags per game — roughly 1 per 150 games.
+    phantom_flag_rate: float = 0.001
+    swallowed_whistle_rate: float = 0.0015
+    spot_error_rate: float = 0.002
+    blown_calls: int = 0
     blown_call_log: list = field(default_factory=list)
+    challenged_calls: int = 0       # Total challenges attempted
+    overturned_calls: int = 0       # Challenges that succeeded
 
 
 # ── Named Referee Pool ──────────────────────────────────────────
-# 30 referees with pre-baked hidden attributes.  The user only
-# ever sees the name.  Distribution:
-#   ~20 good (accuracy 94-98%)
-#   ~7 average (accuracy 92-94%)
-#   ~3 below-average (accuracy 91-93%) — the "Angel Hernandezes"
+# Generated dynamically using the name generator so the pool can
+# be expanded at any time.  Each referee gets hidden attributes
+# (accuracy, home favor, consistency) that the user never sees.
+#
+# Distribution target (per 30 refs):
+#   ~3  elite        (97-98% accuracy)
+#   ~10 good         (95-97%)
+#   ~10 solid        (93-95%)
+#   ~5  average      (92-93%)
+#   ~2  below-avg    (91-92%) — the controversial ones
+#
+# To regenerate or expand: call generate_referee_pool(n, seed).
 
-REFEREE_POOL = [
-    # --- Elite tier (97-98%) ---
-    {"name": "Marcus Bell",        "accuracy": 0.98, "home_favor": 0.01, "consistency": 0.97},
-    {"name": "Diane Okoro",        "accuracy": 0.975, "home_favor": -0.02, "consistency": 0.96},
-    {"name": "James Whitfield",    "accuracy": 0.97, "home_favor": 0.03, "consistency": 0.96},
-    # --- Good tier (95-97%) ---
-    {"name": "Carla Munoz",        "accuracy": 0.965, "home_favor": 0.02, "consistency": 0.95},
-    {"name": "Ray Patterson",      "accuracy": 0.96, "home_favor": -0.01, "consistency": 0.95},
-    {"name": "Tomoko Sato",        "accuracy": 0.96, "home_favor": 0.04, "consistency": 0.94},
-    {"name": "Andre Kimball",      "accuracy": 0.955, "home_favor": 0.00, "consistency": 0.95},
-    {"name": "Lisa Brandt",        "accuracy": 0.955, "home_favor": -0.03, "consistency": 0.94},
-    {"name": "Kevin O'Malley",     "accuracy": 0.95, "home_favor": 0.06, "consistency": 0.93},
-    {"name": "Priya Deshmukh",     "accuracy": 0.95, "home_favor": -0.01, "consistency": 0.95},
-    {"name": "Robert Tran",        "accuracy": 0.95, "home_favor": 0.02, "consistency": 0.94},
-    {"name": "Monica Reeves",      "accuracy": 0.945, "home_favor": 0.01, "consistency": 0.94},
-    {"name": "David Nyström",      "accuracy": 0.945, "home_favor": -0.02, "consistency": 0.93},
-    # --- Solid tier (94-95%) ---
-    {"name": "Gloria Hutchins",    "accuracy": 0.94, "home_favor": 0.05, "consistency": 0.93},
-    {"name": "Sam Kowalski",       "accuracy": 0.94, "home_favor": 0.00, "consistency": 0.94},
-    {"name": "Terrence Miles",     "accuracy": 0.94, "home_favor": -0.04, "consistency": 0.92},
-    {"name": "Rosa Delgado",       "accuracy": 0.94, "home_favor": 0.03, "consistency": 0.93},
-    {"name": "Franklin Yu",        "accuracy": 0.935, "home_favor": 0.01, "consistency": 0.93},
-    {"name": "Barbara Hess",       "accuracy": 0.935, "home_favor": -0.01, "consistency": 0.92},
-    {"name": "Jerome Washington",  "accuracy": 0.93, "home_favor": 0.02, "consistency": 0.93},
-    # --- Average tier (92-94%) ---
-    {"name": "Bill Strickland",    "accuracy": 0.93, "home_favor": 0.08, "consistency": 0.91},
-    {"name": "Anita Flores",       "accuracy": 0.925, "home_favor": -0.03, "consistency": 0.92},
-    {"name": "Donald Marsh",       "accuracy": 0.925, "home_favor": 0.06, "consistency": 0.90},
-    {"name": "Helen Novak",        "accuracy": 0.92, "home_favor": 0.04, "consistency": 0.91},
-    {"name": "Greg Fontaine",      "accuracy": 0.92, "home_favor": -0.05, "consistency": 0.90},
-    {"name": "Yuki Tanaka",        "accuracy": 0.92, "home_favor": 0.01, "consistency": 0.91},
-    {"name": "Charles Pruitt",     "accuracy": 0.915, "home_favor": 0.07, "consistency": 0.89},
-    # --- Below-average tier (91-92%) — the controversial ones ---
-    {"name": "Hank Durkin",        "accuracy": 0.91, "home_favor": 0.12, "consistency": 0.88},
-    {"name": "Marge Tillotson",    "accuracy": 0.91, "home_favor": -0.08, "consistency": 0.89},
-    {"name": "Lou Crenshaw",       "accuracy": 0.905, "home_favor": 0.10, "consistency": 0.87},
+# Accuracy/consistency tiers for assigning hidden attributes
+_REF_TIERS = [
+    # (weight, accuracy_lo, accuracy_hi, consistency_lo, consistency_hi)
+    (0.10, 0.97, 0.98, 0.95, 0.97),   # elite
+    (0.33, 0.95, 0.97, 0.93, 0.96),   # good
+    (0.33, 0.93, 0.95, 0.91, 0.94),   # solid
+    (0.17, 0.92, 0.93, 0.89, 0.92),   # average
+    (0.07, 0.905, 0.92, 0.87, 0.90),  # below-average
 ]
 
+_REFEREE_POOL_CACHE: Optional[List[Dict]] = None
 
-def assign_referee(rng: random.Random) -> RefereeCrew:
-    """Pick a referee from the pool and build a RefereeCrew for one game.
 
-    The referee's hidden attributes drive blown-call rates.  The user
-    only sees the name in the box score.
+def generate_referee_pool(n: int = 30, seed: int = 12345) -> List[Dict]:
+    """Generate a pool of named referees using the name generator.
+
+    Each ref gets a name from the player name generator and hidden
+    attributes drawn from the tier distribution.  The pool is cached
+    so it stays stable across a season.
     """
-    ref_data = rng.choice(REFEREE_POOL)
-    accuracy = ref_data["accuracy"]
+    global _REFEREE_POOL_CACHE
+    if _REFEREE_POOL_CACHE is not None and len(_REFEREE_POOL_CACHE) >= n:
+        return _REFEREE_POOL_CACHE
+
+    rng = random.Random(seed)
+    pool = []
+
+    # Try to use the name generator for diverse, realistic names
+    try:
+        from scripts.generate_names import generate_player_name
+        use_generator = True
+    except (ImportError, FileNotFoundError):
+        use_generator = False
+
+    # Build tier boundaries for weighted selection
+    tier_cumulative = []
+    cumsum = 0.0
+    for weight, *_ in _REF_TIERS:
+        cumsum += weight
+        tier_cumulative.append(cumsum)
+
+    used_names: set = set()
+    for _ in range(n):
+        # Generate a unique name
+        if use_generator:
+            for _attempt in range(10):
+                # Mix of genders for the officiating pool
+                gender = rng.choice(["female", "male"])
+                name_data = generate_player_name(gender=gender)
+                full_name = name_data["full_name"]
+                if full_name not in used_names:
+                    used_names.add(full_name)
+                    break
+        else:
+            full_name = f"Referee #{len(pool) + 1}"
+
+        # Assign tier
+        roll = rng.random()
+        tier_idx = 0
+        for i, boundary in enumerate(tier_cumulative):
+            if roll <= boundary:
+                tier_idx = i
+                break
+
+        _, acc_lo, acc_hi, con_lo, con_hi = _REF_TIERS[tier_idx]
+        accuracy = rng.uniform(acc_lo, acc_hi)
+        consistency = rng.uniform(con_lo, con_hi)
+        # Home favor: slight home lean on average, wider spread for worse refs
+        favor_spread = 0.04 + (1.0 - accuracy) * 0.8
+        home_favor = rng.gauss(0.03, favor_spread)
+        home_favor = max(-0.5, min(0.5, home_favor))
+
+        pool.append({
+            "name": full_name,
+            "accuracy": round(accuracy, 4),
+            "home_favor": round(home_favor, 3),
+            "consistency": round(consistency, 4),
+        })
+
+    _REFEREE_POOL_CACHE = pool
+    return pool
+
+
+def build_referee_crews(pool: List[Dict], rng: random.Random) -> List[Dict]:
+    """Group a referee pool into 3-person crews.
+
+    Each crew has a head referee (highest accuracy in the trio),
+    an umpire, and a side judge.  The crew's effective accuracy
+    is the average of the three members.
+    """
+    shuffled = list(pool)
+    rng.shuffle(shuffled)
+    crews = []
+    for i in range(0, len(shuffled) - 2, 3):
+        trio = shuffled[i:i+3]
+        # Head ref is the most accurate in the crew
+        trio.sort(key=lambda r: r["accuracy"], reverse=True)
+        avg_acc = sum(r["accuracy"] for r in trio) / 3
+        avg_favor = sum(r["home_favor"] for r in trio) / 3
+        avg_con = sum(r["consistency"] for r in trio) / 3
+        crew_name = f"{trio[0]['name']}, {trio[1]['name']}, {trio[2]['name']}"
+        crews.append({
+            "name": crew_name,
+            "head_ref": trio[0]["name"],
+            "members": [r["name"] for r in trio],
+            "accuracy": round(avg_acc, 4),
+            "home_favor": round(avg_favor, 3),
+            "consistency": round(avg_con, 4),
+        })
+    return crews
+
+
+def assign_referee(rng: random.Random, is_playoff: bool = False,
+                   conference: str = "") -> RefereeCrew:
+    """Assign a 3-person referee crew to a game.
+
+    For playoff games, picks from the top-rated crews.
+    For regular season, any crew can be assigned.
+    Conference assignment is noted but not yet enforced
+    (future: refs assigned to conferences like teams).
+    """
+    pool = generate_referee_pool()
+    crews = build_referee_crews(pool, random.Random(rng.randint(0, 2**31)))
+
+    if not crews:
+        return RefereeCrew()
+
+    if is_playoff:
+        # Playoffs get the best crews — top third by accuracy
+        crews.sort(key=lambda c: c["accuracy"], reverse=True)
+        top_crews = crews[:max(1, len(crews) // 3)]
+        crew = rng.choice(top_crews)
+    else:
+        crew = rng.choice(crews)
+
+    accuracy = crew["accuracy"]
     inaccuracy = 1.0 - accuracy
 
-    # Blown call rates scale inversely with accuracy
-    phantom_flag_rate = 0.001 + inaccuracy * 0.03
-    swallowed_whistle_rate = 0.002 + inaccuracy * 0.03
-    spot_error_rate = 0.003 + inaccuracy * 0.04
+    # Calibrated LOW: season-wide 0.5-3% error rate across all games.
+    # Most games will be completely clean.
+    phantom_flag_rate = 0.0005 + inaccuracy * 0.01
+    swallowed_whistle_rate = 0.0008 + inaccuracy * 0.01
+    spot_error_rate = 0.001 + inaccuracy * 0.015
 
     return RefereeCrew(
-        name=ref_data["name"],
+        name=crew["name"],
         accuracy=accuracy,
-        home_favor=ref_data["home_favor"],
-        consistency=ref_data["consistency"],
-        phantom_flag_rate=round(phantom_flag_rate, 4),
-        swallowed_whistle_rate=round(swallowed_whistle_rate, 4),
-        spot_error_rate=round(spot_error_rate, 4),
+        home_favor=crew["home_favor"],
+        consistency=crew["consistency"],
+        phantom_flag_rate=round(phantom_flag_rate, 5),
+        swallowed_whistle_rate=round(swallowed_whistle_rate, 5),
+        spot_error_rate=round(spot_error_rate, 5),
     )
 
 
@@ -5292,18 +5415,33 @@ class ViperballEngine:
                 # ── Referee: swallowed whistle ──
                 # Crew might miss a legitimate penalty call
                 if random.random() < self.referee_crew.swallowed_whistle_rate:
-                    self.referee_crew.blown_calls += 1
-                    self.referee_crew.blown_call_log.append({
-                        "type": "swallowed_whistle",
-                        "quarter": self.state.quarter,
-                        "time_remaining": self.state.time_remaining,
-                        "penalty_missed": pen_def["name"],
-                        "on_team": team_name,
-                        "player": ptag,
-                        "yards": pen_def["yards"],
-                        "field_position": self.state.field_position,
-                    })
-                    return None  # Ref missed the call
+                    # Coach challenge: disadvantaged team may challenge
+                    if self._coach_challenge("swallowed_whistle", team_name):
+                        # Challenge successful — call the penalty after all
+                        self.referee_crew.blown_call_log.append({
+                            "type": "swallowed_whistle_overturned",
+                            "quarter": self.state.quarter,
+                            "time_remaining": self.state.time_remaining,
+                            "penalty_missed": pen_def["name"],
+                            "on_team": team_name,
+                            "player": ptag,
+                            "yards": pen_def["yards"],
+                            "field_position": self.state.field_position,
+                        })
+                        # Fall through to return the penalty normally
+                    else:
+                        self.referee_crew.blown_calls += 1
+                        self.referee_crew.blown_call_log.append({
+                            "type": "swallowed_whistle",
+                            "quarter": self.state.quarter,
+                            "time_remaining": self.state.time_remaining,
+                            "penalty_missed": pen_def["name"],
+                            "on_team": team_name,
+                            "player": ptag,
+                            "yards": pen_def["yards"],
+                            "field_position": self.state.field_position,
+                        })
+                        return None  # Ref missed the call, challenge failed or not used
 
                 return Penalty(
                     name=pen_def["name"],
@@ -5332,6 +5470,21 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
+                # Coach challenge: penalized team may challenge the phantom flag
+                if self._coach_challenge("phantom_flag", team_name):
+                    # Challenge successful — phantom flag overturned, no penalty
+                    self.referee_crew.blown_call_log.append({
+                        "type": "phantom_flag_overturned",
+                        "quarter": self.state.quarter,
+                        "time_remaining": self.state.time_remaining,
+                        "penalty_called": pen_def["name"],
+                        "on_team": team_name,
+                        "player": ptag,
+                        "yards": pen_def["yards"],
+                        "field_position": self.state.field_position,
+                    })
+                    return None  # No penalty — challenge succeeded
+
                 self.referee_crew.blown_calls += 1
                 self.referee_crew.blown_call_log.append({
                     "type": "phantom_flag",
@@ -5354,6 +5507,81 @@ class ViperballEngine:
                 )
 
         return None
+
+    def _coach_challenge(self, blown_call_type: str, penalized_team: str) -> bool:
+        """Coach challenge system: the disadvantaged team may challenge a blown call.
+
+        The replay system always gets the call correct — if a coach
+        challenges a genuine blown call, it WILL be overturned.  But
+        coaches don't always use their challenges wisely; sometimes they
+        burn one on a call that was actually correct (which we don't
+        model here since this is only called on actual blown calls).
+
+        Coaches also sometimes fail to notice blown calls or choose to
+        save their challenges for later, so not every blown call gets
+        challenged.
+
+        Each team gets 3 challenges per game total.
+        """
+        # The team hurt by the call is the one that would challenge
+        if blown_call_type == "phantom_flag":
+            challenging_team = penalized_team
+        elif blown_call_type == "swallowed_whistle":
+            # The team that should have benefited from the missed call
+            challenging_team = "away" if penalized_team == "home" else "home"
+        else:
+            return False  # Spot errors aren't challengeable
+
+        challenges_left = (self.state.home_challenges if challenging_team == "home"
+                          else self.state.away_challenges)
+
+        if challenges_left <= 0:
+            return False
+
+        # Coach decides whether to challenge — only ~60% chance they
+        # notice the blown call and decide to use a challenge on it.
+        # Better coaches (higher awareness) might be modeled later.
+        if random.random() > 0.60:
+            return False  # Coach didn't notice or saved challenge
+
+        # Use a challenge
+        if challenging_team == "home":
+            self.state.home_challenges -= 1
+        else:
+            self.state.away_challenges -= 1
+
+        self.referee_crew.challenged_calls += 1
+
+        # Replay always gets the correct call — overturn the blown call
+        self.referee_crew.overturned_calls += 1
+        return True
+
+    def _coach_wastes_challenge(self) -> Optional[str]:
+        """Occasionally a coach wastes a challenge on a correct call.
+
+        This happens independently of blown calls — the coach thinks
+        the ref made an error but replay confirms the original call.
+        Very rare (~0.1% per play).  Returns the team that wasted it,
+        or None.
+        """
+        if random.random() > 0.001:
+            return None
+
+        # Pick which team wastes the challenge
+        team = random.choice(["home", "away"])
+        challenges_left = (self.state.home_challenges if team == "home"
+                          else self.state.away_challenges)
+        if challenges_left <= 0:
+            return None
+
+        if team == "home":
+            self.state.home_challenges -= 1
+        else:
+            self.state.away_challenges -= 1
+
+        self.referee_crew.challenged_calls += 1
+        # Challenge fails — original call stands (it was correct)
+        return team
 
     def _check_spot_error(self, yards_gained: int) -> int:
         """Referee spot error: occasionally the ball is spotted 1-3 yards off.
@@ -12397,11 +12625,15 @@ class ViperballEngine:
             "adaptation_log": list(self._adaptation_log),
             # ── Timeout log: every timeout event for post-game audit ──
             "timeout_log": list(self.timeout_log),
-            # ── Referee crew: name visible, attributes hidden ──
+            # ── Referee crew: name + challenge stats visible ──
             "referee": {
                 "name": self.referee_crew.name,
                 "blown_calls": self.referee_crew.blown_calls,
+                "challenged_calls": self.referee_crew.challenged_calls,
+                "overturned_calls": self.referee_crew.overturned_calls,
                 "blown_call_log": list(self.referee_crew.blown_call_log),
+                "home_challenges_remaining": self.state.home_challenges,
+                "away_challenges_remaining": self.state.away_challenges,
             },
         }
 

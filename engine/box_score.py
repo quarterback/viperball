@@ -431,51 +431,6 @@ class BoxScoreGenerator:
         lines.append("")
 
         # ══════════════════════════════════════════════════════════
-        # REFEREE SCORECARD
-        # ══════════════════════════════════════════════════════════
-        referee = self.game_data.get('referee', {})
-        if referee:
-            ref_name = referee.get('name', 'Unknown')
-            blown_calls = referee.get('blown_calls', 0)
-
-            lines.append("## OFFICIALS")
-            lines.append("")
-            lines.append(f"**Head Referee:** {ref_name}")
-            lines.append("")
-
-            blown_call_log = referee.get('blown_call_log', [])
-            if blown_call_log:
-                lines.append(f"*{len(blown_call_log)} questionable call(s) identified in post-game review:*")
-                lines.append("")
-                for bc in blown_call_log:
-                    q = bc.get('quarter', '?')
-                    time = bc.get('time_remaining', 0)
-                    bc_type = bc.get('type', 'unknown')
-                    if bc_type == "phantom_flag":
-                        pen_name = bc.get('penalty_called', '?')
-                        on_team = bc.get('on_team', '?')
-                        team_label = home_name if on_team == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — {pen_name} called on {team_label} ({bc.get('player', '?')}); replay shows no infraction")
-                    elif bc_type == "swallowed_whistle":
-                        pen_name = bc.get('penalty_missed', '?')
-                        on_team = bc.get('on_team', '?')
-                        team_label = home_name if on_team == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — {pen_name} on {team_label} ({bc.get('player', '?')}) went uncalled")
-                    elif bc_type == "spot_error":
-                        error = bc.get('error_yards', 0)
-                        direction = "forward" if error > 0 else "back"
-                        poss = bc.get('possession', '?')
-                        team_label = home_name if poss == 'home' else away_name
-                        lines.append(f"- **Q{q} {_fmt_time(time)}** — Ball spotted {abs(error)} yd(s) {direction} of correct position ({team_label} possession)")
-                lines.append("")
-            else:
-                lines.append("*Clean game — no questionable calls identified in post-game review.*")
-                lines.append("")
-
-            lines.append("---")
-            lines.append("")
-
-        # ══════════════════════════════════════════════════════════
         # KEY PLAYS
         # ══════════════════════════════════════════════════════════
         lines.append("## KEY PLAYS")
@@ -537,6 +492,70 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append("---")
         lines.append("")
+
+        # ══════════════════════════════════════════════════════════
+        # GAME INFO (officials, weather — subtle, at the end)
+        # ══════════════════════════════════════════════════════════
+        referee = self.game_data.get('referee', {})
+        info_parts = []
+        if referee:
+            ref_name = referee.get('name', 'Unknown')
+            info_parts.append(f"**Officials:** {ref_name}")
+        if weather_label:
+            info_parts.append(f"**Weather:** {weather_label}")
+
+        if info_parts:
+            lines.append(" | ".join(info_parts))
+            lines.append("")
+
+        # Challenge summary (if any challenges were used)
+        if referee:
+            challenged = referee.get('challenged_calls', 0)
+            overturned = referee.get('overturned_calls', 0)
+            if challenged > 0:
+                lines.append(f"*Challenges: {challenged} used, {overturned} overturned*")
+                lines.append("")
+
+            blown_call_log = referee.get('blown_call_log', [])
+            if blown_call_log:
+                uncorrected = [bc for bc in blown_call_log
+                               if bc.get('type') in ('phantom_flag', 'swallowed_whistle', 'spot_error')]
+                corrected = [bc for bc in blown_call_log
+                            if bc.get('type') in ('phantom_flag_overturned', 'swallowed_whistle_overturned')]
+                if uncorrected or corrected:
+                    lines.append("*Post-game officiating review:*")
+                    for bc in blown_call_log:
+                        q = bc.get('quarter', '?')
+                        time = bc.get('time_remaining', 0)
+                        bc_type = bc.get('type', 'unknown')
+                        if bc_type == "phantom_flag":
+                            pen_name = bc.get('penalty_called', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} called on {team_label}; no infraction on replay")
+                        elif bc_type == "phantom_flag_overturned":
+                            pen_name = bc.get('penalty_called', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} overturned on challenge")
+                        elif bc_type == "swallowed_whistle":
+                            pen_name = bc.get('penalty_missed', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} went uncalled")
+                        elif bc_type == "swallowed_whistle_overturned":
+                            pen_name = bc.get('penalty_missed', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} called after challenge")
+                        elif bc_type == "spot_error":
+                            error = bc.get('error_yards', 0)
+                            direction = "forward" if error > 0 else "back"
+                            poss = bc.get('possession', '?')
+                            team_label = home_name if poss == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — Spot error: {abs(error)} yd(s) {direction} ({team_label})")
+                    lines.append("")
+
         lines.append(f"*Collegiate Viperball League (CVL) Official Box Score — {away_name} at {home_name}*")
 
         return "\n".join(lines)
