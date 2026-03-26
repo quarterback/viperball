@@ -42,8 +42,10 @@ STAT_KEYS = [
 YEAR_LABELS = ["Rookie", "2nd Year", "3rd Year", "Veteran", "Veteran", "Veteran"]
 
 OFFENSE_STYLES = [
-    "balanced", "smashmouth", "air_raid", "west_coast", "power_spread",
-    "lateral_chaos", "triple_option", "ground_pound", "tempo",
+    "ground_pound", "lateral_spread", "boot_raid", "ball_control", "ghost",
+    "stampede", "chain_gang", "slick_n_slide", "balanced", "east_coast",
+    "shock_and_awe", "six_shooter", "quick_strike", "mousetrap", "mismatch",
+    "ironclad",
 ]
 DEFENSE_STYLES = [
     "base_defense", "blitz_heavy", "zone", "man_press", "swarm", "bend_no_break",

@@ -40,6 +40,13 @@ OFFENSE_TOOLTIPS = {
     "chain_gang": "Maximum laterals, maximum chaos. Every play is a 4-5 lateral chain. Showtime Viperball.",
     "slick_n_slide": "Go-Go inspired 2-back attack. Zone reads + run-kick pass options. Adapts to any roster by reading the defense.",
     "balanced": "No strong tendency — mixes run, chain, and kick based on game state. Jack of all trades.",
+    "east_coast": "Short kick passes, chain-moving possession offense. Rhythm escalation builds to deeper shots. Death by a thousand completions.",
+    "shock_and_awe": "Vertical kick pass bombs at maximum tempo. Volume shooting — 35% completion is fine when completions go for 35+ yards.",
+    "six_shooter": "Phase offense built around the 6-down structure. Run-heavy setup on 1-4, pull the trigger with snap kicks in Kick Mode.",
+    "quick_strike": "Transition offense. Score in 2-4 plays off turnovers and bonus possessions. Fast, vertical, ruthless.",
+    "mousetrap": "Bait and switch. Feed the DC predictable looks, let them adapt, then punish the over-correction.",
+    "mismatch": "Matchup hunting. Read the defense, find the weak link, attack it relentlessly with the Viper.",
+    "ironclad": "Iowa football as Viperball. Suffocating grind, maximum clock burn, win 15-12. Boring and beautiful.",
 }
 
 DEFENSE_TOOLTIPS = {
