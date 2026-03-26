@@ -864,11 +864,11 @@ def generate_quick_portal(
             k=1,
         )[0]
 
-        # Stat range: portal players are decent (they had college experience)
-        # Ceiling lowered to prevent portal from flooding rosters with 90+ talent
-        lo, hi = 58, 82
+        # Stat range: portal players start with modest base stats — in-game
+        # multipliers and development are what make them competitive
+        lo, hi = 28, 52
         if year_class in ("Senior", "Graduate"):
-            lo, hi = 62, 86
+            lo, hi = 32, 56
 
         def _stat():
             return rng.randint(lo, hi)
@@ -887,11 +887,11 @@ def generate_quick_portal(
         tackling = _stat()
 
         if pos in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback"):
-            speed = min(99, speed + rng.randint(2, 5))
-            lateral_skill = min(99, lateral_skill + rng.randint(1, 4))
+            speed = min(96, speed + rng.randint(2, 5))
+            lateral_skill = min(96, lateral_skill + rng.randint(1, 4))
         elif pos in ("Offensive Line", "Defensive Line"):
-            tackling = min(99, tackling + rng.randint(3, 6))
-            power = min(99, power + rng.randint(3, 6))
+            tackling = min(96, tackling + rng.randint(3, 6))
+            power = min(96, power + rng.randint(3, 6))
             speed = max(55, speed - rng.randint(2, 4))
 
         # Height / weight
