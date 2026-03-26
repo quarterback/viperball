@@ -8,8 +8,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ coach.full_name }}</h1>
+<div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
+  {% if face_src %}
+  <div class="player-card-frame">
+    <img src="{{ face_src }}" alt="{{ coach.full_name }}" class="player-card-face">
+    <span class="player-card-number">{{ role_label }}</span>
+  </div>
+  {% endif %}
+  <div style="flex:1; min-width:0;">
+  <h1 style="margin:0">{{ coach.full_name }}</h1>
   <div class="subtitle">
     <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
     &middot; <span class="tag tag-pos">{{ role_label }}</span>
@@ -17,6 +24,7 @@
     {% if coach.sub_archetype_label %}&middot; <em>{{ coach.sub_archetype_label }}</em>{% endif %}
     &middot; Age {{ coach.age }}
     &middot; {{ season_record }}
+  </div>
   </div>
 </div>
 

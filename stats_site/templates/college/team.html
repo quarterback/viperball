@@ -351,7 +351,7 @@
   {% for c in coaching_staff %}
   <tr>
     <td><span class="tag {% if c.role == 'head_coach' %}stat-elite{% endif %}">{{ c.role_label }}</span></td>
-    <td><a href="/stats/college/{{ session_id }}/coach/{{ team_name }}/{{ c.role }}">{{ c.name }}</a></td>
+    <td>{% if c.face_src %}<img src="{{ c.face_src }}" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">{% endif %}<a href="/stats/college/{{ session_id }}/coach/{{ team_name }}/{{ c.role }}">{{ c.name }}</a></td>
     <td class="num {% if c.overall >= 80 %}stat-elite{% elif c.overall >= 65 %}stat-good{% endif %}">{{ '%.0f'|format(c.overall) }}</td>
     <td style="font-size:11px;">{{ c.classification_label }}</td>
     <td style="font-size:11px;">{{ c.composure_label }}</td>
