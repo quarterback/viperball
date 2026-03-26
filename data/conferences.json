@@ -1,20 +1,12 @@
 {
   "ACC": [
     {
-      "id": "boston_college",
-      "name": "Boston College"
-    },
-    {
-      "id": "clemson",
-      "name": "Clemson"
+      "id": "cincinnati",
+      "name": "Cincinnati"
     },
     {
       "id": "duke",
       "name": "Duke"
-    },
-    {
-      "id": "florida_state",
-      "name": "Florida State"
     },
     {
       "id": "georgia_tech",
@@ -47,6 +39,10 @@
     {
       "id": "wake_forest",
       "name": "Wake Forest"
+    },
+    {
+      "id": "west_virginia",
+      "name": "West Virginia"
     }
   ],
   "Big 12": [
@@ -59,10 +55,6 @@
       "name": "BYU"
     },
     {
-      "id": "cincinnati",
-      "name": "Cincinnati"
-    },
-    {
       "id": "houston",
       "name": "Houston"
     },
@@ -71,16 +63,16 @@
       "name": "Iowa State"
     },
     {
-      "id": "kansas",
-      "name": "Kansas"
-    },
-    {
       "id": "kansas_state",
       "name": "Kansas State"
     },
     {
       "id": "oklahoma_state",
       "name": "Oklahoma State"
+    },
+    {
+      "id": "smu",
+      "name": "SMU"
     },
     {
       "id": "tcu",
@@ -93,13 +85,13 @@
     {
       "id": "ucf",
       "name": "UCF"
-    },
-    {
-      "id": "west_virginia",
-      "name": "West Virginia"
     }
   ],
   "Big East": [
+    {
+      "id": "boston_college",
+      "name": "Boston College"
+    },
     {
       "id": "butler",
       "name": "Butler"
@@ -155,6 +147,10 @@
       "name": "Iowa"
     },
     {
+      "id": "kansas",
+      "name": "Kansas"
+    },
+    {
       "id": "michigan",
       "name": "Michigan"
     },
@@ -165,6 +161,10 @@
     {
       "id": "minnesota",
       "name": "Minnesota"
+    },
+    {
+      "id": "missouri",
+      "name": "Missouri"
     },
     {
       "id": "nebraska",
@@ -205,20 +205,12 @@
       "name": "Illinois State"
     },
     {
-      "id": "little_rock",
-      "name": "UALR"
-    },
-    {
       "id": "north_texas",
       "name": "North Texas"
     },
     {
       "id": "rice",
       "name": "Rice"
-    },
-    {
-      "id": "smu",
-      "name": "SMU"
     },
     {
       "id": "texas_state",
@@ -229,16 +221,20 @@
       "name": "Tulane"
     },
     {
+      "id": "little_rock",
+      "name": "UALR"
+    },
+    {
       "id": "unlv",
       "name": "UNLV"
     },
     {
-      "id": "ut_san_antonio",
-      "name": "UTSA"
-    },
-    {
       "id": "utep",
       "name": "UTEP"
+    },
+    {
+      "id": "ut_san_antonio",
+      "name": "UTSA"
     }
   ],
   "Galactic League": [
@@ -247,24 +243,8 @@
       "name": "Carnegie Mellon"
     },
     {
-      "id": "davidson",
-      "name": "Davidson"
-    },
-    {
       "id": "dayton",
       "name": "Dayton"
-    },
-    {
-      "id": "delaware",
-      "name": "Delaware"
-    },
-    {
-      "id": "duquesne",
-      "name": "Duquesne"
-    },
-    {
-      "id": "fgcu",
-      "name": "Florida Gulf Coast"
     },
     {
       "id": "georgia_state",
@@ -275,6 +255,10 @@
       "name": "Johns Hopkins"
     },
     {
+      "id": "memphis",
+      "name": "Memphis"
+    },
+    {
       "id": "north_florida",
       "name": "North Florida"
     },
@@ -283,8 +267,12 @@
       "name": "Rhode Island"
     },
     {
-      "id": "sacramento_state",
-      "name": "Sacramento State"
+      "id": "tennessee_state",
+      "name": "Tennessee State"
+    },
+    {
+      "id": "toledo",
+      "name": "Toledo"
     }
   ],
   "Heritage League": [
@@ -327,6 +315,10 @@
     {
       "id": "mississippi_valley_state",
       "name": "Mississippi Valley State"
+    },
+    {
+      "id": "north_carolina_central",
+      "name": "North Carolina Central"
     },
     {
       "id": "south_carolina_state",
@@ -393,6 +385,10 @@
       "name": "Indiana State"
     },
     {
+      "id": "lafayette",
+      "name": "Lafayette"
+    },
+    {
       "id": "missouri_state",
       "name": "Missouri State"
     },
@@ -403,10 +399,6 @@
     {
       "id": "northern_iowa",
       "name": "Northern Iowa"
-    },
-    {
-      "id": "saint_louis",
-      "name": "Saint Louis"
     },
     {
       "id": "southern_illinois",
@@ -447,16 +439,20 @@
       "name": "Northern Colorado"
     },
     {
+      "id": "sacramento_state",
+      "name": "Sacramento State"
+    },
+    {
       "id": "south_dakota",
       "name": "South Dakota"
     },
     {
-      "id": "uwrf",
-      "name": "Wisconsin-River Falls"
-    },
-    {
       "id": "weber_state",
       "name": "Weber State"
+    },
+    {
+      "id": "uwrf",
+      "name": "Wisconsin-River Falls"
     }
   ],
   "Mountain West": [
@@ -489,10 +485,6 @@
       "name": "Northwest Missouri State"
     },
     {
-      "id": "pepperdine",
-      "name": "Pepperdine"
-    },
-    {
       "id": "san_diego",
       "name": "San Diego"
     },
@@ -510,10 +502,6 @@
     }
   ],
   "Northern Shield": [
-    {
-      "id": "boston_university",
-      "name": "BU"
-    },
     {
       "id": "brandeis",
       "name": "Brandeis"
@@ -547,16 +535,16 @@
       "name": "SUNY Plattsburgh"
     },
     {
-      "id": "quinnipiac",
-      "name": "Quinnipiac"
-    },
-    {
       "id": "sdsu",
       "name": "South Dakota State"
     },
     {
       "id": "swarthmore",
       "name": "Swarthmore"
+    },
+    {
+      "id": "western_michigan",
+      "name": "Western Michigan"
     }
   ],
   "Pac-16": [
@@ -627,6 +615,10 @@
   ],
   "Prairie Athletic Union": [
     {
+      "id": "uchicago",
+      "name": "Chicago"
+    },
+    {
       "id": "ferris_state",
       "name": "Ferris State"
     },
@@ -663,10 +655,6 @@
       "name": "St. Thomas"
     },
     {
-      "id": "uchicago",
-      "name": "Chicago"
-    },
-    {
       "id": "wash_u",
       "name": "Wash U"
     },
@@ -689,8 +677,16 @@
       "name": "Auburn"
     },
     {
+      "id": "clemson",
+      "name": "Clemson"
+    },
+    {
       "id": "florida",
       "name": "Florida"
+    },
+    {
+      "id": "florida_state",
+      "name": "Florida State"
     },
     {
       "id": "georgia",
@@ -707,10 +703,6 @@
     {
       "id": "mississippi_state",
       "name": "Mississippi State"
-    },
-    {
-      "id": "missouri",
-      "name": "Missouri"
     },
     {
       "id": "oklahoma",
@@ -787,7 +779,11 @@
       "name": "Western Washington"
     }
   ],
-  "Yankee Fourteen": [
+  "Yankee Conference": [
+    {
+      "id": "boston_university",
+      "name": "BU"
+    },
     {
       "id": "buffalo",
       "name": "Buffalo"
@@ -797,8 +793,16 @@
       "name": "Colgate"
     },
     {
+      "id": "delaware",
+      "name": "Delaware"
+    },
+    {
       "id": "ithaca",
       "name": "Ithaca"
+    },
+    {
+      "id": "lehigh",
+      "name": "Lehigh"
     },
     {
       "id": "maine",
@@ -813,16 +817,12 @@
       "name": "New Hampshire"
     },
     {
-      "id": "njit",
-      "name": "NJIT"
+      "id": "rpi",
+      "name": "RPI"
     },
     {
       "id": "rochester",
       "name": "Rochester"
-    },
-    {
-      "id": "rpi",
-      "name": "RPI"
     },
     {
       "id": "umbc",

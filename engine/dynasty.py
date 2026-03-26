@@ -1736,12 +1736,10 @@ class Dynasty:
         """Update head-to-head rivalry records from completed season games."""
         rivalry_pairs = set()
         for team, rivals in self.rivalries.items():
-            conf_rival = rivals.get("conference")
-            nc_rival = rivals.get("non_conference")
-            if conf_rival:
-                rivalry_pairs.add(tuple(sorted([team, conf_rival])))
-            if nc_rival:
-                rivalry_pairs.add(tuple(sorted([team, nc_rival])))
+            for r in Season._rivalry_list(rivals.get("conference")):
+                rivalry_pairs.add(tuple(sorted([team, r])))
+            for r in Season._rivalry_list(rivals.get("non_conference")):
+                rivalry_pairs.add(tuple(sorted([team, r])))
 
         for game in season.schedule:
             if not game.completed:

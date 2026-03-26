@@ -41,13 +41,12 @@ TARGET = {
     "Galactic League": [
         "carnegie_mellon", "davidson", "duquesne", "georgia_state", "fgcu",
         "johns_hopkins", "rhode_island", "dayton", "delaware", "north_florida",
-        "sacramento_state",
     ],
     "Heritage League": [
         "alabama_state", "bethune_cookman", "delaware_state", "florida_am",
         "kentucky_state", "mississippi_valley_state", "jackson_state",
         "texas_southern", "grambling", "south_carolina_state", "howard",
-        "hampton",
+        "hampton", "north_carolina_central",
     ],
     "Ivy League": [
         "brown", "columbia", "cornell", "dartmouth", "harvard", "penn",
@@ -55,16 +54,17 @@ TARGET = {
     ],
     "Midwest States": [
         "umass", "bradley", "drake", "indiana_state", "missouri_state",
-        "saint_louis", "southern_illinois", "nebraska_omaha", "northern_iowa",
+        "lafayette", "southern_illinois", "nebraska_omaha", "northern_iowa",
         "wichita_state",
     ],
     "Moonshine League": [
         "boise_state", "montana_state", "air_force", "denver", "montana",
         "northern_colorado", "uwrf", "weber_state", "south_dakota",
+        "sacramento_state",
     ],
     "Mountain West": [
         "cal_poly", "colorado_state", "east_texas_am", "fresno_state",
-        "loyola_marymount", "nw_missouri_state", "pepperdine", "san_diego_state",
+        "loyola_marymount", "nw_missouri_state", "san_diego_state",
         "san_jose_state", "uc_davis", "san_diego", "colorado_mines",
     ],
     "Northern Shield": [
@@ -93,7 +93,7 @@ TARGET = {
         "hawaii", "portland", "san_francisco", "pacific", "southern_oregon",
         "western_washington",
     ],
-    "Yankee Fourteen": [
+    "Yankee Conference": [
         "ithaca", "njit", "rpi", "merchant_marine", "umbc", "buffalo",
         "colgate", "rochester", "new_hampshire", "vermont", "maine",
     ],
@@ -121,6 +121,8 @@ NEW_TEAMS = [
     ("sacramento_state", "Sacramento State", "SACST", "Hornets", "Sacramento", "CA", ["Green", "Gold"], "fresno_state"),
     ("cal_poly", "Cal Poly", "CPOLY", "Mustangs", "San Luis Obispo", "CA", ["Green", "Gold"], "fresno_state"),
     ("uc_davis", "UC Davis", "UCD", "Aggies", "Davis", "CA", ["Blue", "Gold"], "san_jose_state"),
+    ("north_carolina_central", "North Carolina Central", "NCCU", "Eagles", "Durham", "NC", ["Maroon", "Gray"], "bethune_cookman"),
+    ("lafayette", "Lafayette", "LAF", "Leopards", "Easton", "PA", ["Maroon", "White"], "bradley"),
 ]
 
 # ── Teams to delete ──
@@ -129,6 +131,7 @@ DELETE_TEAMS = [
     "wellesley", "space_force", "marine_corps", "xavier", "st_johns",
     "new_orleans", "seton_hall", "emory", "spelman", "lipscomb",
     "valparaiso", "caltech", "uc_santa_cruz",
+    "pepperdine", "saint_louis",
 ]
 
 # Build target lookup: file_id → conference
