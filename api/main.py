@@ -1194,6 +1194,30 @@ def season_injuries(session_id: str, team: Optional[str] = Query(None)):
         }
 
 
+@app.get("/sessions/{session_id}/season/referees")
+def season_referees(session_id: str, name: Optional[str] = Query(None)):
+    """List all referees or get a specific referee's card."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+    pool = getattr(season, 'referee_pool', None)
+    if pool is None:
+        return {"referees": [], "total": 0}
+
+    if name:
+        card = pool.get_card(name)
+        if card is None:
+            return {"error": f"Referee '{name}' not found"}
+        return {"referee": card.to_dict()}
+    else:
+        # Return all refs with game activity, sorted by games officiated
+        active_refs = [c.to_dict() for c in pool.get_all_cards() if c.career_games > 0]
+        return {
+            "referees": active_refs,
+            "total": len(pool.cards),
+            "active": len(active_refs),
+        }
+
+
 @app.get("/sessions/{session_id}/season/roster/{team_name}")
 def get_team_roster(session_id: str, team_name: str):
     session = _get_session(session_id)

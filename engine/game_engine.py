@@ -1524,7 +1524,7 @@ _REF_TIERS = [
 _REFEREE_POOL_CACHE: Optional[List[Dict]] = None
 
 
-def generate_referee_pool(n: int = 300, seed: int = 12345) -> List[Dict]:
+def generate_referee_pool(n: int = 360, seed: int = 12345) -> List[Dict]:
     """Generate a pool of named referees using the name generator.
 
     Each ref gets a name from the player name generator and hidden
@@ -3414,7 +3414,8 @@ class ViperballEngine:
                  home_brick_wall: bool = False,
                  away_brick_wall: bool = False,
                  home_turnover_machine: bool = False,
-                 away_turnover_machine: bool = False):
+                 away_turnover_machine: bool = False,
+                 referee_crew: Optional["RefereeCrew"] = None):
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -3437,8 +3438,13 @@ class ViperballEngine:
         self.viper_position = "free"
 
         # ── Referee crew: human element of officiating ──
-        _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
-        self.referee_crew = assign_referee(_ref_rng)
+        # If a pre-built RefereeCrew is passed in (from RefereePool via
+        # season.py), use it.  Otherwise generate one for standalone games.
+        if referee_crew is not None:
+            self.referee_crew = referee_crew
+        else:
+            _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
+            self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
         self.drive_play_count = 0
         self._drive_chain_positive = 0
