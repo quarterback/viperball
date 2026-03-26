@@ -4142,7 +4142,117 @@ class ViperballEngine:
                 self._home_halftime_score = self.state.home_score
                 self._away_halftime_score = self.state.away_score
 
+        # ── OVERTIME (postseason only) ──
+        # If scores are tied after regulation AND this is a playoff/bowl game,
+        # play successive 8-minute overtime quarters until someone wins.
+        # Regular season ties remain as ties.
+        if (self._is_playoff
+                and self.state.home_score == self.state.away_score):
+            self._simulate_overtime()
+
         return self.generate_game_summary()
+
+    def _simulate_overtime(self):
+        """Play overtime quarters until someone wins.
+
+        Overtime rules:
+        - Each OT period is one 8-minute quarter
+        - Coin flip determines first possession (alternates each OT)
+        - Each team gets 4 timeouts per OT period (fresh)
+        - 3-minute warning applies in each OT quarter
+        - No limit on OT periods — play until someone wins
+        - Maximum 5 OT periods (safety valve to prevent infinite loops)
+        """
+        max_ot_periods = 5
+        ot_number = 0
+
+        while (self.state.home_score == self.state.away_score
+               and ot_number < max_ot_periods):
+            ot_number += 1
+            self.state.quarter = 4 + ot_number  # Q5, Q6, Q7...
+            self.state.time_remaining = 480  # 8-minute quarters
+
+            # Fresh timeouts each OT period
+            self.state.home_timeouts = 4
+            self.state.away_timeouts = 4
+            self.state.three_min_warning_triggered = False
+
+            # Alternate possession each OT (first OT: away starts, like Q3)
+            if ot_number % 2 == 1:
+                self.state.possession = "away"
+            else:
+                self.state.possession = "home"
+
+            # Start from the 20-yard line (no delta adjustment in OT)
+            self.state.field_position = 20
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            self.state.kick_mode = False
+
+            # Clear bonus possession state
+            self.state.bonus_possession_team = ""
+            self._bonus_recipient = ""
+            self._bonus_drives_remaining = -1
+
+            # Recover some energy for OT
+            for p in self.home_team.players:
+                p.game_energy = min(100.0, p.game_energy + 20.0)
+            for p in self.away_team.players:
+                p.game_energy = min(100.0, p.game_energy + 20.0)
+
+            # Log the OT start
+            self.state.play_number += 1
+            stamina = (self.state.home_stamina if self.state.possession == "home"
+                       else self.state.away_stamina)
+            ot_label = f"OVERTIME PERIOD {ot_number}"
+            ot_play = Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=20,
+                down=1,
+                yards_to_go=20,
+                play_type="overtime",
+                play_family="none",
+                players_involved=[],
+                yards_gained=0,
+                result="overtime",
+                description=f"{ot_label} — {self.home_team.name} {self.state.home_score}, {self.away_team.name} {self.state.away_score}",
+                fatigue=round(stamina, 1),
+            )
+            self.play_log.append(ot_play)
+
+            # Run the OT quarter like a normal quarter
+            while self.state.time_remaining > 0:
+                _is_bonus = getattr(self, '_next_drive_is_bonus', False)
+                self._next_drive_is_bonus = False
+                self.simulate_drive(is_bonus_drive=_is_bonus)
+                if self.state.time_remaining <= 0:
+                    break
+
+                if self.state.bonus_possession_team and self.state.bonus_possession_team not in ("", "_armed"):
+                    self._bonus_recipient = self.state.bonus_possession_team
+                    self._bonus_drives_remaining = 1
+                    self.state.bonus_possession_team = ""
+                elif self._bonus_drives_remaining > 0:
+                    self._bonus_drives_remaining -= 1
+
+                if self._bonus_drives_remaining == 0 and self._bonus_recipient:
+                    bonus_team = self._bonus_recipient
+                    self._bonus_recipient = ""
+                    self._bonus_drives_remaining = -1
+                    self.state.possession = bonus_team
+                    self.state.field_position = 20
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
+                    self._next_drive_is_bonus = True
+
+            # Clear bonus state at end of OT period
+            self.state.bonus_possession_team = ""
+            self._bonus_recipient = ""
+            self._bonus_drives_remaining = -1
 
     def _apply_halftime_coaching_adjustments(self):
         for side in ("home", "away"):
@@ -5104,9 +5214,11 @@ class ViperballEngine:
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
         if down == 6:
-            # Late Q4 trailing with no viable kick: go for the TD.
-            # Punting when you're losing with no time is giving up.
-            if quarter == 4 and time_left <= 180 and score_diff < 0 and not best_kick:
+            # NEVER punt when trailing.  Punting while losing is giving up.
+            # Go for the TD, go for the kick, do ANYTHING but punt.
+            if score_diff < 0:
+                if best_kick:
+                    return best_kick
                 return None  # Go for it — punting surrenders the game
 
             # Go for it on very short ytg (elite kickers lower this)
@@ -5390,7 +5502,15 @@ class ViperballEngine:
 
     def _resolve_kick_type(self) -> PlayType:
         result = self.select_kick_decision()
-        return result if result is not None else PlayType.PUNT
+        if result is not None:
+            return result
+        # Never punt when trailing — go for it instead
+        if self._get_score_diff() < 0:
+            return None  # Go for it (no kick, no punt)
+        # Never punt with <=30 seconds left in Q4 — run a play
+        if self.state.quarter == 4 and self.state.time_remaining <= 30:
+            return None
+        return PlayType.PUNT
 
     def _check_penalties(self, phase: str, play_type: str = "run") -> Optional[Penalty]:
         if phase == "during_play":

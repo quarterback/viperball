@@ -1663,6 +1663,7 @@ class Season:
         )
 
         is_neutral = game.week >= 900
+        is_postseason = game.week >= 900
 
         # ── Fast-Sim Path ──
         # CPU-vs-CPU games use lightweight statistical model.
@@ -1778,6 +1779,7 @@ class Season:
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
             neutral_site=is_neutral,
+            is_playoff=is_postseason,
             **injury_kwargs,
             **dq_kwargs,
             **coaching_kwargs,
