@@ -865,9 +865,10 @@ def generate_quick_portal(
         )[0]
 
         # Stat range: portal players are decent (they had college experience)
-        lo, hi = 65, 90
+        # Ceiling lowered to prevent portal from flooding rosters with 90+ talent
+        lo, hi = 58, 82
         if year_class in ("Senior", "Graduate"):
-            lo, hi = 70, 93
+            lo, hi = 62, 86
 
         def _stat():
             return rng.randint(lo, hi)
@@ -902,7 +903,7 @@ def generate_quick_portal(
             wt = rng.randint(155, 195)
         height = f"{ht_in // 12}-{ht_in % 12}"
 
-        potential = rng.choices([2, 3, 4, 5, 1], weights=[30, 35, 20, 10, 5], k=1)[0]
+        potential = rng.choices([2, 3, 4, 5, 1], weights=[30, 38, 18, 6, 8], k=1)[0]
         dev = rng.choices(
             ["normal", "quick", "slow", "late_bloomer"],
             weights=[55, 20, 15, 10], k=1,
