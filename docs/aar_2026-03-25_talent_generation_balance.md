@@ -97,6 +97,12 @@ A 5-star recruit now arrives as a 79-93 OVR player — elite and clearly special
 - **Upsets become plausible.** A punching_above team with a couple hidden gems can now genuinely threaten a national power whose bottom starters might be in the mid-60s on key stats. The overlap in the tails creates drama.
 - **Development matters.** A 5-star arriving at 82 OVR needs to grow into a 90+ player over 2-3 seasons. That progression arc is the story of a dynasty mode.
 
+### Generation ceiling and stat budget (all three pipelines)
+
+**Per-stat ceiling lowered from 99 to 96** across roster generation, recruiting, and transfer portal. A freshly generated player can never have a stat above 96. Reaching 97-99 requires earning it through the development system over multiple seasons — that's a meaningful progression arc.
+
+**Stat budget system added to roster generation.** After rolling all 11 stats, total points are capped at `center * 11 + 44` (roughly 4 points of headroom per stat above the archetype center). If a player's total exceeds the budget, excess is trimmed from their highest stats first. This preserves the player's profile shape (their best stat stays their best) while preventing the "wall of 99s" problem. Example: a blue blood (center 87) has a budget of 1001 — avg stat ~91, allowing some stats to reach 96 as long as others stay lower.
+
 ## Risk Assessment
 
 - **Possible over-correction:** If scoring drops too far, the centers can be nudged back up 2-3 points without touching the spreads. The spreads are the more important fix.

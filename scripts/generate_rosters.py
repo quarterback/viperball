@@ -224,8 +224,12 @@ POSITIONS = [
 ]
 
 def _stat_roll(center, std):
-    """Generate a single stat using gaussian distribution, clamped 15-99."""
-    return max(15, min(99, int(round(random.gauss(center, std)))))
+    """Generate a single stat using gaussian distribution, clamped 15-96.
+
+    Ceiling is 96 — reaching 97-99 requires in-season development.
+    This prevents freshly-generated rosters from spawning max-stat players.
+    """
+    return max(15, min(96, int(round(random.gauss(center, std)))))
 
 
 # Position-specific center offsets (added to archetype stat_center)
@@ -292,6 +296,30 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
                        + viper_off.get(stat, 0)
                        + year_mod)
         results[stat] = _stat_roll(stat_center, std)
+
+    # ── Stat budget enforcement ──
+    # Prevent "all 99s" players by capping the total stat points a player can
+    # have.  The budget scales with archetype center so elite programs still
+    # produce better players — but no one is elite at *everything*.
+    # Budget = center * 11 + 44 (gives ~4 points of headroom per stat).
+    # Example: blue_blood center 87 → budget 87*11+44 = 1001 → avg stat ~91.
+    # A player who rolls 96 speed needs to sacrifice elsewhere.
+    stat_budget = center * len(_STAT_KEYS) + 44
+    stat_total = sum(results[s] for s in _STAT_KEYS)
+    if stat_total > stat_budget:
+        excess = stat_total - stat_budget
+        # Shave excess from the highest stats first (preserves player profile —
+        # their best stat stays best, it just gets trimmed)
+        ranked = sorted(_STAT_KEYS, key=lambda s: results[s], reverse=True)
+        for stat_key in ranked:
+            if excess <= 0:
+                break
+            # Don't reduce any stat below the archetype center
+            headroom = results[stat_key] - max(center, 15)
+            trim = min(excess, headroom)
+            if trim > 0:
+                results[stat_key] -= trim
+                excess -= trim
 
     # Height and weight
     if position in ("Offensive Line", "Defensive Line"):
@@ -494,7 +522,7 @@ def generate_roster(school_data):
         n_stats = random.randint(*archetype_data["hidden_gem_stats"])
         boosted_stats = random.sample(_STAT_KEYS, min(n_stats, len(_STAT_KEYS)))
         for stat_key in boosted_stats:
-            player['stats'][stat_key] = min(99, player['stats'][stat_key] + boost)
+            player['stats'][stat_key] = min(96, player['stats'][stat_key] + boost)
 
     # ── Program Icons ──
     # Doormats and underdogs get 1-2 players who can develop WAY beyond the
