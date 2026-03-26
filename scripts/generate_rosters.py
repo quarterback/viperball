@@ -36,10 +36,10 @@ PROGRAM_ARCHETYPES = {
     "doormat": {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
-        "stat_center": 28,             # team OVR lands ~15-42
+        "stat_center": 15,             # floor-level — pure project players
         "stat_spread": 12,             # wide — individual stats swing wildly
         "hidden_gem_count": (1, 2),    # 1-2 legit players — portal bait
-        "hidden_gem_boost": (30, 42),  # 28+36=64 → gem is a solid mid-tier player, not elite
+        "hidden_gem_boost": (20, 30),  # 15+25=40 → gem is merely competent, not a star
         "hidden_gem_stats": (3, 5),    # boost across some stats
         "potential_weights": {
             "freshman": [1, 3, 8, 35, 53],
@@ -53,10 +53,10 @@ PROGRAM_ARCHETYPES = {
     "underdog": {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
-        "stat_center": 50,             # team OVR lands ~36-64
+        "stat_center": 20,             # very raw — need multipliers to compete
         "stat_spread": 12,
         "hidden_gem_count": (1, 3),    # 1-3 legit players — portal targets
-        "hidden_gem_boost": (20, 30),  # 52+25=77 → gem reaches regional-power caliber
+        "hidden_gem_boost": (18, 25),  # 20+22=42 → gem has upside through development
         "hidden_gem_stats": (3, 5),    # boost across some stats
         "potential_weights": {
             "freshman": [4, 7, 14, 36, 39],
@@ -70,10 +70,10 @@ PROGRAM_ARCHETYPES = {
     "punching_above": {
         "label": "Punching Above Their Weight",
         "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
-        "stat_center": 65,             # team OVR lands ~51-79
+        "stat_center": 35,             # below average base — coaching matters
         "stat_spread": 12,
         "hidden_gem_count": (2, 3),    # 2-3 standouts
-        "hidden_gem_boost": (15, 22),  # 63+18=81 → gem is regional-power caliber
+        "hidden_gem_boost": (12, 18),  # 35+15=50 → gem has real tools to work with
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [10, 16, 24, 28, 22],
@@ -87,10 +87,10 @@ PROGRAM_ARCHETYPES = {
     "regional_power": {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
-        "stat_center": 74,             # team OVR lands ~60-88
+        "stat_center": 44,             # decent base — multipliers push them into contention
         "stat_spread": 12,
         "hidden_gem_count": (3, 5),    # 3-5 standouts
-        "hidden_gem_boost": (8, 14),   # 74+11=85 → gem is national-power caliber
+        "hidden_gem_boost": (8, 14),   # 44+11=55 → gem is a legit starter
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [22, 26, 22, 18, 12],
@@ -104,10 +104,10 @@ PROGRAM_ARCHETYPES = {
     "national_power": {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
-        "stat_center": 82,             # team OVR lands ~68-96
+        "stat_center": 52,             # solid base — multipliers create stars
         "stat_spread": 12,
-        "hidden_gem_count": (3, 5),    # deep bench of stars
-        "hidden_gem_boost": (4, 8),    # 82+6=88 → gem approaches All-American
+        "hidden_gem_count": (3, 5),    # deep bench of potential
+        "hidden_gem_boost": (6, 10),   # 52+8=60 → gem is a cornerstone player
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [38, 30, 16, 11, 5],
@@ -121,10 +121,10 @@ PROGRAM_ARCHETYPES = {
     "blue_blood": {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
-        "stat_center": 87,             # team OVR lands ~73-99
+        "stat_center": 64,             # best base in the game — but still needs development
         "stat_spread": 12,             # wide — elite in one stat, average in another
         "hidden_gem_count": (4, 6),    # stacked — stars everywhere
-        "hidden_gem_boost": (3, 6),    # 87+5=92 → gems are genuine All-Americans
+        "hidden_gem_boost": (5, 9),    # 57+7=64 → gems have highest ceiling for multipliers
         "hidden_gem_stats": (3, 5),
         "potential_weights": {
             "freshman": [50, 30, 12, 6, 2],
@@ -155,13 +155,13 @@ AI_ARCHETYPE_WEIGHTS = {
 # Format: "Conference Name" -> minimum stat_center (after archetype + jitter).
 # Conferences not listed have no floor (teams can be as bad as their archetype allows).
 CONFERENCE_FLOORS = {
-    "SEC": 55,           # range ~87-55 — worst SEC team is still solid
-    "Big Ten": 50,       # range ~84-50
-    "ACC": 62,           # range ~80-62 — tight, consistently good
-    "Big East": 48,      # range ~76-48
-    "Yankee Conference": 58,  # range ~80-58 — high floor
-    "Pac-12": 58,        # range ~82-58
-    "Pac-16": 58,        # alias — Pac-12 may be renamed Pac-16
+    "SEC": 25,           # range ~57-25 — worst SEC team still has a base to build on
+    "Big Ten": 20,       # range ~54-20
+    "ACC": 32,           # range ~50-32 — tight, consistently decent base
+    "Big East": 18,      # range ~46-18
+    "Yankee Conference": 28,  # range ~50-28 — high floor
+    "Pac-12": 28,        # range ~52-28
+    "Pac-16": 28,        # alias — Pac-12 may be renamed Pac-16
 }
 
 # Default archetype (matches existing generation behavior)
@@ -229,7 +229,7 @@ def _stat_roll(center, std):
     Ceiling is 96 — reaching 97-99 requires in-season development.
     This prevents freshly-generated rosters from spawning max-stat players.
     """
-    return max(15, min(96, int(round(random.gauss(center, std)))))
+    return max(10, min(96, int(round(random.gauss(center, std)))))
 
 
 # Position-specific center offsets (added to archetype stat_center)

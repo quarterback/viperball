@@ -44,55 +44,60 @@ National power teams got 4-7 hidden gems with +4-8 boosts. On a team already cen
 
 **Stat centers lowered for top three tiers:**
 
-| Archetype | Center (before → after) | Spread (before → after) | Effective OVR range |
+| Archetype | Center (original → final) | Spread (original → final) | Base OVR range |
 |---|---|---|---|
-| doormat | 28 → 28 | 5 → 12 | ~15-42 |
-| underdog | 50 → 50 | 6 → 12 | ~36-64 |
-| punching_above | 65 → 65 | 6 → 12 | ~51-79 |
-| regional_power | 78 → 74 | 5 → 12 | ~60-88 |
-| national_power | 89 → 82 | 4 → 12 | ~68-96 |
-| blue_blood | 95 → 87 | 3 → 12 | ~73-99 |
+| doormat | 28 → 15 | 5 → 12 | ~15-27 |
+| underdog | 50 → 20 | 6 → 12 | ~15-32 |
+| punching_above | 65 → 35 | 6 → 12 | ~23-47 |
+| regional_power | 78 → 44 | 5 → 12 | ~32-56 |
+| national_power | 89 → 52 | 4 → 12 | ~40-64 |
+| blue_blood | 95 → 64 | 3 → 12 | ~52-76 |
 
 **Key design decisions:**
-- Centers for lower tiers (doormat, underdog, punching_above) were left unchanged — these weren't the problem.
-- **All spreads unified to 12** (from 3-6), roughly 3-4x the original values. This is the biggest single change. With a gaussian spread of 12, individual stats on the same player swing ±12 points from center (1 sigma) and ±24 points (2 sigma). A blue blood Viper might have 97 speed but 75 awareness — she's "elite" in the open field but a liability reading defenses. That's a real player, not a generic 95 OVR robot.
-- The uniform spread across tiers means the *center* is what differentiates programs, not the consistency. A blue blood (center 87) and a doormat (center 28) still produce totally different rosters. But within each tier, individual players are interesting and varied.
-- Hidden gem counts reduced for blue blood (5-8 → 4-6) and national power (4-7 → 3-5) since the wider spreads already create natural standouts.
-- Hidden gem boost for blue blood increased slightly (1-4 → 3-6) since the lower center means gems need a bigger push to become All-Americans.
+- **All centers dropped by ~30 points.** This is the philosophical shift: base stats represent raw, undeveloped talent. Players arrive as projects. In-game multipliers, coaching, and the development system are what transform a 64-center blue blood recruit into an All-American. Nobody walks onto a roster already elite.
+- **All spreads unified to 12** (from 3-6). With a gaussian spread of 12, individual stats on the same player swing ±12 points from center (1 sigma) and ±24 points (2 sigma). A blue blood Viper might have 76 speed but 52 awareness — she has one elite tool to develop but needs coaching to round out her game.
+- The uniform spread across tiers means the *center* is what differentiates programs, not the consistency. A blue blood (center 64) and a doormat (center 15) still produce totally different rosters. But within each tier, individual players are interesting and varied.
+- Hidden gem boosts recalibrated proportionally for the new scale.
+- **OVR floor lowered from 40 to 15** across player_card.py, recruiting.py, and development.py so the full range of talent is visible rather than being clamped into an artificial floor.
 
 **Conference floors adjusted proportionally** to reflect the new center scale.
 
 ### Recruiting (`engine/recruiting.py`)
 
-**Star tier stat ranges shifted down ~4-5 points:**
+**Star tier stat ranges shifted down ~30 points:**
 
 | Star tier | Before | After |
 |---|---|---|
-| 5-star | 83-98 | 79-93 |
-| 4-star | 72-90 | 67-84 |
-| 3-star | 58-78 | 55-75 |
-| 2-star | 45-68 | 43-65 |
-| 1-star | 35-58 | 33-55 |
+| 5-star | 83-98 | 49-63 |
+| 4-star | 72-90 | 37-54 |
+| 3-star | 58-78 | 25-45 |
+| 2-star | 45-68 | 15-35 |
+| 1-star | 35-58 | 15-25 |
 
-A 5-star recruit now arrives as a 79-93 OVR player — elite and clearly special, but not an instant 95+ starter. They need development to reach All-American status, which makes the development system actually matter for top talent.
+A 5-star recruit now arrives at 49-63 — clearly the best available talent, but far from a finished product. In-game multipliers and development over 2-4 seasons are what transform them into stars. The journey IS the game.
 
 ### Transfer portal (`engine/transfer_portal.py`)
 
-**Stat ranges compressed and lowered:**
+**Stat ranges shifted down by 30:**
 
 | Player type | Before | After |
 |---|---|---|
-| Base (Soph/Jr) | 65-90 | 58-82 |
-| Senior/Graduate | 70-93 | 62-86 |
+| Base (Soph/Jr) | 65-90 | 28-52 |
+| Senior/Graduate | 70-93 | 32-56 |
 
-**5-star potential reduced:** 10% → 6% of portal players. The portal should be a source of solid depth and occasional gems, not an elite talent factory.
+**5-star potential reduced:** 10% → 6% of portal players. The portal is a depth tool, not a cheat code.
+
+### OVR floor (`player_card.py`, `recruiting.py`, `development.py`)
+
+**Floor lowered from 40 to 10.** With base stats this low, the old floor of 40 would have masked the entire bottom half of the talent spectrum. Lowering it to 10 makes the full range visible — a doormat freshman should *look* like a 15 OVR player, not be artificially propped up to 40.
 
 ## Expected Impact
 
-- **90+ OVR players become rare.** On a blue blood roster (best case), maybe 3-5 of 36 players will be 90+, not 30+. Even those players will have exploitable weaknesses in individual stats.
-- **Players have actual profiles.** A Viper with 95 speed and 72 awareness plays completely differently from one with 80 speed and 92 awareness. The wide spread (±12 per stat) means every player is a unique combination of strengths and weaknesses, not a flat OVR number.
-- **"Elite" becomes situational.** A player might be elite in one game where her speed dominates, then invisible the next week against a team with high tackling. This creates the kind of variance that makes games feel alive.
-- **Games should be competitive, not shootouts.** With individual stats swinging 24+ points within a single roster, no team is uniformly dominant across all phases.
+- **No more 90+ OVR players at generation.** The best a blue blood player can roll at generation is ~76 OVR (center 64 + position offsets + lucky rolls, capped at 96 per stat, constrained by stat budget). Reaching 80+ requires development. Reaching 90+ requires seasons of it.
+- **In-game multipliers become the star-making engine.** Base stats are the clay; coaching, scheme fit, and game reps are what sculpt it. A 5-star with 60 OVR who develops quick will *feel* like a rising star, not someone who arrived pre-made.
+- **Players have actual profiles.** With spread 12 on a center of 64, a blue blood Viper might roll 76 speed and 52 awareness. She's fast but raw — exactly what a freshman should be.
+- **"Elite" is earned, not generated.** The progression from 50s OVR to 80+ over a 4-year career is the core loop. Every star has a development story.
+- **Games should be competitive, not shootouts.** With base stats in the 40s-60s, scoring is driven by scheme and multipliers rather than raw stat advantages.
 - **Roster management becomes meaningful.** Teams have clear stars, solid contributors, and developmental players. Recruiting and portal decisions matter because you're filling actual skill gaps, not swapping one 95 for another.
 - **Upsets become plausible.** A punching_above team with a couple hidden gems can now genuinely threaten a national power whose bottom starters might be in the mid-60s on key stats. The overlap in the tails creates drama.
 - **Development matters.** A 5-star arriving at 82 OVR needs to grow into a 90+ player over 2-3 seasons. That progression arc is the story of a dynasty mode.

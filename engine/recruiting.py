@@ -170,7 +170,7 @@ class Recruit:
             + self.true_kick_power * w["kick_power"]
             + self.true_kick_accuracy * w["kick_accuracy"]
         ) / total_weight
-        return min(99, max(40, int(raw)))
+        return min(99, max(10, int(raw)))
 
     def get_visible_attrs(self) -> Dict[str, object]:
         """Return what the user can see (depends on scout level)."""
@@ -302,11 +302,11 @@ _STAR_DISTRIBUTION = {
 
 # Stat generation by star tier — wide gaps prevent talent compression
 _STAT_RANGES: Dict[int, Tuple[int, int]] = {
-    5: (79, 93),
-    4: (67, 84),
-    3: (55, 75),
-    2: (43, 65),
-    1: (33, 55),
+    5: (49, 63),
+    4: (37, 54),
+    3: (25, 45),
+    2: (15, 35),
+    1: (15, 25),
 }
 
 # Development trait probabilities by star tier
@@ -650,7 +650,7 @@ def scout_recruit(
         top3 = sorted(all_attrs.items(), key=lambda x: x[1], reverse=True)[:3]
         for attr_name, true_val in top3:
             noise = rng.randint(-scouting_error, scouting_error)
-            recruit.scouted_attrs[attr_name] = max(40, min(99, true_val + noise))
+            recruit.scouted_attrs[attr_name] = max(10, min(99, true_val + noise))
 
     return recruit.get_visible_attrs()
 
@@ -1249,7 +1249,7 @@ def _apply_hs_development(
         elif rng.random() < 0.10 and max_loss > 0:
             # Small regression chance (injury, laziness, etc.)
             loss = rng.randint(1, max_loss)
-            setattr(recruit, attr, max(40, current - loss))
+            setattr(recruit, attr, max(10, current - loss))
 
     if improved_any:
         notes.append(f"Notable improvement during {prospect.grade} grade year")
@@ -1492,7 +1492,7 @@ class HSRecruitingPipeline:
             for attr_name, true_val in sorted_attrs[:n_visible]:
                 # Add grade-appropriate noise
                 noisy = true_val + random.randint(-noise, noise)
-                visible[attr_name] = max(40, min(99, noisy))
+                visible[attr_name] = max(10, min(99, noisy))
             entry["visible_attributes"] = visible
 
             if p.breakout:

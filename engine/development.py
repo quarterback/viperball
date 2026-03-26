@@ -162,7 +162,7 @@ _SENIOR_DECLINE_ATTRS = ["speed", "stamina", "agility"]
 _DECLINE_RANGE = (-2, 0)   # -2 to 0 points
 
 
-def _clamp(val: int, lo: int = 40, hi: int = 99) -> int:
+def _clamp(val: int, lo: int = 10, hi: int = 99) -> int:
     return max(lo, min(hi, val))
 
 
@@ -449,7 +449,7 @@ def apply_pro_development(
         lo, hi = curve["physical"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(40, min(99, old_val + delta))
+        new_val = max(10, min(99, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val
@@ -458,7 +458,7 @@ def apply_pro_development(
         lo, hi = curve["mental"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(40, min(99, old_val + delta))
+        new_val = max(10, min(99, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val
@@ -467,7 +467,7 @@ def apply_pro_development(
         lo, hi = curve["kicking"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(40, min(99, old_val + delta))
+        new_val = max(10, min(99, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val

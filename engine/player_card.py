@@ -545,7 +545,7 @@ class PlayerCard:
             self.kick_power   * w["kick_power"]    +
             self.kick_accuracy * w["kick_accuracy"]
         ) / total_weight
-        return min(99, max(40, int(raw)))
+        return min(99, max(10, int(raw)))
 
     @property
     def star_rating(self) -> str:

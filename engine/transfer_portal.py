@@ -864,11 +864,11 @@ def generate_quick_portal(
             k=1,
         )[0]
 
-        # Stat range: portal players are decent (they had college experience)
-        # Ceiling lowered to prevent portal from flooding rosters with 90+ talent
-        lo, hi = 58, 82
+        # Stat range: portal players start with modest base stats — in-game
+        # multipliers and development are what make them competitive
+        lo, hi = 28, 52
         if year_class in ("Senior", "Graduate"):
-            lo, hi = 62, 86
+            lo, hi = 32, 56
 
         def _stat():
             return rng.randint(lo, hi)
