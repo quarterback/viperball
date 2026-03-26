@@ -34,8 +34,8 @@ log = logging.getLogger(__name__)
 
 PIXELLAB_API_URL = "https://api.pixellab.ai/v1/generate-image-pixflux"
 PIXELLAB_TIMEOUT = 120
-PIXELLAB_MAX_RETRIES = 4
-PIXELLAB_RETRY_BACKOFF = 2
+PIXELLAB_MAX_RETRIES = 6
+PIXELLAB_RETRY_BACKOFF = 4  # seconds, doubled each retry — generous for 429s
 BANNER_WIDTH = 320   # wide panoramic banner
 BANNER_HEIGHT = 128  # shorter height for header strip
 
