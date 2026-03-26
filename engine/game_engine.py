@@ -4775,6 +4775,18 @@ class ViperballEngine:
                             f" ({_to_label}, {to_entry['remaining']} remaining)"
                         )
 
+            # Coach may waste a challenge on a correct call (~0.1% per play)
+            wasted_by = self._coach_wastes_challenge()
+            if wasted_by:
+                waster_name = (self.home_team.name if wasted_by == "home"
+                               else self.away_team.name)
+                challenges_left = (self.state.home_challenges if wasted_by == "home"
+                                   else self.state.away_challenges)
+                play.description += (
+                    f" | CHALLENGE {waster_name} — call stands"
+                    f" ({challenges_left} remaining)"
+                )
+
             # Increment plays_since_last_touch for all non-involved players
             team_on_off = self.get_offensive_team()
             involved_names = set(play.players_involved) if play.players_involved else set()

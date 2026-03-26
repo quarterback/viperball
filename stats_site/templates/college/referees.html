@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Referees — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span>Referees
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>OFFICIALS</h1>
+  <div class="subtitle">{{ referees|length }} referees with game activity</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/referees" class="active">Referees</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{# Sort options #}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Sort:</strong>
+  {% for label, key in [('Games', 'games'), ('Name', 'name'), ('Pen/Game', 'ppg'), ('Blown Calls', 'blown'), ('Playoff Games', 'playoff'), ('Experience', 'exp')] %}
+  {% if not loop.first %}&middot;{% endif %}
+  <a href="/stats/college/{{ session_id }}/referees?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if referees %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Exp</th>
+      <th>Games</th>
+      <th>Pen/G</th>
+      <th>Blown Calls</th>
+      <th>BC/G</th>
+      <th>Playoff</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in referees %}
+    <tr>
+      <td><a href="/stats/college/{{ session_id }}/referee/{{ r.name }}">{{ r.name }}</a></td>
+      <td>{{ r.years_experience }} yr{{ 's' if r.years_experience != 1 }}</td>
+      <td>{{ r.games }}</td>
+      <td>{{ r.penalties_per_game }}</td>
+      <td>{{ r.blown_calls }}</td>
+      <td>{{ r.blown_calls_per_game }}</td>
+      <td>{{ r.playoff_games if r.playoff_games else '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:var(--fg-dim)">No referee data available yet. Simulate some games first.</p>
+{% endif %}
+{% endblock %}
