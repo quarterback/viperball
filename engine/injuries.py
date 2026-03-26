@@ -11,9 +11,9 @@ Comprehensive model covering:
 
 Tiers:
     day_to_day   – Available but diminished, or misses 0-1 games
-    minor        – Out 1-2 weeks
-    moderate     – Out 3-5 weeks
-    major        – Out 6-8 weeks
+    minor        – Out 1-3 weeks
+    moderate     – Out 3-6 weeks
+    major        – Out 6-10 weeks
     severe       – Season-ending
 
 Usage:
@@ -91,6 +91,9 @@ _ON_FIELD_CONTACT = {
         {"desc": "bruised shin", "body": "shin", "freq": 3, "inf_run": 1},
         {"desc": "minor back contusion", "body": "back", "freq": 2, "inf_run": 1},
         {"desc": "mild whiplash", "body": "neck", "freq": 1, "nagging": 1},
+        {"desc": "tailbone bruise", "body": "back", "freq": 2, "inf_run": 1},
+        {"desc": "toe contusion", "body": "foot", "freq": 3, "inf_run": 1, "inf_kick": 1},
+        {"desc": "facial bruise", "body": "head", "freq": 2},
     ],
     "minor": [
         {"desc": "sprained ankle", "body": "ankle", "freq": 5, "reinjury": 1, "nagging": 1, "inf_run": 2},
@@ -106,6 +109,9 @@ _ON_FIELD_CONTACT = {
         {"desc": "bruised foot", "body": "foot", "freq": 3, "inf_run": 1, "inf_kick": 1},
         {"desc": "neck strain", "body": "neck", "freq": 2, "nagging": 1, "inf_run": 1},
         {"desc": "lacerated hand", "body": "hand", "freq": 1, "inf_lateral": 1},
+        {"desc": "sprained wrist", "body": "wrist", "freq": 3, "reinjury": 1, "inf_lateral": 2},
+        {"desc": "facial laceration", "body": "head", "freq": 2, "inf_run": 0},
+        {"desc": "forearm contusion", "body": "forearm", "freq": 2, "inf_lateral": 1},
     ],
     "moderate": [
         {"desc": "MCL sprain (grade 2)", "body": "knee", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 3, "min_weeks": 3, "max_weeks": 6},
@@ -120,6 +126,9 @@ _ON_FIELD_CONTACT = {
         {"desc": "strained back", "body": "back", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2, "inf_kick": 1},
         {"desc": "thumb ligament tear", "body": "hand", "freq": 2, "reinjury": 1, "surgery": 1, "inf_lateral": 2},
         {"desc": "knee hyperextension", "body": "knee", "freq": 2, "reinjury": 1, "inf_run": 2},
+        {"desc": "orbital fracture", "body": "head", "freq": 1, "surgery": 1, "min_weeks": 4, "max_weeks": 6},
+        {"desc": "dislocated wrist", "body": "wrist", "freq": 1, "surgery": 1, "inf_lateral": 3, "min_weeks": 4, "max_weeks": 8},
+        {"desc": "clavicle bruise", "body": "collarbone", "freq": 2, "nagging": 1, "inf_lateral": 1},
     ],
     "major": [
         {"desc": "broken collarbone", "body": "collarbone", "freq": 2, "surgery": 1, "inf_lateral": 2, "min_weeks": 6, "max_weeks": 10},
@@ -133,6 +142,8 @@ _ON_FIELD_CONTACT = {
         {"desc": "herniated disc", "body": "back", "freq": 2, "reinjury": 2, "nagging": 1, "surgery": 1, "inf_run": 3, "inf_kick": 2, "min_weeks": 8, "max_weeks": 15},
         {"desc": "stress fracture (shin)", "body": "shin", "freq": 2, "reinjury": 1, "inf_run": 3, "min_weeks": 6, "max_weeks": 10},
         {"desc": "stress fracture (foot)", "body": "foot", "freq": 2, "reinjury": 1, "inf_run": 3, "inf_kick": 3, "min_weeks": 6, "max_weeks": 10},
+        {"desc": "fractured hand", "body": "hand", "freq": 1, "surgery": 1, "inf_lateral": 3, "min_weeks": 6, "max_weeks": 10},
+        {"desc": "broken jaw", "body": "head", "freq": 1, "surgery": 1, "min_weeks": 6, "max_weeks": 10},
     ],
     "severe": [
         {"desc": "ACL tear", "body": "knee", "freq": 3, "reinjury": 2, "surgery": 2, "inf_run": 3},
@@ -145,6 +156,8 @@ _ON_FIELD_CONTACT = {
         {"desc": "torn UCL (elbow)", "body": "elbow", "freq": 1, "surgery": 2, "inf_lateral": 3, "inf_kick": 3},
         {"desc": "broken femur", "body": "leg", "freq": 1, "surgery": 2, "inf_run": 3},
         {"desc": "torn rotator cuff", "body": "shoulder", "freq": 2, "reinjury": 1, "surgery": 2, "inf_lateral": 3, "inf_kick": 2},
+        {"desc": "multi-ligament knee injury", "body": "knee", "freq": 1, "surgery": 2, "inf_run": 3, "inf_lateral": 3},
+        {"desc": "severe skull fracture (no hard helmet)", "body": "head", "freq": 1, "surgery": 2, "inf_run": 3, "inf_kick": 3, "inf_lateral": 3},
     ],
 }
 
@@ -167,6 +180,10 @@ _ON_FIELD_NONCONTACT = {
         {"desc": "hamstring spasms", "body": "hamstring", "freq": 3, "nagging": 1, "inf_run": 1},
         {"desc": "calf cramp", "body": "calf", "freq": 3, "inf_run": 1},
         {"desc": "shin splints", "body": "shin", "freq": 3, "nagging": 1, "inf_run": 1},
+        {"desc": "foot arch soreness", "body": "foot", "freq": 3, "nagging": 1, "inf_run": 1, "inf_kick": 1},
+        {"desc": "tight IT band", "body": "knee", "freq": 3, "nagging": 1, "inf_run": 1},
+        {"desc": "ankle stiffness", "body": "ankle", "freq": 4, "nagging": 1, "inf_run": 1},
+        {"desc": "sore Achilles", "body": "achilles", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 1},
     ],
     "minor": [
         {"desc": "strained hamstring", "body": "hamstring", "freq": 5, "reinjury": 2, "nagging": 1, "inf_run": 2},
@@ -182,6 +199,10 @@ _ON_FIELD_NONCONTACT = {
         {"desc": "mild hip strain", "body": "hip", "freq": 3, "nagging": 1, "inf_run": 2},
         {"desc": "back tightness", "body": "back", "freq": 4, "reinjury": 1, "nagging": 1, "inf_run": 1},
         {"desc": "patellar tendinitis", "body": "knee", "freq": 3, "reinjury": 2, "nagging": 1, "inf_run": 2, "inf_kick": 1},
+        {"desc": "Achilles tendinitis", "body": "achilles", "freq": 3, "reinjury": 2, "nagging": 1, "inf_run": 2, "inf_kick": 1},
+        {"desc": "plantar fasciitis", "body": "foot", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2, "inf_kick": 1},
+        {"desc": "shin splints (persistent)", "body": "shin", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2},
+        {"desc": "ankle tendinitis", "body": "ankle", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2},
     ],
     "moderate": [
         {"desc": "pulled hamstring (grade 2)", "body": "hamstring", "freq": 4, "reinjury": 2, "nagging": 1, "inf_run": 3, "min_weeks": 3, "max_weeks": 6},
@@ -194,6 +215,9 @@ _ON_FIELD_NONCONTACT = {
         {"desc": "oblique strain", "body": "oblique", "freq": 2, "reinjury": 1, "inf_kick": 2, "inf_lateral": 1},
         {"desc": "lower back strain", "body": "back", "freq": 3, "reinjury": 2, "nagging": 1, "inf_run": 2, "inf_kick": 2},
         {"desc": "IT band syndrome", "body": "knee", "freq": 2, "reinjury": 1, "nagging": 1, "inf_run": 2},
+        {"desc": "calf strain (grade 2)", "body": "calf", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 3},
+        {"desc": "Achilles tendinopathy", "body": "achilles", "freq": 2, "reinjury": 2, "nagging": 1, "inf_run": 3, "inf_kick": 1},
+        {"desc": "sports hernia", "body": "groin", "freq": 2, "reinjury": 1, "surgery": 1, "inf_run": 2, "inf_kick": 2, "min_weeks": 4, "max_weeks": 8},
     ],
     "major": [
         {"desc": "stress fracture (shin)", "body": "shin", "freq": 2, "reinjury": 1, "inf_run": 3, "min_weeks": 6, "max_weeks": 10},
@@ -203,6 +227,8 @@ _ON_FIELD_NONCONTACT = {
         {"desc": "torn abdominal muscle", "body": "abdomen", "freq": 2, "reinjury": 1, "surgery": 1, "inf_run": 3, "inf_kick": 3, "min_weeks": 6, "max_weeks": 10},
         {"desc": "plantar fascia tear", "body": "foot", "freq": 1, "reinjury": 1, "nagging": 1, "inf_run": 3, "inf_kick": 3, "min_weeks": 6, "max_weeks": 10},
         {"desc": "torn thigh muscle", "body": "thigh", "freq": 2, "reinjury": 1, "surgery": 1, "inf_run": 3, "min_weeks": 8, "max_weeks": 12},
+        {"desc": "complete calf tear", "body": "calf", "freq": 1, "reinjury": 1, "surgery": 1, "inf_run": 3, "inf_kick": 2, "min_weeks": 8, "max_weeks": 12},
+        {"desc": "stress fracture (pelvis)", "body": "hip", "freq": 1, "inf_run": 3, "min_weeks": 8, "max_weeks": 14},
     ],
     "severe": [
         {"desc": "ACL tear (non-contact)", "body": "knee", "freq": 3, "reinjury": 2, "surgery": 2, "inf_run": 3},
@@ -210,6 +236,8 @@ _ON_FIELD_NONCONTACT = {
         {"desc": "complete hamstring avulsion", "body": "hamstring", "freq": 1, "surgery": 2, "inf_run": 3},
         {"desc": "torn quadriceps tendon", "body": "quad", "freq": 1, "surgery": 2, "inf_run": 3, "inf_kick": 3},
         {"desc": "complete groin tear", "body": "groin", "freq": 1, "surgery": 2, "inf_run": 3},
+        {"desc": "bilateral ACL tear", "body": "knee", "freq": 1, "reinjury": 2, "surgery": 2, "inf_run": 3, "inf_lateral": 3},
+        {"desc": "complete Achilles rupture (mid-stride)", "body": "achilles", "freq": 1, "surgery": 2, "inf_run": 3, "inf_kick": 3},
     ],
 }
 
@@ -230,6 +258,9 @@ _PRACTICE_INJURY = {
         {"desc": "finger discomfort", "body": "hand", "freq": 3, "inf_lateral": 1},
         {"desc": "neck stiffness from drills", "body": "neck", "freq": 2, "nagging": 1},
         {"desc": "minor shoulder strain", "body": "shoulder", "freq": 3, "nagging": 1, "inf_lateral": 1},
+        {"desc": "bruised toenail", "body": "foot", "freq": 2, "inf_run": 1},
+        {"desc": "mild calf cramp (conditioning)", "body": "calf", "freq": 4, "inf_run": 1},
+        {"desc": "blistered feet", "body": "foot", "freq": 3, "inf_run": 1},
     ],
     "minor": [
         {"desc": "ankle sprain (practice)", "body": "ankle", "freq": 5, "reinjury": 1, "inf_run": 2},
@@ -242,6 +273,8 @@ _PRACTICE_INJURY = {
         {"desc": "mild shoulder inflammation", "body": "shoulder", "freq": 4, "nagging": 1, "inf_lateral": 1},
         {"desc": "knee inflammation", "body": "knee", "freq": 4, "reinjury": 2, "nagging": 1, "inf_run": 2},
         {"desc": "rotator cuff strain", "body": "shoulder", "freq": 2, "reinjury": 1, "inf_lateral": 2},
+        {"desc": "groin pull (agility drill)", "body": "groin", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2},
+        {"desc": "quad strain (sprints)", "body": "quad", "freq": 3, "reinjury": 1, "nagging": 1, "inf_run": 2},
     ],
     "moderate": [
         {"desc": "ligament sprain (practice collision)", "body": "knee", "freq": 2, "reinjury": 1, "inf_run": 2},
@@ -251,17 +284,21 @@ _PRACTICE_INJURY = {
         {"desc": "knee bursitis", "body": "knee", "freq": 2, "nagging": 1, "inf_run": 2},
         {"desc": "lat strain", "body": "back", "freq": 2, "reinjury": 1, "inf_lateral": 2},
         {"desc": "shoulder strain", "body": "shoulder", "freq": 3, "reinjury": 1, "inf_lateral": 2},
+        {"desc": "concussion (practice collision — no hard helmet)", "body": "head", "freq": 2, "reinjury": 2, "inf_run": 1, "inf_kick": 1, "inf_lateral": 1, "min_weeks": 3, "max_weeks": 5},
+        {"desc": "hamstring tear (conditioning)", "body": "hamstring", "freq": 2, "reinjury": 2, "nagging": 1, "inf_run": 3, "min_weeks": 3, "max_weeks": 6},
     ],
     "major": [
         {"desc": "torn meniscus (practice)", "body": "knee", "freq": 2, "reinjury": 2, "surgery": 2, "inf_run": 3, "min_weeks": 6, "max_weeks": 10},
         {"desc": "broken foot (dropped weight)", "body": "foot", "freq": 1, "surgery": 1, "inf_run": 3, "inf_kick": 3, "min_weeks": 8, "max_weeks": 12},
         {"desc": "SLAP tear (shoulder)", "body": "shoulder", "freq": 1, "reinjury": 1, "surgery": 2, "inf_lateral": 3, "min_weeks": 8, "max_weeks": 12},
         {"desc": "shoulder labral tear", "body": "shoulder", "freq": 2, "reinjury": 1, "surgery": 2, "inf_lateral": 3, "min_weeks": 8, "max_weeks": 12},
+        {"desc": "broken collarbone (practice)", "body": "collarbone", "freq": 1, "surgery": 1, "inf_lateral": 2, "min_weeks": 6, "max_weeks": 10},
     ],
     "severe": [
         {"desc": "ACL tear (practice)", "body": "knee", "freq": 2, "reinjury": 2, "surgery": 2, "inf_run": 3},
         {"desc": "neck injury (practice collision)", "body": "neck", "freq": 1, "surgery": 1, "inf_run": 3, "inf_lateral": 3},
         {"desc": "torn Achilles (conditioning)", "body": "achilles", "freq": 1, "surgery": 2, "inf_run": 3, "inf_kick": 3},
+        {"desc": "patellar tendon rupture (weightlifting)", "body": "knee", "freq": 1, "surgery": 2, "inf_run": 3, "inf_kick": 3},
     ],
 }
 
@@ -290,6 +327,10 @@ _OFF_FIELD = {
         # Academic / personal
         {"desc": "missed class — making up coursework", "body": "n/a", "freq": 3},
         {"desc": "exam conflicts — limited availability", "body": "n/a", "freq": 3},
+        {"desc": "dental procedure", "body": "n/a", "freq": 1},
+        {"desc": "skin rash", "body": "n/a", "freq": 1},
+        {"desc": "sore throat", "body": "n/a", "freq": 4},
+        {"desc": "fatigue / low energy", "body": "n/a", "freq": 3, "nagging": 1},
     ],
     "minor": [
         # Illness
@@ -305,6 +346,10 @@ _OFF_FIELD = {
         {"desc": "family emergency (brief)", "body": "n/a", "freq": 3},
         {"desc": "personal leave", "body": "n/a", "freq": 3},
         {"desc": "bereavement leave", "body": "n/a", "freq": 2},
+        {"desc": "strep throat", "body": "n/a", "freq": 2},
+        {"desc": "bronchitis", "body": "n/a", "freq": 2},
+        {"desc": "ear infection", "body": "n/a", "freq": 1},
+        {"desc": "wisdom tooth extraction", "body": "n/a", "freq": 1, "min_weeks": 1, "max_weeks": 2},
     ],
     "moderate": [
         # Illness / medical
@@ -322,6 +367,9 @@ _OFF_FIELD = {
         {"desc": "family hardship leave", "body": "n/a", "freq": 2},
         # Administrative
         {"desc": "visa issues — delayed return", "body": "n/a", "freq": 1, "min_weeks": 3, "max_weeks": 6},
+        {"desc": "eating disorder treatment", "body": "n/a", "freq": 1, "min_weeks": 4, "max_weeks": 8},
+        {"desc": "substance abuse program", "body": "n/a", "freq": 1, "min_weeks": 3, "max_weeks": 6},
+        {"desc": "appendicitis", "body": "n/a", "freq": 1, "surgery": 2, "min_weeks": 3, "max_weeks": 5},
     ],
     "major": [
         # Academic
@@ -335,6 +383,8 @@ _OFF_FIELD = {
         {"desc": "team suspension — conduct detrimental", "body": "n/a", "freq": 1, "min_weeks": 4, "max_weeks": 8},
         # Medical
         {"desc": "surgery (non-sport condition)", "body": "n/a", "freq": 1, "min_weeks": 6, "max_weeks": 12},
+        {"desc": "study abroad conflict — extended absence", "body": "n/a", "freq": 1, "min_weeks": 6, "max_weeks": 10},
+        {"desc": "long-term mental health treatment", "body": "n/a", "freq": 1, "min_weeks": 6, "max_weeks": 12},
     ],
     "severe": [
         {"desc": "entered transfer portal", "body": "n/a", "freq": 3},
@@ -344,6 +394,8 @@ _OFF_FIELD = {
         {"desc": "indefinite suspension — under investigation", "body": "n/a", "freq": 1},
         {"desc": "medical disqualification", "body": "n/a", "freq": 1},
         {"desc": "withdrew from university", "body": "n/a", "freq": 1},
+        {"desc": "declared for professional draft", "body": "n/a", "freq": 1},
+        {"desc": "permanent academic ineligibility", "body": "n/a", "freq": 1},
     ],
 }
 
