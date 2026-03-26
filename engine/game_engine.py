@@ -4658,7 +4658,28 @@ class ViperballEngine:
                     # Coach snapped just in time — clamp to the limit
                     final_time = play_clock_limit
 
-            time_elapsed = final_time
+            # ── Clock stoppage rules ──
+            # The clock stops after:
+            #   - Scoring plays (TD, kick, safety, pindown)
+            #   - Penalties (dead ball — clock resets)
+            #   - Incomplete kick passes
+            #   - Out of bounds (not modeled separately)
+            # After a stoppage, only a brief reset period elapses,
+            # not a full play clock.
+            scoring_results = (
+                "touchdown", "successful_kick", "safety", "pindown",
+                "punt_return_td", "int_return_td", "missed_dk_return_td",
+            )
+            clock_stops = play.result in scoring_results or play.penalty is not None
+            # Incomplete kick passes also stop the clock
+            if play.play_type == "kick_pass" and play.result == "incomplete":
+                clock_stops = True
+
+            if clock_stops:
+                time_elapsed = random.randint(3, 8)  # Brief stoppage
+            else:
+                time_elapsed = final_time
+
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
