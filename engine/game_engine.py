@@ -4658,26 +4658,52 @@ class ViperballEngine:
                     # Coach snapped just in time — clamp to the limit
                     final_time = play_clock_limit
 
-            # ── Clock stoppage rules ──
-            # The clock stops after:
-            #   - Scoring plays (TD, kick, safety, pindown)
-            #   - Penalties (dead ball — clock resets)
+            # ══════════════════════════════════════════════════════
+            # GAME CLOCK vs PLAY CLOCK
+            #
+            # Play clock = 40-second shot clock between snaps.
+            #   This is what `final_time` represents: how long the
+            #   offense takes to get set and snap.  It varies by
+            #   tempo (18-38s) and situation (hurry-up, clock burn).
+            #
+            # Game clock = the 10-minute quarter clock.
+            #   RUNS during live play AND between plays (while the
+            #   play clock ticks down) — UNLESS the game clock is
+            #   stopped.
+            #
+            # Game clock STOPS after:
+            #   - Scoring plays (TD, kick, safety, pindown, return TD)
+            #   - Penalties (dead ball foul)
             #   - Incomplete kick passes
-            #   - Out of bounds (not modeled separately)
-            # After a stoppage, only a brief reset period elapses,
-            # not a full play clock.
+            #   - Timeouts (handled separately)
+            #   - 3-minute warning (handled separately)
+            #
+            # When the game clock is stopped, only the play itself
+            # burns game-clock time (~4-7 seconds of live action).
+            # The play clock still runs between snaps, but the game
+            # clock doesn't resume until the next snap.
+            #
+            # When the game clock is running, the full play clock
+            # duration (final_time) is burned from the game clock.
+            # ══════════════════════════════════════════════════════
             scoring_results = (
                 "touchdown", "successful_kick", "safety", "pindown",
                 "punt_return_td", "int_return_td", "missed_dk_return_td",
             )
-            clock_stops = play.result in scoring_results or play.penalty is not None
-            # Incomplete kick passes also stop the clock
-            if play.play_type == "kick_pass" and play.result == "incomplete":
-                clock_stops = True
+            game_clock_stopped = (
+                play.result in scoring_results
+                or play.penalty is not None
+                or (play.play_type == "kick_pass" and play.result == "incomplete")
+            )
 
-            if clock_stops:
-                time_elapsed = random.randint(3, 8)  # Brief stoppage
+            if game_clock_stopped:
+                # Game clock was stopped — only the live-action play
+                # time elapses (~4-7 seconds).  The play clock runs
+                # between snaps but doesn't drain the game clock.
+                time_elapsed = random.randint(4, 7)
             else:
+                # Game clock running — full play clock drains from
+                # the game clock (play action + between-snap time).
                 time_elapsed = final_time
 
             prev_time = self.state.time_remaining
