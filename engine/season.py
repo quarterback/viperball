@@ -839,6 +839,7 @@ class WeeklyPoll:
     """Complete poll for a single week"""
     week: int
     rankings: List[PollRanking] = field(default_factory=list)
+    full_ranking_map: Dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -2348,7 +2349,10 @@ class Season:
     def _get_current_rankings(self) -> Dict[str, int]:
         """Get current team rankings from latest poll, or by win pct if no poll exists"""
         if self.weekly_polls:
-            return {r.team_name: r.rank for r in self.weekly_polls[-1].rankings}
+            latest = self.weekly_polls[-1]
+            if latest.full_ranking_map:
+                return latest.full_ranking_map
+            return {r.team_name: r.rank for r in latest.rankings}
         return self._rankings_by_record()
 
     def _rankings_by_record(self) -> Dict[str, int]:
@@ -2374,6 +2378,8 @@ class Season:
             else:
                 break
         if best_poll is not None:
+            if best_poll.full_ranking_map:
+                return best_poll.full_ranking_map
             return {r.team_name: r.rank for r in best_poll.rankings}
         return self._rankings_by_record()
 
@@ -2609,7 +2615,9 @@ class Season:
                 sos_rank=sos_rank_map.get(team_name, 0),
             ))
 
-        self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings))
+        full_rank_map = {name: i + 1 for i, (name, _, _) in enumerate(power_rankings)}
+        self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings,
+                                            full_ranking_map=full_rank_map))
 
     def get_standings_sorted(self) -> List[TeamRecord]:
         """Get standings sorted by win percentage, then point differential"""
