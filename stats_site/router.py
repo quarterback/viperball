@@ -2889,6 +2889,49 @@ def college_team_stats(request: Request, session_id: str, sort: str = "total_yar
     ))
 
 
+@router.get("/college/{session_id}/injuries", response_class=HTMLResponse)
+def college_injuries(request: Request, session_id: str):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    tracker = sess.get("injury_tracker")
+    current_week = season.get_last_completed_week()
+
+    # Build injury data grouped by conference → team
+    conferences = {}  # {conf_name: {team_name: [injury_dicts]}}
+    summary = {"active": 0, "dtd": 0, "out": 0, "season_ending": 0, "season_total": 0}
+
+    for conf_name in sorted(season.conferences.keys()):
+        conferences[conf_name] = {}
+        for team_name in sorted(season.conferences[conf_name]):
+            team_injuries = []
+            if tracker:
+                active = tracker.get_active_injuries(team_name, current_week)
+                for inj in active:
+                    d = inj.to_dict()
+                    team_injuries.append(d)
+                    summary["active"] += 1
+                    if inj.is_season_ending:
+                        summary["season_ending"] += 1
+                    elif inj.is_day_to_day:
+                        summary["dtd"] += 1
+                    else:
+                        summary["out"] += 1
+            conferences[conf_name][team_name] = team_injuries
+
+    if tracker:
+        summary["season_total"] = len(tracker.season_log)
+
+    return templates.TemplateResponse("college/injuries.html", _ctx(
+        request, section="college", session_id=session_id,
+        conferences=conferences,
+        summary=summary,
+        current_week=current_week,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/playoffs", response_class=HTMLResponse)
 def college_playoffs(request: Request, session_id: str):
     api = _get_api()
