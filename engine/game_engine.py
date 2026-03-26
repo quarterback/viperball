@@ -3177,6 +3177,8 @@ class ViperballEngine:
         # Timeout-related tracking
         self._consecutive_opponent_scores = {"home": 0, "away": 0}  # Consecutive scoring drives by opponent
         self._last_play_yards = 0  # Yards gained on last play (for scheme reset logic)
+        # Game clock state: True = stopped (after score, penalty, incomplete)
+        self._game_clock_stopped = False
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -4696,15 +4698,40 @@ class ViperballEngine:
                 or (play.play_type == "kick_pass" and play.result == "incomplete")
             )
 
-            if game_clock_stopped:
-                # Game clock was stopped — only the live-action play
-                # time elapses (~4-7 seconds).  The play clock runs
-                # between snaps but doesn't drain the game clock.
-                time_elapsed = random.randint(4, 7)
+            # Live-action play time: 3-9 seconds depending on play type.
+            # Short runs/dives = 3-5s.  Long gains, kick passes with
+            # laterals, and plays that move the ball downfield = 6-9s.
+            yds = abs(play.yards_gained) if play.yards_gained else 0
+            lat_count = play.laterals if play.laterals else 0
+            if play.play_type in ("punt", "drop_kick", "place_kick"):
+                action_time = random.randint(5, 8)  # Kicking plays take longer
+            elif yds >= 20 or lat_count >= 2:
+                action_time = random.randint(6, 9)  # Big plays / lateral chains
+            elif yds >= 10 or play.play_type == "kick_pass":
+                action_time = random.randint(5, 8)  # Medium gains, kick passes
             else:
-                # Game clock running — full play clock drains from
-                # the game clock (play action + between-snap time).
+                action_time = random.randint(3, 6)  # Short runs, stuffs
+
+            # Was the game clock already stopped coming into this play?
+            # (from a previous score, penalty, incomplete, etc.)
+            clock_was_stopped = getattr(self, '_game_clock_stopped', False)
+
+            if clock_was_stopped or game_clock_stopped:
+                # Game clock was stopped — only the live-action play
+                # time elapses.  The play clock ran between snaps
+                # but didn't drain the game clock.  The game clock
+                # restarts at the snap, so only action time counts.
+                time_elapsed = action_time
+            else:
+                # Game clock running continuously — the full
+                # snap-to-snap interval (play clock + action)
+                # drains the game clock.
                 time_elapsed = final_time
+
+            # Update game clock stopped state for NEXT play.
+            # If this play stopped the clock, it stays stopped
+            # through the transition until the next snap.
+            self._game_clock_stopped = game_clock_stopped
 
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
@@ -4829,28 +4856,24 @@ class ViperballEngine:
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    # Possession reset consumes clock (celebration, setup)
-                    self.state.time_remaining = max(0, self.state.time_remaining - 10)
+                    # Game clock is stopped after a score — no additional
+                    # time deduction.  Clock restarts at the next snap.
                     self.kickoff(receiving)
                 elif play.result == "successful_kick":
                     kicking_team = self.state.possession
                     receiving = "away" if kicking_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "punt_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "int_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
