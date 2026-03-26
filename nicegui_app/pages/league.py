@@ -316,7 +316,7 @@ async def render_league_section(state, shared):
             await _render_awards_stats(session_id, standings, user_team)
 
         with ui.tab_panel(tab_objects["Injury Report"]):
-            await _render_injury_report(session_id, standings)
+            await _render_injury_report(session_id, standings, conferences, has_conferences)
 
         if has_history and "History" in tab_objects:
             with ui.tab_panel(tab_objects["History"]):
@@ -1777,7 +1777,7 @@ async def _render_awards_stats(session_id, standings, user_team):
 # Injury Report
 # ---------------------------------------------------------------------------
 
-async def _render_injury_report(session_id, standings):
+async def _render_injury_report(session_id, standings, conferences, has_conferences):
     try:
         inj_resp = await run.io_bound(api_client.get_injuries, session_id)
     except api_client.APIError:
@@ -1791,51 +1791,176 @@ async def _render_injury_report(session_id, standings):
     dtd_count = sum(1 for i in active if i.get("tier") == "day_to_day")
     out_count = sum(1 for i in active if i.get("tier") not in ("day_to_day", "severe") and not i.get("is_season_ending"))
     se_count = sum(1 for i in active if i.get("is_season_ending") or i.get("tier") == "severe")
+    nagging_count = sum(1 for i in active if i.get("nagging"))
+    surgery_count = sum(1 for i in season_log if i.get("requires_surgery", 0) >= 2)
     most_injured = max(counts.items(), key=lambda x: x[1])[0] if counts else "--"
+
+    # Build conference -> teams lookup
+    conf_teams: dict = {}
+    if has_conferences and conferences:
+        for conf_name, conf_data in conferences.items():
+            if isinstance(conf_data, list):
+                conf_teams[conf_name] = conf_data
+            elif isinstance(conf_data, dict):
+                conf_teams[conf_name] = conf_data.get("teams", [])
 
     with ui.row().classes("w-full flex-wrap gap-3"):
         metric_card("Active Injuries", len(active))
         metric_card("Day-to-Day", dtd_count)
         metric_card("Out (Minor+)", out_count)
         metric_card("Season-Ending", se_count)
-        metric_card("Most Affected Team", most_injured)
+        metric_card("Nagging", nagging_count)
+        metric_card("Required Surgery", surgery_count)
+        metric_card("Most Affected", most_injured)
 
-    if active:
-        ui.label("Currently Injured Players").classes("text-lg font-semibold text-slate-700 mt-3")
-        active_rows = []
-        for inj in active:
+    # ── Filters: Conference + Team ──
+    all_team_names = sorted(set(
+        r.get("team_name", "") for r in standings
+    ))
+
+    filter_state = {"conf": "__all__", "team": "__all__"}
+
+    with ui.row().classes("w-full gap-2 mt-2"):
+        if has_conferences and conf_teams:
+            conf_opts = {"__all__": "All Conferences"}
+            conf_opts.update({c: c for c in sorted(conf_teams.keys())})
+            conf_select = ui.select(conf_opts, label="Conference", value="__all__").classes("w-56")
+        else:
+            conf_select = None
+
+        team_opts_base = {"__all__": "All Teams"}
+        team_opts_base.update({t: t for t in all_team_names})
+        team_select = ui.select(team_opts_base, label="Team", value="__all__").classes("w-56")
+
+    # Container for the active injury table
+    active_container = ui.column().classes("w-full")
+
+    def _reinjury_label(val):
+        return {0: "", 1: "Sometimes", 2: "Often"}.get(val, "")
+
+    def _surgery_label(val):
+        return {0: "", 1: "Possible", 2: "Required"}.get(val, "")
+
+    def _influence_dots(val):
+        if not val:
+            return ""
+        return "Low" if val == 1 else ("Med" if val == 2 else "High")
+
+    def _build_active_rows(injuries):
+        rows = []
+        for inj in injuries:
             status_str = _game_status_label(inj)
-            active_rows.append({
+            row = {
                 "Team": inj.get("team_name", ""),
                 "Player": inj.get("player_name", ""),
-                "Position": inj.get("position", ""),
+                "Pos": inj.get("position", ""),
                 "Injury": inj.get("description", ""),
                 "Body Part": (inj.get("body_part") or "").title(),
                 "Category": _CATEGORY_LABELS.get(inj.get("category", ""), inj.get("category", "")),
                 "Status": status_str,
-                "Week Out": inj.get("week_injured", ""),
-                "Return": "Season-ending" if status_str == "OUT FOR SEASON" else f"Wk {inj.get('week_return', '?')}",
-            })
+                "Return": "Season" if status_str == "OUT FOR SEASON" else f"Wk {inj.get('week_return', '?')}",
+            }
+            # Add OOTP-style metadata columns
+            reinjury = inj.get("reinjury_chance", 0)
+            if reinjury:
+                row["Re-injury"] = _reinjury_label(reinjury)
+            nagging = inj.get("nagging", False)
+            if nagging:
+                row["Nagging"] = "Yes"
+            surgery = inj.get("requires_surgery", 0)
+            if surgery:
+                row["Surgery"] = _surgery_label(surgery)
+            # Attribute influence
+            inf_parts = []
+            inf_run = inj.get("inf_run", 0)
+            inf_kick = inj.get("inf_kick", 0)
+            inf_lat = inj.get("inf_lateral", 0)
+            if inf_run:
+                inf_parts.append(f"Run:{_influence_dots(inf_run)}")
+            if inf_kick:
+                inf_parts.append(f"Kick:{_influence_dots(inf_kick)}")
+            if inf_lat:
+                inf_parts.append(f"Lat:{_influence_dots(inf_lat)}")
+            if inf_parts:
+                row["Impact"] = ", ".join(inf_parts)
+            rows.append(row)
+        return rows
 
-        inj_team_opts = {"All": "All"}
-        inj_team_opts.update({t: t for t in sorted(set(r["Team"] for r in active_rows))})
-        inj_team_filter = ui.select(inj_team_opts, label="Filter by Team", value="All").classes("w-full max-w-md")
+    def _filter_active():
+        conf_val = filter_state["conf"]
+        team_val = filter_state["team"]
 
-        inj_table_container = ui.column().classes("w-full")
+        filtered = list(active)
+        if conf_val != "__all__" and conf_val in conf_teams:
+            allowed = set(conf_teams[conf_val])
+            filtered = [i for i in filtered if i.get("team_name", "") in allowed]
+        if team_val != "__all__":
+            filtered = [i for i in filtered if i.get("team_name", "") == team_val]
 
-        def _filter_injuries():
-            ft = inj_team_filter.value
-            filtered = active_rows if ft == "All" else [r for r in active_rows if r["Team"] == ft]
-            inj_table_container.clear()
-            with inj_table_container:
-                stat_table(filtered)
+        active_container.clear()
+        with active_container:
+            if filtered:
+                ui.label(f"Currently Injured Players ({len(filtered)})").classes("text-lg font-semibold text-slate-700")
+                rows = _build_active_rows(filtered)
+                stat_table(rows)
+            else:
+                ui.label("No active injuries matching filter.").classes("text-sm text-gray-500")
 
-        inj_team_filter.on("update:model-value", lambda: _filter_injuries())
-        _filter_injuries()
-    else:
-        ui.label("No active injuries.").classes("text-sm text-gray-500")
+    def _on_conf_change():
+        filter_state["conf"] = conf_select.value if conf_select else "__all__"
+        # Update team dropdown to show only teams in selected conference
+        if conf_select and conf_select.value != "__all__" and conf_select.value in conf_teams:
+            new_opts = {"__all__": "All Teams"}
+            new_opts.update({t: t for t in sorted(conf_teams[conf_select.value])})
+        else:
+            new_opts = {"__all__": "All Teams"}
+            new_opts.update({t: t for t in all_team_names})
+        team_select.options = new_opts
+        team_select.value = "__all__"
+        filter_state["team"] = "__all__"
+        _filter_active()
 
-    # Injuries by Category
+    def _on_team_change():
+        filter_state["team"] = team_select.value
+        _filter_active()
+
+    if conf_select:
+        conf_select.on("update:model-value", lambda: _on_conf_change())
+    team_select.on("update:model-value", lambda: _on_team_change())
+    _filter_active()
+
+    # ── Body Part Breakdown ──
+    if season_log:
+        with ui.expansion("Injuries by Body Part").classes("w-full mt-2"):
+            import pandas as pd
+            body_data = []
+            for inj in season_log:
+                bp = (inj.get("body_part") or "unknown").title()
+                if bp in ("N/A", "Unknown"):
+                    bp = "Off-Field"
+                body_data.append({
+                    "Body Part": bp,
+                    "Severity": _tier_display(inj.get("tier", "")),
+                })
+            if body_data:
+                fig_body = px.histogram(
+                    pd.DataFrame(body_data),
+                    x="Body Part",
+                    color="Severity",
+                    title="Injuries by Body Part",
+                    color_discrete_map={
+                        "Day-To-Day": "#22c55e",
+                        "Minor": "#fbbf24",
+                        "Moderate": "#f59e0b",
+                        "Major": "#dc2626",
+                        "Severe": "#991b1b",
+                    },
+                )
+                fig_body.update_layout(height=350, template="plotly_white",
+                                       xaxis={"categoryorder": "total descending"})
+                ui.plotly(fig_body).classes("w-full")
+
+    # ── Injuries by Category ──
     with ui.expansion("Injuries by Category").classes("w-full"):
         if season_log:
             import pandas as pd
@@ -1864,31 +1989,57 @@ async def _render_injury_report(session_id, standings):
         else:
             ui.label("No injury data yet.").classes("text-sm text-gray-500")
 
-    # Injury Counts by Team
+    # ── Nagging / Re-injury Tracker ──
+    nagging_injuries = [i for i in active if i.get("nagging") or i.get("reinjury_chance", 0) >= 1]
+    if nagging_injuries:
+        with ui.expansion(f"Nagging / Re-injury Watch ({len(nagging_injuries)})").classes("w-full"):
+            nag_rows = []
+            for inj in nagging_injuries:
+                nag_rows.append({
+                    "Team": inj.get("team_name", ""),
+                    "Player": inj.get("player_name", ""),
+                    "Injury": inj.get("description", ""),
+                    "Body Part": (inj.get("body_part") or "").title(),
+                    "Nagging": "Yes" if inj.get("nagging") else "",
+                    "Re-injury Risk": _reinjury_label(inj.get("reinjury_chance", 0)),
+                    "Surgery": _surgery_label(inj.get("requires_surgery", 0)),
+                    "Status": _game_status_label(inj),
+                })
+            stat_table(nag_rows)
+
+    # ── Injury Counts by Team ──
     if counts:
         with ui.expansion("Injury Counts by Team").classes("w-full"):
             count_rows = [{"Team": t, "Injuries": c} for t, c in sorted(counts.items(), key=lambda x: -x[1])]
             stat_table(count_rows)
 
-    # Full Season Injury Log
+    # ── Full Season Injury Log ──
     if season_log:
         with ui.expansion("Full Season Injury Log").classes("w-full"):
             log_rows = []
             for inj in season_log:
                 status_str = _game_status_label(inj)
-                log_rows.append({
-                    "Week": inj.get("week_injured", ""),
+                row = {
+                    "Wk": inj.get("week_injured", ""),
                     "Team": inj.get("team_name", ""),
                     "Player": inj.get("player_name", ""),
-                    "Position": inj.get("position", ""),
+                    "Pos": inj.get("position", ""),
                     "Injury": inj.get("description", ""),
                     "Body Part": (inj.get("body_part") or "").title(),
                     "Category": _CATEGORY_LABELS.get(inj.get("category", ""), inj.get("category", "")),
                     "Severity": _tier_display(inj.get("tier", "")),
-                    "In-Game": "Yes" if inj.get("in_game") else "No",
+                    "In-Game": "Yes" if inj.get("in_game") else "",
                     "Status": status_str,
-                    "Weeks Out": inj.get("weeks_out", ""),
-                })
+                    "Wks Out": inj.get("weeks_out", ""),
+                }
+                reinjury = inj.get("reinjury_chance", 0)
+                if reinjury:
+                    row["Re-injury"] = _reinjury_label(reinjury)
+                if inj.get("nagging"):
+                    row["Nagging"] = "Yes"
+                if inj.get("requires_surgery", 0):
+                    row["Surgery"] = _surgery_label(inj.get("requires_surgery", 0))
+                log_rows.append(row)
             stat_table(log_rows)
 
 

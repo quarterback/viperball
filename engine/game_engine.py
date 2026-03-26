@@ -1207,6 +1207,10 @@ class GameState:
     home_stars: List[str] = field(default_factory=list)
     away_stars: List[str] = field(default_factory=list)
 
+    # --- Coach challenge system (3 per game total) ---
+    home_challenges: int = 3
+    away_challenges: int = 3
+
     # --- V2: Composure timeline for post-game narrative ---
     home_composure_timeline: List[float] = field(default_factory=list)
     away_composure_timeline: List[float] = field(default_factory=list)
@@ -1436,6 +1440,231 @@ class Penalty:
     player: str = ""
     declined: bool = False
     phase: str = "pre_snap"
+    blown_call: bool = False  # True if this penalty was a referee error
+
+
+# ═══════════════════════════════════════════════════════════════
+# REFEREE BIAS SYSTEM
+# Models the human element of officiating.  Calibrated so that
+# across a full season (~120 games), 0.5-3% of total calls are
+# wrong — meaning most games are clean, and maybe 1-3 games per
+# season have a blown call that meaningfully shifts the outcome.
+#
+# Referee attributes (visible in code, not exposed in UI):
+#   accuracy     — 0.91-0.98.  How often the ref gets calls right.
+#                  Elite refs (0.97+) rarely miss.  Below-average
+#                  refs (0.91-0.92) miss noticeably more.
+#   home_favor   — -0.5 to +0.5.  Positive = slight lean toward
+#                  home team on 50/50 calls.  Most refs are near 0.
+#   consistency  — 0.87-0.97.  How stable the ref's zone/calls are
+#                  within a game.  Lower = more erratic.
+#
+# Three blown-call types:
+#   1. Phantom flag     — penalty called when no infraction occurred
+#   2. Swallowed whistle — clear infraction goes uncalled
+#   3. Spot error       — ball spotted 1-3 yards from correct position
+#
+# Coach challenge system:
+#   Each team gets 2 challenges per half (reset on correct challenge).
+#   ~75% of challenged blown calls are overturned, leaving a small
+#   residual human element (~0.5-1% of calls across a season).
+# ═══════════════════════════════════════════════════════════════
+
+@dataclass
+class RefereeCrew:
+    """A game's officiating crew — named ref with attributes.
+
+    Attributes (visible in code for understanding, not exposed in UI):
+        accuracy:     0.91-0.98 — how often the ref gets calls right
+        home_favor:   -0.5 to +0.5 — lean toward home on close calls
+        consistency:  0.87-0.97 — stability of calls within a game
+    """
+    name: str = "Unknown"
+    accuracy: float = 0.95
+    home_favor: float = 0.0
+    consistency: float = 0.94
+    # Per-play blown call rates — calibrated LOW so season-wide
+    # error rate lands at 0.5-3% of total penalty situations.
+    # With ~60 plays/game and ~10% involving a penalty check,
+    # that's ~6 penalty-eligible plays/game.  A 0.1% phantom rate
+    # means ~0.006 phantom flags per game — roughly 1 per 150 games.
+    phantom_flag_rate: float = 0.001
+    swallowed_whistle_rate: float = 0.0015
+    spot_error_rate: float = 0.002
+    blown_calls: int = 0
+    blown_call_log: list = field(default_factory=list)
+    challenged_calls: int = 0       # Total challenges attempted
+    overturned_calls: int = 0       # Challenges that succeeded
+
+
+# ── Named Referee Pool ──────────────────────────────────────────
+# Generated dynamically using the name generator so the pool can
+# be expanded at any time.  Each referee gets hidden attributes
+# (accuracy, home favor, consistency) that the user never sees.
+#
+# Distribution target (per 30 refs):
+#   ~3  elite        (97-98% accuracy)
+#   ~10 good         (95-97%)
+#   ~10 solid        (93-95%)
+#   ~5  average      (92-93%)
+#   ~2  below-avg    (91-92%) — the controversial ones
+#
+# To regenerate or expand: call generate_referee_pool(n, seed).
+
+# Accuracy/consistency tiers for assigning hidden attributes
+_REF_TIERS = [
+    # (weight, accuracy_lo, accuracy_hi, consistency_lo, consistency_hi)
+    (0.10, 0.97, 0.98, 0.95, 0.97),   # elite
+    (0.33, 0.95, 0.97, 0.93, 0.96),   # good
+    (0.33, 0.93, 0.95, 0.91, 0.94),   # solid
+    (0.17, 0.92, 0.93, 0.89, 0.92),   # average
+    (0.07, 0.905, 0.92, 0.87, 0.90),  # below-average
+]
+
+_REFEREE_POOL_CACHE: Optional[List[Dict]] = None
+
+
+def generate_referee_pool(n: int = 300, seed: int = 12345) -> List[Dict]:
+    """Generate a pool of named referees using the name generator.
+
+    Each ref gets a name from the player name generator and hidden
+    attributes drawn from the tier distribution.  The pool is cached
+    so it stays stable across a season.
+    """
+    global _REFEREE_POOL_CACHE
+    if _REFEREE_POOL_CACHE is not None and len(_REFEREE_POOL_CACHE) >= n:
+        return _REFEREE_POOL_CACHE
+
+    rng = random.Random(seed)
+    pool = []
+
+    # Try to use the name generator for diverse, realistic names
+    try:
+        from scripts.generate_names import generate_player_name
+        use_generator = True
+    except (ImportError, FileNotFoundError):
+        use_generator = False
+
+    # Build tier boundaries for weighted selection
+    tier_cumulative = []
+    cumsum = 0.0
+    for weight, *_ in _REF_TIERS:
+        cumsum += weight
+        tier_cumulative.append(cumsum)
+
+    used_names: set = set()
+    for _ in range(n):
+        # Generate a unique name
+        if use_generator:
+            for _attempt in range(10):
+                # Mix of genders for the officiating pool
+                gender = rng.choice(["female", "male"])
+                name_data = generate_player_name(gender=gender)
+                full_name = name_data["full_name"]
+                if full_name not in used_names:
+                    used_names.add(full_name)
+                    break
+        else:
+            full_name = f"Referee #{len(pool) + 1}"
+
+        # Assign tier
+        roll = rng.random()
+        tier_idx = 0
+        for i, boundary in enumerate(tier_cumulative):
+            if roll <= boundary:
+                tier_idx = i
+                break
+
+        _, acc_lo, acc_hi, con_lo, con_hi = _REF_TIERS[tier_idx]
+        accuracy = rng.uniform(acc_lo, acc_hi)
+        consistency = rng.uniform(con_lo, con_hi)
+        # Home favor: slight home lean on average, wider spread for worse refs
+        favor_spread = 0.04 + (1.0 - accuracy) * 0.8
+        home_favor = rng.gauss(0.03, favor_spread)
+        home_favor = max(-0.5, min(0.5, home_favor))
+
+        pool.append({
+            "name": full_name,
+            "accuracy": round(accuracy, 4),
+            "home_favor": round(home_favor, 3),
+            "consistency": round(consistency, 4),
+        })
+
+    _REFEREE_POOL_CACHE = pool
+    return pool
+
+
+def build_referee_crews(pool: List[Dict], rng: random.Random) -> List[Dict]:
+    """Group a referee pool into 3-person crews.
+
+    Each crew has a head referee (highest accuracy in the trio),
+    an umpire, and a side judge.  The crew's effective accuracy
+    is the average of the three members.
+    """
+    shuffled = list(pool)
+    rng.shuffle(shuffled)
+    crews = []
+    for i in range(0, len(shuffled) - 2, 3):
+        trio = shuffled[i:i+3]
+        # Head ref is the most accurate in the crew
+        trio.sort(key=lambda r: r["accuracy"], reverse=True)
+        avg_acc = sum(r["accuracy"] for r in trio) / 3
+        avg_favor = sum(r["home_favor"] for r in trio) / 3
+        avg_con = sum(r["consistency"] for r in trio) / 3
+        crew_name = f"{trio[0]['name']}, {trio[1]['name']}, {trio[2]['name']}"
+        crews.append({
+            "name": crew_name,
+            "head_ref": trio[0]["name"],
+            "members": [r["name"] for r in trio],
+            "accuracy": round(avg_acc, 4),
+            "home_favor": round(avg_favor, 3),
+            "consistency": round(avg_con, 4),
+        })
+    return crews
+
+
+def assign_referee(rng: random.Random, is_playoff: bool = False,
+                   conference: str = "") -> RefereeCrew:
+    """Assign a 3-person referee crew to a game.
+
+    For playoff games, picks from the top-rated crews.
+    For regular season, any crew can be assigned.
+    Conference assignment is noted but not yet enforced
+    (future: refs assigned to conferences like teams).
+    """
+    pool = generate_referee_pool()
+    crews = build_referee_crews(pool, random.Random(rng.randint(0, 2**31)))
+
+    if not crews:
+        return RefereeCrew()
+
+    if is_playoff:
+        # Playoffs get the best crews — top third by accuracy
+        crews.sort(key=lambda c: c["accuracy"], reverse=True)
+        top_crews = crews[:max(1, len(crews) // 3)]
+        crew = rng.choice(top_crews)
+    else:
+        crew = rng.choice(crews)
+
+    accuracy = crew["accuracy"]
+    inaccuracy = 1.0 - accuracy
+
+    # Calibrated LOW: season-wide 0.5-3% error rate across all games.
+    # Most games will be completely clean.
+    phantom_flag_rate = 0.0005 + inaccuracy * 0.01
+    swallowed_whistle_rate = 0.0008 + inaccuracy * 0.01
+    spot_error_rate = 0.001 + inaccuracy * 0.015
+
+    return RefereeCrew(
+        name=crew["name"],
+        accuracy=accuracy,
+        home_favor=crew["home_favor"],
+        consistency=crew["consistency"],
+        phantom_flag_rate=round(phantom_flag_rate, 5),
+        swallowed_whistle_rate=round(swallowed_whistle_rate, 5),
+        spot_error_rate=round(spot_error_rate, 5),
+    )
+
 
 PENALTY_CATALOG = {
     "pre_snap": [
@@ -2934,11 +3163,22 @@ class ViperballEngine:
         self.drive_log: List[Dict] = []
         self.timeout_log: List[Dict] = []  # Every timeout event for post-game visibility
         self.viper_position = "free"
+
+        # ── Referee crew: human element of officiating ──
+        _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
+        self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
         self.drive_play_count = 0
-        self._drive_chain_positive = 0  # Consecutive positive-yard plays this drive
+        self._drive_chain_positive = 0
+        self._drive_yards = 0  # Track drive yards for timeout decisions
+        self._drive_consecutive_negative = 0  # Consecutive negative/zero yard plays
         self._drive_consecutive_completions = 0  # Consecutive kick pass completions (for rhythm_escalation)
         self._current_formation = "split"  # Current snap formation shell
+        # Timeout-related tracking
+        self._consecutive_opponent_scores = {"home": 0, "away": 0}  # Consecutive scoring drives by opponent
+        self._last_play_yards = 0  # Yards gained on last play (for scheme reset logic)
+        # Game clock state: True = stopped (after score, penalty, incomplete)
+        self._game_clock_stopped = False
         self._current_drive_delta = False
         self._current_drive_delta_cost = 0
         self._bonus_recipient = ""  # Defensive bonus possession recipient
@@ -3904,7 +4144,117 @@ class ViperballEngine:
                 self._home_halftime_score = self.state.home_score
                 self._away_halftime_score = self.state.away_score
 
+        # ── OVERTIME (postseason only) ──
+        # If scores are tied after regulation AND this is a playoff/bowl game,
+        # play successive 8-minute overtime quarters until someone wins.
+        # Regular season ties remain as ties.
+        if (self._is_playoff
+                and self.state.home_score == self.state.away_score):
+            self._simulate_overtime()
+
         return self.generate_game_summary()
+
+    def _simulate_overtime(self):
+        """Play overtime quarters until someone wins.
+
+        Overtime rules:
+        - Each OT period is one 8-minute quarter
+        - Coin flip determines first possession (alternates each OT)
+        - Each team gets 4 timeouts per OT period (fresh)
+        - 3-minute warning applies in each OT quarter
+        - No limit on OT periods — play until someone wins
+        - Maximum 5 OT periods (safety valve to prevent infinite loops)
+        """
+        max_ot_periods = 5
+        ot_number = 0
+
+        while (self.state.home_score == self.state.away_score
+               and ot_number < max_ot_periods):
+            ot_number += 1
+            self.state.quarter = 4 + ot_number  # Q5, Q6, Q7...
+            self.state.time_remaining = 480  # 8-minute quarters
+
+            # Fresh timeouts each OT period
+            self.state.home_timeouts = 4
+            self.state.away_timeouts = 4
+            self.state.three_min_warning_triggered = False
+
+            # Alternate possession each OT (first OT: away starts, like Q3)
+            if ot_number % 2 == 1:
+                self.state.possession = "away"
+            else:
+                self.state.possession = "home"
+
+            # Start from the 20-yard line (no delta adjustment in OT)
+            self.state.field_position = 20
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            self.state.kick_mode = False
+
+            # Clear bonus possession state
+            self.state.bonus_possession_team = ""
+            self._bonus_recipient = ""
+            self._bonus_drives_remaining = -1
+
+            # Recover some energy for OT
+            for p in self.home_team.players:
+                p.game_energy = min(100.0, p.game_energy + 20.0)
+            for p in self.away_team.players:
+                p.game_energy = min(100.0, p.game_energy + 20.0)
+
+            # Log the OT start
+            self.state.play_number += 1
+            stamina = (self.state.home_stamina if self.state.possession == "home"
+                       else self.state.away_stamina)
+            ot_label = f"OVERTIME PERIOD {ot_number}"
+            ot_play = Play(
+                play_number=self.state.play_number,
+                quarter=self.state.quarter,
+                time=self.state.time_remaining,
+                possession=self.state.possession,
+                field_position=20,
+                down=1,
+                yards_to_go=20,
+                play_type="overtime",
+                play_family="none",
+                players_involved=[],
+                yards_gained=0,
+                result="overtime",
+                description=f"{ot_label} — {self.home_team.name} {self.state.home_score}, {self.away_team.name} {self.state.away_score}",
+                fatigue=round(stamina, 1),
+            )
+            self.play_log.append(ot_play)
+
+            # Run the OT quarter like a normal quarter
+            while self.state.time_remaining > 0:
+                _is_bonus = getattr(self, '_next_drive_is_bonus', False)
+                self._next_drive_is_bonus = False
+                self.simulate_drive(is_bonus_drive=_is_bonus)
+                if self.state.time_remaining <= 0:
+                    break
+
+                if self.state.bonus_possession_team and self.state.bonus_possession_team not in ("", "_armed"):
+                    self._bonus_recipient = self.state.bonus_possession_team
+                    self._bonus_drives_remaining = 1
+                    self.state.bonus_possession_team = ""
+                elif self._bonus_drives_remaining > 0:
+                    self._bonus_drives_remaining -= 1
+
+                if self._bonus_drives_remaining == 0 and self._bonus_recipient:
+                    bonus_team = self._bonus_recipient
+                    self._bonus_recipient = ""
+                    self._bonus_drives_remaining = -1
+                    self.state.possession = bonus_team
+                    self.state.field_position = 20
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
+                    self._next_drive_is_bonus = True
+
+            # Clear bonus state at end of OT period
+            self.state.bonus_possession_team = ""
+            self._bonus_recipient = ""
+            self._bonus_drives_remaining = -1
 
     def _apply_halftime_coaching_adjustments(self):
         for side in ("home", "away"):
@@ -4077,6 +4427,7 @@ class ViperballEngine:
         max_plays = int(20 + tempo * 15)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
+        self._drive_yards = 0
         self._drive_consecutive_completions = 0
         self.state.kick_mode = False
 
@@ -4167,11 +4518,16 @@ class ViperballEngine:
             if V2_ENGINE_CONFIG.get("play_family_adaptation_enabled", False):
                 self._decay_solved_families(drive_team, _pf_dc_type)
 
+            self._last_play_yards = play.yards_gained
             if play.yards_gained > 0 and play.play_type not in ["punt"]:
                 drive_yards += play.yards_gained
+                self._drive_yards = drive_yards
                 self._drive_chain_positive += 1
+                self._drive_consecutive_negative = 0
             else:
                 self._drive_chain_positive = 0
+                if play.play_type not in ("penalty", "kneel", "bonus_possession", "punt"):
+                    self._drive_consecutive_negative += 1
 
             # ── Shock & Awe: tempo_fatigue_export — drain opponent stamina ──
             tfe = style.get("tempo_fatigue_export", 0.0)
@@ -4304,7 +4660,79 @@ class ViperballEngine:
                     # Coach snapped just in time — clamp to the limit
                     final_time = play_clock_limit
 
-            time_elapsed = final_time
+            # ══════════════════════════════════════════════════════
+            # GAME CLOCK vs PLAY CLOCK
+            #
+            # Play clock = 40-second shot clock between snaps.
+            #   This is what `final_time` represents: how long the
+            #   offense takes to get set and snap.  It varies by
+            #   tempo (18-38s) and situation (hurry-up, clock burn).
+            #
+            # Game clock = the 10-minute quarter clock.
+            #   RUNS during live play AND between plays (while the
+            #   play clock ticks down) — UNLESS the game clock is
+            #   stopped.
+            #
+            # Game clock STOPS after:
+            #   - Scoring plays (TD, kick, safety, pindown, return TD)
+            #   - Penalties (dead ball foul)
+            #   - Incomplete kick passes
+            #   - Timeouts (handled separately)
+            #   - 3-minute warning (handled separately)
+            #
+            # When the game clock is stopped, only the play itself
+            # burns game-clock time (~4-7 seconds of live action).
+            # The play clock still runs between snaps, but the game
+            # clock doesn't resume until the next snap.
+            #
+            # When the game clock is running, the full play clock
+            # duration (final_time) is burned from the game clock.
+            # ══════════════════════════════════════════════════════
+            scoring_results = (
+                "touchdown", "successful_kick", "safety", "pindown",
+                "punt_return_td", "int_return_td", "missed_dk_return_td",
+            )
+            game_clock_stopped = (
+                play.result in scoring_results
+                or play.penalty is not None
+                or (play.play_type == "kick_pass" and play.result == "incomplete")
+            )
+
+            # Live-action play time: 3-9 seconds depending on play type.
+            # Short runs/dives = 3-5s.  Long gains, kick passes with
+            # laterals, and plays that move the ball downfield = 6-9s.
+            yds = abs(play.yards_gained) if play.yards_gained else 0
+            lat_count = play.laterals if play.laterals else 0
+            if play.play_type in ("punt", "drop_kick", "place_kick"):
+                action_time = random.randint(5, 8)  # Kicking plays take longer
+            elif yds >= 20 or lat_count >= 2:
+                action_time = random.randint(6, 9)  # Big plays / lateral chains
+            elif yds >= 10 or play.play_type == "kick_pass":
+                action_time = random.randint(5, 8)  # Medium gains, kick passes
+            else:
+                action_time = random.randint(3, 6)  # Short runs, stuffs
+
+            # Was the game clock already stopped coming into this play?
+            # (from a previous score, penalty, incomplete, etc.)
+            clock_was_stopped = getattr(self, '_game_clock_stopped', False)
+
+            if clock_was_stopped or game_clock_stopped:
+                # Game clock was stopped — only the live-action play
+                # time elapses.  The play clock ran between snaps
+                # but didn't drain the game clock.  The game clock
+                # restarts at the snap, so only action time counts.
+                time_elapsed = action_time
+            else:
+                # Game clock running continuously — the full
+                # snap-to-snap interval (play clock + action)
+                # drains the game clock.
+                time_elapsed = final_time
+
+            # Update game clock stopped state for NEXT play.
+            # If this play stopped the clock, it stays stopped
+            # through the transition until the next snap.
+            self._game_clock_stopped = game_clock_stopped
+
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
 
@@ -4331,6 +4759,10 @@ class ViperballEngine:
                             "offensive_clock_stop": "offensive",
                             "star_fatigue_rest": "fatigue",
                             "personnel_regrouping": "regrouping",
+                            "momentum_stop": "momentum",
+                            "scheme_reset": "scheme reset",
+                            "icing_the_kicker": "icing the kicker",
+                            "fresh_legs": "fresh legs",
                         }.get(to_entry["category"], to_entry["category"])
                         play.description += (
                             f" | TIMEOUT {to_entry['team_name']}"
@@ -4424,28 +4856,24 @@ class ViperballEngine:
                 if play.result == "touchdown":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    # Possession reset consumes clock (celebration, setup)
-                    self.state.time_remaining = max(0, self.state.time_remaining - 10)
+                    # Game clock is stopped after a score — no additional
+                    # time deduction.  Clock restarts at the next snap.
                     self.kickoff(receiving)
                 elif play.result == "successful_kick":
                     kicking_team = self.state.possession
                     receiving = "away" if kicking_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "punt_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "int_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_return_td":
                     scoring_team = self.state.possession
                     receiving = "away" if scoring_team == "home" else "home"
-                    self.state.time_remaining = max(0, self.state.time_remaining - 15)
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
@@ -4553,6 +4981,14 @@ class ViperballEngine:
             "bonus_drive": is_bonus_drive,
             "timeouts": drive_timeouts,
         })
+
+        # Track consecutive opponent scoring drives for momentum timeout logic
+        opponent = "away" if drive_team == "home" else "home"
+        if is_score:
+            self._consecutive_opponent_scores[opponent] += 1
+            # Reset own team's streak (they just got scored on)
+        else:
+            self._consecutive_opponent_scores[opponent] = 0
 
     FIELD_POSITION_VALUE = [
         (10, 0.3), (20, 0.6), (35, 1.0), (50, 1.5),
@@ -4848,9 +5284,11 @@ class ViperballEngine:
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
         if down == 6:
-            # Late Q4 trailing with no viable kick: go for the TD.
-            # Punting when you're losing with no time is giving up.
-            if quarter == 4 and time_left <= 180 and score_diff < 0 and not best_kick:
+            # NEVER punt when trailing.  Punting while losing is giving up.
+            # Go for the TD, go for the kick, do ANYTHING but punt.
+            if score_diff < 0:
+                if best_kick:
+                    return best_kick
                 return None  # Go for it — punting surrenders the game
 
             # Go for it on very short ytg (elite kickers lower this)
@@ -5134,7 +5572,15 @@ class ViperballEngine:
 
     def _resolve_kick_type(self) -> PlayType:
         result = self.select_kick_decision()
-        return result if result is not None else PlayType.PUNT
+        if result is not None:
+            return result
+        # Never punt when trailing — go for it instead
+        if self._get_score_diff() < 0:
+            return None  # Go for it (no kick, no punt)
+        # Never punt with <=30 seconds left in Q4 — run a play
+        if self.state.quarter == 4 and self.state.time_remaining <= 30:
+            return None
+        return PlayType.PUNT
 
     def _check_penalties(self, phase: str, play_type: str = "run") -> Optional[Penalty]:
         if phase == "during_play":
@@ -5179,6 +5625,37 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
+                # ── Referee: swallowed whistle ──
+                # Crew might miss a legitimate penalty call
+                if random.random() < self.referee_crew.swallowed_whistle_rate:
+                    # Coach challenge: disadvantaged team may challenge
+                    if self._coach_challenge("swallowed_whistle", team_name):
+                        # Challenge successful — call the penalty after all
+                        self.referee_crew.blown_call_log.append({
+                            "type": "swallowed_whistle_overturned",
+                            "quarter": self.state.quarter,
+                            "time_remaining": self.state.time_remaining,
+                            "penalty_missed": pen_def["name"],
+                            "on_team": team_name,
+                            "player": ptag,
+                            "yards": pen_def["yards"],
+                            "field_position": self.state.field_position,
+                        })
+                        # Fall through to return the penalty normally
+                    else:
+                        self.referee_crew.blown_calls += 1
+                        self.referee_crew.blown_call_log.append({
+                            "type": "swallowed_whistle",
+                            "quarter": self.state.quarter,
+                            "time_remaining": self.state.time_remaining,
+                            "penalty_missed": pen_def["name"],
+                            "on_team": team_name,
+                            "player": ptag,
+                            "yards": pen_def["yards"],
+                            "field_position": self.state.field_position,
+                        })
+                        return None  # Ref missed the call, challenge failed or not used
+
                 return Penalty(
                     name=pen_def["name"],
                     yards=pen_def["yards"],
@@ -5186,7 +5663,166 @@ class ViperballEngine:
                     player=ptag,
                     phase=phase,
                 )
+
+        # ── Referee: phantom flag ──
+        # No real penalty occurred, but the crew might throw a bad flag.
+        # Home favor nudges which team gets hit: positive favor = away
+        # team more likely to get the phantom call (benefits home).
+        if random.random() < self.referee_crew.phantom_flag_rate:
+            phantom_penalties = PENALTY_CATALOG.get(catalog_key, [])
+            if phantom_penalties:
+                pen_def = random.choice(phantom_penalties)
+                # Home favor: if positive, phantom more likely on away team
+                if random.random() < 0.5 + self.referee_crew.home_favor * 0.3:
+                    team_name = "away" if self.state.possession == "home" else "home"
+                else:
+                    team_name = self.state.possession
+
+                team_obj = self.home_team if team_name == "home" else self.away_team
+                pen_pool = team_obj.players[:10]
+                player = random.choice(pen_pool)
+                ptag = player_tag(player)
+
+                # Coach challenge: penalized team may challenge the phantom flag
+                if self._coach_challenge("phantom_flag", team_name):
+                    # Challenge successful — phantom flag overturned, no penalty
+                    self.referee_crew.blown_call_log.append({
+                        "type": "phantom_flag_overturned",
+                        "quarter": self.state.quarter,
+                        "time_remaining": self.state.time_remaining,
+                        "penalty_called": pen_def["name"],
+                        "on_team": team_name,
+                        "player": ptag,
+                        "yards": pen_def["yards"],
+                        "field_position": self.state.field_position,
+                    })
+                    return None  # No penalty — challenge succeeded
+
+                self.referee_crew.blown_calls += 1
+                self.referee_crew.blown_call_log.append({
+                    "type": "phantom_flag",
+                    "quarter": self.state.quarter,
+                    "time_remaining": self.state.time_remaining,
+                    "penalty_called": pen_def["name"],
+                    "on_team": team_name,
+                    "player": ptag,
+                    "yards": pen_def["yards"],
+                    "field_position": self.state.field_position,
+                })
+
+                return Penalty(
+                    name=pen_def["name"],
+                    yards=pen_def["yards"],
+                    on_team=team_name,
+                    player=ptag,
+                    phase=phase,
+                    blown_call=True,
+                )
+
         return None
+
+    def _coach_challenge(self, blown_call_type: str, penalized_team: str) -> bool:
+        """Coach challenge system: the disadvantaged team may challenge a blown call.
+
+        The replay system always gets the call correct — if a coach
+        challenges a genuine blown call, it WILL be overturned.  But
+        coaches don't always use their challenges wisely; sometimes they
+        burn one on a call that was actually correct (which we don't
+        model here since this is only called on actual blown calls).
+
+        Coaches also sometimes fail to notice blown calls or choose to
+        save their challenges for later, so not every blown call gets
+        challenged.
+
+        Each team gets 3 challenges per game total.
+        """
+        # The team hurt by the call is the one that would challenge
+        if blown_call_type == "phantom_flag":
+            challenging_team = penalized_team
+        elif blown_call_type == "swallowed_whistle":
+            # The team that should have benefited from the missed call
+            challenging_team = "away" if penalized_team == "home" else "home"
+        else:
+            return False  # Spot errors aren't challengeable
+
+        challenges_left = (self.state.home_challenges if challenging_team == "home"
+                          else self.state.away_challenges)
+
+        if challenges_left <= 0:
+            return False
+
+        # Coach decides whether to challenge — only ~60% chance they
+        # notice the blown call and decide to use a challenge on it.
+        # Better coaches (higher awareness) might be modeled later.
+        if random.random() > 0.60:
+            return False  # Coach didn't notice or saved challenge
+
+        # Use a challenge
+        if challenging_team == "home":
+            self.state.home_challenges -= 1
+        else:
+            self.state.away_challenges -= 1
+
+        self.referee_crew.challenged_calls += 1
+
+        # Replay always gets the correct call — overturn the blown call
+        self.referee_crew.overturned_calls += 1
+        return True
+
+    def _coach_wastes_challenge(self) -> Optional[str]:
+        """Occasionally a coach wastes a challenge on a correct call.
+
+        This happens independently of blown calls — the coach thinks
+        the ref made an error but replay confirms the original call.
+        Very rare (~0.1% per play).  Returns the team that wasted it,
+        or None.
+        """
+        if random.random() > 0.001:
+            return None
+
+        # Pick which team wastes the challenge
+        team = random.choice(["home", "away"])
+        challenges_left = (self.state.home_challenges if team == "home"
+                          else self.state.away_challenges)
+        if challenges_left <= 0:
+            return None
+
+        if team == "home":
+            self.state.home_challenges -= 1
+        else:
+            self.state.away_challenges -= 1
+
+        self.referee_crew.challenged_calls += 1
+        # Challenge fails — original call stands (it was correct)
+        return team
+
+    def _check_spot_error(self, yards_gained: int) -> int:
+        """Referee spot error: occasionally the ball is spotted 1-3 yards off.
+
+        Returns the adjusted yards gained.  Most of the time returns the
+        input unchanged.  ~0.3-0.7% of plays get a small spot error.
+        """
+        if random.random() < self.referee_crew.spot_error_rate:
+            error = random.choice([-3, -2, -1, 1, 2, 3])
+            # Home favor nudges spot errors toward benefiting the home team
+            if self.state.possession == "home" and self.referee_crew.home_favor > 0:
+                error = abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+            elif self.state.possession == "away" and self.referee_crew.home_favor > 0:
+                error = -abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+
+            self.referee_crew.blown_calls += 1
+            self.referee_crew.blown_call_log.append({
+                "type": "spot_error",
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "original_yards": yards_gained,
+                "error_yards": error,
+                "adjusted_yards": yards_gained + error,
+                "field_position": self.state.field_position,
+                "possession": self.state.possession,
+            })
+            return yards_gained + error
+        return yards_gained
 
     def _should_decline_penalty(self, penalty: Penalty, play: Play) -> bool:
         on_offense = (penalty.on_team == self.state.possession)
@@ -5329,66 +5965,20 @@ class ViperballEngine:
         """Victory formation check: kneel instead of running plays when
         the leading team can run out the clock safely.
 
-        V2.8: Accounts for opponent's remaining timeouts.  Each defensive
-        timeout can stop the clock after a kneel, so the offense needs
-        enough kneels to burn through the remaining time *plus* the time
-        the defense can reclaim by forcing additional plays.
-
-        In the 6-down system each kneel burns ~37s and costs 1 down.
-        With 6 downs available per set, the offense can kneel up to 6 times
-        before a turnover on downs (which would be catastrophic).  Safe
-        kneeling means running out the clock within a single set of downs.
+        HARD RULE: Victory formation is ONLY available when there are
+        50 seconds or less remaining in the game.  Never before that.
+        This prevents absurd 4-minute kneel-fests.
         """
         if self.state.quarter != 4:
+            return False
+        if self.state.time_remaining > 50:
             return False
         score_diff = self._get_score_diff()
         if score_diff <= 0:
             return False
 
-        time_left = self.state.time_remaining
-        seconds_per_kneel = 37  # average of 35-40
-
-        # How many downs remain in this set before turnover?
-        downs_left = max(1, 7 - self.state.down)  # downs 1-6, turnover on 7th
-
-        # Defensive timeouts: each one stops the clock after a kneel,
-        # but the kneel itself still burns its 37s.  The timeout just
-        # means the clock doesn't run between plays (normally ~0s for
-        # kneels anyway).  The real cost is that the offense burns a
-        # down for each timeout + each kneel.  So the offense needs
-        # enough downs to cover kneels.
-        def_side = "away" if self.state.possession == "home" else "home"
-        def_timeouts = (self.state.home_timeouts if def_side == "home"
-                        else self.state.away_timeouts)
-
-        # Each kneel burns 37s.  Defense can call timeout after each of
-        # their remaining TOs, but the kneel still consumed its time.
-        # The offense needs ceil(time_left / 37) kneels total.
-        # However, the final sub-40s of game clock doesn't require a snap:
-        # the play clock (40s) will expire before the game clock does,
-        # so the last "kneel" is free — just let the clock run out.
-        play_clock = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
-        effective_time = max(0, time_left - play_clock)  # free burn at the end
-        kneels_needed = max(1, -(-effective_time // seconds_per_kneel))  # ceiling division
-        # Edge case: if time_left <= play_clock, one kneel suffices (or zero,
-        # but we need at least one to trigger victory formation).
-        if time_left <= play_clock:
-            kneels_needed = 1
-
-        # Can we kneel it out within the remaining downs?
-        can_kneel_out = kneels_needed <= downs_left
-
-        # Safety margin: don't kneel unless lead is big enough relative
-        # to remaining time (prevents kneeling away a 1-point lead with
-        # 2 minutes left where a fumbled snap could be disaster).
-        if time_left > 90:
-            safe_lead = score_diff > 9  # need double-digit lead
-        elif time_left > 45:
-            safe_lead = score_diff > 5
-        else:
-            safe_lead = score_diff > 0
-
-        return can_kneel_out and safe_lead
+        # With <=50 seconds left, any lead is enough to kneel
+        return True
 
     def simulate_kneel(self) -> Play:
         """Victory formation: kneel-down that burns 35-40 seconds of clock
@@ -5447,6 +6037,21 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+
+        # ── Referee: spot error on non-scoring, non-penalty plays ──
+        if (play.result not in ("touchdown", "safety", "penalty", "kneel",
+                                "punt_return_td", "int_return_td",
+                                "missed_dk_return_td", "successful_kick",
+                                "bonus_possession")
+                and play.play_type not in ("penalty", "kneel", "bonus_possession")
+                and play.yards_gained != 0):
+            adjusted = self._check_spot_error(play.yards_gained)
+            if adjusted != play.yards_gained:
+                spot_diff = adjusted - play.yards_gained
+                # Adjust field position by the spot error delta
+                self.state.field_position = max(1, min(99,
+                    self.state.field_position + spot_diff))
+                play.yards_gained = adjusted
 
         # Stamp pre-play state on the Play so the play-by-play always
         # shows "3rd & 5 at the 50" as the starting situation.
@@ -11299,18 +11904,22 @@ class ViperballEngine:
         return False
 
     def call_timeout(self) -> bool:
-        """V2.8: Realistic timeout decision engine.
+        """Realistic timeout decision engine.
 
-        Five categories of timeout calls, each with situational triggers
-        and coach-skill gating.  Good coaches hoard timeouts for Q4;
-        bad coaches may waste them on fatigue or personnel issues.
+        Teams use timeouts throughout the game, not just at the end.
+        Coaches treat the 3-minute warning as a "free timeout" and
+        budget accordingly — a well-coached team typically enters the
+        final 3 minutes with 1-2 timeouts remaining per half.
 
-        Categories:
-        1. Strategic clock stop (defense, Q4/Q2) — stop clock to get ball back
-        2. Star fatigue rest (offense, any quarter) — rare, red-zone only
-        3. Injury timeout (official, any quarter) — not charged to either team
-        4. Personnel/scheme regrouping (offense, Q1-Q3) — regroup after solved play
-        5. Offensive clock stop (offense, Q2/Q4 trailing) — preserve time to score
+        Categories (checked in priority order):
+        1. Injury timeout (official, any Q) — not charged
+        2. Momentum stop (defense, any Q) — after opponent's hot streak
+        3. Scheme reset (offense, any Q) — after sack/big loss/consecutive bad plays
+        4. Strategic clock stop (defense, Q2/Q4) — preserve time for comeback
+        5. Offensive clock stop (offense, Q2/Q4) — preserve time when trailing
+        6. Icing the kicker (defense, any Q) — before opponent kick attempt
+        7. Fresh legs (either, Q1-Q3) — key players exhausted mid-drive
+        8. Personnel regrouping (offense, any Q) — stalled drive, scheme change
 
         Returns True if any timeout was called.
         """
@@ -11340,8 +11949,13 @@ class ViperballEngine:
         caller = None
         caller_category = ""
 
-        # ── Category 3: Injury timeout (official-called, no team charged) ──
-        # ~0.3% chance per play.  Both teams rest.  Not a strategic decision.
+        # How many timeouts should a team ideally save for the final stretch?
+        # Good coaches save 1-2 for Q4, bad coaches burn them all early.
+        # The 3-minute warning acts as a "free timeout" so teams can afford
+        # to use more TOs during the game than in traditional football.
+        _ideal_reserve = 1 if off_clock_mgmt > 0.5 else 0
+
+        # ── Category 1: Injury timeout (official-called, no team charged) ──
         if random.random() < 0.003:
             off_team = self.get_offensive_team()
             def_team_obj = (self.home_team if def_side == "home"
@@ -11350,7 +11964,6 @@ class ViperballEngine:
                 p.game_energy = min(100.0, p.game_energy + 10.0)
             for p in def_team_obj.players:
                 p.game_energy = min(100.0, p.game_energy + 10.0)
-            # No timeout charged to either team
             self.timeout_log.append({
                 "quarter": quarter,
                 "time_remaining": time_left,
@@ -11362,103 +11975,162 @@ class ViperballEngine:
             })
             return True
 
-        # ── Category 1: Strategic clock stop (defense) ──
+        # ── Category 2: Momentum stop (defense) ──
+        # After the opponent scores 2+ consecutive TDs or has a big play,
+        # the defensive coach calls timeout to settle the team down.
+        # This happens in ANY quarter, not just late game.
+        if caller is None and def_timeouts > _ideal_reserve:
+            opp_streak = self._consecutive_opponent_scores.get(def_side, 0)
+            # After 2+ consecutive opponent scoring drives
+            if opp_streak >= 2:
+                # Base 10% chance, ramps with streak length
+                call_prob = 0.08 + 0.06 * min(3, opp_streak - 1)
+                call_prob *= (0.70 + 0.30 * def_clock_mgmt)
+                if "timeout_hoarder" in def_traits:
+                    call_prob *= 0.50
+                if "timeout_sprinter" in def_traits:
+                    call_prob *= 1.40
+                # Don't burn momentum TOs in Q4 with <3 min — save for clock
+                if quarter == 4 and time_left < 180:
+                    call_prob *= 0.20
+                if random.random() < min(0.45, call_prob):
+                    caller = def_side
+                    caller_category = "momentum_stop"
+
+        # ── Category 3: Scheme reset (offense) ──
+        # After a sack, big loss, or 2+ consecutive negative plays,
+        # the offensive coach calls timeout to regroup and change the play.
+        if caller is None and off_timeouts > _ideal_reserve:
+            consecutive_bad = getattr(self, '_drive_consecutive_negative', 0)
+            last_yards = getattr(self, '_last_play_yards', 0)
+
+            should_reset = False
+            call_prob = 0.0
+
+            # After a sack or big loss (>= 5 yards lost)
+            if last_yards <= -5:
+                call_prob = 0.18 + 0.07 * (1.0 - off_clock_mgmt)
+                should_reset = True
+            # After 2+ consecutive negative/zero-yard plays
+            elif consecutive_bad >= 2:
+                call_prob = 0.12 + 0.08 * min(3, consecutive_bad - 1)
+                call_prob *= (0.60 + 0.40 * (1.0 - off_clock_mgmt))
+                should_reset = True
+
+            if should_reset:
+                if "timeout_hoarder" in off_traits:
+                    call_prob *= 0.40
+                if "timeout_sprinter" in off_traits:
+                    call_prob *= 1.50
+                # Save TOs in Q4 crunch time if leading
+                if quarter == 4 and time_left < 180 and score_diff > 0:
+                    call_prob *= 0.15
+                if random.random() < min(0.35, call_prob):
+                    caller = off_side
+                    caller_category = "scheme_reset"
+
+        # ── Category 4: Strategic clock stop (defense) ──
         # Trailing defense stops the clock to preserve time for a comeback.
-        if def_timeouts > 0:
+        if caller is None and def_timeouts > 0:
             def_score_diff = -score_diff  # negative = defense trailing
             can_stop = False
             call_prob = 0.0
 
             if quarter == 4 and def_score_diff < 0 and def_score_diff >= -14:
-                # Q4 with <5 min left, trailing by ≤14
                 if time_left < 300:
-                    # Urgency ramps as clock ticks down
                     urgency = min(1.0, (300 - time_left) / 300.0)
                     deficit_factor = min(1.0, abs(def_score_diff) / 14.0)
-                    call_prob = 0.20 + 0.50 * urgency + 0.15 * deficit_factor
-                    # Clock management skill amplifies good decisions
+                    call_prob = 0.25 + 0.50 * urgency + 0.15 * deficit_factor
                     call_prob *= (0.60 + 0.40 * def_clock_mgmt)
                     can_stop = True
 
-            elif quarter == 2 and def_score_diff < 0 and time_left < 60:
-                # Q2 with <1 min: try to get ball back before halftime
-                call_prob = 0.25 * (0.50 + 0.50 * def_clock_mgmt)
+            elif quarter == 2 and def_score_diff < 0 and time_left < 90:
+                call_prob = 0.20 * (0.50 + 0.50 * def_clock_mgmt)
                 can_stop = True
 
             if can_stop:
-                # Trait adjustments
                 if "timeout_hoarder" in def_traits:
-                    call_prob *= 0.70  # hoarders are reluctant
+                    call_prob *= 0.70
                 if "timeout_sprinter" in def_traits:
                     call_prob = min(0.90, call_prob * 1.25)
-
                 call_prob = min(0.85, call_prob)
                 if random.random() < call_prob:
                     caller = def_side
                     caller_category = "strategic_clock_stop"
 
         # ── Category 5: Offensive clock stop (trailing offense) ──
-        # Offense uses timeout to preserve time when trailing late.
         if caller is None and off_timeouts > 0 and score_diff < 0:
-            if quarter in (2, 4) and time_left < 120:
-                call_prob = 0.35 * (0.50 + 0.50 * off_clock_mgmt)
+            if quarter in (2, 4) and time_left < 180:
+                call_prob = 0.25 * (0.50 + 0.50 * off_clock_mgmt)
                 if quarter == 4:
-                    call_prob *= 1.5  # more urgent in Q4
-
+                    call_prob *= 1.5
                 if "timeout_hoarder" in off_traits:
                     call_prob *= 0.70
                 if "timeout_sprinter" in off_traits:
                     call_prob = min(0.85, call_prob * 1.25)
-
                 if random.random() < min(0.75, call_prob):
                     caller = off_side
                     caller_category = "offensive_clock_stop"
 
-        # ── Category 2: Star fatigue rest (offense) ──
-        # Rare — only in red zone with exhausted stars.  Bad clock managers
-        # are more likely to waste one here instead of saving for late game.
-        if caller is None and off_timeouts > 0:
-            off_team = self.get_offensive_team()
-            skill_players = self._offense_skill(off_team)
-            fatigued_stars = [p for p in skill_players
-                             if p.game_energy < 50 and p.overall >= 75]
+        # ── Category 6: Icing the kicker (defense) ──
+        # Right before a snap kick or place kick attempt on 6th down.
+        if (caller is None and def_timeouts > 0
+                and self.state.down >= 5 and self.state.kick_mode):
+            # 20-35% chance depending on coach clock management
+            call_prob = 0.20 + 0.15 * def_clock_mgmt
+            if "timeout_hoarder" in def_traits:
+                call_prob *= 0.50
+            # More likely in close games
+            if abs(score_diff) <= 5:
+                call_prob *= 1.4
+            if random.random() < min(0.40, call_prob):
+                caller = def_side
+                caller_category = "icing_the_kicker"
 
-            if fatigued_stars and self.state.field_position >= 50:
-                # Good clock managers resist: 15% at clock_mgmt=1.0, 30% at 0.0
-                call_prob = 0.30 - 0.15 * off_clock_mgmt
+        # ── Category 7: Fresh legs (either team, Q1-Q3) ──
+        # When key starters are exhausted mid-drive.  Teams use this
+        # as a natural breather, especially in humid/hot weather.
+        if caller is None and quarter <= 3:
+            for side, side_tos, mods, traits in [
+                (off_side, off_timeouts, off_mods, off_traits),
+                (def_side, def_timeouts, def_mods, def_traits),
+            ]:
+                if side_tos > _ideal_reserve + 1:  # Only if well-stocked on TOs
+                    team_obj = (self.home_team if side == "home"
+                                else self.away_team)
+                    gassed_starters = sum(1 for p in team_obj.players[:8]
+                                         if p.game_energy < 40)
+                    if gassed_starters >= 3:
+                        clock_mgmt = mods.get("clock_management", 0.5)
+                        call_prob = 0.10 + 0.05 * (1.0 - clock_mgmt)
+                        # Weather boost: hot/humid games drain more
+                        if self.weather in ("heat",):
+                            call_prob *= 1.6
+                        if "timeout_hoarder" in traits:
+                            call_prob *= 0.30
+                        if "timeout_sprinter" in traits:
+                            call_prob *= 1.50
+                        if random.random() < min(0.20, call_prob):
+                            caller = side
+                            caller_category = "fresh_legs"
+                            break
 
-                # Don't waste TOs in Q4 if you have a good clock manager
-                if quarter == 4 and off_clock_mgmt > 0.6:
-                    call_prob *= 0.3
-
-                if "timeout_hoarder" in off_traits:
-                    call_prob *= 0.50
-                if "timeout_sprinter" in off_traits:
-                    call_prob *= 1.40
-
-                if random.random() < call_prob:
-                    caller = off_side
-                    caller_category = "star_fatigue_rest"
-
-        # ── Category 4: Personnel/scheme timeout (offense, Q1-Q3) ──
-        # When the DC has solved a play family and the offense is struggling.
-        # Only if team has 2+ timeouts (preserve last one for emergencies).
-        if (caller is None and off_timeouts >= 2
-                and quarter <= 3
+        # ── Category 8: Personnel regrouping (offense) ──
+        # Stalled drive — offense needs a scheme change.
+        # Available any quarter (not just Q1-Q3), but less likely in Q4 crunch.
+        if (caller is None and off_timeouts > _ideal_reserve
                 and self.drive_play_count >= 3):
-            # Check if offense has been shut down on this drive (no gains)
-            recent_stall = (self.drive_play_count >= 4
-                            and getattr(self, '_drive_yards', 0) <= 2)
+            drive_yds = getattr(self, '_drive_yards', 0)
+            recent_stall = (self.drive_play_count >= 4 and drive_yds <= 3)
             if recent_stall:
-                # Bad clock managers burn TOs here more often
-                call_prob = 0.05 + 0.03 * (1.0 - off_clock_mgmt)
-
+                call_prob = 0.10 + 0.05 * (1.0 - off_clock_mgmt)
+                if quarter == 4 and time_left < 180:
+                    call_prob *= 0.30  # save TOs late
                 if "timeout_sprinter" in off_traits:
                     call_prob *= 1.50
                 if "timeout_hoarder" in off_traits:
                     call_prob *= 0.30
-
-                if random.random() < call_prob:
+                if random.random() < min(0.20, call_prob):
                     caller = off_side
                     caller_category = "personnel_regrouping"
 
@@ -12187,6 +12859,16 @@ class ViperballEngine:
             "adaptation_log": list(self._adaptation_log),
             # ── Timeout log: every timeout event for post-game audit ──
             "timeout_log": list(self.timeout_log),
+            # ── Referee crew: name + challenge stats visible ──
+            "referee": {
+                "name": self.referee_crew.name,
+                "blown_calls": self.referee_crew.blown_calls,
+                "challenged_calls": self.referee_crew.challenged_calls,
+                "overturned_calls": self.referee_crew.overturned_calls,
+                "blown_call_log": list(self.referee_crew.blown_call_log),
+                "home_challenges_remaining": self.state.home_challenges,
+                "away_challenges_remaining": self.state.away_challenges,
+            },
         }
 
         return summary

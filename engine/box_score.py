@@ -3,20 +3,25 @@ Box Score Generator for Collegiate Viperball
 Generates markdown-formatted box scores with advanced metrics
 """
 
-from typing import Dict
+from typing import Dict, List
 from datetime import datetime
 
 
 def _fmt_pts(v):
-    """Format a point value: whole numbers without .0, half-points with \u00bd."""
+    """Format a point value: whole numbers without .0, half-points with ½."""
     if isinstance(v, (int, float)):
         whole = int(v)
         frac = v - whole
         if abs(frac) < 0.01:
             return str(whole)
         elif abs(frac - 0.5) < 0.01:
-            return f"{whole}\u00bd" if whole > 0 else "\u00bd"
+            return f"{whole}½" if whole > 0 else "½"
     return str(v)
+
+
+def _fmt_time(seconds: int) -> str:
+    """Format seconds as MM:SS."""
+    return f"{seconds // 60:02d}:{seconds % 60:02d}"
 
 
 class BoxScoreGenerator:
@@ -29,29 +34,55 @@ class BoxScoreGenerator:
         self.home_stats = game_data['stats']['home']
         self.away_stats = game_data['stats']['away']
         self.tempo = game_data.get('tempo', 'standard')
-    
+
     def generate(self) -> str:
         """Generate complete box score"""
         lines = []
 
-        # Header
+        away_name = self.away['team']
+        home_name = self.home['team']
+        away_score = self.away['score']
+        home_score = self.home['score']
+
+        # ══════════════════════════════════════════════════════════
+        # HEADER — Prominent matchup with HOME/AWAY clearly marked
+        # ══════════════════════════════════════════════════════════
         lines.append("# VIPERBALL BOX SCORE")
         lines.append("")
         if self.tempo == "uptempo":
             lines.append("> **TEMPO: UP-TEMPO** -- Fast-paced, lateral-heavy offensive game")
             lines.append("")
-        lines.append(f"**{self.away['team']}** @ **{self.home['team']}**")
+
+        # Big scoreboard-style header
+        lines.append(f"## {away_name} {_fmt_pts(away_score)}  @  {home_name} {_fmt_pts(home_score)}")
         lines.append("")
+
+        # Determine winner
+        margin = abs(home_score - away_score)
+        if home_score > away_score:
+            winner = f"**{home_name}** wins by {_fmt_pts(margin)}"
+        elif away_score > home_score:
+            winner = f"**{away_name}** wins by {_fmt_pts(margin)}"
+        else:
+            winner = "Game ended in a tie"
+        lines.append(winner)
+        lines.append("")
+
+        # Weather and context
+        weather_label = self.game_data.get('weather_label', '')
+        if weather_label:
+            lines.append(f"*Conditions: {weather_label}*")
         lines.append(f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
         lines.append("")
         lines.append("---")
         lines.append("")
 
-        # Quarter-by-Quarter Scoring
+        # ══════════════════════════════════════════════════════════
+        # SCORING SUMMARY — Quarter-by-quarter
+        # ══════════════════════════════════════════════════════════
         lines.append("## SCORING SUMMARY")
         lines.append("")
 
-        # Build quarter scores from running score deltas in play-by-play
         away_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
         home_q = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
         plays = self.game_data['play_by_play']
@@ -71,27 +102,15 @@ class BoxScoreGenerator:
 
         lines.append("| Team | Q1 | Q2 | Q3 | Q4 | Final |")
         lines.append("|------|----|----|----|----|-------|")
-        lines.append(f"| {self.away['team']} | {_fmt_pts(away_q[1])} | {_fmt_pts(away_q[2])} | {_fmt_pts(away_q[3])} | {_fmt_pts(away_q[4])} | **{_fmt_pts(self.away['score'])}** |")
-        lines.append(f"| {self.home['team']} | {_fmt_pts(home_q[1])} | {_fmt_pts(home_q[2])} | {_fmt_pts(home_q[3])} | {_fmt_pts(home_q[4])} | **{_fmt_pts(self.home['score'])}** |")
-        lines.append("")
-
-        # Determine winner
-        if self.home['score'] > self.away['score']:
-            winner = f"{self.home['team']} wins by {self.home['score'] - self.away['score']}"
-        elif self.away['score'] > self.home['score']:
-            winner = f"{self.away['team']} wins by {self.away['score'] - self.home['score']}"
-        else:
-            winner = "Game ended in a tie"
-
-        lines.append(f"**{winner}**")
+        lines.append(f"| {away_name} | {_fmt_pts(away_q[1])} | {_fmt_pts(away_q[2])} | {_fmt_pts(away_q[3])} | {_fmt_pts(away_q[4])} | **{_fmt_pts(away_score)}** |")
+        lines.append(f"| {home_name} | {_fmt_pts(home_q[1])} | {_fmt_pts(home_q[2])} | {_fmt_pts(home_q[3])} | {_fmt_pts(home_q[4])} | **{_fmt_pts(home_score)}** |")
         lines.append("")
         lines.append("---")
         lines.append("")
 
-        # Scoring Breakdown — all 6 channels
-        # Count all scoring events directly from play-by-play to avoid
-        # stats-dict ambiguity (possession is already set to scoring team
-        # by the engine for TDs, kicks, pindowns; recovering team for fumbles).
+        # ══════════════════════════════════════════════════════════
+        # SCORING BREAKDOWN — All 6 scoring channels
+        # ══════════════════════════════════════════════════════════
         lines.append("## SCORING BREAKDOWN")
         lines.append("")
         home_all_td = 0
@@ -116,20 +135,18 @@ class BoxScoreGenerator:
                 else:
                     away_pindowns += 1
             elif r == 'safety':
-                # possession = offense that committed it; opponent scores
                 if pos == 'home':
                     away_safeties += 1
                 else:
                     home_safeties += 1
             elif r == 'fumble':
-                # possession = recovering team
                 if pos == 'home':
                     home_bells += 1
                 else:
                     away_bells += 1
 
-        lines.append(f"| Category | {self.away['team']} | {self.home['team']} |")
-        lines.append(f"|----------|" + "-" * (len(self.away['team']) + 2) + "|" + "-" * (len(self.home['team']) + 2) + "|")
+        lines.append(f"| Category | {away_name} | {home_name} |")
+        lines.append(f"|----------|" + "-" * (len(away_name) + 2) + "|" + "-" * (len(home_name) + 2) + "|")
         lines.append(f"| Touchdowns (9 pts) | {away_all_td} ({away_all_td * 9} pts) | {home_all_td} ({home_all_td * 9} pts) |")
         lines.append(f"| Snap Kicks (5 pts) | {self.away_stats['drop_kicks_made']} ({self.away_stats['drop_kicks_made'] * 5} pts) | {self.home_stats['drop_kicks_made']} ({self.home_stats['drop_kicks_made'] * 5} pts) |")
         lines.append(f"| Field Goals (3 pts) | {self.away_stats['place_kicks_made']} ({self.away_stats['place_kicks_made'] * 3} pts) | {self.home_stats['place_kicks_made']} ({self.home_stats['place_kicks_made'] * 3} pts) |")
@@ -138,16 +155,18 @@ class BoxScoreGenerator:
         if away_pindowns or home_pindowns:
             lines.append(f"| Pindowns (1 pt) | {away_pindowns} ({away_pindowns} pts) | {home_pindowns} ({home_pindowns} pts) |")
         if away_bells or home_bells:
-            lines.append(f"| Bells (\u00bd pt) | {away_bells} ({_fmt_pts(away_bells * 0.5)} pts) | {home_bells} ({_fmt_pts(home_bells * 0.5)} pts) |")
+            lines.append(f"| Bells (½ pt) | {away_bells} ({_fmt_pts(away_bells * 0.5)} pts) | {home_bells} ({_fmt_pts(home_bells * 0.5)} pts) |")
         lines.append("")
         lines.append("---")
         lines.append("")
 
-        # Standard Statistics
+        # ══════════════════════════════════════════════════════════
+        # TEAM STATISTICS
+        # ══════════════════════════════════════════════════════════
         lines.append("## TEAM STATISTICS")
         lines.append("")
-        hdr = f"| Statistic | {self.away['team']} | {self.home['team']} |"
-        sep = f"|-----------|" + "-" * (len(self.away['team']) + 2) + "|" + "-" * (len(self.home['team']) + 2) + "|"
+        hdr = f"| Statistic | {away_name} | {home_name} |"
+        sep = f"|-----------|" + "-" * (len(away_name) + 2) + "|" + "-" * (len(home_name) + 2) + "|"
         lines.append(hdr)
         lines.append(sep)
         lines.append(f"| Total Yards | {self.away_stats['total_yards']} | {self.home_stats['total_yards']} |")
@@ -155,11 +174,23 @@ class BoxScoreGenerator:
         lines.append(f"| Yards/Play | {self.away_stats['yards_per_play']} | {self.home_stats['yards_per_play']} |")
         lines.append(f"| Touchdowns | {self.away_stats.get('touchdowns', 0)} | {self.home_stats.get('touchdowns', 0)} |")
 
+        # Time of Possession (estimated from play counts and tempo)
+        away_plays = self.away_stats.get('total_plays', 0)
+        home_plays = self.home_stats.get('total_plays', 0)
+        total_plays = away_plays + home_plays
+        if total_plays > 0:
+            # 2400 total seconds in a game (4 x 10-minute quarters)
+            total_seconds = 2400
+            away_top = round(total_seconds * away_plays / total_plays)
+            home_top = total_seconds - away_top
+            lines.append(f"| Time of Possession | {_fmt_time(away_top)} | {_fmt_time(home_top)} |")
+
         # Rushing
         away_rc = self.away_stats.get('rushing_carries', 0)
         home_rc = self.home_stats.get('rushing_carries', 0)
         away_ry = self.away_stats.get('rushing_yards', 0)
         home_ry = self.home_stats.get('rushing_yards', 0)
+        lines.append(f"| **--- RUSHING ---** | | |")
         lines.append(f"| Rushing | {away_rc} car, {away_ry} yds | {home_rc} car, {home_ry} yds |")
         lines.append(f"| Rushing TDs | {self.away_stats.get('rushing_touchdowns', 0)} | {self.home_stats.get('rushing_touchdowns', 0)} |")
 
@@ -168,12 +199,14 @@ class BoxScoreGenerator:
         away_kp_att = self.away_stats.get('kick_passes_attempted', 0)
         home_kp_comp = self.home_stats.get('kick_passes_completed', 0)
         home_kp_att = self.home_stats.get('kick_passes_attempted', 0)
+        lines.append(f"| **--- KICK PASSING ---** | | |")
         lines.append(f"| Kick Passes | {away_kp_comp}/{away_kp_att} | {home_kp_comp}/{home_kp_att} |")
         lines.append(f"| Kick Pass Yards | {self.away_stats.get('kick_pass_yards', 0)} | {self.home_stats.get('kick_pass_yards', 0)} |")
         lines.append(f"| Kick Pass TDs | {self.away_stats.get('kick_pass_tds', 0)} | {self.home_stats.get('kick_pass_tds', 0)} |")
         lines.append(f"| Kick Pass INTs | {self.away_stats.get('kick_pass_interceptions', 0)} | {self.home_stats.get('kick_pass_interceptions', 0)} |")
 
         # Laterals
+        lines.append(f"| **--- LATERALS ---** | | |")
         lines.append(f"| Lateral Chains | {self.away_stats['lateral_chains']} | {self.home_stats['lateral_chains']} |")
         lines.append(f"| Successful Laterals | {self.away_stats['successful_laterals']} | {self.home_stats['successful_laterals']} |")
         lines.append(f"| Lateral INTs | {self.away_stats.get('lateral_interceptions', 0)} | {self.home_stats.get('lateral_interceptions', 0)} |")
@@ -187,11 +220,13 @@ class BoxScoreGenerator:
                          + self.home_stats.get('turnovers_on_downs', 0)
                          + self.home_stats.get('kick_pass_interceptions', 0)
                          + self.home_stats.get('lateral_interceptions', 0))
+        lines.append(f"| **--- TURNOVERS ---** | | |")
         lines.append(f"| **Total Turnovers** | **{away_total_to}** | **{home_total_to}** |")
         lines.append(f"| Fumbles Lost | {self.away_stats.get('fumbles_lost', 0)} | {self.home_stats.get('fumbles_lost', 0)} |")
         lines.append(f"| Turnovers on Downs | {self.away_stats.get('turnovers_on_downs', 0)} | {self.home_stats.get('turnovers_on_downs', 0)} |")
 
         # Kicking
+        lines.append(f"| **--- KICKING ---** | | |")
         lines.append(f"| Drop Kicks | {self.away_stats['drop_kicks_made']}/{self.away_stats.get('drop_kicks_attempted', 0)} | {self.home_stats['drop_kicks_made']}/{self.home_stats.get('drop_kicks_attempted', 0)} |")
         lines.append(f"| Place Kicks | {self.away_stats['place_kicks_made']}/{self.away_stats.get('place_kicks_attempted', 0)} | {self.home_stats['place_kicks_made']}/{self.home_stats.get('place_kicks_attempted', 0)} |")
         lines.append(f"| Punts | {self.away_stats.get('punts', 0)} | {self.home_stats.get('punts', 0)} |")
@@ -227,21 +262,32 @@ class BoxScoreGenerator:
         # Penalties
         away_pen = self.away_stats.get('penalties', 0)
         home_pen = self.home_stats.get('penalties', 0)
-        if away_pen or home_pen:
+        away_pen_dec = self.away_stats.get('penalties_declined', 0)
+        home_pen_dec = self.home_stats.get('penalties_declined', 0)
+        if away_pen or home_pen or away_pen_dec or home_pen_dec:
+            lines.append(f"| **--- PENALTIES ---** | | |")
             lines.append(f"| Penalties | {away_pen} for {self.away_stats.get('penalty_yards', 0)} yds | {home_pen} for {self.home_stats.get('penalty_yards', 0)} yds |")
+            if away_pen_dec or home_pen_dec:
+                lines.append(f"| Penalties Declined | {away_pen_dec} | {home_pen_dec} |")
 
         # Down Conversions
         away_dc = self.away_stats.get('down_conversions', {})
         home_dc = self.home_stats.get('down_conversions', {})
+        has_dc = False
         for d in [4, 5, 6]:
             adc = away_dc.get(d, away_dc.get(str(d), {}))
             hdc = home_dc.get(d, home_dc.get(str(d), {}))
             a_att = adc.get('attempts', 0) if isinstance(adc, dict) else 0
             h_att = hdc.get('attempts', 0) if isinstance(hdc, dict) else 0
             if a_att or h_att:
+                if not has_dc:
+                    lines.append(f"| **--- DOWN CONVERSIONS ---** | | |")
+                    has_dc = True
                 a_conv = adc.get('converted', 0) if isinstance(adc, dict) else 0
                 h_conv = hdc.get('converted', 0) if isinstance(hdc, dict) else 0
-                lines.append(f"| {d}th Down Conv. | {a_conv}/{a_att} | {h_conv}/{h_att} |")
+                a_rate = round(a_conv / max(1, a_att) * 100) if a_att else 0
+                h_rate = round(h_conv / max(1, h_att) * 100) if h_att else 0
+                lines.append(f"| {d}th Down Conv. | {a_conv}/{a_att} ({a_rate}%) | {h_conv}/{h_att} ({h_rate}%) |")
 
         # Bonus Possessions
         away_bp = self.away_stats.get('bonus_possessions', 0)
@@ -255,7 +301,77 @@ class BoxScoreGenerator:
         lines.append("---")
         lines.append("")
 
-        # Advanced Metrics
+        # ══════════════════════════════════════════════════════════
+        # INDIVIDUAL LEADERS
+        # ══════════════════════════════════════════════════════════
+        home_players = self.game_data.get('player_stats', {}).get('home', [])
+        away_players = self.game_data.get('player_stats', {}).get('away', [])
+
+        if home_players or away_players:
+            lines.append("## INDIVIDUAL LEADERS")
+            lines.append("")
+
+            # Rushing leaders
+            all_rushers = ([(p, away_name) for p in away_players if p.get('rush_carries', 0) > 0]
+                          + [(p, home_name) for p in home_players if p.get('rush_carries', 0) > 0])
+            all_rushers.sort(key=lambda x: x[0].get('rushing_yards', 0), reverse=True)
+            if all_rushers:
+                lines.append("### Rushing")
+                lines.append("")
+                lines.append("| Player | Team | Car | Yds | TDs |")
+                lines.append("|--------|------|-----|-----|-----|")
+                for rusher, team in all_rushers[:5]:
+                    lines.append(f"| {rusher['name']} | {team} | {rusher.get('rush_carries', 0)} | {rusher.get('rushing_yards', 0)} | {rusher.get('rushing_tds', 0)} |")
+                lines.append("")
+
+            # Kick passing leaders (throwers)
+            all_passers = ([(p, away_name) for p in away_players if p.get('kick_passes_thrown', 0) > 0]
+                          + [(p, home_name) for p in home_players if p.get('kick_passes_thrown', 0) > 0])
+            all_passers.sort(key=lambda x: x[0].get('kick_pass_yards', 0), reverse=True)
+            if all_passers:
+                lines.append("### Kick Passing")
+                lines.append("")
+                lines.append("| Player | Team | Comp/Att | Yds | TDs | INTs |")
+                lines.append("|--------|------|----------|-----|-----|------|")
+                for passer, team in all_passers[:3]:
+                    comp = passer.get('kick_passes_completed', 0)
+                    att = passer.get('kick_passes_thrown', 0)
+                    lines.append(f"| {passer['name']} | {team} | {comp}/{att} | {passer.get('kick_pass_yards', 0)} | {passer.get('kick_pass_tds', 0)} | {passer.get('kick_pass_interceptions_thrown', 0)} |")
+                lines.append("")
+
+            # Receiving leaders
+            all_receivers = ([(p, away_name) for p in away_players if p.get('kick_pass_receptions', 0) > 0]
+                            + [(p, home_name) for p in home_players if p.get('kick_pass_receptions', 0) > 0])
+            all_receivers.sort(key=lambda x: x[0].get('kick_pass_yards', 0), reverse=True)
+            if all_receivers:
+                lines.append("### Receiving")
+                lines.append("")
+                lines.append("| Player | Team | Rec | Yds | TDs |")
+                lines.append("|--------|------|-----|-----|-----|")
+                for recv, team in all_receivers[:5]:
+                    # kick_pass_yards on a receiver is receiving yards
+                    lines.append(f"| {recv['name']} | {team} | {recv.get('kick_pass_receptions', 0)} | {recv.get('kick_pass_yards', 0)} | {recv.get('kick_pass_tds', 0)} |")
+                lines.append("")
+
+            # Defensive leaders
+            all_defenders = ([(p, away_name) for p in away_players if p.get('tackles', 0) > 0]
+                            + [(p, home_name) for p in home_players if p.get('tackles', 0) > 0])
+            all_defenders.sort(key=lambda x: x[0].get('tackles', 0), reverse=True)
+            if all_defenders:
+                lines.append("### Defense")
+                lines.append("")
+                lines.append("| Player | Team | Tkl | TFL | Sacks | Hurries |")
+                lines.append("|--------|------|-----|-----|-------|---------|")
+                for defender, team in all_defenders[:5]:
+                    lines.append(f"| {defender['name']} | {team} | {defender.get('tackles', 0)} | {defender.get('tfl', 0)} | {defender.get('sacks', 0)} | {defender.get('hurries', 0)} |")
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+        # ══════════════════════════════════════════════════════════
+        # ADVANCED METRICS
+        # ══════════════════════════════════════════════════════════
         lines.append("## ADVANCED METRICS")
         lines.append("")
         lines.append("### Viper Efficiency")
@@ -263,8 +379,8 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append(f"| Team | Viper Efficiency |")
         lines.append(f"|------|------------------|")
-        lines.append(f"| {self.away['team']} | {self.away_stats['viper_efficiency']:.2f} |")
-        lines.append(f"| {self.home['team']} | {self.home_stats['viper_efficiency']:.2f} |")
+        lines.append(f"| {away_name} | {self.away_stats['viper_efficiency']:.2f} |")
+        lines.append(f"| {home_name} | {self.home_stats['viper_efficiency']:.2f} |")
         lines.append("")
 
         lines.append("### Kicking Aggression Index")
@@ -283,8 +399,8 @@ class BoxScoreGenerator:
         home_kick_pts = self.home_stats['drop_kicks_made'] * 5 + self.home_stats['place_kicks_made'] * 3
         lines.append(f"| Team | DK/Total Kicks | Kick Points |")
         lines.append(f"|------|----------------|-------------|")
-        lines.append(f"| {self.away['team']} | {away_dk_att}/{away_total_kicks} ({away_kai}%) | {away_kick_pts} |")
-        lines.append(f"| {self.home['team']} | {home_dk_att}/{home_total_kicks} ({home_kai}%) | {home_kick_pts} |")
+        lines.append(f"| {away_name} | {away_dk_att}/{away_total_kicks} ({away_kai}%) | {away_kick_pts} |")
+        lines.append(f"| {home_name} | {home_dk_att}/{home_total_kicks} ({home_kai}%) | {home_kick_pts} |")
         lines.append("")
 
         lines.append("### Lateral Efficiency")
@@ -292,8 +408,8 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append(f"| Team | Lateral Efficiency |")
         lines.append(f"|------|--------------------|")
-        lines.append(f"| {self.away['team']} | {self.away_stats['lateral_efficiency']:.1f}% |")
-        lines.append(f"| {self.home['team']} | {self.home_stats['lateral_efficiency']:.1f}% |")
+        lines.append(f"| {away_name} | {self.away_stats['lateral_efficiency']:.1f}% |")
+        lines.append(f"| {home_name} | {self.home_stats['lateral_efficiency']:.1f}% |")
         lines.append("")
 
         # Tempo section for uptempo games
@@ -307,18 +423,19 @@ class BoxScoreGenerator:
             lines.append(f"|------|----|----|----|----|-------|")
             aq = [away_ppq.get(str(q), away_ppq.get(q, 0)) for q in range(1, 5)]
             hq = [home_ppq.get(str(q), home_ppq.get(q, 0)) for q in range(1, 5)]
-            lines.append(f"| {self.away['team']} | {aq[0]} | {aq[1]} | {aq[2]} | {aq[3]} | {sum(aq)} |")
-            lines.append(f"| {self.home['team']} | {hq[0]} | {hq[1]} | {hq[2]} | {hq[3]} | {sum(hq)} |")
+            lines.append(f"| {away_name} | {aq[0]} | {aq[1]} | {aq[2]} | {aq[3]} | {sum(aq)} |")
+            lines.append(f"| {home_name} | {hq[0]} | {hq[1]} | {hq[2]} | {hq[3]} | {sum(hq)} |")
             lines.append("")
 
         lines.append("---")
         lines.append("")
 
-        # Key Plays
+        # ══════════════════════════════════════════════════════════
+        # KEY PLAYS
+        # ══════════════════════════════════════════════════════════
         lines.append("## KEY PLAYS")
         lines.append("")
 
-        # Find touchdowns and big plays
         key_plays = []
         for play in self.game_data['play_by_play']:
             if play['result'] in ('touchdown', 'punt_return_td', 'int_return_td', 'missed_dk_return_td'):
@@ -331,13 +448,12 @@ class BoxScoreGenerator:
                 key_plays.append(play)
 
         if key_plays:
-            for play in key_plays[:15]:  # Show top 15 key plays for uptempo
+            for play in key_plays[:15]:
                 quarter = play['quarter']
                 time = play['time_remaining']
-                minutes = time // 60
-                seconds = time % 60
-                team_label = "HOME" if play['possession'] == 'home' else 'AWAY'
-                lines.append(f"- **Q{quarter} {minutes:02d}:{seconds:02d}** [{team_label}] {play['description']}")
+                pos = play['possession']
+                team_label = home_name if pos == 'home' else away_name
+                lines.append(f"- **Q{quarter} {_fmt_time(time)}** [{team_label}] {play['description']}")
         else:
             lines.append("*No significant plays recorded*")
 
@@ -345,16 +461,19 @@ class BoxScoreGenerator:
         lines.append("---")
         lines.append("")
 
-        # Game Notes
+        # ══════════════════════════════════════════════════════════
+        # GAME NOTES
+        # ══════════════════════════════════════════════════════════
         lines.append("## GAME NOTES")
         lines.append("")
-        lines.append(f"- **CVL Rules:** 6-for-20 down system, 15-minute quarters")
+        lines.append(f"- **CVL Rules:** 6-for-20 down system, 10-minute quarters")
         if self.tempo == "uptempo":
             lines.append(f"- **Tempo:** Up-tempo offense (both teams)")
+        if weather_label:
+            lines.append(f"- **Weather:** {weather_label}")
         lines.append(f"- **Total Plays:** {self.home_stats['total_plays'] + self.away_stats['total_plays']}")
         lines.append(f"- **Combined Yards:** {self.home_stats['total_yards'] + self.away_stats['total_yards']}")
 
-        # Identify the more aggressive team
         total_drop_kicks = self.home_stats['drop_kicks_made'] + self.away_stats['drop_kicks_made']
         if total_drop_kicks > 0:
             lines.append(f"- **Aggressive Play:** {total_drop_kicks} drop kick(s) made in this game")
@@ -373,10 +492,74 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append("---")
         lines.append("")
-        lines.append("*Collegiate Viperball League (CVL) Official Box Score*")
+
+        # ══════════════════════════════════════════════════════════
+        # GAME INFO (officials, weather — subtle, at the end)
+        # ══════════════════════════════════════════════════════════
+        referee = self.game_data.get('referee', {})
+        info_parts = []
+        if referee:
+            ref_name = referee.get('name', 'Unknown')
+            info_parts.append(f"**Officials:** {ref_name}")
+        if weather_label:
+            info_parts.append(f"**Weather:** {weather_label}")
+
+        if info_parts:
+            lines.append(" | ".join(info_parts))
+            lines.append("")
+
+        # Challenge summary (if any challenges were used)
+        if referee:
+            challenged = referee.get('challenged_calls', 0)
+            overturned = referee.get('overturned_calls', 0)
+            if challenged > 0:
+                lines.append(f"*Challenges: {challenged} used, {overturned} overturned*")
+                lines.append("")
+
+            blown_call_log = referee.get('blown_call_log', [])
+            if blown_call_log:
+                uncorrected = [bc for bc in blown_call_log
+                               if bc.get('type') in ('phantom_flag', 'swallowed_whistle', 'spot_error')]
+                corrected = [bc for bc in blown_call_log
+                            if bc.get('type') in ('phantom_flag_overturned', 'swallowed_whistle_overturned')]
+                if uncorrected or corrected:
+                    lines.append("*Post-game officiating review:*")
+                    for bc in blown_call_log:
+                        q = bc.get('quarter', '?')
+                        time = bc.get('time_remaining', 0)
+                        bc_type = bc.get('type', 'unknown')
+                        if bc_type == "phantom_flag":
+                            pen_name = bc.get('penalty_called', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} called on {team_label}; no infraction on replay")
+                        elif bc_type == "phantom_flag_overturned":
+                            pen_name = bc.get('penalty_called', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} overturned on challenge")
+                        elif bc_type == "swallowed_whistle":
+                            pen_name = bc.get('penalty_missed', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} went uncalled")
+                        elif bc_type == "swallowed_whistle_overturned":
+                            pen_name = bc.get('penalty_missed', '?')
+                            on_team = bc.get('on_team', '?')
+                            team_label = home_name if on_team == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — {pen_name} on {team_label} called after challenge")
+                        elif bc_type == "spot_error":
+                            error = bc.get('error_yards', 0)
+                            direction = "forward" if error > 0 else "back"
+                            poss = bc.get('possession', '?')
+                            team_label = home_name if poss == 'home' else away_name
+                            lines.append(f"- Q{q} {_fmt_time(time)} — Spot error: {abs(error)} yd(s) {direction} ({team_label})")
+                    lines.append("")
+
+        lines.append(f"*Collegiate Viperball League (CVL) Official Box Score — {away_name} at {home_name}*")
 
         return "\n".join(lines)
-    
+
     def save_to_file(self, filepath: str):
         """Save box score to markdown file"""
         content = self.generate()

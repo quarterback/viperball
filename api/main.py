@@ -371,6 +371,8 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "season_kill_pct": round(rec.season_kill_pct, 1) if hasattr(rec, 'season_kill_pct') else 0.0,
         "avg_delta_yds": round(rec.avg_delta_yds, 1) if hasattr(rec, 'avg_delta_yds') else 0.0,
         "conversion_by_zone": rec.season_conversion_by_zone if hasattr(rec, 'season_conversion_by_zone') else {},
+        # KenPom-style efficiency metrics
+        "kenpom": rec.kenpom_metrics() if hasattr(rec, 'kenpom_metrics') else {},
     }
 
 

@@ -1036,12 +1036,16 @@ def fast_sim_game(home_team, away_team,
     away_scoring = _generate_scoring_events(away_expected, away_team, home_def, rng)
 
     if home_scoring["score"] == away_scoring["score"]:
-        if rng.random() < 0.5:
-            home_scoring["score"] += SCORING["rouge"]
-            home_scoring["rouges"] += 1
+        # Overtime tiebreaker: award a TD (9 pts) to the winner.
+        # In fast-sim, overtime is abstracted — the better team has
+        # a slight edge, but either can win.
+        home_edge = home_str / max(1, home_str + away_str)
+        if rng.random() < home_edge:
+            home_scoring["score"] += SCORING["touchdown"]
+            home_scoring["rush_tds"] += 1
         else:
-            away_scoring["score"] += SCORING["rouge"]
-            away_scoring["rouges"] += 1
+            away_scoring["score"] += SCORING["touchdown"]
+            away_scoring["rush_tds"] += 1
 
     home_stats = _generate_team_stats(home_scoring, home_team, away_def, rng)
     away_stats = _generate_team_stats(away_scoring, away_team, home_def, rng)

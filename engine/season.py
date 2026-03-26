@@ -274,6 +274,34 @@ class TeamRecord:
     conv_zone_opp_deep_6d_att: int = 0
     conv_zone_opp_deep_6d_conv: int = 0
 
+    # KenPom-style efficiency accumulators (raw per-game stats summed)
+    # Populated from game_stats dict passed through add_game_result
+    kp_own_drives: int = 0           # Total offensive drives
+    kp_total_plays: int = 0          # Total offensive plays
+    kp_rushing_yards: int = 0        # Total rushing yards
+    kp_rushing_carries: int = 0      # Total rushing carries
+    kp_kick_pass_att: int = 0        # Kick pass attempts
+    kp_kick_pass_comp: int = 0       # Kick pass completions
+    kp_kick_pass_yards: int = 0      # Kick pass yards
+    kp_dk_att: int = 0               # Drop kick attempts
+    kp_dk_made: int = 0              # Drop kicks made
+    kp_pk_att: int = 0               # Place kick attempts
+    kp_pk_made: int = 0              # Place kicks made
+    kp_turnovers_committed: int = 0  # Own turnovers (fumbles + INTs)
+    kp_lateral_chains: int = 0       # Lateral chain attempts
+    kp_lateral_success: int = 0      # Successful lateral chains
+    kp_penalties_against: int = 0    # Penalties on this team (opponent's free yards)
+    kp_penalty_yards_against: int = 0  # Penalty yards benefiting opponent
+    kp_opp_points: float = 0.0      # Points allowed (same as points_against, kept for clarity)
+    kp_opp_plays: int = 0           # Opponent total plays
+    kp_opp_dk_att: int = 0          # Opponent drop kick attempts
+    kp_opp_dk_made: int = 0         # Opponent drop kicks made
+    kp_opp_pk_att: int = 0          # Opponent place kick attempts
+    kp_opp_pk_made: int = 0         # Opponent place kicks made
+    kp_opp_rushing_yards: int = 0   # Opponent rushing yards
+    kp_opp_kick_pass_comp: int = 0  # Opponent kick pass completions
+    kp_opp_kick_pass_att: int = 0   # Opponent kick pass attempts
+
     # Delta profile season accumulators
     total_delta_yds: float = 0.0
     total_team_kill_drives: int = 0
@@ -293,7 +321,9 @@ class TeamRecord:
                         dye_data: Optional[Dict] = None,
                         opponent_dye_data: Optional[Dict] = None,
                         bonus_data: Optional[Dict] = None,
-                        opponent_bonus_data: Optional[Dict] = None):
+                        opponent_bonus_data: Optional[Dict] = None,
+                        game_stats: Optional[Dict] = None,
+                        opp_game_stats: Optional[Dict] = None):
         if won is None:
             self.ties += 1
             self.win_streak = 0
@@ -412,6 +442,44 @@ class TeamRecord:
             self.bonus_poss_yards += bonus_data.get("yards", 0)
         if opponent_bonus_data:
             self.opponent_bonus_poss_scores += opponent_bonus_data.get("scores", 0)
+
+        # ── KenPom-style raw stat accumulation ──
+        gs = game_stats or {}
+        ogs = opp_game_stats or {}
+        self.kp_total_plays += gs.get("total_plays", 0)
+        self.kp_rushing_yards += gs.get("rushing_yards", 0)
+        self.kp_rushing_carries += gs.get("rushing_carries", 0)
+        self.kp_kick_pass_att += gs.get("kick_passes_attempted", 0)
+        self.kp_kick_pass_comp += gs.get("kick_passes_completed", 0)
+        self.kp_kick_pass_yards += gs.get("kick_pass_yards", 0)
+        self.kp_dk_att += gs.get("drop_kicks_attempted", 0)
+        self.kp_dk_made += gs.get("drop_kicks_made", 0)
+        self.kp_pk_att += gs.get("place_kicks_attempted", 0)
+        self.kp_pk_made += gs.get("place_kicks_made", 0)
+        self.kp_turnovers_committed += (gs.get("fumbles_lost", 0)
+                                        + gs.get("kick_pass_interceptions", 0)
+                                        + gs.get("lateral_interceptions", 0))
+        self.kp_lateral_chains += gs.get("lateral_chains", 0)
+        self.kp_lateral_success += gs.get("successful_laterals", 0)
+        self.kp_penalties_against += gs.get("penalties", 0)
+        self.kp_penalty_yards_against += gs.get("penalty_yards", 0)
+
+        # Estimate own drives from opponent drives (roughly symmetric)
+        scoring = metrics.get("scoring_profile", {})
+        def_impact = metrics.get("defensive_impact", {})
+        own_drives = def_impact.get("opponent_drives", 0)  # Rough proxy: each team gets ~same drives
+        self.kp_own_drives += max(own_drives, gs.get("total_plays", 0) // 6)  # fallback: plays/6
+
+        # Opponent stats
+        self.kp_opp_points += points_against
+        self.kp_opp_plays += ogs.get("total_plays", 0)
+        self.kp_opp_dk_att += ogs.get("drop_kicks_attempted", 0)
+        self.kp_opp_dk_made += ogs.get("drop_kicks_made", 0)
+        self.kp_opp_pk_att += ogs.get("place_kicks_attempted", 0)
+        self.kp_opp_pk_made += ogs.get("place_kicks_made", 0)
+        self.kp_opp_rushing_yards += ogs.get("rushing_yards", 0)
+        self.kp_opp_kick_pass_comp += ogs.get("kick_passes_completed", 0)
+        self.kp_opp_kick_pass_att += ogs.get("kick_passes_attempted", 0)
 
     # ── Fan-friendly metric averages ──
 
@@ -609,6 +677,76 @@ class TeamRecord:
         if self.conf_ties:
             return f"{self.conf_wins}-{self.conf_losses}-{self.conf_ties}"
         return f"{self.conf_wins}-{self.conf_losses}"
+
+    # ── KenPom-style efficiency metrics ──
+
+    def kenpom_metrics(self) -> Dict:
+        """Compute KenPom-style efficiency breakout from season accumulators.
+
+        Returns a dict with all KenPom columns mapped to Viperball equivalents.
+        Not opponent-adjusted (that requires league-wide context).
+        """
+        gp = max(1, self.games_played)
+        own_drives = max(1, self.kp_own_drives)
+        opp_drives = max(1, self.total_opponent_drives)
+
+        # ── Offense ──
+        # Raw O: points per drive × 10 (KenPom uses per-100-possessions)
+        raw_o = round(self.points_for / own_drives * 10, 1)
+        # Raw D: opponent points per drive × 10
+        raw_d = round(self.kp_opp_points / opp_drives * 10, 1)
+
+        # Effective Kick% (EK%): kick success weighted by value
+        # DK worth 5/3 of PK (5pts vs 3pts), so weight DK makes by 5/3
+        total_kick_att = max(1, self.kp_dk_att + self.kp_pk_att)
+        ek_pct = round((self.kp_dk_made * (5/3) + self.kp_pk_made) /
+                       total_kick_att * 100, 1)
+        # Opponent EK%
+        opp_kick_att = max(1, self.kp_opp_dk_att + self.kp_opp_pk_att)
+        opp_ek_pct = round((self.kp_opp_dk_made * (5/3) + self.kp_opp_pk_made) /
+                          opp_kick_att * 100, 1)
+
+        # TO% (turnover rate per drive)
+        to_pct = round(self.kp_turnovers_committed / own_drives * 100, 1)
+        # TOD% (forced turnover rate per opponent drive)
+        tod_pct = round(self.total_turnovers_forced_all / opp_drives * 100, 1)
+
+        # Lateral Recovery% (successful laterals / attempted)
+        lr_pct = round(self.kp_lateral_success / max(1, self.kp_lateral_chains) * 100, 1)
+
+        # Free Down Rate (penalty first downs per play — like FTR)
+        # This is penalties drawn AGAINST the opponent per own play
+        total_plays = max(1, self.kp_total_plays)
+        fdr = round(self.kp_penalties_against / total_plays * 100, 1)
+
+        # Rush/Lateral Efficiency: yards per carry
+        rle = round(self.kp_rushing_yards / max(1, self.kp_rushing_carries), 1)
+        # Opponent R/L Efficiency
+        opp_rle = round(self.kp_opp_rushing_yards / max(1, gp * 15), 1)  # rough: ~15 carries/game
+
+        # Kick Pass%: completion rate
+        kp_pct = round(self.kp_kick_pass_comp / max(1, self.kp_kick_pass_att) * 100, 1)
+        # Opponent KP%
+        opp_kp_pct = round(self.kp_opp_kick_pass_comp / max(1, self.kp_opp_kick_pass_att) * 100, 1)
+
+        # Adjusted Tempo: plays per game
+        adj_tempo = round(self.kp_total_plays / gp, 0)
+
+        return {
+            "raw_o": raw_o,        # Points per 10 drives (like AdjO)
+            "raw_d": raw_d,        # Opponent pts per 10 drives (like AdjD)
+            "ek_pct": ek_pct,      # Effective Kick% (like eFG%)
+            "opp_ek_pct": opp_ek_pct,  # Opponent EK% (like eFGD)
+            "to_pct": to_pct,      # Turnover% (like TO%)
+            "tod_pct": tod_pct,    # Forced TO% (like TOD%)
+            "lr_pct": lr_pct,      # Lateral Recovery% (like OR%)
+            "fdr": fdr,            # Free Down Rate (like FTR)
+            "rle": rle,            # Rush/Lateral Efficiency (like 2P%)
+            "opp_rle": opp_rle,    # Opponent RLE (like 2P%D)
+            "kp_pct": kp_pct,      # Kick Pass% (like 3P%)
+            "opp_kp_pct": opp_kp_pct,  # Opponent KP% (like 3P%D)
+            "adj_tempo": adj_tempo,  # Plays per game (like AdjT)
+        }
 
     def _check_no_fly_zone(self):
         """V2.4: Check if team has earned No-Fly Zone defensive prestige.
@@ -1532,6 +1670,7 @@ class Season:
         )
 
         is_neutral = game.week >= 900
+        is_postseason = game.week >= 900
 
         # ── Fast-Sim Path ──
         # CPU-vs-CPU games use lightweight statistical model.
@@ -1647,6 +1786,7 @@ class Season:
             weather=season_weather,
             is_rivalry=game.is_rivalry_game,
             neutral_site=is_neutral,
+            is_playoff=is_postseason,
             **injury_kwargs,
             **dq_kwargs,
             **coaching_kwargs,
@@ -1729,6 +1869,8 @@ class Season:
                 opponent_dye_data=away_dye,
                 bonus_data=home_bonus,
                 opponent_bonus_data=away_bonus,
+                game_stats=home_game_stats,
+                opp_game_stats=away_game_stats,
             )
 
         if fcs_side != "away" and game.away_team in self.standings:
@@ -1745,6 +1887,8 @@ class Season:
                 opponent_dye_data=home_dye,
                 bonus_data=away_bonus,
                 opponent_bonus_data=home_bonus,
+                game_stats=away_game_stats,
+                opp_game_stats=home_game_stats,
             )
 
         # ── Dynamic prestige: update after every game ──
