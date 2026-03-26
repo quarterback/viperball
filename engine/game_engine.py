@@ -12729,10 +12729,9 @@ def generate_team_on_the_fly(
 
     # Per-team center jitter: shifts the whole roster up or down so teams
     # within the same archetype tier aren't all identical OVR.
-    # ±25 points creates massive differentiation — a doormat can field a
-    # competitive roster one year or be truly abysmal, and programs can
-    # grow into better tiers through recruiting and development.
-    team_center_offset = int(round(random.gauss(0, 25)))
+    # ±5 points creates meaningful differentiation without overpowering
+    # the archetype center — keeps teams within their intended tier.
+    team_center_offset = int(round(random.gauss(0, 5)))
 
     # Conference floor: even the worst team in a strong conference can't
     # drop below the conference's minimum quality threshold.  Max potential
@@ -12823,7 +12822,7 @@ def generate_team_on_the_fly(
         elite_stats = random.sample(_GEM_STAT_NAMES, num_elite)
         for stat_name in elite_stats:
             current = getattr(p, stat_name)
-            setattr(p, stat_name, min(100, current + boost))
+            setattr(p, stat_name, min(96, current + boost))
         # Hidden gems also get better potential
         p.potential = min(5, p.potential + random.randint(1, 2))
 
