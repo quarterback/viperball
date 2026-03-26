@@ -167,6 +167,42 @@ def _banner_url_for(team_id: str) -> str | None:
     from engine.banner_generator import get_banner_url
     return get_banner_url(team_id, pool_size=n, banners_dir=_BANNERS_DIR)
 
+# ── Pixel-art coach face pool (male + female) ──
+_COACH_FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "coach_faces")
+_coach_face_pool_sizes: dict | None = None
+
+def _get_coach_face_pool_sizes() -> dict:
+    global _coach_face_pool_sizes
+    if _coach_face_pool_sizes is None:
+        from engine.coach_face_generator import get_pool_size
+        _coach_face_pool_sizes = get_pool_size(_COACH_FACES_DIR)
+    return _coach_face_pool_sizes
+
+def _coach_face_url_for(coach_id: str, gender: str) -> str | None:
+    sizes = _get_coach_face_pool_sizes()
+    if sizes.get("m", 0) == 0 and sizes.get("f", 0) == 0:
+        return None
+    from engine.coach_face_generator import get_coach_face_url
+    return get_coach_face_url(coach_id, gender, sizes, _COACH_FACES_DIR)
+
+# ── Pixel-art referee face pool ──
+_REFS_DIR = os.path.join(os.path.dirname(__file__), "static", "referees")
+_ref_pool_size: int | None = None
+
+def _get_ref_pool_size() -> int:
+    global _ref_pool_size
+    if _ref_pool_size is None:
+        from engine.referee_generator import get_pool_size
+        _ref_pool_size = get_pool_size(_REFS_DIR)
+    return _ref_pool_size
+
+def _ref_face_url_for(referee_id: str) -> str | None:
+    n = _get_ref_pool_size()
+    if n == 0:
+        return None
+    from engine.referee_generator import get_ref_url
+    return get_ref_url(referee_id, pool_size=n, refs_dir=_REFS_DIR)
+
 # Conference abbreviation mapping — auto-generates from first letters if not listed
 CONF_ABBREVS = {
     "Southern Sun Conference": "SSC",
@@ -1287,6 +1323,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
                 "championships": card.championships,
                 "philosophy": card.philosophy,
                 "coaching_style": card.coaching_style,
+                "face_src": _coach_face_url_for(card.coach_id, card.gender),
             })
 
     # ── Postseason history ──
@@ -1557,6 +1594,7 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
         season_record=season_record, coach_awards=coach_awards,
         sliders=sliders,
         postseason_apps=postseason_apps, postseason_wins=postseason_wins,
+        face_src=_coach_face_url_for(card.coach_id, card.gender),
     ))
 
 
@@ -5026,16 +5064,22 @@ def face_pool_page(request: Request):
 
 @router.get("/sprites", response_class=HTMLResponse)
 def sprite_pools_page(request: Request):
-    """Overview page for all sprite pools: faces, stadiums, banners."""
+    """Overview page for all sprite pools: faces, stadiums, banners, coach faces, referees."""
     from engine.face_generator import get_pool_size as face_count
     from engine.stadium_generator import get_pool_size as stadium_count
     from engine.banner_generator import get_pool_size as banner_count
+    from engine.coach_face_generator import get_pool_size as coach_face_count
+    from engine.referee_generator import get_pool_size as ref_count
     has_key = bool(os.environ.get("PIXELLAB_API_KEY", ""))
+    coach_sizes = coach_face_count(_COACH_FACES_DIR)
     return templates.TemplateResponse("sprites.html", _ctx(
         request, section="sprites", has_key=has_key,
         face_pool=face_count(_FACES_DIR),
         stadium_pool=stadium_count(_STADIUMS_DIR),
         banner_pool=banner_count(_BANNERS_DIR),
+        coach_face_pool_m=coach_sizes.get("m", 0),
+        coach_face_pool_f=coach_sizes.get("f", 0),
+        ref_pool=ref_count(_REFS_DIR),
     ))
 
 

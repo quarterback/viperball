@@ -4846,3 +4846,162 @@ def download_banner_pool():
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=banners.zip"},
     )
+
+
+# ── Pixel-art coach face pool generation ───────────────────────────────
+
+@app.get("/generate-coach_face-pool")
+@app.post("/generate-coach_face-pool")
+async def generate_coach_face_pool(count: int = 150, force: bool = False):
+    """
+    Generate pixel-art coach face pool via PixelLab API.
+
+    Creates coach_m_000.png … coach_m_N.png and coach_f_000.png … coach_f_N.png
+    in stats_site/static/coach_faces/.  `count` is per gender.
+
+    GET-friendly:
+      http://localhost:5000/generate-coach_face-pool
+      http://localhost:5000/generate-coach_face-pool?count=150
+    """
+    from engine.coach_face_generator import generate_pool, get_pool_size
+
+    api_key = _load_pixellab_key()
+    if not api_key:
+        raise HTTPException(400,
+            "No PixelLab API key found. "
+            "Set PIXELLAB_API_KEY via: fly secrets set PIXELLAB_API_KEY=your-key")
+
+    coach_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                              "stats_site", "static", "coach_faces")
+    existing = get_pool_size(coach_dir)
+
+    results = await generate_pool(
+        count=count, faces_dir=coach_dir, api_key=api_key, force=force,
+    )
+
+    try:
+        import stats_site.router as _sr
+        _sr._coach_face_pool_sizes = None
+    except Exception:
+        pass
+
+    return {
+        "message": f"Coach face pool: {existing} existed, now generating up to {count} per gender",
+        "generated": len(results["generated"]),
+        "skipped": len(results["skipped"]),
+        "failed": len(results["failed"]),
+        "errors": results["failed"][:10],
+    }
+
+
+@app.get("/coach_face-pool-status")
+def coach_face_pool_status():
+    """Check how many coach faces are in the pool."""
+    from engine.coach_face_generator import get_pool_size
+    coach_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                              "stats_site", "static", "coach_faces")
+    return get_pool_size(coach_dir)
+
+
+@app.get("/download-coach_face-pool")
+def download_coach_face_pool():
+    """Download all generated coach face PNGs as a zip file."""
+    import io
+    import zipfile
+    from pathlib import Path
+
+    coach_dir = Path(os.path.dirname(os.path.dirname(__file__))) / "stats_site" / "static" / "coach_faces"
+    pngs = sorted(coach_dir.glob("coach_*.png"))
+    if not pngs:
+        raise HTTPException(404, "No coach faces generated yet. Call /generate-coach_face-pool first.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pngs:
+            zf.write(p, p.name)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=coach_faces.zip"},
+    )
+
+
+# ── Pixel-art referee face pool generation ─────────────────────────────
+
+@app.get("/generate-referee-pool")
+@app.post("/generate-referee-pool")
+async def generate_referee_pool(count: int = 300, force: bool = False):
+    """
+    Generate pixel-art referee face pool via PixelLab API.
+
+    Creates ref_000.png … ref_N.png in stats_site/static/referees/.
+
+    GET-friendly:
+      http://localhost:5000/generate-referee-pool
+      http://localhost:5000/generate-referee-pool?count=300
+    """
+    from engine.referee_generator import generate_pool, get_pool_size
+
+    api_key = _load_pixellab_key()
+    if not api_key:
+        raise HTTPException(400,
+            "No PixelLab API key found. "
+            "Set PIXELLAB_API_KEY via: fly secrets set PIXELLAB_API_KEY=your-key")
+
+    ref_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            "stats_site", "static", "referees")
+    existing = get_pool_size(ref_dir)
+
+    results = await generate_pool(
+        count=count, refs_dir=ref_dir, api_key=api_key, force=force,
+    )
+
+    try:
+        import stats_site.router as _sr
+        _sr._ref_pool_size = None
+    except Exception:
+        pass
+
+    return {
+        "message": f"Referee pool: {existing} existed, now generating up to {count}",
+        "generated": len(results["generated"]),
+        "skipped": len(results["skipped"]),
+        "failed": len(results["failed"]),
+        "errors": results["failed"][:10],
+    }
+
+
+@app.get("/referee-pool-status")
+def referee_pool_status():
+    """Check how many referee faces are in the pool."""
+    from engine.referee_generator import get_pool_size
+    ref_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            "stats_site", "static", "referees")
+    return {"pool_size": get_pool_size(ref_dir)}
+
+
+@app.get("/download-referee-pool")
+def download_referee_pool():
+    """Download all generated referee face PNGs as a zip file."""
+    import io
+    import zipfile
+    from pathlib import Path
+
+    ref_dir = Path(os.path.dirname(os.path.dirname(__file__))) / "stats_site" / "static" / "referees"
+    pngs = sorted(ref_dir.glob("ref_*.png"))
+    if not pngs:
+        raise HTTPException(404, "No referee faces generated yet. Call /generate-referee-pool first.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pngs:
+            zf.write(p, p.name)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=referees.zip"},
+    )

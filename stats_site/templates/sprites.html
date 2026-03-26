@@ -101,6 +101,69 @@
 </div>
 <div id="banner-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
 
+{# ── Coach Faces ── #}
+<h2>Coach Faces <span style="color:var(--fg-dim);font-weight:normal">(32x32, male + female pools)</span></h2>
+<div class="grid-3" style="margin-bottom:12px;">
+  <div class="metric"><div class="label">Male Pool</div><div class="value" id="coach-m-count">{{ coach_face_pool_m }}</div></div>
+  <div class="metric"><div class="label">Female Pool</div><div class="value" id="coach-f-count">{{ coach_face_pool_f }}</div></div>
+  <div class="metric"><div class="label">Size</div><div class="value">32x32</div></div>
+</div>
+{% set coach_total = coach_face_pool_m + coach_face_pool_f %}
+{% if coach_total > 0 %}
+<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px;">
+  {% for i in range([coach_face_pool_m, 6]|min) %}
+  <div style="width:32px;height:32px;border:1px solid var(--border);overflow:hidden;">
+    <img src="/stats/static/coach_faces/coach_m_{{ '%03d'|format(i) }}.png" alt="coach m {{ i }}"
+         style="width:100%;height:100%;image-rendering:pixelated;">
+  </div>
+  {% endfor %}
+  {% for i in range([coach_face_pool_f, 6]|min) %}
+  <div style="width:32px;height:32px;border:1px solid var(--border);overflow:hidden;">
+    <img src="/stats/static/coach_faces/coach_f_{{ '%03d'|format(i) }}.png" alt="coach f {{ i }}"
+         style="width:100%;height:100%;image-rendering:pixelated;">
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div style="margin-bottom:8px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Generate count (per gender)</label>
+  <input type="number" id="coach_face-gen-count" value="150" min="10" max="500"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+  <button onclick="generate('coach_face')" id="coach_face-btn"
+          style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;">
+    Generate Coach Faces
+  </button>
+</div>
+<div id="coach_face-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
+
+{# ── Referees ── #}
+<h2>Referee Faces <span style="color:var(--fg-dim);font-weight:normal">(32x32, mixed gender)</span></h2>
+<div class="grid-3" style="margin-bottom:12px;">
+  <div class="metric"><div class="label">In Pool</div><div class="value" id="referee-count">{{ ref_pool }}</div></div>
+  <div class="metric"><div class="label">Size</div><div class="value">32x32</div></div>
+  <div class="metric"><div class="label">Style</div><div class="value">8-bit</div></div>
+</div>
+{% if ref_pool > 0 %}
+<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px;">
+  {% for i in range([ref_pool, 12]|min) %}
+  <div style="width:32px;height:32px;border:1px solid var(--border);overflow:hidden;">
+    <img src="/stats/static/referees/ref_{{ '%03d'|format(i) }}.png" alt="ref {{ i }}"
+         style="width:100%;height:100%;image-rendering:pixelated;">
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div style="margin-bottom:8px;">
+  <label style="color:var(--fg-dim);font-size:11px;">Generate count</label>
+  <input type="number" id="referee-gen-count" value="300" min="10" max="500"
+         style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:4px 8px;width:80px;font-family:inherit;">
+  <button onclick="generate('referee')" id="referee-btn"
+          style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold;">
+    Generate Referees
+  </button>
+</div>
+<div id="referee-status" style="font-size:11px;color:var(--fg-dim);white-space:pre-line;margin-bottom:16px;"></div>
+
 </div>
 
 <script>
