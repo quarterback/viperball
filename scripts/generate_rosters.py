@@ -37,7 +37,7 @@ PROGRAM_ARCHETYPES = {
         "label": "Doormat",
         "description": "Bottom-tier program. Talent is scarce but a hidden gem or two keeps hope alive.",
         "stat_center": 15,             # floor-level — pure project players
-        "stat_spread": 12,             # wide — individual stats swing wildly
+        "stat_spread": 18,             # wide — individual stats swing wildly
         "hidden_gem_count": (1, 2),    # 1-2 legit players — portal bait
         "hidden_gem_boost": (20, 30),  # 15+25=40 → gem is merely competent, not a star
         "hidden_gem_stats": (3, 5),    # boost across some stats
@@ -54,7 +54,7 @@ PROGRAM_ARCHETYPES = {
         "label": "Underdogs",
         "description": "Below average but scrappy. A few solid players make them competitive on any given day.",
         "stat_center": 20,             # very raw — need multipliers to compete
-        "stat_spread": 12,
+        "stat_spread": 18,
         "hidden_gem_count": (1, 3),    # 1-3 legit players — portal targets
         "hidden_gem_boost": (18, 25),  # 20+22=42 → gem has upside through development
         "hidden_gem_stats": (3, 5),    # boost across some stats
@@ -71,7 +71,7 @@ PROGRAM_ARCHETYPES = {
         "label": "Punching Above Their Weight",
         "description": "Upper mid-major. Well-coached and greater than the sum of their parts.",
         "stat_center": 35,             # below average base — coaching matters
-        "stat_spread": 12,
+        "stat_spread": 18,
         "hidden_gem_count": (2, 3),    # 2-3 standouts
         "hidden_gem_boost": (12, 18),  # 35+15=50 → gem has real tools to work with
         "hidden_gem_stats": (3, 5),
@@ -88,7 +88,7 @@ PROGRAM_ARCHETYPES = {
         "label": "Regional Power",
         "description": "Strong program that dominates their region. Solid roster top to bottom.",
         "stat_center": 44,             # decent base — multipliers push them into contention
-        "stat_spread": 12,
+        "stat_spread": 18,
         "hidden_gem_count": (3, 5),    # 3-5 standouts
         "hidden_gem_boost": (8, 14),   # 44+11=55 → gem is a legit starter
         "hidden_gem_stats": (3, 5),
@@ -105,7 +105,7 @@ PROGRAM_ARCHETYPES = {
         "label": "National Power",
         "description": "Top-tier program that competes for championships. Deep roster with multiple stars.",
         "stat_center": 52,             # solid base — multipliers create stars
-        "stat_spread": 12,
+        "stat_spread": 18,
         "hidden_gem_count": (3, 5),    # deep bench of potential
         "hidden_gem_boost": (6, 10),   # 52+8=60 → gem is a cornerstone player
         "hidden_gem_stats": (3, 5),
@@ -122,7 +122,7 @@ PROGRAM_ARCHETYPES = {
         "label": "Blue Blood",
         "description": "Elite program. Loaded with talent across every position. The standard everyone else chases.",
         "stat_center": 64,             # best base in the game — but still needs development
-        "stat_spread": 12,             # wide — elite in one stat, average in another
+        "stat_spread": 18,             # wide — elite in one stat, average in another
         "hidden_gem_count": (4, 6),    # stacked — stars everywhere
         "hidden_gem_boost": (5, 9),    # 57+7=64 → gems have highest ceiling for multipliers
         "hidden_gem_stats": (3, 5),

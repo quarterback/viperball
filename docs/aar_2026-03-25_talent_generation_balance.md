@@ -51,16 +51,16 @@ This is the philosophical core of the fix. Base stats now represent raw, undevel
 
 | Archetype | Center (before → after) | Spread (before → after) | Base OVR range |
 |---|---|---|---|
-| doormat | 28 → 15 | 5 → 12 | ~10-27 |
-| underdog | 50 → 20 | 6 → 12 | ~10-32 |
-| punching_above | 65 → 35 | 6 → 12 | ~23-47 |
-| regional_power | 78 → 44 | 5 → 12 | ~32-56 |
-| national_power | 89 → 52 | 4 → 12 | ~40-64 |
-| blue_blood | 95 → 64 | 3 → 12 | ~52-76 |
+| doormat | 28 → 15 | 5 → 18 | ~10-27 |
+| underdog | 50 → 20 | 6 → 18 | ~10-32 |
+| punching_above | 65 → 35 | 6 → 18 | ~23-47 |
+| regional_power | 78 → 44 | 5 → 18 | ~32-56 |
+| national_power | 89 → 52 | 4 → 18 | ~40-64 |
+| blue_blood | 95 → 64 | 3 → 18 | ~52-76 |
 
-### 2. Spreads unified to 12 across all tiers
+### 2. Spreads unified to 18 across all tiers
 
-With a gaussian spread of 12, individual stats on the same player swing ±12 points from center (1σ) and ±24 points (2σ). A blue blood Viper might roll 76 speed but 52 awareness — she's fast but raw, exactly what a freshman should be. The uniform spread means the *center* differentiates programs, not the consistency.
+With a gaussian spread of 18, individual stats on the same player swing ±18 points from center (1σ) and ±36 points (2σ). A blue blood Viper might roll 76 speed but 52 awareness — she's fast but raw, exactly what a freshman should be. The uniform spread means the *center* differentiates programs, not the consistency.
 
 ### 3. Per-stat generation ceiling lowered to 96
 
