@@ -1450,16 +1450,12 @@ class Season:
                         continue
                     _add_game(h, a, False)
 
+            # FCS filler disabled — with 205+ real teams, schedule gaps
+            # should not occur.  If they do, the team simply plays fewer games
+            # rather than generating fictional opponents.
             short_teams = [t for t in team_names if game_counts[t] < games_per_team]
-            for st in short_teams:
-                while game_counts[st] < games_per_team:
-                    fcs_name, fcs_mascot = generate_fcs_team_name()
-                    game = Game(week=0, home_team=st, away_team=fcs_name,
-                                is_conference_game=False, is_fcs_game=True)
-                    games.append(game)
-                    scheduled_pairs.add(tuple(sorted([st, fcs_name])))
-                    game_counts[st] += 1
-                    self.fcs_teams[fcs_name] = fcs_mascot
+            if short_teams:
+                print(f"  ⚠ {len(short_teams)} team(s) have fewer than {games_per_team} games (no FCS filler)")
         else:
             single_conf = len(self.conferences) == 1
             all_matchups = []
