@@ -253,6 +253,13 @@ def get_injuries(session_id: str, team: Optional[str] = None) -> dict:
     return _get(f"/sessions/{session_id}/season/injuries", params=params)
 
 
+def get_referees(session_id: str, name: Optional[str] = None) -> dict:
+    params = {}
+    if name:
+        params["name"] = name
+    return _get(f"/sessions/{session_id}/season/referees", params=params)
+
+
 def get_roster(session_id: str, team_name: str) -> dict:
     return _get(f"/sessions/{session_id}/season/roster/{team_name}")
 

@@ -1139,6 +1139,10 @@ class Season:
     # Set by Dynasty at season start; None means prestige tracking is off.
     team_prestige: Optional[Dict[str, int]] = None
 
+    # Referee pool — manages named refs with cards and game logs.
+    # Created lazily on first game simulation.
+    referee_pool: Optional[object] = None
+
     def __post_init__(self):
         for team_name, team in self.teams.items():
             style_config = self.style_configs.get(team_name, {})
@@ -1635,6 +1639,16 @@ class Season:
             use_fast_sim: If True, use fast statistical model for CPU-vs-CPU
                           games. Human-team games always use the full engine.
         """
+        # Lazily create referee pool on first game simulation
+        if self.referee_pool is None:
+            from engine.referee_card import RefereePool
+            # Scale pool to league size: need ~(team_count/2) crews per week
+            ref_count = max(120, len(self.teams) * 2)
+            # Round up to nearest multiple of 3 (crew size)
+            ref_count = ((ref_count + 2) // 3) * 3
+            self.referee_pool = RefereePool(seed=hash(self.name) % (2**31))
+            self.referee_pool.generate(ref_count)
+
         fcs_side = None
         if game.is_fcs_game:
             if game.home_team in self.fcs_teams:
@@ -1771,6 +1785,28 @@ class Season:
         if away_record and away_record.turnover_machine:
             nfz_kwargs["away_turnover_machine"] = True
 
+        # ── Referee crew assignment from pool ──
+        ref_crew_obj = None
+        ref_crew_names = []
+        if self.referee_pool is not None:
+            _ref_rng = random.Random(random.randint(0, 2**31))
+            ref_crew_names = self.referee_pool.assign_crew(_ref_rng, is_playoff=is_postseason)
+            if ref_crew_names:
+                from engine.game_engine import RefereeCrew
+                avg_acc = self.referee_pool.get_crew_accuracy(ref_crew_names)
+                avg_favor = self.referee_pool.get_crew_home_favor(ref_crew_names)
+                avg_con = self.referee_pool.get_crew_consistency(ref_crew_names)
+                inaccuracy = 1.0 - avg_acc
+                ref_crew_obj = RefereeCrew(
+                    name=", ".join(ref_crew_names),
+                    accuracy=avg_acc,
+                    home_favor=avg_favor,
+                    consistency=avg_con,
+                    phantom_flag_rate=round(0.0005 + inaccuracy * 0.01, 5),
+                    swallowed_whistle_rate=round(0.0008 + inaccuracy * 0.01, 5),
+                    spot_error_rate=round(0.001 + inaccuracy * 0.015, 5),
+                )
+
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -1780,6 +1816,7 @@ class Season:
             is_rivalry=game.is_rivalry_game,
             neutral_site=is_neutral,
             is_playoff=is_postseason,
+            referee_crew=ref_crew_obj,
             **injury_kwargs,
             **dq_kwargs,
             **coaching_kwargs,
@@ -1787,6 +1824,11 @@ class Season:
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
+
+        # Record game in referee pool for game log tracking
+        if self.referee_pool is not None and ref_crew_names:
+            result["week"] = game.week
+            self.referee_pool.record_game(ref_crew_names, result, year=0)
 
         if fcs_side != "home":
             for p in home_team.players:
