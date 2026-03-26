@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Injury Report — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Injury Report
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>INJURY REPORT</h1>
+  <div class="subtitle">{{ season_name }} &middot; Week {{ current_week }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/injuries" class="active">Injuries</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{# ── Summary cards ── #}
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:10px 16px;border-radius:4px;min-width:100px;text-align:center;">
+    <div style="font-size:20px;font-weight:bold;color:var(--fg-bright)">{{ summary.active }}</div>
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase">Active</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:10px 16px;border-radius:4px;min-width:100px;text-align:center;">
+    <div style="font-size:20px;font-weight:bold;color:var(--yellow)">{{ summary.dtd }}</div>
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase">Day-to-Day</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:10px 16px;border-radius:4px;min-width:100px;text-align:center;">
+    <div style="font-size:20px;font-weight:bold;color:var(--red)">{{ summary.out }}</div>
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase">Out</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:10px 16px;border-radius:4px;min-width:100px;text-align:center;">
+    <div style="font-size:20px;font-weight:bold;color:var(--red)">{{ summary.season_ending }}</div>
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase">Season-Ending</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:10px 16px;border-radius:4px;min-width:100px;text-align:center;">
+    <div style="font-size:20px;font-weight:bold;color:var(--fg)">{{ summary.season_total }}</div>
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase">Season Total</div>
+  </div>
+</div>
+
+{# ── Conference dropdown ── #}
+<div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+  <strong style="font-size:11px;text-transform:uppercase;color:var(--fg-dim)">Conference:</strong>
+  <select id="conf-select" style="background:var(--bg-alt);color:var(--fg);border:1px solid var(--border);padding:6px 12px;border-radius:4px;font-size:12px;font-family:inherit;cursor:pointer">
+    <option value="">Select a conference&hellip;</option>
+    {% for conf_name in conferences.keys()|sort %}
+    <option value="{{ conf_name }}">{{ conf_name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+{# ── Conference sections (hidden by default, shown via dropdown) ── #}
+{% for conf_name, teams in conferences.items()|sort %}
+<div class="conf-section" data-conf="{{ conf_name }}" style="display:none">
+<h2 style="margin-bottom:12px">{{ conf_name }}</h2>
+
+{% for team_name, injuries in teams.items()|sort %}
+<div style="margin-bottom:20px">
+<h3 style="margin-bottom:4px">
+  <a href="/stats/college/{{ session_id }}/team/{{ team_name }}">{{ team_name }}</a>
+  <span style="font-size:11px;color:var(--fg-dim);font-weight:normal;margin-left:8px">
+    {% if injuries %}{{ injuries|length }} active injur{{ 'y' if injuries|length == 1 else 'ies' }}{% else %}No injuries{% endif %}
+  </span>
+</h3>
+
+{% if injuries %}
+<table>
+  <thead>
+    <tr>
+      <th>Player</th>
+      <th>Pos</th>
+      <th>Injury</th>
+      <th>Body Part</th>
+      <th>Status</th>
+      <th class="num">Wk Out</th>
+      <th class="num">Return</th>
+      <th>Recovery</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for inj in injuries|sort(attribute='game_status') %}
+  <tr>
+    <td>{{ inj.player_name }}</td>
+    <td>{{ inj.position }}</td>
+    <td>{{ inj.description }}</td>
+    <td>{{ inj.body_part }}</td>
+    <td>
+      {% if inj.is_season_ending %}
+        <span style="color:var(--red);font-weight:bold">SEASON-ENDING</span>
+      {% elif inj.game_status == 'OUT' %}
+        <span style="color:var(--red)">OUT</span>
+      {% elif inj.game_status == 'DOUBTFUL' %}
+        <span style="color:var(--yellow)">DOUBTFUL</span>
+      {% elif inj.game_status == 'QUESTIONABLE' %}
+        <span style="color:var(--yellow)">QUESTIONABLE</span>
+      {% else %}
+        <span style="color:var(--fg-dim)">{{ inj.game_status }}</span>
+      {% endif %}
+    </td>
+    <td class="num">{% if inj.is_season_ending %}&mdash;{% else %}{{ inj.weeks_out }}{% endif %}</td>
+    <td class="num">{% if inj.is_season_ending %}&mdash;{% else %}Wk {{ inj.week_return }}{% endif %}</td>
+    <td style="color:var(--fg-dim)">{{ inj.recovery_note or '' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="color:var(--fg-dim);font-size:11px;padding:4px 0">Clean bill of health</div>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+{% endfor %}
+
+<div id="no-conf" style="color:var(--fg-dim);font-size:12px;margin-top:8px">Select a conference above to view injury reports.</div>
+
+<script>
+document.getElementById('conf-select').addEventListener('change', function() {
+  document.querySelectorAll('.conf-section').forEach(function(d) { d.style.display = 'none'; });
+  var hint = document.getElementById('no-conf');
+  if (this.value) {
+    var el = document.querySelector('.conf-section[data-conf="' + this.value + '"]');
+    if (el) el.style.display = '';
+    if (hint) hint.style.display = 'none';
+  } else {
+    if (hint) hint.style.display = '';
+  }
+});
+</script>
+
+{% endblock %}
