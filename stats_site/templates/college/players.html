@@ -19,8 +19,9 @@
   <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
   <a href="/stats/college/{{ session_id }}/polls">Polls</a>
   <a href="/stats/college/{{ session_id }}/players" class="active">Players</a>
-  <a href="/stats/college/{{ session_id }}/team-stats"
-  <a href="/stats/college/{{ session_id }}/referees">Referees</a>>Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/kenpom">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/referees">Referees</a>
   <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
   <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
   <a href="/stats/college/{{ session_id }}/injuries">Injuries</a>
@@ -32,16 +33,7 @@
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 
-{# ── Conference Filter ── #}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Conference:</strong>
-  <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
-  {% for c in conferences %}
-  &middot; <a href="/stats/college/{{ session_id }}/players?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
-  {% endfor %}
-</div>
-
-{# ── Category Tabs ── #}
+{# ── Controls Row: Conference + Category + Sort ── #}
 {% set cat_map = {
   'yards': 'offense', 'tds': 'offense', 'touches': 'offense', 'rush_carries': 'offense', 'rushing_tds': 'offense', 'ypc': 'offense', 'fumbles': 'offense',
   'laterals': 'lateral', 'lateral_rec': 'lateral', 'lateral_tds': 'lateral',
@@ -55,80 +47,66 @@
 } %}
 {% set active_cat = cat_map.get(sort, 'offense') %}
 
-<div class="tabs" style="margin-bottom:12px;">
-  {% for label, cat, default_sort in [
-    ('Offense', 'offense', 'yards'),
-    ('Lateral', 'lateral', 'laterals'),
-    ('Kick-Pass', 'kickpass', 'kick_pass_yards'),
-    ('Kicking', 'kicking', 'kick_pct'),
-    ('Defense', 'defense', 'tackles'),
-    ('Special Teams', 'special', 'kr_yds'),
-    ('Keeper', 'keeper', 'bells'),
-    ('Line Play', 'line', 'blocks'),
-    ('Impact', 'impact', 'wpa'),
-  ] %}
-  <a href="/stats/college/{{ session_id }}/players?sort={{ default_sort }}{% if conference %}&conference={{ conference }}{% endif %}" {% if active_cat == cat %}class="active"{% endif %}>{{ label }}</a>
-  {% endfor %}
+{% set sort_options = {
+  'offense': [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('rush_carries', 'Carries'), ('rushing_tds', 'Rush TD'), ('ypc', 'YPC'), ('fumbles', 'Fumbles')],
+  'lateral': [('laterals', 'Thrown'), ('lateral_rec', 'Receptions'), ('lateral_tds', 'TDs')],
+  'kickpass': [('kick_pass_yards', 'KP Yards'), ('kp_tds', 'KP TDs'), ('kp_pct', 'KP%'), ('kp_ints', 'KP INTs'), ('kp_rec', 'KP Rec')],
+  'kicking': [('kick_pct', 'Kick%')],
+  'defense': [('tackles', 'Tackles'), ('tfl', 'TFL'), ('sacks', 'Sacks'), ('hurries', 'Hurries'), ('def_ints', 'INTs')],
+  'special': [('kr_yds', 'KR Yards'), ('pr_yds', 'PR Yards'), ('st_tackles', 'ST Tackles')],
+  'keeper': [('bells', 'Bells'), ('deflections', 'Deflections')],
+  'line': [('blocks', 'Blocks'), ('pancakes', 'Pancakes')],
+  'impact': [('wpa', 'WPA'), ('war', 'WAR'), ('zbr', 'ZBR'), ('vpr', 'VPR')],
+} %}
+
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+  <select id="conf-select" style="background:var(--bg-card,#1a1a2e);color:var(--fg,#e0e0e0);border:1px solid var(--border,#333);padding:6px 12px;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer">
+    <option value="">All Conferences</option>
+    {% for c in conferences %}
+    <option value="{{ c }}" {% if conference == c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+  <select id="cat-select" style="background:var(--bg-card,#1a1a2e);color:var(--fg,#e0e0e0);border:1px solid var(--border,#333);padding:6px 12px;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer">
+    {% for label, cat, default_sort in [
+      ('Offense', 'offense', 'yards'),
+      ('Lateral', 'lateral', 'laterals'),
+      ('Kick-Pass', 'kickpass', 'kick_pass_yards'),
+      ('Kicking', 'kicking', 'kick_pct'),
+      ('Defense', 'defense', 'tackles'),
+      ('Special Teams', 'special', 'kr_yds'),
+      ('Keeper', 'keeper', 'bells'),
+      ('Line Play', 'line', 'blocks'),
+      ('Impact', 'impact', 'wpa'),
+    ] %}
+    <option value="{{ default_sort }}" {% if active_cat == cat %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <select id="sort-select" style="background:var(--bg-card,#1a1a2e);color:var(--fg,#e0e0e0);border:1px solid var(--border,#333);padding:6px 12px;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer">
+    {% for key, label in sort_options.get(active_cat, []) %}
+    <option value="{{ key }}" {% if sort == key %}selected{% endif %}>Sort: {{ label }}</option>
+    {% endfor %}
+  </select>
 </div>
 
-{# ── Sort Controls (within category) ── #}
-{% if active_cat == 'offense' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('rush_carries', 'Carries'), ('rushing_tds', 'Rush TD'), ('ypc', 'YPC'), ('fumbles', 'Fumbles')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'lateral' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('laterals', 'Thrown'), ('lateral_rec', 'Receptions'), ('lateral_tds', 'TDs')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'kickpass' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('kick_pass_yards', 'KP Yards'), ('kp_tds', 'KP TDs'), ('kp_pct', 'KP%'), ('kp_ints', 'KP INTs'), ('kp_rec', 'KP Rec')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'defense' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('tackles', 'Tackles'), ('tfl', 'TFL'), ('sacks', 'Sacks'), ('hurries', 'Hurries'), ('def_ints', 'INTs')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'special' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('kr_yds', 'KR Yards'), ('pr_yds', 'PR Yards'), ('st_tackles', 'ST Tackles')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'keeper' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('bells', 'Bells'), ('deflections', 'Deflections')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'line' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('blocks', 'Blocks'), ('pancakes', 'Pancakes')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% elif active_cat == 'impact' %}
-<div style="margin-bottom:8px;font-size:11px;">
-  <strong>Sort:</strong>
-  {% for key, label in [('wpa', 'WPA'), ('war', 'WAR'), ('zbr', 'ZBR'), ('vpr', 'VPR')] %}
-  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/players?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</div>
-{% endif %}
+<script>
+(function() {
+  var base = '/stats/college/{{ session_id }}/players';
+  function nav(sort, conf) {
+    var url = base + '?sort=' + sort;
+    if (conf) url += '&conference=' + encodeURIComponent(conf);
+    window.location.href = url;
+  }
+  var confSel = document.getElementById('conf-select');
+  var catSel = document.getElementById('cat-select');
+  var sortSel = document.getElementById('sort-select');
+  confSel.addEventListener('change', function() { nav(sortSel.value, this.value); });
+  catSel.addEventListener('change', function() { nav(this.value, confSel.value); });
+  sortSel.addEventListener('change', function() { nav(this.value, confSel.value); });
+})();
+</script>
+
 
 {# ══════ Helper macro for player link ══════ #}
 {% macro player_row_start(p, rank) %}

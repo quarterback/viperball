@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}KenPom Metrics — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>KenPom
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>KENPOM EFFICIENCY METRICS</h1>
+  <div class="subtitle">{{ season_name }} &middot; {{ standings|length }} teams</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/kenpom" class="active">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/referees">Referees</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/injuries">Injuries</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{# ── Conference Filter ── #}
+{% if conferences %}
+<div style="margin-bottom:12px; font-size:11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/kenpom?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/kenpom?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %} title="{{ c }}">{{ conf_abbrev(c) }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Sort Controls ── #}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Sort:</strong>
+  {% for key, label in [('raw_o', 'Raw O'), ('raw_d', 'Raw D'), ('ek_pct', 'EK%'), ('to_pct', 'TO%'), ('tod_pct', 'TOD%'), ('lr_pct', 'LR%'), ('rle', 'RLE'), ('kp_pct', 'KP%'), ('adj_tempo', 'Tempo')] %}
+  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/kenpom?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th>
+      <th class="num">Raw O</th><th class="num">Raw D</th>
+      <th class="num">EK%</th><th class="num">Opp EK%</th>
+      <th class="num">TO%</th><th class="num">TOD%</th>
+      <th class="num">LR%</th><th class="num">FDR</th>
+      <th class="num">RLE</th><th class="num">Opp RLE</th>
+      <th class="num">KP%</th><th class="num">Opp KP%</th>
+      <th class="num">Tempo</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td>{{ s.conference }}</td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td class="num {% if s.kenpom.raw_o >= 25 %}stat-elite{% elif s.kenpom.raw_o >= 18 %}stat-good{% elif s.kenpom.raw_o < 10 %}stat-bad{% endif %}">{{ s.kenpom.raw_o }}</td>
+    <td class="num {% if s.kenpom.raw_d <= 10 %}stat-elite{% elif s.kenpom.raw_d <= 15 %}stat-good{% elif s.kenpom.raw_d >= 25 %}stat-bad{% endif %}">{{ s.kenpom.raw_d }}</td>
+    <td class="num {% if s.kenpom.ek_pct >= 55 %}stat-good{% elif s.kenpom.ek_pct < 35 %}stat-bad{% endif %}">{{ s.kenpom.ek_pct }}%</td>
+    <td class="num {% if s.kenpom.opp_ek_pct <= 35 %}stat-good{% elif s.kenpom.opp_ek_pct >= 55 %}stat-bad{% endif %}">{{ s.kenpom.opp_ek_pct }}%</td>
+    <td class="num {% if s.kenpom.to_pct <= 10 %}stat-good{% elif s.kenpom.to_pct >= 20 %}stat-bad{% endif %}">{{ s.kenpom.to_pct }}%</td>
+    <td class="num {% if s.kenpom.tod_pct >= 20 %}stat-good{% elif s.kenpom.tod_pct < 10 %}stat-bad{% endif %}">{{ s.kenpom.tod_pct }}%</td>
+    <td class="num {% if s.kenpom.lr_pct >= 60 %}stat-good{% elif s.kenpom.lr_pct < 30 %}stat-bad{% endif %}">{{ s.kenpom.lr_pct }}%</td>
+    <td class="num">{{ s.kenpom.fdr }}%</td>
+    <td class="num {% if s.kenpom.rle >= 5.0 %}stat-good{% elif s.kenpom.rle < 3.0 %}stat-bad{% endif %}">{{ s.kenpom.rle }}</td>
+    <td class="num {% if s.kenpom.opp_rle <= 3.0 %}stat-good{% elif s.kenpom.opp_rle >= 5.0 %}stat-bad{% endif %}">{{ s.kenpom.opp_rle }}</td>
+    <td class="num {% if s.kenpom.kp_pct >= 60 %}stat-good{% elif s.kenpom.kp_pct < 40 %}stat-bad{% endif %}">{{ s.kenpom.kp_pct }}%</td>
+    <td class="num {% if s.kenpom.opp_kp_pct <= 40 %}stat-good{% elif s.kenpom.opp_kp_pct >= 60 %}stat-bad{% endif %}">{{ s.kenpom.opp_kp_pct }}%</td>
+    <td class="num">{{ s.kenpom.adj_tempo|int }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<div style="margin-top:16px;font-size:11px;color:var(--fg-dim);">
+  <strong>Glossary:</strong>
+  Raw O/D = Points per 10 drives &middot;
+  EK% = Effective Kick% (DK weighted 5/3 vs PK) &middot;
+  TO% = Turnover rate per drive &middot;
+  TOD% = Forced turnover rate per opponent drive &middot;
+  LR% = Lateral Recovery% &middot;
+  FDR = Free Down Rate (penalty first downs per play) &middot;
+  RLE = Rush/Lateral Efficiency (yds/carry) &middot;
+  KP% = Kick Pass completion% &middot;
+  Tempo = Plays per game
+</div>
+
+{% endblock %}
