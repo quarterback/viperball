@@ -4234,13 +4234,54 @@ class ViperballEngine:
         return set()
 
     def _is_blowout(self) -> bool:
-        """Check if the current game is a blowout (20+ point lead in Q3/Q4)."""
-        if self.state.quarter < 3:
-            return False
-        home_score = self.state.home_score
-        away_score = self.state.away_score
-        diff = abs(home_score - away_score)
-        return diff >= 20
+        """Check if the current game is a blowout.
+
+        Returns True when backups should be seeing more action:
+        - 20+ point lead in Q3/Q4
+        - 25+ point lead in late Q2 (≤5:00 remaining)
+        """
+        diff = abs(self.state.home_score - self.state.away_score)
+        if self.state.quarter >= 3:
+            return diff >= 20
+        if self.state.quarter == 2 and self.state.time_remaining <= 300:
+            return diff >= 25
+        return False
+
+    def _blowout_tier(self, score_diff: float) -> int:
+        """Return the blowout severity tier for the WINNING team.
+
+        score_diff is positive when this team is winning.
+
+        Tier 0: Not a blowout — no rotation changes.
+        Tier 1 (Soft rotation): Start mixing backups in for a drive at a time.
+                Trigger: 20+ pts Q3+, or 25+ pts late Q2.
+        Tier 2 (Pull starters): Bench all skill-position starters for the game.
+                Trigger: 25+ pts Q3+, or 30+ pts Q2.
+        Tier 3 (Deep bench): Also rest defensive starters.
+                Trigger: 35+ pts Q3+.
+        """
+        if score_diff < 20:
+            return 0
+        quarter = self.state.quarter
+        time_left = self.state.time_remaining
+
+        if quarter >= 3:
+            if score_diff >= 35:
+                return 3
+            if score_diff >= 25:
+                return 2
+            # Q4 under 5 minutes with 20+ lead — no reason for starters
+            # to still be in, pull them
+            if quarter == 4 and time_left <= 300 and score_diff >= 20:
+                return 2
+            if score_diff >= 20:
+                return 1
+        elif quarter == 2 and time_left <= 300:
+            if score_diff >= 30:
+                return 2
+            if score_diff >= 25:
+                return 1
+        return 0
 
     def _spread_the_love_offense(self, eligible, weights, for_receiving=False, play_family=None):
         """Rating-driven touch distribution.
@@ -5025,6 +5066,19 @@ class ViperballEngine:
                             base_time = int(base_time * 1.1)
                     else:
                         tempo_mult *= 1.2 * clock_burn
+
+            # ── Blowout clock-chew: leading team milks the play clock ──
+            # In a blowout the leading team has zero incentive to snap fast.
+            # Run the play clock close to the limit on every play to bleed
+            # the game out.  This stacks with 3-min-warning logic above.
+            if self._is_blowout():
+                blowout_score_diff = self._get_score_diff()
+                if blowout_score_diff > 0:
+                    if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                        base_time = max(base_time, 36)  # floor at 36s
+                        base_time = min(42, base_time)
+                    else:
+                        tempo_mult = max(tempo_mult, 1.6)
 
             # ── V2.8: Play clock enforcement ──
             # If computed base_time exceeds the play clock limit, the coach
@@ -7062,11 +7116,10 @@ class ViperballEngine:
                 weights["field_goal"] = weights.get("field_goal", 0.06) * (1.0 + suppress * 1.5)
 
         # ── V2.8: Clock-run mode ──
-        # When leading in Q4 but not in kneel range, grind the clock with
-        # run-heavy play calling.  Turnovers here are catastrophic — suppress
-        # risky plays aggressively.  Coach clock_management skill scales it.
-        if (quarter == 4 and score_diff > 0
-                and time_left > 60 and not self._is_blowout()):
+        # When leading in Q4, grind the clock with run-heavy play calling.
+        # Turnovers here are catastrophic — suppress risky plays aggressively.
+        # Coach clock_management skill scales it.
+        if (quarter == 4 and score_diff > 0 and time_left > 60):
             off_mods_cr = self._coaching_mods()
             clock_mgmt = off_mods_cr.get("clock_management", 0.5)
             # Scale: low clock_mgmt → modest changes, high → very conservative
@@ -7081,6 +7134,26 @@ class ViperballEngine:
             weights["trick_play"] = weights.get("trick_play", 0.05) * max(0.15, 1.0 - 0.60 * cr_intensity)
             # Keep punt weight normal — punting for field position is fine
             # Keep snap_kick/field_goal — safe points are good
+
+        # ── Blowout clock-chew mode ──
+        # When the leading team is in blowout territory, the coaching goal
+        # shifts entirely to running the clock out.  Heavy run game, suppress
+        # anything risky, take safe points if available.  This applies in any
+        # quarter once _is_blowout() is true — not just Q4.
+        if self._is_blowout() and score_diff > 0:
+            # Run-heavy: dives/power dominate, everything else suppressed
+            for rk in ("dive_option", "power", "counter", "draw"):
+                weights[rk] = weights.get(rk, 0.05) * 2.0
+            weights["sweep_option"] = weights.get("sweep_option", 0.05) * 1.4
+            weights["speed_option"] = weights.get("speed_option", 0.05) * 1.2
+            # Kill risky/aggressive plays — no reason to gamble with a huge lead
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.20
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.10
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.05
+            weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.30
+            # Kicks are fine — safe points that keep the clock moving
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * 1.3
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 1.3
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
@@ -12151,13 +12224,14 @@ class ViperballEngine:
             injured = self._injured_in_game(team)
             already_out = injured | set(benched.keys()) | just_returned
 
-            # ── 1. Blowout protection: pull starters when up big ──
+            # ── 1. Blowout protection: graduated backup rotation ──
             score_diff = self.state.home_score - self.state.away_score
             if team == self.away_team:
                 score_diff = -score_diff
-            is_winning_blowout = score_diff >= 25 and self.state.quarter >= 3
+            tier = self._blowout_tier(score_diff)
 
-            if is_winning_blowout:
+            if tier >= 2:
+                # Tier 2+: pull ALL skill-position starters for the game
                 skill = [p for p in team.players
                          if p.position in ("Zeroback", "Halfback", "Wingback",
                                            "Slotback", "Viper")
@@ -12165,8 +12239,7 @@ class ViperballEngine:
                          and getattr(p, 'game_role', '') == "STARTER"]
                 for p in skill:
                     if self._is_last_kicker(team, p, already_out):
-                        continue  # Never bench the team's last available kicker
-                    # Only bench if there's a backup available
+                        continue
                     backups = [b for b in team.players
                                if b.position == p.position
                                and b.name not in already_out
@@ -12174,7 +12247,53 @@ class ViperballEngine:
                     if backups:
                         self._bench_player(team, p, "blowout_rest", "game")
                         already_out.add(p.name)
+
+                # Tier 3: also rest defensive starters
+                if tier >= 3:
+                    def_starters = [p for p in team.players
+                                    if p.position in ("Keeper", "Defensive Line")
+                                    and p.name not in already_out
+                                    and getattr(p, 'game_def_role', '') == "STARTER"]
+                    for p in def_starters:
+                        backups = [b for b in team.players
+                                   if b.position == p.position
+                                   and b.name not in already_out
+                                   and b.name != p.name]
+                        if backups:
+                            self._bench_player(team, p, "blowout_rest", "game")
+                            already_out.add(p.name)
+
                 continue  # Skip other checks during blowout — just rest starters
+
+            if tier == 1:
+                # Tier 1 (soft rotation): rotate 1-2 starters out per drive
+                # to give backups reps without pulling the whole unit at once.
+                skill = [p for p in team.players
+                         if p.position in ("Zeroback", "Halfback", "Wingback",
+                                           "Slotback", "Viper")
+                         and p.name not in already_out
+                         and getattr(p, 'game_role', '') == "STARTER"]
+                # Sort by usage (most touches first) — rest the workhorses
+                skill.sort(key=lambda p: getattr(p, 'game_touches', 0), reverse=True)
+                rested_this_drive = 0
+                for p in skill:
+                    if rested_this_drive >= 2:
+                        break
+                    if self._is_last_kicker(team, p, already_out):
+                        continue
+                    backups = [b for b in team.players
+                               if b.position == p.position
+                               and b.name not in already_out
+                               and b.name != p.name]
+                    if backups:
+                        # ~60% chance per eligible starter — coaches rotate
+                        # rather than pulling everyone at once
+                        if random.random() < 0.60:
+                            self._bench_player(team, p, "blowout_rotation", "drive")
+                            already_out.add(p.name)
+                            rested_this_drive += 1
+                # Don't skip other checks — tier 1 is soft, allow fatigue
+                # and performance checks to also fire.
 
             # ── 2. Performance-based benching ──
             # Bench starters who are actively hurting the team
