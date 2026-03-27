@@ -12810,7 +12810,7 @@ def generate_team_on_the_fly(
         elite_stats = random.sample(_GEM_STAT_NAMES, num_elite)
         for stat_name in elite_stats:
             current = getattr(p, stat_name)
-            setattr(p, stat_name, min(96, current + boost))
+            setattr(p, stat_name, min(85, current + boost))
         # Hidden gems also get better potential
         p.potential = min(5, p.potential + random.randint(1, 2))
 
