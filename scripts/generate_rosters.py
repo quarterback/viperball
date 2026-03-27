@@ -174,36 +174,36 @@ def assign_archetype(position: str, speed: int, stamina: int,
     spd, kick, lat, stam, tck = speed, kicking, lateral_skill, stamina, tackling
 
     if "Zeroback" in position:
-        if kick >= 80 and kick >= spd:
+        if kick >= 65 and kick >= spd:
             return "kicking_zb"
-        elif spd >= 90 and spd > kick + 5:
+        elif spd >= 75 and spd > kick + 5:
             return "running_zb"
-        elif lat >= 85 and lat >= spd and lat >= kick:
+        elif lat >= 70 and lat >= spd and lat >= kick:
             return "distributor_zb"
         else:
             return "dual_threat_zb"
     elif "Viper" in position:
-        if lat >= 90 and spd >= 90:
+        if lat >= 75 and spd >= 75:
             return "receiving_viper"
-        elif tck >= 80 and stam >= 85:
+        elif tck >= 65 and stam >= 70:
             return "power_viper"
-        elif spd >= 93 and lat < 85:
+        elif spd >= 78 and lat < 65:
             return "decoy_viper"
         else:
             return "hybrid_viper"
     elif any(p in position for p in ["Halfback", "Wingback", "Slotback"]):
-        if spd >= 93:
+        if spd >= 78:
             return "speed_flanker"
-        elif tck >= 80 and stam >= 88:
+        elif tck >= 65 and stam >= 72:
             return "power_flanker"
-        elif lat >= 88 and spd >= 85:
+        elif lat >= 72 and spd >= 68:
             return "elusive_flanker"
         else:
             return "reliable_flanker"
     elif "Keeper" in position:
-        if spd >= 90 and spd > tck:
+        if spd >= 75 and spd > tck:
             return "return_keeper"
-        elif lat >= 85 and stam >= 85:
+        elif lat >= 68 and stam >= 68:
             return "sure_hands_keeper"
         else:
             return "tackle_keeper"
