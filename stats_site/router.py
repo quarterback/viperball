@@ -801,6 +801,28 @@ def college_standings(request: Request, session_id: str):
     ))
 
 
+@router.get("/college/{session_id}/kenpom", response_class=HTMLResponse)
+def college_kenpom(request: Request, session_id: str, sort: str = "raw_o", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    standings = api["serialize_standings"](season)
+
+    if conference:
+        standings = [s for s in standings if s.get("conference") == conference]
+
+    # Sort by KenPom metric
+    reverse = sort not in ("raw_d", "to_pct", "opp_ek_pct", "opp_rle", "opp_kp_pct")
+    standings.sort(key=lambda s: s.get("kenpom", {}).get(sort, 0), reverse=reverse)
+
+    conferences = sorted(season.conferences.keys())
+    return templates.TemplateResponse("college/kenpom.html", _ctx(
+        request, section="college", session_id=session_id,
+        standings=standings, conferences=conferences, sort=sort, conference=conference,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/schedule", response_class=HTMLResponse)
 def college_schedule(request: Request, session_id: str, week: int = 0):
     api = _get_api()
