@@ -1667,16 +1667,29 @@ def assign_referee(rng: random.Random, is_playoff: bool = False,
 
 
 PENALTY_CATALOG = {
+    # ── PRE-SNAP ─────────────────────────────────────────────────────
     "pre_snap": [
         {"name": "False Start", "yards": 5, "on": "offense", "prob": 0.014},
         {"name": "Offsides", "yards": 5, "on": "defense", "prob": 0.012},
         {"name": "Delay of Game", "yards": 5, "on": "offense", "prob": 0.0},  # V2.8: mechanically driven by play clock
+        {"name": "Delay of Game (Defense)", "yards": 5, "on": "defense", "prob": 0.001},
         {"name": "Illegal Formation", "yards": 5, "on": "offense", "prob": 0.004},
         {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
         {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
         {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.002},
         {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Motion", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Snap", "yards": 5, "on": "offense", "prob": 0.001},
+        {"name": "Illegal Defensive Formation", "yards": 5, "on": "defense", "prob": 0.002},
+        {"name": "Missing Viper Jersey", "yards": 5, "on": "offense", "prob": 0.001},
+        {"name": "Illegal Shift", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Disconcerting Signals", "yards": 5, "on": "defense", "prob": 0.002},
+        {"name": "Player Out of Bounds at Snap", "yards": 5, "on": "either", "prob": 0.001},
+        {"name": "Illegal Viper Substitution", "yards": 5, "on": "offense", "prob": 0.001},
+        {"name": "Illegal Numbering", "yards": 5, "on": "offense", "prob": 0.001},
+        {"name": "Illegal Formation (Numbering Exception)", "yards": 5, "on": "offense", "prob": 0.001},
     ],
+    # ── DURING PLAY: RUN ─────────────────────────────────────────────
     "during_play_run": [
         {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.018},
         {"name": "Illegal Block", "yards": 10, "on": "offense", "prob": 0.005},
@@ -1688,7 +1701,25 @@ PENALTY_CATALOG = {
         {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.003, "auto_first": True},
         {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.003},
         {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.002},
+        {"name": "Targeting", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Blindside Block", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Illegal Use of Hands", "yards": 10, "on": "offense", "prob": 0.004},
+        {"name": "Lowering the Helmet", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Blocking Below the Waist", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Hurdling", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Hands to the Face", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Interlocked Interference", "yards": 5, "on": "offense", "prob": 0.002},
+        {"name": "Illegal Contact Against Snapper", "yards": 15, "on": "defense", "prob": 0.001, "auto_first": True},
+        {"name": "Fouling Out of Play", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.002},
+        {"name": "Striking", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Piling On", "yards": 15, "on": "defense", "prob": 0.002},
+        {"name": "Assisting the Runner", "yards": 5, "on": "offense", "prob": 0.002},
+        {"name": "Roughing the Zeroback", "yards": 15, "on": "defense", "prob": 0.003, "auto_first": True},
+        {"name": "Illegal Participation", "yards": 5, "on": "either", "prob": 0.001},
     ],
+    # ── DURING PLAY: LATERAL CHAIN ───────────────────────────────────
     "during_play_lateral": [
         {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.016},
         {"name": "Illegal Forward Lateral", "yards": 5, "on": "offense", "prob": 0.007, "loss_of_down": True},
@@ -1702,7 +1733,61 @@ PENALTY_CATALOG = {
         {"name": "Illegal Viper Contact", "yards": 10, "on": "defense", "prob": 0.004, "auto_first": True},
         {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.003},
         {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Wedge Formation", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Double Forward Lateral", "yards": 10, "on": "offense", "prob": 0.003, "loss_of_down": True},
+        {"name": "Blindside Block", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Targeting", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Illegal Viper Handoff", "yards": 10, "on": "offense", "prob": 0.002},
+        {"name": "Lowering the Helmet", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Illegal Lateral Beyond Scrimmage", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Concealing the Ball", "yards": 15, "on": "offense", "prob": 0.001},
+        {"name": "Illegal Use of Hands", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Blocking Below the Waist", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Hurdling", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Interlocked Interference", "yards": 5, "on": "offense", "prob": 0.002},
+        {"name": "Hands to the Face", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.002, "auto_first": True},
+        {"name": "Tripping", "yards": 10, "on": "either", "prob": 0.002},
+        {"name": "Illegal Lateral Formation", "yards": 10, "on": "offense", "prob": 0.002},
+        # Viperball-specific lateral physicality rules (§25 Player Safety)
+        {"name": "Contact Before Lateral Arrives", "yards": 10, "on": "defense", "prob": 0.005, "auto_first": True},
+        {"name": "Excessive Contact on Lateral Receiver", "yards": 15, "on": "defense", "prob": 0.003, "auto_first": True},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.002},
+        {"name": "Illegal Participation", "yards": 5, "on": "either", "prob": 0.001},
+        {"name": "Piling On", "yards": 15, "on": "defense", "prob": 0.001},
+        {"name": "Striking", "yards": 15, "on": "either", "prob": 0.001},
     ],
+    # ── DURING PLAY: KICK PASS (Viperball signature mechanic) ────────
+    "during_play_kick_pass": [
+        # Contact rules — Viperball protects kickpass receivers like defenseless players
+        {"name": "Contact on Kickpass Receiver", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
+        {"name": "Roughing the Kickpasser", "yards": 15, "on": "defense", "prob": 0.006, "auto_first": True},
+        {"name": "Hit on Defenseless Kickpass Receiver", "yards": 15, "on": "defense", "prob": 0.004, "auto_first": True},
+        {"name": "Kickpass Interference", "yards": 15, "on": "defense", "prob": 0.006, "auto_first": True},
+        {"name": "Offensive Kickpass Interference", "yards": 10, "on": "offense", "prob": 0.003},
+        # Formation / mechanics
+        {"name": "Illegal Kickpass Formation", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Double Kickpass", "yards": 10, "on": "offense", "prob": 0.002, "loss_of_down": True},
+        {"name": "Kickpass Out of Bounds", "yards": 5, "on": "offense", "prob": 0.004, "loss_of_down": True},
+        {"name": "Shielding the Kickpass", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Kickpass Touch", "yards": 5, "on": "offense", "prob": 0.002},
+        # Standard penalties that also apply during kickpass plays
+        {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.014},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.007, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.004, "auto_first": True},
+        {"name": "Illegal Block in Back", "yards": 10, "on": "offense", "prob": 0.004},
+        {"name": "Illegal Use of Hands", "yards": 10, "on": "offense", "prob": 0.003},
+        {"name": "Blindside Block", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Targeting", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Lowering the Helmet", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Personal Foul", "yards": 15, "on": "either", "prob": 0.003},
+        {"name": "Horse Collar", "yards": 15, "on": "defense", "prob": 0.002, "auto_first": True},
+        {"name": "Illegal Viper Contact", "yards": 10, "on": "defense", "prob": 0.003, "auto_first": True},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.001},
+        {"name": "Illegal Bat", "yards": 10, "on": "either", "prob": 0.002},
+    ],
+    # ── DURING PLAY: PUNT / DROP KICK / PLACE KICK ───────────────────
     "during_play_kick": [
         {"name": "Roughing the Kicker", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
         {"name": "Running Into Kicker", "yards": 5, "on": "defense", "prob": 0.010},
@@ -1711,13 +1796,44 @@ PENALTY_CATALOG = {
         {"name": "Illegal Kick", "yards": 10, "on": "offense", "prob": 0.002},
         {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.010},
         {"name": "Illegal Block in Back", "yards": 10, "on": "either", "prob": 0.005},
+        {"name": "Illegal Wedge Formation", "yards": 15, "on": "offense", "prob": 0.003},
+        {"name": "Leverage", "yards": 15, "on": "defense", "prob": 0.002},
+        {"name": "Illegal Bat", "yards": 10, "on": "either", "prob": 0.002},
+        {"name": "Targeting", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Offside on Kick", "yards": 5, "on": "offense", "prob": 0.004},
+        {"name": "Illegal Touch", "yards": 5, "on": "offense", "prob": 0.003},
+        {"name": "Illegal Free Kick Formation", "yards": 5, "on": "offense", "prob": 0.002},
+        {"name": "Player Out of Bounds During Kick", "yards": 5, "on": "offense", "prob": 0.002},
+        {"name": "Kicker Simulating Being Roughed", "yards": 15, "on": "offense", "prob": 0.001},
+        {"name": "Clipping", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Defensive Holding", "yards": 5, "on": "defense", "prob": 0.004, "auto_first": True},
+        {"name": "Facemask", "yards": 15, "on": "defense", "prob": 0.002, "auto_first": True},
+        {"name": "Blindside Block", "yards": 15, "on": "offense", "prob": 0.002},
+        {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.002},
+        {"name": "Unnecessary Roughness", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Blocking Below the Waist", "yards": 15, "on": "offense", "prob": 0.001},
+        {"name": "Free Kick Out of Bounds", "yards": 5, "on": "offense", "prob": 0.003},
     ],
+    # ── POST-PLAY ────────────────────────────────────────────────────
     "post_play": [
         {"name": "Taunting", "yards": 15, "on": "either", "prob": 0.004},
         {"name": "Unsportsmanlike Conduct", "yards": 15, "on": "either", "prob": 0.003},
         {"name": "Late Hit", "yards": 15, "on": "defense", "prob": 0.004},
+        {"name": "Late Hit Out of Bounds", "yards": 15, "on": "defense", "prob": 0.002},
         {"name": "Excessive Celebration", "yards": 15, "on": "offense", "prob": 0.002},
         {"name": "Sideline Interference", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Throwing Punch", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Helmet-to-Helmet Contact", "yards": 15, "on": "either", "prob": 0.002},
+        {"name": "Bench Area Violation", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Persons Illegally on Field", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Player Not Returning Ball", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Continued Play Without Helmet", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Provoking Ill Will", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Obscene Language", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Removal of Helmet", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Spiking the Ball", "yards": 15, "on": "either", "prob": 0.001},
+        {"name": "Piling On", "yards": 15, "on": "defense", "prob": 0.001},
+        {"name": "Fighting", "yards": 15, "on": "either", "prob": 0.001},
     ],
 }
 
@@ -5864,6 +5980,8 @@ class ViperballEngine:
         if phase == "during_play":
             if play_type in ("lateral_chain",):
                 catalog_key = "during_play_lateral"
+            elif play_type in ("kick_pass",):
+                catalog_key = "during_play_kick_pass"
             elif play_type in ("punt", "drop_kick", "place_kick"):
                 catalog_key = "during_play_kick"
             else:

@@ -605,28 +605,123 @@ Penalties maintain fair play, player safety, and game integrity. Officials enfor
 
 | Infraction | Penalty | Enforcement |
 |------------|---------|-------------|
-| **Forward Pass Violation** | Loss of down + 5 yards | From spot of pass |
-| **Illegal Offensive Formation** | 5 yards | Replay of down |
-| **Illegal Defensive Formation** | 5 yards | Enforced at snap |
-| **Targeting Head/Neck** | 15 yards + ejection | From spot of foul |
-| **Blindside Block** | 15 yards | From spot of foul |
-| **Too Many Players on Field** | 5 yards | Enforced at snap |
+| | **Pre-Snap Infractions** | |
 | **False Start** | 5 yards | Enforced at line of scrimmage |
 | **Offside** | 5 yards | Enforced at line of scrimmage |
 | **Encroachment** | 5 yards + automatic first down | Enforced at line of scrimmage |
 | **Delay of Game** | 5 yards | Enforced at line of scrimmage |
-| **Unsportsmanlike Conduct** | 15 yards | From spot of foul or previous spot |
-| **Illegal Motion** | 5 yards | Enforced at snap |
-| **Offensive Holding** | 10 yards | From spot of foul |
-| **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
-| **Wedge Formation (3+ players)** | 15 yards | From spot of foul |
-| **Illegal Kick** | 5 yards | From spot of kick |
+| **Delay of Game (Defense)** | 5 yards | Enforced at line of scrimmage |
+| **Illegal Offensive Formation** | 5 yards | Replay of down |
+| **Illegal Defensive Formation** | 5 yards | Enforced at snap |
+| **Too Many Players on Field** | 5 yards | Enforced at snap (also during play) |
 | **Illegal Substitution** | 5 yards | Enforced at snap |
-| **Face Mask** | 15 yards | From spot of foul |
+| **Illegal Motion** | 5 yards | Enforced at snap |
+| **Illegal Shift** | 5 yards | Enforced at snap |
+| **Illegal Snap** | 5 yards | Enforced at line of scrimmage |
+| **Illegal Viper Alignment** | 5 yards | Enforced at snap |
+| **Illegal Viper Substitution** | 5 yards | Enforced at snap |
+| **Missing Viper Jersey** | 5 yards | Enforced at snap |
+| **Disconcerting Signals** | 5 yards | Enforced at snap |
+| **Player Out of Bounds at Snap** | 5 yards | Enforced at snap |
+| **Illegal Numbering** | 5 yards | Enforced at snap |
+| | **Run Play Infractions** | |
+| **Offensive Holding** | 10 yards | From spot of foul |
+| **Illegal Block** | 10 yards | From spot of foul |
+| **Illegal Block in Back** | 10 yards | From spot of foul |
+| **Illegal Use of Hands** | 10 yards | From spot of foul |
 | **Clipping** | 15 yards | From spot of foul |
+| **Chop Block** | 15 yards | From spot of foul |
+| **Blindside Block** | 15 yards | From spot of foul |
+| **Blocking Below the Waist** | 15 yards | From spot of foul |
+| **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
+| **Face Mask** | 15 yards + automatic first down | From spot of foul |
+| **Hands to the Face** | 15 yards | From spot of foul |
+| **Horse Collar Tackle** | 15 yards + automatic first down | From spot of foul |
 | **Unnecessary Roughness** | 15 yards | From spot of foul |
+| **Personal Foul** | 15 yards | From spot of foul |
+| **Targeting Head/Neck** | 15 yards + ejection | From spot of foul |
+| **Lowering the Helmet** | 15 yards | From spot of foul |
+| **Tripping** | 10 yards | From spot of foul |
+| **Hurdling** | 15 yards | From spot of foul |
+| **Striking** | 15 yards | From spot of foul |
+| **Piling On** | 15 yards | From spot of foul |
+| **Assisting the Runner** | 5 yards | From spot of foul |
+| **Interlocked Interference** | 5 yards | From spot of foul |
+| **Illegal Contact Against Snapper** | 15 yards + automatic first down | From spot of foul |
+| **Roughing the Zeroback** | 15 yards + automatic first down | From spot of foul |
+| **Illegal Participation** | 5 yards | From spot of foul |
+| | **Lateral Play Infractions** | |
+| **Illegal Forward Lateral** | 5 yards + loss of down | From spot of lateral |
+| **Double Forward Lateral** | 10 yards + loss of down | From spot of lateral |
+| **Illegal Lateral Beyond Scrimmage** | 5 yards | From spot of lateral |
+| **Illegal Lateral Formation** | 10 yards | From spot of foul |
+| **Lateral Interference** | 10 yards + automatic first down | From spot of foul |
+| **Contact Before Lateral Arrives** | 10 yards + automatic first down | From spot of foul |
+| **Excessive Contact on Lateral Receiver** | 15 yards + automatic first down | From spot of foul |
+| **Illegal Contact** | 5 yards + automatic first down | From spot of foul |
+| **Illegal Screen** | 10 yards | From spot of foul |
+| **Illegal Viper Contact** | 10 yards + automatic first down | From spot of foul |
+| **Illegal Viper Handoff** | 10 yards | From spot of foul |
+| **Concealing the Ball** | 15 yards | From spot of foul |
+| **Wedge Formation (3+ players)** | 15 yards | From spot of foul |
+| | **Kickpass Infractions (Viperball-specific)** | |
+| **Contact on Kickpass Receiver** | 15 yards + automatic first down | From spot of foul |
+| **Roughing the Kickpasser** | 15 yards + automatic first down | From spot of foul |
+| **Hit on Defenseless Kickpass Receiver** | 15 yards + automatic first down | From spot of foul |
+| **Kickpass Interference** | 15 yards + automatic first down | From spot of foul |
+| **Offensive Kickpass Interference** | 10 yards | From spot of foul |
+| **Illegal Kickpass Formation** | 5 yards | Enforced at snap |
+| **Illegal Double Kickpass** | 10 yards + loss of down | From spot of foul |
+| **Kickpass Out of Bounds** | 5 yards + loss of down | From spot of kick |
+| **Shielding the Kickpass** | 10 yards | From spot of foul |
+| **Illegal Kickpass Touch** | 5 yards | From spot of foul |
+| | **Punt / Drop Kick / Place Kick Infractions** | |
+| **Roughing the Kicker** | 15 yards + automatic first down | From spot of foul |
+| **Running Into the Kicker** | 5 yards | From spot of foul |
+| **Fair Catch Interference** | 15 yards | From spot of foul |
+| **Kick Catch Interference** | 15 yards | From spot of foul |
+| **Illegal Kick** | 10 yards | From spot of kick |
+| **Illegal Wedge Formation** | 15 yards | From spot of foul |
+| **Illegal Free Kick Formation** | 5 yards | Enforced at snap |
+| **Free Kick Out of Bounds** | 5 yards | Enforced at line of scrimmage |
+| **Leverage** | 15 yards | From spot of foul |
+| **Illegal Bat** | 10 yards | From spot of foul |
+| **Offside on Kick** | 5 yards | Enforced at line of scrimmage |
+| **Illegal Touch** | 5 yards | From spot of foul |
+| **Kicker Simulating Being Roughed** | 15 yards | From spot of foul |
+| **Player Out of Bounds During Kick** | 5 yards | From spot of foul |
+| | **Post-Play Infractions** | |
+| **Taunting** | 15 yards | From succeeding spot |
+| **Unsportsmanlike Conduct** | 15 yards | From succeeding spot |
+| **Late Hit** | 15 yards | From succeeding spot |
+| **Late Hit Out of Bounds** | 15 yards | From succeeding spot |
+| **Excessive Celebration** | 15 yards | From succeeding spot |
+| **Sideline Interference** | 15 yards | From succeeding spot |
+| **Throwing Punch** | 15 yards + ejection | From succeeding spot |
+| **Fighting** | 15 yards + ejection | From succeeding spot |
+| **Helmet-to-Helmet Contact** | 15 yards | From succeeding spot |
+| **Bench Area Violation** | 15 yards | From succeeding spot |
+| **Persons Illegally on Field** | 15 yards | From succeeding spot |
+| **Player Not Returning Ball** | 15 yards | From succeeding spot |
+| **Continued Play Without Helmet** | 15 yards | From succeeding spot |
+| **Removal of Helmet** | 15 yards | From succeeding spot |
+| **Spiking the Ball** | 15 yards | From succeeding spot |
+| **Piling On** | 15 yards | From succeeding spot |
+| **Provoking Ill Will** | 15 yards | From succeeding spot |
+| **Obscene Language** | 15 yards | From succeeding spot |
+| | **Not Applicable** | |
 | **Pass Interference** | Not applicable (no forward passes) | N/A |
 | **Intentional Grounding** | Not applicable (no forward passes) | N/A |
+
+### Viperball-Specific Physicality Rules
+
+Viperball enforces stricter contact rules than traditional football in several areas, reflecting the sport's emphasis on rugby-style play and player safety:
+
+- **Kickpass receiver protection:** A player positioned to receive a kickpass is considered defenseless from the moment the kick is launched until the player has had a reasonable opportunity to secure the ball and brace for contact. Defenders may not initiate forceful contact during this window. Violation: 15 yards + automatic first down.
+- **Roughing the Zeroback:** The Zeroback receives protection similar to a passer. Defenders who make forceful contact after the Zeroback has released a lateral or kickpass are penalized. Violation: 15 yards + automatic first down.
+- **Lateral receiver protection:** Contact on a player before a lateral arrives is penalized to protect players in vulnerable catching positions during lateral chains. Violation: 10 yards + automatic first down.
+- **Excessive contact on lateral receiver:** Defenders may not deliver unnecessarily forceful hits to a player immediately after receiving a lateral while the player is still in the act of securing the ball. Violation: 15 yards + automatic first down.
+- **Kickpass interference:** Defenders may not impede a receiver's ability to position for a kickpass through contact or obstruction. This is Viperball's equivalent of pass interference. Violation: 15 yards + automatic first down.
 
 ### Notes
 
@@ -634,6 +729,8 @@ Penalties maintain fair play, player safety, and game integrity. Officials enfor
 - Live ball fouls may be accepted or declined by the non-offending team
 - Multiple fouls on the same play: accepting team chooses which penalty to enforce
 - Personal fouls (targeting, unnecessary roughness, unsportsmanlike conduct) may result in ejection at referee's discretion
+- Two unsportsmanlike conduct penalties on the same player result in automatic ejection
+- "Too Many Men on Field" can be called both pre-snap and during live play
 
 ---
 
