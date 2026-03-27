@@ -963,33 +963,73 @@ html { overscroll-behavior-y: contain; }
 /* Copy Box Score as text — scrapes tables from the rendered page */
 function copyBoxScore(btn) {
   var lines = [];
+  var awayName = '', homeName = '';
+
   /* Score header */
   var hdr = document.querySelector('.box-score-header');
   if (hdr) {
     var teams = hdr.querySelectorAll('.box-team');
     var vs = hdr.querySelector('.box-score-vs');
     if (teams.length >= 2) {
-      var aN = teams[0].querySelector('.name').textContent.trim();
+      awayName = teams[0].querySelector('.name').textContent.trim();
       var aS = teams[0].querySelector('.box-score-final').textContent.trim();
-      var hN = teams[1].querySelector('.name').textContent.trim();
+      homeName = teams[1].querySelector('.name').textContent.trim();
       var hS = teams[1].querySelector('.box-score-final').textContent.trim();
       var ctx = vs ? vs.textContent.trim().replace(/\s+/g, ' ') : '';
-      lines.push(aN + ' ' + aS + '  @  ' + hN + ' ' + hS);
+      lines.push(awayName + ' ' + aS + '  @  ' + homeName + ' ' + hS);
       if (ctx) lines.push(ctx);
       lines.push('');
     }
   }
-  /* Each h2 section + its table */
-  var sections = document.querySelectorAll('.container.wide > h2, .container.wide > table, .container.wide > .grid-4, .container.wide > .grid-3');
+
+  /* Sections to skip entirely */
+  var SKIP = ['Play-by-Play', 'Drive Summary', 'Play Distribution', 'Plays Per Quarter', 'Game Context'];
+  function shouldSkip(s) { return SKIP.some(function(k) { return s.indexOf(k) !== -1; }); }
+
+  /* Detect if a table is a 3-column comparison table (away | stat | home) */
+  function isComparisonTable(thead) {
+    if (!thead) return false;
+    var ths = thead.querySelectorAll('th');
+    return ths.length === 3;
+  }
+
+  /* Get column headers from thead */
+  function getTheadCols(thead) {
+    if (!thead) return [];
+    var ths = thead.querySelectorAll('th');
+    var cols = [];
+    ths.forEach(function(th) { cols.push(th.textContent.trim()); });
+    return cols;
+  }
+
+  /* Each h2/h3 section + its table or grid */
+  var sections = document.querySelectorAll('.container.wide > h2, .container.wide > h3, .container.wide > table, .container.wide > div > table, .container.wide > .grid-4, .container.wide > .grid-3, .container.wide > div[style*="overflow"] > table');
+  /* Also grab tables inside overflow wrappers */
+  var allEls = [];
+  document.querySelectorAll('.container.wide').forEach(function(c) {
+    c.childNodes.forEach(function(child) {
+      if (child.nodeType !== 1) return;
+      if (['H2','H3','TABLE'].indexOf(child.tagName) !== -1 || (child.classList && (child.classList.contains('grid-4') || child.classList.contains('grid-3')))) {
+        allEls.push(child);
+      } else if (child.tagName === 'DIV') {
+        /* Check for tables inside wrapper divs (overflow-x:auto) */
+        var innerTable = child.querySelector('table');
+        if (innerTable) allEls.push(innerTable);
+        /* Check for grid metrics inside divs */
+        if (child.classList && (child.classList.contains('grid-4') || child.classList.contains('grid-3'))) {
+          allEls.push(child);
+        }
+      }
+    });
+  });
+
   var curSection = '';
-  sections.forEach(function(el) {
-    if (el.tagName === 'H2') {
+  allEls.forEach(function(el) {
+    if (el.tagName === 'H2' || el.tagName === 'H3') {
       curSection = el.textContent.trim();
-      /* Skip play-by-play and drive summary to keep it concise */
       return;
     }
-    if (curSection.indexOf('Play-by-Play') !== -1 || curSection.indexOf('Drive Summary') !== -1 ||
-        curSection.indexOf('Play Distribution') !== -1 || curSection.indexOf('Plays Per Quarter') !== -1) return;
+    if (shouldSkip(curSection)) return;
 
     if (el.tagName === 'TABLE') {
       var thead = el.querySelector('thead');
@@ -998,8 +1038,29 @@ function copyBoxScore(btn) {
       var rows = tbody.querySelectorAll('tr');
       if (rows.length === 0) return;
 
+      var isComp = isComparisonTable(thead);
+      var theadCols = getTheadCols(thead);
+
       /* Section label */
-      if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
+      if (curSection) {
+        lines.push('--- ' + curSection + ' ---');
+        curSection = '';
+      }
+
+      /* For comparison tables, show column header with team names */
+      if (isComp && (awayName || homeName)) {
+        lines.push(padR('', 32) + padL(awayName.substring(0, 16), 18) + padL(homeName.substring(0, 16), 18));
+      }
+      /* For multi-column player stats tables, show the thead */
+      if (!isComp && theadCols.length > 3) {
+        var hdrLine = '';
+        theadCols.forEach(function(col, i) {
+          if (i === 0) hdrLine += padR(col, 20);
+          else hdrLine += padL(col, 8);
+        });
+        lines.push(hdrLine);
+        lines.push(Array(hdrLine.length + 1).join('-'));
+      }
 
       rows.forEach(function(tr) {
         var cells = tr.querySelectorAll('td, th');
@@ -1007,32 +1068,51 @@ function copyBoxScore(btn) {
         var vals = [];
         cells.forEach(function(td) {
           var t = td.textContent.trim().replace(/\s+/g, ' ');
-          if (t) vals.push(t);
+          vals.push(t);
         });
         /* Section headers inside table (OFFENSE, RUSHING, etc) */
-        if (cells.length === 1 && vals.length === 1) {
+        if (cells.length === 1 && vals[0]) {
           lines.push('');
           lines.push('[' + vals[0] + ']');
-        } else if (vals.length >= 2) {
-          /* 3-col: away | stat | home  or  2-col formats */
-          if (vals.length === 3) {
-            lines.push(padR(vals[1], 28) + padL(vals[0], 12) + padL(vals[2], 12));
-          } else {
-            lines.push(vals.join('  '));
+          /* Re-print column header after section break */
+          if (isComp && (awayName || homeName)) {
+            lines.push(padR('', 32) + padL(awayName.substring(0, 16), 18) + padL(homeName.substring(0, 16), 18));
           }
+        } else if (isComp && vals.length >= 3) {
+          /* 3-col comparison: stat_label | away_val | home_val */
+          lines.push(padR(vals[1], 32) + padL(vals[0], 18) + padL(vals[2], 18));
+        } else if (!isComp && vals.length > 1) {
+          /* Multi-column player stats table */
+          var rowLine = '';
+          vals.forEach(function(v, i) {
+            if (i === 0) rowLine += padR(v, 20);
+            else rowLine += padL(v, 8);
+          });
+          lines.push(rowLine);
+        } else if (vals.length >= 2) {
+          lines.push(vals.join('  '));
         }
       });
       lines.push('');
     }
-    /* Grid metrics */
-    if (el.classList.contains('grid-4') || el.classList.contains('grid-3')) {
+    /* Grid metrics (Game Ratings) */
+    if (el.classList && (el.classList.contains('grid-4') || el.classList.contains('grid-3'))) {
       if (curSection) { lines.push('--- ' + curSection + ' ---'); curSection = ''; }
       var metrics = el.querySelectorAll('.metric');
       var parts = [];
       metrics.forEach(function(m) {
         var lbl = m.querySelector('.label');
         var val = m.querySelector('.value');
-        if (lbl && val) parts.push(lbl.textContent.trim() + ': ' + val.textContent.trim().replace(/\s+/g, '/'));
+        if (lbl && val) {
+          var rawVal = val.textContent.trim().replace(/\s+/g, ' ');
+          /* Split "awayVal / homeVal" into labeled columns */
+          var halves = rawVal.split(/\s*\/\s*/);
+          if (halves.length === 2 && awayName && homeName) {
+            parts.push(lbl.textContent.trim() + ': ' + awayName + ' ' + halves[0] + ' / ' + homeName + ' ' + halves[1]);
+          } else {
+            parts.push(lbl.textContent.trim() + ': ' + rawVal);
+          }
+        }
       });
       if (parts.length) lines.push(parts.join('  |  '));
       lines.push('');
