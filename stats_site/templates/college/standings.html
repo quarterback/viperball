@@ -72,6 +72,47 @@
   </tbody>
 </table>
 
+{# ── KenPom Efficiency Metrics ── #}
+<h2>KenPom Efficiency Metrics</h2>
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th><th>Team</th><th>Conf</th>
+      <th class="num">Raw O</th><th class="num">Raw D</th>
+      <th class="num">EK%</th><th class="num">Opp EK%</th>
+      <th class="num">TO%</th><th class="num">TOD%</th>
+      <th class="num">LR%</th><th class="num">FDR</th>
+      <th class="num">RLE</th><th class="num">Opp RLE</th>
+      <th class="num">KP%</th><th class="num">Opp KP%</th>
+      <th class="num">Tempo</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td>{{ s.conference }}</td>
+    <td class="num {% if s.kenpom.raw_o >= 25 %}stat-elite{% elif s.kenpom.raw_o >= 18 %}stat-good{% elif s.kenpom.raw_o < 10 %}stat-bad{% endif %}">{{ s.kenpom.raw_o }}</td>
+    <td class="num {% if s.kenpom.raw_d <= 10 %}stat-elite{% elif s.kenpom.raw_d <= 15 %}stat-good{% elif s.kenpom.raw_d >= 25 %}stat-bad{% endif %}">{{ s.kenpom.raw_d }}</td>
+    <td class="num {% if s.kenpom.ek_pct >= 55 %}stat-good{% elif s.kenpom.ek_pct < 35 %}stat-bad{% endif %}">{{ s.kenpom.ek_pct }}%</td>
+    <td class="num {% if s.kenpom.opp_ek_pct <= 35 %}stat-good{% elif s.kenpom.opp_ek_pct >= 55 %}stat-bad{% endif %}">{{ s.kenpom.opp_ek_pct }}%</td>
+    <td class="num {% if s.kenpom.to_pct <= 10 %}stat-good{% elif s.kenpom.to_pct >= 20 %}stat-bad{% endif %}">{{ s.kenpom.to_pct }}%</td>
+    <td class="num {% if s.kenpom.tod_pct >= 20 %}stat-good{% elif s.kenpom.tod_pct < 10 %}stat-bad{% endif %}">{{ s.kenpom.tod_pct }}%</td>
+    <td class="num {% if s.kenpom.lr_pct >= 60 %}stat-good{% elif s.kenpom.lr_pct < 30 %}stat-bad{% endif %}">{{ s.kenpom.lr_pct }}%</td>
+    <td class="num">{{ s.kenpom.fdr }}%</td>
+    <td class="num {% if s.kenpom.rle >= 5.0 %}stat-good{% elif s.kenpom.rle < 3.0 %}stat-bad{% endif %}">{{ s.kenpom.rle }}</td>
+    <td class="num {% if s.kenpom.opp_rle <= 3.0 %}stat-good{% elif s.kenpom.opp_rle >= 5.0 %}stat-bad{% endif %}">{{ s.kenpom.opp_rle }}</td>
+    <td class="num {% if s.kenpom.kp_pct >= 60 %}stat-good{% elif s.kenpom.kp_pct < 40 %}stat-bad{% endif %}">{{ s.kenpom.kp_pct }}%</td>
+    <td class="num {% if s.kenpom.opp_kp_pct <= 40 %}stat-good{% elif s.kenpom.opp_kp_pct >= 60 %}stat-bad{% endif %}">{{ s.kenpom.opp_kp_pct }}%</td>
+    <td class="num">{{ s.kenpom.adj_tempo|int }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
 {# ── Conference Standings ── #}
 <div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   <h2 style="margin:0">Conference Standings</h2>
