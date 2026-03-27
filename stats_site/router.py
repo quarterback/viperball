@@ -2011,6 +2011,78 @@ def _cached_college_player_agg(season):
     return players
 
 
+# ── Referee Pages ────────────────────────────────────────────
+
+@router.get("/college/{session_id}/referees", response_class=HTMLResponse)
+def college_referees(request: Request, session_id: str, sort: str = "games"):
+    """Listing page for all referees with game activity."""
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    pool = getattr(season, "referee_pool", None)
+    if pool is None:
+        return templates.TemplateResponse("college/referees.html", _ctx(
+            request, section="college", session_id=session_id,
+            referees=[], sort=sort,
+        ))
+
+    refs = []
+    for card in pool.get_all_cards():
+        if card.career_games == 0:
+            continue
+        refs.append({
+            "name": card.full_name,
+            "referee_id": card.referee_id,
+            "years_experience": card.years_experience,
+            "games": card.career_games,
+            "penalties_per_game": card.career_penalties_per_game,
+            "blown_calls": card.career_blown_calls,
+            "blown_calls_per_game": card.career_blown_calls_per_game,
+            "playoff_games": card.career_playoff_games,
+        })
+
+    sort_map = {
+        "games": "games",
+        "name": "name",
+        "ppg": "penalties_per_game",
+        "blown": "blown_calls",
+        "playoff": "playoff_games",
+        "exp": "years_experience",
+    }
+    sort_key = sort_map.get(sort, "games")
+    reverse = sort != "name"
+    refs.sort(key=lambda r: r.get(sort_key, 0), reverse=reverse)
+
+    return templates.TemplateResponse("college/referees.html", _ctx(
+        request, section="college", session_id=session_id,
+        referees=refs, sort=sort,
+    ))
+
+
+@router.get("/college/{session_id}/referee/{referee_name:path}", response_class=HTMLResponse)
+def college_referee_profile(request: Request, session_id: str, referee_name: str):
+    """Individual referee profile with game log and season stats."""
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    pool = getattr(season, "referee_pool", None)
+    if pool is None:
+        raise HTTPException(404, "Referee pool not available")
+
+    card = pool.get_card(referee_name)
+    if card is None:
+        raise HTTPException(404, f"Referee '{referee_name}' not found")
+
+    ref_data = card.to_dict()
+
+    return templates.TemplateResponse("college/referee.html", _ctx(
+        request, section="college", session_id=session_id,
+        ref=ref_data,
+    ))
+
+
 @router.get("/college/{session_id}/players", response_class=HTMLResponse)
 def college_players(request: Request, session_id: str, sort: str = "yards", conference: str = ""):
     api = _get_api()

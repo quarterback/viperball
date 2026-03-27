@@ -911,6 +911,25 @@
 </table>
 {% endif %}
 
+{# ── Officials ── #}
+{% set ref = fr.get('referee', {}) if fr else {} %}
+{% if ref and ref.get('name') %}
+<div style="margin:16px 0 8px;font-size:11px;color:var(--fg-dim)">
+  <strong>Officials:</strong>
+  {% for rname in ref.name.split(', ') %}
+  {% if not loop.first %}&middot;{% endif %}
+  <a href="/stats/college/{{ session_id }}/referee/{{ rname }}">{{ rname }}</a>
+  {% endfor %}
+  {% set bc_log = ref.get('blown_call_log', []) %}
+  {% if bc_log %}
+  &middot; <span style="color:var(--red)">{{ bc_log|length }} questionable call{{ 's' if bc_log|length != 1 }}</span>
+  {% endif %}
+  {% if ref.get('challenged_calls', 0) %}
+  &middot; {{ ref.challenged_calls }} challenge{{ 's' if ref.challenged_calls != 1 }} ({{ ref.get('overturned_calls', 0) }} overturned)
+  {% endif %}
+</div>
+{% endif %}
+
 {% if analysis_text %}
 <h2>Game Analysis</h2>
 <details>

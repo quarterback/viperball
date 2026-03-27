@@ -5163,6 +5163,34 @@ class ViperballEngine:
                             f" ({_to_label}, {to_entry['remaining']} remaining)"
                         )
 
+            # ── Coach challenge system ──
+            # After any play, the disadvantaged coach may challenge the
+            # ruling (spot, catch, fumble, scoring — NOT penalties).
+            # Inside the 3-minute warning, plays are auto-reviewed.
+            # The coach doesn't know if the call is right — they evaluate
+            # based on ref reputation, game situation, and their judgment.
+            is_auto_review = (self.state.quarter in (2, 4)
+                              and self.state.time_remaining <= 180)
+            if not is_auto_review:
+                challenge_result = self._coach_considers_challenge(play)
+                if challenge_result:
+                    is_success = not challenge_result.startswith("FAILED:")
+                    team_key = challenge_result if is_success else challenge_result.split(":")[1]
+                    team_name = (self.home_team.name if team_key == "home"
+                                else self.away_team.name)
+                    challenges_left = (self.state.home_challenges if team_key == "home"
+                                      else self.state.away_challenges)
+                    if is_success:
+                        play.description += (
+                            f" | CHALLENGE {team_name} — OVERTURNED"
+                            f" ({challenges_left} remaining)"
+                        )
+                    else:
+                        play.description += (
+                            f" | CHALLENGE {team_name} — call stands"
+                            f" ({challenges_left} remaining)"
+                        )
+
             # Increment plays_since_last_touch for all non-involved players
             team_on_off = self.get_offensive_team()
             involved_names = set(play.players_involved) if play.players_involved else set()
@@ -6022,35 +6050,22 @@ class ViperballEngine:
                 ptag = player_tag(player)
 
                 # ── Referee: swallowed whistle ──
-                # Crew might miss a legitimate penalty call
+                # Crew might miss a legitimate penalty call.
+                # The penalty simply doesn't get called — no one knows
+                # it happened except the post-game review.
                 if random.random() < self.referee_crew.swallowed_whistle_rate:
-                    # Coach challenge: disadvantaged team may challenge
-                    if self._coach_challenge("swallowed_whistle", team_name):
-                        # Challenge successful — call the penalty after all
-                        self.referee_crew.blown_call_log.append({
-                            "type": "swallowed_whistle_overturned",
-                            "quarter": self.state.quarter,
-                            "time_remaining": self.state.time_remaining,
-                            "penalty_missed": pen_def["name"],
-                            "on_team": team_name,
-                            "player": ptag,
-                            "yards": pen_def["yards"],
-                            "field_position": self.state.field_position,
-                        })
-                        # Fall through to return the penalty normally
-                    else:
-                        self.referee_crew.blown_calls += 1
-                        self.referee_crew.blown_call_log.append({
-                            "type": "swallowed_whistle",
-                            "quarter": self.state.quarter,
-                            "time_remaining": self.state.time_remaining,
-                            "penalty_missed": pen_def["name"],
-                            "on_team": team_name,
-                            "player": ptag,
-                            "yards": pen_def["yards"],
-                            "field_position": self.state.field_position,
-                        })
-                        return None  # Ref missed the call, challenge failed or not used
+                    self.referee_crew.blown_calls += 1
+                    self.referee_crew.blown_call_log.append({
+                        "type": "swallowed_whistle",
+                        "quarter": self.state.quarter,
+                        "time_remaining": self.state.time_remaining,
+                        "penalty_missed": pen_def["name"],
+                        "on_team": team_name,
+                        "player": ptag,
+                        "yards": pen_def["yards"],
+                        "field_position": self.state.field_position,
+                    })
+                    return None  # Ref missed the call
 
                 return Penalty(
                     name=pen_def["name"],
@@ -6061,14 +6076,14 @@ class ViperballEngine:
                 )
 
         # ── Referee: phantom flag ──
-        # No real penalty occurred, but the crew might throw a bad flag.
-        # Home favor nudges which team gets hit: positive favor = away
-        # team more likely to get the phantom call (benefits home).
+        # No real penalty occurred, but the crew throws a bad flag.
+        # This penalty is marked blown_call=True internally, but the
+        # coach doesn't see that flag — they just see a penalty and
+        # decide whether to challenge based on their own judgment.
         if random.random() < self.referee_crew.phantom_flag_rate:
             phantom_penalties = PENALTY_CATALOG.get(catalog_key, [])
             if phantom_penalties:
                 pen_def = random.choice(phantom_penalties)
-                # Home favor: if positive, phantom more likely on away team
                 if random.random() < 0.5 + self.referee_crew.home_favor * 0.3:
                     team_name = "away" if self.state.possession == "home" else "home"
                 else:
@@ -6079,22 +6094,6 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
-                # Coach challenge: penalized team may challenge the phantom flag
-                if self._coach_challenge("phantom_flag", team_name):
-                    # Challenge successful — phantom flag overturned, no penalty
-                    self.referee_crew.blown_call_log.append({
-                        "type": "phantom_flag_overturned",
-                        "quarter": self.state.quarter,
-                        "time_remaining": self.state.time_remaining,
-                        "penalty_called": pen_def["name"],
-                        "on_team": team_name,
-                        "player": ptag,
-                        "yards": pen_def["yards"],
-                        "field_position": self.state.field_position,
-                    })
-                    return None  # No penalty — challenge succeeded
-
-                self.referee_crew.blown_calls += 1
                 self.referee_crew.blown_call_log.append({
                     "type": "phantom_flag",
                     "quarter": self.state.quarter,
@@ -6112,85 +6111,165 @@ class ViperballEngine:
                     on_team=team_name,
                     player=ptag,
                     phase=phase,
-                    blown_call=True,
+                    blown_call=True,  # Only the engine knows this
                 )
 
         return None
 
-    def _coach_challenge(self, blown_call_type: str, penalized_team: str) -> bool:
-        """Coach challenge system: the disadvantaged team may challenge a blown call.
+    def _coach_considers_challenge(self, play) -> Optional[str]:
+        """Coach evaluates ANY play and considers challenging the ruling.
 
-        The replay system always gets the call correct — if a coach
-        challenges a genuine blown call, it WILL be overturned.  But
-        coaches don't always use their challenges wisely; sometimes they
-        burn one on a call that was actually correct (which we don't
-        model here since this is only called on actual blown calls).
+        Coaches challenge more than just penalties — they challenge:
+        - Penalty calls (was there really a foul?)
+        - Spot of the ball (close first-down situations)
+        - Catch/no-catch (kick pass completions near sideline)
+        - Fumble rulings (was it really a fumble?)
+        - Scoring plays (did the ball cross the goal line?)
 
-        Coaches also sometimes fail to notice blown calls or choose to
-        save their challenges for later, so not every blown call gets
-        challenged.
+        The coach does NOT know the truth.  Their decision is based on:
+        - Ref crew reputation (worse crews get challenged more)
+        - Coach judgment quality (clock_management as proxy)
+        - Game situation (close game, late quarter, high stakes)
+        - Play type (close gains near the marker, borderline catches)
 
-        Each team gets 3 challenges per game total.
+        The challenge success rate varies by coach quality, matching
+        real NFL data: ~40-45% average, Daboll at 71%, McDaniel at 21%.
+
+        Returns the challenging team name if challenge was thrown, None otherwise.
+        The caller determines outcome based on whether a blown call existed.
         """
-        # The team hurt by the call is the one that would challenge
-        if blown_call_type == "phantom_flag":
-            challenging_team = penalized_team
-        elif blown_call_type == "swallowed_whistle":
-            # The team that should have benefited from the missed call
-            challenging_team = "away" if penalized_team == "home" else "home"
-        else:
-            return False  # Spot errors aren't challengeable
+        # ── Determine which team might challenge and why ──
+        challenger = None
+        challenge_reason = ""
+        base_prob = 0.0
 
-        challenges_left = (self.state.home_challenges if challenging_team == "home"
+        off_side = self.state.possession
+        def_side = "away" if off_side == "home" else "home"
+
+        # Penalties are NOT challengeable (same as NFL rules).
+        # Coaches can only challenge the play itself: spot, catch,
+        # fumble, and scoring.
+
+        # Situation 1: Close first-down/scoring situation — offense challenges
+        # the spot of the ball when they JUST missed
+        if play.result in ("gain",) and play.yards_gained > 0:
+            ytg = getattr(self, '_pre_play_ytg', self.state.yards_to_go)
+            # Just barely short of the first down marker (within 2 yards)
+            if 0 < ytg - play.yards_gained <= 2:
+                challenger = off_side
+                challenge_reason = "spot"
+                base_prob = 0.12  # ~12% when barely short
+
+            # Also challenge close gains on late downs (4th-6th)
+            elif self.state.down >= 4 and 0 < ytg - play.yards_gained <= 4:
+                challenger = off_side
+                challenge_reason = "spot"
+                base_prob = 0.06  # ~6% on late-down close plays
+
+        # Situation 2: Turnover — losing team challenges the ruling
+        elif play.result in ("fumble", "lateral_intercepted", "kick_pass_intercepted"):
+            challenger = off_side
+            challenge_reason = "turnover"
+            base_prob = 0.08  # ~8% on turnovers
+
+        # Situation 3: Incomplete kick pass — offense challenges catch ruling
+        elif play.result in ("incomplete",) or (play.play_type == "kick_pass" and play.yards_gained == 0):
+            challenger = off_side
+            challenge_reason = "catch"
+            base_prob = 0.04  # ~4% on incompletions
+
+        # Situation 4: Touchdown — defense challenges if it was close
+        elif play.result == "touchdown" and play.yards_gained <= 5:
+            challenger = def_side
+            challenge_reason = "scoring"
+            base_prob = 0.06  # ~6% on short TD runs
+
+        # Situation 5: Turnover on downs — offense challenges spot
+        elif play.result == "turnover_on_downs":
+            challenger = off_side
+            challenge_reason = "spot"
+            base_prob = 0.10  # ~10% on TOD (high stakes)
+
+        if challenger is None or base_prob <= 0:
+            return None
+
+        challenges_left = (self.state.home_challenges if challenger == "home"
                           else self.state.away_challenges)
-
         if challenges_left <= 0:
-            return False
+            return None
 
-        # Coach decides whether to challenge — only ~60% chance they
-        # notice the blown call and decide to use a challenge on it.
-        # Better coaches (higher awareness) might be modeled later.
-        if random.random() > 0.60:
-            return False  # Coach didn't notice or saved challenge
+        # ── Coach judgment modifiers ──
+        coach_mods = (self.home_coaching_mods if challenger == "home"
+                     else self.away_coaching_mods)
+        clock_mgmt = coach_mods.get("clock_management", 0.5)
 
-        # Use a challenge
-        if challenging_team == "home":
+        # Ref reputation: worse crews → more suspicious → challenge more
+        ref_factor = 0.8 + (1.0 - self.referee_crew.accuracy) * 4.0  # 0.88-1.16
+
+        # Game situation: close games and late quarters raise stakes
+        score_diff = abs(self._get_score_diff())
+        situation = 1.0
+        if score_diff <= 9:
+            situation *= 1.3  # Close game
+        if self.state.quarter >= 3:
+            situation *= 1.2  # Second half
+
+        # Coach trigger rate: bad coaches challenge MORE (lower threshold)
+        # but succeed LESS (they challenge correct calls too often).
+        # Good coaches challenge LESS but succeed MORE.
+        coach_trigger = 1.2 - clock_mgmt * 0.6  # 0.6-1.2
+
+        challenge_prob = base_prob * ref_factor * situation * coach_trigger
+        challenge_prob = max(0.01, min(0.25, challenge_prob))
+
+        if random.random() >= challenge_prob:
+            return None  # Coach decides not to challenge
+
+        # ── Coach throws the flag ──
+        if challenger == "home":
             self.state.home_challenges -= 1
         else:
             self.state.away_challenges -= 1
 
         self.referee_crew.challenged_calls += 1
 
-        # Replay always gets the correct call — overturn the blown call
-        self.referee_crew.overturned_calls += 1
-        return True
+        # ── Replay determines the truth ──
+        # Success rate depends on coach quality.  Good coaches pick
+        # better spots — their challenges are more likely to be correct.
+        # NFL data: 21% (McDaniel) to 71% (Daboll), avg ~42%.
+        #
+        # clock_mgmt 0.0 → 25% success (bad judgment)
+        # clock_mgmt 0.5 → 40% success (average)
+        # clock_mgmt 1.0 → 60% success (elite judgment)
+        success_rate = 0.25 + clock_mgmt * 0.35
 
-    def _coach_wastes_challenge(self) -> Optional[str]:
-        """Occasionally a coach wastes a challenge on a correct call.
+        # Blown calls are always overturned if challenged
+        has_blown_call = (play.penalty and play.penalty.blown_call) if challenge_reason == "penalty" else False
+        # For non-penalty challenges, the spot/catch/fumble was a
+        # "judgment call" by the ref — success rate applies directly
+        challenge_succeeds = has_blown_call or (random.random() < success_rate)
 
-        This happens independently of blown calls — the coach thinks
-        the ref made an error but replay confirms the original call.
-        Very rare (~0.1% per play).  Returns the team that wasted it,
-        or None.
-        """
-        if random.random() > 0.001:
-            return None
-
-        # Pick which team wastes the challenge
-        team = random.choice(["home", "away"])
-        challenges_left = (self.state.home_challenges if team == "home"
-                          else self.state.away_challenges)
-        if challenges_left <= 0:
-            return None
-
-        if team == "home":
-            self.state.home_challenges -= 1
+        if challenge_succeeds:
+            self.referee_crew.overturned_calls += 1
+            self.referee_crew.blown_call_log.append({
+                "type": f"{challenge_reason}_overturned",
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "reason": challenge_reason,
+                "challenger": challenger,
+                "field_position": self.state.field_position,
+            })
         else:
-            self.state.away_challenges -= 1
+            self.referee_crew.blown_call_log.append({
+                "type": "challenge_failed",
+                "quarter": self.state.quarter,
+                "time_remaining": self.state.time_remaining,
+                "reason": challenge_reason,
+                "challenger": challenger,
+                "field_position": self.state.field_position,
+            })
 
-        self.referee_crew.challenged_calls += 1
-        # Challenge fails — original call stands (it was correct)
-        return team
+        return challenger if challenge_succeeds else f"FAILED:{challenger}"
 
     def _check_spot_error(self, yards_gained: int) -> int:
         """Referee spot error: occasionally the ball is spotted 1-3 yards off.

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ ref.full_name }} — Official — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/referees">Referees</a><span class="sep">/</span>{{ ref.full_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ ref.full_name }}</h1>
+  <div class="subtitle">
+    CVL Official &middot; {{ ref.years_experience }} year{{ 's' if ref.years_experience != 1 }} experience
+    &middot; {{ ref.career_games }} career game{{ 's' if ref.career_games != 1 }}
+    {% if ref.career_playoff_games %}&middot; {{ ref.career_playoff_games }} playoff game{{ 's' if ref.career_playoff_games != 1 }}{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+
+{# ── Left column: Career Summary ── #}
+<div>
+<h2>Career Summary</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:160px">Games Officiated</td><td style="font-weight:bold">{{ ref.career_games }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Penalties / Game</td><td>{{ ref.career_penalties_per_game }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Blown Calls</td><td>{{ ref.career_blown_calls }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Blown Calls / Game</td><td>{{ ref.career_blown_calls_per_game }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Playoff Games</td><td>{{ ref.career_playoff_games }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Experience</td><td>{{ ref.years_experience }} year{{ 's' if ref.years_experience != 1 }}</td></tr>
+  </tbody>
+</table>
+
+{# ── Season-by-Season Stats ── #}
+{% if ref.career_seasons %}
+<h2>Season Stats</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Year</th>
+      <th>Games</th>
+      <th>Penalties</th>
+      <th>Pen Yds</th>
+      <th>Pen/G</th>
+      <th>BC</th>
+      <th>BC/G</th>
+      <th>Challenges</th>
+      <th>Overturned</th>
+      <th>Home Pen%</th>
+      <th>PO</th>
+      <th>OT</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in ref.career_seasons %}
+    <tr>
+      <td>{{ s.year if s.year else '—' }}</td>
+      <td>{{ s.games_officiated }}</td>
+      <td>{{ s.total_penalties }}</td>
+      <td>{{ s.total_penalty_yards }}</td>
+      <td>{{ s.penalties_per_game }}</td>
+      <td>{{ s.total_blown_calls }}</td>
+      <td>{{ s.blown_calls_per_game }}</td>
+      <td>{{ s.total_challenges }}</td>
+      <td>{{ s.total_overturned }}</td>
+      <td>{{ s.home_penalty_pct }}%</td>
+      <td>{{ s.playoff_games if s.playoff_games else '' }}</td>
+      <td>{{ s.overtime_games if s.overtime_games else '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+
+{# ── Right column: Game Log ── #}
+<div>
+<h2>Game Log</h2>
+{% if ref.game_log %}
+<table>
+  <thead>
+    <tr>
+      <th>Wk</th>
+      <th>Matchup</th>
+      <th>Score</th>
+      <th>Pen</th>
+      <th>Pen Yds</th>
+      <th>H/A</th>
+      <th>BC</th>
+      <th>Chal</th>
+      <th>OT</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for g in ref.game_log|reverse %}
+    <tr>
+      <td>{% if g.is_playoff %}<span class="tag">PO</span>{% else %}{{ g.week }}{% endif %}</td>
+      <td style="font-size:11px">{{ g.away_team[:20] }} @ {{ g.home_team[:20] }}</td>
+      <td>{{ g.away_score|int }}-{{ g.home_score|int }}</td>
+      <td>{{ g.penalties_called }}</td>
+      <td>{{ g.penalty_yards }}</td>
+      <td style="font-size:10px">{{ g.penalties_on_home }}H/{{ g.penalties_on_away }}A</td>
+      <td class="{% if g.blown_calls %}stat-bad{% endif %}">{{ g.blown_calls if g.blown_calls else '' }}</td>
+      <td>{{ g.challenges_attempted if g.challenges_attempted else '' }}</td>
+      <td>{% if g.is_overtime %}<span class="tag">OT</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:var(--fg-dim)">No games officiated yet.</p>
+{% endif %}
+
+{# ── Blown Call Breakdown ── #}
+{% set total_phantom = ref.career_seasons|sum(attribute='total_phantom_flags') if ref.career_seasons else 0 %}
+{% set total_swallowed = ref.career_seasons|sum(attribute='total_swallowed_whistles') if ref.career_seasons else 0 %}
+{% set total_spot = ref.career_seasons|sum(attribute='total_spot_errors') if ref.career_seasons else 0 %}
+{% if total_phantom or total_swallowed or total_spot %}
+<h2>Blown Call Breakdown</h2>
+<table>
+  <tbody>
+  <tr><td style="color:var(--fg-dim);width:160px">Phantom Flags</td><td>{{ total_phantom }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Swallowed Whistles</td><td>{{ total_swallowed }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Spot Errors</td><td>{{ total_spot }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+</div>
+
+{% endblock %}
