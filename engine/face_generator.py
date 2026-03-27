@@ -268,6 +268,129 @@ async def generate_pool(
     return results
 
 
+# ══════════════════════════════════════════════════════════════
+# REFEREE FACE POOL
+# Same architecture as player faces, but with referee-specific
+# prompts: black & white striped uniform, whistle, no helmet.
+# Stored separately in stats_site/static/ref_faces/
+# ══════════════════════════════════════════════════════════════
+
+_DEFAULT_REF_FACES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "stats_site", "static", "ref_faces"
+)
+
+# Referee-specific appearance pools
+REF_UNIFORM_STYLES = [
+    "black and white striped shirt",
+    "black and white vertical striped jersey",
+    "referee striped uniform",
+]
+
+REF_ACCESSORIES = [
+    "whistle around neck",
+    "whistle",
+    "silver whistle",
+]
+
+REF_POSES = [
+    "standing pose",
+    "arms crossed",
+    "pointing gesture",
+    "blowing whistle",
+]
+
+
+def build_ref_pool_prompt(index: int) -> str:
+    """Build a unique PixelLab prompt for referee face slot `index`."""
+    h = int(hashlib.sha256(f"viperball-ref-{index}".encode()).hexdigest(), 16)
+
+    skin = _pick(SKIN_TONES, h, 0)
+    hair_color = _pick(HAIR_COLORS, h, 8)
+    hair_style = _pick(HAIR_STYLES, h, 16)
+    uniform = _pick(REF_UNIFORM_STYLES, h, 24)
+    accessory = _pick(REF_ACCESSORIES, h, 32)
+    pose = _pick(REF_POSES, h, 40)
+    # Mix of genders for the officiating pool
+    gender = "female" if (h >> 48) % 2 == 0 else "male"
+
+    return (
+        f"{gender} sports referee, {skin}, {hair_color} {hair_style}, "
+        f"{uniform}, {accessory}, {pose}, no helmet, black cap"
+    )
+
+
+def ref_face_path(index: int, faces_dir: str = _DEFAULT_REF_FACES_DIR) -> Path:
+    """Path for a specific ref face: ref_042.png"""
+    return Path(faces_dir) / f"ref_{index:03d}.png"
+
+
+def get_ref_pool_size(faces_dir: str = _DEFAULT_REF_FACES_DIR) -> int:
+    """Count how many ref faces currently exist."""
+    d = Path(faces_dir)
+    if not d.is_dir():
+        return 0
+    return sum(1 for f in d.iterdir() if re.match(r"ref_\d{3}\.png$", f.name))
+
+
+def get_ref_face_index(referee_id: str, pool_size: int = 0,
+                       faces_dir: str = _DEFAULT_REF_FACES_DIR) -> Optional[int]:
+    """Map a referee_id to a ref face index.  Returns None if pool is empty."""
+    n = pool_size or get_ref_pool_size(faces_dir)
+    if n == 0:
+        # Fall back to the player face pool (refs get player faces until
+        # ref-specific faces are generated)
+        player_n = get_pool_size()
+        if player_n == 0:
+            return None
+        h = int(hashlib.sha256(referee_id.encode()).hexdigest(), 16)
+        return h % player_n
+    h = int(hashlib.sha256(referee_id.encode()).hexdigest(), 16)
+    return h % n
+
+
+def get_ref_face_url(referee_id: str, pool_size: int = 0,
+                     faces_dir: str = _DEFAULT_REF_FACES_DIR) -> Optional[str]:
+    """Return the static URL path for a referee's face, or None."""
+    ref_n = pool_size or get_ref_pool_size(faces_dir)
+    if ref_n > 0:
+        idx = get_ref_face_index(referee_id, pool_size=ref_n, faces_dir=faces_dir)
+        if idx is not None:
+            return f"/stats/static/ref_faces/ref_{idx:03d}.png"
+    # Fall back to player face pool
+    player_n = get_pool_size()
+    if player_n > 0:
+        h = int(hashlib.sha256(referee_id.encode()).hexdigest(), 16)
+        idx = h % player_n
+        return f"/stats/static/faces/face_{idx:03d}.png"
+    return None
+
+
+def generate_ref_pool_face(
+    index: int,
+    faces_dir: str = _DEFAULT_REF_FACES_DIR,
+    api_key: Optional[str] = None,
+    force: bool = False,
+) -> Path:
+    """Generate a single referee face (synchronous)."""
+    api_key = api_key or os.environ.get("PIXELLAB_API_KEY", "")
+    if not api_key:
+        raise ValueError("PIXELLAB_API_KEY not set")
+
+    out_path = ref_face_path(index, faces_dir)
+    if not force and out_path.is_file():
+        return out_path
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    prompt = build_ref_pool_prompt(index)
+    seed_hash = int(hashlib.sha256(f"viperball-ref-{index}".encode()).hexdigest(), 16)
+    seed = seed_hash % (2**31)
+
+    png_bytes = _call_pixellab(prompt, seed, api_key)
+    out_path.write_bytes(png_bytes)
+    return out_path
+
+
 # ── CLI entry point ──
 
 if __name__ == "__main__":

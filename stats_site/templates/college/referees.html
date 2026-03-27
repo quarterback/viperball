@@ -56,7 +56,10 @@
   <tbody>
     {% for r in referees %}
     <tr>
-      <td><a href="/stats/college/{{ session_id }}/referee/{{ r.name }}">{{ r.name }}</a></td>
+      <td style="display:flex;align-items:center;gap:6px">
+        {% if r.face_src %}<img src="{{ r.face_src }}" alt="" style="width:24px;height:24px;image-rendering:pixelated">{% endif %}
+        <a href="/stats/college/{{ session_id }}/referee/{{ r.name }}">{{ r.name }}</a>
+      </td>
       <td>{{ r.years_experience }} yr{{ 's' if r.years_experience != 1 }}</td>
       <td>{{ r.games }}</td>
       <td>{{ r.penalties_per_game }}</td>
