@@ -13891,25 +13891,12 @@ def generate_team_on_the_fly(
     players = []
     used_numbers: set = set()
 
-    # Per-team center jitter: shifts the whole roster up or down so teams
-    # within the same archetype tier aren't all identical OVR.
-    # ±25 points creates massive differentiation — a doormat can field a
-    # competitive roster one year or be truly abysmal, and programs can
-    # grow into better tiers through recruiting and development.
-    team_center_offset = int(round(random.gauss(0, 25)))
-
-    # Conference floor: even the worst team in a strong conference can't
-    # drop below the conference's minimum quality threshold.  Max potential
-    # is unconstrained — the floor only prevents jitter from pushing a team
-    # too far down.
-    if conference_floor > 0:
-        archetype_center = PROGRAM_ARCHETYPES.get(
-            program_archetype or DEFAULT_ARCHETYPE,
-            PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE],
-        )["stat_center"]
-        effective_center = archetype_center + team_center_offset
-        if effective_center < conference_floor:
-            team_center_offset = conference_floor - archetype_center
+    # No per-team center jitter — the archetype center IS the team's
+    # identity, and the wide stat_spread (18) already creates natural
+    # variance within each roster.  Jitter was causing teams to randomly
+    # exceed their archetype tier, producing 90+ OVR players on teams
+    # that should never have them.
+    team_center_offset = 0
 
     for i, (position, is_viper) in enumerate(ROSTER_TEMPLATE):
         number = 1 if is_viper and i == 0 else None
@@ -13987,7 +13974,7 @@ def generate_team_on_the_fly(
         elite_stats = random.sample(_GEM_STAT_NAMES, num_elite)
         for stat_name in elite_stats:
             current = getattr(p, stat_name)
-            setattr(p, stat_name, min(100, current + boost))
+            setattr(p, stat_name, min(85, current + boost))
         # Hidden gems also get better potential
         p.potential = min(5, p.potential + random.randint(1, 2))
 

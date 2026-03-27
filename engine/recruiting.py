@@ -486,22 +486,22 @@ def generate_single_recruit(
     tackling = _stat()
 
     if position in ("Viper", "Halfback", "Wingback", "Slotback"):
-        speed = min(96, speed + rng.randint(2, 6))
-        lateral_skill = min(96, lateral_skill + rng.randint(2, 5))
-        agility = min(96, agility + rng.randint(1, 4))
+        speed = min(85, speed + rng.randint(2, 6))
+        lateral_skill = min(85, lateral_skill + rng.randint(2, 5))
+        agility = min(85, agility + rng.randint(1, 4))
     elif position in ("Offensive Line", "Defensive Line"):
-        tackling = min(96, tackling + rng.randint(3, 7))
-        power = min(96, power + rng.randint(3, 7))
+        tackling = min(85, tackling + rng.randint(3, 7))
+        power = min(85, power + rng.randint(3, 7))
         speed = max(55, speed - rng.randint(2, 5))
     elif position == "Zeroback":
-        awareness = min(96, awareness + rng.randint(3, 6))
-        kick_power = min(96, kick_power + rng.randint(2, 5))
-        kick_accuracy = min(96, kick_accuracy + rng.randint(2, 5))
+        awareness = min(85, awareness + rng.randint(3, 6))
+        kick_power = min(85, kick_power + rng.randint(2, 5))
+        kick_accuracy = min(85, kick_accuracy + rng.randint(2, 5))
     elif position == "Keeper":
-        speed = min(96, speed + rng.randint(2, 6))
-        tackling = min(96, tackling + rng.randint(3, 7))
-        awareness = min(96, awareness + rng.randint(2, 5))
-        hands = min(96, hands + rng.randint(2, 5))
+        speed = min(85, speed + rng.randint(2, 6))
+        tackling = min(85, tackling + rng.randint(3, 7))
+        awareness = min(85, awareness + rng.randint(2, 5))
+        hands = min(85, hands + rng.randint(2, 5))
 
     # Potential and development
     true_potential = rng.randint(max(1, stars - 1), min(5, stars + 1))

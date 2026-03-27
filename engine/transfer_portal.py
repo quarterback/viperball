@@ -887,11 +887,11 @@ def generate_quick_portal(
         tackling = _stat()
 
         if pos in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback"):
-            speed = min(96, speed + rng.randint(2, 5))
-            lateral_skill = min(96, lateral_skill + rng.randint(1, 4))
+            speed = min(85, speed + rng.randint(2, 5))
+            lateral_skill = min(85, lateral_skill + rng.randint(1, 4))
         elif pos in ("Offensive Line", "Defensive Line"):
-            tackling = min(96, tackling + rng.randint(3, 6))
-            power = min(96, power + rng.randint(3, 6))
+            tackling = min(85, tackling + rng.randint(3, 6))
+            power = min(85, power + rng.randint(3, 6))
             speed = max(55, speed - rng.randint(2, 4))
 
         # Height / weight
