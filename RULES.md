@@ -605,26 +605,66 @@ Penalties maintain fair play, player safety, and game integrity. Officials enfor
 
 | Infraction | Penalty | Enforcement |
 |------------|---------|-------------|
-| **Forward Pass Violation** | Loss of down + 5 yards | From spot of pass |
-| **Illegal Offensive Formation** | 5 yards | Replay of down |
-| **Illegal Defensive Formation** | 5 yards | Enforced at snap |
-| **Targeting Head/Neck** | 15 yards + ejection | From spot of foul |
-| **Blindside Block** | 15 yards | From spot of foul |
-| **Too Many Players on Field** | 5 yards | Enforced at snap |
+| | **Pre-Snap Infractions** | |
 | **False Start** | 5 yards | Enforced at line of scrimmage |
 | **Offside** | 5 yards | Enforced at line of scrimmage |
 | **Encroachment** | 5 yards + automatic first down | Enforced at line of scrimmage |
 | **Delay of Game** | 5 yards | Enforced at line of scrimmage |
-| **Unsportsmanlike Conduct** | 15 yards | From spot of foul or previous spot |
-| **Illegal Motion** | 5 yards | Enforced at snap |
-| **Offensive Holding** | 10 yards | From spot of foul |
-| **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
-| **Wedge Formation (3+ players)** | 15 yards | From spot of foul |
-| **Illegal Kick** | 5 yards | From spot of kick |
+| **Illegal Offensive Formation** | 5 yards | Replay of down |
+| **Illegal Defensive Formation** | 5 yards | Enforced at snap |
+| **Too Many Players on Field** | 5 yards | Enforced at snap |
 | **Illegal Substitution** | 5 yards | Enforced at snap |
-| **Face Mask** | 15 yards | From spot of foul |
+| **Illegal Motion** | 5 yards | Enforced at snap |
+| **Illegal Snap** | 5 yards | Enforced at line of scrimmage |
+| **Illegal Viper Alignment** | 5 yards | Enforced at snap |
+| **Missing Viper Jersey** | 5 yards | Enforced at snap |
+| | **Run Play Infractions** | |
+| **Offensive Holding** | 10 yards | From spot of foul |
+| **Illegal Block** | 10 yards | From spot of foul |
+| **Illegal Block in Back** | 10 yards | From spot of foul |
+| **Illegal Use of Hands** | 10 yards | From spot of foul |
 | **Clipping** | 15 yards | From spot of foul |
+| **Chop Block** | 15 yards | From spot of foul |
+| **Blindside Block** | 15 yards | From spot of foul |
+| **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
+| **Face Mask** | 15 yards + automatic first down | From spot of foul |
+| **Horse Collar Tackle** | 15 yards + automatic first down | From spot of foul |
 | **Unnecessary Roughness** | 15 yards | From spot of foul |
+| **Personal Foul** | 15 yards | From spot of foul |
+| **Targeting Head/Neck** | 15 yards + ejection | From spot of foul |
+| **Lowering the Helmet** | 15 yards | From spot of foul |
+| **Tripping** | 10 yards | From spot of foul |
+| | **Lateral Play Infractions** | |
+| **Illegal Forward Lateral** | 5 yards + loss of down | From spot of lateral |
+| **Double Forward Lateral** | 10 yards + loss of down | From spot of lateral |
+| **Illegal Lateral Beyond Scrimmage** | 5 yards | From spot of lateral |
+| **Lateral Interference** | 10 yards + automatic first down | From spot of foul |
+| **Illegal Contact** | 5 yards + automatic first down | From spot of foul |
+| **Illegal Screen** | 10 yards | From spot of foul |
+| **Illegal Viper Contact** | 10 yards + automatic first down | From spot of foul |
+| **Illegal Viper Handoff** | 10 yards | From spot of foul |
+| **Wedge Formation (3+ players)** | 15 yards | From spot of foul |
+| | **Kick Play Infractions** | |
+| **Roughing the Kicker** | 15 yards + automatic first down | From spot of foul |
+| **Running Into the Kicker** | 5 yards | From spot of foul |
+| **Fair Catch Interference** | 15 yards | From spot of foul |
+| **Kick Catch Interference** | 15 yards | From spot of foul |
+| **Illegal Kick** | 10 yards | From spot of kick |
+| **Illegal Wedge Formation** | 15 yards | From spot of foul |
+| **Leverage** | 15 yards | From spot of foul |
+| **Illegal Bat** | 10 yards | From spot of foul |
+| **Offside on Kick** | 5 yards | Enforced at line of scrimmage |
+| **Illegal Touch** | 5 yards | From spot of foul |
+| | **Post-Play Infractions** | |
+| **Taunting** | 15 yards | From succeeding spot |
+| **Unsportsmanlike Conduct** | 15 yards | From succeeding spot |
+| **Late Hit** | 15 yards | From succeeding spot |
+| **Excessive Celebration** | 15 yards | From succeeding spot |
+| **Sideline Interference** | 15 yards | From succeeding spot |
+| **Throwing Punch** | 15 yards + ejection | From succeeding spot |
+| **Helmet-to-Helmet Contact** | 15 yards | From succeeding spot |
+| **Bench Area Violation** | 15 yards | From succeeding spot |
+| | **Not Applicable** | |
 | **Pass Interference** | Not applicable (no forward passes) | N/A |
 | **Intentional Grounding** | Not applicable (no forward passes) | N/A |
 
