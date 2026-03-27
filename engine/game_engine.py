@@ -5870,6 +5870,13 @@ class ViperballEngine:
                 "field_position": self.state.field_position,
             })
         else:
+            # Failed challenge — burn a timeout as penalty
+            if challenger == "home":
+                if self.state.home_timeouts > 0:
+                    self.state.home_timeouts -= 1
+            else:
+                if self.state.away_timeouts > 0:
+                    self.state.away_timeouts -= 1
             self.referee_crew.blown_call_log.append({
                 "type": "challenge_failed",
                 "quarter": self.state.quarter,
