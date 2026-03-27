@@ -5067,6 +5067,19 @@ class ViperballEngine:
                     else:
                         tempo_mult *= 1.2 * clock_burn
 
+            # ── Blowout clock-chew: leading team milks the play clock ──
+            # In a blowout the leading team has zero incentive to snap fast.
+            # Run the play clock close to the limit on every play to bleed
+            # the game out.  This stacks with 3-min-warning logic above.
+            if self._is_blowout():
+                blowout_score_diff = self._get_score_diff()
+                if blowout_score_diff > 0:
+                    if V2_ENGINE_CONFIG.get("top_model_enabled", False):
+                        base_time = max(base_time, 36)  # floor at 36s
+                        base_time = min(42, base_time)
+                    else:
+                        tempo_mult = max(tempo_mult, 1.6)
+
             # ── V2.8: Play clock enforcement ──
             # If computed base_time exceeds the play clock limit, the coach
             # must snap in time or face a delay-of-game penalty (5 yards,
@@ -7103,11 +7116,10 @@ class ViperballEngine:
                 weights["field_goal"] = weights.get("field_goal", 0.06) * (1.0 + suppress * 1.5)
 
         # ── V2.8: Clock-run mode ──
-        # When leading in Q4 but not in kneel range, grind the clock with
-        # run-heavy play calling.  Turnovers here are catastrophic — suppress
-        # risky plays aggressively.  Coach clock_management skill scales it.
-        if (quarter == 4 and score_diff > 0
-                and time_left > 60 and not self._is_blowout()):
+        # When leading in Q4, grind the clock with run-heavy play calling.
+        # Turnovers here are catastrophic — suppress risky plays aggressively.
+        # Coach clock_management skill scales it.
+        if (quarter == 4 and score_diff > 0 and time_left > 60):
             off_mods_cr = self._coaching_mods()
             clock_mgmt = off_mods_cr.get("clock_management", 0.5)
             # Scale: low clock_mgmt → modest changes, high → very conservative
@@ -7122,6 +7134,26 @@ class ViperballEngine:
             weights["trick_play"] = weights.get("trick_play", 0.05) * max(0.15, 1.0 - 0.60 * cr_intensity)
             # Keep punt weight normal — punting for field position is fine
             # Keep snap_kick/field_goal — safe points are good
+
+        # ── Blowout clock-chew mode ──
+        # When the leading team is in blowout territory, the coaching goal
+        # shifts entirely to running the clock out.  Heavy run game, suppress
+        # anything risky, take safe points if available.  This applies in any
+        # quarter once _is_blowout() is true — not just Q4.
+        if self._is_blowout() and score_diff > 0:
+            # Run-heavy: dives/power dominate, everything else suppressed
+            for rk in ("dive_option", "power", "counter", "draw"):
+                weights[rk] = weights.get(rk, 0.05) * 2.0
+            weights["sweep_option"] = weights.get("sweep_option", 0.05) * 1.4
+            weights["speed_option"] = weights.get("speed_option", 0.05) * 1.2
+            # Kill risky/aggressive plays — no reason to gamble with a huge lead
+            weights["kick_pass"] = weights.get("kick_pass", 0.3) * 0.20
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.05) * 0.10
+            weights["trick_play"] = weights.get("trick_play", 0.05) * 0.05
+            weights["viper_jet"] = weights.get("viper_jet", 0.05) * 0.30
+            # Kicks are fine — safe points that keep the clock moving
+            weights["snap_kick"] = weights.get("snap_kick", 0.08) * 1.3
+            weights["field_goal"] = weights.get("field_goal", 0.06) * 1.3
 
         style_name = self._current_style_name()
         self._apply_style_situational(weights, style_name, down, ytg, fp, score_diff, quarter, time_left)
