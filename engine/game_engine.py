@@ -5740,25 +5740,20 @@ class ViperballEngine:
         return None
 
     def _coach_challenge(self, blown_call_type: str, penalized_team: str) -> bool:
-        """Coach challenge system: the disadvantaged team may challenge a blown call.
+        """Coach challenge system modeled after real NFL data.
 
-        The replay system always gets the call correct — if a coach
-        challenges a genuine blown call, it WILL be overturned.  But
-        coaches don't always use their challenges wisely; sometimes they
-        burn one on a call that was actually correct (which we don't
-        model here since this is only called on actual blown calls).
-
-        Coaches also sometimes fail to notice blown calls or choose to
-        save their challenges for later, so not every blown call gets
-        challenged.
+        Real NFL coaches challenge at rates of 22-71% success (avg ~45%).
+        Coaches ALWAYS use their challenges — the question is whether
+        they challenge the right play.  This method is called on actual
+        blown calls, so it always succeeds (replay gets it right).
+        The companion method _coach_wastes_challenge handles the ~55%
+        of challenges that target correct calls and fail.
 
         Each team gets 3 challenges per game total.
         """
-        # The team hurt by the call is the one that would challenge
         if blown_call_type == "phantom_flag":
             challenging_team = penalized_team
         elif blown_call_type == "swallowed_whistle":
-            # The team that should have benefited from the missed call
             challenging_team = "away" if penalized_team == "home" else "home"
         else:
             return False  # Spot errors aren't challengeable
@@ -5769,11 +5764,11 @@ class ViperballEngine:
         if challenges_left <= 0:
             return False
 
-        # Coach decides whether to challenge — only ~60% chance they
-        # notice the blown call and decide to use a challenge on it.
-        # Better coaches (higher awareness) might be modeled later.
-        if random.random() > 0.60:
-            return False  # Coach didn't notice or saved challenge
+        # Coaches almost always challenge obvious blown calls.
+        # 90% chance they throw the flag on a genuine bad call.
+        # The 10% miss rate covers subtle calls coaches don't catch.
+        if random.random() > 0.90:
+            return False
 
         # Use a challenge
         if challenging_team == "home":
@@ -5788,31 +5783,51 @@ class ViperballEngine:
         return True
 
     def _coach_wastes_challenge(self) -> Optional[str]:
-        """Occasionally a coach wastes a challenge on a correct call.
+        """Coach challenges a correct call — replay confirms, challenge fails.
 
-        This happens independently of blown calls — the coach thinks
-        the ref made an error but replay confirms the original call.
-        Very rare (~0.1% per play).  Returns the team that wasted it,
-        or None.
+        Real NFL data: coaches succeed on only ~45% of challenges.
+        That means ~55% of challenges are wasted on correct calls.
+        We model this as a per-play chance that a coach sees something
+        they disagree with and throws the flag, but replay says the
+        ref got it right.
+
+        The rate is calibrated so that across a game, each team uses
+        roughly 1-2 challenges total (some on blown calls via
+        _coach_challenge, some wasted here).  With ~60 plays per game
+        and ~0.8% chance per play, that's ~0.5 wasted challenges per
+        game per team, plus the ones spent on actual blown calls.
+
+        Coach quality affects success rate: good coaches (high
+        clock_management) waste fewer challenges.  Bad coaches
+        challenge more often on correct calls.
         """
-        if random.random() > 0.001:
-            return None
+        for side in ["home", "away"]:
+            challenges_left = (self.state.home_challenges if side == "home"
+                              else self.state.away_challenges)
+            if challenges_left <= 0:
+                continue
 
-        # Pick which team wastes the challenge
-        team = random.choice(["home", "away"])
-        challenges_left = (self.state.home_challenges if team == "home"
-                          else self.state.away_challenges)
-        if challenges_left <= 0:
-            return None
+            mods = (self.home_coaching_mods if side == "home"
+                    else self.away_coaching_mods)
+            clock_mgmt = mods.get("clock_management", 0.5)
 
-        if team == "home":
-            self.state.home_challenges -= 1
-        else:
-            self.state.away_challenges -= 1
+            # Base rate calibrated so overall success rate lands at ~40-45%.
+            # Good coach (1.0): 0.1% — like Daboll/Sirianni (60-70% success)
+            # Avg coach (0.5):  0.25% — like Shanahan/McVay (40-50% success)
+            # Bad coach (0.0):  0.4% — like McDaniel/Reeves (20-30% success)
+            waste_rate = 0.004 - clock_mgmt * 0.003
 
-        self.referee_crew.challenged_calls += 1
-        # Challenge fails — original call stands (it was correct)
-        return team
+            if random.random() < waste_rate:
+                if side == "home":
+                    self.state.home_challenges -= 1
+                else:
+                    self.state.away_challenges -= 1
+
+                self.referee_crew.challenged_calls += 1
+                # Challenge fails — original (correct) call stands
+                return side
+
+        return None
 
     def _check_spot_error(self, yards_gained: int) -> int:
         """Referee spot error: occasionally the ball is spotted 1-3 yards off.
