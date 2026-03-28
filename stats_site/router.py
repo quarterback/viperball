@@ -169,21 +169,21 @@ def _banner_url_for(team_id: str) -> str | None:
 
 # ── Pixel-art coach face pool (male + female) ──
 _COACH_FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "coach_faces")
-_coach_face_pool_sizes: dict | None = None
+_coach_face_pool_files: dict | None = None
 
-def _get_coach_face_pool_sizes() -> dict:
-    global _coach_face_pool_sizes
-    if _coach_face_pool_sizes is None:
-        from engine.coach_face_generator import get_pool_size
-        _coach_face_pool_sizes = get_pool_size(_COACH_FACES_DIR)
-    return _coach_face_pool_sizes
+def _get_coach_face_pool_files() -> dict:
+    global _coach_face_pool_files
+    if _coach_face_pool_files is None:
+        from engine.coach_face_generator import get_pool_files
+        _coach_face_pool_files = get_pool_files(_COACH_FACES_DIR)
+    return _coach_face_pool_files
 
 def _coach_face_url_for(coach_id: str, gender: str) -> str | None:
-    sizes = _get_coach_face_pool_sizes()
-    if sizes.get("m", 0) == 0 and sizes.get("f", 0) == 0:
+    pool = _get_coach_face_pool_files()
+    if not pool.get("m") and not pool.get("f"):
         return None
     from engine.coach_face_generator import get_coach_face_url
-    return get_coach_face_url(coach_id, gender, sizes, _COACH_FACES_DIR)
+    return get_coach_face_url(coach_id, gender, pool, _COACH_FACES_DIR)
 
 # ── Pixel-art referee face pool ──
 _REFS_DIR = os.path.join(os.path.dirname(__file__), "static", "referees")

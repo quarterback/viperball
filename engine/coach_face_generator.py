@@ -135,6 +135,22 @@ def get_pool_size(faces_dir: str = _DEFAULT_COACH_FACES_DIR,
     return {"m": m, "f": f_count}
 
 
+def get_pool_files(faces_dir: str = _DEFAULT_COACH_FACES_DIR) -> dict:
+    """Return sorted lists of actual face filenames keyed by gender.
+
+    Returns {"m": ["coach_m_000.png", ...], "f": ["coach_f_000.png", ...]}.
+    Using the real file list avoids 404s when generated indices have gaps.
+    """
+    d = Path(faces_dir)
+    if not d.is_dir():
+        return {"m": [], "f": []}
+    m_files = sorted(f.name for f in d.iterdir()
+                     if re.match(r"coach_m_\d{3}\.png$", f.name))
+    f_files = sorted(f.name for f in d.iterdir()
+                     if re.match(r"coach_f_\d{3}\.png$", f.name))
+    return {"m": m_files, "f": f_files}
+
+
 def get_coach_face_index(coach_id: str, pool_size: int) -> int | None:
     if pool_size == 0:
         return None
@@ -142,16 +158,21 @@ def get_coach_face_index(coach_id: str, pool_size: int) -> int | None:
     return h % pool_size
 
 
-def get_coach_face_url(coach_id: str, gender: str, pool_sizes: dict,
+def get_coach_face_url(coach_id: str, gender: str, pool_files: dict,
                        faces_dir: str = _DEFAULT_COACH_FACES_DIR) -> str | None:
-    """Return the static URL for a coach's face, or None if no pool."""
+    """Return the static URL for a coach's face, or None if no pool.
+
+    ``pool_files`` should come from :func:`get_pool_files` — a dict mapping
+    gender keys to sorted lists of actual filenames on disk.  This ensures
+    we only reference files that actually exist (handles gaps in numbering).
+    """
     # Map gender to pool key: male -> m, female -> f, neutral -> f (default)
     g = "m" if gender == "male" else "f"
-    n = pool_sizes.get(g, 0)
-    idx = get_coach_face_index(coach_id, n)
+    files = pool_files.get(g, [])
+    idx = get_coach_face_index(coach_id, len(files))
     if idx is None:
         return None
-    return f"/stats/static/coach_faces/coach_{g}_{idx:03d}.png"
+    return f"/stats/static/coach_faces/{files[idx]}"
 
 
 # ── PixelLab API ──
