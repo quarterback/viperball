@@ -10,14 +10,14 @@ from nicegui import ui, run
 
 from ui import api_client
 from nicegui_app.state import UserState
-from nicegui_app.components import metric_card, notify_error, notify_success
+from nicegui_app.components import metric_card, notify_error, notify_success, section_header, empty_state, loading_card_skeleton
 from nicegui_app.helpers import fmt_vb_score
 
 
 def render_home_sync(state: UserState, shared: dict, switch_fn):
     """Synchronous entry — used for initial page load."""
     if state.session_id and state.mode:
-        ui.label("Loading session...").classes("text-slate-400")
+        ui.label("Loading session...").classes("text-slate-500")
         ui.timer(0.1, lambda: _deferred_dashboard(state, shared, switch_fn), once=True)
     else:
         _render_landing(state, shared, switch_fn)
@@ -35,107 +35,128 @@ async def _deferred_dashboard(state: UserState, shared: dict, switch_fn):
     await _render_dashboard(state, shared, switch_fn)
 
 
+# ═══════════════════════════════════════════════════════════════
+# LANDING PAGE
+# ═══════════════════════════════════════════════════════════════
+
 def _render_landing(state: UserState, shared: dict, switch_fn):
     """Landing page with session creation cards."""
     team_count = len(shared.get("teams", []))
 
-    with ui.column().classes("w-full items-center mt-8 mb-8"):
-        ui.label("Viperball Sandbox").classes(
-            "text-4xl sm:text-5xl font-extrabold text-slate-800 tracking-tight"
-        )
+    # Hero section
+    with ui.element("div").classes("w-full text-center mt-6 mb-8"):
+        ui.icon("sports_football").classes("text-5xl mb-2").style("color: var(--vb-accent);")
+        ui.label("VIPERBALL SANDBOX").classes(
+            "text-4xl sm:text-5xl font-black tracking-wider"
+        ).style("color: #fff; letter-spacing: 0.1em;")
         ui.label("Collegiate Viperball League Simulator").classes(
-            "text-base text-slate-400 mt-1"
-        )
+            "text-sm mt-2"
+        ).style("color: var(--vb-text-muted);")
 
-    # ── All game modes — equal grid ─────────────────────────────
+    # Mode cards
     _MODES = [
         {
             "label": "College Season",
             "icon": "sports_football",
-            "color": "indigo",
+            "gradient": "linear-gradient(135deg, #312e81, #4338ca)",
+            "accent": "#818cf8",
             "nav": "Play",
             "play_tab": "season",
-            "desc": "Run a full CVL season with conferences, playoffs, and bowl games. Coach one or more teams through a 12-week season.",
+            "desc": "Run a full CVL season with conferences, playoffs, and bowl games.",
             "tags": ["12 weeks", "Playoffs", "Bowl Games"],
         },
         {
             "label": "College Dynasty",
             "icon": "school",
-            "color": "teal",
+            "gradient": "linear-gradient(135deg, #134e4a, #0d9488)",
+            "accent": "#5eead4",
             "nav": "Play",
             "play_tab": "dynasty",
-            "desc": "Multi-season career mode. Build a program across multiple years with recruiting, player development, awards, and historical record books.",
+            "desc": "Multi-season career mode with recruiting, development, and record books.",
             "tags": ["Multi-season", "Recruiting", "Record Books"],
         },
         {
             "label": "Quick Game",
             "icon": "bolt",
-            "color": "amber",
+            "gradient": "linear-gradient(135deg, #78350f, #d97706)",
+            "accent": "#fbbf24",
             "nav": "Play",
             "play_tab": "quick",
-            "desc": "Pick two teams and play a single exhibition game. Choose offensive styles, weather, and see full box scores.",
+            "desc": "Pick two teams. Play one game. Full box scores and play-by-play.",
             "tags": ["Exhibition", "Custom Styles", "Box Score"],
         },
         {
             "label": "Pro Leagues",
             "icon": "stadium",
-            "color": "purple",
+            "gradient": "linear-gradient(135deg, #3b0764, #7c3aed)",
+            "accent": "#c4b5fd",
             "nav": "Pro Leagues",
-            "desc": "NVL spectator mode — watch full pro seasons unfold, browse stats and standings, and bet through DraftyQueenz.",
+            "desc": "NVL spectator mode — watch pro seasons unfold and bet via DraftyQueenz.",
             "tags": ["NVL", "Spectator", "Betting"],
         },
         {
             "label": "WVL Owner Mode",
             "icon": "emoji_events",
-            "color": "rose",
+            "gradient": "linear-gradient(135deg, #4c0519, #e11d48)",
+            "accent": "#fda4af",
             "nav": "WVL",
-            "desc": "Women's Viperball League franchise management. Multi-tier system with promotion, relegation, drafts, and finances.",
+            "desc": "WVL franchise management with promotion, relegation, and finances.",
             "tags": ["Franchise", "Dynasty", "Multi-tier"],
         },
         {
             "label": "International",
             "icon": "public",
-            "color": "sky",
+            "gradient": "linear-gradient(135deg, #0c4a6e, #0284c7)",
+            "accent": "#7dd3fc",
             "nav": "International",
-            "desc": "FIV international tournament — 5-nation competition with confederation play, knockouts, and national team rosters.",
+            "desc": "FIV 5-nation tournament with confederation play and knockouts.",
             "tags": ["FIV", "5 Nations", "Tournament"],
         },
         {
             "label": "DraftyQueenz",
             "icon": "casino",
-            "color": "emerald",
+            "gradient": "linear-gradient(135deg, #064e3b, #059669)",
+            "accent": "#6ee7b7",
             "nav": "Play",
             "play_tab": "dq",
-            "desc": "Fantasy betting game with salary caps and parlays. Build lineups, place bets, and compete against the house.",
+            "desc": "Fantasy betting with salary caps, parlays, and lineup building.",
             "tags": ["Fantasy", "Betting", "$5M Cap"],
         },
     ]
 
-    with ui.element("div").classes(
-        "w-full grid gap-5 mt-4"
-    ).style(
+    with ui.element("div").classes("w-full grid gap-4 mt-2").style(
         "grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"
     ):
         for m in _MODES:
             play_tab = m.get("play_tab")
 
-            with ui.card().classes(
-                "p-5 cursor-pointer hover:shadow-lg transition-shadow"
+            with ui.element("div").classes("cursor-pointer group").style(
+                f"background: {m['gradient']}; border-radius: 14px; padding: 20px; "
+                f"border: 1px solid rgba(255,255,255,0.08); "
+                f"transition: transform 0.15s, box-shadow 0.15s; "
             ).on("click", lambda nav=m["nav"], pt=play_tab: switch_fn(nav, play_tab=pt)):
                 with ui.row().classes("items-center gap-3 mb-3"):
-                    ui.icon(m["icon"]).classes(f"text-3xl text-{m['color']}-500")
-                    ui.label(m["label"]).classes("text-xl font-bold text-slate-800")
-                ui.label(m["desc"]).classes("text-sm text-slate-500 leading-relaxed")
-                with ui.row().classes("mt-4 gap-2 flex-wrap"):
+                    ui.icon(m["icon"]).classes("text-2xl").style(f"color: {m['accent']};")
+                    ui.label(m["label"]).classes("text-lg font-bold text-white")
+                ui.label(m["desc"]).classes("text-xs leading-relaxed").style(
+                    "color: rgba(255,255,255,0.7);"
+                )
+                with ui.row().classes("mt-3 gap-2 flex-wrap"):
                     for tag in m["tags"]:
-                        ui.badge(tag).props(f"outline color={m['color']}")
+                        ui.element("span").classes("text-[10px] font-semibold px-2 py-0.5 rounded-full").style(
+                            f"color: {m['accent']}; background: rgba(255,255,255,0.1); "
+                            f"border: 1px solid rgba(255,255,255,0.15);"
+                        ).text = tag
 
-    # ── Footer stats ─────────────────────────────────────────────
-    with ui.row().classes("w-full justify-center mt-10 gap-6"):
-        ui.label(f"{team_count} teams").classes("text-sm text-slate-400")
-        ui.label("16 conferences").classes("text-sm text-slate-400")
-        ui.label("CVL Engine v2.5").classes("text-sm text-slate-400")
+    # Footer stats
+    with ui.row().classes("w-full justify-center mt-10 gap-8"):
+        for label in [f"{team_count} teams", "16 conferences", "CVL Engine v2.5"]:
+            ui.label(label).classes("text-xs").style("color: var(--vb-text-dim);")
 
+
+# ═══════════════════════════════════════════════════════════════
+# DASHBOARD (active session)
+# ═══════════════════════════════════════════════════════════════
 
 async def _render_dashboard(state: UserState, shared: dict, switch_fn):
     """Active session dashboard — quick overview + navigation."""
@@ -144,7 +165,6 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
     try:
         status = await run.io_bound(api_client.get_season_status, state.session_id)
     except api_client.APIError:
-        # Dynasty in setup/offseason phase — no active season yet
         if mode == "dynasty":
             try:
                 dyn_status = await run.io_bound(api_client.get_dynasty_status, state.session_id)
@@ -152,8 +172,6 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
                 return
             except api_client.APIError:
                 pass
-        # Session is stale (e.g. server restarted) — clear it so
-        # subsequent navigation doesn't keep trying the expired session.
         state.clear_session()
         _render_landing(state, shared, switch_fn)
         return
@@ -164,56 +182,47 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
     total_weeks = status.get("total_weeks", 10)
     champion = status.get("champion")
 
-    ui.label(season_name).classes("text-2xl font-bold text-slate-800")
+    section_header(season_name, icon="sports_football")
 
     if champion:
-        with ui.card().classes("w-full bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4"):
+        with ui.element("div").classes("w-full p-4 rounded-xl mb-4").style(
+            "background: linear-gradient(135deg, #78350f, #d97706); "
+            "border: 1px solid rgba(251,191,36,0.3);"
+        ):
             with ui.row().classes("items-center gap-3"):
-                ui.icon("emoji_events").classes("text-3xl text-amber-500")
+                ui.icon("emoji_events").classes("text-3xl").style("color: #fbbf24;")
                 ui.label(f"National Champions: {champion}").classes(
-                    "text-lg font-bold text-amber-800"
+                    "text-lg font-bold text-white"
                 )
 
     with ui.row().classes("w-full gap-3 flex-wrap mb-6"):
-        metric_card("Week", f"{current_week}/{total_weeks}")
-        metric_card("Phase", phase.replace("_", " ").title())
-        metric_card("Mode", mode.title())
+        metric_card("Week", f"{current_week}/{total_weeks}", icon="calendar_today")
+        metric_card("Phase", phase.replace("_", " ").title(), icon="flag")
+        metric_card("Mode", mode.title(), icon="sports_football")
 
     # Quick action cards
+    _actions = [
+        ("Continue Playing", "Simulate the next week or advance.", "play_arrow", "Play", "#4338ca"),
+        ("View Standings", "Conference standings, polls, leaders.", "leaderboard", "League", "#059669"),
+    ]
+    if state.human_teams:
+        team_name = shared.get("team_names", {}).get(
+            state.human_teams[0], state.human_teams[0]
+        )
+        _actions.append((team_name, "Dashboard, roster, and schedule.", "groups", "My Team", "#e11d48"))
+
     with ui.row().classes("w-full gap-4 flex-wrap"):
-        with ui.card().classes(
-            "p-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Play")):
-            with ui.row().classes("items-center gap-2"):
-                ui.icon("play_arrow").classes("text-2xl text-indigo-500")
-                ui.label("Continue Playing").classes("text-lg font-bold text-slate-700")
-            ui.label("Simulate the next week or advance the season.").classes(
-                "text-sm text-slate-500 mt-1"
-            )
-
-        with ui.card().classes(
-            "p-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("League")):
-            with ui.row().classes("items-center gap-2"):
-                ui.icon("leaderboard").classes("text-2xl text-emerald-500")
-                ui.label("View Standings").classes("text-lg font-bold text-slate-700")
-            ui.label("Check conference standings, polls, and stat leaders.").classes(
-                "text-sm text-slate-500 mt-1"
-            )
-
-        if state.human_teams:
-            with ui.card().classes(
-                "p-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-shadow"
-            ).on("click", lambda: switch_fn("My Team")):
+        for title, desc, icon, nav, color in _actions:
+            with ui.element("div").classes(
+                "flex-1 min-w-[200px] p-4 rounded-xl cursor-pointer"
+            ).style(
+                f"background: var(--vb-surface); border: 1px solid var(--vb-border); "
+                f"transition: border-color 0.15s;"
+            ).on("click", lambda n=nav: switch_fn(n)):
                 with ui.row().classes("items-center gap-2"):
-                    ui.icon("groups").classes("text-2xl text-rose-500")
-                    team_name = shared.get("team_names", {}).get(
-                        state.human_teams[0], state.human_teams[0]
-                    ) if state.human_teams else "My Team"
-                    ui.label(team_name).classes("text-lg font-bold text-slate-700")
-                ui.label("Dashboard, roster, and schedule for your team.").classes(
-                    "text-sm text-slate-500 mt-1"
-                )
+                    ui.icon(icon).classes("text-xl").style(f"color: {color};")
+                    ui.label(title).classes("text-base font-bold text-white")
+                ui.label(desc).classes("text-xs mt-1").style("color: var(--vb-text-muted);")
 
     # Recent results
     try:
@@ -222,7 +231,9 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
         completed = [g for g in all_games if g.get("completed")]
         if completed:
             recent = completed[-min(6, len(completed)):]
-            ui.label("Recent Results").classes("text-lg font-semibold text-slate-700 mt-6 mb-2")
+            ui.label("Recent Results").classes("text-sm font-semibold mt-6 mb-2").style(
+                "color: var(--vb-text-muted);"
+            )
             with ui.row().classes("w-full gap-3 flex-wrap"):
                 for g in reversed(recent):
                     home = g.get("home_team", "")
@@ -230,18 +241,22 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
                     hs = fmt_vb_score(g.get("home_score", 0))
                     aws = fmt_vb_score(g.get("away_score", 0))
                     week = g.get("week", "")
-                    with ui.card().classes("p-3 min-w-[180px]").style(
-                        "background: #f8fafc; border: 1px solid #e2e8f0;"
+                    with ui.element("div").classes("p-3 min-w-[170px] rounded-lg").style(
+                        "background: var(--vb-surface-2); border: 1px solid var(--vb-border);"
                     ):
-                        ui.label(f"Week {week}").classes("text-xs text-slate-400 mb-1")
-                        ui.label(f"{home} {hs}").classes("text-sm font-semibold text-slate-700")
-                        ui.label(f"{away} {aws}").classes("text-sm text-slate-600")
+                        ui.label(f"Week {week}").classes("text-[10px] mb-1").style(
+                            "color: var(--vb-text-dim);"
+                        )
+                        ui.label(f"{home} {hs}").classes("text-sm font-bold text-white")
+                        ui.label(f"{away} {aws}").classes("text-sm").style(
+                            "color: var(--vb-text-muted);"
+                        )
     except api_client.APIError:
         pass
 
 
 async def _render_dynasty_dashboard(state: UserState, shared: dict, switch_fn, dyn_status: dict):
-    """Dashboard for dynasty in setup/offseason phase (no active season)."""
+    """Dashboard for dynasty in setup/offseason phase."""
     dynasty_name = dyn_status.get("dynasty_name", "Dynasty")
     current_year = dyn_status.get("current_year", "?")
     coach_info = dyn_status.get("coach", {})
@@ -250,23 +265,22 @@ async def _render_dynasty_dashboard(state: UserState, shared: dict, switch_fn, d
     seasons_played = dyn_status.get("seasons_played", 0)
     history_years = dyn_status.get("history_years", 0)
 
-    ui.label(dynasty_name).classes("text-2xl font-bold text-slate-800")
+    section_header(dynasty_name, icon="school")
 
     with ui.row().classes("w-full gap-3 flex-wrap mb-6"):
-        metric_card("Year", str(current_year))
-        metric_card("Seasons Coached", str(seasons_played))
+        metric_card("Year", str(current_year), icon="calendar_today")
+        metric_card("Seasons", str(seasons_played), icon="replay")
         if history_years > 0:
-            metric_card("Program History", f"{history_years} yrs")
-        metric_card("Coach", coach)
-        metric_card("Team", team)
+            metric_card("History", f"{history_years} yrs", icon="history")
+        metric_card("Coach", coach, icon="person")
+        metric_card("Team", team, icon="groups")
 
-    with ui.row().classes("w-full gap-4 flex-wrap"):
-        with ui.card().classes(
-            "p-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-shadow"
-        ).on("click", lambda: switch_fn("Play")):
-            with ui.row().classes("items-center gap-2"):
-                ui.icon("play_arrow").classes("text-2xl text-teal-500")
-                ui.label("Start Next Season").classes("text-lg font-bold text-slate-700")
-            ui.label("Configure and begin the next season of your dynasty.").classes(
-                "text-sm text-slate-500 mt-1"
-            )
+    with ui.element("div").classes("p-4 rounded-xl cursor-pointer").style(
+        "background: var(--vb-surface); border: 1px solid var(--vb-border);"
+    ).on("click", lambda: switch_fn("Play")):
+        with ui.row().classes("items-center gap-2"):
+            ui.icon("play_arrow").classes("text-xl").style("color: var(--vb-green);")
+            ui.label("Start Next Season").classes("text-base font-bold text-white")
+        ui.label("Configure and begin the next season of your dynasty.").classes(
+            "text-xs mt-1"
+        ).style("color: var(--vb-text-muted);")

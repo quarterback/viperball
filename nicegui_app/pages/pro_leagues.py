@@ -2,6 +2,8 @@
 
 Spectator-only mode: browse standings, stats, box scores, playoffs.
 No team management. Users watch seasons unfold and bet via DraftyQueenz.
+
+Session management has been extracted to nicegui_app/pages/pro/pro_state.py.
 """
 
 from __future__ import annotations
@@ -31,174 +33,23 @@ from engine.db import (
     load_all_league_archives as _db_load_archives,
 )
 
-
-_pro_sessions: dict[str, ProLeagueSeason] = {}
-_pro_dq_managers: dict[str, DraftyQueenzManager] = {}
-
-
-def _try_restore_from_db(league_id: str, sid: str) -> bool:
-    """Attempt to restore a session from the database into memory.
-
-    Returns True if successfully restored.
-    """
-    try:
-        season, dq = _db_load_league(league_id, sid)
-        if season is not None:
-            _pro_sessions[sid] = season
-            _pro_dq_managers[sid] = dq
-            # Also register in the API pro_sessions so the stats site can see it
-            try:
-                from api.main import pro_sessions as _api_pro_sessions
-                _api_pro_sessions[f"{league_id}_{sid}"] = season
-            except Exception:
-                pass
-            _log.info(f"Restored {league_id} (session={sid}) from database")
-            return True
-    except Exception as e:
-        _log.warning(f"Failed to restore {league_id} from DB: {e}")
-    return False
+# ── Session management (extracted to sub-module) ──
+from nicegui_app.pages.pro.pro_state import (
+    pro_sessions as _pro_sessions,
+    pro_dq_managers as _pro_dq_managers,
+    try_restore_from_db as _try_restore_from_db,
+    auto_save as _auto_save,
+    get_all_user_sessions as _get_all_user_sessions,
+    get_active_league_id as _get_active_league_id,
+    set_active_league as _set_active_league,
+    register_session as _register_session,
+    unregister_session as _unregister_session,
+    get_session_and_dq as _get_session_and_dq,
+    create_season_sync as _create_season_sync,
+)
 
 
-def _auto_save(league_id: str, sid: str):
-    """Save the current league state to the database (fire-and-forget)."""
-    season = _pro_sessions.get(sid)
-    dq = _pro_dq_managers.get(sid)
-    if season is None:
-        return
-    if dq is None:
-        dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
-    try:
-        _db_save_league(league_id, sid, season, dq)
-    except Exception as e:
-        _log.warning(f"Auto-save failed for {league_id}: {e}")
 
-
-def _get_all_user_sessions() -> dict[str, tuple[str, ProLeagueSeason, DraftyQueenzManager]]:
-    """Return {league_id: (session_id, season, dq_mgr)} for all active leagues.
-
-    Tries in-memory first. If a session is in the cookie map but not in memory
-    (e.g. after server restart), attempts to restore from the database.
-    """
-    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
-    result = {}
-    stale_keys = []
-    for league_id, sid in sessions_map.items():
-        if sid in _pro_sessions:
-            season = _pro_sessions[sid]
-            dq = _pro_dq_managers.get(sid)
-            if dq is None:
-                dq = DraftyQueenzManager(manager_name=f"{season.config.league_name} Bettor")
-                _pro_dq_managers[sid] = dq
-            result[league_id] = (sid, season, dq)
-        elif _try_restore_from_db(league_id, sid):
-            # Successfully restored from database
-            season = _pro_sessions[sid]
-            dq = _pro_dq_managers[sid]
-            result[league_id] = (sid, season, dq)
-        else:
-            stale_keys.append(league_id)
-    if stale_keys:
-        for k in stale_keys:
-            sessions_map.pop(k, None)
-        app.storage.user["pro_league_sessions"] = sessions_map
-    return result
-
-
-def _get_active_league_id() -> str | None:
-    """Return the league_id the user is currently viewing."""
-    return app.storage.user.get("pro_league_active")
-
-
-def _set_active_league(league_id: str | None):
-    """Set which league the user is currently viewing."""
-    app.storage.user["pro_league_active"] = league_id
-
-
-def _register_session(league_id: str, sid: str, season: ProLeagueSeason, dq: DraftyQueenzManager):
-    """Register a new league session in both the global store and the user's session map."""
-    _pro_sessions[sid] = season
-    _pro_dq_managers[sid] = dq
-    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
-    sessions_map[league_id] = sid
-    app.storage.user["pro_league_sessions"] = sessions_map
-    _set_active_league(league_id)
-    # Also register in the API pro_sessions so the stats site can see this league
-    try:
-        from api.main import pro_sessions as _api_pro_sessions
-        _api_pro_sessions[f"{league_id}_{sid}"] = season
-    except Exception:
-        pass
-    # Persist to database
-    _auto_save(league_id, sid)
-
-
-def _unregister_session(league_id: str):
-    """Remove a league session from the user's map and global store."""
-    sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
-    sid = sessions_map.pop(league_id, None)
-    app.storage.user["pro_league_sessions"] = sessions_map
-    if sid:
-        if sid in _pro_sessions:
-            archive_season(_pro_sessions[sid])
-            # Save archive to DB for cross-session Champions League
-            from engine.pro_league import _completed_league_snapshots
-            if league_id in _completed_league_snapshots:
-                _db_save_archive(league_id, _completed_league_snapshots[league_id])
-            del _pro_sessions[sid]
-        _pro_dq_managers.pop(sid, None)
-        # Also remove from API pro_sessions
-        try:
-            from api.main import pro_sessions as _api_pro_sessions
-            _api_pro_sessions.pop(f"{league_id}_{sid}", None)
-        except Exception:
-            pass
-        # Remove from DB
-        _db_delete_save(league_id, sid)
-    if _get_active_league_id() == league_id:
-        _set_active_league(None)
-
-
-def _get_session_and_dq():
-    """Get the currently active league's season and DQ manager.
-
-    Supports both new multi-session storage and legacy single-session storage.
-    Falls back to database restore if in-memory state is missing.
-    """
-    # New multi-session path
-    active_lid = _get_active_league_id()
-    if active_lid:
-        all_sessions = _get_all_user_sessions()
-        if active_lid in all_sessions:
-            sid, season, dq = all_sessions[active_lid]
-            return season, dq, sid
-
-    # Legacy single-session fallback
-    sid = app.storage.user.get("pro_league_session_id")
-    if sid and sid in _pro_sessions:
-        season = _pro_sessions[sid]
-        dq = _pro_dq_managers.get(sid)
-        if dq is None:
-            league_name = season.config.league_name
-            dq = DraftyQueenzManager(manager_name=f"{league_name} Bettor")
-            _pro_dq_managers[sid] = dq
-        # Migrate to new multi-session storage
-        league_id = season.config.league_id
-        sessions_map: dict = app.storage.user.get("pro_league_sessions") or {}
-        sessions_map[league_id] = sid
-        app.storage.user["pro_league_sessions"] = sessions_map
-        _set_active_league(league_id)
-        return season, dq, sid
-    if sid and sid not in _pro_sessions:
-        app.storage.user["pro_league_session_id"] = None
-    return None, None, None
-
-
-def _create_season_sync(config) -> tuple[str, 'ProLeagueSeason']:
-    """CPU-bound season creation. No NiceGUI context access here."""
-    import uuid
-    sid = str(uuid.uuid4())[:8]
-    season = ProLeagueSeason(config)
-    return sid, season
 
 
 # League display metadata

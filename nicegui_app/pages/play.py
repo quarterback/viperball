@@ -16,7 +16,7 @@ from nicegui import ui, run
 from ui import api_client
 from nicegui_app.state import UserState
 from nicegui_app.helpers import fmt_vb_score
-from nicegui_app.components import metric_card, stat_table, notify_error, notify_info, notify_success
+from nicegui_app.components import metric_card, stat_table, notify_error, notify_info, notify_success, section_header
 from nicegui_app.pages.postseason import render_playoff_bracket, render_bowl_games
 
 
