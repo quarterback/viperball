@@ -47,14 +47,14 @@ def p5_sketch(sketch_name: str, container_id: str, data: dict | None = None,
 def metric_card(label: str, value, delta: str = "", icon: str = ""):
     """Render a KPI metric card with optional icon and delta."""
     with ui.card().classes("p-3 min-w-[100px] flex-1").style(
-        "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; "
-        "box-shadow: 0 1px 3px rgba(0,0,0,0.04);"
+        "background: var(--vb-surface, #1a1a2e); border: 1px solid var(--vb-border, #2a2a4a); "
+        "border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"
     ):
         with ui.row().classes("items-center gap-2"):
             if icon:
                 ui.icon(icon).classes("text-sm").style("color: #94a3b8;")
             ui.label(label).classes("text-[11px] font-semibold uppercase tracking-wider").style("color: #94a3b8;")
-        ui.label(str(value)).classes("text-xl sm:text-2xl font-extrabold mt-0.5").style("color: #0f172a; line-height: 1.2;")
+        ui.label(str(value)).classes("text-xl sm:text-2xl font-extrabold mt-0.5").style("color: var(--vb-text, #e2e8f0); line-height: 1.2;")
         if delta:
             ui.label(delta).classes("text-xs mt-0.5").style("color: #64748b;")
 
@@ -66,8 +66,8 @@ def metric_card(label: str, value, delta: str = "", icon: str = ""):
 def score_display(team_name: str, score):
     """Render a big score display for game results."""
     with ui.column().classes("items-center"):
-        ui.label(team_name).classes("text-base font-semibold").style("color: #475569;")
-        ui.label(str(score)).classes("text-5xl font-extrabold").style("color: #0f172a; line-height: 1;")
+        ui.label(team_name).classes("text-base font-semibold").style("color: var(--vb-text-muted, #94a3b8);")
+        ui.label(str(score)).classes("text-5xl font-extrabold").style("color: var(--vb-text, #e2e8f0); line-height: 1;")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -123,12 +123,22 @@ def stat_table(rows: list[dict], columns: Optional[list[str]] = None,
                 pagination=pagination_val if pagination_val else None,
             ).classes("w-full")
             tbl.props("dense flat bordered separator=cell")
-            tbl.style("""
-                .q-table th { background: #f8fafc; font-weight: 700; font-size: 11px;
-                  text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
-                .q-table td { font-size: 13px; }
-                .q-table tbody tr:hover { background: #f1f5f9; }
-            """)
+            _TABLE_STYLE_CSS = """
+            <style>
+                .vb-stat-table .q-table th {
+                    background: var(--vb-surface-alt, #f8fafc);
+                    font-weight: 700; font-size: 11px;
+                    text-transform: uppercase; letter-spacing: 0.05em;
+                    color: var(--vb-text-muted, #64748b);
+                }
+                .vb-stat-table .q-table td { font-size: 13px; }
+                .vb-stat-table .q-table tbody tr:hover {
+                    background: var(--vb-surface-hover, rgba(255,255,255,0.05));
+                }
+            </style>
+            """
+            ui.add_head_html(_TABLE_STYLE_CSS, shared=True)
+            tbl.classes(add="vb-stat-table")
 
             if searchable:
                 tbl.props('filter=""')
@@ -231,7 +241,7 @@ def section_header(title: str, subtitle: str = "", icon: str = ""):
     with ui.row().classes("items-center gap-2 mb-1"):
         if icon:
             ui.icon(icon).classes("text-2xl").style("color: #6366f1;")
-        ui.label(title).classes("text-2xl font-extrabold").style("color: #0f172a;")
+        ui.label(title).classes("text-2xl font-extrabold").style("color: var(--vb-text, #e2e8f0);")
     if subtitle:
         ui.label(subtitle).classes("text-sm mb-4").style("color: #64748b;")
 
@@ -378,13 +388,13 @@ _RATING_DISPLAY_ATTRS = [
 def rating_badge_color(val: int) -> tuple[str, str, str]:
     """Return (bg, fg, border) color tuple for a rating value."""
     if val >= 85:
-        return "#dcfce7", "#166534", "#86efac"
+        return "#14532d", "#86efac", "#22c55e"
     elif val >= 75:
-        return "#dbeafe", "#1e40af", "#93c5fd"
+        return "#1e3a5f", "#93c5fd", "#3b82f6"
     elif val >= 65:
-        return "#fef3c7", "#92400e", "#fcd34d"
+        return "#451a03", "#fcd34d", "#d97706"
     else:
-        return "#f1f5f9", "#475569", "#cbd5e1"
+        return "#1e293b", "#94a3b8", "#475569"
 
 
 def render_rating_badges(ratings: dict, attrs: list | None = None):

@@ -16,7 +16,6 @@ Every blocking HTTP call to the local API must go through
 
 from __future__ import annotations
 
-import traceback
 from pathlib import Path
 
 from nicegui import ui, app, run
@@ -184,6 +183,89 @@ APP_CSS = """
     .drive-downs { color: var(--vb-amber); font-weight: 700; }
     .drive-punt { color: var(--vb-text-dim); }
 
+    /* ─── Remap light-theme Tailwind text colors → dark-theme equivalents ─── */
+    /* These override the hundreds of hardcoded text-slate-800, text-gray-500, etc.
+       across all page modules so they're readable on dark backgrounds. */
+
+    /* Headings / primary text (were dark, now light) */
+    .text-slate-800, .text-slate-900, .text-gray-800, .text-gray-900,
+    .text-zinc-800, .text-zinc-900 {
+        color: #f1f5f9 !important;
+    }
+    .text-slate-700, .text-gray-700, .text-zinc-700 {
+        color: #e2e8f0 !important;
+    }
+    .text-slate-600, .text-gray-600, .text-zinc-600 {
+        color: #cbd5e1 !important;
+    }
+
+    /* Muted / secondary text (were medium-dark, now medium-light) */
+    .text-slate-500, .text-gray-500, .text-zinc-500 {
+        color: #94a3b8 !important;
+    }
+    .text-slate-400, .text-gray-400, .text-zinc-400 {
+        color: #94a3b8 !important;
+    }
+
+    /* Indigo accent headings — make them brighter */
+    .text-indigo-600 { color: #a5b4fc !important; }
+    .text-indigo-700, .text-indigo-800 { color: #c7d2fe !important; }
+    .text-indigo-500 { color: #818cf8 !important; }
+    .text-indigo-200, .text-indigo-300 { color: #a5b4fc !important; }
+
+    /* Other accent colors — brighten for dark bg */
+    .text-teal-500, .text-teal-600, .text-teal-700 { color: #5eead4 !important; }
+    .text-emerald-500, .text-emerald-600 { color: #6ee7b7 !important; }
+    .text-amber-500, .text-amber-600 { color: #fbbf24 !important; }
+    .text-rose-500, .text-rose-600 { color: #fda4af !important; }
+    .text-purple-500, .text-purple-600, .text-purple-700 { color: #c4b5fd !important; }
+    .text-sky-500, .text-sky-600 { color: #7dd3fc !important; }
+    .text-blue-500, .text-blue-600, .text-blue-700, .text-blue-800 { color: #93c5fd !important; }
+    .text-blue-200 { color: #93c5fd !important; }
+    .text-green-800 { color: #86efac !important; }
+    .text-amber-800 { color: #fde68a !important; }
+    .text-red-500, .text-red-600 { color: #fca5a5 !important; }
+
+    /* Background overrides for info cards that assumed light bg */
+    .bg-blue-50, .bg-green-50, .bg-amber-50, .bg-red-50,
+    .bg-indigo-50, .bg-teal-50, .bg-purple-50 {
+        background: var(--vb-surface-2) !important;
+    }
+    .bg-slate-50 { background: var(--vb-surface) !important; }
+    .bg-white { background: var(--vb-surface) !important; }
+
+    /* Border overrides */
+    .border-blue-200, .border-green-200, .border-amber-200,
+    .border-red-200, .border-indigo-200 {
+        border-color: var(--vb-border) !important;
+    }
+
+    /* Input / form field backgrounds */
+    .q-field__control {
+        background: var(--vb-surface) !important;
+    }
+    .q-field--outlined .q-field__control:after {
+        border-color: var(--vb-border-light) !important;
+    }
+    .q-field--focused .q-field__control:after {
+        border-color: var(--vb-accent) !important;
+    }
+
+    /* Badge overrides */
+    .q-badge {
+        border-color: var(--vb-border-light) !important;
+    }
+
+    /* Slider overrides */
+    .q-slider__track-container {
+        background: var(--vb-border) !important;
+    }
+
+    /* Dialog overrides */
+    .q-dialog .q-card {
+        background: var(--vb-surface) !important;
+    }
+
     /* Session context bar */
     .session-bar {
         background: var(--vb-surface-2);
@@ -346,7 +428,6 @@ def index():
                 import logging
                 logging.getLogger("viperball").error(f"Error loading {name}: {exc}", exc_info=True)
                 ui.label(f"Error loading {name}: {exc}").classes("text-red-400")
-                traceback.print_exc()
 
     async def _end_session():
         if state.session_id:
@@ -471,7 +552,6 @@ def index():
                     import logging
                     logging.getLogger("viperball").error(f"{initial_section} render error: {exc}", exc_info=True)
                     ui.label(f"Error loading {initial_section}: {exc}").classes("text-red-400")
-                    traceback.print_exc()
         ui.timer(0.1, _init_section, once=True)
     else:
         with content_container:
