@@ -1086,6 +1086,7 @@ def generate_coach_card(
     classification: Optional[str] = None,
     year: int = 2026,
     rng: Optional[random.Random] = None,
+    existing_names: Optional[set] = None,
 ) -> CoachCard:
     """
     Generate a complete CoachCard with random attributes, classification,
@@ -1115,13 +1116,18 @@ def generate_coach_card(
         )[0]
 
     if gender == "female":
-        first = rng.choice(_FEMALE_FIRST)
+        first_pool = _FEMALE_FIRST
     elif gender == "male":
-        first = rng.choice(_MALE_FIRST)
+        first_pool = _MALE_FIRST
     else:
-        first = rng.choice(_NEUTRAL_FIRST)
+        first_pool = _NEUTRAL_FIRST
 
-    last = rng.choice(_SURNAMES)
+    # Pick a unique first+last combo (retry up to 20 times, then accept)
+    for _attempt in range(20):
+        first = rng.choice(first_pool)
+        last = rng.choice(_SURNAMES)
+        if existing_names is None or f"{first} {last}" not in existing_names:
+            break
 
     # ── age / experience ──────────────────────
     if role == "head_coach":
@@ -1276,6 +1282,7 @@ def generate_coaching_staff(
         rng = random.Random()
 
     staff: Dict[str, CoachCard] = {}
+    used_names: set = set()
     for role in ROLES:
         card = generate_coach_card(
             role=role,
@@ -1283,7 +1290,9 @@ def generate_coaching_staff(
             prestige=prestige,
             year=year,
             rng=rng,
+            existing_names=used_names,
         )
+        used_names.add(f"{card.first_name} {card.last_name}")
         # Assign alma mater from the league's school list
         if all_team_names and rng.random() < 0.35:
             card.alma_mater = rng.choice(all_team_names)
@@ -1313,11 +1322,13 @@ class CoachMarketplace:
         self,
         num_coaches: int = 40,
         rng: Optional[random.Random] = None,
+        existing_names: Optional[set] = None,
     ) -> None:
         """Populate the marketplace with randomly generated free-agent coaches."""
         if rng is None:
             rng = random.Random()
 
+        used_names: set = set(existing_names) if existing_names else set()
         for _ in range(num_coaches):
             role = rng.choice(ROLES)
             card = generate_coach_card(
@@ -1326,7 +1337,9 @@ class CoachMarketplace:
                 prestige=rng.randint(20, 70),
                 year=self.year,
                 rng=rng,
+                existing_names=used_names,
             )
+            used_names.add(f"{card.first_name} {card.last_name}")
             self.available_coaches.append(card)
 
     def add_poaching_targets(

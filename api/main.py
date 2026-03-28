@@ -4905,7 +4905,7 @@ async def generate_coach_face_pool(count: int = 150, force: bool = False):
 
     try:
         import stats_site.router as _sr
-        _sr._coach_face_pool_sizes = None
+        _sr._coach_face_pool_files = None
     except Exception:
         pass
 
