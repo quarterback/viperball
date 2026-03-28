@@ -34,6 +34,10 @@ from nicegui_app.components import (
     notify_warning,
     download_button,
     coaching_snapshot_card,
+    section_header,
+    empty_state,
+    loading_table_skeleton,
+    LazyTabManager,
 )
 
 
@@ -1411,19 +1415,46 @@ async def render_my_team_section(state, shared):
                 if mode == "dynasty":
                     history_tab = ui.tab("History")
 
+            lazy = LazyTabManager()
+            _panels: dict[str, ui.column] = {}
+
             with ui.tab_panels(tabs, value=dashboard_tab).classes("w-full"):
                 with ui.tab_panel(dashboard_tab):
-                    await _render_dashboard(session_id, mode, team_name, standings)
-
+                    _panels["Dashboard"] = ui.column().classes("w-full")
                 with ui.tab_panel(roster_tab):
-                    await _render_roster(session_id, team_name)
-
+                    _panels["Roster"] = ui.column().classes("w-full")
                 with ui.tab_panel(schedule_tab):
-                    await _render_schedule(session_id, mode, team_name)
-
+                    _panels["Schedule"] = ui.column().classes("w-full")
                 if mode == "dynasty" and history_tab is not None:
                     with ui.tab_panel(history_tab):
+                        _panels["History"] = ui.column().classes("w-full")
+
+            # Render Dashboard eagerly
+            with _panels["Dashboard"]:
+                await _render_dashboard(session_id, mode, team_name, standings)
+            lazy.mark_loaded("Dashboard")
+
+            async def _on_tab(e):
+                name = e.value if isinstance(e.value, str) else getattr(e.value, 'name', str(e.value))
+                if lazy.is_loaded(name):
+                    return
+                lazy.mark_loaded(name)
+                panel = _panels.get(name)
+                if not panel:
+                    return
+                panel.clear()
+                with panel:
+                    loading_table_skeleton(5)
+                panel.clear()
+                with panel:
+                    if name == "Roster":
+                        await _render_roster(session_id, team_name)
+                    elif name == "Schedule":
+                        await _render_schedule(session_id, mode, team_name)
+                    elif name == "History":
                         await _render_history(session_id)
+
+            tabs.on("update:model-value", _on_tab)
 
     if len(human_teams) > 1:
         async def _on_team_change(e):

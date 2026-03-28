@@ -6,9 +6,43 @@ needing ``await client.connected()``.
 """
 
 from __future__ import annotations
+import time
 from typing import Optional
 
 from nicegui import app
+
+
+class ResponseCache:
+    """Simple TTL cache for API responses to avoid redundant fetches on tab switches.
+
+    Stores data in-memory per UserState instance. Data expires after ``ttl`` seconds.
+    """
+
+    def __init__(self, ttl: float = 30.0):
+        self._ttl = ttl
+        self._store: dict[str, tuple[float, object]] = {}
+
+    def get(self, key: str):
+        """Return cached value or None if expired/missing."""
+        entry = self._store.get(key)
+        if entry is None:
+            return None
+        ts, val = entry
+        if time.monotonic() - ts > self._ttl:
+            del self._store[key]
+            return None
+        return val
+
+    def set(self, key: str, value: object):
+        """Cache a value with the current timestamp."""
+        self._store[key] = (time.monotonic(), value)
+
+    def invalidate(self, key: str | None = None):
+        """Clear one key or the entire cache."""
+        if key:
+            self._store.pop(key, None)
+        else:
+            self._store.clear()
 
 
 class UserState:
@@ -28,6 +62,7 @@ class UserState:
         self.play_inspector_results: Optional[list] = None
         self.dq_css_injected: bool = False
         self._team_states_cache: Optional[dict] = None
+        self.cache = ResponseCache(ttl=30.0)
 
     @property
     def session_id(self) -> Optional[str]:
@@ -181,3 +216,4 @@ class UserState:
         self.last_seed = 0
         self.batch_results = None
         self._team_states_cache = None
+        self.cache.invalidate()

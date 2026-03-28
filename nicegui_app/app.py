@@ -34,35 +34,51 @@ if _sketches_dir.is_dir():
 APP_CSS = """
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
 <style>
+    :root {
+        --vb-bg: #0f0f1a;
+        --vb-surface: #1a1a2e;
+        --vb-surface-2: #222240;
+        --vb-border: #2a2a4a;
+        --vb-border-light: #333360;
+        --vb-text: #e2e8f0;
+        --vb-text-muted: #94a3b8;
+        --vb-text-dim: #64748b;
+        --vb-accent: #818cf8;
+        --vb-accent-bright: #a5b4fc;
+        --vb-accent-dim: #4f46e5;
+        --vb-green: #34d399;
+        --vb-red: #f87171;
+        --vb-amber: #fbbf24;
+    }
+
     body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: #f1f5f9;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--vb-bg);
+        color: var(--vb-text);
     }
 
     /* ─── Ambient P5 Background ─── */
     #vb-ambient-bg {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
         z-index: 0;
         pointer-events: none;
-        opacity: 0.6;
+        opacity: 0.4;
     }
     #vb-nav-glow {
         width: 100%;
-        height: 3px;
+        height: 2px;
         position: relative;
         z-index: 2001;
         pointer-events: none;
+        background: linear-gradient(90deg, transparent, var(--vb-accent-dim), transparent);
+        opacity: 0.5;
     }
     #vb-page-transition {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
         z-index: 9999;
         pointer-events: none;
     }
@@ -73,20 +89,109 @@ APP_CSS = """
         z-index: 1;
     }
 
-    .score-big { font-size: 2.8rem; font-weight: 800; text-align: center; line-height: 1; color: #0f172a; }
-    .team-name { font-size: 1.05rem; font-weight: 600; text-align: center; color: #475569; }
-    .drive-td { color: #16a34a; font-weight: 700; }
-    .drive-kick { color: #2563eb; font-weight: 700; }
-    .drive-fumble { color: #dc2626; font-weight: 700; }
-    .drive-downs { color: #d97706; font-weight: 700; }
-    .drive-punt { color: #94a3b8; }
+    /* ─── Dark theme overrides for Quasar components ─── */
+    .q-card {
+        background: var(--vb-surface) !important;
+        color: var(--vb-text) !important;
+        border: 1px solid var(--vb-border) !important;
+        border-radius: 12px !important;
+    }
+
+    .q-table {
+        background: var(--vb-surface) !important;
+        color: var(--vb-text) !important;
+    }
+    .q-table th {
+        background: var(--vb-surface-2) !important;
+        color: var(--vb-text-muted) !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        border-bottom: 1px solid var(--vb-border) !important;
+    }
+    .q-table td {
+        color: var(--vb-text) !important;
+        border-bottom: 1px solid var(--vb-border) !important;
+        font-size: 13px !important;
+    }
+    .q-table tbody tr:hover td {
+        background: var(--vb-surface-2) !important;
+    }
+
+    .q-tabs {
+        overflow: hidden !important;
+    }
+    .q-tabs__content {
+        flex-wrap: nowrap !important;
+    }
+    .q-tab {
+        color: var(--vb-text-muted) !important;
+    }
+    .q-tab--active {
+        color: var(--vb-accent-bright) !important;
+    }
+    .q-tab-panel {
+        padding: 12px 0 !important;
+    }
+
+    .q-separator {
+        background: var(--vb-border) !important;
+    }
+
+    .q-field__control {
+        color: var(--vb-text) !important;
+    }
+    .q-field__label {
+        color: var(--vb-text-muted) !important;
+    }
+    .q-field--outlined .q-field__control:before {
+        border-color: var(--vb-border) !important;
+    }
+
+    .q-expansion-item {
+        border: 1px solid var(--vb-border) !important;
+        border-radius: 8px !important;
+        margin-bottom: 4px;
+    }
+    .q-expansion-item__container {
+        background: var(--vb-surface) !important;
+        color: var(--vb-text) !important;
+    }
+
+    .q-menu {
+        background: var(--vb-surface-2) !important;
+        border: 1px solid var(--vb-border) !important;
+    }
+    .q-item {
+        color: var(--vb-text) !important;
+    }
+    .q-item:hover {
+        background: var(--vb-surface) !important;
+    }
+
+    /* Notify / toast overrides */
+    .q-notification {
+        border-radius: 8px !important;
+    }
+
+    /* ─── Custom classes ─── */
+    .score-big { font-size: 2.8rem; font-weight: 800; text-align: center; line-height: 1; color: #fff; }
+    .team-name { font-size: 1.05rem; font-weight: 600; text-align: center; color: var(--vb-text-muted); }
+    .drive-td { color: var(--vb-green); font-weight: 700; }
+    .drive-kick { color: var(--vb-accent); font-weight: 700; }
+    .drive-fumble { color: var(--vb-red); font-weight: 700; }
+    .drive-downs { color: var(--vb-amber); font-weight: 700; }
+    .drive-punt { color: var(--vb-text-dim); }
 
     /* Session context bar */
     .session-bar {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        background: var(--vb-surface-2);
+        border-bottom: 1px solid var(--vb-border);
         z-index: 1999;
     }
 
+    /* ─── Responsive ─── */
     @media (max-width: 768px) {
         .desktop-nav { display: none !important; }
         .mobile-menu-btn { display: flex !important; }
@@ -95,7 +200,6 @@ APP_CSS = """
         .q-tab .q-tab__icon { font-size: 1.3rem !important; }
         .q-table td, .q-table th { padding: 4px 6px !important; font-size: 0.75rem !important; }
         .q-card { padding: 10px !important; }
-        .q-card .min-w-\[180px\] { min-width: 120px !important; }
         .nicegui-content { padding: 8px !important; }
         .vb-hero-banner { padding: 14px 16px !important; }
         .vb-hero-banner .vb-hero-top { flex-direction: column !important; gap: 12px !important; }
@@ -105,8 +209,6 @@ APP_CSS = """
     @media (min-width: 769px) {
         .mobile-menu-btn { display: none !important; }
     }
-    .q-tabs__content { flex-wrap: nowrap !important; }
-    .q-tabs { overflow: hidden !important; }
 </style>
 """
 
@@ -153,7 +255,6 @@ def _load_shared_data() -> dict:
 
 
 # ─── Navigation Structure ───────────────────────────────────────
-# All primary tabs — visible in the nav bar
 NAV_TABS = [
     ("Home", "home"),
     ("Play", "sports_football"),
@@ -165,7 +266,6 @@ NAV_TABS = [
     ("Export", "download"),
 ]
 
-# Dev tools — hidden behind a gear icon (not real user-facing features)
 NAV_DEV = [
     ("Debug", "bug_report"),
     ("Inspector", "science"),
@@ -195,10 +295,7 @@ def index():
     shared = _load_shared_data()
     state = UserState()
 
-    # Validate stored session — if the API server restarted, the in-memory
-    # session is gone but the cookie still has the stale session_id.
-    # Check the in-process sessions dict directly instead of making an HTTP
-    # call to ourselves, which deadlocks the single uvicorn worker.
+    # Validate stored session
     if state.session_id:
         from api.main import sessions as _api_sessions
         if state.session_id not in _api_sessions:
@@ -226,15 +323,20 @@ def index():
             return
         active_nav["current"] = name
 
-        # Trigger P5.js page transition animation
         ui.run_javascript("if (window.vbTransition) window.vbTransition();")
 
         # Update button styling
         for btn_name, btn in nav_buttons.items():
             if btn_name == name:
-                btn.classes(remove="text-slate-500", add="text-indigo-600 font-semibold")
+                btn.classes(remove="text-slate-500 hover:text-slate-300", add="text-indigo-400 font-semibold")
             else:
-                btn.classes(remove="text-indigo-600 font-semibold", add="text-slate-500")
+                btn.classes(remove="text-indigo-400 font-semibold", add="text-slate-500 hover:text-slate-300")
+
+        # Show loading skeleton while content loads
+        content_container.clear()
+        with content_container:
+            from nicegui_app.components import loading_page_skeleton
+            loading_page_skeleton()
 
         content_container.clear()
         with content_container:
@@ -243,7 +345,7 @@ def index():
             except Exception as exc:
                 import logging
                 logging.getLogger("viperball").error(f"Error loading {name}: {exc}", exc_info=True)
-                ui.label(f"Error loading {name}: {exc}").classes("text-red-500")
+                ui.label(f"Error loading {name}: {exc}").classes("text-red-400")
                 traceback.print_exc()
 
     async def _end_session():
@@ -257,82 +359,84 @@ def index():
         ui.navigate.to("/")
 
     # ─── Header ──────────────────────────────────────────────────
-    with ui.header().classes("bg-white shadow-sm px-4 py-2 items-center").style("z-index: 2000;"):
+    with ui.header().classes("px-4 py-2 items-center").style(
+        "z-index: 2000; background: var(--vb-surface); "
+        "border-bottom: 1px solid var(--vb-border); "
+        "box-shadow: 0 1px 12px rgba(0,0,0,0.3);"
+    ):
         with ui.row().classes("w-full items-center gap-1"):
-            # Brand — clicking it goes Home
-            with ui.row().classes("items-center cursor-pointer gap-0 mr-4").on(
+            # Brand
+            with ui.row().classes("items-center cursor-pointer gap-1 mr-6").on(
                 "click", lambda: _switch_to("Home")
             ):
-                ui.label("Viperball").classes("text-lg font-extrabold text-indigo-600")
-                ui.label("Sandbox").classes("text-base font-light text-slate-400 ml-1")
+                ui.icon("sports_football").classes("text-lg").style("color: var(--vb-accent);")
+                ui.label("VIPERBALL").classes("text-base font-black tracking-widest").style(
+                    "color: var(--vb-accent-bright); letter-spacing: 0.15em;"
+                )
 
-            # ── All nav buttons (flat, equal) ────────────────────
-            with ui.row().classes("desktop-nav items-center gap-1"):
+            # ── Nav buttons ─────────────────────────────────────
+            with ui.row().classes("desktop-nav items-center gap-0"):
                 for name, icon_name in NAV_TABS:
                     btn = ui.button(name, icon=icon_name, on_click=lambda n=name: _switch_to(n))
                     btn.props("flat dense no-caps size=sm")
                     if name == initial_section:
-                        btn.classes("text-indigo-600 font-semibold")
+                        btn.classes("text-indigo-400 font-semibold")
                     else:
-                        btn.classes("text-slate-500")
+                        btn.classes("text-slate-500 hover:text-slate-300")
+                    btn.style("transition: color 0.15s;")
                     nav_buttons[name] = btn
 
-                # ── Separator + gear icon for dev tools ──────────
-                ui.separator().props("vertical").classes("mx-1 h-6")
+                # ── Dev tools gear ──────────────────────────────
+                ui.separator().props("vertical").classes("mx-2 h-5")
                 with ui.button(icon="settings").props(
                     "flat dense size=sm round"
-                ).classes("text-slate-400") as gear_btn:
+                ).classes("text-slate-600 hover:text-slate-400") as gear_btn:
                     nav_buttons["_gear"] = gear_btn
-                    with ui.menu().classes("bg-white shadow-lg"):
+                    with ui.menu():
                         for name, icon_name in NAV_DEV:
                             mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
-                            mi.classes("text-slate-700")
                             nav_buttons[name] = mi
 
-            # ── Mobile hamburger menu ────────────────────────────
-            with ui.button(icon="menu").props("flat dense").classes("mobile-menu-btn text-slate-600"):
-                with ui.menu().classes("bg-white shadow-lg"):
+            # ── Mobile hamburger ─────────────────────────────────
+            with ui.button(icon="menu").props("flat dense").classes("mobile-menu-btn").style(
+                "color: var(--vb-text-muted);"
+            ):
+                with ui.menu():
                     for name, icon_name in NAV_TABS:
                         mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
-                        mi.classes("text-slate-700")
                         nav_buttons.setdefault(name, mi)
                     ui.separator()
                     for name, icon_name in NAV_DEV:
                         mi = ui.menu_item(name, on_click=lambda n=name: _switch_to(n))
-                        mi.classes("text-slate-500 text-sm")
                         nav_buttons.setdefault(name, mi)
 
             ui.space()
 
-            # ── Session indicator (right side) ───────────────────
+            # ── Session indicator ────────────────────────────────
             if state.session_id:
                 mode_label = state.mode.title() if state.mode else ""
-                ui.label(mode_label).classes("text-xs text-indigo-500 font-medium mr-2")
-                ui.button("End", icon="stop", on_click=_end_session).props(
-                    "flat dense size=sm color=red no-caps"
-                )
+                with ui.row().classes("items-center gap-2"):
+                    ui.badge(mode_label).props("color=indigo outline").classes("text-xs")
+                    ui.button("End", icon="stop", on_click=_end_session).props(
+                        "flat dense size=sm no-caps"
+                    ).style("color: var(--vb-red);")
 
     # ─── Session Context Bar ─────────────────────────────────────
-    # Persistent strip below the header showing session state
     if state.session_id and state.mode in ("season", "dq"):
-        with ui.row().classes(
-            "session-bar w-full px-4 py-1.5 items-center gap-4"
-        ):
-            ui.icon("sports_football").classes("text-indigo-300 text-sm")
-            # We show basic info synchronously, details load via timer
+        with ui.row().classes("session-bar w-full px-4 py-1.5 items-center gap-4"):
+            ui.icon("sports_football").classes("text-sm").style("color: var(--vb-accent);")
             mode_text = "Season" if state.mode == "season" else "DraftyQueenz"
             session_label = ui.label(f"{mode_text} Active").classes(
-                "text-xs text-indigo-200 font-medium"
-            )
+                "text-xs font-medium"
+            ).style("color: var(--vb-text-muted);")
             if state.human_teams:
                 team_display = shared.get("team_names", {}).get(
                     state.human_teams[0], state.human_teams[0]
                 )
-                ui.label(f"Team: {team_display}").classes("text-xs text-indigo-300")
+                ui.label(f"Team: {team_display}").classes("text-xs").style("color: var(--vb-accent);")
             ui.space()
 
-            # Load live details (week, phase) asynchronously
-            detail_label = ui.label("").classes("text-xs text-indigo-300")
+            detail_label = ui.label("").classes("text-xs").style("color: var(--vb-text-dim);")
 
             async def _load_context():
                 try:
@@ -351,11 +455,11 @@ def index():
 
             ui.timer(0.2, _load_context, once=True)
 
-    # Nav glow container
+    # Nav glow
     ui.html('<div id="vb-nav-glow"></div>')
 
     # ─── Main content area ───────────────────────────────────────
-    content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-4 px-2")
+    content_container = ui.column().classes("w-full max-w-7xl mx-auto p-4 sm:p-6 px-3")
 
     if initial_section != "Home":
         async def _init_section():
@@ -366,7 +470,7 @@ def index():
                 except Exception as exc:
                     import logging
                     logging.getLogger("viperball").error(f"{initial_section} render error: {exc}", exc_info=True)
-                    ui.label(f"Error loading {initial_section}: {exc}").classes("text-red-500")
+                    ui.label(f"Error loading {initial_section}: {exc}").classes("text-red-400")
                     traceback.print_exc()
         ui.timer(0.1, _init_section, once=True)
     else:
@@ -388,19 +492,19 @@ async def _render_section(name: str, state: UserState, shared: dict, switch_fn, 
             from nicegui_app.pages.pro_leagues import render_pro_leagues_section
             await render_pro_leagues_section(state, shared)
         except ImportError:
-            ui.label("Pro Leagues module not yet available.").classes("text-gray-400 italic")
+            ui.label("Pro Leagues module not yet available.").classes("text-slate-500 italic")
     elif name == "WVL":
         try:
             from nicegui_app.pages.wvl_mode import render_wvl_section
             await render_wvl_section(state, shared)
         except ImportError:
-            ui.label("WVL module not yet available.").classes("text-gray-400 italic")
+            ui.label("WVL module not yet available.").classes("text-slate-500 italic")
     elif name == "International":
         try:
             from nicegui_app.pages.international import render_international_section
             await render_international_section(state, shared)
         except ImportError:
-            ui.label("International module not yet available.").classes("text-gray-400 italic")
+            ui.label("International module not yet available.").classes("text-slate-500 italic")
     elif name == "League":
         from nicegui_app.pages.league import render_league_section
         await render_league_section(state, shared)

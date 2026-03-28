@@ -5,6 +5,9 @@ WVL Owner Mode — NiceGUI UI Page
 Owner mode interface for the Women's Viperball League.
 Tab-based layout with week-by-week sim controls, roster management,
 financial dashboard, and multi-step offseason flow.
+
+State management and utilities have been extracted to
+nicegui_app/pages/wvl/wvl_state.py for maintainability.
 """
 
 from nicegui import ui, app
@@ -23,140 +26,21 @@ from engine.wvl_owner import (
     compute_final_score_report,
 )
 from engine.wvl_dynasty import create_wvl_dynasty, WVLDynasty
-from engine.db import save_wvl_season as _db_save_season, load_wvl_season as _db_load_season, delete_wvl_season as _db_delete_season
 
-
-_WVL_DYNASTY_KEY = "wvl_dynasty"
-_WVL_PHASE_KEY = "wvl_phase"
-_WVL_SEASON_KEY = "wvl_last_season"
-
-# In-memory cache for the active WVL season (avoids repeated DB reads)
-_wvl_season_cache = {}
-
-
-def _get_wvl_season():
-    """Load the WVL season from in-memory cache, then DB, then legacy storage."""
-    if "current" in _wvl_season_cache:
-        return _wvl_season_cache["current"]
-    # Try database
-    season = _db_load_season()
-    if season is not None:
-        _wvl_season_cache["current"] = season
-        return season
-    # Legacy fallback: try app.storage.user (old cookie-based storage)
-    legacy = app.storage.user.get(_WVL_SEASON_KEY)
-    if legacy and hasattr(legacy, 'tier_seasons'):
-        _wvl_season_cache["current"] = legacy
-        # Migrate to DB
-        try:
-            _db_save_season(legacy)
-            app.storage.user.pop(_WVL_SEASON_KEY, None)
-            _log.info("Migrated WVL season from app.storage.user to database")
-        except Exception as e:
-            _log.warning(f"Failed to migrate WVL season to DB: {e}")
-        return legacy
-    return None
-
-
-def _save_wvl_season(season):
-    """Save the WVL season to in-memory cache and database."""
-    _wvl_season_cache["current"] = season
-    try:
-        _db_save_season(season)
-    except Exception as e:
-        _log.warning(f"Failed to save WVL season to DB: {e}")
-
-
-def _clear_wvl_season():
-    """Clear the WVL season from cache and database."""
-    _wvl_season_cache.pop("current", None)
-    try:
-        _db_delete_season()
-    except Exception:
-        pass
-    app.storage.user.pop(_WVL_SEASON_KEY, None)
-
-
-def _get_dynasty() -> Optional[WVLDynasty]:
-    raw = app.storage.user.get(_WVL_DYNASTY_KEY)
-    if raw is None:
-        return None
-    if isinstance(raw, WVLDynasty):
-        dynasty = raw
-    else:
-        try:
-            dynasty = WVLDynasty.from_dict(raw)
-        except Exception:
-            return None
-    # Re-link the live season so roster/OVR populate from Team objects when
-    # _team_rosters is empty (e.g., after a page reload)
-    season = _get_wvl_season()
-    if season and hasattr(season, 'tier_seasons') and not dynasty._team_rosters:
-        dynasty._current_season = season
-    return dynasty
-
-
-def _set_dynasty(dynasty: Optional[WVLDynasty]):
-    app.storage.user[_WVL_DYNASTY_KEY] = dynasty.to_dict() if dynasty is not None else None
-
-
-def _get_phase() -> str:
-    return app.storage.user.get(_WVL_PHASE_KEY, "setup")
-
-
-def _set_phase(phase: str):
-    app.storage.user[_WVL_PHASE_KEY] = phase
-
-
-def _extract_args(e) -> dict:
-    """Safely extract row dict from NiceGUI table slot event args.
-
-    NiceGUI 2.x may deliver $parent.$emit('event', row) args as either
-    the dict directly OR as a single-element list wrapping the dict.
-    """
-    args = e.args
-    if isinstance(args, list):
-        args = args[0] if args else {}
-    return args if isinstance(args, dict) else {}
-
-
-def _register_wvl_season(dynasty, season, year=None):
-    try:
-        import time as _time
-        from api.main import wvl_sessions
-        effective_year = year if year is not None else dynasty.current_year - 1
-        session_id = f"wvl_{dynasty.dynasty_name}_{effective_year}"
-        session_id = session_id.lower().replace(" ", "_").replace("'", "")
-        wvl_sessions[session_id] = {
-            "season": season,
-            "dynasty": dynasty,
-            "dynasty_name": dynasty.dynasty_name,
-            "year": effective_year,
-            "club_key": dynasty.owner.club_key,
-            "last_accessed": _time.time(),
-        }
-    except Exception:
-        pass
-
-
-def _ordinal(n: int) -> str:
-    if 11 <= n % 100 <= 13:
-        return f"{n}th"
-    s = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{s}"
-
-
-def _rating_color(val: int) -> str:
-    if val >= 85:
-        return "color: #15803d; font-weight: 700;"
-    elif val >= 75:
-        return "color: #16a34a;"
-    elif val >= 65:
-        return "color: #ca8a04;"
-    elif val >= 55:
-        return "color: #ea580c;"
-    else:
-        return "color: #dc2626;"
+# ── Shared state & utilities (extracted to sub-module) ──
+from nicegui_app.pages.wvl.wvl_state import (
+    get_wvl_season as _get_wvl_season,
+    save_wvl_season as _save_wvl_season,
+    clear_wvl_season as _clear_wvl_season,
+    get_dynasty as _get_dynasty,
+    set_dynasty as _set_dynasty,
+    get_phase as _get_phase,
+    set_phase as _set_phase,
+    extract_args as _extract_args,
+    register_wvl_season as _register_wvl_season,
+    ordinal as _ordinal,
+    rating_color as _rating_color,
+)
 
 
 def _open_edit_player_dialog(player_name: str, dynasty, team_key: str):

@@ -13,7 +13,12 @@ from nicegui import ui, run
 from ui import api_client
 from engine.season import BOWL_TIERS
 from nicegui_app.helpers import fmt_vb_score
-from nicegui_app.components import metric_card, stat_table, notify_error, notify_info
+from nicegui_app.components import (
+    metric_card, stat_table, notify_error, notify_info,
+    section_header, loading_page_skeleton, loading_table_skeleton,
+    render_rating_badges, render_ovr_display, render_bio_line,
+    empty_state, LazyTabManager,
+)
 from nicegui_app.pages.postseason import render_playoff_bracket, render_playoff_field, render_bowl_games
 
 
@@ -182,9 +187,11 @@ async def render_league_section(state, shared):
     mode = state.mode
 
     if not session_id or not mode:
-        ui.label("League").classes("text-2xl font-bold text-slate-800")
-        with ui.card().classes("bg-blue-50 p-3 rounded"):
-            ui.label("No active season found. Start a new season or dynasty from the Play section to view league data.")
+        section_header("League", icon="leaderboard")
+        empty_state(
+            "No active season. Start one from the Play section to see league data.",
+            icon="leaderboard",
+        )
         return
 
     # -- Parallel initial fetch (5 calls → 1 round-trip) -----------------------
@@ -216,9 +223,11 @@ async def render_league_section(state, shared):
 
     standings = standings_resp.get("standings", [])
     if not standings:
-        ui.label("League").classes("text-2xl font-bold text-slate-800")
-        with ui.card().classes("bg-blue-50 p-3 rounded"):
-            ui.label("No standings data available yet. Simulate some games first.")
+        section_header("League", icon="leaderboard")
+        empty_state(
+            "No standings data yet. Simulate some games first.",
+            icon="bar_chart",
+        )
         return
 
     user_team = None
@@ -288,42 +297,60 @@ async def render_league_section(state, shared):
         for name in tab_names:
             tab_objects[name] = ui.tab(name)
 
-    with ui.tab_panels(tabs).classes("w-full"):
+    # Lazy-load: only render Standings eagerly; other tabs load on first click
+    lazy = LazyTabManager()
+    panel_containers: dict[str, ui.column] = {}
 
-        with ui.tab_panel(tab_objects["Standings"]):
-            _render_standings(session_id, standings, has_conferences, user_team)
+    with ui.tab_panels(tabs).classes("w-full") as panels:
+        for name in tab_names:
+            with ui.tab_panel(tab_objects[name]):
+                panel_containers[name] = ui.column().classes("w-full")
 
-        with ui.tab_panel(tab_objects["Power Rankings"]):
-            await _render_power_rankings(session_id, standings, user_team)
+    # Render standings immediately (it's the default/first tab)
+    with panel_containers["Standings"]:
+        _render_standings(session_id, standings, has_conferences, user_team)
+    lazy.mark_loaded("Standings")
 
-        if has_conferences:
-            with ui.tab_panel(tab_objects["Conferences"]):
-                await _render_conferences(session_id, conferences, user_team)
+    async def _on_tab_change(e):
+        tab_name = e.value if isinstance(e.value, str) else getattr(e.value, 'name', str(e.value))
+        if lazy.is_loaded(tab_name):
+            return
+        lazy.mark_loaded(tab_name)
 
-        with ui.tab_panel(tab_objects["Player Stats"]):
-            await _render_player_stats(session_id, standings, conferences, has_conferences)
+        container = panel_containers.get(tab_name)
+        if not container:
+            return
+        container.clear()
+        with container:
+            loading_table_skeleton(6)
+        container.clear()
+        with container:
+            try:
+                if tab_name == "Power Rankings":
+                    await _render_power_rankings(session_id, standings, user_team)
+                elif tab_name == "Conferences":
+                    await _render_conferences(session_id, conferences, user_team)
+                elif tab_name == "Player Stats":
+                    await _render_player_stats(session_id, standings, conferences, has_conferences)
+                elif tab_name == "Team Browser":
+                    await _render_team_browser(session_id, standings, conferences, has_conferences)
+                elif tab_name == "Postseason":
+                    await _render_postseason(session_id, user_team)
+                elif tab_name == "Schedule":
+                    await _render_schedule(session_id, completed_games, user_team)
+                elif tab_name == "Awards & Stats":
+                    await _render_awards_stats(session_id, standings, user_team)
+                elif tab_name == "Injury Report":
+                    await _render_injury_report(session_id, standings, conferences, has_conferences)
+                elif tab_name == "History":
+                    if dynasty_awards:
+                        _render_dynasty_league_history(dynasty_awards)
+                    elif history:
+                        _render_league_history(history)
+            except Exception as exc:
+                ui.label(f"Error loading {tab_name}: {exc}").classes("text-red-400")
 
-        with ui.tab_panel(tab_objects["Team Browser"]):
-            await _render_team_browser(session_id, standings, conferences, has_conferences)
-
-        with ui.tab_panel(tab_objects["Postseason"]):
-            await _render_postseason(session_id, user_team)
-
-        with ui.tab_panel(tab_objects["Schedule"]):
-            await _render_schedule(session_id, completed_games, user_team)
-
-        with ui.tab_panel(tab_objects["Awards & Stats"]):
-            await _render_awards_stats(session_id, standings, user_team)
-
-        with ui.tab_panel(tab_objects["Injury Report"]):
-            await _render_injury_report(session_id, standings, conferences, has_conferences)
-
-        if has_history and "History" in tab_objects:
-            with ui.tab_panel(tab_objects["History"]):
-                if dynasty_awards:
-                    _render_dynasty_league_history(dynasty_awards)
-                elif history:
-                    _render_league_history(history)
+    tabs.on("update:model-value", _on_tab_change)
 
 
 # ---------------------------------------------------------------------------
