@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Head-to-Head — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Head-to-Head
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>HEAD-TO-HEAD GAME FINDER</h1>
+  <div class="subtitle">{{ season_name }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/kenpom">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/referees">Referees</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/injuries">Injuries</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+<form id="h2h-form" method="get" action="/stats/college/{{ session_id }}/head-to-head" style="margin-bottom:16px;">
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <label style="font-size:11px;color:var(--fg-dim);">Team 1:</label>
+    <select name="team1" id="sel-team1" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);">
+      <option value="">-- Select --</option>
+      {% for t in all_teams %}
+      <option value="{{ t }}" {% if t == team1 %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+
+    <label style="font-size:11px;color:var(--fg-dim);">Team 2:</label>
+    <select name="team2" id="sel-team2" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);">
+      <option value="">-- Select --</option>
+      {% for t in all_teams %}
+      <option value="{{ t }}" {% if t == team2 %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" style="background:var(--accent);color:#000;border:none;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font-mono);">Search</button>
+  </div>
+</form>
+
+<script>
+(function(){
+  var f = document.getElementById('h2h-form');
+  var s1 = document.getElementById('sel-team1');
+  var s2 = document.getElementById('sel-team2');
+  function maybeSubmit(){
+    if(s1.value && s2.value) f.submit();
+  }
+  s1.addEventListener('change', maybeSubmit);
+  s2.addEventListener('change', maybeSubmit);
+})();
+</script>
+
+{% if team1 and team2 %}
+  {% if team1 == team2 %}
+    <p style="color:var(--fg-dim);font-size:12px;">Please select two different teams.</p>
+  {% elif games|length == 0 %}
+    <p style="color:var(--fg-dim);font-size:12px;">No completed matchups found between <strong>{{ team1 }}</strong> and <strong>{{ team2 }}</strong> this season.</p>
+  {% else %}
+    <div style="margin-bottom:12px;font-size:12px;">
+      <strong>{{ team1 }}</strong> vs <strong>{{ team2 }}</strong> &mdash;
+      <span style="color:var(--green)">{{ team1_wins }}W</span> &ndash;
+      <span style="color:var(--red)">{{ team2_wins }}W</span>
+      {% if ties > 0 %} &ndash; <span style="color:var(--fg-dim)">{{ ties }}T</span>{% endif %}
+      &nbsp;({{ games|length }} game{{ 's' if games|length != 1 else '' }})
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="num">Wk</th>
+          <th>Away</th>
+          <th class="num">Score</th>
+          <th></th>
+          <th class="num">Score</th>
+          <th>Home</th>
+          <th>Tags</th>
+          <th>Box</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for g in games %}
+      <tr {% if g.game_type == 'playoff' %}style="background:rgba(234,179,8,0.08)"{% elif g.game_type == 'bowl' %}style="background:rgba(56,189,248,0.08)"{% endif %}>
+        <td class="num">
+          {% if g.game_type == 'playoff' %}{{ g.round_label }}{% elif g.game_type == 'bowl' %}{{ g.bowl_name }}{% else %}{{ g.week }}{% endif %}
+        </td>
+        <td>
+          <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+        </td>
+        <td class="num {% if g.completed and g.away_score is not none and g.away_score > g.home_score %}score-win{% elif g.completed and g.away_score == g.home_score %}score-tie{% elif g.completed %}score-loss{% endif %}">
+          {% if g.completed %}{{ g.away_score }}{% else %}&mdash;{% endif %}
+        </td>
+        <td style="color:var(--fg-dim)">@</td>
+        <td class="num {% if g.completed and g.home_score is not none and g.home_score > g.away_score %}score-win{% elif g.completed and g.home_score == g.away_score %}score-tie{% elif g.completed %}score-loss{% endif %}">
+          {% if g.completed %}{{ g.home_score }}{% else %}&mdash;{% endif %}
+        </td>
+        <td>
+          <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+        </td>
+        <td>
+          {% if g.game_type == 'playoff' %}<span class="tag" style="background:var(--yellow);color:#000;font-size:9px;padding:1px 5px;border-radius:3px;">PLAYOFF</span>{% endif %}
+          {% if g.game_type == 'bowl' %}<span class="tag" style="background:var(--accent);color:#000;font-size:9px;padding:1px 5px;border-radius:3px;">BOWL</span>{% endif %}
+          {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
+          {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+        </td>
+        <td>
+          {% if g.completed %}
+          <a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}">Box</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endif %}
+{% endblock %}

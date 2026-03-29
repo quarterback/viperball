@@ -315,6 +315,27 @@
 {# Game Log #}
 {% if game_log %}
 <h2>Game Log ({{ game_log|length }} games)</h2>
+
+{# ── Performance Trend Sparklines ── #}
+{% if game_log|length >= 3 %}
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;padding:6px 8px;background:var(--bg-alt);border:1px solid var(--border);">
+  {% set yds_vals = game_log|map(attribute='yards')|map('round', 0)|map('int')|list %}
+  {% set td_vals = game_log|map(attribute='tds')|list %}
+  {% set tkl_vals = game_log|map(attribute='tackles')|list %}
+  {% set wpa_vals = game_log|map(attribute='wpa')|list %}
+  {% if yds_vals|sum > 0 %}
+  <div style="font-size:10px;color:var(--fg-dim);">Yards <span class="sparkline" data-values="{{ yds_vals|join(',') }}" data-width="80" data-height="18"></span></div>
+  {% endif %}
+  {% if td_vals|sum > 0 %}
+  <div style="font-size:10px;color:var(--fg-dim);">TDs <span class="sparkline" data-values="{{ td_vals|join(',') }}" data-width="80" data-height="18" data-color="var(--green)"></span></div>
+  {% endif %}
+  {% if tkl_vals|sum > 0 %}
+  <div style="font-size:10px;color:var(--fg-dim);">Tackles <span class="sparkline" data-values="{{ tkl_vals|join(',') }}" data-width="80" data-height="18" data-color="var(--cyan)"></span></div>
+  {% endif %}
+  <div style="font-size:10px;color:var(--fg-dim);">WPA <span class="sparkline" data-values="{{ wpa_vals|join(',') }}" data-width="80" data-height="18" data-color="var(--yellow)"></span></div>
+</div>
+{% endif %}
+
 <table>
   <thead>
     <tr>
