@@ -643,6 +643,17 @@ def stats_home(request: Request):
     # Load all saved data from DB (may include leagues no longer in memory)
     all_saved = _get_all_saved_data()
 
+    # Compute last_updated from the most recent completed game across sessions
+    last_updated = None
+    api = _get_api()
+    for sid, sess in api["sessions"].items():
+        season = sess.get("season")
+        if season:
+            games_played = sum(1 for g in season.schedule if g.completed)
+            if games_played > 0:
+                last_week = season.get_last_completed_week()
+                last_updated = f"Through Week {last_week} ({games_played} games)"
+
     return templates.TemplateResponse("home.html", _ctx(
         request,
         section="home",
@@ -653,6 +664,7 @@ def stats_home(request: Request):
         fiv_rankings=fiv_rankings,
         archives=archives,
         all_saved=all_saved,
+        last_updated=last_updated,
     ))
 
 
@@ -766,6 +778,8 @@ def college_season(request: Request, session_id: str):
                 recent_games.append(sg)
             week_counters[w] = idx + 1
 
+    last_updated = f"Through Week {current_week} ({games_played} games)" if games_played > 0 else None
+
     return templates.TemplateResponse("college/season.html", _ctx(
         request,
         section="college",
@@ -780,6 +794,7 @@ def college_season(request: Request, session_id: str):
         current_week=current_week,
         champion=season.champion,
         recent_games=recent_games,
+        last_updated=last_updated,
     ))
 
 
@@ -1694,6 +1709,227 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         analysis_text=analysis_text,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
         benchmarks=benchmarks,
+    ))
+
+
+def _aggregate_player_season_totals(season, team_name, player_name):
+    """Aggregate season totals for a player from game logs (same logic as college_player)."""
+    season_totals = {
+        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
+        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
+        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
+        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
+        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
+        "kick_passes_thrown": 0, "kick_passes_completed": 0,
+        "kick_return_yards": 0, "punt_return_yards": 0,
+        "rush_carries": 0, "rushing_tds": 0,
+        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
+        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
+        "kick_pass_ints": 0,
+        "kick_returns": 0, "kick_return_tds": 0,
+        "punt_returns": 0, "punt_return_tds": 0,
+        "muffs": 0, "st_tackles": 0,
+        "keeper_tackles": 0, "keeper_bells": 0,
+        "kick_deflections": 0, "coverage_snaps": 0,
+        "keeper_return_yards": 0,
+        "points_allowed_in_coverage": 0.0,
+        "completions_allowed_in_coverage": 0,
+        "blocks": 0, "pancakes": 0,
+        "offensive_snaps": 0, "defensive_snaps": 0,
+        "wpa": 0.0, "plays_involved": 0,
+    }
+    for game in _all_college_games(season):
+        if not game.completed or not getattr(game, "full_result", None):
+            continue
+        if game.home_team != team_name and game.away_team != team_name:
+            continue
+        side = "home" if game.home_team == team_name else "away"
+        fr = game.full_result
+        ps = fr.get("player_stats", {}).get(side, [])
+        for pg in ps:
+            if pg.get("name") == player_name:
+                season_totals["games"] += 1
+                for stat in [
+                    "touches", "yards", "rushing_yards", "lateral_yards",
+                    "tds", "fumbles", "laterals_thrown",
+                    "kick_att", "kick_made", "pk_att", "pk_made",
+                    "dk_att", "dk_made", "tackles", "tfl", "sacks", "hurries",
+                    "kick_pass_yards", "kick_pass_tds",
+                    "kick_passes_thrown", "kick_passes_completed",
+                    "kick_return_yards", "punt_return_yards",
+                    "rush_carries", "rushing_tds",
+                    "lateral_receptions", "lateral_assists", "lateral_tds",
+                    "kick_pass_interceptions_thrown", "kick_pass_receptions",
+                    "kick_pass_ints",
+                    "kick_returns", "kick_return_tds",
+                    "punt_returns", "punt_return_tds",
+                    "muffs", "st_tackles",
+                    "keeper_tackles", "keeper_bells",
+                    "kick_deflections", "coverage_snaps",
+                    "keeper_return_yards",
+                    "points_allowed_in_coverage",
+                    "completions_allowed_in_coverage",
+                    "blocks", "pancakes",
+                    "offensive_snaps", "defensive_snaps",
+                    "wpa", "plays_involved",
+                ]:
+                    season_totals[stat] += pg.get(stat, 0)
+                break
+    # Ensure yard totals are integers
+    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
+                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
+        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
+    # Derived season totals
+    season_totals["yards_per_touch"] = round(
+        season_totals["yards"] / max(1, season_totals["touches"]), 1
+    )
+    season_totals["kick_pct"] = round(
+        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
+    )
+    season_totals["total_return_yards"] = (
+        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
+    )
+    season_totals["kp_pct"] = round(
+        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
+    )
+    return season_totals
+
+
+@router.get("/college/{session_id}/compare", response_class=HTMLResponse)
+def college_compare(request: Request, session_id: str, type: str = "player", a: str = "", b: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    all_teams = sorted(season.teams.keys())
+    all_players = []
+    for tname, team in season.teams.items():
+        for p in team.players:
+            all_players.append({"name": p.name, "team": tname, "position": getattr(p, "position", ""), "overall": getattr(p, "overall", 0)})
+
+    comparison = None
+    if type == "player" and a and b:
+        # Find both players across all teams
+        def _find_player(name):
+            for tname, team in season.teams.items():
+                for p in team.players:
+                    if p.name == name:
+                        return p, tname
+            return None, None
+
+        player_a, team_a = _find_player(a)
+        player_b, team_b = _find_player(b)
+        if player_a and player_b:
+            stats_a = _aggregate_player_season_totals(season, team_a, a)
+            stats_b = _aggregate_player_season_totals(season, team_b, b)
+            comparison = {
+                "type": "player",
+                "a": {"name": a, "team": team_a, "player": api["serialize_player"](player_a), "stats": stats_a},
+                "b": {"name": b, "team": team_b, "player": api["serialize_player"](player_b), "stats": stats_b},
+            }
+
+    elif type == "team" and a and b:
+        if a in season.teams and b in season.teams:
+            rec_a = season.standings.get(a)
+            rec_b = season.standings.get(b)
+            comparison = {
+                "type": "team",
+                "a": {"name": a, "record": api["serialize_team_record"](rec_a) if rec_a else None},
+                "b": {"name": b, "record": api["serialize_team_record"](rec_b) if rec_b else None},
+            }
+
+    season_name = getattr(season, "name", "Season")
+    return templates.TemplateResponse("college/compare.html", _ctx(
+        request, section="college", session_id=session_id,
+        compare_type=type, a=a, b=b,
+        all_teams=all_teams, all_players=all_players,
+        comparison=comparison,
+        season_name=season_name,
+    ))
+
+
+@router.get("/college/{session_id}/head-to-head", response_class=HTMLResponse)
+def college_head_to_head(request: Request, session_id: str, team1: str = "", team2: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+
+    all_teams = sorted(season.teams.keys())
+
+    games = []
+    team1_wins = 0
+    team2_wins = 0
+    ties = 0
+
+    if team1 and team2 and team1 != team2:
+        # Gather all games (regular + playoff + bowl)
+        reg_games = list(season.schedule)
+        playoff_games = list(season.playoff_bracket or [])
+        bowl_game_list = list(season.bowl_games or [])
+
+        bowl_game_map = {}
+        for bg in bowl_game_list:
+            bowl_game_map[id(bg.game)] = bg.name
+
+        all_games = reg_games + playoff_games + [bg.game for bg in bowl_game_list]
+
+        # Build per-week game index for box score links (over ALL games, not just matched)
+        week_counters = {}
+        game_idx_map = {}  # id(game) -> week_game_idx
+        for g in all_games:
+            w = g.week
+            idx = week_counters.get(w, 0)
+            game_idx_map[id(g)] = idx
+            week_counters[w] = idx + 1
+
+        round_labels = {
+            995: "Play-In Round", 996: "First Round", 997: "Octofinals",
+            998: "Quarterfinals", 999: "National Semifinals", 1000: "National Championship",
+        }
+
+        # Filter to matchups between team1 and team2
+        pair = {team1, team2}
+        for g in all_games:
+            if {g.home_team, g.away_team} == pair and g.completed:
+                sg = api["serialize_game"](g)
+                sg["week_game_idx"] = game_idx_map[id(g)]
+                # Postseason metadata
+                bowl_name = bowl_game_map.get(id(g))
+                if bowl_name:
+                    sg["bowl_name"] = bowl_name
+                    sg["game_type"] = "bowl"
+                elif g.week >= 995:
+                    sg["game_type"] = "playoff"
+                    sg["round_label"] = round_labels.get(g.week, f"Playoff Wk {g.week}")
+                else:
+                    sg["game_type"] = "regular"
+                games.append(sg)
+
+                # Tally record from team1's perspective
+                home = sg.get("home_team", "")
+                away = sg.get("away_team", "")
+                hs = sg.get("home_score", 0) or 0
+                aws = sg.get("away_score", 0) or 0
+                if home == team1:
+                    if hs > aws:
+                        team1_wins += 1
+                    elif aws > hs:
+                        team2_wins += 1
+                    else:
+                        ties += 1
+                else:
+                    if aws > hs:
+                        team1_wins += 1
+                    elif hs > aws:
+                        team2_wins += 1
+                    else:
+                        ties += 1
+
+    return templates.TemplateResponse("college/head_to_head.html", _ctx(
+        request, section="college", session_id=session_id,
+        all_teams=all_teams, team1=team1, team2=team2,
+        games=games, team1_wins=team1_wins, team2_wins=team2_wins, ties=ties,
+        season_name=getattr(season, "name", "Season"),
     ))
 
 
@@ -5222,9 +5458,66 @@ def sprite_pools_page(request: Request):
 
 # ── SEARCH ───────────────────────────────────────────────────────────────
 
+
+def _levenshtein(s1, s2):
+    """Simple Levenshtein distance for short strings."""
+    if len(s1) < len(s2):
+        return _levenshtein(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    prev_row = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        curr_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            ins = prev_row[j + 1] + 1
+            dele = curr_row[j] + 1
+            sub = prev_row[j] + (0 if c1 == c2 else 1)
+            curr_row.append(min(ins, dele, sub))
+        prev_row = curr_row
+    return prev_row[-1]
+
+
+def _fuzzy_match(query, text):
+    """Return True if query fuzzy-matches text.
+
+    Matches if:
+    - query is a substring of text (existing behavior)
+    - All space-separated words in query match the start of words in text
+    - For single-word queries of 4+ chars, allow edit distance <= 1
+    """
+    text_lower = text.lower()
+    query_lower = query.lower().strip()
+
+    # Substring match
+    if query_lower in text_lower:
+        return True
+
+    # Word-start match: "jo sm" matches "John Smith"
+    query_words = query_lower.split()
+    if len(query_words) >= 2:
+        text_words = text_lower.split()
+        matched = 0
+        for qw in query_words:
+            for tw in text_words:
+                if tw.startswith(qw):
+                    matched += 1
+                    break
+        if matched == len(query_words):
+            return True
+
+    # Edit distance for single-word queries of 4+ chars
+    if len(query_words) == 1 and len(query_lower) >= 4:
+        text_words = text_lower.split()
+        for tw in text_words:
+            if len(tw) >= 3 and _levenshtein(query_lower, tw) <= 1:
+                return True
+
+    return False
+
+
 @router.get("/search", response_class=HTMLResponse)
 def search(request: Request, q: str = ""):
-    results = {"college_teams": [], "college_players": [], "pro_teams": [], "nations": []}
+    results = {"college_teams": [], "college_players": [], "pro_teams": [], "nations": [], "wvl_teams": [], "wvl_players": []}
 
     if not q or len(q) < 2:
         return templates.TemplateResponse("search.html", _ctx(
@@ -5243,7 +5536,7 @@ def search(request: Request, q: str = ""):
         label = dynasty.dynasty_name if dynasty else getattr(season, "name", "Season")
 
         for team_name, team in season.teams.items():
-            if query in team_name.lower() or query in getattr(team, "mascot", "").lower() or query in getattr(team, "abbreviation", "").lower():
+            if _fuzzy_match(query, team_name) or _fuzzy_match(query, getattr(team, "mascot", "")) or _fuzzy_match(query, getattr(team, "abbreviation", "")):
                 record = season.standings.get(team_name)
                 results["college_teams"].append({
                     "session_id": sid, "session_label": label,
@@ -5256,7 +5549,7 @@ def search(request: Request, q: str = ""):
 
             # Search players on this team
             for p in team.players:
-                if query in p.name.lower():
+                if _fuzzy_match(query, p.name):
                     results["college_players"].append({
                         "session_id": sid, "session_label": label,
                         "name": p.name,
@@ -5287,7 +5580,7 @@ def search(request: Request, q: str = ""):
             for t in all_teams:
                 tname = t.get("team_name", t.get("name", ""))
                 tkey = t.get("team_key", tname)
-                if query in tname.lower() or query in tkey.lower():
+                if _fuzzy_match(query, tname) or _fuzzy_match(query, tkey):
                     results["pro_teams"].append({
                         "league_id": league_id, "session_id": sess_id,
                         "league_name": league_name,
@@ -5305,13 +5598,47 @@ def search(request: Request, q: str = ""):
         for code, team in nations.items():
             nation = team.get("nation", {}) if isinstance(team, dict) else {}
             name = nation.get("name", "") if isinstance(nation, dict) else ""
-            if query in code.lower() or query in name.lower():
+            if _fuzzy_match(query, code) or _fuzzy_match(query, name):
                 results["nations"].append({
                     "code": code,
                     "name": name,
                     "confederation": nation.get("confederation", "") if isinstance(nation, dict) else "",
                     "tier": nation.get("tier", "") if isinstance(nation, dict) else "",
                 })
+
+    # Search WVL teams + players
+    for sid, data in api["wvl_sessions"].items():
+        season = data.get("season")
+        if not season:
+            continue
+        label = data.get("dynasty_name", "WVL") + f" (Year {data.get('year', '?')})"
+
+        for tier_num in sorted(season.tier_seasons.keys()):
+            tier_season = season.tier_seasons[tier_num]
+            for team_key, team in tier_season.teams.items():
+                team_name = getattr(team, "name", team_key)
+                if _fuzzy_match(query, team_name) or _fuzzy_match(query, team_key):
+                    record = tier_season.standings.get(team_key)
+                    results["wvl_teams"].append({
+                        "session_id": sid, "session_label": label,
+                        "team_key": team_key,
+                        "team_name": team_name,
+                        "tier": tier_num,
+                        "record": f"{record.wins}-{record.losses}" if record else "",
+                    })
+
+                # Search players on this WVL team
+                for p in team.players:
+                    if _fuzzy_match(query, p.name):
+                        results["wvl_players"].append({
+                            "session_id": sid, "session_label": label,
+                            "team_key": team_key,
+                            "team_name": team_name,
+                            "name": p.name,
+                            "position": getattr(p, "position", ""),
+                            "overall": getattr(p, "overall", 0),
+                            "tier": tier_num,
+                        })
 
     return templates.TemplateResponse("search.html", _ctx(
         request, section="search", query=q, results=results, searched=True,

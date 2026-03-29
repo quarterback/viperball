@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Compare — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Compare
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>COMPARISON TOOL</h1>
+  <div class="subtitle">{{ season_name }} &mdash; Compare players or teams side-by-side</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/kenpom">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/referees">Referees</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/injuries">Injuries</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+  <a href="/stats/college/{{ session_id }}/compare" class="active">Compare</a>
+</div>
+
+{# ── Mode selector ── #}
+<div style="margin-bottom:12px;display:flex;gap:8px;">
+  <a href="/stats/college/{{ session_id }}/compare?type=player"
+     style="padding:4px 12px;font-size:11px;font-family:var(--font-mono);text-decoration:none;
+            border:1px solid var(--border);
+            {% if compare_type == 'player' %}background:var(--accent);color:#000;font-weight:bold;{% else %}background:var(--bg-card);color:var(--fg-dim);{% endif %}">
+    Player vs Player
+  </a>
+  <a href="/stats/college/{{ session_id }}/compare?type=team"
+     style="padding:4px 12px;font-size:11px;font-family:var(--font-mono);text-decoration:none;
+            border:1px solid var(--border);
+            {% if compare_type == 'team' %}background:var(--accent);color:#000;font-weight:bold;{% else %}background:var(--bg-card);color:var(--fg-dim);{% endif %}">
+    Team vs Team
+  </a>
+</div>
+
+{# ── Selection form ── #}
+<form id="compare-form" method="get" action="/stats/college/{{ session_id }}/compare" style="margin-bottom:16px;">
+  <input type="hidden" name="type" value="{{ compare_type }}">
+
+  {% if compare_type == 'player' %}
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <label style="font-size:11px;color:var(--fg-dim);">Player A:</label>
+    <select name="a" id="sel-a" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);max-width:280px;">
+      <option value="">-- Select --</option>
+      {% for p in all_players|sort(attribute='overall', reverse=true) %}
+      <option value="{{ p.name }}" {% if p.name == a %}selected{% endif %}>{{ p.name }} ({{ p.team }}, {{ p.position }}, {{ p.overall }} OVR)</option>
+      {% endfor %}
+    </select>
+
+    <label style="font-size:11px;color:var(--fg-dim);">Player B:</label>
+    <select name="b" id="sel-b" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);max-width:280px;">
+      <option value="">-- Select --</option>
+      {% for p in all_players|sort(attribute='overall', reverse=true) %}
+      <option value="{{ p.name }}" {% if p.name == b %}selected{% endif %}>{{ p.name }} ({{ p.team }}, {{ p.position }}, {{ p.overall }} OVR)</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" style="background:var(--accent);color:#000;border:none;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font-mono);">Compare</button>
+  </div>
+
+  {% else %}
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <label style="font-size:11px;color:var(--fg-dim);">Team A:</label>
+    <select name="a" id="sel-a" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);">
+      <option value="">-- Select --</option>
+      {% for t in all_teams %}
+      <option value="{{ t }}" {% if t == a %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+
+    <label style="font-size:11px;color:var(--fg-dim);">Team B:</label>
+    <select name="b" id="sel-b" style="background:var(--bg-card);color:var(--fg);border:1px solid var(--border);padding:4px 8px;font-size:12px;font-family:var(--font-mono);">
+      <option value="">-- Select --</option>
+      {% for t in all_teams %}
+      <option value="{{ t }}" {% if t == b %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" style="background:var(--accent);color:#000;border:none;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font-mono);">Compare</button>
+  </div>
+  {% endif %}
+</form>
+
+<script>
+(function(){
+  var f = document.getElementById('compare-form');
+  var a = document.getElementById('sel-a');
+  var b = document.getElementById('sel-b');
+  if (a) a.addEventListener('change', function(){ if(a.value && b.value) f.submit(); });
+  if (b) b.addEventListener('change', function(){ if(a.value && b.value) f.submit(); });
+})();
+</script>
+
+{# ── Comparison results ── #}
+{% if comparison %}
+
+<style>
+.compare-table { width:100%; border-collapse:collapse; font-size:12px; }
+.compare-table th, .compare-table td { padding:5px 10px; border-bottom:1px solid var(--border); }
+.compare-table th { background:var(--bg-alt); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--fg-dim); }
+.compare-table .stat-label { text-align:center; color:var(--fg-dim); font-size:11px; min-width:120px; }
+.compare-table .val-a { text-align:right; font-variant-numeric:tabular-nums; min-width:80px; }
+.compare-table .val-b { text-align:left; font-variant-numeric:tabular-nums; min-width:80px; }
+.compare-table .winner { color:var(--green); font-weight:bold; }
+.compare-table .loser { color:var(--red); }
+.compare-header { text-align:center; font-weight:bold; font-size:13px; }
+.compare-header a { color:var(--fg-bright); }
+</style>
+
+{% if comparison.type == 'player' %}
+{# ── Player comparison ── #}
+{% set pa = comparison.a %}
+{% set pb = comparison.b %}
+
+<h2 style="text-align:center;margin-bottom:4px;">{{ pa.name }} vs {{ pb.name }}</h2>
+<div style="text-align:center;font-size:11px;color:var(--fg-dim);margin-bottom:12px;">
+  <a href="/stats/college/{{ session_id }}/player/{{ pa.team }}/{{ pa.name }}">{{ pa.team }}</a>
+  &nbsp;vs&nbsp;
+  <a href="/stats/college/{{ session_id }}/player/{{ pb.team }}/{{ pb.name }}">{{ pb.team }}</a>
+</div>
+
+{# Bio comparison #}
+<table class="compare-table" style="margin-bottom:16px;">
+  <thead>
+    <tr>
+      <th class="compare-header"><a href="/stats/college/{{ session_id }}/player/{{ pa.team }}/{{ pa.name }}">{{ pa.name }}</a></th>
+      <th class="stat-label">Attribute</th>
+      <th class="compare-header"><a href="/stats/college/{{ session_id }}/player/{{ pb.team }}/{{ pb.name }}">{{ pb.name }}</a></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set bio_rows = [
+      ('Position', pa.player.position, pb.player.position, false),
+      ('Team', pa.team, pb.team, false),
+      ('Overall', pa.player.overall, pb.player.overall, true),
+      ('Speed', pa.player.speed, pb.player.speed, true),
+      ('Stamina', pa.player.stamina, pb.player.stamina, true),
+      ('Kicking', pa.player.kicking, pb.player.kicking, true),
+      ('Tackling', pa.player.tackling, pb.player.tackling, true),
+      ('Agility', pa.player.agility, pb.player.agility, true),
+      ('Power', pa.player.power, pb.player.power, true),
+      ('Awareness', pa.player.awareness, pb.player.awareness, true),
+      ('Hands', pa.player.hands, pb.player.hands, true),
+      ('Lateral Skill', pa.player.lateral_skill, pb.player.lateral_skill, true),
+    ] %}
+    {% for label, va, vb, is_numeric in bio_rows %}
+    <tr>
+      <td class="val-a {% if is_numeric %}{% if va > vb %}winner{% elif va < vb %}loser{% endif %}{% endif %}">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b {% if is_numeric %}{% if vb > va %}winner{% elif vb < va %}loser{% endif %}{% endif %}">{{ vb }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# Season stats comparison #}
+<h3 style="margin-top:16px;">Season Stats</h3>
+<table class="compare-table">
+  <thead>
+    <tr>
+      <th class="compare-header">{{ pa.name }}</th>
+      <th class="stat-label">Stat</th>
+      <th class="compare-header">{{ pb.name }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set sa = pa.stats %}
+    {% set sb = pb.stats %}
+    {# higher-is-better stats #}
+    {% set stat_rows = [
+      ('Games', 'games', true),
+      ('Touches', 'touches', true),
+      ('Total Yards', 'yards', true),
+      ('Yards/Touch', 'yards_per_touch', true),
+      ('Rushing Yards', 'rushing_yards', true),
+      ('Rush Carries', 'rush_carries', true),
+      ('Rushing TDs', 'rushing_tds', true),
+      ('Lateral Yards', 'lateral_yards', true),
+      ('Lateral Receptions', 'lateral_receptions', true),
+      ('Lateral Assists', 'lateral_assists', true),
+      ('Lateral TDs', 'lateral_tds', true),
+      ('TDs', 'tds', true),
+      ('Kick Att', 'kick_att', true),
+      ('Kick Made', 'kick_made', true),
+      ('Kick %', 'kick_pct', true),
+      ('KP Thrown', 'kick_passes_thrown', true),
+      ('KP Completed', 'kick_passes_completed', true),
+      ('KP %', 'kp_pct', true),
+      ('KP Yards', 'kick_pass_yards', true),
+      ('KP TDs', 'kick_pass_tds', true),
+      ('Tackles', 'tackles', true),
+      ('TFL', 'tfl', true),
+      ('Sacks', 'sacks', true),
+      ('Hurries', 'hurries', true),
+      ('Kick Return Yards', 'kick_return_yards', true),
+      ('Punt Return Yards', 'punt_return_yards', true),
+      ('Total Return Yards', 'total_return_yards', true),
+      ('Blocks', 'blocks', true),
+      ('Pancakes', 'pancakes', true),
+      ('WPA', 'wpa', true),
+    ] %}
+    {# lower-is-better stats #}
+    {% set bad_stats = [
+      ('Fumbles', 'fumbles', false),
+      ('Muffs', 'muffs', false),
+      ('KP INTs Thrown', 'kick_pass_interceptions_thrown', false),
+    ] %}
+    {% for label, key, higher_better in stat_rows + bad_stats %}
+    {% set va = sa.get(key, 0) %}
+    {% set vb = sb.get(key, 0) %}
+    <tr>
+      <td class="val-a {% if higher_better %}{% if va > vb %}winner{% elif va < vb %}loser{% endif %}{% else %}{% if va < vb %}winner{% elif va > vb %}loser{% endif %}{% endif %}">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b {% if higher_better %}{% if vb > va %}winner{% elif vb < va %}loser{% endif %}{% else %}{% if vb < va %}winner{% elif vb > va %}loser{% endif %}{% endif %}">{{ vb }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% elif comparison.type == 'team' %}
+{# ── Team comparison ── #}
+{% set ta = comparison.a %}
+{% set tb = comparison.b %}
+
+<h2 style="text-align:center;margin-bottom:4px;">{{ ta.name }} vs {{ tb.name }}</h2>
+<div style="text-align:center;font-size:11px;color:var(--fg-dim);margin-bottom:12px;">
+  <a href="/stats/college/{{ session_id }}/team/{{ ta.name }}">{{ ta.name }}</a>
+  &nbsp;vs&nbsp;
+  <a href="/stats/college/{{ session_id }}/team/{{ tb.name }}">{{ tb.name }}</a>
+</div>
+
+{% if ta.record and tb.record %}
+<table class="compare-table">
+  <thead>
+    <tr>
+      <th class="compare-header"><a href="/stats/college/{{ session_id }}/team/{{ ta.name }}">{{ ta.name }}</a></th>
+      <th class="stat-label">Stat</th>
+      <th class="compare-header"><a href="/stats/college/{{ session_id }}/team/{{ tb.name }}">{{ tb.name }}</a></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set ra = ta.record %}
+    {% set rb = tb.record %}
+    {% set team_rows = [
+      ('Wins', 'wins', true),
+      ('Losses', 'losses', false),
+      ('Conference', 'conference', false),
+      ('Points For', 'points_for', true),
+      ('Points Against', 'points_against', false),
+      ('Point Diff', 'point_differential', true),
+      ('Streak', 'streak', false),
+    ] %}
+    {% for label, key, higher_better in team_rows %}
+    {% set va = ra.get(key, ra[key] if key in ra else '') %}
+    {% set vb = rb.get(key, rb[key] if key in rb else '') %}
+    <tr>
+      {% if higher_better and va is number and vb is number %}
+      <td class="val-a {% if va > vb %}winner{% elif va < vb %}loser{% endif %}">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b {% if vb > va %}winner{% elif vb < va %}loser{% endif %}">{{ vb }}</td>
+      {% elif not higher_better and key == 'losses' and va is number and vb is number %}
+      <td class="val-a {% if va < vb %}winner{% elif va > vb %}loser{% endif %}">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b {% if vb < va %}winner{% elif vb > va %}loser{% endif %}">{{ vb }}</td>
+      {% elif not higher_better and key == 'points_against' and va is number and vb is number %}
+      <td class="val-a {% if va < vb %}winner{% elif va > vb %}loser{% endif %}">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b {% if vb < va %}winner{% elif vb > va %}loser{% endif %}">{{ vb }}</td>
+      {% else %}
+      <td class="val-a">{{ va }}</td>
+      <td class="stat-label">{{ label }}</td>
+      <td class="val-b">{{ vb }}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">Could not load records for both teams.</div>
+{% endif %}
+
+{% endif %}
+
+{% elif a and b %}
+<div class="empty">
+  {% if compare_type == 'player' %}
+    One or both players not found. Make sure both names are exact matches.
+  {% else %}
+    One or both teams not found. Make sure both names are exact matches.
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

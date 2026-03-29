@@ -129,21 +129,74 @@
 {% for conf_name, conf_standings in conferences.items()|sort %}
 <div class="conf-section" data-conf="{{ conf_name }}" style="display:none">
 <h3>{{ conf_name }}</h3>
+
+{# ── Conference Race Visualization ── #}
+{% set leader_wins = conf_standings[0].conf_wins if conf_standings else 0 %}
+{% set leader_losses = conf_standings[0].conf_losses if conf_standings else 0 %}
+<div style="margin-bottom:16px;padding:12px;background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#333);border-radius:6px;">
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--fg-dim,#888);margin-bottom:8px;">Conference Race &mdash; Win Percentage</div>
+  {% for t in conf_standings %}
+  {% set total = t.conf_wins + t.conf_losses + t.conf_ties %}
+  {% set win_pct = (t.conf_wins / total * 100) if total > 0 else 0 %}
+  {% set gb = ((leader_wins - leader_losses) - (t.conf_wins - t.conf_losses)) / 2 %}
+  {% if loop.index == 1 %}
+    {% set bar_color = "var(--green,#4caf50)" %}
+    {% set status_label = "LEADER" %}
+  {% elif gb <= 2 %}
+    {% set bar_color = "var(--yellow,#ffc107)" %}
+    {% set status_label = gb|round(1) ~ " GB" %}
+  {% elif gb >= 5 %}
+    {% set bar_color = "var(--red,#ef5350)" %}
+    {% set status_label = gb|round(1) ~ " GB" %}
+  {% else %}
+    {% set bar_color = "var(--accent,#7c4dff)" %}
+    {% set status_label = gb|round(1) ~ " GB" %}
+  {% endif %}
+  <div style="display:flex;align-items:center;gap:8px;margin:3px 0;">
+    <span style="width:120px;font-size:10px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg,#e0e0e0);">{{ t.team_name[:15] }}</span>
+    <div style="flex:1;height:14px;background:var(--border,#333);border-radius:2px;position:relative;overflow:hidden;">
+      <div style="height:100%;width:{{ win_pct|round(1) }}%;background:{{ bar_color }};border-radius:2px;transition:width 0.3s;"></div>
+    </div>
+    <span style="font-size:10px;color:var(--fg-dim,#888);width:50px;text-align:right;">{{ t.conf_wins }}-{{ t.conf_losses }}{% if t.conf_ties %}-{{ t.conf_ties }}{% endif %}</span>
+    <span style="font-size:9px;width:55px;text-align:right;font-weight:{% if loop.index == 1 %}700{% else %}400{% endif %};color:{{ bar_color }};">{{ status_label }}</span>
+  </div>
+  {% endfor %}
+</div>
+
 <table>
   <thead>
     <tr>
       <th class="num">#</th><th>Team</th><th>Conf</th><th>Overall</th>
+      <th class="num">GB</th><th class="num" style="width:60px;">Pace</th>
       <th class="num">PF</th><th class="num">PA</th>
       <th class="num">Rating</th><th class="num">PPD</th><th class="num">5D%</th><th class="num">KILL%</th>
     </tr>
   </thead>
   <tbody>
   {% for s in conf_standings %}
+  {% set gb = ((leader_wins - leader_losses) - (s.conf_wins - s.conf_losses)) / 2 %}
+  {% if loop.index == 1 %}
+    {% set gb_color = "var(--green,#4caf50)" %}
+  {% elif gb <= 2 %}
+    {% set gb_color = "var(--yellow,#ffc107)" %}
+  {% elif gb >= 5 %}
+    {% set gb_color = "var(--red,#ef5350)" %}
+  {% else %}
+    {% set gb_color = "var(--fg-dim,#888)" %}
+  {% endif %}
+  {% set conf_total = s.conf_wins + s.conf_losses + s.conf_ties %}
+  {% set conf_win_pct = (s.conf_wins / conf_total * 100) if conf_total > 0 else 0 %}
   <tr>
     <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
     <td class="record"><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span>{% if s.conf_ties %}-<span class="t">{{ s.conf_ties }}</span>{% endif %}</td>
     <td><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span>{% if s.ties %}-<span class="t">{{ s.ties }}</span>{% endif %}</td>
+    <td class="num" style="color:{{ gb_color }};font-weight:{% if loop.index == 1 %}700{% else %}400{% endif %};">{% if loop.index == 1 %}&mdash;{% else %}{{ gb|round(1) }}{% endif %}</td>
+    <td class="num" style="padding:4px 6px;">
+      <div style="width:100%;height:10px;background:var(--border,#333);border-radius:2px;overflow:hidden;" title="{{ conf_win_pct|round(1) }}% win rate">
+        <div style="height:100%;width:{{ conf_win_pct|round(1) }}%;background:{{ gb_color }};border-radius:2px;"></div>
+      </div>
+    </td>
     <td class="num">{{ s.points_for }}</td>
     <td class="num">{{ s.points_against }}</td>
     <td class="num">{{ s.avg_team_rating }}</td>

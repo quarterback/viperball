@@ -6,6 +6,9 @@
   <h1>VIPERBALL STATS</h1>
   <div class="subtitle">Scores, standings, box scores, player stats &mdash; all leagues</div>
 </div>
+{% if last_updated %}
+<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;">{{ last_updated }}</div>
+{% endif %}
 
 {% if college_sessions or pro_sessions or wvl_sessions or fiv_data %}
 

@@ -695,9 +695,34 @@ td.rank {
   thead th, tbody td { padding: 4px 6px; }
 
   /* Tabs */
-  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; position: relative; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs a { padding: 8px 12px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Scroll fade indicators for overflowing tabs */
+  .tabs-wrapper { position: relative; }
+  .tabs-wrapper::before,
+  .tabs-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .tabs-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+  }
+  .tabs-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
+  }
+  .tabs-wrapper.scroll-right::after { opacity: 1; }
+  .tabs-wrapper.scroll-left::before { opacity: 1; }
 
   /* Box scores */
   .box-score-header { flex-direction: column; gap: 8px; }
@@ -851,6 +876,200 @@ html { overscroll-behavior-y: contain; }
   line-height: 1.4;
   opacity: .85;
 }
+
+/* Sortable table headers */
+thead th.sortable { cursor: pointer; user-select: none; }
+thead th.sortable:hover { color: var(--fg-bright); }
+thead th.sort-asc::after { content: ' ▲'; font-size: 8px; }
+thead th.sort-desc::after { content: ' ▼'; font-size: 8px; }
+
+/* Sparkline inline SVGs */
+.sparkline svg { vertical-align: middle; }
+
+/* Keyboard shortcuts overlay */
+.kb-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.65);
+  justify-content: center;
+  align-items: center;
+}
+.kb-overlay.open { display: flex; }
+.kb-modal {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  max-width: 420px;
+  width: 90%;
+  padding: 20px 24px;
+  font-size: 11px;
+  color: var(--fg);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+.kb-modal h3 {
+  font-size: 13px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.kb-modal .kb-section {
+  color: var(--fg-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 4px;
+}
+.kb-modal .kb-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+.kb-modal kbd {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--fg-bright);
+  min-width: 20px;
+  text-align: center;
+}
+.kb-modal .kb-close {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: 10px;
+}
+
+/* Table keyboard row highlight */
+tbody tr.kb-highlight { background: var(--row-hover); outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* Footer keyboard hint */
+.footer .kb-hint { cursor: pointer; color: var(--fg-dim); }
+.footer .kb-hint:hover { color: var(--accent); }
+
+/* Copy Table button */
+.copy-table-btn {
+  background: var(--bg-alt);
+  color: var(--fg-dim);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+.copy-table-btn:hover {
+  color: var(--fg-bright);
+  border-color: var(--accent);
+}
+.copy-table-btn.copied {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+/* Export Page button */
+.export-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: var(--bg-alt);
+  color: var(--fg-dim);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  z-index: 90;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.export-btn:hover {
+  color: var(--fg-bright);
+  border-color: var(--accent);
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-alt);
+  color: var(--green);
+  border: 1px solid var(--green);
+  padding: 8px 20px;
+  font-family: inherit;
+  font-size: 11px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ── Print Stylesheet ── */
+@media print {
+  /* Hide chrome */
+  .topbar, .breadcrumb, .theme-switcher, .nav-toggle, .footer nav,
+  .tabs, button, .copy-table-btn, .copy-boxscore-btn, .export-btn,
+  .toast, .stadium-bg, .team-banner, .kb-overlay, .theme-menu,
+  .btn-delete, #archive-btn, #archive-status { display: none !important; }
+
+  /* Full width content */
+  .container, .container.wide { max-width: 100% !important; padding: 0 !important; }
+  body { font-size: 10px; color: #000 !important; background: #fff !important; }
+  a { color: #000 !important; text-decoration: none !important; }
+
+  /* Reset CSS variables for print */
+  :root, [data-theme] {
+    --bg: #fff !important;
+    --bg-alt: #fff !important;
+    --fg: #000 !important;
+    --fg-dim: #555 !important;
+    --fg-bright: #000 !important;
+    --border: #999 !important;
+    --row-hover: transparent !important;
+  }
+
+  /* Tables */
+  table { display: table !important; overflow: visible !important; font-size: 9px; page-break-inside: avoid; }
+  thead th { background: #fff !important; color: #333 !important; border-bottom: 2px solid #333 !important; }
+  tbody td { border-bottom: 1px solid #ccc !important; color: #000 !important; }
+  tbody tr:hover { background: transparent !important; }
+
+  /* Keep stat highlighting visible */
+  .stat-elite { color: #000 !important; font-weight: bold !important; }
+  .stat-good { color: #000 !important; font-weight: bold !important; }
+  .stat-bad { color: #666 !important; }
+  .w, .score-win { color: #000 !important; font-weight: bold !important; }
+  .l, .score-loss { color: #666 !important; }
+
+  /* Metrics */
+  .metric, .metric-card { border: 1px solid #ccc !important; background: #fff !important; page-break-inside: avoid; }
+  .metric .value, .metric-card .metric-value { color: #000 !important; }
+  .metric .label, .metric-card .metric-label { color: #555 !important; }
+
+  /* Grids: avoid break inside */
+  .grid-2, .grid-3, .grid-4 { page-break-inside: avoid; }
+
+  /* Page header */
+  .page-header { border-bottom: 2px solid #333 !important; }
+  .page-header h1 { color: #000 !important; }
+
+  /* Footer - minimal */
+  .footer { border-top: 1px solid #ccc !important; color: #999 !important; }
+}
 </style>
 <script>
 (function(){
@@ -911,7 +1130,7 @@ html { overscroll-behavior-y: contain; }
 
 <div class="container">
   <div class="footer">
-    VIPERBALL STATS &middot; Data refreshes with each simulation
+    VIPERBALL STATS &middot; Data refreshes with each simulation{% if last_updated %} &middot; {{ last_updated }}{% endif %} &middot; <span class="kb-hint" onclick="document.getElementById('kb-overlay').classList.add('open')">Press <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:0 4px;font-family:inherit;font-size:10px;color:var(--fg-bright)">?</kbd> for keyboard shortcuts</span>
   </div>
 </div>
 <script>
@@ -1128,6 +1347,497 @@ function copyBoxScore(btn) {
 }
 function padR(s, n) { while (s.length < n) s += ' '; return s; }
 function padL(s, n) { while (s.length < n) s = ' ' + s; return s; }
+
+/* ── Copy Table as Text ── */
+function tableToText(table) {
+  var thead = table.querySelector('thead');
+  var tbody = table.querySelector('tbody');
+  if (!tbody) return '';
+  var cols = [];
+  var rows = [];
+
+  /* Gather header cells */
+  if (thead) {
+    var ths = thead.querySelectorAll('th');
+    ths.forEach(function(th) { cols.push(th.textContent.trim().replace(/\s+/g, ' ')); });
+  }
+
+  /* Gather body rows */
+  var trs = tbody.querySelectorAll('tr');
+  trs.forEach(function(tr) {
+    var cells = tr.querySelectorAll('td, th');
+    var row = [];
+    cells.forEach(function(td) { row.push(td.textContent.trim().replace(/\s+/g, ' ')); });
+    if (row.length > 0) rows.push(row);
+  });
+
+  if (rows.length === 0) return '';
+
+  /* Determine column count and max widths */
+  var numCols = Math.max(cols.length, rows.reduce(function(m, r) { return Math.max(m, r.length); }, 0));
+  var widths = [];
+  for (var i = 0; i < numCols; i++) {
+    var w = cols[i] ? cols[i].length : 0;
+    rows.forEach(function(r) { if (r[i] && r[i].length > w) w = r[i].length; });
+    widths.push(w);
+  }
+
+  /* Detect numeric columns (right-align them) */
+  var isNum = [];
+  for (var c = 0; c < numCols; c++) {
+    var numCount = 0;
+    var total = 0;
+    rows.forEach(function(r) {
+      if (r[c] && r[c] !== '' && r[c] !== '—' && r[c] !== '-') {
+        total++;
+        if (/^-?[\d,]+\.?\d*%?$/.test(r[c].replace(/,/g, ''))) numCount++;
+      }
+    });
+    isNum.push(total > 0 && numCount / total > 0.5);
+  }
+
+  /* Build lines */
+  var lines = [];
+  var gap = '  ';
+
+  /* Header line */
+  if (cols.length > 0) {
+    var hdr = '';
+    for (var i = 0; i < numCols; i++) {
+      var val = cols[i] || '';
+      if (i > 0) hdr += gap;
+      if (isNum[i]) hdr += padL(val, widths[i]);
+      else hdr += padR(val, widths[i]);
+    }
+    lines.push(hdr);
+
+    /* Separator line */
+    var sepLen = widths.reduce(function(a, b) { return a + b; }, 0) + (numCols - 1) * gap.length;
+    var sep = '';
+    for (var i = 0; i < sepLen; i++) sep += '\u2550';
+    lines.push(sep);
+  }
+
+  /* Data rows */
+  rows.forEach(function(row) {
+    var line = '';
+    for (var i = 0; i < numCols; i++) {
+      var val = row[i] || '';
+      if (i > 0) line += gap;
+      if (isNum[i]) line += padL(val, widths[i]);
+      else line += padR(val, widths[i]);
+    }
+    lines.push(line);
+  });
+
+  return lines.join('\n');
+}
+
+function copyTableText(btn, table) {
+  var text = tableToText(table);
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+/* Auto-add Copy buttons to every table with a thead */
+(function() {
+  var tables = document.querySelectorAll('table');
+  tables.forEach(function(table) {
+    if (!table.querySelector('thead')) return;
+    var btn = document.createElement('button');
+    btn.className = 'copy-table-btn';
+    btn.textContent = 'Copy';
+    btn.type = 'button';
+    btn.addEventListener('click', function() { copyTableText(btn, table); });
+    table.parentNode.insertBefore(btn, table);
+  });
+})();
+
+/* ── Export Entire Page as Text ── */
+function metricGridToText(grid) {
+  var metrics = grid.querySelectorAll('.metric, .metric-card');
+  if (metrics.length === 0) return '';
+  var parts = [];
+  metrics.forEach(function(m) {
+    var lbl = m.querySelector('.label, .metric-label');
+    var val = m.querySelector('.value, .metric-value');
+    if (lbl && val) {
+      parts.push(lbl.textContent.trim() + ': ' + val.textContent.trim().replace(/\s+/g, ' '));
+    }
+  });
+  return parts.join('  |  ');
+}
+
+function exportPageAsText() {
+  var lines = [];
+
+  /* Page title */
+  var header = document.querySelector('.page-header h1');
+  if (header) {
+    lines.push(header.textContent.trim());
+    var sub = document.querySelector('.page-header .subtitle');
+    if (sub) lines.push(sub.textContent.trim());
+    lines.push('');
+  }
+
+  /* Walk through main content area */
+  var container = document.querySelector('.container.wide');
+  if (!container) return;
+
+  function walk(parent) {
+    var children = parent.children;
+    for (var i = 0; i < children.length; i++) {
+      var el = children[i];
+      var tag = el.tagName;
+
+      if (tag === 'H2' || tag === 'H3') {
+        lines.push('');
+        lines.push('--- ' + el.textContent.trim() + ' ---');
+        continue;
+      }
+
+      if (tag === 'TABLE') {
+        var text = tableToText(el);
+        if (text) { lines.push(text); lines.push(''); }
+        continue;
+      }
+
+      if (el.classList && (el.classList.contains('grid-2') || el.classList.contains('grid-3') || el.classList.contains('grid-4'))) {
+        /* Check for metric grids */
+        var metricText = metricGridToText(el);
+        if (metricText) { lines.push(metricText); lines.push(''); }
+        /* Also check for tables inside grids */
+        var innerTables = el.querySelectorAll('table');
+        innerTables.forEach(function(t) {
+          var text = tableToText(t);
+          if (text) { lines.push(text); lines.push(''); }
+        });
+        continue;
+      }
+
+      /* Recurse into divs that might contain tables */
+      if (tag === 'DIV') {
+        var innerTable = el.querySelector('table');
+        if (innerTable) {
+          var text = tableToText(innerTable);
+          if (text) { lines.push(text); lines.push(''); }
+        } else if (el.children.length > 0) {
+          walk(el);
+        }
+      }
+    }
+  }
+
+  walk(container);
+
+  var text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!text) { text = '(No table data found on this page)'; }
+  navigator.clipboard.writeText(text).then(function() { showToast('Copied to clipboard!'); });
+}
+
+function showToast(msg) {
+  var toast = document.getElementById('vb-toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2000);
+}
 </script>
+<script>
+/* ── Sortable Tables ── */
+(function(){
+  var tables = document.querySelectorAll('table:not(.no-sort)');
+  tables.forEach(function(table){
+    var thead = table.querySelector('thead');
+    if (!thead) return;
+    var ths = thead.querySelectorAll('th');
+    if (ths.length < 2) return;
+
+    table.classList.add('sortable');
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    ths.forEach(function(th, colIdx){
+      th.classList.add('sortable');
+      th.addEventListener('click', function(){
+        var asc = !th.classList.contains('sort-asc');
+        // Clear sort classes from all headers
+        ths.forEach(function(h){ h.classList.remove('sort-asc','sort-desc'); });
+        th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        rows.sort(function(a, b){
+          var cellA = a.children[colIdx];
+          var cellB = b.children[colIdx];
+          if (!cellA || !cellB) return 0;
+          var valA = (cellA.getAttribute('data-sort') || cellA.textContent).trim();
+          var valB = (cellB.getAttribute('data-sort') || cellB.textContent).trim();
+          var numA = parseFloat(valA.replace(/[^0-9.\-]/g, ''));
+          var numB = parseFloat(valB.replace(/[^0-9.\-]/g, ''));
+          var isNum = !isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '';
+          var cmp;
+          if (isNum) {
+            cmp = numA - numB;
+          } else {
+            cmp = valA.localeCompare(valB, undefined, {sensitivity:'base'});
+          }
+          return asc ? cmp : -cmp;
+        });
+        rows.forEach(function(row){ tbody.appendChild(row); });
+      });
+    });
+  });
+})();
+
+/* ── Sparklines ── */
+(function(){
+  function sparkline(data, opts) {
+    opts = opts || {};
+    var w = opts.width || 60;
+    var h = opts.height || 16;
+    var color = opts.color || 'var(--accent)';
+    if (!data || data.length === 0) return '';
+    var min = Math.min.apply(null, data);
+    var max = Math.max.apply(null, data);
+    var range = max - min || 1;
+    var pad = 1;
+    var points = data.map(function(v, i){
+      var x = data.length === 1 ? w / 2 : pad + (i / (data.length - 1)) * (w - 2 * pad);
+      var y = pad + (1 - (v - min) / range) * (h - 2 * pad);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg">' +
+      '<polyline fill="none" stroke="' + color + '" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" points="' + points + '"/>' +
+      '</svg>';
+  }
+  // Expose globally
+  window.sparkline = sparkline;
+
+  // Auto-render .sparkline elements
+  var els = document.querySelectorAll('.sparkline[data-values]');
+  els.forEach(function(el){
+    var raw = el.getAttribute('data-values');
+    if (!raw) return;
+    var data = raw.split(',').map(function(s){ return parseFloat(s.trim()); }).filter(function(n){ return !isNaN(n); });
+    if (data.length === 0) return;
+    var opts = {};
+    if (el.getAttribute('data-color')) opts.color = el.getAttribute('data-color');
+    if (el.getAttribute('data-width')) opts.width = parseInt(el.getAttribute('data-width'), 10);
+    if (el.getAttribute('data-height')) opts.height = parseInt(el.getAttribute('data-height'), 10);
+    el.innerHTML = sparkline(data, opts);
+  });
+})();
+</script>
+
+<!-- Keyboard shortcuts overlay -->
+<div class="kb-overlay" id="kb-overlay">
+  <div class="kb-modal">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="kb-section">Global</div>
+    <div class="kb-row"><span>Focus search / go to search</span><kbd>/</kbd></div>
+    <div class="kb-row"><span>Show this help</span><kbd>?</kbd></div>
+    <div class="kb-row"><span>Go home</span><kbd>h</kbd></div>
+    <div class="kb-row"><span>Close overlay / menu</span><kbd>Esc</kbd></div>
+    <div class="kb-section">Table Navigation</div>
+    <div class="kb-row"><span>Next row</span><kbd>j</kbd></div>
+    <div class="kb-row"><span>Previous row</span><kbd>k</kbd></div>
+    <div class="kb-row"><span>Open link in highlighted row</span><kbd>Enter</kbd></div>
+    <div class="kb-close">Press <kbd>Esc</kbd> or click outside to close</div>
+  </div>
+</div>
+
+<script>
+/* ── Feature 1: Mobile Tab Scroll Indicators & Active Tab Auto-Scroll ── */
+(function(){
+  var tabsEls = document.querySelectorAll('.tabs');
+  tabsEls.forEach(function(tabs){
+    /* Wrap .tabs in .tabs-wrapper for gradient indicators */
+    var wrapper = document.createElement('div');
+    wrapper.className = 'tabs-wrapper';
+    tabs.parentNode.insertBefore(wrapper, tabs);
+    wrapper.appendChild(tabs);
+
+    function updateScrollIndicators(){
+      var sl = tabs.scrollLeft;
+      var maxScroll = tabs.scrollWidth - tabs.clientWidth;
+      if (maxScroll <= 2) {
+        /* No overflow — hide both indicators */
+        wrapper.classList.remove('scroll-left', 'scroll-right');
+        return;
+      }
+      wrapper.classList.toggle('scroll-left', sl > 4);
+      wrapper.classList.toggle('scroll-right', sl < maxScroll - 4);
+    }
+
+    tabs.addEventListener('scroll', updateScrollIndicators);
+    window.addEventListener('resize', updateScrollIndicators);
+
+    /* Auto-scroll to the active tab */
+    var active = tabs.querySelector('.active');
+    if (active) {
+      /* Use requestAnimationFrame to ensure layout is complete */
+      requestAnimationFrame(function(){
+        var tabsRect = tabs.getBoundingClientRect();
+        var activeRect = active.getBoundingClientRect();
+        /* Center the active tab in the visible area */
+        var offset = activeRect.left - tabsRect.left - (tabsRect.width / 2) + (activeRect.width / 2);
+        tabs.scrollLeft += offset;
+        /* Update indicators after scroll */
+        setTimeout(updateScrollIndicators, 50);
+      });
+    }
+
+    /* Initial check */
+    requestAnimationFrame(updateScrollIndicators);
+  });
+})();
+
+/* ── Feature 2: Keyboard Navigation ── */
+(function(){
+  var overlay = document.getElementById('kb-overlay');
+  var highlightedRow = null;
+  var activeTable = null;
+
+  function isInputFocused(){
+    var tag = document.activeElement && document.activeElement.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (document.activeElement && document.activeElement.isContentEditable);
+  }
+
+  function closeAllOverlays(){
+    if (overlay) overlay.classList.remove('open');
+    var themeMenu = document.querySelector('.theme-menu');
+    if (themeMenu) themeMenu.classList.remove('open');
+    var nav = document.getElementById('main-nav');
+    var navBtn = document.getElementById('nav-toggle');
+    if (nav) {
+      nav.classList.remove('open');
+      if (navBtn) { navBtn.setAttribute('aria-expanded', 'false'); navBtn.innerHTML = '&#9776;'; }
+    }
+  }
+
+  function clearHighlight(){
+    if (highlightedRow) highlightedRow.classList.remove('kb-highlight');
+    highlightedRow = null;
+  }
+
+  function getVisibleTable(){
+    /* Find the first table with a tbody that has rows */
+    var tables = document.querySelectorAll('table');
+    for (var i = 0; i < tables.length; i++){
+      var tbody = tables[i].querySelector('tbody');
+      if (tbody && tbody.querySelectorAll('tr').length > 0) return tables[i];
+    }
+    return null;
+  }
+
+  function getRows(){
+    if (!activeTable) activeTable = getVisibleTable();
+    if (!activeTable) return [];
+    var tbody = activeTable.querySelector('tbody');
+    return tbody ? Array.prototype.slice.call(tbody.querySelectorAll('tr')) : [];
+  }
+
+  function highlightRow(row){
+    clearHighlight();
+    if (!row) return;
+    highlightedRow = row;
+    row.classList.add('kb-highlight');
+    /* Scroll row into view if needed */
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function moveHighlight(direction){
+    var rows = getRows();
+    if (rows.length === 0) return;
+    if (!highlightedRow) {
+      highlightRow(direction === 1 ? rows[0] : rows[rows.length - 1]);
+      return;
+    }
+    var idx = rows.indexOf(highlightedRow);
+    var next = idx + direction;
+    if (next >= 0 && next < rows.length) highlightRow(rows[next]);
+  }
+
+  document.addEventListener('keydown', function(e){
+    /* Ignore when typing in form fields */
+    if (isInputFocused()) {
+      if (e.key === 'Escape') document.activeElement.blur();
+      return;
+    }
+
+    /* Esc — close overlays */
+    if (e.key === 'Escape') {
+      closeAllOverlays();
+      clearHighlight();
+      activeTable = null;
+      return;
+    }
+
+    /* ? — show shortcuts overlay (Shift+/ on US keyboard) */
+    if (e.key === '?') {
+      e.preventDefault();
+      if (overlay) overlay.classList.toggle('open');
+      return;
+    }
+
+    /* / — focus search */
+    if (e.key === '/') {
+      e.preventDefault();
+      var searchInput = document.querySelector('input[type="search"], input[name="q"], input[name="query"]');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      } else {
+        window.location.href = '/stats/search';
+      }
+      return;
+    }
+
+    /* h — go home */
+    if (e.key === 'h') {
+      window.location.href = '/stats/';
+      return;
+    }
+
+    /* j — next row */
+    if (e.key === 'j') {
+      e.preventDefault();
+      moveHighlight(1);
+      return;
+    }
+
+    /* k — previous row */
+    if (e.key === 'k') {
+      e.preventDefault();
+      moveHighlight(-1);
+      return;
+    }
+
+    /* Enter — click first link in highlighted row */
+    if (e.key === 'Enter' && highlightedRow) {
+      e.preventDefault();
+      var link = highlightedRow.querySelector('a');
+      if (link) link.click();
+      return;
+    }
+  });
+
+  /* Close overlay on click outside modal */
+  if (overlay) {
+    overlay.addEventListener('click', function(e){
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  }
+})();
+</script>
+
+<!-- Export Page button and toast -->
+<button class="export-btn" onclick="exportPageAsText()" type="button">Export Page</button>
+<div class="toast" id="vb-toast"></div>
+
 </body>
 </html>

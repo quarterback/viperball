@@ -296,6 +296,25 @@
 </div>
 {% endif %}
 
+{# ── Scoring Trend Sparklines ── #}
+{% set completed_games = games|selectattr('completed')|list %}
+{% if completed_games|length >= 3 %}
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;background:var(--bg-alt);border:1px solid var(--border);">
+  <div style="font-size:10px;color:var(--fg-dim);">
+    Points Scored
+    <span class="sparkline" data-width="100" data-height="20" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ g.home_score if is_h else g.away_score }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
+  </div>
+  <div style="font-size:10px;color:var(--fg-dim);">
+    Points Allowed
+    <span class="sparkline" data-width="100" data-height="20" data-color="var(--red)" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ g.away_score if is_h else g.home_score }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
+  </div>
+  <div style="font-size:10px;color:var(--fg-dim);">
+    Margin
+    <span class="sparkline" data-width="100" data-height="20" data-color="var(--yellow)" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ (g.home_score - g.away_score) if is_h else (g.away_score - g.home_score) }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
+  </div>
+</div>
+{% endif %}
+
 <div class="grid-2">
 
 {# ── Schedule ── #}

@@ -28,7 +28,7 @@
 </form>
 
 {% if searched %}
-{% set total = results.college_teams|length + results.college_players|length + results.pro_teams|length + results.nations|length %}
+{% set total = results.college_teams|length + results.college_players|length + results.pro_teams|length + results.nations|length + results.wvl_teams|length + results.wvl_players|length %}
 
 {% if total == 0 %}
 <div class="empty">No results for "{{ query }}"</div>
@@ -106,6 +106,44 @@
     <td>{{ n.name }}</td>
     <td>{% if n.confederation %}<a href="/stats/international/confederation/{{ n.confederation }}">{{ n.confederation | upper }}</a>{% else %}&mdash;{% endif %}</td>
     <td>{{ n.tier | title if n.tier else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── WVL Teams ── #}
+{% if results.wvl_teams %}
+<h2>WVL Teams ({{ results.wvl_teams|length }})</h2>
+<table>
+  <thead><tr><th>Team</th><th>Tier</th><th>Record</th><th>Season</th></tr></thead>
+  <tbody>
+  {% for t in results.wvl_teams %}
+  <tr>
+    <td><a href="/stats/wvl/{{ t.session_id }}/team/{{ t.team_key }}">{{ t.team_name }}</a></td>
+    <td>Tier {{ t.tier }}</td>
+    <td class="record">{{ t.record }}</td>
+    <td style="color:var(--fg-dim)">{{ t.session_label }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── WVL Players ── #}
+{% if results.wvl_players %}
+<h2>WVL Players ({{ results.wvl_players|length }})</h2>
+<table>
+  <thead><tr><th>Name</th><th>Team</th><th>Pos</th><th class="num">OVR</th><th>Tier</th><th>Season</th></tr></thead>
+  <tbody>
+  {% for p in results.wvl_players|sort(attribute='overall', reverse=true) %}
+  <tr>
+    <td>{{ p.name }}</td>
+    <td><a href="/stats/wvl/{{ p.session_id }}/team/{{ p.team_key }}">{{ p.team_name }}</a></td>
+    <td><span class="tag tag-pos">{{ p.position[:10] }}</span></td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td>Tier {{ p.tier }}</td>
+    <td style="color:var(--fg-dim)">{{ p.session_label }}</td>
   </tr>
   {% endfor %}
   </tbody>
