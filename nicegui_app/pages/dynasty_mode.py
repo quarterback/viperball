@@ -282,7 +282,7 @@ def render_dynasty_mode(state: UserState, shared: dict):
             season_playoff_options, value=season_playoff_default, label="Playoff Size",
         ).classes("w-40")
         initial_max_bowls = min(16, max(0, (total_teams - season_playoff_default) // 2))
-        season_bowl_ct = ui.number("Bowl Games", value=min(4, initial_max_bowls), min=0, max=initial_max_bowls).classes("w-32")
+        season_bowl_ct = ui.number("Bowl Games", value=min(4, initial_max_bowls), min=0, max=initial_max_bowls).classes("w-40")
 
         def _update_bowl_max():
             ps = int(season_playoff_sz.value)
