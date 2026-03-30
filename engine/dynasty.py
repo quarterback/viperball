@@ -1384,7 +1384,8 @@ class Dynasty:
 
         portal = TransferPortal(year=year)
         populate_portal(portal, player_cards, team_records, rng=rng,
-                       coaching_retention=coaching_retention)
+                       coaching_retention=coaching_retention,
+                       team_prestige=self.team_prestige)
 
         # CPU teams make portal offers based on actual roster needs
         team_regions = self._estimate_team_regions()

@@ -239,6 +239,8 @@ class Recruit:
             potential=self.true_potential,
             development=self.true_development,
             current_team=team_name,
+            original_stars=self.stars,
+            loyalty=self.prefers_geography * 0.5 + (1.0 - self.prefers_prestige) * 0.3 + 0.1,
         )
 
     def to_dict(self) -> dict:

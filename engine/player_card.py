@@ -518,6 +518,11 @@ class PlayerCard:
     career_awards: List[Dict] = field(default_factory=list)
     current_team: str = ""
 
+    # ── Transfer tracking ──
+    transfer_count: int = 0          # how many times this player has transferred
+    loyalty: float = 0.5             # 0.0 = will transfer at any excuse, 1.0 = ride-or-die
+    original_stars: int = 0          # star rating at recruitment (for bust/gem detection)
+
     # ── Computed ──
     @property
     def full_name(self) -> str:
