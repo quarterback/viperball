@@ -364,9 +364,19 @@ def _should_enter_portal(
     team_record_losses: int,
     rng: random.Random,
     retention_bonus: float = 0.0,
+    is_non_starter: bool = False,
 ) -> Optional[str]:
     """
     Determine if a player enters the transfer portal.
+
+    Args:
+        card:              The player card.
+        team_record_wins:  Team wins this season.
+        team_record_losses: Team losses this season.
+        rng:               Seeded Random.
+        retention_bonus:   Coaching retention bonus (0-1).
+        is_non_starter:    True if the player's overall is below the team
+                           average at their position (i.e. they are a backup).
 
     Returns the reason string, or None if they stay.
     """
@@ -376,8 +386,10 @@ def _should_enter_portal(
             return "graduate_transfer"
         return None  # some graduates stay for a 5th+ year
 
-    # Seniors very rarely transfer
+    # Seniors: small chance to enter as graduate_transfer (wanting one more year elsewhere)
     if card.year == "Senior":
+        if is_non_starter and rng.random() < 0.12:
+            return "graduate_transfer"
         if rng.random() < 0.05:
             return "nil_opportunity"
         return None
@@ -391,6 +403,10 @@ def _should_enter_portal(
     elif loss_rate > 0.4:
         base_chance += 0.04
 
+    # Non-starting Sophomores and Juniors are more likely to seek playing time
+    if is_non_starter and card.year in ("Sophomore", "Junior"):
+        base_chance += 0.12  # significant bump for backups seeking playing time
+
     # Low potential players less likely to transfer (nowhere to go)
     if card.potential <= 2:
         base_chance *= 0.5
@@ -403,13 +419,23 @@ def _should_enter_portal(
         base_chance *= max(0.3, 1.0 - retention_bonus)
 
     if rng.random() < base_chance:
-        reasons = [
-            ("seeking_playing_time", 0.30),
-            ("nil_opportunity", 0.25),
-            ("program_direction", 0.20),
-            ("closer_to_home", 0.15),
-            ("fresh_start", 0.10),
-        ]
+        # Weight reasons based on whether the player is a non-starter
+        if is_non_starter and card.year in ("Sophomore", "Junior"):
+            reasons = [
+                ("seeking_playing_time", 0.50),
+                ("program_direction", 0.20),
+                ("nil_opportunity", 0.10),
+                ("closer_to_home", 0.10),
+                ("fresh_start", 0.10),
+            ]
+        else:
+            reasons = [
+                ("seeking_playing_time", 0.30),
+                ("nil_opportunity", 0.25),
+                ("program_direction", 0.20),
+                ("closer_to_home", 0.15),
+                ("fresh_start", 0.10),
+            ]
         r_names, r_weights = zip(*reasons)
         return rng.choices(r_names, weights=r_weights, k=1)[0]
 
@@ -446,8 +472,22 @@ def populate_portal(
     for team_name, roster in team_rosters.items():
         wins, losses = team_records.get(team_name, (5, 5))
         ret_bonus = coaching_retention.get(team_name, 0.0)
+
+        # Compute average overall at each position to identify non-starters
+        pos_overalls: Dict[str, List[int]] = {}
+        for c in roster:
+            pos_overalls.setdefault(c.position, []).append(c.overall)
+        pos_avg: Dict[str, float] = {
+            pos: sum(ovrs) / len(ovrs) for pos, ovrs in pos_overalls.items()
+        }
+
         for card in roster:
-            reason = _should_enter_portal(card, wins, losses, rng, retention_bonus=ret_bonus)
+            is_non_starter = card.overall < pos_avg.get(card.position, 0)
+            reason = _should_enter_portal(
+                card, wins, losses, rng,
+                retention_bonus=ret_bonus,
+                is_non_starter=is_non_starter,
+            )
             if reason is not None:
                 pres = rng.uniform(0.25, 0.55)
                 nil_pref = rng.uniform(0.15, 0.45)

@@ -1379,19 +1379,46 @@ class Dynasty:
         populate_portal(portal, player_cards, team_records, rng=rng,
                        coaching_retention=coaching_retention)
 
-        # CPU teams make portal offers
+        # CPU teams make portal offers based on actual roster needs
         team_regions = self._estimate_team_regions()
+
+        # Target roster count per position (total roster ~36)
+        _TARGET_POS_COUNTS = {
+            "Offensive Line": 8,
+            "Defensive Line": 7,
+            "Halfback": 4,
+            "Wingback": 4,
+            "Slotback": 4,
+            "Zeroback": 3,
+            "Viper": 3,
+            "Keeper": 3,
+        }
+
         for team_name in self.team_histories:
             if team_name == human_team:
                 continue
             prestige = self.team_prestige.get(team_name, 50)
             nil_prog = self._nil_programs.get(team_name)
             portal_budget = nil_prog.portal_pool if nil_prog else 150_000
+
+            # Identify position needs from current roster
+            roster = player_cards.get(team_name, [])
+            pos_counts: Dict[str, int] = {}
+            for c in roster:
+                pos_counts[c.position] = pos_counts.get(c.position, 0) + 1
+            needs = [
+                pos for pos, target in _TARGET_POS_COUNTS.items()
+                if pos_counts.get(pos, 0) < target
+            ]
+            # Always have at least one need to avoid empty targeting
+            if not needs:
+                needs = ["Viper", "Halfback", "Offensive Line"]
+
             auto_portal_offers(
                 portal=portal,
                 team_name=team_name,
                 team_prestige=prestige,
-                needs=["Viper", "Halfback", "Offensive Line"],
+                needs=needs,
                 nil_budget=portal_budget,
                 max_targets=4,
                 rng=rng,
