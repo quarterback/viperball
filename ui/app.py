@@ -69,6 +69,7 @@ from ui.page_modules.section_my_team import render_my_team_section
 from ui.page_modules.section_export import render_export_section
 from ui.page_modules.debug_tools import render_debug_tools
 from ui.page_modules.play_inspector import render_play_inspector
+from ui.page_modules.recruiting_portal import render_recruiting_portal
 
 st.set_page_config(
     page_title="Viperball Sandbox",
@@ -315,7 +316,7 @@ if settings_page:
     elif settings_page == "Play Inspector":
         render_play_inspector(shared)
 else:
-    main_tabs = st.tabs(["Play", "League", "My Team", "Export"])
+    main_tabs = st.tabs(["Play", "League", "My Team", "Recruiting", "Export"])
 
     with main_tabs[0]:
         render_play_section(shared)
@@ -327,4 +328,7 @@ else:
         render_my_team_section(shared)
 
     with main_tabs[3]:
+        render_recruiting_portal(shared)
+
+    with main_tabs[4]:
         render_export_section(shared)

@@ -309,6 +309,9 @@ class Dynasty:
     # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
     _hs_pipeline: Optional[object] = field(default=None, repr=False)
 
+    # High school league (simulated each offseason to produce real recruits)
+    _hs_league: Optional[object] = field(default=None, repr=False)
+
     # Persisted roster data for next season (populated by offseason_complete)
     _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
     # Program infrastructure per team: team_name -> {facilities, campus_life, ...}
@@ -1107,10 +1110,17 @@ class Dynasty:
                     except (json.JSONDecodeError, OSError):
                         pass
                 if team_name not in self._team_infrastructure:
-                    # Default mid-range infrastructure
+                    # Prestige-correlated infrastructure with variance.
+                    # Prestige 90 → base ~8, prestige 30 → base ~3, with ±2 noise
+                    # so there's a gradient even within conferences.
+                    prestige = self.team_prestige.get(team_name, 50)
+                    base = max(1, min(9, int(prestige / 12) + 1))
                     self._team_infrastructure[team_name] = {
-                        "facilities": 5, "campus_life": 5, "location": 5,
-                        "coaching_development": 5, "nil_program": 5,
+                        "facilities": max(1, min(10, base + rng.randint(-2, 2))),
+                        "campus_life": max(1, min(10, base + rng.randint(-2, 2))),
+                        "location": max(1, min(10, base + rng.randint(-1, 2))),
+                        "coaching_development": max(1, min(10, base + rng.randint(-2, 1))),
+                        "nil_program": max(1, min(10, base + rng.randint(-2, 2))),
                     }
 
         # Apply yearly decay (-0.1 rounded) and AI auto-investment
@@ -1377,21 +1387,49 @@ class Dynasty:
 
         portal = TransferPortal(year=year)
         populate_portal(portal, player_cards, team_records, rng=rng,
-                       coaching_retention=coaching_retention)
+                       coaching_retention=coaching_retention,
+                       team_prestige=self.team_prestige)
 
-        # CPU teams make portal offers
+        # CPU teams make portal offers based on actual roster needs
         team_regions = self._estimate_team_regions()
+
+        # Target roster count per position (total roster ~36)
+        _TARGET_POS_COUNTS = {
+            "Offensive Line": 8,
+            "Defensive Line": 7,
+            "Halfback": 4,
+            "Wingback": 4,
+            "Slotback": 4,
+            "Zeroback": 3,
+            "Viper": 3,
+            "Keeper": 3,
+        }
+
         for team_name in self.team_histories:
             if team_name == human_team:
                 continue
             prestige = self.team_prestige.get(team_name, 50)
             nil_prog = self._nil_programs.get(team_name)
             portal_budget = nil_prog.portal_pool if nil_prog else 150_000
+
+            # Identify position needs from current roster
+            roster = player_cards.get(team_name, [])
+            pos_counts: Dict[str, int] = {}
+            for c in roster:
+                pos_counts[c.position] = pos_counts.get(c.position, 0) + 1
+            needs = [
+                pos for pos, target in _TARGET_POS_COUNTS.items()
+                if pos_counts.get(pos, 0) < target
+            ]
+            # Always have at least one need to avoid empty targeting
+            if not needs:
+                needs = ["Viper", "Halfback", "Offensive Line"]
+
             auto_portal_offers(
                 portal=portal,
                 team_name=team_name,
                 team_prestige=prestige,
-                needs=["Viper", "Halfback", "Offensive Line"],
+                needs=needs,
                 nil_budget=portal_budget,
                 max_targets=4,
                 rng=rng,
@@ -1474,6 +1512,21 @@ class Dynasty:
                     {"position": getattr(c, "position", "")} for c in player_cards[tn]
                 ]
 
+        # ── 6a. HS League Season Sim → Real Recruit Pool ──
+        from engine.hs_league import (
+            create_hs_league, simulate_hs_season, advance_hs_league,
+            graduating_class_to_recruits, league_summary,
+        )
+
+        if self._hs_league is None:
+            self._hs_league = create_hs_league(year, rng=rng)
+        else:
+            self._hs_league = advance_hs_league(self._hs_league, year, rng=rng)
+
+        self._hs_league = simulate_hs_season(self._hs_league, rng=rng)
+        hs_recruits = graduating_class_to_recruits(self._hs_league)
+        result["hs_league"] = league_summary(self._hs_league)
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -1490,16 +1543,19 @@ class Dynasty:
             coaching_prestige_bonus=coaching_prestige_bonus,
             team_infrastructure=_team_infra if _team_infra else None,
             team_rosters=_team_rosters_for_recruit if _team_rosters_for_recruit else None,
+            hs_pool=hs_recruits,
         )
 
         self.recruiting_history[year] = {
             "class_rankings": recruit_result["class_rankings"],
             "signed_count": {t: len(r) for t, r in recruit_result["signed"].items()},
-            "pool_size": pool_size,
+            "pool_size": len(hs_recruits),
+            "hs_national_champion": self._hs_league.national_champion,
+            "hs_state_champions": dict(self._hs_league.state_champions),
         }
         result["recruiting"] = self.recruiting_history[year]
 
-        # ── 7. HS Recruiting Pipeline ──
+        # ── 7. HS Recruiting Pipeline (legacy — keep for scouting board) ──
         from engine.recruiting import HSRecruitingPipeline
         if self._hs_pipeline is None:
             self._hs_pipeline = HSRecruitingPipeline()

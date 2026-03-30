@@ -364,52 +364,109 @@ def _should_enter_portal(
     team_record_losses: int,
     rng: random.Random,
     retention_bonus: float = 0.0,
+    is_non_starter: bool = False,
+    team_prestige: int = 50,
 ) -> Optional[str]:
     """
     Determine if a player enters the transfer portal.
 
+    Hidden gem / bust transfer logic:
+    - Hidden gems (low original_stars, high current overall) at low-prestige
+      programs get a massive portal entry boost (~80% chance). They transfer
+      UP to bigger programs. Low loyalty score makes this near-certain.
+    - Busts (high original_stars, declining/stagnant overall) at high-prestige
+      programs also get boosted portal entry. They transfer DOWN — pushed out
+      or seeking a fresh start where they can actually contribute.
+    - Players can only transfer ONCE (transfer_count >= 1 → blocked).
+
     Returns the reason string, or None if they stay.
     """
+    # ── Hard block: no player transfers more than once ──
+    if getattr(card, 'transfer_count', 0) >= 1:
+        return None
+
     # Graduates always leave
     if card.year == "Graduate":
         if rng.random() < 0.60:
             return "graduate_transfer"
-        return None  # some graduates stay for a 5th+ year
-
-    # Seniors very rarely transfer
-    if card.year == "Senior":
-        if rng.random() < 0.05:
-            return "nil_opportunity"
         return None
 
-    # Losing record increases portal entries
+    # Seniors: small chance to enter as graduate_transfer
+    if card.year == "Senior":
+        if is_non_starter and rng.random() < 0.12:
+            return "graduate_transfer"
+        if rng.random() < 0.05:
+            return "fresh_start"
+        return None
+
+    # ── Hidden gem detection: low-star recruit who developed well ──
+    original_stars = getattr(card, 'original_stars', 0) or card.potential
+    loyalty = getattr(card, 'loyalty', 0.5)
+    is_hidden_gem = (original_stars <= 2 and card.overall >= 72) or \
+                    (original_stars <= 3 and card.overall >= 78)
+
+    # Hidden gems at low-prestige programs almost always transfer up.
+    # ~80% of hidden gems at bad programs leave (8 out of 10).
+    if is_hidden_gem and team_prestige < 55:
+        gem_chance = 0.80 * (1.0 - loyalty)  # low loyalty → near certain
+        if rng.random() < gem_chance:
+            return "seeking_playing_time" if is_non_starter else "program_direction"
+
+    # ── Bust detection: high-star recruit who isn't developing ──
+    is_bust = (original_stars >= 4 and card.overall < 65) or \
+              (original_stars >= 5 and card.overall < 70)
+    # Also check development trait directly
+    if getattr(card, 'development', '') == 'bust':
+        is_bust = True
+
+    # Busts at high-prestige programs get pushed out or leave voluntarily.
+    # They know they're not cutting it and seek a fresh start at a smaller school.
+    if is_bust and team_prestige >= 60:
+        bust_chance = 0.65 * (1.0 - loyalty)
+        if rng.random() < bust_chance:
+            return "fresh_start" if rng.random() < 0.6 else "program_direction"
+
+    # ── Standard portal logic ──
     loss_rate = team_record_losses / max(1, team_record_wins + team_record_losses)
 
-    base_chance = 0.08  # ~8% base transfer rate
+    base_chance = 0.08
     if loss_rate > 0.6:
-        base_chance += 0.10   # bad team: more players leave
+        base_chance += 0.10
     elif loss_rate > 0.4:
         base_chance += 0.04
 
-    # Low potential players less likely to transfer (nowhere to go)
+    if is_non_starter and card.year in ("Sophomore", "Junior"):
+        base_chance += 0.12
+
     if card.potential <= 2:
         base_chance *= 0.5
 
-    # High potential underperformers more likely
     if card.potential >= 4 and card.overall < 70:
         base_chance += 0.06
+
+    # Loyalty reduces transfer chance
+    base_chance *= max(0.2, 1.0 - loyalty * 0.5)
 
     if retention_bonus > 0:
         base_chance *= max(0.3, 1.0 - retention_bonus)
 
     if rng.random() < base_chance:
-        reasons = [
-            ("seeking_playing_time", 0.30),
-            ("nil_opportunity", 0.25),
-            ("program_direction", 0.20),
-            ("closer_to_home", 0.15),
-            ("fresh_start", 0.10),
-        ]
+        if is_non_starter and card.year in ("Sophomore", "Junior"):
+            reasons = [
+                ("seeking_playing_time", 0.50),
+                ("program_direction", 0.20),
+                ("fresh_start", 0.10),
+                ("closer_to_home", 0.10),
+                ("program_direction", 0.10),
+            ]
+        else:
+            reasons = [
+                ("seeking_playing_time", 0.30),
+                ("program_direction", 0.25),
+                ("fresh_start", 0.20),
+                ("closer_to_home", 0.15),
+                ("coaching_change", 0.10),
+            ]
         r_names, r_weights = zip(*reasons)
         return rng.choices(r_names, weights=r_weights, k=1)[0]
 
@@ -422,15 +479,21 @@ def populate_portal(
     team_records: Dict[str, Tuple[int, int]],
     rng: Optional[random.Random] = None,
     coaching_retention: Optional[Dict[str, float]] = None,
+    team_prestige: Optional[Dict[str, int]] = None,
 ) -> List[PortalEntry]:
     """
     Populate the transfer portal from existing team rosters.
 
+    Hidden gems at low-prestige programs and busts at high-prestige programs
+    are much more likely to enter the portal.  Players can only transfer once.
+
     Args:
-        portal:       TransferPortal to populate.
-        team_rosters: team_name -> list of PlayerCard.
-        team_records: team_name -> (wins, losses).
-        rng:          Seeded Random.
+        portal:            TransferPortal to populate.
+        team_rosters:      team_name -> list of PlayerCard.
+        team_records:      team_name -> (wins, losses).
+        rng:               Seeded Random.
+        coaching_retention: team_name -> coaching retention bonus (0-1).
+        team_prestige:     team_name -> prestige rating (0-100).
 
     Returns:
         List of new PortalEntry objects added to the portal.
@@ -442,16 +505,52 @@ def populate_portal(
 
     if coaching_retention is None:
         coaching_retention = {}
+    if team_prestige is None:
+        team_prestige = {}
 
     for team_name, roster in team_rosters.items():
         wins, losses = team_records.get(team_name, (5, 5))
         ret_bonus = coaching_retention.get(team_name, 0.0)
+        prestige = team_prestige.get(team_name, 50)
+
+        # Compute average overall at each position to identify non-starters
+        pos_overalls: Dict[str, List[int]] = {}
+        for c in roster:
+            pos_overalls.setdefault(c.position, []).append(c.overall)
+        pos_avg: Dict[str, float] = {
+            pos: sum(ovrs) / len(ovrs) for pos, ovrs in pos_overalls.items()
+        }
+
         for card in roster:
-            reason = _should_enter_portal(card, wins, losses, rng, retention_bonus=ret_bonus)
+            is_non_starter = card.overall < pos_avg.get(card.position, 0)
+            reason = _should_enter_portal(
+                card, wins, losses, rng,
+                retention_bonus=ret_bonus,
+                is_non_starter=is_non_starter,
+                team_prestige=prestige,
+            )
             if reason is not None:
-                pres = rng.uniform(0.25, 0.55)
-                nil_pref = rng.uniform(0.15, 0.45)
-                geo = max(0.0, 1.0 - pres - nil_pref)
+                # Transfer preferences: hidden gems want prestige (transfer up),
+                # busts want playing time (transfer down)
+                original_stars = getattr(card, 'original_stars', 0) or card.potential
+                is_hidden_gem = (original_stars <= 2 and card.overall >= 72) or \
+                                (original_stars <= 3 and card.overall >= 78)
+                is_bust = getattr(card, 'development', '') == 'bust' or \
+                          (original_stars >= 4 and card.overall < 65)
+
+                if is_hidden_gem:
+                    # Hidden gems strongly prefer prestige — they want to move UP
+                    pres = rng.uniform(0.55, 0.80)
+                    geo = rng.uniform(0.05, 0.15)
+                elif is_bust:
+                    # Busts want playing time at a smaller school
+                    pres = rng.uniform(0.10, 0.25)
+                    geo = rng.uniform(0.20, 0.40)
+                else:
+                    pres = rng.uniform(0.30, 0.55)
+                    geo = rng.uniform(0.15, 0.30)
+
+                nil_pref = max(0.0, 1.0 - pres - geo) * rng.uniform(0.1, 0.3)
 
                 entry = PortalEntry(
                     player_card=card,
@@ -462,6 +561,8 @@ def populate_portal(
                     prefers_nil=nil_pref,
                     prefers_geography=geo,
                 )
+                # Mark the card as having transferred
+                card.transfer_count = getattr(card, 'transfer_count', 0) + 1
                 portal.add_entry(entry)
                 new_entries.append(entry)
 
