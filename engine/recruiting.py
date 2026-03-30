@@ -1061,6 +1061,7 @@ def run_full_recruiting_cycle(
     coaching_prestige_bonus: Optional[Dict[str, int]] = None,
     team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
     team_rosters: Optional[Dict[str, List[Dict]]] = None,
+    hs_pool: Optional[List[Recruit]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle (for use by Dynasty.advance_season).
@@ -1080,7 +1081,7 @@ def run_full_recruiting_cycle(
     if rng is None:
         rng = random.Random(year)
 
-    pool = generate_recruit_class(year=year, size=pool_size, rng=rng)
+    pool = hs_pool if hs_pool else generate_recruit_class(year=year, size=pool_size, rng=rng)
 
     boards: Dict[str, RecruitingBoard] = {}
     all_nil: Dict[str, Dict[str, float]] = {}

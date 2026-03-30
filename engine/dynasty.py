@@ -309,6 +309,9 @@ class Dynasty:
     # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
     _hs_pipeline: Optional[object] = field(default=None, repr=False)
 
+    # High school league (simulated each offseason to produce real recruits)
+    _hs_league: Optional[object] = field(default=None, repr=False)
+
     # Persisted roster data for next season (populated by offseason_complete)
     _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
     # Program infrastructure per team: team_name -> {facilities, campus_life, ...}
@@ -1509,6 +1512,21 @@ class Dynasty:
                     {"position": getattr(c, "position", "")} for c in player_cards[tn]
                 ]
 
+        # ── 6a. HS League Season Sim → Real Recruit Pool ──
+        from engine.hs_league import (
+            create_hs_league, simulate_hs_season, advance_hs_league,
+            graduating_class_to_recruits, league_summary,
+        )
+
+        if self._hs_league is None:
+            self._hs_league = create_hs_league(year, rng=rng)
+        else:
+            self._hs_league = advance_hs_league(self._hs_league, year, rng=rng)
+
+        self._hs_league = simulate_hs_season(self._hs_league, rng=rng)
+        hs_recruits = graduating_class_to_recruits(self._hs_league)
+        result["hs_league"] = league_summary(self._hs_league)
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -1525,16 +1543,19 @@ class Dynasty:
             coaching_prestige_bonus=coaching_prestige_bonus,
             team_infrastructure=_team_infra if _team_infra else None,
             team_rosters=_team_rosters_for_recruit if _team_rosters_for_recruit else None,
+            hs_pool=hs_recruits,
         )
 
         self.recruiting_history[year] = {
             "class_rankings": recruit_result["class_rankings"],
             "signed_count": {t: len(r) for t, r in recruit_result["signed"].items()},
-            "pool_size": pool_size,
+            "pool_size": len(hs_recruits),
+            "hs_national_champion": self._hs_league.national_champion,
+            "hs_state_champions": dict(self._hs_league.state_champions),
         }
         result["recruiting"] = self.recruiting_history[year]
 
-        # ── 7. HS Recruiting Pipeline ──
+        # ── 7. HS Recruiting Pipeline (legacy — keep for scouting board) ──
         from engine.recruiting import HSRecruitingPipeline
         if self._hs_pipeline is None:
             self._hs_pipeline = HSRecruitingPipeline()
