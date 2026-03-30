@@ -1107,10 +1107,17 @@ class Dynasty:
                     except (json.JSONDecodeError, OSError):
                         pass
                 if team_name not in self._team_infrastructure:
-                    # Default mid-range infrastructure
+                    # Prestige-correlated infrastructure with variance.
+                    # Prestige 90 → base ~8, prestige 30 → base ~3, with ±2 noise
+                    # so there's a gradient even within conferences.
+                    prestige = self.team_prestige.get(team_name, 50)
+                    base = max(1, min(9, int(prestige / 12) + 1))
                     self._team_infrastructure[team_name] = {
-                        "facilities": 5, "campus_life": 5, "location": 5,
-                        "coaching_development": 5, "nil_program": 5,
+                        "facilities": max(1, min(10, base + rng.randint(-2, 2))),
+                        "campus_life": max(1, min(10, base + rng.randint(-2, 2))),
+                        "location": max(1, min(10, base + rng.randint(-1, 2))),
+                        "coaching_development": max(1, min(10, base + rng.randint(-2, 1))),
+                        "nil_program": max(1, min(10, base + rng.randint(-2, 2))),
                     }
 
         # Apply yearly decay (-0.1 rounded) and AI auto-investment

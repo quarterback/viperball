@@ -311,12 +311,14 @@ _STAT_RANGES: Dict[int, Tuple[int, int]] = {
 }
 
 # Development trait probabilities by star tier
+# "bust" = player regresses / never reaches potential (~25% of 4-5 stars combined)
+# Hidden gems come from 1-3 star "quick"/"late_bloomer" traits
 _DEV_BY_STARS: Dict[int, List[Tuple[str, float]]] = {
-    5: [("quick", 0.40), ("normal", 0.35), ("late_bloomer", 0.15), ("slow", 0.10)],
-    4: [("quick", 0.25), ("normal", 0.45), ("late_bloomer", 0.15), ("slow", 0.15)],
-    3: [("normal", 0.55), ("quick", 0.15), ("late_bloomer", 0.15), ("slow", 0.15)],
-    2: [("normal", 0.50), ("slow", 0.25), ("late_bloomer", 0.15), ("quick", 0.10)],
-    1: [("slow", 0.35), ("normal", 0.40), ("late_bloomer", 0.20), ("quick", 0.05)],
+    5: [("quick", 0.30), ("normal", 0.30), ("late_bloomer", 0.10), ("slow", 0.10), ("bust", 0.20)],
+    4: [("quick", 0.20), ("normal", 0.30), ("late_bloomer", 0.15), ("slow", 0.10), ("bust", 0.25)],
+    3: [("normal", 0.40), ("quick", 0.15), ("late_bloomer", 0.20), ("slow", 0.15), ("bust", 0.10)],
+    2: [("normal", 0.35), ("slow", 0.20), ("late_bloomer", 0.25), ("quick", 0.15), ("bust", 0.05)],
+    1: [("slow", 0.25), ("normal", 0.30), ("late_bloomer", 0.30), ("quick", 0.10), ("bust", 0.05)],
 }
 
 # Simple first/last name pools for recruit generation (no external file dependency)
