@@ -35,6 +35,16 @@ from engine.player_card import PlayerCard, _get_position_weights
 
 
 # ──────────────────────────────────────────────
+# FICTIONAL RECRUITING NETWORK
+# ──────────────────────────────────────────────
+
+RECRUITING_NETWORK_NAME = "ViperScout"          # Like 247Sports / Rivals
+RECRUITING_NETWORK_TAGLINE = "The Source for Viperball Recruiting"
+CRYSTAL_BALL_NAME = "StrikePrediction"          # Like 247Sports Crystal Ball
+RECRUIT_RANKINGS_NAME = "ViperScout Top 300"    # Like Rivals250 / 247Sports Top247
+
+
+# ──────────────────────────────────────────────
 # POSITIONS / ARCHETYPES (mirrors generate_rosters)
 # ──────────────────────────────────────────────
 
@@ -133,6 +143,19 @@ class Recruit:
     offers: List[str] = field(default_factory=list)           # team_names that offered
     committed_to: Optional[str] = None
     signed: bool = False
+
+    # Phased signing state
+    signing_phase: Optional[str] = None   # "early", "regular", "post_bowl", "walkon"
+    signing_week: int = 0                 # week within phase when player signed
+    is_walkon: bool = False               # True if assigned as walk-on (no scholarship)
+
+    # Shortlist / decision timeline (like Rivals/247Sports recruit cards)
+    top_schools: List[str] = field(default_factory=list)       # top-5 list (narrowed from all offers)
+    finalist_schools: List[str] = field(default_factory=list)  # top-3 finalists
+    decision_speed: str = "normal"     # "early_decider", "normal", "late_decider"
+    status: str = "unsigned"           # "unsigned", "committed", "signed", "decommitted", "walkon"
+    crystal_ball: Dict[str, float] = field(default_factory=dict)  # team_name -> prediction % (0-100)
+    timeline: List[Dict] = field(default_factory=list)  # [{"event": "...", "phase": "...", "week": int}]
 
     # Preferences (affect decision weights)
     prefers_prestige: float = 0.5    # 0-1: how much prestige matters
@@ -259,6 +282,15 @@ class Recruit:
             "committed_to": self.committed_to,
             "signed": self.signed,
             "offers": list(self.offers),
+            "signing_phase": self.signing_phase,
+            "signing_week": self.signing_week,
+            "is_walkon": self.is_walkon,
+            "top_schools": list(self.top_schools),
+            "finalist_schools": list(self.finalist_schools),
+            "decision_speed": self.decision_speed,
+            "status": self.status,
+            "crystal_ball": dict(self.crystal_ball),
+            "timeline": list(self.timeline),
         }
 
 
@@ -942,6 +974,475 @@ def simulate_recruit_decisions(
 
 
 # ──────────────────────────────────────────────
+# SHORTLIST NARROWING & CRYSTAL BALL
+# ──────────────────────────────────────────────
+
+# Decision speed distribution by star tier
+_DECISION_SPEED_BY_STARS: Dict[int, List[Tuple[str, float]]] = {
+    5: [("early_decider", 0.45), ("normal", 0.40), ("late_decider", 0.15)],
+    4: [("early_decider", 0.30), ("normal", 0.50), ("late_decider", 0.20)],
+    3: [("early_decider", 0.20), ("normal", 0.50), ("late_decider", 0.30)],
+    2: [("early_decider", 0.15), ("normal", 0.45), ("late_decider", 0.40)],
+    1: [("early_decider", 0.10), ("normal", 0.40), ("late_decider", 0.50)],
+}
+
+
+def build_recruit_shortlists(
+    pool: List[Recruit],
+    team_prestige: Dict[str, int],
+    team_regions: Dict[str, str],
+    nil_offers: Dict[str, Dict[str, float]],
+    rng: Optional[random.Random] = None,
+    team_coaching_scores: Optional[Dict[str, float]] = None,
+    coaching_prestige_bonus: Optional[Dict[str, int]] = None,
+    team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
+    team_rosters: Optional[Dict[str, List[Dict]]] = None,
+) -> None:
+    """
+    For each recruit with offers, build their top-5 and top-3 shortlists.
+
+    This models the real recruiting process where players:
+    1. Receive offers from many schools
+    2. Narrow to a "top 5" based on initial preferences
+    3. Take visits and narrow to "top 3" finalists
+    4. Eventually commit to their choice
+
+    Also assigns decision_speed (early/normal/late) and generates
+    crystal ball predictions (like 247Sports predictions).
+
+    Mutates recruits in-place.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    max_nil = 1.0
+    for team_nil in nil_offers.values():
+        for amt in team_nil.values():
+            if amt > max_nil:
+                max_nil = amt
+
+    infra = team_infrastructure or {}
+
+    for recruit in pool:
+        if not recruit.offers or recruit.signed:
+            continue
+
+        # Assign decision speed
+        speeds = _DECISION_SPEED_BY_STARS.get(recruit.stars, _DECISION_SPEED_BY_STARS[3])
+        labels, weights = zip(*speeds)
+        recruit.decision_speed = rng.choices(labels, weights=weights, k=1)[0]
+
+        # Score all offering teams
+        team_scores: List[Tuple[str, float]] = []
+        for team_name in recruit.offers:
+            nil_amt = nil_offers.get(team_name, {}).get(recruit.recruit_id, 0.0)
+            cs = (team_coaching_scores or {}).get(team_name, 0.0)
+            p_bonus = (coaching_prestige_bonus or {}).get(team_name, 0)
+            pos_depth = 0
+            if team_rosters and team_name in team_rosters:
+                pos_depth = sum(
+                    1 for p in team_rosters[team_name]
+                    if p.get("position", "") == recruit.position
+                )
+            score = _compute_team_score(
+                recruit=recruit,
+                team_name=team_name,
+                team_prestige=min(100, team_prestige.get(team_name, 50) + p_bonus),
+                team_region=team_regions.get(team_name, "midwest"),
+                nil_offer=nil_amt,
+                max_nil_in_class=max_nil,
+                rng=rng,
+                coaching_score=cs,
+                infrastructure=infra.get(team_name),
+                position_depth=pos_depth,
+            )
+            team_scores.append((team_name, score))
+
+        # Sort by score descending
+        team_scores.sort(key=lambda x: -x[1])
+
+        # Top 5 (or fewer if less offers)
+        recruit.top_schools = [t for t, _ in team_scores[:5]]
+        recruit.timeline.append({
+            "event": f"Released top {len(recruit.top_schools)}",
+            "phase": "pre_signing",
+            "week": 0,
+        })
+
+        # Top 3 finalists
+        recruit.finalist_schools = [t for t, _ in team_scores[:3]]
+        recruit.timeline.append({
+            "event": f"Narrowed to top {len(recruit.finalist_schools)}",
+            "phase": "pre_signing",
+            "week": 0,
+        })
+
+        # Crystal ball predictions: normalise scores into percentages
+        if team_scores:
+            total = sum(max(0, s) for _, s in team_scores[:5])
+            if total > 0:
+                for team_name, score in team_scores[:5]:
+                    pct = round(max(0, score) / total * 100, 1)
+                    recruit.crystal_ball[team_name] = pct
+            else:
+                for team_name, _ in team_scores[:5]:
+                    recruit.crystal_ball[team_name] = round(100 / len(team_scores[:5]), 1)
+
+
+# ──────────────────────────────────────────────
+# COMMISSIONER OVERRIDE
+# ──────────────────────────────────────────────
+
+def commissioner_force_sign(
+    recruit: Recruit,
+    team_name: str,
+    board: Optional[RecruitingBoard] = None,
+) -> bool:
+    """
+    Commissioner mode: force-sign a recruit to a specific team.
+
+    Bypasses all preference logic. Useful for narrative/storyline purposes.
+    If the recruit was committed elsewhere, decommits first.
+
+    Args:
+        recruit:   The recruit to force-sign.
+        team_name: Destination team.
+        board:     Optional RecruitingBoard to update (adds to signed list).
+
+    Returns:
+        True if successful.
+    """
+    # Decommit from previous team if needed
+    if recruit.committed_to and recruit.committed_to != team_name:
+        recruit.timeline.append({
+            "event": f"Decommitted from {recruit.committed_to} (commissioner override)",
+            "phase": "override",
+            "week": 0,
+        })
+
+    recruit.committed_to = team_name
+    recruit.signed = True
+    recruit.signing_phase = "override"
+    recruit.status = "signed"
+    recruit.timeline.append({
+        "event": f"Signed with {team_name} (commissioner override)",
+        "phase": "override",
+        "week": 0,
+    })
+
+    if board is not None:
+        if recruit.recruit_id not in board.signed:
+            board.signed.append(recruit.recruit_id)
+        if recruit.recruit_id not in board.committed:
+            board.committed.append(recruit.recruit_id)
+
+    return True
+
+
+# ──────────────────────────────────────────────
+# PHASED SIGNING SYSTEM
+# ──────────────────────────────────────────────
+
+# Phase configuration: (phase_name, fraction_of_pool_eligible, weeks_in_phase)
+_SIGNING_PHASES = [
+    ("early", 0.35, 4),       # Early signing period: ~35% of recruits sign over 4 weeks
+    ("regular", 0.50, 6),     # Regular signing day window: ~50% sign over 6 weeks
+    ("post_bowl", 0.15, 3),   # Post-bowl/playoff: last ~15% sign over 3 weeks
+]
+
+
+def simulate_phased_signing(
+    pool: List[Recruit],
+    team_boards: Dict[str, RecruitingBoard],
+    team_prestige: Dict[str, int],
+    team_regions: Dict[str, str],
+    nil_offers: Dict[str, Dict[str, float]],
+    rng: Optional[random.Random] = None,
+    team_coaching_scores: Optional[Dict[str, float]] = None,
+    coaching_prestige_bonus: Optional[Dict[str, int]] = None,
+    team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
+    team_rosters: Optional[Dict[str, List[Dict]]] = None,
+) -> Dict[str, object]:
+    """
+    Simulate recruits signing across multiple phases and weeks.
+
+    Instead of all recruits signing at once, they sign in waves:
+    - Early signing period: ~35% of recruits, spread across 4 weeks
+    - Regular signing day: ~50% of recruits, spread across 6 weeks
+    - Post-bowl/playoff: ~15% of recruits, spread across 3 weeks
+
+    Within each phase, recruits from ALL star levels sign (not top-down).
+    Each week a batch of eligible recruits makes decisions based on their
+    preferences with randomised ordering.
+
+    Returns:
+        {
+            "signed_by_team": { team_name: [Recruit, ...] },
+            "signing_log": [
+                { "phase": str, "week": int, "recruit": str, "team": str, "stars": int },
+                ...
+            ],
+            "unsigned": [Recruit, ...],   # recruits who got no offers or didn't sign
+            "phase_summary": {
+                "early": { "count": int, "by_stars": {1: n, 2: n, ...} },
+                "regular": { ... },
+                "post_bowl": { ... },
+            },
+        }
+    """
+    if rng is None:
+        rng = random.Random()
+
+    # Step 1: Build shortlists (top-5, top-3, crystal ball) for all recruits
+    build_recruit_shortlists(
+        pool=pool,
+        team_prestige=team_prestige,
+        team_regions=team_regions,
+        nil_offers=nil_offers,
+        rng=rng,
+        team_coaching_scores=team_coaching_scores,
+        coaching_prestige_bonus=coaching_prestige_bonus,
+        team_infrastructure=team_infrastructure,
+        team_rosters=team_rosters,
+    )
+
+    # Find max NIL offer for normalisation
+    max_nil = 1.0
+    for team_nil in nil_offers.values():
+        for amt in team_nil.values():
+            if amt > max_nil:
+                max_nil = amt
+
+    signed_by_team: Dict[str, List[Recruit]] = {tn: [] for tn in team_boards}
+    signing_log: List[Dict] = []
+    phase_summary: Dict[str, Dict] = {}
+
+    # Build position depth counts per team
+    position_counts: Dict[str, Dict[str, int]] = {}
+    for tn in team_boards:
+        counts: Dict[str, int] = {}
+        if team_rosters and tn in team_rosters:
+            for p in team_rosters[tn]:
+                pos = p.get("position", "")
+                counts[pos] = counts.get(pos, 0) + 1
+        position_counts[tn] = counts
+
+    infra = team_infrastructure or {}
+
+    # Separate recruits with offers from those without
+    available = [r for r in pool if r.committed_to is None and not r.signed and r.offers]
+
+    # Shuffle available recruits — signing order is NOT strictly by stars
+    rng.shuffle(available)
+
+    # Assign each recruit to a phase based on decision_speed + star tier
+    phase_pools: Dict[str, List[Recruit]] = {"early": [], "regular": [], "post_bowl": []}
+
+    for recruit in available:
+        # Decision speed drives phase assignment more than stars alone
+        if recruit.decision_speed == "early_decider":
+            weights = [0.70, 0.25, 0.05]
+        elif recruit.decision_speed == "late_decider":
+            weights = [0.10, 0.40, 0.50]
+        else:  # normal
+            if recruit.stars >= 4:
+                weights = [0.45, 0.45, 0.10]
+            elif recruit.stars == 3:
+                weights = [0.30, 0.50, 0.20]
+            else:
+                weights = [0.20, 0.50, 0.30]
+
+        phase = rng.choices(["early", "regular", "post_bowl"], weights=weights, k=1)[0]
+        phase_pools[phase].append(recruit)
+
+    # Process each phase
+    for phase_name, _, weeks_in_phase in _SIGNING_PHASES:
+        phase_recruits = phase_pools[phase_name]
+        rng.shuffle(phase_recruits)  # randomise within phase
+
+        phase_count = 0
+        phase_by_stars: Dict[int, int] = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+
+        # Distribute recruits across weeks in this phase
+        if not phase_recruits:
+            phase_summary[phase_name] = {"count": 0, "by_stars": phase_by_stars}
+            continue
+
+        # Split into weekly batches
+        batch_size = max(1, len(phase_recruits) // weeks_in_phase)
+        weekly_batches: List[List[Recruit]] = []
+        for w in range(weeks_in_phase):
+            start = w * batch_size
+            if w == weeks_in_phase - 1:
+                weekly_batches.append(phase_recruits[start:])
+            else:
+                weekly_batches.append(phase_recruits[start:start + batch_size])
+
+        for week_num, batch in enumerate(weekly_batches, 1):
+            for recruit in batch:
+                if recruit.committed_to is not None or recruit.signed:
+                    continue
+
+                best_score = -1.0
+                best_team = None
+
+                # Recruits choose from their finalist schools (top 3),
+                # falling back to top 5 if all finalists are full
+                candidate_teams = recruit.finalist_schools or recruit.top_schools or recruit.offers
+                if not any(team_boards.get(t, None) and team_boards[t].has_room() for t in candidate_teams):
+                    candidate_teams = recruit.top_schools or recruit.offers
+                if not any(team_boards.get(t, None) and team_boards[t].has_room() for t in candidate_teams):
+                    candidate_teams = recruit.offers
+
+                for team_name in candidate_teams:
+                    board = team_boards.get(team_name)
+                    if board is None or not board.has_room():
+                        continue
+
+                    nil_amt = nil_offers.get(team_name, {}).get(recruit.recruit_id, 0.0)
+                    cs = (team_coaching_scores or {}).get(team_name, 0.0)
+                    p_bonus = (coaching_prestige_bonus or {}).get(team_name, 0)
+                    pos_depth = position_counts.get(team_name, {}).get(recruit.position, 0)
+                    score = _compute_team_score(
+                        recruit=recruit,
+                        team_name=team_name,
+                        team_prestige=min(100, team_prestige.get(team_name, 50) + p_bonus),
+                        team_region=team_regions.get(team_name, "midwest"),
+                        nil_offer=nil_amt,
+                        max_nil_in_class=max_nil,
+                        rng=rng,
+                        coaching_score=cs,
+                        infrastructure=infra.get(team_name),
+                        position_depth=pos_depth,
+                    )
+                    if score > best_score:
+                        best_score = score
+                        best_team = team_name
+
+                if best_team is not None:
+                    recruit.committed_to = best_team
+                    recruit.signed = True
+                    recruit.signing_phase = phase_name
+                    recruit.signing_week = week_num
+                    recruit.status = "signed"
+                    recruit.timeline.append({
+                        "event": f"Committed to {best_team}",
+                        "phase": phase_name,
+                        "week": week_num,
+                    })
+                    board = team_boards[best_team]
+                    board.committed.append(recruit.recruit_id)
+                    board.signed.append(recruit.recruit_id)
+                    signed_by_team[best_team].append(recruit)
+                    # Update position depth
+                    pos_counts = position_counts.get(best_team, {})
+                    pos_counts[recruit.position] = pos_counts.get(recruit.position, 0) + 1
+                    position_counts[best_team] = pos_counts
+
+                    signing_log.append({
+                        "phase": phase_name,
+                        "week": week_num,
+                        "recruit": recruit.full_name,
+                        "recruit_id": recruit.recruit_id,
+                        "team": best_team,
+                        "stars": recruit.stars,
+                        "position": recruit.position,
+                    })
+                    phase_count += 1
+                    phase_by_stars[recruit.stars] = phase_by_stars.get(recruit.stars, 0) + 1
+
+        phase_summary[phase_name] = {"count": phase_count, "by_stars": phase_by_stars}
+
+    # Collect unsigned recruits (had offers but all teams full, or no offers)
+    unsigned = [r for r in pool if not r.signed]
+
+    return {
+        "signed_by_team": signed_by_team,
+        "signing_log": signing_log,
+        "unsigned": unsigned,
+        "phase_summary": phase_summary,
+    }
+
+
+def assign_walkon_players(
+    unsigned_pool: List[Recruit],
+    team_roster_counts: Dict[str, int],
+    team_portal_losses: Dict[str, int],
+    team_portal_gains: Dict[str, int],
+    roster_target: int = 36,
+    max_walkons_per_team: int = 4,
+    rng: Optional[random.Random] = None,
+) -> Dict[str, List[Recruit]]:
+    """
+    Assign unsigned HIGH SCHOOL recruits as walk-ons to teams that need them.
+
+    Walk-ons go to programs that:
+    1. Lost players to the transfer portal AND
+    2. Didn't fully replace them through portal gains or recruiting
+
+    Walk-ons are ONLY high school players (never portal transfers).
+    Rosters can exceed the normal 36-player target to accommodate walk-ons.
+
+    Args:
+        unsigned_pool:      Unsigned recruits from the signing phases.
+        team_roster_counts: Current roster size per team (after portal/signing).
+        team_portal_losses: Number of players each team lost to portal.
+        team_portal_gains:  Number of portal players each team gained.
+        roster_target:      Base roster target (typically 36).
+        max_walkons_per_team: Cap on walk-ons per team per year.
+        rng:                Seeded random.
+
+    Returns:
+        Dict of team_name -> list of walk-on Recruit objects.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    walkons_by_team: Dict[str, List[Recruit]] = {}
+
+    # Find teams with unresolved roster gaps from portal losses
+    teams_needing_walkons: List[Tuple[str, int]] = []
+    for team_name, current_count in team_roster_counts.items():
+        losses = team_portal_losses.get(team_name, 0)
+        gains = team_portal_gains.get(team_name, 0)
+        # Team needs walk-ons if they lost more than they gained AND are under target
+        unresolved = max(0, losses - gains)
+        roster_gap = max(0, roster_target - current_count)
+        need = min(max_walkons_per_team, max(unresolved, roster_gap))
+        if need > 0:
+            teams_needing_walkons.append((team_name, need))
+
+    if not teams_needing_walkons or not unsigned_pool:
+        return walkons_by_team
+
+    # Sort teams by need (most desperate first)
+    teams_needing_walkons.sort(key=lambda x: -x[1])
+
+    # Filter to only HS recruits (not portal players — they don't have is_walkon set)
+    hs_available = [r for r in unsigned_pool if not r.signed and r.committed_to is None]
+    rng.shuffle(hs_available)
+
+    idx = 0
+    for team_name, spots_needed in teams_needing_walkons:
+        assigned = []
+        for _ in range(spots_needed):
+            if idx >= len(hs_available):
+                break
+            recruit = hs_available[idx]
+            recruit.committed_to = team_name
+            recruit.signed = True
+            recruit.signing_phase = "walkon"
+            recruit.signing_week = 0
+            recruit.is_walkon = True
+            assigned.append(recruit)
+            idx += 1
+        if assigned:
+            walkons_by_team[team_name] = assigned
+
+    return walkons_by_team
+
+
+# ──────────────────────────────────────────────
 # AI RECRUITING (for CPU-controlled teams)
 # ──────────────────────────────────────────────
 
@@ -1048,13 +1549,21 @@ def run_full_recruiting_cycle(
     coaching_prestige_bonus: Optional[Dict[str, int]] = None,
     team_infrastructure: Optional[Dict[str, Dict[str, int]]] = None,
     team_rosters: Optional[Dict[str, List[Dict]]] = None,
+    team_portal_losses: Optional[Dict[str, int]] = None,
+    team_portal_gains: Optional[Dict[str, int]] = None,
 ) -> Dict[str, object]:
     """
-    Run a complete recruiting cycle (for use by Dynasty.advance_season).
+    Run a complete recruiting cycle with phased signing.
+
+    Recruits sign in waves across early signing, regular signing day,
+    and post-bowl periods. Unsigned players become walk-ons at programs
+    with unresolved roster gaps from portal losses.
 
     Args:
         team_infrastructure: Dict of team_name -> {facilities, campus_life, ...}.
         team_rosters:        Dict of team_name -> list of player dicts for depth calc.
+        team_portal_losses:  Dict of team_name -> number of players lost to portal.
+        team_portal_gains:   Dict of team_name -> number of portal players gained.
 
     Returns:
         {
@@ -1062,6 +1571,9 @@ def run_full_recruiting_cycle(
             "signed": { team_name: [Recruit, ...] },
             "boards": { team_name: RecruitingBoard },
             "class_rankings": [(team_name, avg_stars, count), ...],
+            "signing_log": [...],
+            "phase_summary": { "early": {...}, "regular": {...}, "post_bowl": {...} },
+            "walkons": { team_name: [Recruit, ...] },
         }
     """
     if rng is None:
@@ -1091,7 +1603,8 @@ def run_full_recruiting_cycle(
             boards[team] = board
             all_nil[team] = nil
 
-    signed = simulate_recruit_decisions(
+    # Use phased signing instead of single-pass
+    phased_result = simulate_phased_signing(
         pool=pool,
         team_boards=boards,
         team_prestige=team_prestige,
@@ -1104,12 +1617,38 @@ def run_full_recruiting_cycle(
         team_rosters=team_rosters,
     )
 
-    # Class rankings
+    signed = phased_result["signed_by_team"]
+
+    # Assign walk-ons from unsigned pool
+    walkons: Dict[str, List[Recruit]] = {}
+    if phased_result["unsigned"] and team_portal_losses:
+        # Calculate current roster counts (existing + signed recruits)
+        roster_counts: Dict[str, int] = {}
+        for tn in team_names:
+            existing = len((team_rosters or {}).get(tn, []))
+            newly_signed = len(signed.get(tn, []))
+            roster_counts[tn] = existing + newly_signed
+
+        walkons = assign_walkon_players(
+            unsigned_pool=phased_result["unsigned"],
+            team_roster_counts=roster_counts,
+            team_portal_losses=team_portal_losses or {},
+            team_portal_gains=team_portal_gains or {},
+            rng=rng,
+        )
+        # Merge walk-ons into signed dict for roster building
+        for tn, wo_list in walkons.items():
+            if tn not in signed:
+                signed[tn] = []
+            signed[tn].extend(wo_list)
+
+    # Class rankings (exclude walk-ons from star averages)
     rankings: List[Tuple[str, float, int]] = []
     for team, recruits in signed.items():
-        if recruits:
-            avg = sum(r.stars for r in recruits) / len(recruits)
-            rankings.append((team, round(avg, 2), len(recruits)))
+        scholarship_recruits = [r for r in recruits if not r.is_walkon]
+        if scholarship_recruits:
+            avg = sum(r.stars for r in scholarship_recruits) / len(scholarship_recruits)
+            rankings.append((team, round(avg, 2), len(scholarship_recruits)))
     rankings.sort(key=lambda x: (-x[1], -x[2]))
 
     return {
@@ -1117,6 +1656,9 @@ def run_full_recruiting_cycle(
         "signed": signed,
         "boards": boards,
         "class_rankings": rankings,
+        "signing_log": phased_result["signing_log"],
+        "phase_summary": phased_result["phase_summary"],
+        "walkons": walkons,
     }
 
 

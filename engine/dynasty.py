@@ -34,6 +34,9 @@ from engine.recruiting import (
     run_full_recruiting_cycle,
     auto_recruit_team,
     simulate_recruit_decisions,
+    commissioner_force_sign,
+    _region_to_nationality,
+    _REGIONS,
 )
 from engine.transfer_portal import (
     TransferPortal,
@@ -340,13 +343,23 @@ class Dynasty:
                 return conf_name
         return ""
 
-    def _roster_maintenance(self, season: Season, rng: Optional[random.Random] = None):
-        """Remove graduated players and recruit new freshmen for all teams.
+    def _roster_maintenance(
+        self,
+        season: Season,
+        rng: Optional[random.Random] = None,
+        signed_recruits: Optional[Dict[str, list]] = None,
+    ):
+        """Remove graduated players and add signed recruits to rosters.
 
         Called after development (which advances class years) so that
-        players who just became 'Graduate' after their Senior year are removed,
-        and new Freshman players are recruited to fill the roster back to 36.
-        Uses ROSTER_TEMPLATE from game_engine for position distribution.
+        players who just became 'Graduate' after their Senior year are removed.
+
+        If signed_recruits is provided (from the recruiting cycle), those
+        recruits are converted to players and added to the roster. Any remaining
+        roster gaps (below target) are filled with generated freshmen as fallback.
+
+        Walk-on recruits (is_walkon=True) allow the roster to exceed the
+        normal 36-player target.
         """
         from engine.game_engine import Player
         from scripts.generate_names import generate_player_name, build_geo_pipeline
@@ -390,17 +403,58 @@ class Dynasty:
         except Exception:
             pass
 
+        signed = signed_recruits or {}
+
         for team_name, team in season.teams.items():
             graduated = [p for p in team.players if getattr(p, 'year', '') == 'Graduate']
             remaining = [p for p in team.players if getattr(p, 'year', '') != 'Graduate']
             team.players = remaining
 
-            slots_to_fill = max(0, ROSTER_TARGET - len(remaining))
+            used_numbers = {p.number for p in remaining}
+
+            # Add signed recruits (scholarship + walk-ons) from recruiting cycle
+            team_recruits = signed.get(team_name, [])
+            for recruit in team_recruits:
+                number = None
+                while number is None or number in used_numbers:
+                    number = rng.randint(2, 99)
+                used_numbers.add(number)
+
+                team.players.append(Player(
+                    number=number,
+                    name=recruit.full_name,
+                    position=recruit.position,
+                    speed=recruit.true_speed,
+                    stamina=recruit.true_stamina,
+                    kicking=recruit.true_kicking,
+                    lateral_skill=recruit.true_lateral_skill,
+                    tackling=recruit.true_tackling,
+                    agility=recruit.true_agility,
+                    power=recruit.true_power,
+                    awareness=recruit.true_awareness,
+                    hands=recruit.true_hands,
+                    kick_power=recruit.true_kick_power,
+                    kick_accuracy=recruit.true_kick_accuracy,
+                    archetype="none",  # assigned later
+                    player_id=recruit.recruit_id,
+                    nationality=_region_to_nationality(recruit.region),
+                    hometown_city=recruit.hometown.split(",")[0].strip(),
+                    hometown_country="USA" if recruit.region in _REGIONS else recruit.region.replace("_", " ").title(),
+                    high_school=recruit.high_school,
+                    height=recruit.height,
+                    weight=recruit.weight,
+                    year="Freshman",
+                    potential=recruit.true_potential,
+                    development=recruit.true_development,
+                ))
+
+            # Fill remaining gaps with generated freshmen (fallback for any shortfall)
+            slots_to_fill = max(0, ROSTER_TARGET - len(team.players))
             if slots_to_fill == 0:
                 continue
 
             current_positions = {}
-            for p in remaining:
+            for p in team.players:
                 current_positions[p.position] = current_positions.get(p.position, 0) + 1
 
             template_counts = {}
@@ -418,7 +472,6 @@ class Dynasty:
             while len(recruit_positions) < slots_to_fill:
                 recruit_positions.append(rng.choice([p for p, _ in ROSTER_TEMPLATE]))
 
-            used_numbers = {p.number for p in remaining}
             state_str = team_state_cache.get(team_name, "")
             pipeline = build_geo_pipeline(state_str) if state_str else None
             philosophy = getattr(team, 'philosophy', 'hybrid') if hasattr(team, 'philosophy') else 'hybrid'
@@ -955,8 +1008,10 @@ class Dynasty:
         # Record graduates in career tracker for alumni/hall-of-fame pages
         self._record_graduates_in_tracker(season, year)
 
-        # Roster maintenance: graduate seniors, recruit freshmen
-        self._roster_maintenance(season, rng=rng or random.Random(year + 99))
+        # Roster maintenance: graduate seniors, add signed recruits + fill gaps
+        signed_recruits = getattr(self, '_pending_signed_recruits', None)
+        self._roster_maintenance(season, rng=rng or random.Random(year + 99), signed_recruits=signed_recruits)
+        self._pending_signed_recruits = None  # consumed
 
         self._update_rivalry_ledger(season)
 
@@ -1474,6 +1529,16 @@ class Dynasty:
                     {"position": getattr(c, "position", "")} for c in player_cards[tn]
                 ]
 
+        # Compute portal losses/gains per team for walk-on assignment
+        _portal_losses: Dict[str, int] = {}
+        _portal_gains: Dict[str, int] = {}
+        for tn in self.team_histories:
+            _portal_losses[tn] = sum(
+                1 for e in portal.entries
+                if e.origin_team == tn and e.committed_to and e.committed_to != tn
+            )
+            _portal_gains[tn] = len(portal_result.get(tn, []))
+
         recruit_result = run_full_recruiting_cycle(
             year=year,
             team_names=list(self.team_histories.keys()),
@@ -1490,12 +1555,20 @@ class Dynasty:
             coaching_prestige_bonus=coaching_prestige_bonus,
             team_infrastructure=_team_infra if _team_infra else None,
             team_rosters=_team_rosters_for_recruit if _team_rosters_for_recruit else None,
+            team_portal_losses=_portal_losses,
+            team_portal_gains=_portal_gains,
         )
+
+        # Store signed recruits for roster maintenance in advance_season()
+        self._pending_signed_recruits = recruit_result["signed"]
 
         self.recruiting_history[year] = {
             "class_rankings": recruit_result["class_rankings"],
             "signed_count": {t: len(r) for t, r in recruit_result["signed"].items()},
             "pool_size": pool_size,
+            "signing_log": recruit_result.get("signing_log", []),
+            "phase_summary": recruit_result.get("phase_summary", {}),
+            "walkons": {t: len(w) for t, w in recruit_result.get("walkons", {}).items()},
         }
         result["recruiting"] = self.recruiting_history[year]
 
