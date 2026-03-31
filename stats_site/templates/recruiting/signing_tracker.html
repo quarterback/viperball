@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Signing Day Tracker — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/recruiting/">Recruiting</a><span class="sep">/</span>Signing Day Tracker
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>SIGNING DAY TRACKER</h1>
+  <div class="subtitle">Early Signing &middot; Regular Signing Day &middot; Post-Bowl Commitments</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/">Overview</a>
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
+  <a href="/stats/recruiting/signing-tracker" class="active">Signing Tracker</a>
+</div>
+
+{# ── Phase Summary Cards ── #}
+{% if phase_summary %}
+<h2>Signing Phase Summary</h2>
+<div class="grid-3" style="margin-bottom:16px;">
+
+  {# Early Signing #}
+  <div class="metric-card">
+    <div class="metric-label">Early Signing Period</div>
+    <div class="metric-value">{{ phase_summary.early.count }} signed</div>
+    <div class="metric-detail">
+      {% if phase_summary.early.count > 0 %}
+      {% set bs = phase_summary.early.by_stars %}
+      <span class="stat-elite">&#9733;&#9733;&#9733;&#9733;&#9733; {{ bs.get(5, 0) }}</span> &middot;
+      <span class="stat-good">&#9733;&#9733;&#9733;&#9733; {{ bs.get(4, 0) }}</span> &middot;
+      &#9733;&#9733;&#9733; {{ bs.get(3, 0) }} &middot;
+      &#9733;&#9733; {{ bs.get(2, 0) }} &middot;
+      &#9733; {{ bs.get(1, 0) }}
+      {% else %}
+      No signings recorded
+      {% endif %}
+    </div>
+  </div>
+
+  {# Regular Signing Day #}
+  <div class="metric-card">
+    <div class="metric-label">Regular Signing Day</div>
+    <div class="metric-value">{{ phase_summary.regular.count }} signed</div>
+    <div class="metric-detail">
+      {% if phase_summary.regular.count > 0 %}
+      {% set bs = phase_summary.regular.by_stars %}
+      <span class="stat-elite">&#9733;&#9733;&#9733;&#9733;&#9733; {{ bs.get(5, 0) }}</span> &middot;
+      <span class="stat-good">&#9733;&#9733;&#9733;&#9733; {{ bs.get(4, 0) }}</span> &middot;
+      &#9733;&#9733;&#9733; {{ bs.get(3, 0) }} &middot;
+      &#9733;&#9733; {{ bs.get(2, 0) }} &middot;
+      &#9733; {{ bs.get(1, 0) }}
+      {% else %}
+      No signings recorded
+      {% endif %}
+    </div>
+  </div>
+
+  {# Post-Bowl #}
+  <div class="metric-card">
+    <div class="metric-label">Post-Bowl Period</div>
+    <div class="metric-value">{{ phase_summary.post_bowl.count }} signed</div>
+    <div class="metric-detail">
+      {% if phase_summary.post_bowl.count > 0 %}
+      {% set bs = phase_summary.post_bowl.by_stars %}
+      <span class="stat-elite">&#9733;&#9733;&#9733;&#9733;&#9733; {{ bs.get(5, 0) }}</span> &middot;
+      <span class="stat-good">&#9733;&#9733;&#9733;&#9733; {{ bs.get(4, 0) }}</span> &middot;
+      &#9733;&#9733;&#9733; {{ bs.get(3, 0) }} &middot;
+      &#9733;&#9733; {{ bs.get(2, 0) }} &middot;
+      &#9733; {{ bs.get(1, 0) }}
+      {% else %}
+      No signings recorded
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+{# ── Signing Log ── #}
+<h2>Signing Log</h2>
+
+{# Phase filter tabs #}
+<div class="tabs" style="margin-top:8px;">
+  <a href="/stats/recruiting/signing-tracker?phase=all" {% if active_phase == "all" %}class="active"{% endif %}>All</a>
+  <a href="/stats/recruiting/signing-tracker?phase=early" {% if active_phase == "early" %}class="active"{% endif %}>Early</a>
+  <a href="/stats/recruiting/signing-tracker?phase=regular" {% if active_phase == "regular" %}class="active"{% endif %}>Regular</a>
+  <a href="/stats/recruiting/signing-tracker?phase=post_bowl" {% if active_phase == "post_bowl" %}class="active"{% endif %}>Post-Bowl</a>
+</div>
+
+{% if signing_log %}
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Phase</th>
+      <th class="num">Wk</th>
+      <th>Recruit</th>
+      <th>Pos</th>
+      <th class="num">Stars</th>
+      <th>Team</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for entry in signing_log %}
+  {% if active_phase == "all" or entry.phase == active_phase %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>
+      {% if entry.phase == "early" %}
+        <span class="tag" style="border-color:var(--blue);color:var(--blue)">EARLY</span>
+      {% elif entry.phase == "regular" %}
+        <span class="tag" style="border-color:var(--cyan);color:var(--cyan)">REGULAR</span>
+      {% elif entry.phase == "post_bowl" %}
+        <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">POST-BOWL</span>
+      {% else %}
+        <span class="tag">{{ entry.phase|upper }}</span>
+      {% endif %}
+    </td>
+    <td class="num">{{ entry.week }}</td>
+    <td>
+      {% if entry.recruit_id %}
+        <a href="/stats/recruiting/prospect/{{ entry.recruit_id }}">{{ entry.recruit }}</a>
+      {% else %}
+        {{ entry.recruit }}
+      {% endif %}
+    </td>
+    <td><span class="tag tag-pos">{{ entry.position }}</span></td>
+    <td class="num {% if entry.stars >= 5 %}stat-elite{% elif entry.stars >= 4 %}stat-good{% elif entry.stars <= 1 %}stat-bad{% endif %}">
+      {{ ("&#9733;" * entry.stars ~ "&#9734;" * (5 - entry.stars))|safe }}
+    </td>
+    <td>{{ entry.team }}</td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice">No signings recorded yet. Signing Day activity will appear here once the period opens.</div>
+{% endif %}
+
+{# ── Class Rankings ── #}
+{% if class_rankings %}
+<h2>Class Rankings</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th class="num">Avg Stars</th>
+      <th class="num">Signed</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for team_name, avg_stars, count in class_rankings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ team_name }}</td>
+    <td class="num {% if avg_stars >= 4.5 %}stat-elite{% elif avg_stars >= 3.5 %}stat-good{% elif avg_stars < 2.0 %}stat-bad{% endif %}">
+      {{ "%.2f"|format(avg_stars) }}
+    </td>
+    <td class="num">{{ count }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Walk-Ons ── #}
+{% if walkons %}
+<h2>Walk-On Additions</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th class="num">Walk-Ons</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for team_name, wo_count in walkons.items() %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ team_name }}</td>
+    <td class="num">{{ wo_count }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Legend ── #}
+<div style="margin-top:16px;color:var(--fg-dim);font-size:11px;">
+  <p><span style="color:var(--yellow)">&#9733;&#9733;&#9733;&#9733;&#9733;</span> = 5-star (elite) &middot;
+     <span style="color:var(--green)">&#9733;&#9733;&#9733;&#9733;</span> = 4-star (highly rated) &middot;
+     &#9733;&#9733;&#9733; = 3-star (solid contributor)</p>
+  <p>
+    <span style="color:var(--blue)">EARLY</span> = Early Signing Period (Dec) &middot;
+    <span style="color:var(--cyan)">REGULAR</span> = National Signing Day (Feb) &middot;
+    <span style="color:var(--yellow)">POST-BOWL</span> = Post-bowl additions
+  </p>
+</div>
+{% endblock %}

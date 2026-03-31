@@ -201,10 +201,10 @@ APP_CSS = """
 
     /* Muted / secondary text (were medium-dark, now medium-light) */
     .text-slate-500, .text-gray-500, .text-zinc-500 {
-        color: #94a3b8 !important;
+        color: #b0bec5 !important;
     }
     .text-slate-400, .text-gray-400, .text-zinc-400 {
-        color: #94a3b8 !important;
+        color: #b0bec5 !important;
     }
 
     /* Indigo accent headings — make them brighter */
@@ -260,6 +260,45 @@ APP_CSS = """
     .q-slider__track-container {
         background: var(--vb-border) !important;
     }
+    .q-slider__thumb { color: var(--vb-accent) !important; }
+    .q-slider__selection { background: var(--vb-accent) !important; }
+    .q-slider__text { color: var(--vb-text) !important; }
+
+    /* Radio button / checkbox / toggle overrides */
+    .q-radio__label, .q-checkbox__label, .q-toggle__label {
+        color: var(--vb-text) !important;
+    }
+    .q-radio__inner, .q-checkbox__inner {
+        color: var(--vb-text-muted) !important;
+    }
+    .q-radio__inner--truthy, .q-checkbox__inner--truthy {
+        color: var(--vb-accent) !important;
+    }
+    .q-option-group .q-radio, .q-option-group .q-checkbox {
+        color: var(--vb-text) !important;
+    }
+
+    /* Select / dropdown overrides */
+    .q-select .q-field__native, .q-select .q-field__input {
+        color: var(--vb-text) !important;
+    }
+    .q-select .q-field__native span {
+        color: var(--vb-text) !important;
+    }
+    .q-select__dropdown-icon {
+        color: var(--vb-text-muted) !important;
+    }
+    .q-virtual-scroll__content .q-item__label {
+        color: var(--vb-text) !important;
+    }
+
+    /* Input text should be visible */
+    .q-field__native, .q-field__prefix, .q-field__suffix, .q-field__input {
+        color: var(--vb-text) !important;
+    }
+
+    /* Chip overrides (used in multi-selects) */
+    .q-chip { background: var(--vb-surface-2) !important; color: var(--vb-text) !important; }
 
     /* Dialog overrides */
     .q-dialog .q-card {
