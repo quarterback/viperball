@@ -955,6 +955,41 @@ tbody tr.kb-highlight { background: var(--row-hover); outline: 1px solid var(--a
 .footer .kb-hint { cursor: pointer; color: var(--fg-dim); }
 .footer .kb-hint:hover { color: var(--accent); }
 
+/* Form elements — ensure visibility across all themes */
+select, input[type="text"], input[type="search"], textarea {
+  background: var(--bg-alt);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 2px;
+}
+select:focus, input[type="text"]:focus, input[type="search"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  color: var(--fg-bright);
+}
+select option {
+  background: var(--bg);
+  color: var(--fg);
+}
+button, input[type="submit"] {
+  background: var(--bg-alt);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+button:hover, input[type="submit"]:hover {
+  color: var(--fg-bright);
+  border-color: var(--accent);
+}
+
 /* Copy Table button */
 .copy-table-btn {
   background: var(--bg-alt);

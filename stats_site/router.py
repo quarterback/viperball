@@ -6015,6 +6015,7 @@ def recruiting_index(request: Request):
         raw_top = pipeline.get_top_prospects(n=25)
         for p in raw_top:
             top_prospects.append({
+                "recruit_id": p.recruit.recruit_id,
                 "name": p.recruit.full_name,
                 "position": p.recruit.position,
                 "scouted_stars": p.scouted_stars,
@@ -6236,13 +6237,41 @@ def _get_dynasty_recruiting_data():
 
 
 def _get_recruit_pool():
-    """Get the last recruit pool from any active dynasty session."""
+    """Get the last recruit pool from any active dynasty session.
+
+    Falls back to HS pipeline 12th graders if no signing pool exists yet.
+    """
     try:
         from api.main import sessions
         for sid, sess in sessions.items():
             dynasty = sess.get("dynasty")
-            if dynasty and hasattr(dynasty, "_last_recruit_pool") and dynasty._last_recruit_pool:
+            if not dynasty:
+                continue
+            # Prefer the actual signing pool (set during run_offseason)
+            if hasattr(dynasty, "_last_recruit_pool") and dynasty._last_recruit_pool:
                 return dynasty._last_recruit_pool, dynasty, sid
+            # Fall back to HS pipeline seniors
+            if hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
+                pipeline = dynasty._hs_pipeline
+                seniors = []
+                if hasattr(pipeline, "classes") and "12th" in pipeline.classes:
+                    seniors = [p.recruit for p in pipeline.classes["12th"]]
+                elif hasattr(pipeline, "get_class"):
+                    try:
+                        seniors = [p.recruit for p in pipeline.get_class("12th")]
+                    except Exception:
+                        pass
+                if seniors:
+                    return seniors, dynasty, sid
+            # Fall back to HS league graduating class
+            if hasattr(dynasty, "_hs_league") and dynasty._hs_league:
+                try:
+                    from engine.hs_league import graduating_class_to_recruits
+                    recruits = graduating_class_to_recruits(dynasty._hs_league)
+                    if recruits:
+                        return recruits, dynasty, sid
+                except Exception:
+                    pass
         return None, None, None
     except Exception:
         return None, None, None

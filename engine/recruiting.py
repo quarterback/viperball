@@ -2039,6 +2039,7 @@ class HSRecruitingPipeline:
 
         for p in prospects:
             entry: dict = {
+                "recruit_id": p.recruit.recruit_id,
                 "rank": p.national_rank,
                 "name": p.recruit.full_name,
                 "position": p.recruit.position,
