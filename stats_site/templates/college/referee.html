@@ -8,12 +8,20 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ ref.full_name }}</h1>
-  <div class="subtitle">
-    CVL Official &middot; {{ ref.years_experience }} year{{ 's' if ref.years_experience != 1 }} experience
-    &middot; {{ ref.career_games }} career game{{ 's' if ref.career_games != 1 }}
-    {% if ref.career_playoff_games %}&middot; {{ ref.career_playoff_games }} playoff game{{ 's' if ref.career_playoff_games != 1 }}{% endif %}
+<div class="page-header" style="display:flex; align-items:flex-start; gap:16px;">
+  {% if face_src %}
+  <div class="player-card-frame">
+    <img src="{{ face_src }}" alt="{{ ref.full_name }}" class="player-card-face">
+  </div>
+  {% endif %}
+  <div style="flex:1; min-width:0;">
+    <h1 style="margin:0">{{ ref.full_name }}</h1>
+    <div class="subtitle">
+      <span class="tag">OFFICIAL</span>
+      CVL Official &middot; {{ ref.years_experience }} year{{ 's' if ref.years_experience != 1 }} experience
+      &middot; {{ ref.career_games }} career game{{ 's' if ref.career_games != 1 }}
+      {% if ref.career_playoff_games %}&middot; {{ ref.career_playoff_games }} playoff game{{ 's' if ref.career_playoff_games != 1 }}{% endif %}
+    </div>
   </div>
 </div>
 

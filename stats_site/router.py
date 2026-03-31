@@ -131,6 +131,12 @@ def _face_url_for(player_id: str) -> str | None:
     from engine.face_generator import get_face_url
     return get_face_url(player_id, pool_size=n, faces_dir=_FACES_DIR)
 
+
+def _ref_face_url_for(referee_id: str) -> str | None:
+    """Return face URL for a referee — uses ref pool if available, falls back to player pool."""
+    from engine.face_generator import get_ref_face_url
+    return get_ref_face_url(referee_id)
+
 # ── Pixel-art stadium pool ──
 _STADIUMS_DIR = os.path.join(os.path.dirname(__file__), "static", "stadiums")
 _stadium_pool_size: int | None = None
@@ -2321,6 +2327,7 @@ def college_referees(request: Request, session_id: str, sort: str = "games"):
             "blown_calls": card.career_blown_calls,
             "blown_calls_per_game": card.career_blown_calls_per_game,
             "playoff_games": card.career_playoff_games,
+            "face_src": _ref_face_url_for(card.referee_id),
         })
 
     sort_map = {
@@ -2357,10 +2364,12 @@ def college_referee_profile(request: Request, session_id: str, referee_name: str
         raise HTTPException(404, f"Referee '{referee_name}' not found")
 
     ref_data = card.to_dict()
+    face_src = _ref_face_url_for(card.referee_id)
 
     return templates.TemplateResponse("college/referee.html", _ctx(
         request, section="college", session_id=session_id,
         ref=ref_data,
+        face_src=face_src,
     ))
 
 

@@ -1866,6 +1866,25 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     session["season"] = None
     session["program_archetype"] = req.program_archetype
 
+    # Eagerly initialise the HS league and recruiting pipeline so the
+    # Recruiting Hub on the stats site shows data before the first offseason.
+    try:
+        import random as _rnd
+        from engine.hs_league import create_hs_league, simulate_hs_season
+        from engine.recruiting import HSRecruitingPipeline
+
+        _year = req.starting_year
+        _rng = _rnd.Random(_year)
+        dynasty._hs_league = create_hs_league(_year, rng=_rng)
+        dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
+
+        dynasty._hs_pipeline = HSRecruitingPipeline()
+        dynasty._hs_pipeline.generate_initial_pipeline(
+            base_seed=_year, size_per_class=300,
+        )
+    except Exception:
+        pass  # Non-critical — will be created on first offseason advance
+
     # Persist dynasty to database
     db_save_dynasty(dynasty, save_key=session_id)
 
@@ -2271,6 +2290,26 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
     session["season"] = None
     session["injury_tracker"] = None
     session["human_teams"] = [dynasty.coach.team_name]
+
+    # Restore HS league + pipeline if not already present from the save
+    if dynasty._hs_pipeline is None:
+        try:
+            import random as _rnd
+            from engine.hs_league import create_hs_league, simulate_hs_season
+            from engine.recruiting import HSRecruitingPipeline
+
+            _year = dynasty.current_year
+            _rng = _rnd.Random(_year)
+            dynasty._hs_league = create_hs_league(_year, rng=_rng)
+            dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
+
+            dynasty._hs_pipeline = HSRecruitingPipeline()
+            dynasty._hs_pipeline.generate_initial_pipeline(
+                base_seed=_year, size_per_class=300,
+            )
+        except Exception:
+            pass
+
     return _serialize_dynasty_status(session)
 
 

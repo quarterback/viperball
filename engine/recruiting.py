@@ -166,6 +166,7 @@ class Recruit:
     prefers_coaching: float = 0.15   # 0-1: how much coaching quality matters
     prefers_facilities: float = 0.15 # 0-1: how much facilities/campus/location matters
     prefers_playing_time: float = 0.1  # 0-1: how much starting opportunity matters
+    prefers_program_success: float = 0.3  # 0-1: how much recent W/L success matters
 
     @property
     def full_name(self) -> str:
@@ -263,6 +264,8 @@ class Recruit:
             potential=self.true_potential,
             development=self.true_development,
             current_team=team_name,
+            original_stars=self.stars,
+            loyalty=self.prefers_geography * 0.5 + (1.0 - self.prefers_prestige) * 0.3 + 0.1,
         )
 
     def to_dict(self) -> dict:
@@ -346,12 +349,14 @@ _STAT_RANGES: Dict[int, Tuple[int, int]] = {
 }
 
 # Development trait probabilities by star tier
+# "bust" = player regresses / never reaches potential (~25% of 4-5 stars combined)
+# Hidden gems come from 1-3 star "quick"/"late_bloomer" traits
 _DEV_BY_STARS: Dict[int, List[Tuple[str, float]]] = {
-    5: [("quick", 0.40), ("normal", 0.35), ("late_bloomer", 0.15), ("slow", 0.10)],
-    4: [("quick", 0.25), ("normal", 0.45), ("late_bloomer", 0.15), ("slow", 0.15)],
-    3: [("normal", 0.55), ("quick", 0.15), ("late_bloomer", 0.15), ("slow", 0.15)],
-    2: [("normal", 0.50), ("slow", 0.25), ("late_bloomer", 0.15), ("quick", 0.10)],
-    1: [("slow", 0.35), ("normal", 0.40), ("late_bloomer", 0.20), ("quick", 0.05)],
+    5: [("quick", 0.30), ("normal", 0.30), ("late_bloomer", 0.10), ("slow", 0.10), ("bust", 0.20)],
+    4: [("quick", 0.20), ("normal", 0.30), ("late_bloomer", 0.15), ("slow", 0.10), ("bust", 0.25)],
+    3: [("normal", 0.40), ("quick", 0.15), ("late_bloomer", 0.20), ("slow", 0.15), ("bust", 0.10)],
+    2: [("normal", 0.35), ("slow", 0.20), ("late_bloomer", 0.25), ("quick", 0.15), ("bust", 0.05)],
+    1: [("slow", 0.25), ("normal", 0.30), ("late_bloomer", 0.30), ("quick", 0.10), ("bust", 0.05)],
 }
 
 # Simple first/last name pools for recruit generation (no external file dependency)
@@ -559,7 +564,8 @@ def generate_single_recruit(
     # Decision preferences (randomised personality)
     pres = rng.uniform(0.2, 0.6)
     geo = rng.uniform(0.1, 0.4)
-    nil_pref = rng.uniform(0.05, 0.3)
+    nil_pref = rng.uniform(0.01, 0.08)
+    prog_success = rng.uniform(0.15, 0.45)
     fac = rng.uniform(0.05, 0.25)
     # Lower-star recruits care more about playing time opportunity
     pt_base = 0.05 if stars >= 4 else (0.15 if stars >= 3 else 0.25)
@@ -594,6 +600,7 @@ def generate_single_recruit(
         prefers_nil=nil_pref,
         prefers_facilities=fac,
         prefers_playing_time=pt,
+        prefers_program_success=prog_success,
     )
 
 
@@ -792,6 +799,7 @@ def _compute_team_score(
     coaching_score: float = 0.0,
     infrastructure: Optional[Dict[str, int]] = None,
     position_depth: int = 0,
+    program_success: int = 0,
 ) -> float:
     """
     Compute how attractive a team is to a recruit.
@@ -849,6 +857,9 @@ def _compute_team_score(
     else:
         playing_time_score = max(10.0, 100.0 - position_depth * 18.0)
 
+    # Program success component (0-100): recent W/L success, distinct from brand prestige
+    program_success_score = min(100, team_prestige * 0.6 + rng.uniform(10, 30))
+
     # Random factor (personality noise)
     noise = rng.uniform(-8, 8)
 
@@ -859,6 +870,7 @@ def _compute_team_score(
         + recruit.prefers_coaching * coach_score
         + recruit.prefers_facilities * infra_score
         + recruit.prefers_playing_time * playing_time_score
+        + recruit.prefers_program_success * program_success_score
         + noise
     )
     return max(0.0, min(100.0, score))
@@ -957,6 +969,7 @@ def simulate_recruit_decisions(
                 coaching_score=cs,
                 infrastructure=infra.get(team_name),
                 position_depth=pos_depth,
+                program_success=team_prestige.get(team_name, 50),
             )
             if score > best_score:
                 best_score = score
@@ -1575,6 +1588,7 @@ def run_full_recruiting_cycle(
     team_rosters: Optional[Dict[str, List[Dict]]] = None,
     team_portal_losses: Optional[Dict[str, int]] = None,
     team_portal_gains: Optional[Dict[str, int]] = None,
+    hs_pool: Optional[List[Recruit]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle with phased signing.
@@ -1603,7 +1617,7 @@ def run_full_recruiting_cycle(
     if rng is None:
         rng = random.Random(year)
 
-    pool = generate_recruit_class(year=year, size=pool_size, rng=rng)
+    pool = hs_pool if hs_pool else generate_recruit_class(year=year, size=pool_size, rng=rng)
 
     boards: Dict[str, RecruitingBoard] = {}
     all_nil: Dict[str, Dict[str, float]] = {}

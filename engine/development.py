@@ -125,6 +125,23 @@ _GAINS_BY_PROFILE = {
         "lateral_skill":(0, 1),
         "tackling":     (0, 1),
     },
+    # Bust profile: attributes stagnate or REGRESS. These players never
+    # reach their recruiting hype.  ~15% of 5-stars, ~20% of 4-stars,
+    # ~10% of 3-stars.  Great coaching can slow the decline but can't
+    # fully prevent it.
+    "bust": {
+        "speed":        (-2, 0),
+        "stamina":      (-1, 1),
+        "agility":      (-2, 0),
+        "power":        (-1, 1),
+        "awareness":    (-1, 1),
+        "hands":        (-2, 0),
+        "kicking":      (-1, 0),
+        "kick_power":   (-1, 0),
+        "kick_accuracy":(-1, 0),
+        "lateral_skill":(-2, 0),
+        "tackling":     (-1, 1),
+    },
     "late_bloomer": {
         # Early years: minimal gains (Freshman, Sophomore)
         "early": {
@@ -199,10 +216,31 @@ def apply_offseason_development(
             gains = _GAINS_BY_PROFILE["late_bloomer"]["early"]
         else:
             gains = _GAINS_BY_PROFILE["late_bloomer"]["late"]
+    elif dev == "bust":
+        gains = _GAINS_BY_PROFILE["bust"]
     else:
         gains = _GAINS_BY_PROFILE.get(dev, _GAINS_BY_PROFILE["normal"])
 
+    # Potential scales the ceiling, but elite coaching can push past it.
+    # Base: potential 1 → 0.6x, potential 5 → 1.0x
+    # Coaching boost adds up to +0.4x on top, meaning a great coach can
+    # take a potential-2 player (0.7x) up to ~1.1x — surpassing their
+    # natural ceiling.  This is how a 2-star at a well-coached program
+    # can develop into a 4-star caliber player.
     potential_scale = 0.6 + (potential - 1) * 0.1
+    coaching_ceiling_bonus = min(0.4, dev_boost / 10.0)
+    potential_scale += coaching_ceiling_bonus
+
+    # For busts, coaching can mitigate but not fully prevent decline.
+    # Great coaching (dev_boost >= 4) shifts bust gains toward 0 instead
+    # of negative — the player stagnates rather than regresses.
+    if dev == "bust" and dev_boost >= 4:
+        bust_mitigation = min(1.0, dev_boost / 8.0)  # 0.5 to 1.0
+        gains = {
+            attr: (int(lo * (1.0 - bust_mitigation)), max(hi, 1))
+            for attr, (lo, hi) in gains.items()
+        }
+
     boost_scale = 1.0 + (dev_boost / 16.0)
 
     total_gain = 0
@@ -242,7 +280,13 @@ def apply_offseason_development(
                 attr_changes[attr] = attr_changes.get(attr, 0) + actual
 
     # Classify event
-    if dev == "late_bloomer" and year_idx >= 2 and total_gain >= 12:
+    if dev == "bust" and total_gain <= -5:
+        event_type = "decline"
+        event_desc = f"Failed to develop — bust trajectory ({total_gain:+d} total attributes)"
+    elif dev == "bust" and total_gain >= 0:
+        event_type = "breakout"
+        event_desc = f"Coaching rescued a bust prospect — stagnation avoided (+{total_gain})"
+    elif dev == "late_bloomer" and year_idx >= 2 and total_gain >= 12:
         event_type = "breakout"
         event_desc = f"Late-bloomer breakout (+{total_gain} total attributes)"
     elif dev == "quick" and year_idx <= 1 and total_gain >= 15:
