@@ -1561,6 +1561,8 @@ class Dynasty:
 
         # Store signed recruits for roster maintenance in advance_season()
         self._pending_signed_recruits = recruit_result["signed"]
+        # Store full pool for stats site / commissioner mode access
+        self._last_recruit_pool = recruit_result.get("pool", [])
 
         self.recruiting_history[year] = {
             "class_rankings": recruit_result["class_rankings"],

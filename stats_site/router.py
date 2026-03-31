@@ -6206,3 +6206,213 @@ def recruiting_pro_pipeline(request: Request):
         intake_classes=intake_classes,
         graduates=graduates,
     ))
+
+
+# ── SIGNING TRACKER / RECRUIT PROFILES / COMMISSIONER ──────────────────
+
+
+def _get_dynasty_recruiting_data():
+    """Get signing log, phase summary, and recruit pool from active dynasty."""
+    try:
+        from api.main import sessions
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            if dynasty and hasattr(dynasty, "recruiting_history") and dynasty.recruiting_history:
+                latest_year = max(dynasty.recruiting_history.keys())
+                data = dynasty.recruiting_history[latest_year]
+                return data, dynasty, sid
+        return None, None, None
+    except Exception:
+        return None, None, None
+
+
+def _get_recruit_pool():
+    """Get the last recruit pool from any active dynasty session."""
+    try:
+        from api.main import sessions
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            if dynasty and hasattr(dynasty, "_last_recruit_pool") and dynasty._last_recruit_pool:
+                return dynasty._last_recruit_pool, dynasty, sid
+        return None, None, None
+    except Exception:
+        return None, None, None
+
+
+@router.get("/recruiting/signing-tracker", response_class=HTMLResponse)
+def recruiting_signing_tracker(request: Request):
+    """Signing Day Tracker: phased signing log, class rankings, walk-ons."""
+    data, dynasty, sid = _get_dynasty_recruiting_data()
+
+    phase_summary = {}
+    signing_log = []
+    class_rankings = []
+    walkons = {}
+    active_phase = request.query_params.get("phase", "all")
+
+    if data:
+        phase_summary = data.get("phase_summary", {})
+        signing_log = data.get("signing_log", [])
+        class_rankings = data.get("class_rankings", [])
+        walkons = data.get("walkons", {})
+
+        # Filter signing log by phase if needed
+        if active_phase and active_phase != "all":
+            signing_log = [e for e in signing_log if e.get("phase") == active_phase]
+
+    return templates.TemplateResponse("recruiting/signing_tracker.html", _ctx(
+        request,
+        section="recruiting",
+        phase_summary=phase_summary,
+        signing_log=signing_log,
+        class_rankings=class_rankings,
+        walkons=walkons,
+        active_phase=active_phase,
+    ))
+
+
+@router.get("/recruiting/recruit/{recruit_id}", response_class=HTMLResponse)
+def recruiting_recruit_profile(request: Request, recruit_id: str):
+    """Individual recruit profile with shortlists, crystal ball, timeline."""
+    pool, dynasty, sid = _get_recruit_pool()
+
+    recruit_data = None
+    if pool:
+        for r in pool:
+            if r.recruit_id == recruit_id:
+                recruit_data = r.to_dict()
+                recruit_data["full_name"] = r.full_name
+                recruit_data["true_overall"] = r.true_overall
+                break
+
+    if not recruit_data:
+        # Try from signing log in recruiting history
+        data, dynasty, sid = _get_dynasty_recruiting_data()
+        if data:
+            # Build a minimal recruit card from signing log entry
+            for entry in data.get("signing_log", []):
+                if entry.get("recruit_id") == recruit_id:
+                    recruit_data = {
+                        "recruit_id": recruit_id,
+                        "full_name": entry.get("recruit", "Unknown"),
+                        "first_name": entry.get("recruit", "Unknown").split()[0],
+                        "last_name": " ".join(entry.get("recruit", "Unknown").split()[1:]),
+                        "position": entry.get("position", ""),
+                        "stars": entry.get("stars", 0),
+                        "status": "signed",
+                        "committed_to": entry.get("team", ""),
+                        "signing_phase": entry.get("phase", ""),
+                        "signing_week": entry.get("week", 0),
+                        "top_schools": [],
+                        "finalist_schools": [],
+                        "school_interest": {},
+                        "crystal_ball": {},
+                        "timeline": [{"event": f"Signed with {entry.get('team', '')}", "phase": entry.get("phase", ""), "week": entry.get("week", 0)}],
+                        "decision_speed": "normal",
+                        "decision_date": None,
+                        "offers": [entry.get("team", "")],
+                        "scout_level": "none",
+                        "hometown": "",
+                        "high_school": "",
+                        "height": "",
+                        "weight": 0,
+                        "region": "",
+                    }
+                    break
+
+    if not recruit_data:
+        recruit_data = {"full_name": "Recruit Not Found", "status": "unknown", "stars": 0,
+                        "position": "", "top_schools": [], "finalist_schools": [],
+                        "school_interest": {}, "crystal_ball": {}, "timeline": [],
+                        "offers": [], "scout_level": "none", "committed_to": None,
+                        "decision_speed": "", "decision_date": None,
+                        "signing_phase": None, "signing_week": 0,
+                        "hometown": "", "high_school": "", "height": "", "weight": 0, "region": ""}
+
+    return templates.TemplateResponse("recruiting/recruit_profile.html", _ctx(
+        request,
+        section="recruiting",
+        recruit=recruit_data,
+    ))
+
+
+@router.get("/recruiting/commissioner", response_class=HTMLResponse)
+def recruiting_commissioner(request: Request):
+    """Commissioner mode: view all recruits and force-sign them."""
+    pool, dynasty, sid = _get_recruit_pool()
+    data, dynasty2, _ = _get_dynasty_recruiting_data()
+
+    recruits = []
+    teams = []
+
+    if pool:
+        for r in pool:
+            recruits.append({
+                "recruit_id": r.recruit_id,
+                "full_name": r.full_name,
+                "first_name": r.first_name,
+                "last_name": r.last_name,
+                "position": r.position,
+                "stars": r.stars,
+                "status": r.status,
+                "committed_to": r.committed_to or "",
+                "signed": r.signed,
+                "hometown": r.hometown,
+            })
+
+    dynasty_obj = dynasty or dynasty2
+    if dynasty_obj and hasattr(dynasty_obj, "team_histories"):
+        teams = sorted(dynasty_obj.team_histories.keys())
+
+    message = request.query_params.get("msg")
+
+    return templates.TemplateResponse("recruiting/commissioner.html", _ctx(
+        request,
+        section="recruiting",
+        recruits=recruits,
+        teams=teams,
+        message=message,
+    ))
+
+
+@router.post("/recruiting/commissioner/force-sign")
+async def recruiting_commissioner_force_sign(request: Request):
+    """Force-sign a recruit to a team (commissioner override)."""
+    from starlette.responses import RedirectResponse
+    from engine.recruiting import commissioner_force_sign
+
+    form = await request.form()
+    recruit_id = form.get("recruit_id", "")
+    team_name = form.get("team_name", "")
+
+    if not recruit_id or not team_name:
+        return RedirectResponse(
+            url="/stats/recruiting/commissioner?msg=Missing+recruit+or+team",
+            status_code=303,
+        )
+
+    pool, dynasty, sid = _get_recruit_pool()
+    if not pool:
+        return RedirectResponse(
+            url="/stats/recruiting/commissioner?msg=No+active+recruit+pool",
+            status_code=303,
+        )
+
+    target = None
+    for r in pool:
+        if r.recruit_id == recruit_id:
+            target = r
+            break
+
+    if not target:
+        return RedirectResponse(
+            url="/stats/recruiting/commissioner?msg=Recruit+not+found",
+            status_code=303,
+        )
+
+    commissioner_force_sign(target, team_name)
+    msg = f"Force-signed+{target.full_name}+to+{team_name}"
+    return RedirectResponse(
+        url=f"/stats/recruiting/commissioner?msg={msg}",
+        status_code=303,
+    )

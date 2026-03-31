@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Commissioner Mode — Recruiting — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/recruiting/">Recruiting</a><span class="sep">/</span>Commissioner Mode
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>RECRUITING HUB</h1>
+  <div class="subtitle">High School Pipeline &middot; CVL Draft Classes &middot; WVL Pro Pipeline</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/recruiting/">Overview</a>
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/draft-classes">Draft Classes</a>
+  <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
+  <a href="/stats/recruiting/commissioner" class="active" style="border-bottom-color: #cc7700; color: #cc7700;">Commissioner</a>
+</div>
+
+{# ── Warning Banner ── #}
+<div style="
+  border: 1px solid #cc7700;
+  background: rgba(204, 119, 0, 0.08);
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-size: 11px;
+  color: #cc9933;
+  letter-spacing: 0.3px;
+">
+  &#9888; <strong>Commissioner Mode</strong> &mdash; Changes here bypass normal recruiting rules. Use for narrative/storyline purposes.
+</div>
+
+{# ── Message notice ── #}
+{% if message %}
+<div style="
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  padding: 8px 14px;
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: {% if 'error' in message|lower or 'fail' in message|lower %}var(--red){% else %}var(--green){% endif %};
+">{{ message }}</div>
+{% endif %}
+
+{# ── Force-Sign Form ── #}
+<h2>Force Sign</h2>
+<form method="post" action="/stats/recruiting/commissioner/force-sign" style="
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+">
+  <div style="display:flex; flex-direction:column; gap:4px; flex: 2 1 280px;">
+    <label for="recruit_id" style="font-size:10px; color:var(--fg-dim); text-transform:uppercase; letter-spacing:0.5px;">Recruit</label>
+    <select id="recruit_id" name="recruit_id" style="
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 8px;
+      cursor: pointer;
+      width: 100%;
+    ">
+      {% for r in recruits %}
+      <option value="{{ r.recruit_id }}">
+        {{ r.full_name }} ({{ "★" * r.stars }}{{ "☆" * (5 - r.stars) }} {{ r.position }}) — {{ r.status }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:4px; flex: 1 1 180px;">
+    <label for="team_name" style="font-size:10px; color:var(--fg-dim); text-transform:uppercase; letter-spacing:0.5px;">Team</label>
+    <select id="team_name" name="team_name" style="
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 8px;
+      cursor: pointer;
+      width: 100%;
+    ">
+      {% for team in teams %}
+      <option value="{{ team }}">{{ team }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="flex-shrink:0;">
+    <button type="submit" style="
+      background: var(--bg);
+      border: 1px solid #cc7700;
+      color: #cc9933;
+      font-family: inherit;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 6px 18px;
+      cursor: pointer;
+      white-space: nowrap;
+    " onmouseover="this.style.background='rgba(204,119,0,0.15)';this.style.color='#ffbb44'"
+       onmouseout="this.style.background='var(--bg)';this.style.color='#cc9933'">
+      Force Sign
+    </button>
+  </div>
+</form>
+
+{# ── Current Recruit Board ── #}
+<h2>Current Recruit Board</h2>
+{% if recruits %}
+<table id="recruit-board">
+  <thead>
+    <tr>
+      <th class="num sortable">Stars</th>
+      <th class="sortable">Name</th>
+      <th class="sortable">Position</th>
+      <th class="sortable">Hometown</th>
+      <th class="sortable">Status</th>
+      <th class="sortable">Committed To</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in recruits %}
+  <tr>
+    <td class="num {% if r.stars >= 5 %}stat-elite{% elif r.stars >= 4 %}stat-good{% endif %}">
+      {{ ("★" * r.stars)|safe }}
+    </td>
+    <td>{{ r.full_name }}</td>
+    <td><span class="tag tag-pos">{{ r.position }}</span></td>
+    <td>{{ r.hometown }}</td>
+    <td>
+      {% if r.signed %}
+        <span class="tag" style="border-color:var(--green);color:var(--green);">SIGNED</span>
+      {% elif r.status == 'committed' %}
+        <span class="tag" style="border-color:var(--blue);color:var(--blue);">COMMITTED</span>
+      {% elif r.status == 'interested' %}
+        <span class="tag" style="border-color:var(--yellow);color:var(--yellow);">INTERESTED</span>
+      {% elif r.status == 'unsigned' %}
+        <span class="tag" style="border-color:var(--fg-dim);color:var(--fg-dim);">UNSIGNED</span>
+      {% else %}
+        <span class="tag">{{ r.status|upper }}</span>
+      {% endif %}
+    </td>
+    <td>{{ r.committed_to if r.committed_to else "—" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice">No recruits found.</div>
+{% endif %}
+
+<script>
+(function () {
+  var table = document.getElementById('recruit-board');
+  if (!table) return;
+  var thead = table.querySelector('thead');
+  var tbody = table.querySelector('tbody');
+  var headers = thead.querySelectorAll('th.sortable');
+  var sortCol = -1, sortAsc = true;
+
+  headers.forEach(function (th, idx) {
+    th.addEventListener('click', function () {
+      if (sortCol === idx) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = idx;
+        sortAsc = true;
+      }
+      headers.forEach(function (h) {
+        h.classList.remove('sort-asc', 'sort-desc');
+      });
+      th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+      rows.sort(function (a, b) {
+        var aText = a.cells[idx] ? a.cells[idx].textContent.trim() : '';
+        var bText = b.cells[idx] ? b.cells[idx].textContent.trim() : '';
+        var aNum = parseFloat(aText.replace(/[^\d.\-]/g, ''));
+        var bNum = parseFloat(bText.replace(/[^\d.\-]/g, ''));
+        var cmp;
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          cmp = aNum - bNum;
+        } else {
+          cmp = aText.localeCompare(bText);
+        }
+        return sortAsc ? cmp : -cmp;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+}());
+</script>
+{% endblock %}
