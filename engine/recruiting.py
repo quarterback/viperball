@@ -149,12 +149,14 @@ class Recruit:
     signing_week: int = 0                 # week within phase when player signed
     is_walkon: bool = False               # True if assigned as walk-on (no scholarship)
 
-    # Shortlist / decision timeline (like Rivals/247Sports recruit cards)
+    # Shortlist / decision timeline (like 247Sports/Rivals/On3 recruit cards)
     top_schools: List[str] = field(default_factory=list)       # top-5 list (narrowed from all offers)
     finalist_schools: List[str] = field(default_factory=list)  # top-3 finalists
+    school_interest: Dict[str, str] = field(default_factory=dict)  # team -> "hot"/"warm"/"cool" (247-style)
     decision_speed: str = "normal"     # "early_decider", "normal", "late_decider"
-    status: str = "unsigned"           # "unsigned", "committed", "signed", "decommitted", "walkon"
-    crystal_ball: Dict[str, float] = field(default_factory=dict)  # team_name -> prediction % (0-100)
+    decision_date: Optional[str] = None   # announced decision date (e.g. "Early Signing Day")
+    status: str = "uncommitted"        # "uncommitted", "committed", "signed", "decommitted", "walkon"
+    crystal_ball: Dict[str, float] = field(default_factory=dict)  # team_name -> prediction % (StrikePrediction)
     timeline: List[Dict] = field(default_factory=list)  # [{"event": "...", "phase": "...", "week": int}]
 
     # Preferences (affect decision weights)
@@ -287,7 +289,9 @@ class Recruit:
             "is_walkon": self.is_walkon,
             "top_schools": list(self.top_schools),
             "finalist_schools": list(self.finalist_schools),
+            "school_interest": dict(self.school_interest),
             "decision_speed": self.decision_speed,
+            "decision_date": self.decision_date,
             "status": self.status,
             "crystal_ball": dict(self.crystal_ball),
             "timeline": list(self.timeline),
@@ -1069,6 +1073,18 @@ def build_recruit_shortlists(
             "week": 0,
         })
 
+        # Assign interest tiers (247Sports-style: hot / warm / cool)
+        if team_scores:
+            top_score = team_scores[0][1] if team_scores[0][1] > 0 else 1
+            for team_name, score in team_scores:
+                ratio = score / top_score if top_score > 0 else 0
+                if ratio >= 0.85:
+                    recruit.school_interest[team_name] = "hot"
+                elif ratio >= 0.60:
+                    recruit.school_interest[team_name] = "warm"
+                else:
+                    recruit.school_interest[team_name] = "cool"
+
         # Top 3 finalists
         recruit.finalist_schools = [t for t, _ in team_scores[:3]]
         recruit.timeline.append({
@@ -1077,7 +1093,15 @@ def build_recruit_shortlists(
             "week": 0,
         })
 
-        # Crystal ball predictions: normalise scores into percentages
+        # Assign decision date based on decision speed
+        if recruit.decision_speed == "early_decider":
+            recruit.decision_date = "Early Signing Period"
+        elif recruit.decision_speed == "late_decider":
+            recruit.decision_date = "Post-Bowl Period"
+        else:
+            recruit.decision_date = "National Signing Day"
+
+        # Crystal ball predictions (StrikePrediction): normalise scores into %
         if team_scores:
             total = sum(max(0, s) for _, s in team_scores[:5])
             if total > 0:
