@@ -2614,7 +2614,7 @@ def _render_offseason_start(container, dynasty):
             bridge = offseason.get("bridge_import")
             if bridge:
                 ui.notify(
-                    f"Imported {bridge['players_imported']} CVL graduates from {bridge['pools_consumed']} class(es)!",
+                    f"Imported {bridge.get('players_imported', 0)} CVL graduates from {bridge.get('pools_consumed', 0)} class(es)!",
                     type="positive", position="top", timeout=5000,
                 )
 
@@ -2854,8 +2854,8 @@ def _offseason_step_import(dynasty, data):
         bridge = data.get("bridge_import")
         if bridge:
             ui.label(
-                f"Auto-imported {bridge['players_imported']} CVL graduates "
-                f"from {bridge['pools_consumed']} graduating class(es)."
+                f"Auto-imported {bridge.get('players_imported', 0)} CVL graduates "
+                f"from {bridge.get('pools_consumed', 0)} graduating class(es)."
             ).classes("text-sm text-green-700 font-semibold mb-2")
             ui.label(
                 "These players were automatically added to this offseason's free agency pool."
@@ -2893,15 +2893,27 @@ def _offseason_step_import(dynasty, data):
             ui.notify(f"Invalid JSON: {exc}", type="negative")
             return
 
-        from engine.wvl_free_agency import build_free_agent_pool_from_data
-        new_fas = build_free_agent_pool_from_data(players)
-        d._ensure_fa_pool()
+        try:
+            from engine.wvl_free_agency import build_free_agent_pool_from_data
+            new_fas = build_free_agent_pool_from_data(players)
+        except Exception as exc:
+            ui.notify(f"Import failed: {exc}", type="negative")
+            return
+        if not new_fas:
+            ui.notify("No valid players found in the data.", type="warning")
+            return
+        if hasattr(d, '_ensure_fa_pool'):
+            d._ensure_fa_pool()
+        if not hasattr(d, '_fa_pool_dicts'):
+            d._fa_pool_dicts = []
         for fa in new_fas:
             d._fa_pool_dicts.append({
                 "card_dict": fa.player_card.to_dict(),
                 "asking_salary": fa.asking_salary,
                 "source": "import",
             })
+        if not hasattr(d, '_team_rosters'):
+            d._team_rosters = {}
         for fa in new_fas:
             roster = d._team_rosters.get(d.owner.club_key, [])
             if len(roster) < 40:

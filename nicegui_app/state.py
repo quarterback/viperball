@@ -196,7 +196,12 @@ class UserState:
         self._store["full_engine"] = value
 
     def clear_session(self):
-        """Reset all session-related state."""
+        """Reset CVL session state without touching WVL state.
+
+        This is called when a CVL session expires or the user switches
+        modes.  It preserves the concurrent WVL dynasty so it is not
+        accidentally wiped.
+        """
         self.session_id = None
         self.mode = None
         self.human_teams = []
@@ -210,10 +215,27 @@ class UserState:
         self.dyn_playoff_size = 8
         self.dyn_bowl_count = 4
         self.dq_current_week = 0
-        self.wvl_active = False
-        self.wvl_session_id = None
         self.last_result = None
         self.last_seed = 0
         self.batch_results = None
         self._team_states_cache = None
         self.cache.invalidate()
+
+    def clear_wvl_session(self):
+        """Reset WVL-specific state only."""
+        self.wvl_active = False
+        self.wvl_session_id = None
+        # Clear WVL storage keys
+        for key in [
+            "wvl_dynasty", "wvl_phase", "wvl_last_season",
+            "_wvl_offseason_data", "_wvl_offseason_step", "_wvl_refresh",
+            "_wvl_draft_pool", "_wvl_drafted", "cvl_graduates",
+            "cvl_graduates_year", "wvl_last_offseason_data",
+            "_wvl_commish_phase", "_wvl_pending_nav",
+        ]:
+            self._store.pop(key, None)
+
+    def clear_all(self):
+        """Reset both CVL and WVL state (full teardown)."""
+        self.clear_session()
+        self.clear_wvl_session()

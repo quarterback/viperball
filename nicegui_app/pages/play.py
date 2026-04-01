@@ -573,9 +573,39 @@ async def _render_offseason_portal(state: UserState, coach_team: str):
         "text-sm text-slate-500 mb-2"
     )
 
+    # -- Budget info --
+    try:
+        off_status = await run.io_bound(api_client.get_offseason_status, state.session_id)
+        nil_data = await run.io_bound(api_client.get_offseason_nil, state.session_id)
+    except api_client.APIError:
+        off_status = {}
+        nil_data = {}
+    portal_pool_budget = nil_data.get("portal_pool", 0)
+    portal_pool_spent_ref = {"value": nil_data.get("portal_spent", 0)}
+    transfers_remaining = off_status.get("transfers_remaining", -1)
+
+    budget_label = ui.label("").classes("text-sm font-semibold mb-2")
+
+    def _update_budget_label():
+        remaining = portal_pool_budget - portal_pool_spent_ref["value"]
+        parts = [f"Portal Budget: ${remaining:,.0f} / ${portal_pool_budget:,.0f}"]
+        if transfers_remaining >= 0:
+            parts.append(f"Transfers Left: {transfers_remaining}")
+        budget_label.text = " | ".join(parts)
+        if remaining <= 0:
+            budget_label.classes(remove="text-slate-700", add="text-red-600")
+        else:
+            budget_label.classes(remove="text-red-600", add="text-slate-700")
+
+    _update_budget_label()
+
+    # -- Filters row --
     positions = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
-    pos_select = ui.select(positions, value="All", label="Position Filter").classes("w-40")
-    min_ovr = ui.number("Min Overall", value=0, min=0, max=99).classes("w-32")
+    with ui.row().classes("gap-3 items-end mb-3"):
+        pos_select = ui.select(positions, value="All", label="Position").classes("w-36")
+        min_ovr = ui.number("Min OVR", value=0, min=0, max=99).classes("w-28")
+        search_input = ui.input(label="Search player name").props("clearable dense outlined").classes("w-56")
+        filter_btn = ui.button("Filter", icon="filter_list").props("color=secondary no-caps dense")
 
     portal_container = ui.column().classes("w-full")
 
@@ -596,10 +626,16 @@ async def _render_offseason_portal(state: UserState, coach_team: str):
         total = portal_resp.get("total_entries", 0)
         available = portal_resp.get("total_available", 0)
 
+        # Client-side name search
+        name_query = (search_input.value or "").strip().lower()
+        if name_query:
+            entries = [e for e in entries if name_query in e.get("name", "").lower()]
+
         with portal_container:
-            with ui.row().classes("gap-3 mb-2"):
+            with ui.row().classes("gap-3 mb-3"):
                 metric_card("Total Entries", str(total))
                 metric_card("Available", str(available))
+                metric_card("Showing", str(len(entries)))
 
             if not entries:
                 ui.label("No available portal players matching filters.").classes("text-slate-400 italic")
@@ -607,14 +643,14 @@ async def _render_offseason_portal(state: UserState, coach_team: str):
 
             # Table
             columns = [
-                {"name": "name", "label": "Name", "field": "name", "align": "left"},
-                {"name": "position", "label": "Pos", "field": "position"},
+                {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+                {"name": "position", "label": "Pos", "field": "position", "sortable": True},
                 {"name": "overall", "label": "OVR", "field": "overall", "sortable": True},
-                {"name": "year", "label": "Year", "field": "year"},
-                {"name": "origin_team", "label": "From", "field": "origin_team", "align": "left"},
-                {"name": "reason", "label": "Reason", "field": "reason"},
+                {"name": "year", "label": "Year", "field": "year", "sortable": True},
+                {"name": "origin_team", "label": "From", "field": "origin_team", "align": "left", "sortable": True},
+                {"name": "reason", "label": "Reason", "field": "reason", "sortable": True},
                 {"name": "stars", "label": "Stars", "field": "stars", "sortable": True},
-                {"name": "offers", "label": "Offers", "field": "offers"},
+                {"name": "offers", "label": "Offers", "field": "offers", "sortable": True},
             ]
             rows = [
                 {
@@ -630,63 +666,78 @@ async def _render_offseason_portal(state: UserState, coach_team: str):
                 }
                 for e in entries
             ]
-            table = ui.table(columns=columns, rows=rows, row_key="name", selection="single").classes(
-                "w-full"
-            ).props("dense")
+            table = ui.table(
+                columns=columns, rows=rows, row_key="global_index", selection="single",
+                pagination={"rowsPerPage": 20, "sortBy": "overall", "descending": True},
+            ).classes("w-full").props("dense flat bordered")
 
             # Actions for selected player
-            with ui.row().classes("gap-4 mt-4 items-end"):
-                nil_offer_input = ui.number("NIL Offer ($)", value=25000, min=0, max=500000, step=5000).classes("w-40")
-                action_spinner = ui.spinner(size="md").classes("hidden")
+            with ui.card().classes("w-full p-3 mt-3 bg-slate-50"):
+                ui.label("Player Actions").classes("text-sm font-semibold text-slate-600 mb-2")
+                with ui.row().classes("gap-4 items-end"):
+                    nil_offer_input = ui.number(
+                        "NIL Offer ($)", value=25000, min=0,
+                        max=max(0, portal_pool_budget - portal_pool_spent_ref["value"]),
+                        step=5000,
+                    ).classes("w-44")
+                    action_spinner = ui.spinner(size="md").classes("hidden")
 
-                async def _make_offer():
-                    selected = table.selected
-                    if not selected:
-                        notify_error("Select a player first.")
-                        return
-                    gidx = selected[0].get("global_index", -1)
-                    if gidx < 0:
-                        notify_error("Cannot interact with this player.")
-                        return
-                    action_spinner.classes(remove="hidden")
-                    try:
-                        await run.io_bound(
-                            api_client.offseason_portal_offer,
-                            state.session_id,
-                            entry_index=gidx,
-                            nil_amount=int(nil_offer_input.value or 0),
-                        )
-                        notify_success(f"Offer sent to {selected[0]['name']}!")
-                        await _load_portal()
-                    except api_client.APIError as e:
-                        notify_error(f"Offer failed: {e.detail}")
-                    finally:
-                        action_spinner.classes(add="hidden")
+                    async def _make_offer():
+                        selected = table.selected
+                        if not selected:
+                            notify_error("Select a player first.")
+                            return
+                        gidx = selected[0].get("global_index", -1)
+                        if gidx < 0:
+                            notify_error("Cannot interact with this player.")
+                            return
+                        offer_amt = int(nil_offer_input.value or 0)
+                        remaining_budget = portal_pool_budget - portal_pool_spent_ref["value"]
+                        if offer_amt > remaining_budget:
+                            notify_error(f"NIL offer ${offer_amt:,} exceeds remaining portal budget ${remaining_budget:,.0f}.")
+                            return
+                        action_spinner.classes(remove="hidden")
+                        try:
+                            await run.io_bound(
+                                api_client.offseason_portal_offer,
+                                state.session_id,
+                                entry_index=gidx,
+                                nil_amount=offer_amt,
+                            )
+                            portal_pool_spent_ref["value"] += offer_amt
+                            _update_budget_label()
+                            notify_success(f"Offer sent to {selected[0]['name']}!")
+                            await _load_portal()
+                        except api_client.APIError as e:
+                            notify_error(f"Offer failed: {e.detail}")
+                        finally:
+                            action_spinner.classes(add="hidden")
 
-                async def _commit():
-                    selected = table.selected
-                    if not selected:
-                        notify_error("Select a player first.")
-                        return
-                    gidx = selected[0].get("global_index", -1)
-                    if gidx < 0:
-                        notify_error("Cannot interact with this player.")
-                        return
-                    action_spinner.classes(remove="hidden")
-                    try:
-                        await run.io_bound(
-                            api_client.offseason_portal_commit, state.session_id, entry_index=gidx
-                        )
-                        notify_success(f"Committed {selected[0]['name']} to {coach_team}!")
-                        await _load_portal()
-                    except api_client.APIError as e:
-                        notify_error(f"Commit failed: {e.detail}")
-                    finally:
-                        action_spinner.classes(add="hidden")
+                    async def _commit():
+                        selected = table.selected
+                        if not selected:
+                            notify_error("Select a player first.")
+                            return
+                        gidx = selected[0].get("global_index", -1)
+                        if gidx < 0:
+                            notify_error("Cannot interact with this player.")
+                            return
+                        action_spinner.classes(remove="hidden")
+                        try:
+                            await run.io_bound(
+                                api_client.offseason_portal_commit, state.session_id, entry_index=gidx
+                            )
+                            notify_success(f"Committed {selected[0]['name']} to {coach_team}!")
+                            await _load_portal()
+                        except api_client.APIError as e:
+                            notify_error(f"Commit failed: {e.detail}")
+                        finally:
+                            action_spinner.classes(add="hidden")
 
-                ui.button("Make Offer", on_click=_make_offer, icon="local_offer").props("color=secondary")
-                ui.button("Commit Player", on_click=_commit, icon="person_add").props("color=primary")
+                    ui.button("Make Offer", on_click=_make_offer, icon="local_offer").props("color=secondary no-caps")
+                    ui.button("Commit Player", on_click=_commit, icon="person_add").props("color=primary no-caps")
 
+    filter_btn.on_click(lambda: _load_portal())
     await _load_portal()
 
     ui.separator().classes("my-4")
@@ -721,139 +772,189 @@ async def _render_offseason_recruiting(state: UserState, coach_team: str):
         "text-sm text-slate-500 mb-2"
     )
 
-    try:
-        rec_resp = await run.io_bound(api_client.get_offseason_recruiting, state.session_id)
-    except api_client.APIError as e:
-        notify_error(f"Could not load recruiting: {e.detail}")
-        return
+    rec_container = ui.column().classes("w-full")
+    # Positions for filtering
+    recruit_positions = ["All", "VP", "HB", "WB", "SB", "ZB", "LB", "CB", "LA", "LM"]
 
-    recruits = rec_resp.get("recruits", [])
-    total_pool = rec_resp.get("total_pool", 0)
-    board = rec_resp.get("board", {})
+    with ui.row().classes("gap-3 items-end mb-3"):
+        rec_pos_select = ui.select(recruit_positions, value="All", label="Position").classes("w-36")
+        rec_search = ui.input(label="Search player name").props("clearable dense outlined").classes("w-56")
+        rec_stars_min = ui.select(
+            {0: "Any Stars", 3: "3+ Stars", 4: "4+ Stars", 5: "5 Stars"},
+            value=0, label="Min Stars",
+        ).classes("w-36")
+        rec_filter_btn = ui.button("Filter", icon="filter_list").props("color=secondary no-caps dense")
 
-    with ui.row().classes("gap-3 mb-4"):
-        metric_card("Recruit Pool", str(total_pool))
-        metric_card("Showing", str(len(recruits)))
-        if board:
-            metric_card("Scholarships", str(board.get("scholarships_available", 0)))
-            metric_card("Scouting Pts", str(board.get("scouting_points", 0)))
+    async def _load_recruiting():
+        rec_container.clear()
+        try:
+            rec_resp = await run.io_bound(api_client.get_offseason_recruiting, state.session_id)
+        except api_client.APIError as e:
+            with rec_container:
+                notify_error(f"Could not load recruiting: {e.detail}")
+            return
 
-    if recruits:
-        columns = [
-            {"name": "name", "label": "Name", "field": "name", "align": "left"},
-            {"name": "position", "label": "Pos", "field": "position"},
-            {"name": "stars", "label": "Stars", "field": "stars", "sortable": True},
-            {"name": "region", "label": "Region", "field": "region"},
-            {"name": "hometown", "label": "Hometown", "field": "hometown", "align": "left"},
-        ]
-        rows = []
-        for r in recruits[:50]:
-            row = {
-                "name": r.get("name", ""),
-                "position": r.get("position", ""),
-                "stars": r.get("stars", 0),
-                "region": r.get("region", "").replace("_", " ").title(),
-                "hometown": r.get("hometown", ""),
-                "pool_index": r.get("pool_index", 0),
-            }
-            scouted = r.get("scouted", {})
-            if scouted:
-                row["spd"] = scouted.get("speed", "?")
-                row["agi"] = scouted.get("agility", "?")
-                row["pwr"] = scouted.get("power", "?")
-                row["hnd"] = scouted.get("hands", "?")
-            if "true_overall" in r:
-                row["ovr"] = r["true_overall"]
-            rows.append(row)
+        recruits = rec_resp.get("recruits", [])
+        total_pool = rec_resp.get("total_pool", 0)
+        board = rec_resp.get("board", {})
 
-        # Add scouted attribute columns if any recruit has them
-        has_scouted = any("spd" in r for r in rows)
-        if has_scouted:
-            columns += [
-                {"name": "spd", "label": "SPD", "field": "spd"},
-                {"name": "agi", "label": "AGI", "field": "agi"},
-                {"name": "pwr", "label": "PWR", "field": "pwr"},
-                {"name": "hnd", "label": "HND", "field": "hnd"},
-            ]
-        has_ovr = any("ovr" in r for r in rows)
-        if has_ovr:
-            columns.append({"name": "ovr", "label": "OVR", "field": "ovr", "sortable": True})
+        # Client-side filtering
+        pos_filter = rec_pos_select.value
+        name_query = (rec_search.value or "").strip().lower()
+        stars_min = int(rec_stars_min.value or 0)
+        filtered = recruits
+        if pos_filter and pos_filter != "All":
+            filtered = [r for r in filtered if r.get("position", "").upper() == pos_filter.upper()]
+        if name_query:
+            filtered = [r for r in filtered if name_query in r.get("name", "").lower()]
+        if stars_min > 0:
+            filtered = [r for r in filtered if r.get("stars", 0) >= stars_min]
 
-        table = ui.table(columns=columns, rows=rows, row_key="name", selection="single").classes("w-full").props(
-            "dense"
-        )
+        with rec_container:
+            with ui.row().classes("gap-3 mb-3"):
+                metric_card("Recruit Pool", str(total_pool))
+                metric_card("Showing", str(len(filtered)))
+                if board:
+                    metric_card("Scholarships", str(board.get("scholarships_available", 0)))
+                    metric_card("Scouting Pts", str(board.get("scouting_points", 0)))
+                    metric_card("Offers Used", f"{len(board.get('offered', []))}/{board.get('max_offers', 15)}")
 
-        with ui.row().classes("gap-4 mt-4 items-end"):
-            scout_level = ui.select(["basic", "full"], value="basic", label="Scout Level").classes("w-32")
-            action_spinner = ui.spinner(size="md").classes("hidden")
+            if filtered:
+                columns = [
+                    {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+                    {"name": "position", "label": "Pos", "field": "position", "sortable": True},
+                    {"name": "stars", "label": "Stars", "field": "stars", "sortable": True},
+                    {"name": "region", "label": "Region", "field": "region", "sortable": True},
+                    {"name": "hometown", "label": "Hometown", "field": "hometown", "align": "left"},
+                    {"name": "scout_level", "label": "Scouted", "field": "scout_level", "sortable": True},
+                ]
+                rows = []
+                for r in filtered[:100]:
+                    row = {
+                        "name": r.get("name", ""),
+                        "position": r.get("position", ""),
+                        "stars": r.get("stars", 0),
+                        "region": r.get("region", "").replace("_", " ").title(),
+                        "hometown": r.get("hometown", ""),
+                        "pool_index": r.get("pool_index", 0),
+                        "scout_level": r.get("scout_level", "none").title(),
+                    }
+                    scouted = r.get("scouted", {})
+                    if scouted:
+                        row["spd"] = scouted.get("speed", "?")
+                        row["agi"] = scouted.get("agility", "?")
+                        row["pwr"] = scouted.get("power", "?")
+                        row["hnd"] = scouted.get("hands", "?")
+                    if "true_overall" in r:
+                        row["ovr"] = r["true_overall"]
+                    rows.append(row)
 
-            async def _scout():
-                selected = table.selected
-                if not selected:
-                    notify_error("Select a recruit first.")
-                    return
-                pidx = selected[0].get("pool_index", 0)
-                action_spinner.classes(remove="hidden")
-                try:
-                    result = await run.io_bound(
-                        api_client.offseason_recruiting_scout,
-                        state.session_id,
-                        recruit_index=pidx,
-                        level=scout_level.value,
-                    )
-                    pts_left = result.get("scouting_points_remaining", 0)
-                    notify_success(f"Scouted {selected[0]['name']}! ({pts_left} pts remaining)")
-                    ui.navigate.to("/")
-                except api_client.APIError as e:
-                    notify_error(f"Scouting failed: {e.detail}")
-                finally:
-                    action_spinner.classes(add="hidden")
+                # Add scouted attribute columns if any recruit has them
+                has_scouted = any("spd" in r for r in rows)
+                if has_scouted:
+                    columns += [
+                        {"name": "spd", "label": "SPD", "field": "spd", "sortable": True},
+                        {"name": "agi", "label": "AGI", "field": "agi", "sortable": True},
+                        {"name": "pwr", "label": "PWR", "field": "pwr", "sortable": True},
+                        {"name": "hnd", "label": "HND", "field": "hnd", "sortable": True},
+                    ]
+                has_ovr = any("ovr" in r for r in rows)
+                if has_ovr:
+                    columns.append({"name": "ovr", "label": "OVR", "field": "ovr", "sortable": True})
 
-            async def _offer():
-                selected = table.selected
-                if not selected:
-                    notify_error("Select a recruit first.")
-                    return
-                pidx = selected[0].get("pool_index", 0)
-                action_spinner.classes(remove="hidden")
-                try:
-                    result = await run.io_bound(
-                        api_client.offseason_recruiting_offer, state.session_id, recruit_index=pidx
-                    )
-                    offers_made = result.get("offers_made", 0)
-                    max_offers = result.get("max_offers", 0)
-                    notify_success(f"Offered {selected[0]['name']}! ({offers_made}/{max_offers} offers used)")
-                    ui.navigate.to("/")
-                except api_client.APIError as e:
-                    notify_error(f"Offer failed: {e.detail}")
-                finally:
-                    action_spinner.classes(add="hidden")
+                table = ui.table(
+                    columns=columns, rows=rows, row_key="pool_index", selection="single",
+                    pagination={"rowsPerPage": 25, "sortBy": "stars", "descending": True},
+                ).classes("w-full").props("dense flat bordered")
 
-            ui.button("Scout", on_click=_scout, icon="search").props("color=secondary")
-            ui.button("Offer Scholarship", on_click=_offer, icon="school").props("color=primary")
+                with ui.card().classes("w-full p-3 mt-3 bg-slate-50"):
+                    ui.label("Recruit Actions").classes("text-sm font-semibold text-slate-600 mb-2")
+                    with ui.row().classes("gap-4 items-end"):
+                        scout_level = ui.select(
+                            {"basic": "Basic (1 pt)", "full": "Full (3 pts)"},
+                            value="basic", label="Scout Level",
+                        ).classes("w-40")
+                        action_spinner = ui.spinner(size="md").classes("hidden")
 
-    else:
-        ui.label("No recruits available.").classes("text-slate-400 italic")
+                        async def _scout():
+                            selected = table.selected
+                            if not selected:
+                                notify_error("Select a recruit first.")
+                                return
+                            pidx = selected[0].get("pool_index", 0)
+                            action_spinner.classes(remove="hidden")
+                            try:
+                                result = await run.io_bound(
+                                    api_client.offseason_recruiting_scout,
+                                    state.session_id,
+                                    recruit_index=pidx,
+                                    level=scout_level.value,
+                                )
+                                pts_left = result.get("scouting_points_remaining", 0)
+                                notify_success(f"Scouted {selected[0]['name']}! ({pts_left} pts remaining)")
+                                # Reload data in-place instead of full page refresh
+                                await _load_recruiting()
+                            except api_client.APIError as e:
+                                notify_error(f"Scouting failed: {e.detail}")
+                            finally:
+                                action_spinner.classes(add="hidden")
 
-    # Offer board
-    if board and board.get("offered"):
-        ui.label("Your Offer Board").classes("text-lg font-semibold text-slate-700 mt-4")
-        offer_rows = []
-        for offered_id in board.get("offered", []):
-            for r in recruits:
-                if r.get("name", "") in offered_id or offered_id in r.get("name", ""):
-                    offer_rows.append({"name": r.get("name", ""), "pos": r.get("position", ""), "stars": r.get("stars", 0)})
-                    break
-        if offer_rows:
-            ui.table(
-                columns=[
-                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
-                    {"name": "pos", "label": "Pos", "field": "pos"},
-                    {"name": "stars", "label": "Stars", "field": "stars"},
-                ],
-                rows=offer_rows,
-                row_key="name",
-            ).classes("w-full").props("dense")
+                        async def _offer():
+                            selected = table.selected
+                            if not selected:
+                                notify_error("Select a recruit first.")
+                                return
+                            pidx = selected[0].get("pool_index", 0)
+                            action_spinner.classes(remove="hidden")
+                            try:
+                                result = await run.io_bound(
+                                    api_client.offseason_recruiting_offer, state.session_id, recruit_index=pidx
+                                )
+                                offers_made = result.get("offers_made", 0)
+                                max_offers = result.get("max_offers", 0)
+                                notify_success(f"Offered {selected[0]['name']}! ({offers_made}/{max_offers} offers used)")
+                                # Reload data in-place instead of full page refresh
+                                await _load_recruiting()
+                            except api_client.APIError as e:
+                                notify_error(f"Offer failed: {e.detail}")
+                            finally:
+                                action_spinner.classes(add="hidden")
+
+                        ui.button("Scout", on_click=_scout, icon="search").props("color=secondary no-caps")
+                        ui.button("Offer Scholarship", on_click=_offer, icon="school").props("color=primary no-caps")
+
+            else:
+                ui.label("No recruits matching filters.").classes("text-slate-400 italic")
+
+            # Offer board
+            if board and board.get("offered"):
+                ui.separator().classes("my-3")
+                ui.label("Your Offer Board").classes("text-lg font-semibold text-slate-700 mt-2")
+                offer_rows = []
+                for offered_id in board.get("offered", []):
+                    for r in recruits:
+                        if r.get("name", "") in offered_id or offered_id in r.get("name", ""):
+                            offer_rows.append({
+                                "name": r.get("name", ""),
+                                "pos": r.get("position", ""),
+                                "stars": r.get("stars", 0),
+                                "scouted": r.get("scout_level", "none").title(),
+                            })
+                            break
+                if offer_rows:
+                    ui.table(
+                        columns=[
+                            {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                            {"name": "pos", "label": "Pos", "field": "pos"},
+                            {"name": "stars", "label": "Stars", "field": "stars"},
+                            {"name": "scouted", "label": "Scouted", "field": "scouted"},
+                        ],
+                        rows=offer_rows,
+                        row_key="name",
+                    ).classes("w-full").props("dense flat bordered")
+
+    rec_filter_btn.on_click(lambda: _load_recruiting())
+    await _load_recruiting()
 
     ui.separator().classes("my-4")
     resolve_spinner = ui.spinner(size="lg").classes("hidden")
