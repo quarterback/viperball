@@ -94,7 +94,7 @@ async def render_international_section(state, shared):
         with content_area:
             try:
                 if name == "dashboard":
-                    await _render_dashboard(cycle_data, _refresh_cycle_data)
+                    await _render_dashboard(cycle_data, _refresh_cycle_data, state=state)
                 elif name == "rankings":
                     await _render_rankings()
                 elif name == "continental":
@@ -120,14 +120,14 @@ async def render_international_section(state, shared):
             tab_buttons[tab_id] = btn
 
     with content_area:
-        await _render_dashboard(cycle_data, _refresh_cycle_data)
+        await _render_dashboard(cycle_data, _refresh_cycle_data, state=state)
 
 
 # ═══════════════════════════════════════════════════════════════
 # DASHBOARD
 # ═══════════════════════════════════════════════════════════════
 
-async def _render_dashboard(cycle_data: dict, refresh_fn=None):
+async def _render_dashboard(cycle_data: dict, refresh_fn=None, state=None):
     """FIV Dashboard: cycle status, quick actions, rankings summary."""
 
     ui.label("FIV — Fédération Internationale de Viperball").classes(
@@ -145,8 +145,19 @@ async def _render_dashboard(cycle_data: dict, refresh_fn=None):
                 "run continental championships, and compete in the World Cup."
             ).classes("text-slate-500 mb-4")
 
-            with ui.row().classes("gap-4"):
+            # Detect active CVL session for player import
+            cvl_sid = state.session_id if (state and state.mode in ("season", "dynasty")) else None
+
+            with ui.row().classes("gap-4 items-end"):
                 host_input = ui.input("Host Nation (code)", placeholder="e.g. FRA").classes("w-32")
+                if cvl_sid:
+                    ui.label(f"CVL players will be imported from active session").classes(
+                        "text-xs text-green-600"
+                    )
+                else:
+                    ui.label("No active CVL session — generated rosters only").classes(
+                        "text-xs text-slate-400 italic"
+                    )
 
                 async def _start_cycle():
                     ui.notify("Starting FIV cycle... This may take a moment.", type="info")
@@ -154,6 +165,7 @@ async def _render_dashboard(cycle_data: dict, refresh_fn=None):
                         result = await run.io_bound(
                             api_client.fiv_new_cycle,
                             host_input.value or None,
+                            cvl_session_id=cvl_sid,
                         )
                         cycle_data["data"] = result
                         ui.notify(
