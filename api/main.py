@@ -2569,6 +2569,9 @@ def offseason_status(session_id: str):
     nil_prog = offseason.get("nil_program")
     portal = offseason.get("portal")
     recruit_pool = offseason.get("recruit_pool", [])
+    dynasty = session.get("dynasty")
+    human_team = dynasty.coach.team_name if dynasty else ""
+    transfers_rem = portal.transfers_remaining(human_team) if portal and human_team else -1
     return {
         "phase": offseason["phase"],
         "nil_budget": nil_prog.annual_budget if nil_prog else 0,
@@ -2578,6 +2581,7 @@ def offseason_status(session_id: str):
         "recruit_pool_size": len(recruit_pool),
         "retention_risks_count": len(offseason.get("retention_risks", [])),
         "graduating_count": sum(len(v) for v in offseason.get("graduating", {}).values()),
+        "transfers_remaining": transfers_rem,
     }
 
 
@@ -2668,15 +2672,35 @@ def offseason_portal_offer(session_id: str, req: PortalOfferRequest):
     if req.entry_index < 0 or req.entry_index >= len(portal.entries):
         raise HTTPException(status_code=400, detail="Invalid entry index")
 
+    # Validate NIL offer against portal budget
+    nil_prog = offseason.get("nil_program")
+    if nil_prog and req.nil_amount > 0:
+        if req.nil_amount > nil_prog.portal_remaining:
+            raise HTTPException(
+                status_code=400,
+                detail=f"NIL offer ${req.nil_amount:,.0f} exceeds remaining portal budget ${nil_prog.portal_remaining:,.0f}",
+            )
+
     entry = portal.entries[req.entry_index]
     human_team = dynasty.coach.team_name
     success = portal.make_offer(human_team, entry, nil_amount=req.nil_amount)
     if not success:
         raise HTTPException(status_code=400, detail="Cannot make offer to this player")
 
+    # Track NIL spend in the budget
+    if nil_prog and req.nil_amount > 0:
+        nil_prog.make_deal(
+            pool="portal",
+            player_id=getattr(entry, "player_id", entry.player_name),
+            player_name=entry.player_name,
+            amount=req.nil_amount,
+            year=dynasty.current_year,
+        )
+
     return {
         "offered": True,
         "player": _serialize_portal_entry(entry),
+        "portal_remaining": nil_prog.portal_remaining if nil_prog else 0,
     }
 
 
@@ -2694,13 +2718,23 @@ def offseason_portal_commit(session_id: str, req: PortalCommitRequest):
 
     entry = portal.entries[req.entry_index]
     human_team = dynasty.coach.team_name
+
+    # Provide specific error messages
+    if entry.committed_to is not None or entry.withdrawn:
+        raise HTTPException(status_code=400, detail="This player is no longer available")
+    remaining = portal.transfers_remaining(human_team)
+    if remaining == 0:
+        raise HTTPException(status_code=400, detail="You have reached your transfer cap")
+
     success = portal.instant_commit(human_team, entry)
     if not success:
         raise HTTPException(status_code=400, detail="Cannot commit this player")
 
+    transfers_left = portal.transfers_remaining(human_team)
     return {
         "committed": True,
         "player": _serialize_portal_entry(entry),
+        "transfers_remaining": transfers_left,
     }
 
 

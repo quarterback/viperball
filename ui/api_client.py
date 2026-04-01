@@ -768,12 +768,15 @@ def pro_league_status(league: str, session_id: str) -> dict:
 # FIV — International Viperball
 # ═══════════════════════════════════════════════════════════════
 
-def fiv_new_cycle(host_nation: str = None, seed: int = None) -> dict:
+def fiv_new_cycle(host_nation: str = None, seed: int = None,
+                  cvl_session_id: str = None) -> dict:
     body = {}
     if host_nation:
         body["host_nation"] = host_nation
     if seed:
         body["seed"] = seed
+    if cvl_session_id:
+        body["cvl_session_id"] = cvl_session_id
     return _post("/api/fiv/cycle/new", json=body)
 
 
