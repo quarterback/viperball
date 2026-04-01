@@ -62,7 +62,7 @@
   {% for p in top_prospects %}
   <tr>
     <td class="num rank">{{ loop.index }}</td>
-    <td>{{ p.name }}</td>
+    <td><a href="/stats/recruiting/recruit/{{ p.recruit_id }}">{{ p.name }}</a></td>
     <td>{{ p.position }}</td>
     <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}">
       {{ ("&#9733;" * p.scouted_stars)|safe }}
