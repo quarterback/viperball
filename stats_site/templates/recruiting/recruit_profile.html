@@ -24,6 +24,13 @@
 <div style="background:var(--bg-alt);border:1px solid var(--border);padding:16px;margin-bottom:16px;">
   <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
 
+    {# Face photo #}
+    {% if face_src %}
+    <div class="player-card-frame">
+      <img src="{{ face_src }}" alt="{{ recruit.first_name }} {{ recruit.last_name }}" class="player-card-face">
+    </div>
+    {% endif %}
+
     {# Name + core bio #}
     <div style="flex:1;min-width:200px;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
@@ -206,11 +213,9 @@
   </div>
   <div class="metric-card">
     <div class="metric-label">True Potential</div>
-    <div class="metric-value
-      {% if recruit.true_potential >= 90 %} stat-elite
-      {% elif recruit.true_potential >= 80 %} stat-good
-      {% elif recruit.true_potential < 60 %} stat-bad
-      {% endif %}">{{ recruit.true_potential }}</div>
+    <div class="metric-value">
+      {% for i in range(recruit.true_potential) %}&#9733;{% endfor %}{% for i in range(5 - recruit.true_potential) %}&#9734;{% endfor %}
+    </div>
     <div class="metric-detail">Ceiling projection</div>
   </div>
   <div class="metric-card">
@@ -219,6 +224,32 @@
     <div class="metric-detail">Dev trait</div>
   </div>
 </div>
+
+{# Attribute Ratings — matches player page style #}
+<h2>Attributes</h2>
+<table>
+  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set attrs = [
+    ('Speed', recruit.true_speed), ('Power', recruit.true_power), ('Agility', recruit.true_agility),
+    ('Hands', recruit.true_hands), ('Awareness', recruit.true_awareness), ('Stamina', recruit.true_stamina),
+    ('Kicking', recruit.true_kicking), ('Kick Power', recruit.true_kick_power),
+    ('Kick Accuracy', recruit.true_kick_accuracy), ('Lateral Skill', recruit.true_lateral_skill),
+    ('Tackling', recruit.true_tackling),
+  ] %}
+  {% for name, val in attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
 {% endif %}
 
 {# ── All Offers ── #}

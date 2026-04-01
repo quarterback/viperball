@@ -6367,10 +6367,15 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
                         "signing_phase": None, "signing_week": 0,
                         "hometown": "", "high_school": "", "height": "", "weight": 0, "region": ""}
 
+    # Generate face photo from recruit_id (same ID becomes player_id on signing)
+    _rid = recruit_data.get("recruit_id", "")
+    face_src = _face_url_for(_rid) if _rid else None
+
     return templates.TemplateResponse("recruiting/recruit_profile.html", _ctx(
         request,
         section="recruiting",
         recruit=recruit_data,
+        face_src=face_src,
     ))
 
 
