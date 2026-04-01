@@ -595,7 +595,7 @@
 <table>
   <thead>
     <tr>
-      <th>Tag</th><th>Name</th><th style="font-size:10px">Role</th>
+      <th>Tag</th><th>Name</th>
       <th class="num">TCH</th><th class="num">YDS</th><th class="num">APY</th>
       <th class="num">RUSH</th><th class="num">KPR</th>
       <th class="num">TD</th><th class="num">FUM</th>
@@ -608,7 +608,6 @@
   <tr>
     <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
     <td>{{ p.get('name', '?') }}</td>
-    <td style="font-size:10px;color:var(--fg-dim)">{{ p.get('archetype', '') }}</td>
     <td class="num">{{ p.get('touches', 0) }}</td>
     <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
     <td class="num {% if p.get('all_purpose_yards', 0) >= 120 %}stat-elite{% elif p.get('all_purpose_yards', 0) >= 75 %}stat-good{% endif %}">{{ p.get('all_purpose_yards', 0) }}</td>

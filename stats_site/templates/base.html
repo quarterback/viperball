@@ -1243,25 +1243,7 @@ function copyBoxScore(btn) {
   var SKIP = ['Play-by-Play', 'Drive Summary', 'Play Distribution', 'Plays Per Quarter', 'Game Context'];
   function shouldSkip(s) { return SKIP.some(function(k) { return s.indexOf(k) !== -1; }); }
 
-  /* Detect if a table is a 3-column comparison table (away | stat | home) */
-  function isComparisonTable(thead) {
-    if (!thead) return false;
-    var ths = thead.querySelectorAll('th');
-    return ths.length === 3;
-  }
-
-  /* Get column headers from thead */
-  function getTheadCols(thead) {
-    if (!thead) return [];
-    var ths = thead.querySelectorAll('th');
-    var cols = [];
-    ths.forEach(function(th) { cols.push(th.textContent.trim()); });
-    return cols;
-  }
-
-  /* Each h2/h3 section + its table or grid */
-  var sections = document.querySelectorAll('.container.wide > h2, .container.wide > h3, .container.wide > table, .container.wide > div > table, .container.wide > .grid-4, .container.wide > .grid-3, .container.wide > div[style*="overflow"] > table');
-  /* Also grab tables inside overflow wrappers */
+  /* Walk the page collecting headings, tables, and grids */
   var allEls = [];
   document.querySelectorAll('.container.wide').forEach(function(c) {
     c.childNodes.forEach(function(child) {
@@ -1269,10 +1251,8 @@ function copyBoxScore(btn) {
       if (['H2','H3','TABLE'].indexOf(child.tagName) !== -1 || (child.classList && (child.classList.contains('grid-4') || child.classList.contains('grid-3')))) {
         allEls.push(child);
       } else if (child.tagName === 'DIV') {
-        /* Check for tables inside wrapper divs (overflow-x:auto) */
         var innerTable = child.querySelector('table');
         if (innerTable) allEls.push(innerTable);
-        /* Check for grid metrics inside divs */
         if (child.classList && (child.classList.contains('grid-4') || child.classList.contains('grid-3'))) {
           allEls.push(child);
         }
@@ -1289,68 +1269,12 @@ function copyBoxScore(btn) {
     if (shouldSkip(curSection)) return;
 
     if (el.tagName === 'TABLE') {
-      var thead = el.querySelector('thead');
-      var tbody = el.querySelector('tbody');
-      if (!tbody) return;
-      var rows = tbody.querySelectorAll('tr');
-      if (rows.length === 0) return;
-
-      var isComp = isComparisonTable(thead);
-      var theadCols = getTheadCols(thead);
-
-      /* Section label */
       if (curSection) {
         lines.push('--- ' + curSection + ' ---');
         curSection = '';
       }
-
-      /* For comparison tables, show column header with team names */
-      if (isComp && (awayName || homeName)) {
-        lines.push(padR('', 32) + padL(awayName.substring(0, 16), 18) + padL(homeName.substring(0, 16), 18));
-      }
-      /* For multi-column player stats tables, show the thead */
-      if (!isComp && theadCols.length > 3) {
-        var hdrLine = '';
-        theadCols.forEach(function(col, i) {
-          if (i === 0) hdrLine += padR(col, 20);
-          else hdrLine += padL(col, 8);
-        });
-        lines.push(hdrLine);
-        lines.push(Array(hdrLine.length + 1).join('-'));
-      }
-
-      rows.forEach(function(tr) {
-        var cells = tr.querySelectorAll('td, th');
-        if (cells.length === 0) return;
-        var vals = [];
-        cells.forEach(function(td) {
-          var t = td.textContent.trim().replace(/\s+/g, ' ');
-          vals.push(t);
-        });
-        /* Section headers inside table (OFFENSE, RUSHING, etc) */
-        if (cells.length === 1 && vals[0]) {
-          lines.push('');
-          lines.push('[' + vals[0] + ']');
-          /* Re-print column header after section break */
-          if (isComp && (awayName || homeName)) {
-            lines.push(padR('', 32) + padL(awayName.substring(0, 16), 18) + padL(homeName.substring(0, 16), 18));
-          }
-        } else if (isComp && vals.length >= 3) {
-          /* 3-col comparison: stat_label | away_val | home_val */
-          lines.push(padR(vals[1], 32) + padL(vals[0], 18) + padL(vals[2], 18));
-        } else if (!isComp && vals.length > 1) {
-          /* Multi-column player stats table */
-          var rowLine = '';
-          vals.forEach(function(v, i) {
-            if (i === 0) rowLine += padR(v, 20);
-            else rowLine += padL(v, 8);
-          });
-          lines.push(rowLine);
-        } else if (vals.length >= 2) {
-          lines.push(vals.join('  '));
-        }
-      });
-      lines.push('');
+      var text = tableToText(el);
+      if (text) { lines.push(text); lines.push(''); }
     }
     /* Grid metrics (Game Ratings) */
     if (el.classList && (el.classList.contains('grid-4') || el.classList.contains('grid-3'))) {
@@ -1362,7 +1286,6 @@ function copyBoxScore(btn) {
         var val = m.querySelector('.value');
         if (lbl && val) {
           var rawVal = val.textContent.trim().replace(/\s+/g, ' ');
-          /* Split "awayVal / homeVal" into labeled columns */
           var halves = rawVal.split(/\s*\/\s*/);
           if (halves.length === 2 && awayName && homeName) {
             parts.push(lbl.textContent.trim() + ': ' + awayName + ' ' + halves[0] + ' / ' + homeName + ' ' + halves[1]);
@@ -1400,32 +1323,43 @@ function tableToText(table) {
     ths.forEach(function(th) { cols.push(th.textContent.trim().replace(/\s+/g, ' ')); });
   }
 
-  /* Gather body rows */
+  /* Gather body rows, marking section headers (colspan rows) */
   var trs = tbody.querySelectorAll('tr');
+  var sectionIndices = {};
   trs.forEach(function(tr) {
     var cells = tr.querySelectorAll('td, th');
     var row = [];
+    /* Detect section header rows (single cell with colspan spanning all columns) */
+    var isSectionHeader = (cells.length === 1 && cols.length > 1 && cells[0].getAttribute('colspan'));
     cells.forEach(function(td) { row.push(td.textContent.trim().replace(/\s+/g, ' ')); });
-    if (row.length > 0) rows.push(row);
+    if (row.length > 0) {
+      if (isSectionHeader) sectionIndices[rows.length] = true;
+      rows.push(row);
+    }
   });
 
   if (rows.length === 0) return '';
 
-  /* Determine column count and max widths */
-  var numCols = Math.max(cols.length, rows.reduce(function(m, r) { return Math.max(m, r.length); }, 0));
+  /* Determine column count and max widths (exclude section headers from width calc) */
+  var numCols = Math.max(cols.length, rows.reduce(function(m, r, idx) {
+    return sectionIndices[idx] ? m : Math.max(m, r.length);
+  }, 0));
   var widths = [];
   for (var i = 0; i < numCols; i++) {
     var w = cols[i] ? cols[i].length : 0;
-    rows.forEach(function(r) { if (r[i] && r[i].length > w) w = r[i].length; });
+    rows.forEach(function(r, idx) {
+      if (!sectionIndices[idx] && r[i] && r[i].length > w) w = r[i].length;
+    });
     widths.push(w);
   }
 
-  /* Detect numeric columns (right-align them) */
+  /* Detect numeric columns (right-align them; exclude section headers) */
   var isNum = [];
   for (var c = 0; c < numCols; c++) {
     var numCount = 0;
     var total = 0;
-    rows.forEach(function(r) {
+    rows.forEach(function(r, idx) {
+      if (sectionIndices[idx]) return;
       if (r[c] && r[c] !== '' && r[c] !== '—' && r[c] !== '-') {
         total++;
         if (/^-?[\d,]+\.?\d*%?$/.test(r[c].replace(/,/g, ''))) numCount++;
@@ -1457,7 +1391,13 @@ function tableToText(table) {
   }
 
   /* Data rows */
-  rows.forEach(function(row) {
+  rows.forEach(function(row, idx) {
+    /* Section header rows render as [SECTION_NAME] with a blank line before */
+    if (sectionIndices[idx]) {
+      lines.push('');
+      lines.push('[' + row[0] + ']');
+      return;
+    }
     var line = '';
     for (var i = 0; i < numCols; i++) {
       var val = row[i] || '';
