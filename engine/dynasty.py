@@ -1086,7 +1086,7 @@ class Dynasty:
         human_board: Optional[RecruitingBoard] = None,
         human_nil_offers: Optional[Dict[str, float]] = None,
         human_portal_picks: Optional[List[str]] = None,
-        pool_size: int = 300,
+        pool_size: int = 1500,
         rng: Optional[random.Random] = None,
     ) -> dict:
         """
@@ -2304,7 +2304,7 @@ class Dynasty:
         self,
         filepath: str,
         year_count: int = 4,
-        pool_size: int = 300,
+        pool_size: int = 1500,
         rng: Optional[random.Random] = None,
     ) -> dict:
         """Export multiple future recruit classes for WVL intake preview.

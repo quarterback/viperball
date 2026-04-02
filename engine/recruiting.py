@@ -606,7 +606,7 @@ def generate_single_recruit(
 
 def generate_recruit_class(
     year: int,
-    size: int = 300,
+    size: int = 1500,
     rng: Optional[random.Random] = None,
 ) -> List[Recruit]:
     """
@@ -1580,7 +1580,7 @@ def run_full_recruiting_cycle(
     team_regions: Dict[str, str],
     scholarships_per_team: Dict[str, int],
     nil_budgets: Dict[str, float],
-    pool_size: int = 300,
+    pool_size: int = 1500,
     rng: Optional[random.Random] = None,
     team_coaching_scores: Optional[Dict[str, float]] = None,
     coaching_prestige_bonus: Optional[Dict[str, int]] = None,
@@ -1852,7 +1852,7 @@ def _apply_hs_development(
 
 def generate_hs_class(
     grade: str,
-    size: int = 300,
+    size: int = 1500,
     rng: Optional[random.Random] = None,
     seed: Optional[int] = None,
 ) -> List[HSProspect]:
@@ -1927,7 +1927,7 @@ class HSRecruitingPipeline:
     def generate_initial_pipeline(
         self,
         base_seed: int = 0,
-        size_per_class: int = 300,
+        size_per_class: int = 1500,
     ) -> None:
         """Generate all four HS grade classes from scratch."""
         for i, grade in enumerate(_HS_GRADES):
@@ -1939,7 +1939,7 @@ class HSRecruitingPipeline:
     def advance_year(
         self,
         new_9th_seed: int = 0,
-        size: int = 300,
+        size: int = 1500,
         rng: Optional[random.Random] = None,
     ) -> List[HSProspect]:
         """Advance all classes by one year.
