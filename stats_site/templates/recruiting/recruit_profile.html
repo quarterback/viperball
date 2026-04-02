@@ -21,8 +21,7 @@
 <div style="background:var(--bg-alt);border:1px solid var(--border);padding:0;margin-bottom:16px;overflow:hidden;">
 
   {# Top stripe with status #}
-  <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;">
-    <span style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">ViperScout Recruit Profile</span>
+  <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;">
     {% if recruit.status == "signed" %}
       <span class="tag" style="background:var(--green);color:#000;font-size:10px;padding:2px 10px;border-color:var(--green);">SIGNED</span>
     {% elif recruit.status == "committed" %}
@@ -89,7 +88,6 @@
       <div style="text-align:center;">
         <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Rating</div>
         <div style="font-size:28px;font-weight:bold;color:{% if recruit.overall_estimate >= 85 %}var(--yellow){% elif recruit.overall_estimate >= 75 %}var(--green){% else %}var(--fg){% endif %};line-height:1.1;">{{ recruit.overall_estimate }}</div>
-        <div style="font-size:9px;color:var(--fg-dim);">ViperScout</div>
       </div>
       {% endif %}
     </div>
@@ -117,7 +115,7 @@
     <div style="font-size:10px;color:var(--fg-dim);">of {{ recruit.position_total }}</div>
   </div>
   <div style="flex:1;min-width:140px;background:var(--bg-alt);border:1px solid var(--border);padding:10px 14px;text-align:center;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Region ({{ recruit.region | replace("_", " ") | title }})</div>
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">State</div>
     <div style="font-size:22px;font-weight:bold;color:{% if recruit.regional_rank <= 3 %}var(--yellow){% elif recruit.regional_rank <= 10 %}var(--green){% else %}var(--fg-bright){% endif %};">
       #{{ recruit.regional_rank }}
     </div>
@@ -159,61 +157,11 @@
     {% if recruit.height %}<tr><td style="color:var(--fg-dim);">Height / Weight</td><td>{{ recruit.height }} / {{ recruit.weight }} lbs</td></tr>{% endif %}
     {% if recruit.hometown %}<tr><td style="color:var(--fg-dim);">Hometown</td><td>{{ recruit.hometown }}</td></tr>{% endif %}
     {% if recruit.high_school %}<tr><td style="color:var(--fg-dim);">High School</td><td>{{ recruit.high_school }}</td></tr>{% endif %}
-    {% if recruit.region %}<tr><td style="color:var(--fg-dim);">Region</td><td>{{ recruit.region | replace("_", " ") | title }}</td></tr>{% endif %}
     {% if recruit.committed_to %}<tr><td style="color:var(--fg-dim);">Committed To</td><td style="color:var(--green);font-weight:bold;">{{ recruit.committed_to }}</td></tr>{% endif %}
     {% if recruit.signing_phase %}<tr><td style="color:var(--fg-dim);">Signing Phase</td><td>{{ recruit.signing_phase | title }}</td></tr>{% endif %}
   </tbody>
 </table>
 
-{# ── Scouting Report (full scout only) ── #}
-{% if recruit.scout_level == "full" %}
-<h2>Scouting Report</h2>
-<div class="grid-3" style="margin-bottom:12px;">
-  <div class="metric-card">
-    <div class="metric-label">True Overall</div>
-    <div class="metric-value
-      {% if recruit.true_overall >= 90 %} stat-elite
-      {% elif recruit.true_overall >= 80 %} stat-good
-      {% elif recruit.true_overall < 60 %} stat-bad
-      {% endif %}">{{ recruit.true_overall }}</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Potential</div>
-    <div class="metric-value">
-      {% for i in range(recruit.true_potential) %}&#9733;{% endfor %}{% for i in range(5 - recruit.true_potential) %}&#9734;{% endfor %}
-    </div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Development</div>
-    <div class="metric-value" style="font-size:13px;letter-spacing:0.5px;">{{ recruit.true_development | replace("_", " ") | upper }}</div>
-  </div>
-</div>
-
-<h2>Attributes</h2>
-<table>
-  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
-  <tbody>
-  {% set attrs = [
-    ('Speed', recruit.true_speed), ('Power', recruit.true_power), ('Agility', recruit.true_agility),
-    ('Hands', recruit.true_hands), ('Awareness', recruit.true_awareness), ('Stamina', recruit.true_stamina),
-    ('Kicking', recruit.true_kicking), ('Kick Power', recruit.true_kick_power),
-    ('Kick Accuracy', recruit.true_kick_accuracy), ('Lateral Skill', recruit.true_lateral_skill),
-    ('Tackling', recruit.true_tackling),
-  ] %}
-  {% for name, val in attrs %}
-  <tr>
-    <td>{{ name }}</td>
-    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
-    <td>
-      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
-        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
-      </div>
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% endif %}
 
 </div>
 
@@ -224,16 +172,6 @@
 <h2>Decision Info</h2>
 <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;margin-bottom:16px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;">
-    <div>
-      <span style="color:var(--fg-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Timeline</span><br>
-      {% if recruit.decision_speed == "early_decider" %}
-        <span style="color:var(--green);font-weight:bold;">EARLY DECIDER</span>
-      {% elif recruit.decision_speed == "late_decider" %}
-        <span style="color:var(--yellow);font-weight:bold;">LATE DECIDER</span>
-      {% else %}
-        <span style="color:var(--fg);">NORMAL</span>
-      {% endif %}
-    </div>
     <div>
       <span style="color:var(--fg-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Decision Date</span><br>
       <span style="color:var(--fg-bright);">{% if recruit.decision_date %}{{ recruit.decision_date }}{% else %}&mdash;{% endif %}</span>
