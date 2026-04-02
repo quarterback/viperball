@@ -10253,7 +10253,7 @@ class ViperballEngine:
                             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                             return Play(
                                 play_number=self.state.play_number, quarter=self.state.quarter,
-                                time=self.state.time_remaining, possession=throwing_team_fum,
+                                time=self.state.time_remaining, possession=self.state.possession,
                                 field_position=self.state.field_position, down=1, yards_to_go=20,
                                 play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
                                 players_involved=[kicker_lbl, receiver_lbl],
@@ -10435,7 +10435,7 @@ class ViperballEngine:
                         play_number=self.state.play_number,
                         quarter=self.state.quarter,
                         time=self.state.time_remaining,
-                        possession=throwing_team_fum,
+                        possession=self.state.possession,
                         field_position=self.state.field_position,
                         down=1,
                         yards_to_go=20,
@@ -10467,7 +10467,7 @@ class ViperballEngine:
                             play_number=self.state.play_number,
                             quarter=self.state.quarter,
                             time=self.state.time_remaining,
-                            possession=throwing_team_fum,
+                            possession=self.state.possession,
                             field_position=self.state.field_position,
                             down=1, yards_to_go=20,
                             play_type="kick_pass",

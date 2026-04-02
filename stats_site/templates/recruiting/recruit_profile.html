@@ -8,158 +8,276 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>RECRUIT PROFILE</h1>
-  <div class="subtitle">High School Pipeline &middot; CVL Draft Classes &middot; WVL Pro Pipeline</div>
-</div>
-
-<div class="tabs">
+<div class="tabs" style="margin-bottom:16px;">
   <a href="/stats/recruiting/">Overview</a>
   <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
   <a href="/stats/recruiting/draft-classes">Draft Classes</a>
   <a href="/stats/recruiting/pro-pipeline">Pro Pipeline</a>
 </div>
 
-{# ── Profile Header ── #}
-<div style="background:var(--bg-alt);border:1px solid var(--border);padding:16px;margin-bottom:16px;">
-  <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+{# ═══════════════════════════════════════════
+   HERO CARD — On3 / 247-style profile header
+   ═══════════════════════════════════════════ #}
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:0;margin-bottom:16px;overflow:hidden;">
 
-    {# Name + core bio #}
-    <div style="flex:1;min-width:200px;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-        <span style="font-size:22px;font-weight:bold;color:var(--fg-bright);letter-spacing:0.5px;">
+  {# Top stripe with status #}
+  <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <span style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">ViperScout Recruit Profile</span>
+    {% if recruit.status == "signed" %}
+      <span class="tag" style="background:var(--green);color:#000;font-size:10px;padding:2px 10px;border-color:var(--green);">SIGNED</span>
+    {% elif recruit.status == "committed" %}
+      <span class="tag" style="background:var(--blue);color:#000;font-size:10px;padding:2px 10px;border-color:var(--blue);">COMMITTED</span>
+    {% elif recruit.status == "decommitted" %}
+      <span class="tag" style="background:var(--red);color:#fff;font-size:10px;padding:2px 10px;border-color:var(--red);">DECOMMITTED</span>
+    {% elif recruit.status == "walkon" %}
+      <span class="tag" style="background:#cc7700;color:#000;font-size:10px;padding:2px 10px;border-color:#cc7700;">WALK-ON</span>
+    {% else %}
+      <span class="tag" style="font-size:10px;padding:2px 10px;color:var(--fg-dim);">UNCOMMITTED</span>
+    {% endif %}
+  </div>
+
+  <div style="display:flex;align-items:stretch;flex-wrap:wrap;">
+
+    {# ── Face + Name block ── #}
+    <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;flex:1;min-width:280px;">
+      {% if face_src %}
+      <div class="player-card-frame" style="flex-shrink:0;">
+        <img src="{{ face_src }}" alt="{{ recruit.first_name }} {{ recruit.last_name }}" class="player-card-face">
+      </div>
+      {% endif %}
+
+      <div>
+        <div style="font-size:24px;font-weight:bold;color:var(--fg-bright);letter-spacing:0.5px;line-height:1.2;">
           {{ recruit.first_name }} {{ recruit.last_name }}
-        </span>
-        {# Status badge #}
-        {% if recruit.status == "signed" %}
-          <span class="tag" style="background:var(--green);color:#000;font-size:11px;padding:2px 8px;border-color:var(--green);">SIGNED</span>
-        {% elif recruit.status == "committed" %}
-          <span class="tag" style="background:var(--blue);color:#000;font-size:11px;padding:2px 8px;border-color:var(--blue);">COMMITTED</span>
-        {% elif recruit.status == "decommitted" %}
-          <span class="tag" style="background:var(--red);color:#fff;font-size:11px;padding:2px 8px;border-color:var(--red);">DECOMMITTED</span>
-        {% elif recruit.status == "walkon" %}
-          <span class="tag" style="background:#cc7700;color:#000;font-size:11px;padding:2px 8px;border-color:#cc7700;">WALK-ON</span>
-        {% else %}
-          <span class="tag" style="color:var(--fg-dim);font-size:11px;padding:2px 8px;">UNCOMMITTED</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <span class="tag tag-pos" style="font-size:11px;padding:2px 8px;">{{ recruit.position }}</span>
+          {% if recruit.hometown %}<span style="font-size:11px;color:var(--fg-dim);">{{ recruit.hometown }}</span>{% endif %}
+        </div>
+        {% if recruit.high_school %}
+        <div style="font-size:11px;color:var(--fg-dim);margin-top:2px;">{{ recruit.high_school }}</div>
         {% endif %}
-      </div>
-
-      {# Stars #}
-      <div style="font-size:16px;margin-bottom:8px;">
-        {% if recruit.stars >= 5 %}
-          <span class="stat-elite">{{ ("&#9733;" * recruit.stars)|safe }}</span>
-        {% elif recruit.stars >= 4 %}
-          <span class="stat-good">{{ ("&#9733;" * recruit.stars)|safe }}</span>
-        {% else %}
-          <span style="color:var(--fg-dim);">{{ ("&#9733;" * recruit.stars)|safe }}</span>
-        {% endif %}
-      </div>
-
-      {# Bio grid #}
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:11px;">
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Position</span>
-        <span style="color:var(--fg-bright);">{{ recruit.position }}</span>
-
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Height / Weight</span>
-        <span style="color:var(--fg-bright);">{{ recruit.height }} &middot; {{ recruit.weight }}</span>
-
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Hometown</span>
-        <span style="color:var(--fg-bright);">{{ recruit.hometown }}</span>
-
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">High School</span>
-        <span style="color:var(--fg-bright);">{{ recruit.high_school }}</span>
-
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Region</span>
-        <span style="color:var(--fg-bright);">{{ recruit.region }}</span>
-
         {% if recruit.committed_to %}
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Committed To</span>
-        <span style="color:var(--green);font-weight:bold;">{{ recruit.committed_to }}</span>
-        {% endif %}
-
-        {% if recruit.signing_phase %}
-        <span style="color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Signing Phase</span>
-        <span style="color:var(--fg-bright);">{{ recruit.signing_phase }}</span>
+        <div style="margin-top:6px;font-size:12px;">
+          <span style="color:var(--fg-dim);">Committed to</span>
+          <span style="color:var(--green);font-weight:bold;">{{ recruit.committed_to }}</span>
+        </div>
         {% endif %}
       </div>
     </div>
 
-    {# Decision Info panel #}
-    <div style="min-width:160px;">
-      <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Decision Info</div>
-      <div style="background:var(--bg);border:1px solid var(--border);padding:10px;font-size:11px;">
-        <div style="margin-bottom:6px;">
-          <span style="color:var(--fg-dim);">Speed</span><br>
-          {% if recruit.decision_speed == "early_decider" %}
-            <span style="color:var(--green);font-weight:bold;">EARLY DECIDER</span>
-          {% elif recruit.decision_speed == "late_decider" %}
-            <span style="color:var(--yellow);font-weight:bold;">LATE DECIDER</span>
+    {# ── Rating badge (On3-style composite) ── #}
+    <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-left:1px solid var(--border);flex-shrink:0;">
+      {# Star rating circle #}
+      <div style="text-align:center;">
+        <div style="width:64px;height:64px;border-radius:50%;border:3px solid {% if recruit.stars >= 5 %}var(--yellow){% elif recruit.stars >= 4 %}var(--green){% elif recruit.stars >= 3 %}var(--fg){% else %}var(--fg-dim){% endif %};display:flex;align-items:center;justify-content:center;flex-direction:column;">
+          <span style="font-size:20px;font-weight:bold;color:var(--fg-bright);line-height:1;">{{ recruit.stars }}</span>
+          <span style="font-size:8px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Stars</span>
+        </div>
+        <div style="margin-top:4px;font-size:14px;">
+          {% if recruit.stars >= 5 %}
+            <span class="stat-elite">{{ ("&#9733;" * recruit.stars)|safe }}</span>
+          {% elif recruit.stars >= 4 %}
+            <span class="stat-good">{{ ("&#9733;" * recruit.stars)|safe }}</span>
           {% else %}
-            <span style="color:var(--fg);">NORMAL</span>
+            <span style="color:var(--fg-dim);">{{ ("&#9733;" * recruit.stars)|safe }}{{ ("&#9734;" * (5 - recruit.stars))|safe }}</span>
           {% endif %}
         </div>
-        <div style="margin-bottom:6px;">
-          <span style="color:var(--fg-dim);">Decision Date</span><br>
-          <span style="color:var(--fg-bright);">
-            {% if recruit.decision_date %}{{ recruit.decision_date }}{% else %}&mdash;{% endif %}
-          </span>
-        </div>
-        <div>
-          <span style="color:var(--fg-dim);">Signing Week</span><br>
-          <span style="color:var(--fg-bright);">Week {{ recruit.signing_week }}</span>
-        </div>
       </div>
+      {# Estimated overall #}
+      {% if recruit.overall_estimate %}
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Rating</div>
+        <div style="font-size:28px;font-weight:bold;color:{% if recruit.overall_estimate >= 85 %}var(--yellow){% elif recruit.overall_estimate >= 75 %}var(--green){% else %}var(--fg){% endif %};line-height:1.1;">{{ recruit.overall_estimate }}</div>
+      </div>
+      {% endif %}
     </div>
 
   </div>
 </div>
 
-{# ── Top Schools / Crystal Ball ── #}
+{# ═══════════════════════════════════════════
+   RANKINGS ROW — National / Position / Regional
+   ═══════════════════════════════════════════ #}
+{% if recruit.national_rank %}
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:140px;background:var(--bg-alt);border:1px solid var(--border);padding:10px 14px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">National</div>
+    <div style="font-size:22px;font-weight:bold;color:{% if recruit.national_rank <= 10 %}var(--yellow){% elif recruit.national_rank <= 50 %}var(--green){% else %}var(--fg-bright){% endif %};">
+      #{{ recruit.national_rank }}
+    </div>
+    <div style="font-size:10px;color:var(--fg-dim);">of {{ recruit.national_total }}</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:var(--bg-alt);border:1px solid var(--border);padding:10px 14px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Position ({{ recruit.position }})</div>
+    <div style="font-size:22px;font-weight:bold;color:{% if recruit.position_rank <= 3 %}var(--yellow){% elif recruit.position_rank <= 10 %}var(--green){% else %}var(--fg-bright){% endif %};">
+      #{{ recruit.position_rank }}
+    </div>
+    <div style="font-size:10px;color:var(--fg-dim);">of {{ recruit.position_total }}</div>
+  </div>
+  <div style="flex:1;min-width:140px;background:var(--bg-alt);border:1px solid var(--border);padding:10px 14px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">State</div>
+    <div style="font-size:22px;font-weight:bold;color:{% if recruit.regional_rank <= 3 %}var(--yellow){% elif recruit.regional_rank <= 10 %}var(--green){% else %}var(--fg-bright){% endif %};">
+      #{{ recruit.regional_rank }}
+    </div>
+    <div style="font-size:10px;color:var(--fg-dim);">of {{ recruit.regional_total }}</div>
+  </div>
+</div>
+{% endif %}
+
+{# ═══════════════════════════════════════════
+   TWO-COLUMN LAYOUT
+   ═══════════════════════════════════════════ #}
+<div class="grid-2">
+
+{# ══ LEFT COLUMN ══ #}
+<div>
+
+{# ── Measurables ── #}
+<h2>Measurables</h2>
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:80px;background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Height</div>
+    <div style="font-size:16px;font-weight:bold;color:var(--fg-bright);">{{ recruit.height if recruit.height else '—' }}</div>
+  </div>
+  <div style="flex:1;min-width:80px;background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Weight</div>
+    <div style="font-size:16px;font-weight:bold;color:var(--fg-bright);">{{ recruit.weight if recruit.weight else '—' }} lbs</div>
+  </div>
+  <div style="flex:1;min-width:80px;background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;text-align:center;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Offers</div>
+    <div style="font-size:16px;font-weight:bold;color:var(--fg-bright);">{{ recruit.offers | length }}</div>
+  </div>
+</div>
+
+{# ── Bio ── #}
+<h2>Player Info</h2>
+<table>
+  <tbody>
+    <tr><td style="color:var(--fg-dim);width:120px;">Position</td><td>{{ recruit.position }}</td></tr>
+    {% if recruit.height %}<tr><td style="color:var(--fg-dim);">Height / Weight</td><td>{{ recruit.height }} / {{ recruit.weight }} lbs</td></tr>{% endif %}
+    {% if recruit.hometown %}<tr><td style="color:var(--fg-dim);">Hometown</td><td>{{ recruit.hometown }}</td></tr>{% endif %}
+    {% if recruit.high_school %}<tr><td style="color:var(--fg-dim);">High School</td><td>{{ recruit.high_school }}</td></tr>{% endif %}
+    {% if recruit.committed_to %}<tr><td style="color:var(--fg-dim);">Committed To</td><td style="color:var(--green);font-weight:bold;">{{ recruit.committed_to }}</td></tr>{% endif %}
+    {% if recruit.signing_phase %}<tr><td style="color:var(--fg-dim);">Signing Phase</td><td>{{ recruit.signing_phase | title }}</td></tr>{% endif %}
+  </tbody>
+</table>
+
+{# ── ViperScout Scouting Report (full scout only) ── #}
+{% if recruit.scout_level == "full" %}
+<h2>ViperScout Scouting Report</h2>
+<div class="grid-2" style="margin-bottom:12px;">
+  <div class="metric-card">
+    <div class="metric-label">Overall</div>
+    <div class="metric-value
+      {% if recruit.true_overall >= 90 %} stat-elite
+      {% elif recruit.true_overall >= 80 %} stat-good
+      {% elif recruit.true_overall < 60 %} stat-bad
+      {% endif %}">{{ recruit.true_overall }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Potential</div>
+    <div class="metric-value">
+      {% for i in range(recruit.true_potential) %}&#9733;{% endfor %}{% for i in range(5 - recruit.true_potential) %}&#9734;{% endfor %}
+    </div>
+  </div>
+</div>
+
+<table>
+  <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+  <tbody>
+  {% set attrs = [
+    ('Speed', recruit.true_speed), ('Power', recruit.true_power), ('Agility', recruit.true_agility),
+    ('Hands', recruit.true_hands), ('Awareness', recruit.true_awareness), ('Stamina', recruit.true_stamina),
+    ('Kicking', recruit.true_kicking), ('Kick Power', recruit.true_kick_power),
+    ('Kick Accuracy', recruit.true_kick_accuracy), ('Lateral Skill', recruit.true_lateral_skill),
+    ('Tackling', recruit.true_tackling),
+  ] %}
+  {% for name, val in attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 85 %}stat-elite{% elif val >= 70 %}stat-good{% elif val < 50 %}stat-bad{% endif %}">{{ val }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if val >= 85 %}var(--yellow){% elif val >= 70 %}var(--green){% elif val < 50 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+
+{# ══ RIGHT COLUMN ══ #}
+<div>
+
+{# ── Decision Info ── #}
+<h2>Decision Info</h2>
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;margin-bottom:16px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;">
+    <div>
+      <span style="color:var(--fg-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Decision Date</span><br>
+      <span style="color:var(--fg-bright);">{% if recruit.decision_date %}{{ recruit.decision_date }}{% else %}&mdash;{% endif %}</span>
+    </div>
+    <div>
+      <span style="color:var(--fg-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Signing Week</span><br>
+      <span style="color:var(--fg-bright);">Week {{ recruit.signing_week }}</span>
+    </div>
+    <div>
+      <span style="color:var(--fg-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Status</span><br>
+      <span style="color:var(--fg-bright);">{{ recruit.status | replace("_", " ") | title }}</span>
+    </div>
+  </div>
+</div>
+
+{# ── Top Schools / StrikePrediction ── #}
 {% if recruit.top_schools %}
-<h2>Top Schools &amp; Crystal Ball</h2>
-<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+<h2>Top Schools</h2>
+<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px;">
   {% for school in recruit.top_schools %}
   {% set interest = recruit.school_interest.get(school, "cool") %}
   {% set cb_pct = recruit.crystal_ball.get(school, 0) %}
   {% set is_finalist = school in recruit.finalist_schools %}
   {% set is_committed = recruit.committed_to == school %}
 
-  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div style="background:var(--bg-alt);border:1px solid {% if is_committed %}var(--green){% elif is_finalist %}var(--accent){% else %}var(--border){% endif %};padding:8px 12px;display:flex;align-items:center;gap:10px;">
 
-    {# Interest dot #}
+    {# Interest indicator #}
     {% if interest == "hot" %}
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0;" title="Hot"></span>
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;" title="Hot interest"></span>
     {% elif interest == "warm" %}
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#cc7700;flex-shrink:0;" title="Warm"></span>
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cc7700;flex-shrink:0;" title="Warm interest"></span>
     {% else %}
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--fg-dim);flex-shrink:0;" title="Cool"></span>
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--fg-dim);flex-shrink:0;" title="Cool interest"></span>
     {% endif %}
 
-    {# School name #}
-    <span style="font-size:12px;font-weight:bold;color:var(--fg-bright);min-width:140px;">{{ school }}</span>
+    {# School name + tags #}
+    <div style="min-width:100px;">
+      <span style="font-size:12px;font-weight:bold;color:var(--fg-bright);">{{ school }}</span>
+      {% if is_committed %}
+        <span class="tag" style="background:var(--green);color:#000;border-color:var(--green);font-size:9px;padding:1px 5px;margin-left:4px;">COMMITTED</span>
+      {% elif is_finalist %}
+        <span class="tag" style="background:var(--accent);color:#000;border-color:var(--accent);font-size:9px;padding:1px 5px;margin-left:4px;">FINALIST</span>
+      {% endif %}
+    </div>
 
-    {# Tags #}
-    {% if is_committed %}
-      <span class="tag" style="background:var(--green);color:#000;border-color:var(--green);font-size:10px;padding:1px 6px;">COMMITTED</span>
-    {% elif is_finalist %}
-      <span class="tag" style="background:var(--accent);color:#000;border-color:var(--accent);font-size:10px;padding:1px 6px;">FINALIST</span>
-    {% endif %}
-
-    {# Crystal ball bar #}
-    <div style="flex:1;min-width:100px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="flex:1;background:var(--border);height:6px;border-radius:1px;overflow:hidden;">
-          <div style="width:{{ cb_pct }}%;background:var(--accent);height:100%;border-radius:1px;"></div>
+    {# StrikePrediction bar #}
+    <div style="flex:1;min-width:60px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="flex:1;background:var(--border);height:6px;overflow:hidden;">
+          <div style="width:{{ cb_pct }}%;background:{% if cb_pct >= 60 %}var(--green){% elif cb_pct >= 30 %}var(--accent){% else %}var(--fg-dim){% endif %};height:100%;"></div>
         </div>
-        <span style="font-size:10px;color:var(--fg-dim);min-width:34px;text-align:right;font-variant-numeric:tabular-nums;">
+        <span style="font-size:10px;color:var(--fg-dim);min-width:30px;text-align:right;font-variant-numeric:tabular-nums;">
           {% if cb_pct > 0 %}{{ "%.0f"|format(cb_pct) }}%{% else %}&mdash;{% endif %}
         </span>
       </div>
-      <div style="font-size:9px;color:var(--fg-dim);margin-top:1px;text-transform:uppercase;letter-spacing:0.5px;">Crystal Ball</div>
     </div>
 
   </div>
   {% endfor %}
+  <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">StrikePrediction %</div>
 </div>
 {% endif %}
 
@@ -167,21 +285,17 @@
 {% if recruit.timeline %}
 <h2>Recruiting Timeline</h2>
 <div style="position:relative;padding-left:20px;margin-bottom:16px;">
-  {# Vertical line #}
   <div style="position:absolute;left:5px;top:4px;bottom:4px;width:1px;background:var(--border);"></div>
 
   {% for event in recruit.timeline %}
-  <div style="position:relative;margin-bottom:10px;">
-    {# Timeline dot #}
+  <div style="position:relative;margin-bottom:8px;">
     <div style="position:absolute;left:-18px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:1px solid var(--bg-alt);"></div>
 
     <div style="background:var(--bg-alt);border:1px solid var(--border);padding:6px 10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-size:11px;color:var(--fg-bright);">{{ event.event }}</span>
         <span style="font-size:10px;color:var(--fg-dim);margin-left:auto;">
-          {% if event.phase %}
-            <span class="tag">{{ event.phase }}</span>
-          {% endif %}
+          {% if event.phase %}<span class="tag" style="font-size:9px;">{{ event.phase }}</span>{% endif %}
           Wk {{ event.week }}
         </span>
       </div>
@@ -191,45 +305,15 @@
 </div>
 {% endif %}
 
-{# ── Scout Attributes (full scout only) ── #}
-{% if recruit.scout_level == "full" %}
-<h2>Scouting Report</h2>
-<div class="grid-3" style="margin-bottom:16px;">
-  <div class="metric-card">
-    <div class="metric-label">True Overall</div>
-    <div class="metric-value
-      {% if recruit.true_overall >= 90 %} stat-elite
-      {% elif recruit.true_overall >= 80 %} stat-good
-      {% elif recruit.true_overall < 60 %} stat-bad
-      {% endif %}">{{ recruit.true_overall }}</div>
-    <div class="metric-detail">Hidden from teams unless scouted</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">True Potential</div>
-    <div class="metric-value
-      {% if recruit.true_potential >= 90 %} stat-elite
-      {% elif recruit.true_potential >= 80 %} stat-good
-      {% elif recruit.true_potential < 60 %} stat-bad
-      {% endif %}">{{ recruit.true_potential }}</div>
-    <div class="metric-detail">Ceiling projection</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-label">Development</div>
-    <div class="metric-value" style="font-size:13px;letter-spacing:0.5px;">{{ recruit.true_development | upper }}</div>
-    <div class="metric-detail">Dev trait</div>
-  </div>
-</div>
-{% endif %}
-
 {# ── All Offers ── #}
 {% if recruit.offers %}
-<h2>All Offers ({{ recruit.offers | length }})</h2>
-<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+<h2>Offers ({{ recruit.offers | length }})</h2>
+<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;">
   {% for team in recruit.offers %}
   <span style="
     background:var(--bg-alt);
-    border:1px solid var(--border);
-    padding:3px 10px;
+    border:1px solid {% if recruit.committed_to == team %}var(--green){% elif team in recruit.finalist_schools %}var(--accent){% else %}var(--border){% endif %};
+    padding:3px 8px;
     font-size:11px;
     color:{% if recruit.committed_to == team %}var(--green){% elif team in recruit.finalist_schools %}var(--accent){% else %}var(--fg){% endif %};
     font-weight:{% if recruit.committed_to == team or team in recruit.finalist_schools %}bold{% else %}normal{% endif %};
@@ -237,5 +321,8 @@
   {% endfor %}
 </div>
 {% endif %}
+
+</div>
+</div>{# /grid-2 #}
 
 {% endblock %}
