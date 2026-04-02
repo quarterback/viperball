@@ -51,6 +51,67 @@
 </div>
 {% endif %}
 
+{# ── Record Summary ── #}
+{% if record and record.games > 0 %}
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label">Record</div>
+    <div class="value accent">{{ record.wins }}W-{{ record.draws }}D-{{ record.losses }}L</div>
+  </div>
+  <div class="metric">
+    <div class="label">Games</div>
+    <div class="value">{{ record.games }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Points For</div>
+    <div class="value">{{ record.pf }}</div>
+  </div>
+  <div class="metric">
+    <div class="label">Points Against</div>
+    <div class="value">{{ record.pa }}</div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Match History ── #}
+{% if team_matches %}
+<h2>Match History ({{ team_matches|length }} games)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Opponent</th>
+      <th class="num">Score</th>
+      <th></th>
+      <th class="num">Score</th>
+      <th>Result</th>
+      <th>Competition</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for m in team_matches %}
+  {% set is_home = (m.get('home_code', m.get('home', '')) == nation_code) %}
+  {% set opp = m.get('away_code', m.get('away', '?')) if is_home else m.get('home_code', m.get('home', '?')) %}
+  {% set team_score = m.get('home_score', 0) if is_home else m.get('away_score', 0) %}
+  {% set opp_score = m.get('away_score', 0) if is_home else m.get('home_score', 0) %}
+  {% set result_class = 'stat-elite' if m.get('winner') == nation_code else ('stat-bad' if m.get('winner') != 'draw' and m.get('winner') else '') %}
+  {% set result_label = 'W' if m.get('winner') == nation_code else ('L' if m.get('winner') != 'draw' and m.get('winner') else 'D') %}
+  <tr>
+    <td><a href="/stats/international/team/{{ opp }}">{{ opp }}</a></td>
+    <td class="num {% if team_score > opp_score %}score-win{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ team_score|int }}</a>{% else %}{{ team_score|int }}{% endif %}
+    </td>
+    <td style="color:var(--fg-dim)">–</td>
+    <td class="num {% if opp_score > team_score %}score-win{% endif %}">
+      {% if m.get('match_id') %}<a href="/stats/international/game/{{ m.match_id }}" style="text-decoration:none;color:inherit">{{ opp_score|int }}</a>{% else %}{{ opp_score|int }}{% endif %}
+    </td>
+    <td><span class="{{ result_class }}" style="font-weight:bold">{{ result_label }}</span></td>
+    <td style="color:var(--fg-dim)">{{ m.get('stage', m.get('competition', '')) | replace('_', ' ') | title }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {# ── Roster ── #}
 {% set roster = team.get('roster', []) %}
 {% if roster %}

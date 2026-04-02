@@ -432,12 +432,37 @@ class GroupStandings:
         )
 
     def to_dict(self) -> dict:
+        # Build a template-friendly standings list sorted by rank
+        ranked = self.ranked_teams()
+        standings = []
+        for code in ranked:
+            row = self.table.get(code, {})
+            standings.append({
+                "team": code,
+                "code": code,
+                "played": row.get("played", 0),
+                "p": row.get("played", 0),
+                "wins": row.get("won", 0),
+                "w": row.get("won", 0),
+                "draws": row.get("drawn", 0),
+                "d": row.get("drawn", 0),
+                "losses": row.get("lost", 0),
+                "l": row.get("lost", 0),
+                "pf": row.get("points_for", 0),
+                "pa": row.get("points_against", 0),
+                "points_for": row.get("points_for", 0),
+                "points_against": row.get("points_against", 0),
+                "point_diff": row.get("point_diff", 0),
+                "points": row.get("points", 0),
+                "pts": row.get("points", 0),
+            })
         return {
             "group_name": self.group_name,
             "teams": self.teams,
             "results": [r.to_dict() for r in self.results],
             "table": self.table,
-            "ranked": self.ranked_teams(),
+            "standings": standings,
+            "ranked": ranked,
         }
 
 
@@ -1081,13 +1106,32 @@ def _play_match(
 
     match_id = str(uuid.uuid4())[:12]
 
-    # Update caps for all players
-    for ntp in home_team.roster:
-        ntp.caps += 1
-        ntp.eligibility_locked = True
-    for ntp in away_team.roster:
-        ntp.caps += 1
-        ntp.eligibility_locked = True
+    # Update caps and career stats for all players
+    player_stats = result.get("player_stats", {})
+    for side, team in [("home", home_team), ("away", away_team)]:
+        side_stats = player_stats.get(side, [])
+        # Build lookup by player name for stat accumulation
+        stats_by_name = {ps.get("name"): ps for ps in side_stats if isinstance(ps, dict)}
+        for ntp in team.roster:
+            ntp.caps += 1
+            ntp.eligibility_locked = True
+            # Accumulate career international stats from this game
+            ps = stats_by_name.get(ntp.player.name)
+            if ps:
+                cs = ntp.career_international_stats
+                for stat_key in (
+                    "rushing_yards", "rushing_tds", "rush_carries",
+                    "lateral_yards", "lateral_tds", "laterals_thrown", "lateral_receptions",
+                    "kick_pass_yards", "kick_pass_tds", "kick_passes_thrown", "kick_passes_completed",
+                    "kick_pass_interceptions_thrown", "kick_pass_receptions",
+                    "tackles", "tfl", "sacks", "hurries", "kick_pass_ints",
+                    "yards", "tds", "touches", "fumbles", "all_purpose_yards",
+                    "dk_att", "dk_made", "pk_att", "pk_made",
+                    "kick_returns", "kick_return_yards", "kick_return_tds",
+                ):
+                    cs[stat_key] = cs.get(stat_key, 0) + ps.get(stat_key, 0)
+                cs["wpa"] = round(cs.get("wpa", 0.0) + ps.get("wpa", 0.0), 2)
+                cs["games"] = cs.get("games", 0) + 1
 
     # Update rankings
     if rankings:

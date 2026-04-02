@@ -999,10 +999,71 @@ def _show_fiv_player_card(player_data: dict):
                                     ui.label(abbr).classes("text-[9px] font-bold leading-tight")
                                     ui.label(str(val)).classes("text-xs font-extrabold leading-tight")
 
-            # Close button
-            with ui.element("div").classes("w-full px-5 py-2 flex justify-end").style(
+            # Career International Stats section
+            career = bio.get("career_international_stats", {})
+            caps = bio.get("caps", 0)
+            if caps > 0 or career:
+                with ui.element("div").classes("w-full px-5 py-2").style(
+                    "border-top:1px solid #e2e8f0;"
+                ):
+                    ui.label("International Career").classes(
+                        "text-xs font-bold text-slate-500 mb-1"
+                    )
+                    games = career.get("games", caps)
+                    # Compact stat pills
+                    stat_pills = [("Games", games)]
+                    if career.get("yards", 0):
+                        stat_pills.append(("Yards", career["yards"]))
+                    if career.get("tds", 0):
+                        stat_pills.append(("TDs", career["tds"]))
+                    if career.get("rushing_yards", 0):
+                        stat_pills.append(("Rush Yds", career["rushing_yards"]))
+                    if career.get("rushing_tds", 0):
+                        stat_pills.append(("Rush TDs", career["rushing_tds"]))
+                    if career.get("kick_pass_yards", 0):
+                        stat_pills.append(("KP Yds", career["kick_pass_yards"]))
+                    if career.get("kick_pass_tds", 0):
+                        stat_pills.append(("KP TDs", career["kick_pass_tds"]))
+                    if career.get("lateral_yards", 0):
+                        stat_pills.append(("Lat Yds", career["lateral_yards"]))
+                    if career.get("tackles", 0):
+                        stat_pills.append(("Tackles", career["tackles"]))
+                    if career.get("sacks", 0):
+                        stat_pills.append(("Sacks", career["sacks"]))
+                    if career.get("wpa", 0):
+                        stat_pills.append(("WPA", career["wpa"]))
+
+                    with ui.element("div").classes("flex flex-wrap gap-1"):
+                        for label, val in stat_pills:
+                            with ui.element("div").classes(
+                                "flex flex-col items-center px-2 py-0.5 rounded"
+                            ).style("background:#f1f5f9; border:1px solid #cbd5e1; min-width:50px;"):
+                                ui.label(label).classes("text-[9px] font-bold text-slate-400 leading-tight")
+                                ui.label(str(val)).classes("text-xs font-extrabold text-slate-700 leading-tight")
+
+            # Cross-context link for CVL players
+            nation = bio.get("active_national_team") or bio.get("nation", "")
+            player_name = bio.get("name", "")
+            if bio.get("cvl_source") and player_name:
+                with ui.element("div").classes("w-full px-5 py-1").style(
+                    "border-top:1px solid #e2e8f0;"
+                ):
+                    ui.label(f"CVL Source: {bio['cvl_source']}").classes(
+                        "text-xs text-indigo-600 font-semibold"
+                    )
+
+            # View full profile link + Close button
+            with ui.element("div").classes("w-full px-5 py-2 flex justify-between items-center").style(
                 "border-top:1px solid #e2e8f0;"
             ):
+                if nation and player_name:
+                    ui.link(
+                        "View Full Profile →",
+                        f"/stats/international/team/{nation}/player/{player_name}",
+                        new_tab=True,
+                    ).classes("text-xs text-indigo-600 font-semibold hover:underline")
+                else:
+                    ui.element("div")  # spacer
                 ui.button("Close", icon="close", on_click=dlg.close).props("flat no-caps size=sm color=grey")
 
     dlg.open()

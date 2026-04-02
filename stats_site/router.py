@@ -5444,11 +5444,53 @@ def intl_player(request: Request, nation_code: str, player_name: str):
     _pid = _pl.get("player_id", "") if isinstance(_pl, dict) else getattr(_pl, "player_id", "")
     _face_src = _face_url_for(_pid) if _pid else None
 
+    # Aggregate per-game stats for this player from all match results
+    game_log = []
+    all_results = []
+    for conf_id, cc_data in fiv_data.get("confederations_data", {}).items():
+        all_results.extend(cc_data.get("all_results", []))
+    wc = fiv_data.get("world_cup")
+    if wc:
+        all_results.extend(wc.get("all_results", []))
+
+    for match in all_results:
+        hc = match.get("home_code", match.get("home", ""))
+        ac = match.get("away_code", match.get("away", ""))
+        if hc != nation_code and ac != nation_code:
+            continue
+        gr = match.get("game_result", {})
+        if not gr:
+            continue
+        ps = gr.get("player_stats", {})
+        side = "home" if hc == nation_code else "away"
+        opp_code = ac if side == "home" else hc
+        for pstat in ps.get(side, []):
+            if isinstance(pstat, dict) and pstat.get("name") == player_name:
+                game_log.append({
+                    "opponent": opp_code,
+                    "match_id": match.get("match_id"),
+                    "competition": match.get("stage", match.get("competition", "")),
+                    "result": "W" if match.get("winner") == nation_code else ("L" if match.get("winner") != "draw" else "D"),
+                    "yards": pstat.get("yards", 0),
+                    "tds": pstat.get("tds", 0),
+                    "rushing_yards": pstat.get("rushing_yards", 0),
+                    "rushing_tds": pstat.get("rushing_tds", 0),
+                    "rush_carries": pstat.get("rush_carries", 0),
+                    "kick_pass_yards": pstat.get("kick_pass_yards", 0),
+                    "kick_pass_tds": pstat.get("kick_pass_tds", 0),
+                    "lateral_yards": pstat.get("lateral_yards", 0),
+                    "tackles": pstat.get("tackles", 0),
+                    "sacks": pstat.get("sacks", 0),
+                    "wpa": pstat.get("wpa", 0),
+                })
+                break
+
     return templates.TemplateResponse("international/player.html", _ctx(
         request, section="international", player=player, nation_code=nation_code,
         nation=nation, team_data=team_data, cross_links=cross_links,
         face_src=_face_src,
         stadium_url=_stadium_url_for(nation_code),
+        game_log=game_log,
     ))
 
 
@@ -5688,10 +5730,67 @@ def intl_team(request: Request, nation_code: str):
     if not team:
         raise HTTPException(404, f"Nation '{nation_code}' not found")
 
+    # Collect all match results for this team across all competitions
+    team_matches = []
+
+    # Continental matches
+    for conf_id, cc_data in fiv_data.get("confederations_data", {}).items():
+        for group in cc_data.get("groups", []):
+            for r in group.get("results", []):
+                if r.get("home_code") == nation_code or r.get("away_code") == nation_code:
+                    team_matches.append(r)
+        # Knockout results stored in all_results but not in groups
+        for r in cc_data.get("all_results", []):
+            rid = r.get("match_id")
+            if rid and rid not in {m.get("match_id") for m in team_matches}:
+                if r.get("home_code") == nation_code or r.get("away_code") == nation_code:
+                    team_matches.append(r)
+
+    # Playoff matches
+    playoff = fiv_data.get("playoff")
+    if playoff:
+        for kr in playoff.get("bracket", []):
+            for m in kr.get("matchups", []):
+                r = m.get("result") or m
+                if r.get("home_code", r.get("home")) == nation_code or r.get("away_code", r.get("away")) == nation_code:
+                    if r.get("match_id") and r["match_id"] not in {tm.get("match_id") for tm in team_matches}:
+                        team_matches.append(r)
+
+    # World Cup matches
+    wc = fiv_data.get("world_cup")
+    if wc:
+        for r in wc.get("all_results", []):
+            rid = r.get("match_id")
+            if rid and rid not in {m.get("match_id") for m in team_matches}:
+                if r.get("home_code") == nation_code or r.get("away_code") == nation_code:
+                    team_matches.append(r)
+
+    # Compute record summary
+    wins = draws = losses = pf = pa = 0
+    for m in team_matches:
+        hc = m.get("home_code", m.get("home", ""))
+        hs = m.get("home_score", 0)
+        as_ = m.get("away_score", 0)
+        if hc == nation_code:
+            pf += int(hs); pa += int(as_)
+        else:
+            pf += int(as_); pa += int(hs)
+        w = m.get("winner", "")
+        if w == nation_code:
+            wins += 1
+        elif w == "draw":
+            draws += 1
+        else:
+            losses += 1
+
+    record = {"wins": wins, "draws": draws, "losses": losses,
+              "games": len(team_matches), "pf": pf, "pa": pa}
+
     return templates.TemplateResponse("international/team.html", _ctx(
         request, section="international", team=team, nation_code=nation_code,
         stadium_url=_stadium_url_for(nation_code),
         banner_url=_banner_url_for(nation_code),
+        team_matches=team_matches, record=record,
     ))
 
 
