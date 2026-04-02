@@ -6025,6 +6025,10 @@ def recruiting_index(request: Request):
                 "position_rank": p.position_rank,
                 "regional_rank": p.regional_rank,
                 "is_alpha": p.is_alpha,
+                "status": p.recruit.status,
+                "committed_to": p.recruit.committed_to or "",
+                "top_schools": list(p.recruit.top_schools[:3]),
+                "num_offers": len(p.recruit.offers),
             })
 
     # Find sessions with dynasty data for draft classes
@@ -6054,21 +6058,80 @@ def recruiting_index(request: Request):
 
 @router.get("/recruiting/hs-rankings", response_class=HTMLResponse)
 def recruiting_hs_rankings(request: Request):
-    from engine.recruiting import POSITIONS
+    from engine.recruiting import POSITIONS, _REGIONS, _INTL_REGIONS
 
     grade = request.query_params.get("grade", "12th")
     position = request.query_params.get("position", "")
+    stars_filter = request.query_params.get("stars", "")
+    state_filter = request.query_params.get("state", "")
+    search_q = request.query_params.get("q", "").strip()
 
     pipeline, dynasty, sid = _get_recruiting_pipeline()
 
     board = []
     visible_attrs = []
+    all_states: list[str] = []
+
+    # Display-friendly region labels (group all intl as "International")
+    _region_display = {
+        "northeast": "Northeast", "mid_atlantic": "Mid-Atlantic",
+        "south": "South", "midwest": "Midwest",
+        "west_coast": "West Coast", "texas_southwest": "Texas / Southwest",
+    }
+    for ir in _INTL_REGIONS:
+        _region_display[ir] = "International"
+
     if pipeline:
-        raw_board = pipeline.get_rankings_board(grade=grade, top_n=100)
+        raw_board = pipeline.get_rankings_board(grade=grade, top_n=9999)
+
+        # Add display state + recruit status fields to each entry
+        for p in raw_board:
+            p["state"] = _region_display.get(p.get("region", ""), p.get("region", ""))
+            # Look up recruit object for top_schools / status
+            _r = None
+            for g_prospects in pipeline.classes.values():
+                for hp in g_prospects:
+                    if hp.recruit.recruit_id == p["recruit_id"]:
+                        _r = hp.recruit
+                        break
+                if _r:
+                    break
+            if _r:
+                p["status"] = _r.status
+                p["committed_to"] = _r.committed_to or ""
+                p["top_schools"] = list(_r.top_schools[:3])
+                p["num_offers"] = len(_r.offers)
+            else:
+                p["status"] = ""
+                p["committed_to"] = ""
+                p["top_schools"] = []
+                p["num_offers"] = 0
+
+        # Build state list from data
+        all_states = sorted({p["state"] for p in raw_board})
+
+        # Apply filters
         if position:
             raw_board = [p for p in raw_board if p["position"] == position]
+        if stars_filter:
+            try:
+                sv = int(stars_filter)
+                raw_board = [p for p in raw_board if p["scouted_stars"] == sv]
+            except ValueError:
+                pass
+        if state_filter:
+            raw_board = [p for p in raw_board if p["state"] == state_filter]
+        if search_q:
+            q_lower = search_q.lower()
+            raw_board = [p for p in raw_board if q_lower in p["name"].lower()
+                         or q_lower in p.get("high_school", "").lower()
+                         or q_lower in p.get("hometown", "").lower()]
+
+        # Re-number ranks after filtering
+        for i, p in enumerate(raw_board):
+            p["display_rank"] = i + 1
+
         board = raw_board
-        # Determine which attributes are visible for this grade
         if board:
             visible_attrs = sorted(board[0].get("visible_attributes", {}).keys())
 
@@ -6078,6 +6141,10 @@ def recruiting_hs_rankings(request: Request):
         grade=grade,
         position=position,
         positions=POSITIONS,
+        stars_filter=stars_filter,
+        state_filter=state_filter,
+        search_q=search_q,
+        all_states=all_states,
         board=board,
         visible_attrs=visible_attrs,
     ))
