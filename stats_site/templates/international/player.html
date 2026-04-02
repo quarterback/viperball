@@ -104,8 +104,44 @@
 <h2>International Stats</h2>
 <table>
   <tbody>
-  {% for k, v in career.items() %}
-  <tr><td style="color:var(--fg-dim)">{{ k | replace('_', ' ') | title }}</td><td class="num">{{ v }}</td></tr>
+  {% if career.get('games') %}<tr><td style="color:var(--fg-dim)">Games</td><td class="num" style="font-weight:bold">{{ career.games }}</td></tr>{% endif %}
+  {% if career.get('yards') %}<tr><td style="color:var(--fg-dim)">Total Yards</td><td class="num">{{ career.yards }}</td></tr>{% endif %}
+  {% if career.get('tds') %}<tr><td style="color:var(--fg-dim)">Total TDs</td><td class="num {% if career.tds >= 5 %}stat-elite{% elif career.tds >= 2 %}stat-good{% endif %}">{{ career.tds }}</td></tr>{% endif %}
+  {% if career.get('rushing_yards') %}<tr><td style="color:var(--fg-dim)">Rushing Yards</td><td class="num">{{ career.rushing_yards }}</td></tr>{% endif %}
+  {% if career.get('rushing_tds') %}<tr><td style="color:var(--fg-dim)">Rushing TDs</td><td class="num">{{ career.rushing_tds }}</td></tr>{% endif %}
+  {% if career.get('kick_pass_yards') %}<tr><td style="color:var(--fg-dim)">Kick Pass Yards</td><td class="num">{{ career.kick_pass_yards }}</td></tr>{% endif %}
+  {% if career.get('kick_pass_tds') %}<tr><td style="color:var(--fg-dim)">Kick Pass TDs</td><td class="num">{{ career.kick_pass_tds }}</td></tr>{% endif %}
+  {% if career.get('lateral_yards') %}<tr><td style="color:var(--fg-dim)">Lateral Yards</td><td class="num">{{ career.lateral_yards }}</td></tr>{% endif %}
+  {% if career.get('lateral_tds') %}<tr><td style="color:var(--fg-dim)">Lateral TDs</td><td class="num">{{ career.lateral_tds }}</td></tr>{% endif %}
+  {% if career.get('tackles') %}<tr><td style="color:var(--fg-dim)">Tackles</td><td class="num">{{ career.tackles }}</td></tr>{% endif %}
+  {% if career.get('sacks') %}<tr><td style="color:var(--fg-dim)">Sacks</td><td class="num">{{ career.sacks }}</td></tr>{% endif %}
+  {% if career.get('wpa') %}<tr><td style="color:var(--fg-dim)">WPA</td><td class="num">{{ career.wpa }}</td></tr>{% endif %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Game Log ── #}
+{% if game_log %}
+<h2>Game Log ({{ game_log|length }} games)</h2>
+<table>
+  <thead><tr>
+    <th>Opp</th><th class="num">Res</th><th class="num">Yds</th><th class="num">TDs</th>
+    <th class="num">Rush</th><th class="num">KP Yds</th><th class="num">Tkl</th><th class="num">WPA</th>
+  </tr></thead>
+  <tbody>
+  {% for g in game_log %}
+  <tr>
+    <td><a href="/stats/international/team/{{ g.opponent }}">{{ g.opponent }}</a></td>
+    <td class="num {% if g.result == 'W' %}stat-elite{% elif g.result == 'L' %}stat-bad{% endif %}" style="font-weight:bold">
+      {% if g.match_id %}<a href="/stats/international/game/{{ g.match_id }}" style="text-decoration:none;color:inherit">{{ g.result }}</a>{% else %}{{ g.result }}{% endif %}
+    </td>
+    <td class="num">{{ g.yards }}</td>
+    <td class="num {% if g.tds >= 2 %}stat-elite{% elif g.tds >= 1 %}stat-good{% endif %}">{{ g.tds }}</td>
+    <td class="num">{{ g.rushing_yards }}</td>
+    <td class="num">{{ g.kick_pass_yards }}</td>
+    <td class="num">{{ g.tackles }}</td>
+    <td class="num">{{ g.wpa }}</td>
+  </tr>
   {% endfor %}
   </tbody>
 </table>
