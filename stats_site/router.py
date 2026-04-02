@@ -6315,13 +6315,41 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
     pool, dynasty, sid = _get_recruit_pool()
 
     recruit_data = None
+    recruit_obj = None
     if pool:
         for r in pool:
             if r.recruit_id == recruit_id:
                 recruit_data = r.to_dict()
                 recruit_data["full_name"] = r.full_name
                 recruit_data["true_overall"] = r.true_overall
+                recruit_obj = r
                 break
+
+    # Compute rankings from pool (national, position, regional)
+    if pool and recruit_obj:
+        sorted_pool = sorted(pool, key=lambda r: (-r.stars, -r.overall_estimate))
+        for i, r in enumerate(sorted_pool):
+            if r.recruit_id == recruit_id:
+                recruit_data["national_rank"] = i + 1
+                break
+        recruit_data["national_total"] = len(sorted_pool)
+
+        pos_peers = [r for r in sorted_pool if r.position == recruit_obj.position]
+        for i, r in enumerate(pos_peers):
+            if r.recruit_id == recruit_id:
+                recruit_data["position_rank"] = i + 1
+                break
+        recruit_data["position_total"] = len(pos_peers)
+
+        region_peers = [r for r in sorted_pool if r.region == recruit_obj.region]
+        for i, r in enumerate(region_peers):
+            if r.recruit_id == recruit_id:
+                recruit_data["regional_rank"] = i + 1
+                break
+        recruit_data["regional_total"] = len(region_peers)
+
+        recruit_data["overall_estimate"] = recruit_obj.overall_estimate
+        recruit_data["num_offers"] = len(recruit_obj.offers)
 
     if not recruit_data:
         # Try from signing log in recruiting history
