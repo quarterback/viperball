@@ -152,21 +152,63 @@ WEATHER_KEYS = ['clear', 'rain', 'snow', 'sleet', 'heat', 'wind']
 # These map to existing climate zones for weather generation.
 
 OVERSEAS_CLASSIC_LOCATIONS: List[Dict[str, str]] = [
+    # Europe
     {"city": "London", "country": "England", "climate_zone": "pacific_northwest"},
     {"city": "Dublin", "country": "Ireland", "climate_zone": "pacific_northwest"},
-    {"city": "Tokyo", "country": "Japan", "climate_zone": "mid_atlantic"},
-    {"city": "Mexico City", "country": "Mexico", "climate_zone": "california"},
-    {"city": "Sydney", "country": "Australia", "climate_zone": "california"},
-    {"city": "Berlin", "country": "Germany", "climate_zone": "midwest_central"},
-    {"city": "Madrid", "country": "Spain", "climate_zone": "california"},
     {"city": "Paris", "country": "France", "climate_zone": "mid_atlantic"},
-    {"city": "Toronto", "country": "Canada", "climate_zone": "midwest_north"},
-    {"city": "Rio de Janeiro", "country": "Brazil", "climate_zone": "deep_south"},
-    {"city": "Abu Dhabi", "country": "UAE", "climate_zone": "texas_arid"},
-    {"city": "Seoul", "country": "South Korea", "climate_zone": "mid_atlantic"},
-    {"city": "Rome", "country": "Italy", "climate_zone": "california"},
+    {"city": "Berlin", "country": "Germany", "climate_zone": "midwest_central"},
     {"city": "Munich", "country": "Germany", "climate_zone": "appalachian"},
+    {"city": "Madrid", "country": "Spain", "climate_zone": "california"},
+    {"city": "Rome", "country": "Italy", "climate_zone": "california"},
+    {"city": "Barcelona", "country": "Spain", "climate_zone": "california"},
+    {"city": "Amsterdam", "country": "Netherlands", "climate_zone": "pacific_northwest"},
+    # Nordics
+    {"city": "Stockholm", "country": "Sweden", "climate_zone": "midwest_north"},
+    {"city": "Helsinki", "country": "Finland", "climate_zone": "midwest_north"},
+    {"city": "Copenhagen", "country": "Denmark", "climate_zone": "pacific_northwest"},
+    {"city": "Oslo", "country": "Norway", "climate_zone": "midwest_north"},
+    # Eastern Europe
+    {"city": "Kyiv", "country": "Ukraine", "climate_zone": "midwest_central"},
+    {"city": "Warsaw", "country": "Poland", "climate_zone": "midwest_central"},
+    # East Asia
+    {"city": "Tokyo", "country": "Japan", "climate_zone": "mid_atlantic"},
+    {"city": "Seoul", "country": "South Korea", "climate_zone": "mid_atlantic"},
     {"city": "Shanghai", "country": "China", "climate_zone": "mid_atlantic"},
+    {"city": "Taipei", "country": "Taiwan", "climate_zone": "southeast"},
+    # Southeast Asia & South Asia
+    {"city": "Singapore", "country": "Singapore", "climate_zone": "deep_south"},
+    {"city": "Bangkok", "country": "Thailand", "climate_zone": "deep_south"},
+    {"city": "Mumbai", "country": "India", "climate_zone": "deep_south"},
+    {"city": "Manila", "country": "Philippines", "climate_zone": "deep_south"},
+    # Middle East
+    {"city": "Abu Dhabi", "country": "UAE", "climate_zone": "texas_arid"},
+    {"city": "Riyadh", "country": "Saudi Arabia", "climate_zone": "texas_arid"},
+    # Africa
+    {"city": "Lagos", "country": "Nigeria", "climate_zone": "deep_south"},
+    {"city": "Nairobi", "country": "Kenya", "climate_zone": "california"},
+    {"city": "Cape Town", "country": "South Africa", "climate_zone": "california"},
+    {"city": "Johannesburg", "country": "South Africa", "climate_zone": "appalachian"},
+    {"city": "Accra", "country": "Ghana", "climate_zone": "deep_south"},
+    {"city": "Cairo", "country": "Egypt", "climate_zone": "texas_arid"},
+    {"city": "Dar es Salaam", "country": "Tanzania", "climate_zone": "deep_south"},
+    {"city": "Casablanca", "country": "Morocco", "climate_zone": "california"},
+    # South America
+    {"city": "Rio de Janeiro", "country": "Brazil", "climate_zone": "deep_south"},
+    {"city": "Sao Paulo", "country": "Brazil", "climate_zone": "southeast"},
+    {"city": "Buenos Aires", "country": "Argentina", "climate_zone": "mid_atlantic"},
+    {"city": "Bogota", "country": "Colombia", "climate_zone": "appalachian"},
+    {"city": "Lima", "country": "Peru", "climate_zone": "california"},
+    {"city": "Santiago", "country": "Chile", "climate_zone": "california"},
+    # Central America & Caribbean
+    {"city": "Mexico City", "country": "Mexico", "climate_zone": "california"},
+    {"city": "San Juan", "country": "Puerto Rico", "climate_zone": "southeast"},
+    # Oceania
+    {"city": "Sydney", "country": "Australia", "climate_zone": "california"},
+    {"city": "Melbourne", "country": "Australia", "climate_zone": "pacific_northwest"},
+    {"city": "Auckland", "country": "New Zealand", "climate_zone": "pacific_northwest"},
+    # North America (non-US)
+    {"city": "Toronto", "country": "Canada", "climate_zone": "midwest_north"},
+    {"city": "Vancouver", "country": "Canada", "climate_zone": "pacific_northwest"},
 ]
 
 
