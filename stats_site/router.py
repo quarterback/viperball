@@ -867,6 +867,39 @@ def college_kenpom(request: Request, session_id: str, sort: str = "raw_o", confe
     ))
 
 
+@router.get("/college/{session_id}/luck", response_class=HTMLResponse)
+def college_luck(request: Request, session_id: str, sort: str = "dtw_luck", conference: str = ""):
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    standings = api["serialize_standings"](season)
+
+    if conference:
+        standings = [s for s in standings if s.get("conference") == conference]
+
+    # Sort mappings — most pull from dtw sub-dict, some from kenpom
+    _SORT_MAP = {
+        "dtw_luck": lambda s: s.get("dtw", {}).get("luck_differential", 0),
+        "dtw_xwins": lambda s: s.get("dtw", {}).get("expected_wins", 0),
+        "lucky_wins": lambda s: s.get("dtw", {}).get("lucky_wins", 0),
+        "unlucky_losses": lambda s: s.get("dtw", {}).get("unlucky_losses", 0),
+        "pk_eff": lambda s: s.get("dtw", {}).get("avg_pk_efficiency", 0),
+        "mess_rate": lambda s: s.get("dtw", {}).get("avg_mess_rate", 0),
+        "pythag_luck": lambda s: s.get("kenpom", {}).get("luck", 0),
+    }
+    sort_fn = _SORT_MAP.get(sort, _SORT_MAP["dtw_luck"])
+    # Lower is "unluckier" for luck, but higher is better for most — sort descending
+    reverse = sort not in ("mess_rate", "unlucky_losses")
+    standings.sort(key=sort_fn, reverse=reverse)
+
+    conferences = sorted(season.conferences.keys())
+    return templates.TemplateResponse("college/luck.html", _ctx(
+        request, section="college", session_id=session_id,
+        standings=standings, conferences=conferences, sort=sort, conference=conference,
+        season_name=getattr(season, "name", "Season"),
+    ))
+
+
 @router.get("/college/{session_id}/schedule", response_class=HTMLResponse)
 def college_schedule(request: Request, session_id: str, week: int = 0):
     api = _get_api()

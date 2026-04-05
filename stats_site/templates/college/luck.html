@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}DTW Luck Rankings — {{ season_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Luck
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>DESERVE TO WIN — LUCK RANKINGS</h1>
+  <div class="subtitle">{{ season_name }} &middot; {{ standings|length }} teams &middot; Who deserved better?</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/college/{{ session_id }}/">Overview</a>
+  <a href="/stats/college/{{ session_id }}/standings">Standings</a>
+  <a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+  <a href="/stats/college/{{ session_id }}/polls">Polls</a>
+  <a href="/stats/college/{{ session_id }}/players">Players</a>
+  <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
+  <a href="/stats/college/{{ session_id }}/kenpom">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/luck" class="active">Luck</a>
+  <a href="/stats/college/{{ session_id }}/referees">Referees</a>
+  <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
+  <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
+  <a href="/stats/college/{{ session_id }}/injuries">Injuries</a>
+  <a href="/stats/college/{{ session_id }}/bracketology">Bracketology</a>
+  <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
+  <a href="/stats/college/{{ session_id }}/awards">Awards</a>
+  <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/data">Data</a>
+</div>
+
+{# ── Conference Filter ── #}
+{% if conferences %}
+<div style="margin-bottom:12px; font-size:11px;">
+  <strong>Conference:</strong>
+  <a href="/stats/college/{{ session_id }}/luck?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
+  {% for c in conferences %}
+  &middot; <a href="/stats/college/{{ session_id }}/luck?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %} title="{{ c }}">{{ conf_abbrev(c) }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Sort Controls ── #}
+<div style="margin-bottom:8px;font-size:11px;">
+  <strong>Sort:</strong>
+  {% for key, label in [('dtw_luck', 'DTW Luck'), ('dtw_xwins', 'xWins'), ('lucky_wins', 'Lucky W'), ('unlucky_losses', 'Unlucky L'), ('pk_eff', 'PK Eff'), ('mess_rate', 'Mess Rate'), ('pythag_luck', 'Pyth Luck')] %}
+  {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/luck?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+
+{# ── Luckiest / Unluckiest callout ── #}
+{% if standings|length > 0 %}
+<div class="grid-2" style="margin-bottom:16px;">
+  <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:12px;">
+    <div style="font-size:11px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Luckiest Team</div>
+    {% set luckiest = standings|sort(attribute='dtw.luck_differential', reverse=true)|first %}
+    <div style="font-size:20px;font-weight:bold;color:var(--green);">{{ luckiest.team_name }}</div>
+    <div style="font-size:13px;">{{ luckiest.wins }}-{{ luckiest.losses }} actual &middot; {{ luckiest.dtw.expected_wins }} xW &middot; <span style="color:var(--green)">{{ "%+.1f"|format(luckiest.dtw.luck_differential) }} luck</span></div>
+  </div>
+  <div style="background:rgba(255,85,85,0.08);border:1px solid rgba(255,85,85,0.2);border-radius:8px;padding:12px;">
+    <div style="font-size:11px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Unluckiest Team</div>
+    {% set unluckiest = standings|sort(attribute='dtw.luck_differential')|first %}
+    <div style="font-size:20px;font-weight:bold;color:var(--red);">{{ unluckiest.team_name }}</div>
+    <div style="font-size:13px;">{{ unluckiest.wins }}-{{ unluckiest.losses }} actual &middot; {{ unluckiest.dtw.expected_wins }} xW &middot; <span style="color:var(--red)">{{ "%+.1f"|format(unluckiest.dtw.luck_differential) }} luck</span></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Team</th>
+      <th>Conf</th>
+      <th>W-L</th>
+      <th class="num stat-tip" data-tip="DTW expected wins based on game quality">xW</th>
+      <th class="num stat-tip" data-tip="DTW expected record">DTW Rec</th>
+      <th class="num stat-tip" data-tip="Actual wins minus DTW expected wins">Luck</th>
+      <th class="num stat-tip" data-tip="Wins where opponent had higher DTW%">Lucky W</th>
+      <th class="num stat-tip" data-tip="Losses where team had higher DTW%">Unlucky L</th>
+      <th class="num stat-tip" data-tip="DTW expected win%">xWin%</th>
+      <th class="num stat-tip" data-tip="Avg penalty-kill scoring efficiency">PK Eff</th>
+      <th class="num stat-tip" data-tip="Gap between PP and PK scoring rates">Mess%</th>
+      <th class="num stat-tip" data-tip="Pythagorean expected win%">Pyth%</th>
+      <th class="num stat-tip" data-tip="Actual wins minus Pythagorean expected">Pyth Lk</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in standings %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
+    <td>{{ s.conference }}</td>
+    <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td class="num" style="font-weight:bold">{{ s.dtw.expected_wins }}</td>
+    <td class="num">{{ s.dtw.dtw_record }}</td>
+    <td class="num {% if s.dtw.luck_differential > 1 %}stat-good{% elif s.dtw.luck_differential < -1 %}stat-bad{% endif %}" style="font-weight:bold">{{ "%+.1f"|format(s.dtw.luck_differential) }}</td>
+    <td class="num {% if s.dtw.lucky_wins > 0 %}stat-good{% endif %}">{{ s.dtw.lucky_wins }}</td>
+    <td class="num {% if s.dtw.unlucky_losses > 0 %}stat-bad{% endif %}">{{ s.dtw.unlucky_losses }}</td>
+    <td class="num">{{ "%.1f"|format(s.dtw.expected_win_pct * 100) }}%</td>
+    <td class="num">{{ "%.2f"|format(s.dtw.avg_pk_efficiency) }}</td>
+    <td class="num {% if s.dtw.avg_mess_rate > 30 %}stat-bad{% elif s.dtw.avg_mess_rate < 10 %}stat-good{% endif %}">{{ s.dtw.avg_mess_rate }}%</td>
+    <td class="num">{{ "%.1f"|format(s.kenpom.pythag_wp * 100) }}%</td>
+    <td class="num {% if s.kenpom.luck > 1 %}stat-good{% elif s.kenpom.luck < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.kenpom.luck) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<div style="margin-top:16px;font-size:11px;color:var(--fg-dim);">
+  <strong>Glossary:</strong>
+  xW = DTW expected wins from game quality model &middot;
+  DTW Rec = Expected record based on per-game DTW% &middot;
+  Luck = Actual wins minus expected wins (positive = lucky) &middot;
+  Lucky W = Wins where opponent deserved to win &middot;
+  Unlucky L = Losses where team deserved to win &middot;
+  xWin% = DTW expected win percentage &middot;
+  PK Eff = Penalty-kill scoring efficiency (scoring while leading under DYE) &middot;
+  Mess% = Gap between power-play and penalty-kill scoring rates (high = only scores when spoon-fed) &middot;
+  Pyth% = Pythagorean expected win% from scoring margin &middot;
+  Pyth Lk = Actual wins minus Pythagorean expected wins
+</div>
+
+{% endblock %}

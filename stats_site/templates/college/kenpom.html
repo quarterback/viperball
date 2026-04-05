@@ -21,6 +21,7 @@
   <a href="/stats/college/{{ session_id }}/players">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
   <a href="/stats/college/{{ session_id }}/kenpom" class="active">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/luck">Luck</a>
   <a href="/stats/college/{{ session_id }}/referees">Referees</a>
   <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
   <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
@@ -47,7 +48,7 @@
 {# ── Sort Controls ── #}
 <div style="margin-bottom:8px;font-size:11px;">
   <strong>Sort:</strong>
-  {% for key, label in [('raw_o', 'Raw O'), ('raw_d', 'Raw D'), ('ek_pct', 'EK%'), ('to_pct', 'TO%'), ('tod_pct', 'TOD%'), ('lr_pct', 'LR%'), ('rle', 'RLE'), ('kp_pct', 'KP%'), ('adj_tempo', 'Tempo')] %}
+  {% for key, label in [('net_rating', 'Net'), ('raw_o', 'Raw O'), ('raw_d', 'Raw D'), ('pythag_wp', 'Pyth'), ('luck', 'Luck'), ('dtw_xwins', 'DTW xW'), ('dtw_luck', 'DTW Luck'), ('ek_pct', 'EK%'), ('to_pct', 'TO%'), ('tod_pct', 'TOD%'), ('lr_pct', 'LR%'), ('rle', 'RLE'), ('kp_pct', 'KP%'), ('adj_tempo', 'Tempo')] %}
   {% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/kenpom?sort={{ key }}{% if conference %}&conference={{ conference }}{% endif %}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>
   {% endfor %}
 </div>
@@ -57,7 +58,12 @@
   <thead>
     <tr>
       <th class="num">#</th><th>Team</th><th>Conf</th><th>W-L</th>
+      <th class="num stat-tip" data-tip="Raw O minus Raw D">Net</th>
       <th class="num">Raw O</th><th class="num">Raw D</th>
+      <th class="num stat-tip" data-tip="Pythagorean expected win%">Pyth%</th>
+      <th class="num stat-tip" data-tip="Actual wins minus Pythagorean expected wins">Luck</th>
+      <th class="num stat-tip" data-tip="DTW expected wins from game quality">xW</th>
+      <th class="num stat-tip" data-tip="Actual wins minus DTW expected wins">DTW Lk</th>
       <th class="num">EK%</th><th class="num">Opp EK%</th>
       <th class="num">TO%</th><th class="num">TOD%</th>
       <th class="num">LR%</th><th class="num">FDR</th>
@@ -73,8 +79,13 @@
     <td><a href="/stats/college/{{ session_id }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
     <td>{{ s.conference }}</td>
     <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
+    <td class="num {% if s.kenpom.net_rating >= 10 %}stat-elite{% elif s.kenpom.net_rating >= 5 %}stat-good{% elif s.kenpom.net_rating <= -5 %}stat-bad{% endif %}" style="font-weight:bold">{{ "%+.1f"|format(s.kenpom.net_rating) }}</td>
     <td class="num {% if s.kenpom.raw_o >= 25 %}stat-elite{% elif s.kenpom.raw_o >= 18 %}stat-good{% elif s.kenpom.raw_o < 10 %}stat-bad{% endif %}">{{ s.kenpom.raw_o }}</td>
     <td class="num {% if s.kenpom.raw_d <= 10 %}stat-elite{% elif s.kenpom.raw_d <= 15 %}stat-good{% elif s.kenpom.raw_d >= 25 %}stat-bad{% endif %}">{{ s.kenpom.raw_d }}</td>
+    <td class="num">{{ "%.1f"|format(s.kenpom.pythag_wp * 100) }}%</td>
+    <td class="num {% if s.kenpom.luck > 1 %}stat-good{% elif s.kenpom.luck < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.kenpom.luck) }}</td>
+    <td class="num">{{ s.kenpom.dtw_xwins }}</td>
+    <td class="num {% if s.kenpom.dtw_luck > 1 %}stat-good{% elif s.kenpom.dtw_luck < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.kenpom.dtw_luck) }}</td>
     <td class="num {% if s.kenpom.ek_pct >= 55 %}stat-good{% elif s.kenpom.ek_pct < 35 %}stat-bad{% endif %}">{{ s.kenpom.ek_pct }}%</td>
     <td class="num {% if s.kenpom.opp_ek_pct <= 35 %}stat-good{% elif s.kenpom.opp_ek_pct >= 55 %}stat-bad{% endif %}">{{ s.kenpom.opp_ek_pct }}%</td>
     <td class="num {% if s.kenpom.to_pct <= 10 %}stat-good{% elif s.kenpom.to_pct >= 20 %}stat-bad{% endif %}">{{ s.kenpom.to_pct }}%</td>
@@ -94,7 +105,12 @@
 
 <div style="margin-top:16px;font-size:11px;color:var(--fg-dim);">
   <strong>Glossary:</strong>
+  Net = Raw O minus Raw D (net efficiency) &middot;
   Raw O/D = Points per 10 drives &middot;
+  Pyth% = Pythagorean expected win% &middot;
+  Luck = Actual wins minus Pythagorean expected wins &middot;
+  xW = DTW expected wins (game quality model) &middot;
+  DTW Lk = Actual wins minus DTW expected wins &middot;
   EK% = Effective Kick% (DK weighted 5/3 vs PK) &middot;
   TO% = Turnover rate per drive &middot;
   TOD% = Forced turnover rate per opponent drive &middot;

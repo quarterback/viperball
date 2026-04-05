@@ -408,6 +408,7 @@ def _serialize_game(game: Game, include_full_result: bool = False) -> dict:
         "away_dtw": getattr(game, 'away_dtw', None),
         "dtw_upset": getattr(game, 'dtw_result', {}).get("upset") if getattr(game, 'dtw_result', None) else None,
         "dtw_deserved_winner": getattr(game, 'dtw_result', {}).get("deserved_winner") if getattr(game, 'dtw_result', None) else None,
+        "dtw_result": getattr(game, 'dtw_result', None),
     }
     if include_full_result and getattr(game, 'full_result', None):
         d["full_result"] = game.full_result

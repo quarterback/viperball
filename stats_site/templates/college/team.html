@@ -108,6 +108,46 @@
   </div>
 </div>
 
+{% if record.dtw %}
+<h3 style="margin-bottom:8px; color:var(--accent);">Deserve to Win (DTW)</h3>
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Expected wins based on game quality metrics">Expected Wins</div>
+    <div class="value">{{ record.dtw.expected_wins }}</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Actual wins minus expected wins; positive = lucky">Luck</div>
+    <div class="value {% if record.dtw.luck_differential > 1 %}stat-good{% elif record.dtw.luck_differential < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(record.dtw.luck_differential) }}</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Wins where opponent had higher DTW%">Lucky Wins</div>
+    <div class="value {% if record.dtw.lucky_wins > 0 %}stat-good{% endif %}">{{ record.dtw.lucky_wins }}</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Losses where team had higher DTW%">Unlucky Losses</div>
+    <div class="value {% if record.dtw.unlucky_losses > 0 %}stat-bad{% endif %}">{{ record.dtw.unlucky_losses }}</div>
+  </div>
+</div>
+<div class="grid-4" style="margin-bottom: 16px;">
+  <div class="metric">
+    <div class="label stat-tip" data-tip="DTW-based expected record">DTW Record</div>
+    <div class="value">{{ record.dtw.dtw_record }}</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Expected win% based on DTW">xWin%</div>
+    <div class="value">{{ "%.1f"|format(record.dtw.expected_win_pct * 100) }}%</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Avg scoring efficiency on penalty-kill drives (leading)">PK Efficiency</div>
+    <div class="value">{{ "%.2f"|format(record.dtw.avg_pk_efficiency) }}</div>
+  </div>
+  <div class="metric">
+    <div class="label stat-tip" data-tip="Gap between power-play and penalty-kill scoring rates (lower = better)">Mess Rate</div>
+    <div class="value {% if record.dtw.avg_mess_rate > 30 %}stat-bad{% elif record.dtw.avg_mess_rate < 10 %}stat-good{% endif %}">{{ record.dtw.avg_mess_rate }}%</div>
+  </div>
+</div>
+{% endif %}
+
 {% if record.conversion_by_zone %}
 <h3 style="margin-bottom:8px; color:var(--accent);">Late-Down Conversion by Field Zone</h3>
 <table style="margin-bottom:16px;">
@@ -322,7 +362,7 @@
 <h2>Schedule</h2>
 <table>
   <thead>
-    <tr><th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th><th>Tags</th></tr>
+    <tr><th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th><th class="num">DTW%</th><th>Tags</th></tr>
   </thead>
   <tbody>
   {% for g in games %}
@@ -343,6 +383,15 @@
       {% else %}
       <span style="color:var(--fg-dim)">&mdash;</span>
       {% endif %}
+    </td>
+    <td class="num">
+      {% if g.completed and g.get('home_dtw') is not none %}
+        {% set is_h = (g.home_team == team_name) %}
+        {% set my_dtw = g.home_dtw if is_h else g.away_dtw %}
+        {% set opp_dtw = g.away_dtw if is_h else g.home_dtw %}
+        <span class="{% if my_dtw > opp_dtw %}stat-good{% elif my_dtw < opp_dtw %}stat-bad{% endif %}" style="font-size:11px;">{{ "%.0f"|format(my_dtw) }}%</span>
+        {% if g.get('dtw_upset') %}<span style="font-size:9px;color:var(--yellow);margin-left:2px;" title="DTW Upset">&#9888;</span>{% endif %}
+      {% else %}&mdash;{% endif %}
     </td>
     <td>
       {% if g.get('bowl_name') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">{{ g.bowl_name }}</span>{% endif %}

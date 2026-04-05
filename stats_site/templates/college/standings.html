@@ -21,6 +21,7 @@
   <a href="/stats/college/{{ session_id }}/players">Players</a>
   <a href="/stats/college/{{ session_id }}/team-stats">Team Stats</a>
   <a href="/stats/college/{{ session_id }}/kenpom">KenPom</a>
+  <a href="/stats/college/{{ session_id }}/luck">Luck</a>
   <a href="/stats/college/{{ session_id }}/referees">Referees</a>
   <a href="/stats/college/{{ session_id }}/analytics">Analytics</a>
   <a href="/stats/college/{{ session_id }}/ratings">Ratings</a>
@@ -46,6 +47,10 @@
       <th class="num">Conv%</th><th class="num">Lat%</th>
       <th class="num">Expl</th><th class="num">TO+/-</th>
       <th>Off</th><th>Def</th>
+      <th class="num stat-tip" data-tip="Expected wins from DTW model">xW</th>
+      <th class="num stat-tip" data-tip="Actual wins minus expected. + = lucky, - = unlucky">Luck</th>
+      <th class="num stat-tip" data-tip="Games won when DTW < 50%">LkW</th>
+      <th class="num stat-tip" data-tip="Games lost when DTW > 50%">UlL</th>
     </tr>
   </thead>
   <tbody>
@@ -69,6 +74,11 @@
     <td class="num {% if s.avg_to_margin > 0 %}stat-good{% elif s.avg_to_margin < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.avg_to_margin) }}</td>
     <td>{{ s.offense_style }}</td>
     <td>{{ s.defense_style }}</td>
+    {% set dtw = s.get('dtw', {}) if s.get is defined else {} %}
+    <td class="num">{{ dtw.get('expected_wins', '—') }}</td>
+    <td class="num {% if (dtw.get('luck_differential', 0)|float) > 1 %}stat-good{% elif (dtw.get('luck_differential', 0)|float) < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(dtw.get('luck_differential', 0)) if dtw.get('expected_wins') else '—' }}</td>
+    <td class="num {% if (dtw.get('lucky_wins', 0)|int) > 0 %}stat-good{% endif %}">{{ dtw.get('lucky_wins', '—') }}</td>
+    <td class="num {% if (dtw.get('unlucky_losses', 0)|int) > 0 %}stat-bad{% endif %}">{{ dtw.get('unlucky_losses', '—') }}</td>
   </tr>
   {% endfor %}
   </tbody>
