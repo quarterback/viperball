@@ -559,6 +559,9 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
     conv_by_zone = calculate_conversion_by_field_zone(plays, team)
     delta = calculate_delta_profile(plays, drives, team)
 
+    # Quarter-by-quarter scoring (tennis set analogy)
+    quarter_scoring = calculate_quarter_scoring(plays, team)
+
     metrics = {
         # New fan-friendly metrics
         "ppd": ppd,
@@ -576,6 +579,8 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
         "conversion_by_zone": conv_by_zone,
         # Delta profile — operating environment
         "delta_profile": delta,
+        # Quarter scoring — tennis-style set analysis
+        "quarter_scoring": quarter_scoring,
         # Legacy aliases for backward compat during migration
         "territory_rating": avg_start * 2.0,  # rough 0-100 proxy
         "pressure_index": conv_pct,            # same concept
@@ -587,6 +592,98 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
     }
 
     return metrics
+
+
+def calculate_quarter_scoring(plays: List[Dict], team: str) -> Dict:
+    """Quarter-by-quarter scoring breakdown — the tennis set analogy.
+
+    In tennis, you can win more total points but lose the match because
+    you win your sets 6-0 and lose the close ones 5-7.  In Viperball,
+    the same thing happens: a team can dominate Q1 and Q3 but lose
+    the close quarters, and the DYE system amplifies the effect.
+
+    Returns:
+      quarters:      dict of Q1-Q4 with team/opponent points per quarter
+      quarters_won:  count of quarters where team outscored opponent
+      quarters_lost: count of quarters where opponent outscored team
+      set_efficiency: % of quarters won (tennis "set win rate")
+      blowout_quarters: quarters won by 10+ points (wasted dominance)
+      clutch_quarters:  quarters won by < 5 points (winning the close ones)
+      point_spread_by_quarter: per-Q point differential
+    """
+    # Accumulate scoring by quarter
+    q_team = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+    q_opp = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+
+    # Track last known score at end of each quarter
+    prev_home = 0.0
+    prev_away = 0.0
+    last_q = 0
+
+    for play in plays:
+        q = play.get("quarter", 0)
+        if q < 1 or q > 4:
+            continue
+        hs = play.get("home_score", prev_home)
+        aws = play.get("away_score", prev_away)
+
+        # When quarter changes, record the delta
+        if q != last_q and last_q > 0 and last_q <= 4:
+            if play.get("possession") == team or team == "home":
+                q_team[last_q] = hs - (prev_home if last_q == 1 else q_team.get("_base_h", 0))
+                q_opp[last_q] = aws - (prev_away if last_q == 1 else q_team.get("_base_a", 0))
+
+        prev_home = hs
+        prev_away = aws
+        last_q = q
+
+    # Simpler approach: derive from play-by-play score tracking
+    # Find score at end of each quarter
+    q_end_scores = {}
+    for play in plays:
+        q = play.get("quarter", 0)
+        if 1 <= q <= 4:
+            q_end_scores[q] = (play.get("home_score", 0), play.get("away_score", 0))
+
+    is_home = (team == "home")
+    quarters = {}
+    prev_team_score = 0.0
+    prev_opp_score = 0.0
+
+    for q in range(1, 5):
+        if q not in q_end_scores:
+            quarters[q] = {"team_pts": 0.0, "opp_pts": 0.0, "diff": 0.0}
+            continue
+        hs, aws = q_end_scores[q]
+        team_score = hs if is_home else aws
+        opp_score = aws if is_home else hs
+        team_q_pts = team_score - prev_team_score
+        opp_q_pts = opp_score - prev_opp_score
+        quarters[q] = {
+            "team_pts": team_q_pts,
+            "opp_pts": opp_q_pts,
+            "diff": team_q_pts - opp_q_pts,
+        }
+        prev_team_score = team_score
+        prev_opp_score = opp_score
+
+    # Tennis-style analysis
+    quarters_won = sum(1 for q in quarters.values() if q["diff"] > 0)
+    quarters_lost = sum(1 for q in quarters.values() if q["diff"] < 0)
+    set_efficiency = round(quarters_won / 4 * 100, 1)
+
+    blowout_quarters = sum(1 for q in quarters.values() if q["diff"] >= 10)
+    clutch_quarters = sum(1 for q in quarters.values()
+                         if 0 < q["diff"] < 5)
+
+    return {
+        "quarters": quarters,
+        "quarters_won": quarters_won,
+        "quarters_lost": quarters_lost,
+        "set_efficiency": set_efficiency,
+        "blowout_quarters": blowout_quarters,
+        "clutch_quarters": clutch_quarters,
+    }
 
 
 def calculate_overall_performance_index(metrics: Dict) -> float:

@@ -375,6 +375,17 @@ def _serialize_team_record(rec: TeamRecord) -> dict:
         "conversion_by_zone": rec.season_conversion_by_zone if hasattr(rec, 'season_conversion_by_zone') else {},
         # KenPom-style efficiency metrics
         "kenpom": rec.kenpom_metrics() if hasattr(rec, 'kenpom_metrics') else {},
+        # DTW (Deserve to Win) luck metrics
+        "dtw": {
+            "expected_wins": round(getattr(rec, 'dtw_expected_wins', 0.0), 1),
+            "luck_differential": round(getattr(rec, 'dtw_luck_differential', 0.0), 1),
+            "lucky_wins": getattr(rec, 'dtw_lucky_wins', 0),
+            "unlucky_losses": getattr(rec, 'dtw_unlucky_losses', 0),
+            "expected_win_pct": round(getattr(rec, 'dtw_expected_win_pct', 0.0), 3),
+            "avg_pk_efficiency": round(getattr(rec, 'dtw_avg_pk_efficiency', 1.0), 2),
+            "avg_mess_rate": round(getattr(rec, 'dtw_avg_mess_rate', 0.0), 1),
+            "dtw_record": getattr(rec, 'dtw_record', "0.0-0.0"),
+        },
     }
 
 
@@ -392,6 +403,12 @@ def _serialize_game(game: Game, include_full_result: bool = False) -> dict:
         "home_metrics": game.home_metrics if hasattr(game, 'home_metrics') else None,
         "away_metrics": game.away_metrics if hasattr(game, 'away_metrics') else None,
         "has_full_result": bool(getattr(game, 'full_result', None)),
+        # DTW (Deserve to Win)
+        "home_dtw": getattr(game, 'home_dtw', None),
+        "away_dtw": getattr(game, 'away_dtw', None),
+        "dtw_upset": getattr(game, 'dtw_result', {}).get("upset") if getattr(game, 'dtw_result', None) else None,
+        "dtw_deserved_winner": getattr(game, 'dtw_result', {}).get("deserved_winner") if getattr(game, 'dtw_result', None) else None,
+        "dtw_result": getattr(game, 'dtw_result', None),
     }
     if include_full_result and getattr(game, 'full_result', None):
         d["full_result"] = game.full_result
@@ -1164,6 +1181,81 @@ def season_standings(session_id: str):
     session = _get_session(session_id)
     season = _require_season(session)
     return {"standings": _serialize_standings(season)}
+
+
+@app.get("/sessions/{session_id}/season/dtw")
+def season_dtw(session_id: str, team: Optional[str] = Query(None),
+               sort_by: str = Query("luck_differential")):
+    """Deserve to Win — season luck rankings.
+
+    Shows which teams have been lucky or unlucky based on delta-adjusted
+    performance quality.  The DTW model strips out the DYE system's
+    distortions to reveal who truly played better in each game.
+
+    Query params:
+      team:    Filter to a single team's DTW game log
+      sort_by: luck_differential (default), expected_wins, lucky_wins,
+               unlucky_losses, avg_pk_efficiency, avg_mess_rate
+    """
+    from engine.dtw import (calculate_game_dtw, calculate_season_luck,
+                            get_luck_rankings, calculate_model_accuracy,
+                            get_extreme_teams, get_team_dtw_log,
+                            generate_dtw_headline)
+
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    # Collect DTW results from all completed games
+    game_dtw_results = []
+    for game in season.schedule:
+        if game.completed and getattr(game, 'dtw_result', None):
+            game_dtw_results.append(game.dtw_result)
+
+    if not game_dtw_results:
+        return {"error": "No completed games with DTW data yet."}
+
+    if team:
+        game_log = get_team_dtw_log(game_dtw_results, team)
+        team_luck = calculate_season_luck(game_dtw_results).get(team, {})
+        return {
+            "team": team,
+            "luck": team_luck,
+            "game_log": game_log,
+        }
+
+    rankings = get_luck_rankings(game_dtw_results, sort_by=sort_by)
+    accuracy = calculate_model_accuracy(game_dtw_results)
+    extremes = get_extreme_teams(game_dtw_results)
+
+    return {
+        "rankings": rankings,
+        "model_accuracy": accuracy,
+        "extremes": extremes,
+        "games_analyzed": len(game_dtw_results),
+    }
+
+
+@app.get("/sessions/{session_id}/season/dtw/game/{week}")
+def season_dtw_game(session_id: str, week: int,
+                    home: Optional[str] = Query(None)):
+    """DTW detail for a specific game by week (and optionally home team)."""
+    from engine.dtw import generate_dtw_headline
+
+    session = _get_session(session_id)
+    season = _require_season(session)
+
+    for game in season.schedule:
+        if game.week == week and game.completed:
+            if home and game.home_team != home:
+                continue
+            dtw = getattr(game, 'dtw_result', None)
+            if dtw:
+                return {
+                    "game": _serialize_game(game),
+                    "dtw": dtw,
+                    "headline": generate_dtw_headline(dtw),
+                }
+    return {"error": f"No completed game found for week {week}"}
 
 
 @app.get("/sessions/{session_id}/season/injuries")

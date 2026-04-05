@@ -197,6 +197,92 @@
 {% endif %}
 
 {# ══════════════════════════════════════════════════════════
+   DESERVE TO WIN (DTW) — Delta-Adjusted Performance Quality
+   ══════════════════════════════════════════════════════════ #}
+
+{% if game.home_dtw is defined and game.home_dtw is not none %}
+{% set hdtw = game.home_dtw %}
+{% set adtw = game.away_dtw %}
+{% set dtw = game.get('dtw_result', {}) if game.get is defined else {} %}
+{% set dye = dtw.get('dye_breakdown', {}) if dtw else {} %}
+{% set hdye = dye.get('home', {}) %}
+{% set adye = dye.get('away', {}) %}
+<h2>Deserve to Win</h2>
+<p style="color:var(--fg-dim);font-size:12px;margin-bottom:12px;">
+  Who played better controlling for delta-system distortions? DTW strips away field-position gifts from trailing and penalties from leading.
+</p>
+
+{# DTW Headline bar #}
+<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;color:var(--fg-dim);">{{ game.away_team }}</div>
+      <div style="font-size:28px;font-weight:bold;{% if adtw > hdtw %}color:var(--green){% elif adtw < hdtw %}color:var(--fg-dim){% endif %}">{{ '%.0f'|format(adtw * 100) }}%</div>
+    </div>
+    <div style="text-align:center;flex:0 0 auto;">
+      <div style="font-size:11px;color:var(--fg-dim);">DTW</div>
+      {% if dtw.get('upset') %}<div style="font-size:11px;color:var(--yellow);font-weight:bold;">DTW UPSET</div>{% endif %}
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;color:var(--fg-dim);">{{ game.home_team }}</div>
+      <div style="font-size:28px;font-weight:bold;{% if hdtw > adtw %}color:var(--green){% elif hdtw < adtw %}color:var(--fg-dim){% endif %}">{{ '%.0f'|format(hdtw * 100) }}%</div>
+    </div>
+  </div>
+
+  {# DTW bar visualization #}
+  <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:12px;">
+    <div style="width:{{ '%.1f'|format(adtw * 100) }}%;background:var(--blue);"></div>
+    <div style="width:{{ '%.1f'|format(hdtw * 100) }}%;background:var(--cyan);"></div>
+  </div>
+</div>
+
+{# DYE Breakdown — Penalty Kill / Power Play #}
+{% if hdye or adye %}
+<div class="grid-4" style="margin-bottom:16px;">
+  {% for label, key, desc, fmt, invert in [
+    ('PK Efficiency', 'pk_efficiency', 'Performance when delta-penalized for leading. >1.0 = elite under pressure.', '%.2f', false),
+    ('PK Score Rate', 'pk_score_rate', 'Scoring % on penalty-kill drives (leading, worse field position).', '%.1f%%', false),
+    ('PP Score Rate', 'pp_score_rate', 'Scoring % on power-play drives (trailing, better field position).', '%.1f%%', false),
+    ('Mess Rate', 'mess_rate', 'Gap between PP and PK scoring. Lower = more consistent across delta contexts.', '%.1f', true),
+  ] %}
+  <div class="metric">
+    <div class="label stat-tip" data-tip="{{ desc }}">{{ label }}</div>
+    <div class="value">
+      <span style="margin-right:8px;{% if not invert %}{% if (adye.get(key, 0)|float) > (hdye.get(key, 0)|float) %}color:var(--green){% endif %}{% else %}{% if (adye.get(key, 0)|float) < (hdye.get(key, 0)|float) %}color:var(--green){% endif %}{% endif %}">{{ fmt|format(adye.get(key, 0)) }}</span>
+      <span style="{% if not invert %}{% if (hdye.get(key, 0)|float) > (adye.get(key, 0)|float) %}color:var(--green){% endif %}{% else %}{% if (hdye.get(key, 0)|float) < (adye.get(key, 0)|float) %}color:var(--green){% endif %}{% endif %}">{{ fmt|format(hdye.get(key, 0)) }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# Quarter Scoring — Tennis Set Analysis #}
+{% set hqs = hm.get('quarter_scoring', {}) %}
+{% set aqs = am.get('quarter_scoring', {}) %}
+{% if hqs.get('quarters') or aqs.get('quarters') %}
+<div style="margin-bottom:16px;">
+  <div class="grid-4">
+    {% for q in [1, 2, 3, 4] %}
+    {% set hq = (hqs.get('quarters', {}).get(q, {}) ) %}
+    {% set aq = (aqs.get('quarters', {}).get(q, {}) ) %}
+    <div class="metric">
+      <div class="label">Q{{ q }}</div>
+      <div class="value">
+        <span style="margin-right:8px;{% if (aq.get('diff', 0)|float) > 0 %}color:var(--green){% elif (aq.get('diff', 0)|float) < 0 %}color:var(--red){% endif %}">{{ '%.1f'|format(aq.get('team_pts', 0)) }}</span>
+        <span style="{% if (hq.get('diff', 0)|float) > 0 %}color:var(--green){% elif (hq.get('diff', 0)|float) < 0 %}color:var(--red){% endif %}">{{ '%.1f'|format(hq.get('team_pts', 0)) }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg-dim);margin-top:4px;">
+    <span>{{ game.away_team }}: {{ aqs.get('quarters_won', 0) }}/4 Qs won</span>
+    <span>{{ game.home_team }}: {{ hqs.get('quarters_won', 0) }}/4 Qs won</span>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════
    SCORING PROFILE
    ══════════════════════════════════════════════════════════ #}
 
