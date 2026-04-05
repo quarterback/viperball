@@ -21,7 +21,7 @@ Usage:
 """
 
 import random
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Climate zone definitions
@@ -76,22 +76,22 @@ WEATHER_TABLE: Dict[str, Dict[str, list]] = {
         'winter':       [28, 15, 30, 15,  0, 12],
     },
     'mid_atlantic': {
-        'early_fall':   [55, 20,  0,  0, 10, 15],
-        'late_fall':    [44, 25,  6,  1,  2, 22],
+        'early_fall':   [58, 20,  0,  0,  5, 17],
+        'late_fall':    [44, 25,  6,  1,  0, 24],
         'early_winter': [38, 22, 17,  6,  0, 17],
         'winter':       [36, 20, 22, 10,  0, 12],
     },
     'southeast': {
-        'early_fall':   [40, 32,  0,  0, 22,  6],
-        'late_fall':    [55, 27,  0,  0, 13,  5],
-        'early_winter': [60, 25,  1,  0,  5,  9],
-        'winter':       [60, 27,  2,  0,  3,  8],
+        'early_fall':   [48, 32,  0,  0, 12,  8],
+        'late_fall':    [58, 27,  0,  0,  2,  8],
+        'early_winter': [62, 25,  1,  0,  0,  9],
+        'winter':       [62, 27,  2,  0,  0,  8],
     },
     'deep_south': {
-        'early_fall':   [38, 35,  0,  0, 22,  5],
-        'late_fall':    [50, 30,  0,  0, 14,  6],
-        'early_winter': [54, 28,  0,  0,  9,  9],
-        'winter':       [56, 29,  2,  0,  5,  8],
+        'early_fall':   [42, 35,  0,  0, 14,  6],
+        'late_fall':    [55, 30,  0,  0,  3,  8],
+        'early_winter': [58, 28,  0,  0,  0,  9],
+        'winter':       [58, 29,  2,  0,  0,  8],
     },
     'appalachian': {
         'early_fall':   [50, 22,  0,  0,  8, 20],
@@ -106,16 +106,16 @@ WEATHER_TABLE: Dict[str, Dict[str, list]] = {
         'winter':       [25, 10, 38, 17,  0, 10],
     },
     'midwest_central': {
-        'early_fall':   [48, 22,  0,  0,  8, 22],
-        'late_fall':    [40, 24, 11,  3,  2, 20],
+        'early_fall':   [50, 22,  0,  0,  5, 23],
+        'late_fall':    [42, 24, 11,  3,  0, 20],
         'early_winter': [33, 20, 24,  9,  0, 14],
         'winter':       [30, 18, 29, 12,  0, 11],
     },
     'texas_arid': {
-        'early_fall':   [32, 15,  0,  0, 48,  5],
-        'late_fall':    [54, 18,  0,  0, 18, 10],
-        'early_winter': [64, 18,  1,  0,  8,  9],
-        'winter':       [58, 20,  5,  1,  5, 11],
+        'early_fall':   [38, 15,  0,  0, 35,  7],
+        'late_fall':    [58, 18,  0,  0,  4, 12],
+        'early_winter': [64, 18,  1,  0,  0, 12],
+        'winter':       [58, 20,  5,  1,  0, 11],
     },
     'mountain': {
         'early_fall':   [48, 15,  5,  0,  8, 24],
@@ -130,20 +130,158 @@ WEATHER_TABLE: Dict[str, Dict[str, list]] = {
         'winter':       [18, 48, 14,  2,  0, 18],
     },
     'california': {
-        'early_fall':   [62, 15,  0,  0, 13, 10],
-        'late_fall':    [58, 22,  0,  0,  5, 15],
-        'early_winter': [52, 30,  0,  0,  2, 16],
-        'winter':       [50, 34,  0,  0,  1, 15],
+        'early_fall':   [62, 15,  0,  0,  8, 12],
+        'late_fall':    [60, 22,  0,  0,  1, 15],
+        'early_winter': [54, 30,  0,  0,  0, 16],
+        'winter':       [50, 34,  0,  0,  0, 15],
     },
     'default': {
-        'early_fall':   [50, 20,  2,  0,  8, 20],
-        'late_fall':    [44, 22,  9,  2,  3, 20],
+        'early_fall':   [52, 20,  2,  0,  6, 20],
+        'late_fall':    [46, 22,  9,  2,  1, 20],
         'early_winter': [38, 22, 16,  6,  0, 18],
         'winter':       [35, 20, 20,  8,  0, 17],
     },
 }
 
 WEATHER_KEYS = ['clear', 'rain', 'snow', 'sleet', 'heat', 'wind']
+
+# ---------------------------------------------------------------------------
+# Overseas Classic — international neutral-site game locations
+# ---------------------------------------------------------------------------
+# Each entry: (city, country, climate_zone)
+# These map to existing climate zones for weather generation.
+
+OVERSEAS_CLASSIC_LOCATIONS: List[Dict[str, str]] = [
+    # Europe
+    {"city": "London", "country": "England", "climate_zone": "pacific_northwest"},
+    {"city": "Dublin", "country": "Ireland", "climate_zone": "pacific_northwest"},
+    {"city": "Paris", "country": "France", "climate_zone": "mid_atlantic"},
+    {"city": "Berlin", "country": "Germany", "climate_zone": "midwest_central"},
+    {"city": "Munich", "country": "Germany", "climate_zone": "appalachian"},
+    {"city": "Madrid", "country": "Spain", "climate_zone": "california"},
+    {"city": "Rome", "country": "Italy", "climate_zone": "california"},
+    {"city": "Barcelona", "country": "Spain", "climate_zone": "california"},
+    {"city": "Amsterdam", "country": "Netherlands", "climate_zone": "pacific_northwest"},
+    # Nordics
+    {"city": "Stockholm", "country": "Sweden", "climate_zone": "midwest_north"},
+    {"city": "Helsinki", "country": "Finland", "climate_zone": "midwest_north"},
+    {"city": "Copenhagen", "country": "Denmark", "climate_zone": "pacific_northwest"},
+    {"city": "Oslo", "country": "Norway", "climate_zone": "midwest_north"},
+    # Eastern Europe
+    {"city": "Kyiv", "country": "Ukraine", "climate_zone": "midwest_central"},
+    {"city": "Warsaw", "country": "Poland", "climate_zone": "midwest_central"},
+    # East Asia
+    {"city": "Tokyo", "country": "Japan", "climate_zone": "mid_atlantic"},
+    {"city": "Seoul", "country": "South Korea", "climate_zone": "mid_atlantic"},
+    {"city": "Shanghai", "country": "China", "climate_zone": "mid_atlantic"},
+    {"city": "Taipei", "country": "Taiwan", "climate_zone": "southeast"},
+    # Southeast Asia & South Asia
+    {"city": "Singapore", "country": "Singapore", "climate_zone": "deep_south"},
+    {"city": "Bangkok", "country": "Thailand", "climate_zone": "deep_south"},
+    {"city": "Mumbai", "country": "India", "climate_zone": "deep_south"},
+    {"city": "Manila", "country": "Philippines", "climate_zone": "deep_south"},
+    # Middle East
+    {"city": "Abu Dhabi", "country": "UAE", "climate_zone": "texas_arid"},
+    {"city": "Riyadh", "country": "Saudi Arabia", "climate_zone": "texas_arid"},
+    # Africa
+    {"city": "Lagos", "country": "Nigeria", "climate_zone": "deep_south"},
+    {"city": "Nairobi", "country": "Kenya", "climate_zone": "california"},
+    {"city": "Cape Town", "country": "South Africa", "climate_zone": "california"},
+    {"city": "Johannesburg", "country": "South Africa", "climate_zone": "appalachian"},
+    {"city": "Accra", "country": "Ghana", "climate_zone": "deep_south"},
+    {"city": "Cairo", "country": "Egypt", "climate_zone": "texas_arid"},
+    {"city": "Dar es Salaam", "country": "Tanzania", "climate_zone": "deep_south"},
+    {"city": "Casablanca", "country": "Morocco", "climate_zone": "california"},
+    # South America
+    {"city": "Rio de Janeiro", "country": "Brazil", "climate_zone": "deep_south"},
+    {"city": "Sao Paulo", "country": "Brazil", "climate_zone": "southeast"},
+    {"city": "Buenos Aires", "country": "Argentina", "climate_zone": "mid_atlantic"},
+    {"city": "Bogota", "country": "Colombia", "climate_zone": "appalachian"},
+    {"city": "Lima", "country": "Peru", "climate_zone": "california"},
+    {"city": "Santiago", "country": "Chile", "climate_zone": "california"},
+    # Central America & Caribbean
+    {"city": "Mexico City", "country": "Mexico", "climate_zone": "california"},
+    {"city": "San Juan", "country": "Puerto Rico", "climate_zone": "southeast"},
+    # Oceania
+    {"city": "Sydney", "country": "Australia", "climate_zone": "california"},
+    {"city": "Melbourne", "country": "Australia", "climate_zone": "pacific_northwest"},
+    {"city": "Auckland", "country": "New Zealand", "climate_zone": "pacific_northwest"},
+    # North America (non-US)
+    {"city": "Toronto", "country": "Canada", "climate_zone": "midwest_north"},
+    {"city": "Vancouver", "country": "Canada", "climate_zone": "pacific_northwest"},
+]
+
+
+def pick_overseas_classics(n: int = 5) -> List[Dict[str, str]]:
+    """Pick *n* unique random overseas classic locations."""
+    return random.sample(OVERSEAS_CLASSIC_LOCATIONS, min(n, len(OVERSEAS_CLASSIC_LOCATIONS)))
+
+# ---------------------------------------------------------------------------
+# Realistic temperature ranges by climate zone and season period
+# ---------------------------------------------------------------------------
+# Each entry is (low, high) in °F for the base temperature range.
+# Weather type adjustments are applied on top of these.
+
+ZONE_TEMPS: Dict[str, Dict[str, Tuple[int, int]]] = {
+    'new_england': {
+        'early_fall': (58, 78), 'late_fall': (38, 58),
+        'early_winter': (25, 40), 'winter': (18, 35),
+    },
+    'mid_atlantic': {
+        'early_fall': (62, 82), 'late_fall': (42, 62),
+        'early_winter': (30, 48), 'winter': (25, 40),
+    },
+    'southeast': {
+        'early_fall': (75, 90), 'late_fall': (58, 78),
+        'early_winter': (45, 65), 'winter': (40, 60),
+    },
+    'deep_south': {
+        'early_fall': (78, 95), 'late_fall': (60, 80),
+        'early_winter': (48, 68), 'winter': (42, 62),
+    },
+    'appalachian': {
+        'early_fall': (62, 82), 'late_fall': (42, 60),
+        'early_winter': (30, 48), 'winter': (25, 42),
+    },
+    'midwest_north': {
+        'early_fall': (55, 75), 'late_fall': (35, 55),
+        'early_winter': (18, 35), 'winter': (10, 28),
+    },
+    'midwest_central': {
+        'early_fall': (60, 80), 'late_fall': (40, 60),
+        'early_winter': (25, 42), 'winter': (20, 38),
+    },
+    'texas_arid': {
+        'early_fall': (78, 98), 'late_fall': (58, 80),
+        'early_winter': (45, 68), 'winter': (40, 62),
+    },
+    'mountain': {
+        'early_fall': (55, 78), 'late_fall': (32, 55),
+        'early_winter': (18, 38), 'winter': (12, 32),
+    },
+    'pacific_northwest': {
+        'early_fall': (58, 75), 'late_fall': (42, 58),
+        'early_winter': (35, 48), 'winter': (32, 45),
+    },
+    'california': {
+        'early_fall': (65, 88), 'late_fall': (55, 75),
+        'early_winter': (48, 65), 'winter': (45, 62),
+    },
+    'default': {
+        'early_fall': (60, 80), 'late_fall': (42, 62),
+        'early_winter': (30, 48), 'winter': (25, 42),
+    },
+}
+
+# Temperature adjustments by weather type (added to base temp)
+_WEATHER_TEMP_ADJUST: Dict[str, Tuple[int, int]] = {
+    'clear': (0, 5),
+    'rain': (-5, 0),
+    'snow': (-10, -5),
+    'sleet': (-8, -3),
+    'heat': (5, 10),
+    'wind': (-3, 3),
+}
 
 # ---------------------------------------------------------------------------
 # Season period mapping
@@ -165,6 +303,26 @@ def week_to_period(week: int, total_weeks: int = 18) -> str:
         return 'winter'
 
 # ---------------------------------------------------------------------------
+# Temperature generation
+# ---------------------------------------------------------------------------
+
+def generate_temperature(
+    weather: str,
+    climate_zone: str = 'default',
+    period: str = 'early_fall',
+) -> int:
+    """Generate a realistic game-day temperature in °F.
+
+    Based on the climate zone, season period, and weather type.
+    """
+    zone_table = ZONE_TEMPS.get(climate_zone, ZONE_TEMPS['default'])
+    base_low, base_high = zone_table.get(period, (55, 75))
+    adj_low, adj_high = _WEATHER_TEMP_ADJUST.get(weather, (0, 0))
+    temp_low = base_low + adj_low
+    temp_high = base_high + adj_high
+    return random.randint(temp_low, temp_high)
+
+# ---------------------------------------------------------------------------
 # Human-readable weather descriptions
 # ---------------------------------------------------------------------------
 
@@ -172,44 +330,26 @@ WEATHER_DETAILS: Dict[str, Dict] = {
     'clear': {
         'label': 'Clear',
         'icon': '☀️',
-        'temp_range': '55–75°F',
-        'description': 'Perfect conditions. No weather impact.',
-        'game_note': 'Ideal playing conditions.',
     },
     'rain': {
         'label': 'Rain',
         'icon': '🌧️',
-        'temp_range': '45–60°F',
-        'description': 'Wet field and slippery ball. Increased fumbles and muffs; reduced kick accuracy.',
-        'game_note': 'Ball security becomes critical.',
     },
     'snow': {
         'label': 'Snow',
         'icon': '❄️',
-        'temp_range': '22–34°F',
-        'description': 'Cold and snowy. Major kick accuracy loss; moderately higher fumble risk; slower play.',
-        'game_note': 'Kicking game severely impacted. Ground game preferred.',
     },
     'sleet': {
-        'label': 'Sleet / Ice',
+        'label': 'Sleet',
         'icon': '🌨️',
-        'temp_range': '28–35°F',
-        'description': 'The worst conditions. Extreme fumble risk, terrible kicking, mentally and physically exhausting.',
-        'game_note': 'All ball-handling stats degraded. Penalties increase.',
     },
     'heat': {
-        'label': 'Extreme Heat',
+        'label': 'Hot',
         'icon': '🌡️',
-        'temp_range': '95–108°F',
-        'description': 'Oppressive heat causes rapid stamina drain and sweaty hands.',
-        'game_note': 'Stamina management critical. Fourth-quarter performance drops.',
     },
     'wind': {
-        'label': 'Heavy Wind',
+        'label': 'Windy',
         'icon': '💨',
-        'temp_range': '45–65°F',
-        'description': 'Strong gusts impact kicks and punts heavily; additional variance in distance.',
-        'game_note': 'Kicking game unpredictable. Field position matters more.',
     },
 }
 
@@ -248,6 +388,25 @@ def generate_game_weather(
 
     return random.choices(WEATHER_KEYS, weights=weights, k=1)[0]
 
+def generate_game_weather_full(
+    state: Optional[str] = None,
+    week: int = 5,
+    total_weeks: int = 18,
+    climate_zone: Optional[str] = None,
+) -> Tuple[str, int]:
+    """Generate weather condition AND a realistic temperature.
+
+    Returns:
+        (weather_key, temperature_f) — e.g. ('rain', 52)
+    """
+    zone = climate_zone or get_climate_zone(state or '')
+    period = week_to_period(week, total_weeks)
+    table = WEATHER_TABLE.get(zone, WEATHER_TABLE['default'])
+    weights = table.get(period, table['early_fall'])
+    weather = random.choices(WEATHER_KEYS, weights=weights, k=1)[0]
+    temp = generate_temperature(weather, zone, period)
+    return weather, temp
+
 def generate_bowl_weather(state: Optional[str] = None) -> str:
     """
     Generate weather for bowl/postseason games (played in December–January).
@@ -283,15 +442,18 @@ def generate_season_weather_map(
         for week in schedule_weeks
     }
 
-def describe_conditions(weather_key: str) -> str:
+def describe_conditions(weather_key: str, temp: Optional[int] = None) -> str:
     """
     Return a short human-readable string for display in game logs.
-    E.g. 'Snow (22–34°F)' or 'Clear'
+    E.g. 'Rain, 52°F' or '72°F'
     """
     info = get_weather_description(weather_key)
+    temp_str = f"{temp}°F" if temp is not None else ""
     if weather_key == 'clear':
-        return info['label']
-    return f"{info['label']} ({info['temp_range']})"
+        return temp_str or info['label']
+    if temp_str:
+        return f"{info['label']}, {temp_str}"
+    return info['label']
 
 # ---------------------------------------------------------------------------
 # Module self-test
@@ -315,8 +477,8 @@ if __name__ == '__main__':
 
     for state, label in test_cases:
         week = int(label.split('week ')[1].rstrip(')'))
-        w = generate_game_weather(state=state, week=week)
-        print(f"  {label}: {describe_conditions(w)}")
+        w, temp = generate_game_weather_full(state=state, week=week)
+        print(f"  {label}: {describe_conditions(w, temp)}")
 
     print('\n--- Distribution (WI, week 12, 5000 samples) ---')
     counts = Counter(generate_game_weather(state='WI', week=12) for _ in range(5000))

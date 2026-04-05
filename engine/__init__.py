@@ -41,7 +41,7 @@ from .dtw import (
     generate_dtw_headline, generate_season_luck_summary,
 )
 from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label, load_team_identity
-from .weather import generate_game_weather, generate_bowl_weather, get_weather_description, describe_conditions, get_climate_zone, WEATHER_DETAILS
+from .weather import generate_game_weather, generate_game_weather_full, generate_bowl_weather, get_weather_description, describe_conditions, get_climate_zone, generate_temperature, WEATHER_DETAILS
 from .player_card import PlayerCard, SeasonStats, GameLog, player_to_card, game_result_to_log
 
 __all__ = [
@@ -104,10 +104,12 @@ __all__ = [
     "get_scheme_label",
     "load_team_identity",
     "generate_game_weather",
+    "generate_game_weather_full",
     "generate_bowl_weather",
     "get_weather_description",
     "describe_conditions",
     "get_climate_zone",
+    "generate_temperature",
     "WEATHER_DETAILS",
     "PlayerCard",
     "SeasonStats",

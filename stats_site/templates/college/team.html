@@ -398,6 +398,7 @@
       {% if g.get('is_playoff') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">PLAYOFF</span>{% endif %}
       {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+      {% if g.get('is_overseas_classic') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">🌍 {{ g.get('neutral_site_location', 'INTL') }}</span>{% endif %}
     </td>
   </tr>
   {% endfor %}

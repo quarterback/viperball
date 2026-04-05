@@ -769,9 +769,13 @@ async def _render_schedule(session_id, completed_games, user_team):
                 winner_str = "--"
 
             is_rivalry = g.get("is_rivalry_game", False)
+            is_overseas = g.get("is_overseas_classic", False)
             game_type_str = entry.get("game_type", "")
             if is_rivalry:
                 game_type_str = f"{game_type_str} (Rivalry)" if game_type_str else "Rivalry"
+            if is_overseas:
+                loc = g.get("neutral_site_location", "INTL")
+                game_type_str = f"{game_type_str} 🌍 {loc}" if game_type_str else f"🌍 {loc}"
 
             schedule_data.append({
                 "Week": entry["label_prefix"],

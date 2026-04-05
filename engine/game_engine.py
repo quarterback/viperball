@@ -538,7 +538,7 @@ POSITION_TAGS = {
 WEATHER_CONDITIONS = {
     "clear": {
         "label": "Clear",
-        "description": "Perfect conditions — no weather impact",
+        "description": "",
         "fumble_modifier": 0.0,
         "kick_accuracy_modifier": 0.0,
         "stamina_drain_modifier": 0.0,
@@ -549,7 +549,7 @@ WEATHER_CONDITIONS = {
     },
     "rain": {
         "label": "Rain",
-        "description": "Wet ball, slippery field — increased fumbles and muffs, reduced kick accuracy",
+        "description": "",
         "fumble_modifier": 0.025,
         "kick_accuracy_modifier": -0.08,
         "stamina_drain_modifier": 0.10,
@@ -560,7 +560,7 @@ WEATHER_CONDITIONS = {
     },
     "snow": {
         "label": "Snow",
-        "description": "Cold and slippery — major kick accuracy loss, moderate fumble increase, slower play",
+        "description": "",
         "fumble_modifier": 0.020,
         "kick_accuracy_modifier": -0.12,
         "stamina_drain_modifier": 0.15,
@@ -571,7 +571,7 @@ WEATHER_CONDITIONS = {
     },
     "sleet": {
         "label": "Sleet",
-        "description": "Worst conditions — extreme fumble risk, terrible kicking, exhausting",
+        "description": "",
         "fumble_modifier": 0.035,
         "kick_accuracy_modifier": -0.15,
         "stamina_drain_modifier": 0.20,
@@ -581,8 +581,8 @@ WEATHER_CONDITIONS = {
         "speed_modifier": -0.06,
     },
     "heat": {
-        "label": "Extreme Heat",
-        "description": "100°F+ — rapid stamina drain, slight fumble increase from sweaty hands",
+        "label": "Hot",
+        "description": "",
         "fumble_modifier": 0.010,
         "kick_accuracy_modifier": -0.02,
         "stamina_drain_modifier": 0.30,
@@ -592,8 +592,8 @@ WEATHER_CONDITIONS = {
         "speed_modifier": -0.02,
     },
     "wind": {
-        "label": "Heavy Wind",
-        "description": "Strong gusts — kick accuracy heavily impacted, longer punts with variance",
+        "label": "Windy",
+        "description": "",
         "fumble_modifier": 0.005,
         "kick_accuracy_modifier": -0.10,
         "stamina_drain_modifier": 0.05,
@@ -3506,6 +3506,7 @@ class ViperballEngine:
     def __init__(self, home_team: Team, away_team: Team, seed: Optional[int] = None,
                  style_overrides: Optional[Dict[str, str]] = None,
                  weather: str = "clear",
+                 game_temp: Optional[int] = None,
                  is_rivalry: bool = False,
                  neutral_site: bool = False,
                  injury_tracker=None,
@@ -3588,6 +3589,7 @@ class ViperballEngine:
 
         self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
         self.weather_info = WEATHER_CONDITIONS[self.weather]
+        self.game_temp = game_temp
 
         # --- Injury / substitution state ---
         self.injury_tracker = injury_tracker
@@ -13402,8 +13404,8 @@ class ViperballEngine:
                 "away": self.state.away_delta_yards,
             },
             "weather": self.weather,
-            "weather_label": self.weather_info["label"],
-            "weather_description": self.weather_info["description"],
+            "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
+            "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
             "seed": self.seed,
             "stats": {
                 "home": home_stats,
