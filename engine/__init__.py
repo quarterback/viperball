@@ -35,6 +35,11 @@ from .viperball_metrics import (
     calculate_team_rating, calculate_scoring_profile,
     calculate_defensive_impact, generate_headline,
 )
+from .dtw import (
+    calculate_game_dtw, calculate_season_luck, get_luck_rankings,
+    calculate_model_accuracy, get_extreme_teams, get_team_dtw_log,
+    generate_dtw_headline, generate_season_luck_summary,
+)
 from .ai_coach import assign_ai_scheme, auto_assign_all_teams, get_scheme_label, load_team_identity
 from .weather import generate_game_weather, generate_bowl_weather, get_weather_description, describe_conditions, get_climate_zone, WEATHER_DETAILS
 from .player_card import PlayerCard, SeasonStats, GameLog, player_to_card, game_result_to_log
@@ -86,6 +91,14 @@ __all__ = [
     "assign_variance_archetype",
     "designate_stars",
     "PRESTIGE_TO_HALO",
+    "calculate_game_dtw",
+    "calculate_season_luck",
+    "get_luck_rankings",
+    "calculate_model_accuracy",
+    "get_extreme_teams",
+    "get_team_dtw_log",
+    "generate_dtw_headline",
+    "generate_season_luck_summary",
     "assign_ai_scheme",
     "auto_assign_all_teams",
     "get_scheme_label",

@@ -20,6 +20,7 @@ from pathlib import Path
 from engine.game_engine import ViperballEngine, Team, load_team_from_json
 from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
+from engine.dtw import calculate_game_dtw
 from engine.fast_sim import fast_sim_game
 
 
@@ -309,6 +310,14 @@ class TeamRecord:
     total_opp_kill_drives: int = 0
     total_opp_drives_for_kill: int = 0
 
+    # DTW (Deserve to Win) season accumulators
+    dtw_expected_wins: float = 0.0     # Sum of DTW% across all games
+    dtw_lucky_wins: int = 0            # Won when DTW < 50%
+    dtw_unlucky_losses: int = 0        # Lost when DTW > 50%
+    dtw_total_pk_efficiency: float = 0.0  # Sum of penalty-kill efficiency
+    dtw_total_mess_rate: float = 0.0   # Sum of mess rates
+    dtw_game_log: list = field(default_factory=list)  # Per-game DTW entries
+
     # Streak tracking (for dynamic prestige)
     win_streak: int = 0
     loss_streak: int = 0
@@ -323,7 +332,10 @@ class TeamRecord:
                         bonus_data: Optional[Dict] = None,
                         opponent_bonus_data: Optional[Dict] = None,
                         game_stats: Optional[Dict] = None,
-                        opp_game_stats: Optional[Dict] = None):
+                        opp_game_stats: Optional[Dict] = None,
+                        dtw_pct: Optional[float] = None,
+                        dtw_dye_breakdown: Optional[Dict] = None,
+                        opponent_name: str = ""):
         if won is None:
             self.ties += 1
             self.win_streak = 0
@@ -480,6 +492,55 @@ class TeamRecord:
         self.kp_opp_rushing_yards += ogs.get("rushing_yards", 0)
         self.kp_opp_kick_pass_comp += ogs.get("kick_passes_completed", 0)
         self.kp_opp_kick_pass_att += ogs.get("kick_passes_attempted", 0)
+
+        # ── DTW (Deserve to Win) accumulation ──
+        if dtw_pct is not None:
+            self.dtw_expected_wins += dtw_pct
+            if won and dtw_pct < 0.50:
+                self.dtw_lucky_wins += 1
+            if not won and won is not None and dtw_pct > 0.50:
+                self.dtw_unlucky_losses += 1
+            if dtw_dye_breakdown:
+                self.dtw_total_pk_efficiency += dtw_dye_breakdown.get("pk_efficiency", 1.0)
+                self.dtw_total_mess_rate += dtw_dye_breakdown.get("mess_rate", 0.0)
+            self.dtw_game_log.append({
+                "opponent": opponent_name,
+                "dtw_pct": round(dtw_pct, 4),
+                "won": bool(won) if won is not None else False,
+                "pf": points_for,
+                "pa": points_against,
+                "lucky_win": bool(won) and dtw_pct < 0.50,
+                "unlucky_loss": (won is not None and not won and dtw_pct > 0.50),
+            })
+
+    # ── DTW season properties ──
+
+    @property
+    def dtw_luck_differential(self) -> float:
+        """Actual wins minus expected wins. Positive = lucky."""
+        return round(self.wins - self.dtw_expected_wins, 1)
+
+    @property
+    def dtw_expected_win_pct(self) -> float:
+        """Expected win percentage based on DTW model."""
+        return round(self.dtw_expected_wins / self.games_played, 3) if self.games_played > 0 else 0.0
+
+    @property
+    def dtw_avg_pk_efficiency(self) -> float:
+        """Average penalty-kill efficiency (>1.0 = elite under delta pressure)."""
+        return round(self.dtw_total_pk_efficiency / self.games_played, 2) if self.games_played > 0 else 1.0
+
+    @property
+    def dtw_avg_mess_rate(self) -> float:
+        """Average mess rate (lower = more consistent across delta contexts)."""
+        return round(self.dtw_total_mess_rate / self.games_played, 1) if self.games_played > 0 else 0.0
+
+    @property
+    def dtw_record(self) -> str:
+        """Expected record string like '8.3-4.7'."""
+        xw = self.dtw_expected_wins
+        gp = self.games_played
+        return f"{xw:.1f}-{gp - xw:.1f}" if gp > 0 else "0.0-0.0"
 
     # ── Fan-friendly metric averages ──
 
@@ -858,6 +919,12 @@ class Game:
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
     full_result: Optional[Dict] = None
+
+    # DTW (Deserve to Win) — per-game probability based on delta-adjusted
+    # performance quality.  Populated after each game by calculate_game_dtw().
+    home_dtw: Optional[float] = None   # 0.0-1.0
+    away_dtw: Optional[float] = None   # 0.0-1.0
+    dtw_result: Optional[Dict] = None  # Full DTW breakdown
 
 
 BOWL_NAMES_BY_TIER = {
@@ -1721,6 +1788,12 @@ class Season:
             game.away_metrics = away_metrics
             game.full_result = result
 
+            # Compute DTW (Deserve to Win)
+            dtw = calculate_game_dtw(result, home_metrics, away_metrics)
+            game.home_dtw = dtw["home_dtw"]
+            game.away_dtw = dtw["away_dtw"]
+            game.dtw_result = dtw
+
             self._update_standings(game, result, home_metrics, away_metrics, fcs_side)
             return result
 
@@ -1852,6 +1925,12 @@ class Season:
         game.away_metrics = away_metrics
         game.full_result = result
 
+        # Compute DTW (Deserve to Win)
+        dtw = calculate_game_dtw(result, home_metrics, away_metrics)
+        game.home_dtw = dtw["home_dtw"]
+        game.away_dtw = dtw["away_dtw"]
+        game.dtw_result = dtw
+
         self._update_standings(game, result, home_metrics, away_metrics, fcs_side)
         return result
 
@@ -1894,6 +1973,12 @@ class Season:
         home_metrics["delta_yards_raw"] = home_game_stats.get("delta_yards", 0)
         away_metrics["delta_yards_raw"] = away_game_stats.get("delta_yards", 0)
 
+        # Extract DTW data for standings accumulation
+        dtw = getattr(game, 'dtw_result', None) or {}
+        home_dtw_pct = dtw.get("home_dtw")
+        away_dtw_pct = dtw.get("away_dtw")
+        dtw_dye = dtw.get("dye_breakdown", {})
+
         if fcs_side != "home" and game.home_team in self.standings:
             self.standings[game.home_team].add_game_result(
                 won=home_won,
@@ -1910,6 +1995,9 @@ class Season:
                 opponent_bonus_data=away_bonus,
                 game_stats=home_game_stats,
                 opp_game_stats=away_game_stats,
+                dtw_pct=home_dtw_pct,
+                dtw_dye_breakdown=dtw_dye.get("home"),
+                opponent_name=game.away_team,
             )
 
         if fcs_side != "away" and game.away_team in self.standings:
@@ -1928,6 +2016,9 @@ class Season:
                 opponent_bonus_data=home_bonus,
                 game_stats=away_game_stats,
                 opp_game_stats=home_game_stats,
+                dtw_pct=away_dtw_pct,
+                dtw_dye_breakdown=dtw_dye.get("away"),
+                opponent_name=game.home_team,
             )
 
         # ── Dynamic prestige: update after every game ──
