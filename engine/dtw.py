@@ -57,21 +57,24 @@ from typing import Dict, List, Optional
 # Traditional metrics fill in the gaps.
 
 _DTW_WEIGHTS = {
-    # Tier 1: Proven predictors (85%+ solo accuracy) — 60% total
-    "stop_rate":       0.14,   # 88% solo — defensive stops predict winners
-    "success_rate":    0.14,   # 88% solo — consistency of positive-EPA plays
-    "pk_score_rate":   0.12,   # 87% solo — scoring when delta-penalized
-    "epa_per_play":    0.10,   # 86% solo — true per-play efficiency
-    "conversion_pct":  0.10,   # 83% solo — pressure-down conversions
+    # Tier 0: Dominant predictor (92% solo accuracy) — 15%
+    "set_efficiency":  0.15,   # 92% solo — tennis-style: win the quarters, win the game
 
-    # Tier 2: Solid contributors (60-75% solo) — 28% total
-    "pk_efficiency":   0.08,   # 71% solo — PK yards vs neutral yards
-    "bonus_conv":      0.07,   # 71% solo — capitalizing on turnovers
-    "kick_pass_pct":   0.07,   # 67% solo — kick pass accuracy
-    "pp_conversion":   0.06,   # 61% solo — power-play scoring rate
+    # Tier 1: Proven predictors (85%+ solo accuracy) — 50% total
+    "stop_rate":       0.12,   # 88% solo — defensive stops predict winners
+    "success_rate":    0.12,   # 88% solo — consistency of positive-EPA plays
+    "pk_score_rate":   0.10,   # 87% solo — scoring when delta-penalized
+    "epa_per_play":    0.08,   # 86% solo — true per-play efficiency
+    "conversion_pct":  0.08,   # 83% solo — pressure-down conversions
 
-    # Tier 3: Context signals (below 60% solo but add info in combo) — 12%
-    "kicking_eff":     0.05,   # 56% solo — DK/PK success rate
+    # Tier 2: Solid contributors (60-75% solo) — 24% total
+    "pk_efficiency":   0.07,   # 71% solo — PK yards vs neutral yards
+    "bonus_conv":      0.06,   # 71% solo — capitalizing on turnovers
+    "kick_pass_pct":   0.06,   # 67% solo — kick pass accuracy
+    "pp_conversion":   0.05,   # 61% solo — power-play scoring rate
+
+    # Tier 3: Context signals (below 60% solo but add info in combo) — 11%
+    "kicking_eff":     0.04,   # 56% solo — DK/PK success rate
     "mess_rate":       0.04,   # 51% solo — PP vs PK gap (inverted)
     "team_rating":     0.03,   # 49% solo — composite rating (weak alone)
 
@@ -209,6 +212,13 @@ def _extract_traditional(game_result: Dict, side: str,
     bonus_scores = stats.get("bonus_possession_scores", fs_metrics.get("bonus_scores", 0))
     bonus_conv = (bonus_scores / bonus_poss * 100) if bonus_poss > 0 else 50.0
 
+    # Quarter set efficiency — tennis-style: did you win the quarters?
+    # A team that wins 3 of 4 quarters is more "deserving" than one that
+    # dominates 1 quarter and gets edged in the other 3.
+    qs = m.get("quarter_scoring", {})
+    set_efficiency = qs.get("set_efficiency", 50.0)
+    clutch_quarters = qs.get("clutch_quarters", 0)
+
     return {
         "team_rating": team_rating,
         "success_rate": success_rate,
@@ -221,6 +231,8 @@ def _extract_traditional(game_result: Dict, side: str,
         "kicking_eff": kicking_eff,
         "stop_rate": stop_rate,
         "bonus_conv": bonus_conv,
+        "set_efficiency": set_efficiency,
+        "clutch_quarters": clutch_quarters,
     }
 
 
@@ -242,6 +254,9 @@ def _normalize_edge(home_val: float, away_val: float,
 
 # Scale factors: how big a gap in each metric is considered decisive.
 _EDGE_SCALES = {
+    # Tier 0: Dominant predictor
+    "set_efficiency":  25.0,   # 25% gap (e.g. 75% vs 50% quarters won) ≈ decisive
+
     # Tier 1: Proven predictors
     "stop_rate":       20.0,   # 20% defensive stop gap ≈ decisive
     "success_rate":    12.0,   # 12% gap (e.g. 55% vs 43%) ≈ decisive
@@ -291,6 +306,8 @@ def calculate_game_dtw(game_result: Dict,
     # Helper to assemble one side's full signal vector.
     def _build_signals(dye, trad):
         return {
+            # Tier 0: Dominant predictor
+            "set_efficiency": trad["set_efficiency"],
             # Tier 1: Proven predictors
             "stop_rate": trad["stop_rate"],
             "success_rate": trad["success_rate"],

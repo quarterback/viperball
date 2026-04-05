@@ -793,20 +793,69 @@ class TeamRecord:
         # Adjusted Tempo: plays per game
         adj_tempo = round(self.kp_total_plays / gp, 0)
 
+        # ── Net Efficiency (the single most important KenPom number) ──
+        net_rating = round(raw_o - raw_d, 1)
+
+        # ── Pythagorean Win% ──
+        # Expected record from scoring margin (PF^2 / (PF^2 + PA^2))
+        pf = max(0.1, self.points_for)
+        pa = max(0.1, self.points_against)
+        pythag_wp = round(pf ** 2 / (pf ** 2 + pa ** 2), 3)
+        pythag_wins = round(pythag_wp * gp, 1)
+        # Luck = actual wins - pythagorean wins
+        luck = round(self.wins - pythag_wins, 1)
+
+        # ── Scoring margin per game ──
+        scoring_margin = round((self.points_for - self.points_against) / gp, 1)
+
+        # ── Kick Pass Yards per Attempt (like yards per 3PA) ──
+        kp_ypa = round(self.kp_kick_pass_yards / max(1, self.kp_kick_pass_att), 1)
+
+        # ── Defensive efficiency breakdown ──
+        # Stop rate: opponent drives held without scoring
+        stop_rate = round(self.total_defensive_stops / max(1, self.total_opponent_drives) * 100, 1)
+        # Bonus conversion rate: defense-created drives that result in scores
+        bonus_conv = round(self.total_bonus_scores / max(1, self.total_bonus_possessions) * 100, 1)
+
+        # ── DTW-derived metrics ──
+        dtw_xwins = round(self.dtw_expected_wins, 1)
+        dtw_luck = round(self.wins - self.dtw_expected_wins, 1)
+
         return {
-            "raw_o": raw_o,        # Points per 10 drives (like AdjO)
-            "raw_d": raw_d,        # Opponent pts per 10 drives (like AdjD)
-            "ek_pct": ek_pct,      # Effective Kick% (like eFG%)
+            # Core efficiency (the KenPom "big 4")
+            "raw_o": raw_o,            # Offensive efficiency (pts per 10 drives)
+            "raw_d": raw_d,            # Defensive efficiency (opp pts per 10 drives)
+            "net_rating": net_rating,  # Net efficiency (raw_o - raw_d) ← KEY
+            "adj_tempo": adj_tempo,    # Plays per game
+
+            # Four Factors (Viperball equivalents)
+            "ek_pct": ek_pct,          # Effective Kick% (like eFG%)
             "opp_ek_pct": opp_ek_pct,  # Opponent EK% (like eFGD)
-            "to_pct": to_pct,      # Turnover% (like TO%)
-            "tod_pct": tod_pct,    # Forced TO% (like TOD%)
-            "lr_pct": lr_pct,      # Lateral Recovery% (like OR%)
-            "fdr": fdr,            # Free Down Rate (like FTR)
-            "rle": rle,            # Rush/Lateral Efficiency (like 2P%)
-            "opp_rle": opp_rle,    # Opponent RLE (like 2P%D)
-            "kp_pct": kp_pct,      # Kick Pass% (like 3P%)
-            "opp_kp_pct": opp_kp_pct,  # Opponent KP% (like 3P%D)
-            "adj_tempo": adj_tempo,  # Plays per game (like AdjT)
+            "to_pct": to_pct,          # Turnover% per drive
+            "tod_pct": tod_pct,        # Forced TO% per opponent drive
+            "lr_pct": lr_pct,          # Lateral Recovery% (like OR%)
+            "fdr": fdr,                # Free Down Rate (like FTR)
+
+            # Skill breakdown
+            "rle": rle,                # Rush/Lateral yards per carry
+            "opp_rle": opp_rle,        # Opponent rush efficiency
+            "kp_pct": kp_pct,          # Kick Pass completion %
+            "opp_kp_pct": opp_kp_pct,  # Opponent KP%
+            "kp_ypa": kp_ypa,          # Kick Pass yards per attempt
+
+            # Defense
+            "stop_rate": stop_rate,    # % of opponent drives stopped
+            "bonus_conv": bonus_conv,  # % of bonus possessions converted
+
+            # Record & luck
+            "pythag_wp": pythag_wp,    # Pythagorean expected win%
+            "pythag_wins": pythag_wins,  # Expected wins from scoring margin
+            "luck": luck,              # Actual wins - pythagorean wins
+            "scoring_margin": scoring_margin,  # Points per game margin
+
+            # DTW luck (delta-adjusted — more sophisticated than Pythagorean)
+            "dtw_xwins": dtw_xwins,    # Expected wins from DTW model
+            "dtw_luck": dtw_luck,      # Actual - DTW expected
         }
 
     def _check_no_fly_zone(self):
