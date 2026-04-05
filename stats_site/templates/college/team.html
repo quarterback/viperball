@@ -389,7 +389,7 @@
         {% set is_h = (g.home_team == team_name) %}
         {% set my_dtw = g.home_dtw if is_h else g.away_dtw %}
         {% set opp_dtw = g.away_dtw if is_h else g.home_dtw %}
-        <span class="{% if my_dtw > opp_dtw %}stat-good{% elif my_dtw < opp_dtw %}stat-bad{% endif %}" style="font-size:11px;">{{ "%.0f"|format(my_dtw) }}%</span>
+        <span class="{% if my_dtw > opp_dtw %}stat-good{% elif my_dtw < opp_dtw %}stat-bad{% endif %}" style="font-size:11px;">{{ "%.0f"|format(my_dtw * 100) }}%</span>
         {% if g.get('dtw_upset') %}<span style="font-size:9px;color:var(--yellow);margin-left:2px;" title="DTW Upset">&#9888;</span>{% endif %}
       {% else %}&mdash;{% endif %}
     </td>
