@@ -68,7 +68,7 @@
 <div style="margin-bottom:10px;">
   <span style="color:var(--cyan);">Weather:</span>
   <span style="color:var(--fg-bright);">{{ weather_label }}</span>
-  {% if weather_desc %}<span style="color:var(--fg-dim);"> &mdash; {{ weather_desc }}</span>{% endif %}
+  {% if weather_desc and weather_desc|lower not in ('clear', '') %}<span style="color:var(--fg-dim);"> — {{ weather_desc }}</span>{% endif %}
 </div>
 {% endif %}
 

@@ -182,11 +182,14 @@ def render_game_simulator(state: UserState, shared: dict):
 
         # Weather notice
         game_weather = result.get("weather", "clear")
-        if game_weather != "clear":
-            weather_label = result.get("weather_label", game_weather.title())
-            weather_desc = result.get("weather_description", "")
+        weather_label = result.get("weather_label", "")
+        weather_desc = result.get("weather_description", "")
+        if weather_label and weather_label.lower() not in ("clear", "none", ""):
+            display = weather_label
+            if weather_desc and weather_desc.lower() not in ("clear", ""):
+                display = f"{weather_label} — {weather_desc}"
             with ui.card().classes("w-full bg-blue-50 p-3 rounded"):
-                ui.label(f"{weather_label} — {weather_desc}").classes("text-sm")
+                ui.label(display).classes("text-sm")
 
         # Summary metrics
         with ui.row().classes("w-full gap-3 flex-wrap"):

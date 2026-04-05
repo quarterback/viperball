@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from engine.game_engine import ViperballEngine, Team, load_team_from_json
-from engine.weather import generate_game_weather, describe_conditions
+from engine.weather import generate_game_weather_full, describe_conditions, get_climate_zone, pick_overseas_classics
 from engine.viperball_metrics import calculate_viperball_metrics
 from engine.dtw import calculate_game_dtw
 from engine.fast_sim import fast_sim_game
@@ -964,6 +964,8 @@ class Game:
     is_conference_game: bool = False
     is_rivalry_game: bool = False
     is_fcs_game: bool = False
+    is_overseas_classic: bool = False
+    neutral_site_location: Optional[str] = None
 
     home_metrics: Optional[Dict] = None
     away_metrics: Optional[Dict] = None
@@ -1309,6 +1311,7 @@ class Season:
 
         self._assign_weeks_by_type(non_conf_weeks)
         self._mark_rivalry_games()
+        self._designate_overseas_classics()
 
     @staticmethod
     def _round_robin_rounds(team_list: List[str]) -> List[List[Tuple[str, str]]]:
@@ -1453,6 +1456,47 @@ class Season:
             pair = tuple(sorted([game.home_team, game.away_team]))
             if pair in rivalry_pairs:
                 game.is_rivalry_game = True
+
+    def _designate_overseas_classics(self, max_classics: int = 5):
+        """Mark up to *max_classics* Week 1 games as overseas classic neutral-site games.
+
+        Eligibility: Week 1 non-conference, non-FCS games involving at least
+        one high-prestige team (prestige >= 65).  Games are played at a random
+        international location and treated as neutral sites.
+        """
+        week1_candidates = [
+            g for g in self.schedule
+            if g.week == 1 and not g.is_conference_game and not g.is_fcs_game
+        ]
+        if not week1_candidates:
+            return
+
+        # Score by combined prestige of both teams (higher = more likely)
+        def _prestige_score(g: Game) -> int:
+            h = self.teams.get(g.home_team)
+            a = self.teams.get(g.away_team)
+            hp = getattr(h, 'prestige', 50) if h else 50
+            ap = getattr(a, 'prestige', 50) if a else 50
+            return hp + ap
+
+        # Filter: at least one team with prestige >= 65
+        eligible = [
+            g for g in week1_candidates
+            if max(
+                getattr(self.teams.get(g.home_team), 'prestige', 0),
+                getattr(self.teams.get(g.away_team), 'prestige', 0),
+            ) >= 65
+        ]
+        if not eligible:
+            return
+
+        eligible.sort(key=_prestige_score, reverse=True)
+        selected = eligible[:max_classics]
+        locations = pick_overseas_classics(len(selected))
+
+        for game, loc in zip(selected, locations):
+            game.is_overseas_classic = True
+            game.neutral_site_location = f"{loc['city']}, {loc['country']}"
 
     def _assign_weeks_by_type(self, non_conf_weeks: int = 3):
         """Assign week numbers with natural bye weeks, like real college football.
@@ -1790,14 +1834,36 @@ class Season:
         # Geo-aware weather: use home team's state if available
         home_state = self.team_states.get(game.home_team)
         total_weeks = max((g.week for g in self.schedule), default=18)
-        season_weather = generate_game_weather(
+
+        is_neutral = game.week >= 900 or game.is_overseas_classic
+        is_postseason = game.week >= 900
+
+        # Playoff neutral sites after first round use warm/dome locations.
+        # First round week varies by bracket size (997 for 12/16, 996 for 24/32).
+        # Weeks 998-1000 (quarters/semis/finals) are always warm neutral sites.
+        playoff_size = getattr(self, '_playoff_size', 4)
+        _warm_neutral_states = ['FL', 'TX', 'AZ', 'CA', 'LA']
+        if is_postseason and game.week >= 998 and playoff_size >= 12:
+            home_state = random.choice(_warm_neutral_states)
+        elif is_postseason and game.week == 1000:
+            home_state = random.choice(_warm_neutral_states)
+
+        # Overseas classic: use the international location's climate zone
+        overseas_climate = None
+        if game.is_overseas_classic and game.neutral_site_location:
+            from engine.weather import OVERSEAS_CLASSIC_LOCATIONS
+            city = game.neutral_site_location.split(",")[0].strip()
+            for loc in OVERSEAS_CLASSIC_LOCATIONS:
+                if loc["city"] == city:
+                    overseas_climate = loc["climate_zone"]
+                    break
+
+        season_weather, game_temp = generate_game_weather_full(
             state=home_state,
             week=game.week,
             total_weeks=total_weeks,
+            climate_zone=overseas_climate,
         )
-
-        is_neutral = game.week >= 900
-        is_postseason = game.week >= 900
 
         # ── Fast-Sim Path ──
         # CPU-vs-CPU games use lightweight statistical model.
@@ -1806,14 +1872,14 @@ class Season:
 
         if should_fast_sim:
             weather_code = season_weather if isinstance(season_weather, str) else "clear"
-            weather_label = weather_code.replace("_", " ").title()
+            weather_label = describe_conditions(weather_code, game_temp)
 
             result = fast_sim_game(
                 home_team, away_team,
                 seed=random.randint(1, 1000000),
                 weather=weather_code,
                 weather_label=weather_label,
-                weather_description=f"{weather_label} conditions",
+                weather_description=f"{game_temp}°F",
                 is_rivalry=game.is_rivalry_game,
                 neutral_site=is_neutral,
             )
@@ -1939,6 +2005,7 @@ class Season:
             seed=random.randint(1, 1000000),
             style_overrides=style_overrides,
             weather=season_weather,
+            game_temp=game_temp,
             is_rivalry=game.is_rivalry_game,
             neutral_site=is_neutral,
             is_playoff=is_postseason,
@@ -3090,6 +3157,7 @@ class Season:
         return games
 
     def simulate_playoff(self, num_teams: int = 4, verbose: bool = False):
+        self._playoff_size = num_teams
         playoff_teams = self.get_playoff_teams(num_teams)
         seeds = [t.team_name for t in playoff_teams]
         self.playoff_seeds = {name: i + 1 for i, name in enumerate(seeds)}

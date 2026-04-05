@@ -169,6 +169,7 @@
     <td>
       {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
+      {% if g.is_overseas_classic %}<span class="tag" style="background:var(--cyan);color:#000;font-size:9px;padding:1px 5px;border-radius:3px;">🌍 {{ g.neutral_site_location or 'INTL' }}</span>{% endif %}
     </td>
     <td>
       {% if g.completed %}
