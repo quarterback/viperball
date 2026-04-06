@@ -1012,30 +1012,6 @@ button:hover, input[type="submit"]:hover {
   border-color: var(--green);
 }
 
-/* Content bottom padding so export button doesn't overlap */
-.container.wide { padding-bottom: 48px; }
-
-/* Export Page button */
-.export-btn {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  background: var(--bg-alt);
-  color: var(--fg-dim);
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 11px;
-  z-index: 90;
-  transition: all 0.15s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.export-btn:hover {
-  color: var(--fg-bright);
-  border-color: var(--accent);
-}
 
 /* Toast notification */
 .toast {
@@ -1435,88 +1411,6 @@ function copyTableText(btn, table) {
   });
 })();
 
-/* ── Export Entire Page as Text ── */
-function metricGridToText(grid) {
-  var metrics = grid.querySelectorAll('.metric, .metric-card');
-  if (metrics.length === 0) return '';
-  var parts = [];
-  metrics.forEach(function(m) {
-    var lbl = m.querySelector('.label, .metric-label');
-    var val = m.querySelector('.value, .metric-value');
-    if (lbl && val) {
-      parts.push(lbl.textContent.trim() + ': ' + val.textContent.trim().replace(/\s+/g, ' '));
-    }
-  });
-  return parts.join('  |  ');
-}
-
-function exportPageAsText() {
-  var lines = [];
-
-  /* Page title */
-  var header = document.querySelector('.page-header h1');
-  if (header) {
-    lines.push(header.textContent.trim());
-    var sub = document.querySelector('.page-header .subtitle');
-    if (sub) lines.push(sub.textContent.trim());
-    lines.push('');
-  }
-
-  /* Walk through main content area */
-  var container = document.querySelector('.container.wide');
-  if (!container) return;
-
-  function walk(parent) {
-    var children = parent.children;
-    for (var i = 0; i < children.length; i++) {
-      var el = children[i];
-      var tag = el.tagName;
-
-      if (tag === 'H2' || tag === 'H3') {
-        lines.push('');
-        lines.push('--- ' + el.textContent.trim() + ' ---');
-        continue;
-      }
-
-      if (tag === 'TABLE') {
-        var text = tableToText(el);
-        if (text) { lines.push(text); lines.push(''); }
-        continue;
-      }
-
-      if (el.classList && (el.classList.contains('grid-2') || el.classList.contains('grid-3') || el.classList.contains('grid-4'))) {
-        /* Check for metric grids */
-        var metricText = metricGridToText(el);
-        if (metricText) { lines.push(metricText); lines.push(''); }
-        /* Also check for tables inside grids */
-        var innerTables = el.querySelectorAll('table');
-        innerTables.forEach(function(t) {
-          var text = tableToText(t);
-          if (text) { lines.push(text); lines.push(''); }
-        });
-        continue;
-      }
-
-      /* Recurse into divs that might contain tables */
-      if (tag === 'DIV') {
-        var innerTable = el.querySelector('table');
-        if (innerTable) {
-          var text = tableToText(innerTable);
-          if (text) { lines.push(text); lines.push(''); }
-        } else if (el.children.length > 0) {
-          walk(el);
-        }
-      }
-    }
-  }
-
-  walk(container);
-
-  var text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (!text) { text = '(No table data found on this page)'; }
-  navigator.clipboard.writeText(text).then(function() { showToast('Copied to clipboard!'); });
-}
-
 function showToast(msg) {
   var toast = document.getElementById('vb-toast');
   if (!toast) return;
@@ -1813,8 +1707,6 @@ function showToast(msg) {
 })();
 </script>
 
-<!-- Export Page button and toast -->
-<button class="export-btn" onclick="exportPageAsText()" type="button">Export Page</button>
 <div class="toast" id="vb-toast"></div>
 
 </body>
