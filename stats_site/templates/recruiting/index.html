@@ -53,27 +53,34 @@
     <tr>
       <th class="num">#</th><th>Name</th><th>Pos</th>
       <th class="num">Stars</th><th>Grade</th>
-      <th>Hometown</th><th>High School</th>
-      <th class="num">Pos Rk</th><th class="num">Reg Rk</th>
-      <th>Flag</th>
+      <th>Hometown</th>
+      <th>Status / Top Schools</th>
+      <th class="num">Offers</th>
     </tr>
   </thead>
   <tbody>
   {% for p in top_prospects %}
   <tr>
     <td class="num rank">{{ loop.index }}</td>
-    <td><a href="/stats/recruiting/recruit/{{ p.recruit_id }}">{{ p.name }}</a></td>
-    <td>{{ p.position }}</td>
-    <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}">
-      {{ ("&#9733;" * p.scouted_stars)|safe }}
+    <td {% if p.is_alpha %}style="color:var(--yellow);font-weight:bold"{% endif %}><a href="/stats/recruiting/recruit/{{ p.recruit_id }}">{{ p.name }}</a>
+      <div style="font-size:10px;color:var(--fg-dim);">{{ p.high_school }}</div>
+    </td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}" style="white-space:nowrap;">
+      {{ ("&#9733;" * p.scouted_stars)|safe }}{{ ("&#9734;" * (5 - p.scouted_stars))|safe }}
     </td>
     <td>{{ p.grade }}</td>
-    <td>{{ p.hometown }}</td>
-    <td>{{ p.high_school }}</td>
-    <td class="num">{{ p.position_rank }}</td>
-    <td class="num">{{ p.regional_rank }}</td>
-    <td>{% if p.is_alpha %}<span class="tag" style="background:var(--yellow);color:#000">ALPHA</span>{% endif %}
-        {% if p.get("flag") %}<span class="tag" style="background:var(--green);color:#000">{{ p.flag }}</span>{% endif %}</td>
+    <td style="font-size:11px;">{{ p.hometown }}</td>
+    <td style="font-size:11px;">
+      {% if p.committed_to %}
+        <span style="color:var(--green);font-weight:bold;">{{ p.committed_to }}</span>
+      {% elif p.top_schools %}
+        <span style="color:var(--fg-dim);">{{ p.top_schools | join(", ") }}</span>
+      {% else %}
+        <span style="color:var(--fg-dim);">&mdash;</span>
+      {% endif %}
+    </td>
+    <td class="num">{{ p.num_offers }}</td>
   </tr>
   {% endfor %}
   </tbody>

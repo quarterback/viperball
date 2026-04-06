@@ -302,7 +302,7 @@ class RecruitOfferRequest(BaseModel):
     recruit_index: int
 
 class OffseasonStartRequest(BaseModel):
-    pool_size: int = 300
+    pool_size: int = 1500
 
 
 def _load_team(key: str):
@@ -1972,7 +1972,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
 
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
-            base_seed=_year, size_per_class=300,
+            base_seed=_year, size_per_class=1500,
         )
     except Exception:
         pass  # Non-critical — will be created on first offseason advance
@@ -2296,7 +2296,7 @@ def dynasty_advance(session_id: str):
 
     # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
     from engine.recruiting import HSRecruitingPipeline
-    pool_size = 300
+    pool_size = 1500
     if dynasty._hs_pipeline is None:
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
@@ -2397,7 +2397,7 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
 
             dynasty._hs_pipeline = HSRecruitingPipeline()
             dynasty._hs_pipeline.generate_initial_pipeline(
-                base_seed=_year, size_per_class=300,
+                base_seed=_year, size_per_class=1500,
             )
         except Exception:
             pass

@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-header">
   <h1>HIGH SCHOOL RANKINGS</h1>
-  <div class="subtitle">{{ grade }} Grade &middot; {{ board|length }} prospects{% if position %} &middot; {{ position }}{% endif %}{% if region %} &middot; {{ region }}{% endif %}</div>
+  <div class="subtitle">{{ grade }} Grade &middot; {{ board|length }} prospects{% if position %} &middot; {{ position }}{% endif %}{% if state_filter %} &middot; {{ state_filter }}{% endif %}</div>
 </div>
 
 <div class="tabs">
@@ -29,13 +29,48 @@
   {% endfor %}
 </div>
 
-{# ── Filters ── #}
-<div style="margin:12px 0;display:flex;gap:12px;flex-wrap:wrap;">
-  <span style="color:var(--fg-dim)">Position:</span>
-  <a href="/stats/recruiting/hs-rankings?grade={{ grade }}">All</a>
-  {% for pos in positions %}
-  <a href="/stats/recruiting/hs-rankings?grade={{ grade }}&position={{ pos }}" {% if pos == position %}style="color:var(--fg-bright);text-decoration:underline"{% endif %}>{{ pos }}</a>
-  {% endfor %}
+{# ── Filter Bar (247-style) ── #}
+<div style="margin:12px 0;padding:12px;background:var(--bg-alt);border:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+
+  {# Search #}
+  <form method="get" action="/stats/recruiting/hs-rankings" style="display:flex;gap:6px;align-items:center;flex:1;min-width:180px;">
+    <input type="hidden" name="grade" value="{{ grade }}">
+    {% if position %}<input type="hidden" name="position" value="{{ position }}">{% endif %}
+    {% if stars_filter %}<input type="hidden" name="stars" value="{{ stars_filter }}">{% endif %}
+    {% if state_filter %}<input type="hidden" name="state" value="{{ state_filter }}">{% endif %}
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Search name, school, city..." style="flex:1;padding:4px 8px;font-size:12px;background:var(--bg);border:1px solid var(--border);color:var(--fg);font-family:inherit;">
+    <button type="submit" style="padding:4px 10px;font-size:11px;background:var(--accent);color:#000;border:1px solid var(--accent);cursor:pointer;font-family:inherit;">Search</button>
+    {% if search_q %}<a href="/stats/recruiting/hs-rankings?grade={{ grade }}{% if position %}&position={{ position }}{% endif %}{% if stars_filter %}&stars={{ stars_filter }}{% endif %}{% if state_filter %}&state={{ state_filter }}{% endif %}" style="font-size:10px;">Clear</a>{% endif %}
+  </form>
+
+  {# Position filter #}
+  <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+    <span style="color:var(--fg-dim);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Pos:</span>
+    <a href="/stats/recruiting/hs-rankings?grade={{ grade }}{% if stars_filter %}&stars={{ stars_filter }}{% endif %}{% if state_filter %}&state={{ state_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}" style="font-size:11px;padding:2px 6px;{% if not position %}background:var(--accent);color:#000;{% endif %}">All</a>
+    {% for pos in positions %}
+    <a href="/stats/recruiting/hs-rankings?grade={{ grade }}&position={{ pos }}{% if stars_filter %}&stars={{ stars_filter }}{% endif %}{% if state_filter %}&state={{ state_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}" style="font-size:11px;padding:2px 6px;{% if pos == position %}background:var(--accent);color:#000;{% endif %}">{{ pos }}</a>
+    {% endfor %}
+  </div>
+
+  {# Stars filter #}
+  <div style="display:flex;gap:4px;align-items:center;">
+    <span style="color:var(--fg-dim);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Stars:</span>
+    <a href="/stats/recruiting/hs-rankings?grade={{ grade }}{% if position %}&position={{ position }}{% endif %}{% if state_filter %}&state={{ state_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}" style="font-size:11px;padding:2px 6px;{% if not stars_filter %}background:var(--accent);color:#000;{% endif %}">All</a>
+    {% for s in [5, 4, 3, 2, 1] %}
+    <a href="/stats/recruiting/hs-rankings?grade={{ grade }}&stars={{ s }}{% if position %}&position={{ position }}{% endif %}{% if state_filter %}&state={{ state_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}" style="font-size:11px;padding:2px 6px;{% if stars_filter == s|string %}background:var(--accent);color:#000;{% endif %}">{{ s }}&#9733;</a>
+    {% endfor %}
+  </div>
+
+  {# State/Region filter #}
+  <div style="display:flex;gap:4px;align-items:center;">
+    <span style="color:var(--fg-dim);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">State:</span>
+    <select onchange="if(this.value){location.href='/stats/recruiting/hs-rankings?grade={{ grade }}{% if position %}&position={{ position }}{% endif %}{% if stars_filter %}&stars={{ stars_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}&state='+encodeURIComponent(this.value)}else{location.href='/stats/recruiting/hs-rankings?grade={{ grade }}{% if position %}&position={{ position }}{% endif %}{% if stars_filter %}&stars={{ stars_filter }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}'}" style="padding:3px 6px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--fg);font-family:inherit;">
+      <option value="">All States</option>
+      {% for st in all_states %}
+      <option value="{{ st }}" {% if st == state_filter %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+  </div>
 </div>
 
 {# ── Rankings Board ── #}
@@ -43,51 +78,57 @@
 <table>
   <thead>
     <tr>
-      <th class="num">#</th><th>Name</th><th>Pos</th>
+      <th class="num" style="width:40px;">#</th>
+      <th>Player</th>
+      <th>Pos</th>
       <th class="num">Stars</th>
-      <th>Hometown</th><th>High School</th>
-      <th class="num">Pos Rk</th><th class="num">Reg Rk</th>
-      {% for attr in visible_attrs %}
-      <th class="num" title="{{ attr }}">{{ attr[:3]|upper }}</th>
-      {% endfor %}
-      <th>Flag</th>
+      <th>Hometown</th>
+      <th>Status</th>
+      <th class="num">Offers</th>
+      <th class="num">Pos Rk</th>
     </tr>
   </thead>
   <tbody>
   {% for p in board %}
   <tr>
-    <td class="num rank">{{ p.rank }}</td>
-    <td {% if p.is_alpha %}style="color:var(--yellow);font-weight:bold"{% endif %}><a href="/stats/recruiting/recruit/{{ p.recruit_id }}">{{ p.name }}</a></td>
-    <td>{{ p.position }}</td>
-    <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% elif p.scouted_stars <= 2 %}stat-bad{% endif %}">
-      {{ ("&#9733;" * p.scouted_stars ~ "&#9734;" * (5 - p.scouted_stars))|safe }}
-    </td>
-    <td>{{ p.hometown }}</td>
-    <td>{{ p.high_school }}</td>
-    <td class="num">{{ p.position_rank }}</td>
-    <td class="num">{{ p.regional_rank }}</td>
-    {% for attr in visible_attrs %}
-    <td class="num {% if p.visible_attributes.get(attr, 0) >= 90 %}stat-elite{% elif p.visible_attributes.get(attr, 0) >= 80 %}stat-good{% elif p.visible_attributes.get(attr, 0) < 60 %}stat-bad{% endif %}">
-      {{ p.visible_attributes.get(attr, "—") }}
-    </td>
-    {% endfor %}
+    <td class="num rank">{{ p.display_rank }}</td>
     <td>
-      {% if p.get("flag") == "BREAKOUT" %}<span class="tag" style="background:var(--green);color:#000">BREAKOUT</span>{% endif %}
-      {% if p.is_alpha %}<span class="tag" style="background:var(--yellow);color:#000">ALPHA</span>{% endif %}
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div>
+          <a href="/stats/recruiting/recruit/{{ p.recruit_id }}" style="font-weight:bold;{% if p.is_alpha %}color:var(--yellow);{% endif %}">{{ p.name }}</a>
+          <div style="font-size:10px;color:var(--fg-dim);">{{ p.high_school }} &middot; {{ p.state }}</div>
+        </div>
+      </div>
     </td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num" style="white-space:nowrap;">
+      <span class="{% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% elif p.scouted_stars <= 2 %}stat-bad{% endif %}">
+        {{ ("&#9733;" * p.scouted_stars)|safe }}{{ ("&#9734;" * (5 - p.scouted_stars))|safe }}
+      </span>
+    </td>
+    <td style="font-size:11px;">{{ p.hometown }}</td>
+    <td style="font-size:11px;">
+      {% if p.committed_to %}
+        <span style="color:var(--green);font-weight:bold;">{{ p.committed_to }}</span>
+      {% elif p.top_schools %}
+        <span style="color:var(--fg-dim);">{{ p.top_schools | join(", ") }}</span>
+      {% else %}
+        <span style="color:var(--fg-dim);">&mdash;</span>
+      {% endif %}
+    </td>
+    <td class="num">{{ p.num_offers }}</td>
+    <td class="num">{{ p.position_rank }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+
+<div style="margin-top:8px;color:var(--fg-dim);font-size:11px;">
+  Showing {{ board|length }} prospects &middot;
+  {% if p.get("flag") == "BREAKOUT" %}<span style="color:var(--green)">BREAKOUT</span> = emerging talent &middot; {% endif %}
+  <span style="color:var(--yellow)">Gold names</span> = Alpha prospects (4-5&#9733; or elite talent)
+</div>
 {% else %}
 <div class="notice">No pipeline data available. Start a dynasty to generate HS recruiting classes.</div>
 {% endif %}
-
-{# ── Legend ── #}
-<div style="margin-top:16px;color:var(--fg-dim);font-size:11px;">
-  <p>&#9733; = scouted star rating (may not reflect true talent, especially for younger grades)</p>
-  <p>Attribute values include scouting noise — younger grades have less accurate evaluations.</p>
-  <p><span style="color:var(--yellow)">ALPHA</span> = scouted 4-5&#9733; or verified elite talent &middot;
-     <span style="color:var(--green)">BREAKOUT</span> = talent emerging beyond initial evaluation</p>
-</div>
 {% endblock %}
