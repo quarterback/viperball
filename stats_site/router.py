@@ -6448,6 +6448,9 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
 
     recruit_data = None
     recruit_obj = None
+    grade_pool = None  # the pool (grade class) where recruit was found
+
+    # First try the signing pool (12th graders / active pool)
     if pool:
         for r in pool:
             if r.recruit_id == recruit_id:
@@ -6455,11 +6458,43 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
                 recruit_data["full_name"] = r.full_name
                 recruit_data["true_overall"] = r.true_overall
                 recruit_obj = r
+                grade_pool = pool
                 break
 
+    # If not found in signing pool, search all HS pipeline grades
+    if not recruit_obj:
+        try:
+            from api.main import sessions
+            for _sid, sess in sessions.items():
+                if recruit_obj:
+                    break
+                _dynasty = sess.get("dynasty")
+                if not _dynasty or not hasattr(_dynasty, "_hs_pipeline") or not _dynasty._hs_pipeline:
+                    continue
+                pipeline = _dynasty._hs_pipeline
+                if not hasattr(pipeline, "classes"):
+                    continue
+                for grade, prospects in pipeline.classes.items():
+                    if recruit_obj:
+                        break
+                    for p in prospects:
+                        if p.recruit.recruit_id == recruit_id:
+                            recruit_obj = p.recruit
+                            recruit_data = recruit_obj.to_dict()
+                            recruit_data["full_name"] = recruit_obj.full_name
+                            recruit_data["true_overall"] = recruit_obj.true_overall
+                            dynasty = _dynasty
+                            sid = _sid
+                            # Build grade-level pool for rankings
+                            grade_pool = [pp.recruit for pp in prospects]
+                            recruit_data["grade"] = grade
+                            break
+        except Exception:
+            pass
+
     # Compute rankings from pool (national, position, regional)
-    if pool and recruit_obj:
-        sorted_pool = sorted(pool, key=lambda r: (-r.stars, -r.overall_estimate))
+    if grade_pool and recruit_obj:
+        sorted_pool = sorted(grade_pool, key=lambda r: (-r.stars, -r.overall_estimate))
         for i, r in enumerate(sorted_pool):
             if r.recruit_id == recruit_id:
                 recruit_data["national_rank"] = i + 1
