@@ -6128,9 +6128,13 @@ def _get_or_create_pipeline(sess, sid):
         return pipeline
 
     # Generate a fresh pipeline and attach it to whatever we have
+    # Scale class size to league: ~8 recruits per team
+    season = sess.get("season")
+    num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+    class_size = max(300, num_teams * 8)
     seed = hash(sid) % 999999
     pipeline = HSRecruitingPipeline()
-    pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=300)
+    pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
     if dynasty:
         dynasty._hs_pipeline = pipeline
     else:
