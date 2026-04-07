@@ -222,6 +222,28 @@
 </div>
 {% endif %}
 
+{# ── Dreamsheet (aspirational schools) ── #}
+{% if recruit.dreamsheet %}
+<div style="margin-bottom:16px;">
+  <h2>Dreamsheet</h2>
+  <div style="font-size:10px;color:var(--fg-dim);margin-bottom:8px;">Schools this recruit dreams of attending — may or may not overlap with actual offers</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+    {% for school in recruit.dreamsheet %}
+    <div style="background:var(--bg-alt);border:1px solid {% if school in recruit.offers %}var(--green){% elif school in (recruit.top_schools or []) %}var(--accent){% else %}var(--border){% endif %};padding:6px 12px;font-size:12px;">
+      <span style="{% if school in recruit.offers %}color:var(--green);font-weight:bold;{% elif school in (recruit.top_schools or []) %}color:var(--accent);{% else %}color:var(--fg);{% endif %}">{{ school }}</span>
+      {% if school in recruit.offers %}
+        <span style="font-size:9px;color:var(--green);margin-left:4px;">OFFERED</span>
+      {% elif school in recruit.get('school_interest', {}) %}
+        <span style="font-size:9px;color:var(--fg-dim);margin-left:4px;">INTERESTED</span>
+      {% else %}
+        <span style="font-size:9px;color:var(--fg-dim);margin-left:4px;">DREAM</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {# ═══════════════════════════════════════════════
    BOTTOM ROW — Timeline + Scouting Report side by side
    ═══════════════════════════════════════════════ #}
@@ -253,9 +275,9 @@
 {% endif %}
 </div>
 
-{# ── ViperScout Scouting Report (full scout only) ── #}
+{# ── ViperScout Scouting Report ── #}
 <div>
-{% if recruit.scout_level == "full" %}
+{% if recruit.true_speed is defined and recruit.true_speed %}
 <h2>ViperScout Scouting Report</h2>
 <div style="display:flex;gap:8px;margin-bottom:12px;">
   <div class="metric-card" style="flex:1;">

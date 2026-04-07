@@ -399,6 +399,13 @@ class Recruit:
                                           # Most kids: 0-0.05. High-GPA kids: up to 0.25.
                                           # Small factor — just another dice roll, not a dealbreaker.
 
+    # Dreamsheet — aspirational schools the recruit WANTS to attend.
+    # Separate from offers/interest: a kid can dream of playing for Alabama
+    # but Alabama might never offer. Or a blue blood might be on their sheet
+    # and actually comes calling. The mismatch between dreams and reality
+    # is part of what makes recruiting stories interesting.
+    dreamsheet: List[str] = field(default_factory=list)  # 3-8 schools they dream about
+
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
@@ -546,6 +553,7 @@ class Recruit:
             "crystal_ball": dict(self.crystal_ball),
             "timeline": list(self.timeline),
             "prefers_academics": self.prefers_academics,
+            "dreamsheet": list(self.dreamsheet),
         }
 
 
@@ -707,10 +715,108 @@ _HOMETOWN_BY_REGION = {
     ],
 }
 
-_HS_SUFFIXES = [
-    "High School", "Academy", "Prep", "Central High School",
-    "Regional High School", "Christian Academy", "Catholic High School",
-]
+# Real high school names by city (sourced from MaxPreps/state directories)
+# Each city maps to actual schools in that metro area
+_REAL_HS_BY_CITY = {
+    # Northeast
+    "Boston": ["BC High", "Brookline High", "Catholic Memorial", "Thayer Academy", "Dexter Southfield", "Newton North", "Needham High", "Milton Academy"],
+    "Hartford": ["East Catholic", "Glastonbury High", "Newington High", "Hall High", "Conard High", "Simsbury High"],
+    "Portland, ME": ["Portland High", "Deering High", "Cheverus", "Thornton Academy", "Scarborough High"],
+    "Burlington": ["Rice Memorial", "South Burlington High", "Burlington High", "Essex High"],
+    "Providence": ["La Salle Academy", "Hendricken", "Classical High", "Central High", "North Kingstown High"],
+    "Worcester": ["St. John's High", "Holy Name", "Doherty High", "Wachusett Regional", "Burncoat High"],
+    "Bridgeport": ["Fairfield Prep", "Notre Dame High", "Central High", "Kolbe Cathedral", "Fairfield Ludlowe"],
+    "Albany": ["CBA Albany", "Shaker High", "Shenendehowa", "La Salle Institute", "Colonie Central"],
+    # Mid-Atlantic
+    "Philadelphia": ["St. Joseph's Prep", "Roman Catholic", "Archbishop Wood", "La Salle College High", "Imhotep Charter", "Neumann-Goretti", "Germantown Academy"],
+    "Baltimore": ["St. Frances Academy", "Gilman School", "Calvert Hall", "McDonogh School", "Loyola Blakefield", "Mount St. Joseph"],
+    "Washington": ["Gonzaga College High", "DeMatha Catholic", "St. John's College High", "Good Counsel", "Maret School", "Sidwell Friends"],
+    "Newark": ["St. Benedict's Prep", "Seton Hall Prep", "Don Bosco Prep", "Paramus Catholic", "Bergen Catholic"],
+    "Pittsburgh": ["Pine-Richland", "Central Catholic", "Gateway High", "North Allegheny", "Penn-Trafford", "McKeesport Area"],
+    "Richmond": ["Benedictine", "Trinity Episcopal", "Highland Springs", "Manchester High", "Hermitage High"],
+    "Virginia Beach": ["Green Run High", "Ocean Lakes High", "Princess Anne High", "Frank W. Cox High", "Landstown High"],
+    "Trenton": ["The Hun School", "Trenton Catholic", "Hamilton West", "Lawrence High", "Nottingham High"],
+    # South
+    "Atlanta": ["Grayson High", "Milton High", "North Gwinnett", "Buford High", "Westlake High", "Pebblebrook High", "McEachern High"],
+    "Charlotte": ["Providence Day", "Mallard Creek", "Vance High", "Olympic High", "Butler High", "Ardrey Kell"],
+    "Nashville": ["Montgomery Bell Academy", "Ensworth School", "Lipscomb Academy", "Brentwood Academy", "Ravenwood High"],
+    "Raleigh": ["Millbrook High", "Leesville Road", "Enloe High", "Word of God Academy", "Green Hope High"],
+    "Jacksonville": ["Bolles School", "Trinity Christian", "Bartram Trail", "Sandalwood High", "First Coast High"],
+    "Tampa": ["Tampa Catholic", "Jesuit High", "Plant High", "Wharton High", "Tampa Bay Tech", "Gaither High"],
+    "New Orleans": ["John Curtis Christian", "St. Augustine High", "Warren Easton", "Edna Karr", "Brother Martin"],
+    "Memphis": ["Memphis East", "Whitehaven High", "Briarcrest Christian", "Memphis University School", "Cordova High"],
+    # Midwest
+    "Chicago": ["Simeon Career Academy", "Mount Carmel", "De La Salle", "St. Rita", "Providence Catholic", "Morgan Park High", "Kenwood Academy"],
+    "Indianapolis": ["Lawrence North", "Warren Central", "Cathedral High", "Pike High", "Center Grove"],
+    "Columbus": ["Gahanna Lincoln", "Pickerington Central", "Westerville Central", "Upper Arlington", "Dublin Coffman"],
+    "Detroit": ["Cass Tech", "Martin Luther King", "De La Salle Collegiate", "Brother Rice", "West Bloomfield"],
+    "Milwaukee": ["Rufus King", "Marquette University High", "Brookfield Central", "Homestead High"],
+    "Minneapolis": ["Wayzata High", "Eden Prairie High", "Minnetonka High", "Cretin-Derham Hall", "Totino-Grace"],
+    "Kansas City": ["Blue Valley Northwest", "Rockhurst High", "Lee's Summit North", "St. Thomas Aquinas", "Blue Springs South"],
+    "Cincinnati": ["Moeller High", "St. Xavier High", "Elder High", "Princeton High", "Lakota East"],
+    # West Coast
+    "Los Angeles": ["Mater Dei", "Sierra Canyon", "St. John Bosco", "Corona Centennial", "Long Beach Poly", "Loyola High", "Windward School"],
+    "San Francisco": ["Riordan High", "Sacred Heart Cathedral", "Mitty High", "Serra High", "Bellarmine College Prep"],
+    "Seattle": ["O'Dea High", "Eastside Catholic", "Federal Way", "Rainier Beach", "Garfield High", "Kennedy Catholic"],
+    "Portland, OR": ["Central Catholic", "Jesuit High", "Lake Oswego", "West Linn", "Clackamas High"],
+    "San Diego": ["Cathedral Catholic", "Torrey Pines", "St. Augustine High", "Mission Hills", "Helix High"],
+    "Sacramento": ["Folsom High", "Oak Ridge High", "Sheldon High", "Elk Grove High", "Grant Union High"],
+    "Oakland": ["Oakland Tech", "Bishop O'Dowd", "De La Salle", "San Leandro High", "Salesian College Prep"],
+    "Spokane": ["Gonzaga Prep", "Lewis and Clark", "Mt. Spokane High", "Central Valley High"],
+    # Texas / Southwest
+    "Houston": ["North Shore", "Katy High", "Westfield High", "Atascocita High", "Manvel High", "St. Thomas High", "The Woodlands"],
+    "Dallas": ["Duncanville High", "DeSoto High", "Allen High", "Southlake Carroll", "Highland Park", "Lancaster High", "South Oak Cliff"],
+    "San Antonio": ["Brennan High", "Judson High", "Stevens High", "O'Connor High", "Reagan High", "Steele High"],
+    "Austin": ["Lake Travis High", "Westlake High", "Vandegrift High", "Cedar Ridge", "Hendrickson High"],
+    "Phoenix": ["Hamilton High", "Chandler High", "Perry High", "Basha High", "Mountain Pointe", "Pinnacle High"],
+    "Tucson": ["Salpointe Catholic", "Catalina Foothills", "Cienega High", "Ironwood Ridge", "Tucson High"],
+    "El Paso": ["Eastlake High", "Eastwood High", "Franklin High", "Pebble Hills High", "Del Valle High"],
+    "Albuquerque": ["La Cueva High", "Sandia High", "Rio Rancho High", "Eldorado High", "Valley High"],
+    # International
+    "Sydney": ["The King's School", "Newington College", "Scots College", "Knox Grammar", "St. Joseph's College"],
+    "Melbourne": ["Melbourne Grammar", "Scotch College", "Xavier College", "Trinity Grammar"],
+    "Brisbane": ["Brisbane Grammar", "Gregory Terrace", "Padua College", "Ipswich Grammar"],
+    "Perth": ["Wesley College", "Hale School", "Christ Church Grammar", "Aquinas College"],
+    "Toronto": ["Upper Canada College", "St. Michael's College School", "De La Salle College", "Bishop Allen Academy"],
+    "Vancouver": ["St. George's School", "Point Grey Secondary", "Kitsilano Secondary", "Lord Byng Secondary"],
+    "Calgary": ["Western Canada High", "Bishop Carroll", "Archbishop O'Leary", "Henry Wise Wood"],
+    "Edmonton": ["Archbishop MacDonald", "Ross Sheppard High", "Jasper Place High", "Old Scona Academic"],
+    "Montreal": ["College Notre-Dame", "Jean-de-Brébeuf", "Loyola High School", "College Mont-Saint-Louis"],
+    "Quebec City": ["Séminaire de Québec", "Collège Saint-Charles-Garnier", "École secondaire De Rochebelle"],
+    "Ottawa": ["De La Salle School", "St. Pius X", "Colonel By Secondary", "Lisgar Collegiate"],
+    "Laval": ["College Laval", "Collège Letendre", "Externat Sacré-Coeur"],
+    "Auckland": ["Auckland Grammar", "King's College", "Sacred Heart College", "Mount Albert Grammar"],
+    "Wellington": ["Wellington College", "Scots College", "Rongotai College"],
+    "Christchurch": ["Christchurch Boys' High", "Christ's College", "St. Bede's College"],
+    "London": ["Whitgift School", "Dulwich College", "Harrow School", "Wellington College"],
+    "Manchester": ["Manchester Grammar", "Cheadle Hulme School", "Stockport Grammar"],
+    "Dublin": ["Blackrock College", "Clongowes Wood", "Belvedere College", "Gonzaga College Dublin"],
+    "Berlin": ["Berlin International School", "John F. Kennedy School", "Berlin British School"],
+    "Mexico City": ["American School Foundation", "Colegio Cedros", "Colegio Williams"],
+    "Guadalajara": ["ITESO Preparatoria", "Colegio México", "Instituto de Ciencias"],
+    "São Paulo": ["Graded School", "St. Paul's School", "Escola Americana"],
+    "Buenos Aires": ["St. George's College", "St. Andrew's Scots School", "Lincoln School"],
+    "Lagos": ["King's College Lagos", "Corona Secondary", "Greensprings School"],
+    "Nairobi": ["Strathmore School", "Alliance High", "Brookhouse School"],
+    "Accra": ["Achimota School", "Ghana International School", "Lincoln Community School"],
+    "Johannesburg": ["St. John's College", "Jeppe High", "King David High", "St. Stithians College"],
+    "Helsinki": ["Helsinki Lyceum", "SYK International School", "Kulosaaren yhteiskoulu"],
+    "Stockholm": ["Stockholm International School", "Kungsholmens Gymnasium", "Viktor Rydberg Gymnasium"],
+    "Oslo": ["Oslo International School", "Oslo Cathedral School", "Hartvig Nissen"],
+    "Tampere": ["Tampereen lyseon lukio", "Tampereen yhteiskoulun lukio"],
+    "Gothenburg": ["Hvitfeldtska Gymnasiet", "International School of Gothenburg"],
+    "Bergen": ["Bergen Cathedral School", "Bergen Katedralskole"],
+    "Malmö": ["Malmö Borgarskola", "ProCivitas Privata Gymnasium"],
+    "Trondheim": ["Trondheim Katedralskole", "Rosenborg International School"],
+    "Kingston": ["Jamaica College", "St. George's College", "Kingston College", "Wolmer's Boys' School"],
+    "Port of Spain": ["Queen's Royal College", "Naparima College", "Presentation College"],
+    "Bridgetown": ["Harrison College", "The Lodge School", "Combermere School"],
+    "Nassau": ["St. Augustine's College", "Queen's College", "St. Andrew's School"],
+    "Port-au-Prince": ["Collège Canado Haïtien", "Institution Saint-Louis de Gonzague"],
+    "Santo Domingo": ["Colegio De La Salle", "Abraham Lincoln School", "Carol Morgan School"],
+    "San Juan": ["Colegio San Ignacio de Loyola", "Academia del Perpetuo Socorro", "Robinson School"],
+    "Georgetown": ["Queen's College Georgetown", "Bishops' High School", "St. Stanislaus College"],
+}
 
 
 def _generate_recruit_name(region: str, rng: random.Random) -> Tuple[str, str]:
@@ -725,8 +831,28 @@ def _generate_hometown(region: str, rng: random.Random) -> str:
 
 
 def _generate_high_school(hometown: str, rng: random.Random) -> str:
+    """Generate a real high school name based on the recruit's hometown.
+
+    Uses actual school names from MaxPreps data mapped by city.
+    Falls back to city + generic suffix for unmapped cities.
+    """
     city = hometown.split(",")[0].strip()
-    suffix = rng.choice(_HS_SUFFIXES)
+
+    # Try exact city match first
+    schools = _REAL_HS_BY_CITY.get(city)
+    if schools:
+        return rng.choice(schools)
+
+    # Try city with state disambiguator (e.g., "Portland, ME" vs "Portland, OR")
+    schools = _REAL_HS_BY_CITY.get(hometown.replace(", ", ", ").strip())
+    if schools:
+        return rng.choice(schools)
+
+    # Fallback: city + generic suffix (for cities not in the database)
+    suffix = rng.choice([
+        "High School", "Academy", "Prep", "Catholic High School",
+        "Christian Academy", "Country Day School", "Magnet School",
+    ])
     return f"{city} {suffix}"
 
 
@@ -2405,6 +2531,35 @@ def seed_recruiting_interest(
         # Sort timeline by week
         timeline.sort(key=lambda e: e["week"])
         r.timeline = timeline
+
+        # ── Dreamsheet: aspirational schools the recruit WANTS ──
+        # Doesn't have to match offers — a 3-star kid can dream of Alabama.
+        # But higher-star kids have more realistic dreams.
+        # ~30-50% overlap with actual interested schools, rest are aspirational.
+        dreamsheet = []
+        n_dream = rng.randint(3, 8)
+
+        # Start with some schools that are actually interested (realistic dreams)
+        overlap = rng.sample(interested_schools, min(len(interested_schools), rng.randint(1, 3))) if interested_schools else []
+        dreamsheet.extend(overlap)
+
+        # Add aspirational schools (elite programs the kid grows up watching)
+        aspirational_pool = (elite_teams or []) + (strong_teams or [])
+        rng.shuffle(aspirational_pool)
+        for school in aspirational_pool:
+            if len(dreamsheet) >= n_dream:
+                break
+            if school not in dreamsheet:
+                dreamsheet.append(school)
+
+        # For low-star kids, some dreams are totally unrequited
+        # The 2-star kid from rural Montana who dreams of Ohio State
+        if stars <= 3 and elite_teams and rng.random() < 0.6:
+            dream_reach = rng.choice(elite_teams)
+            if dream_reach not in dreamsheet and len(dreamsheet) < n_dream:
+                dreamsheet.append(dream_reach)
+
+        r.dreamsheet = dreamsheet[:n_dream]
 
 
 def _rank_hs_class(prospects: List[HSProspect]) -> None:
