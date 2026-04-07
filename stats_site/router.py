@@ -6809,9 +6809,36 @@ def my_team_dashboard(request: Request):
     if builder and season:
         from engine.player_card import player_to_card
         team = season.teams[team_name]
+
+        # Build lookup of career data from roster_cards (seeded with backstory)
+        career_lookup = {}
+        for rc in builder.get("roster_cards", []):
+            career_lookup[rc.player_id] = rc
+
         for p in team.players:
             card = player_to_card(p, team_name)
             pos_counts[card.position] = pos_counts.get(card.position, 0) + 1
+
+            # Pull career history from seeded roster card
+            rc = career_lookup.get(card.player_id)
+            career_games = 0
+            career_yards = 0
+            career_tds = 0
+            career_tackles = 0
+            prev_team = ""
+            awards = []
+            if rc:
+                career_games = sum(s.games_played for s in rc.career_seasons)
+                career_yards = sum(s.total_yards for s in rc.career_seasons)
+                career_tds = sum(s.touchdowns for s in rc.career_seasons)
+                career_tackles = sum(s.tackles for s in rc.career_seasons)
+                awards = rc.career_awards
+                # Find if player was at a different school
+                for s in rc.career_seasons:
+                    if s.team and s.team != team_name:
+                        prev_team = s.team
+                        break
+
             roster_data.append({
                 "player_id": card.player_id,
                 "name": card.full_name,
@@ -6825,6 +6852,12 @@ def my_team_dashboard(request: Request):
                 "power": card.power,
                 "awareness": card.awareness,
                 "hands": card.hands,
+                "career_games": career_games,
+                "career_yards": career_yards,
+                "career_tds": career_tds,
+                "career_tackles": career_tackles,
+                "prev_team": prev_team,
+                "awards": awards,
             })
         roster_data.sort(key=lambda x: -x["overall"])
         if roster_data:
@@ -7129,6 +7162,22 @@ async def my_team_simulate_post(request: Request):
     return RedirectResponse(url="/stats/my-team/finalize", status_code=303)
 
 
+@router.post("/my-team/run-it-back", response_class=HTMLResponse)
+async def my_team_run_it_back_post(request: Request):
+    """Advance to next season: age roster, graduate seniors, update prestige."""
+    sess, sid, team_name, season, builder = _my_team_context(request)
+    if not sess or not season:
+        return RedirectResponse(url="/stats/my-team/", status_code=303)
+
+    try:
+        from api.main import my_team_run_it_back
+        result = my_team_run_it_back(sid)
+    except Exception:
+        pass
+
+    return RedirectResponse(url="/stats/my-team/", status_code=303)
+
+
 @router.get("/my-team/finalize", response_class=HTMLResponse)
 def my_team_finalize(request: Request):
     """Finalize roster and simulate season."""
@@ -7157,6 +7206,8 @@ def my_team_finalize(request: Request):
 
     phase = builder["phase"] if builder else "none"
     season_phase = sess["phase"] if sess else "setup"
+    is_champion = (hasattr(season, "champion") and season.champion == team_name) if season else False
+    prestige = builder["prestige"] if builder else 0
 
     return templates.TemplateResponse("my_team/finalize.html", _ctx(
         request,
@@ -7167,5 +7218,7 @@ def my_team_finalize(request: Request):
         phase=phase,
         season_phase=season_phase,
         record=record,
+        is_champion=is_champion,
+        prestige=prestige,
         session_id=sid or "",
     ))

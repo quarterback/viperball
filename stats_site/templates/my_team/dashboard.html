@@ -110,22 +110,39 @@
       <th class="num">OVR</th><th class="num">POT</th>
       <th>Year</th>
       <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
-      <th class="num">AWR</th><th class="num">HND</th>
+      <th class="num">Career GP</th><th class="num">Career YDS</th><th class="num">Career TD</th>
+      <th>Background</th>
     </tr>
   </thead>
   <tbody>
   {% for p in roster %}
   <tr>
-    <td>{{ p.name }}</td>
+    <td style="font-weight:bold;">{{ p.name }}
+      {% if p.awards %}
+        {% for a in p.awards %}
+        <br><span style="font-size:9px;color:var(--yellow);">{{ a.award }} ({{ a.year }})</span>
+        {% endfor %}
+      {% endif %}
+    </td>
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
-    <td style="font-size:11px;">{{ p.year }}</td>
+    <td style="font-size:11px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:9px;">(last yr)</span>{% endif %}</td>
     <td class="num">{{ p.speed }}</td>
     <td class="num">{{ p.power }}</td>
     <td class="num">{{ p.agility }}</td>
-    <td class="num">{{ p.awareness }}</td>
-    <td class="num">{{ p.hands }}</td>
+    <td class="num">{{ p.career_games if p.career_games else "—" }}</td>
+    <td class="num">{{ p.career_yards if p.career_yards else "—" }}</td>
+    <td class="num">{{ p.career_tds if p.career_tds else "—" }}</td>
+    <td style="font-size:10px;color:var(--fg-dim);">
+      {% if p.prev_team %}
+        <span style="color:var(--accent);">Transfer from {{ p.prev_team }}</span>
+      {% elif p.year == "Freshman" %}
+        True Freshman
+      {% elif p.career_games > 0 %}
+        {{ p.career_games }} career games
+      {% endif %}
+    </td>
   </tr>
   {% endfor %}
   </tbody>

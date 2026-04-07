@@ -9,8 +9,8 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Finalize &amp; Simulate</h1>
-  <div class="subtitle">{{ team_name }} &middot; {{ roster_size }} players</div>
+  <h1>{% if season_phase == "complete" %}Season Results{% else %}Finalize &amp; Simulate{% endif %}</h1>
+  <div class="subtitle">{{ team_name }} &middot; {{ roster_size }} players &middot; Prestige {{ prestige }}</div>
 </div>
 
 <div class="tabs">
@@ -22,11 +22,36 @@
 
 {# ── Season Results (if complete) ── #}
 {% if season_phase == "complete" %}
-<div style="background:var(--bg-alt);border:2px solid var(--green);padding:24px;margin-bottom:16px;text-align:center;">
-  <div style="font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Season Complete</div>
-  <div style="font-size:48px;font-weight:bold;color:var(--fg-bright);">{{ record.wins }} - {{ record.losses }}</div>
-  <div style="margin-top:12px;display:flex;gap:12px;justify-content:center;">
-    <a href="/stats/college/" style="background:var(--accent);color:#000;padding:8px 20px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;">View Full Stats</a>
+<div style="background:var(--bg-alt);border:2px solid {% if is_champion %}var(--yellow){% elif record.wins > record.losses %}var(--green){% else %}var(--border){% endif %};padding:24px;margin-bottom:16px;text-align:center;">
+
+  {% if is_champion %}
+  <div style="font-size:14px;color:var(--yellow);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:bold;">National Champions</div>
+  {% endif %}
+
+  <div style="font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Final Record</div>
+  <div style="font-size:56px;font-weight:bold;color:var(--fg-bright);line-height:1;">{{ record.wins }} - {{ record.losses }}</div>
+
+  {% if record.wins > record.losses %}
+  <div style="font-size:12px;color:var(--green);margin-top:4px;">Winning Season</div>
+  {% elif record.wins < record.losses %}
+  <div style="font-size:12px;color:var(--red);margin-top:4px;">Losing Season</div>
+  {% else %}
+  <div style="font-size:12px;color:var(--fg-dim);margin-top:4px;">.500 Season</div>
+  {% endif %}
+
+  <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="/stats/college/" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:8px 20px;text-decoration:none;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">View Full Stats</a>
+
+    <form method="POST" action="/stats/my-team/run-it-back" style="display:inline;">
+      <input type="hidden" name="session_id" value="{{ session_id }}">
+      <button type="submit" style="background:var(--green);color:#000;border:none;padding:8px 24px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">
+        Run It Back &rarr; Next Season
+      </button>
+    </form>
+  </div>
+
+  <div style="margin-top:8px;font-size:10px;color:var(--fg-dim);">
+    Seniors graduate, players develop, prestige updates based on results. New portal and NIL budget for next year.
   </div>
 </div>
 {% endif %}
@@ -48,7 +73,7 @@
 {% endif %}
 
 {# ── Final Roster ── #}
-<h2>Final Roster ({{ roster_size }})</h2>
+<h2>{% if season_phase == "complete" %}Season Roster{% else %}Final Roster{% endif %} ({{ roster_size }})</h2>
 <table>
   <thead>
     <tr>
@@ -64,7 +89,7 @@
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
-    <td style="font-size:11px;">{{ p.year }}</td>
+    <td style="font-size:11px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:9px;">(graduating)</span>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>

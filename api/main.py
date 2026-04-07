@@ -5334,6 +5334,11 @@ def _ensure_roster_builder(sess, session_id: str, team_name: str, season):
         "signed_recruits": [],      # recruit_ids signed
         "max_offers": 15,
     }
+
+    # Seed career backstories so player cards feel lived-in
+    for card in roster_cards:
+        _seed_player_backstory(card, team_name, current_year=2026, rng=rng)
+
     sess["roster_builder"] = builder
     return builder
 
@@ -5727,4 +5732,255 @@ async def my_team_simulate(session_id: str):
         "team_name": team_name,
         "record": record,
         "phase": "complete",
+    }
+
+
+def _seed_player_backstory(card, team_name: str, current_year: int, rng):
+    """Generate synthetic career history for a player based on their class year.
+
+    Gives sophomores 1 past season, juniors 2, seniors 3, etc. — so every
+    player card has stats and a team history that makes them feel real.
+    """
+    from engine.player_card import SeasonStats
+
+    year_to_past_seasons = {
+        "Freshman": 0, "Sophomore": 1, "Junior": 2, "Senior": 3, "Graduate": 4,
+    }
+    past_count = year_to_past_seasons.get(card.year, 0)
+    if past_count == 0 or card.career_seasons:
+        return  # Freshman or already has history
+
+    card.current_team = team_name
+
+    # Generate plausible past seasons
+    for i in range(past_count):
+        season_year = current_year - past_count + i
+        # Younger seasons had slightly lower stats
+        age_factor = 0.6 + (i / max(1, past_count)) * 0.4
+
+        games = rng.randint(8, 14)
+        ovr = card.overall
+
+        # Position-appropriate stats
+        is_skill = card.position in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback")
+        is_line = card.position in ("Offensive Line", "Defensive Line")
+        is_keeper = card.position == "Keeper"
+
+        touches = int(rng.randint(30, 120) * age_factor) if is_skill else rng.randint(0, 15)
+        yards = int(touches * rng.uniform(3.5, 7.0)) if touches > 0 else 0
+        tds = int(touches * rng.uniform(0.03, 0.10)) if is_skill else 0
+        fumbles = rng.randint(0, max(1, touches // 30)) if is_skill else 0
+
+        tackles = int(rng.randint(15, 60) * age_factor) if is_line or is_keeper else rng.randint(0, 10)
+        tfl = int(tackles * rng.uniform(0.05, 0.20)) if is_line else 0
+        sacks = rng.randint(0, max(1, tfl // 2)) if is_line else 0
+
+        kick_att = rng.randint(5, 30) if is_keeper or card.kicking > 65 else 0
+        kick_makes = int(kick_att * rng.uniform(0.5, 0.85)) if kick_att > 0 else 0
+
+        # Transfer history: ~15% chance they played elsewhere before
+        if i == 0 and past_count >= 2 and rng.random() < 0.15:
+            prev_team = rng.choice(["Previous School", "Junior College", "Transfer U"])
+            origin_team = prev_team
+            card.transfer_count = 1
+        else:
+            origin_team = team_name
+
+        season = SeasonStats(
+            season_year=season_year,
+            team=origin_team,
+            games_played=games,
+            touches=touches,
+            total_yards=yards,
+            rushing_yards=int(yards * 0.7) if is_skill else 0,
+            lateral_yards=int(yards * 0.3) if is_skill else 0,
+            touchdowns=tds,
+            fumbles=fumbles,
+            tackles=tackles,
+            tfl=tfl,
+            sacks=sacks,
+            kick_attempts=kick_att,
+            kick_makes=kick_makes,
+        )
+        card.career_seasons.append(season)
+
+    # Generate past awards for elite players
+    if ovr >= 80 and past_count >= 2:
+        if rng.random() < 0.4:
+            card.career_awards.append({
+                "year": current_year - 1,
+                "award": "All-Conference" if ovr < 88 else "All-American",
+                "team": team_name,
+            })
+    if ovr >= 85 and past_count >= 3:
+        if rng.random() < 0.3:
+            card.career_awards.append({
+                "year": current_year - 2,
+                "award": "All-Conference Honorable Mention",
+                "team": team_name,
+            })
+
+
+@app.post("/sessions/{session_id}/my-team/run-it-back")
+def my_team_run_it_back(session_id: str):
+    """Advance to the next season: age players, graduate seniors, update prestige, reset roster builder."""
+    import random as _rnd
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = sess.get("roster_builder")
+
+    if sess["phase"] != "complete":
+        raise HTTPException(400, "Season must be complete before running it back")
+
+    from engine.player_card import player_to_card, card_to_player, SeasonStats
+    from engine.development import apply_offseason_development, _next_year
+    from engine.transfer_portal import estimate_prestige_from_roster
+    from engine.nil_system import apply_season_end_regression
+
+    rng = _rnd.Random(hash(session_id) + 999)
+    team = season.teams[team_name]
+
+    # Get current season record
+    wins = 0
+    losses = 0
+    if hasattr(season, "standings") and team_name in season.standings:
+        rec = season.standings[team_name]
+        wins = getattr(rec, "wins", 0)
+        losses = getattr(rec, "losses", 0)
+
+    is_champion = hasattr(season, "champion") and season.champion == team_name
+
+    # 1. Convert players to cards for development
+    cards = []
+    for p in team.players:
+        card = player_to_card(p, team_name)
+
+        # Record this season's stats from the simulation
+        game_stats = getattr(p, "_season_stats", None)
+        if game_stats:
+            card.career_seasons.append(game_stats)
+        else:
+            # Generate approximate stats from the season
+            is_skill = card.position in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback")
+            games = getattr(p, "season_games_played", wins + losses)
+            if games == 0:
+                games = wins + losses
+            touches = rng.randint(20, 80) if is_skill else rng.randint(0, 10)
+            yards = int(touches * rng.uniform(3.5, 6.5))
+            card.career_seasons.append(SeasonStats(
+                season_year=2026,
+                team=team_name,
+                games_played=games,
+                touches=touches,
+                total_yards=yards,
+                touchdowns=int(touches * rng.uniform(0.03, 0.08)) if is_skill else 0,
+                tackles=rng.randint(10, 45) if card.position in ("Defensive Line", "Keeper") else rng.randint(0, 8),
+            ))
+
+        cards.append(card)
+
+    # 2. Apply development to each player (attribute growth + year advance)
+    graduating = []
+    returning = []
+    for card in cards:
+        if card.year in ("Senior", "Graduate"):
+            graduating.append(card)
+        else:
+            apply_offseason_development(card, rng=rng)
+            returning.append(card)
+
+    # 3. Update prestige
+    old_prestige = builder["prestige"] if builder else estimate_prestige_from_roster(team.players)
+    new_prestige = apply_season_end_regression(old_prestige)
+    if is_champion:
+        new_prestige = min(99, new_prestige + 5)
+    # Win/loss adjustment
+    if wins > losses:
+        new_prestige = min(99, new_prestige + min(5, (wins - losses)))
+    elif losses > wins:
+        new_prestige = max(1, new_prestige - min(5, (losses - wins)))
+
+    # 4. Rebuild the roster from returning players
+    new_players = []
+    for card in returning:
+        p = card_to_player(card)
+        p.year = card.year  # Development already advanced the year
+        new_players.append(p)
+
+    # 5. Fill gaps with generated freshmen to get back toward 36
+    from engine.game_engine import Player, assign_archetype
+    from engine.recruiting import generate_single_recruit
+    gap = max(0, 36 - len(new_players))
+    for i in range(gap):
+        recruit = generate_single_recruit(
+            recruit_id=f"FR-{rng.randint(10000, 99999)}",
+            rng=rng,
+        )
+        freshman = Player(
+            number=max((p.number for p in new_players), default=0) + 1 + i,
+            name=recruit.full_name,
+            position=recruit.position,
+            speed=recruit.true_speed, stamina=recruit.true_stamina,
+            kicking=recruit.true_kicking, lateral_skill=recruit.true_lateral_skill,
+            tackling=recruit.true_tackling, agility=recruit.true_agility,
+            power=recruit.true_power, awareness=recruit.true_awareness,
+            hands=recruit.true_hands, kick_power=recruit.true_kick_power,
+            kick_accuracy=recruit.true_kick_accuracy,
+            player_id=recruit.recruit_id,
+            year="Freshman",
+            potential=recruit.true_potential,
+            development=recruit.true_development,
+        )
+        freshman.archetype = assign_archetype(freshman)
+        new_players.append(freshman)
+
+    # 6. Replace the team roster
+    team.players = new_players
+
+    # 7. Reset season state for next year
+    # Clear schedule, standings, etc. but keep teams
+    if hasattr(season, "schedule"):
+        season.schedule = []
+    if hasattr(season, "standings"):
+        for t in season.standings:
+            rec = season.standings[t]
+            rec.wins = 0
+            rec.losses = 0
+            rec.ties = 0
+            rec.points_for = 0
+            rec.points_against = 0
+            rec.conf_wins = 0
+            rec.conf_losses = 0
+    if hasattr(season, "champion"):
+        season.champion = None
+    if hasattr(season, "playoff_bracket"):
+        season.playoff_bracket = []
+    if hasattr(season, "bowl_games"):
+        season.bowl_games = []
+    if hasattr(season, "polls"):
+        season.polls = {}
+
+    # Regenerate schedule
+    if hasattr(season, "generate_schedule"):
+        games_per_team = sess["config"].get("games_per_team", 12)
+        try:
+            season.generate_schedule(games_per_team=games_per_team)
+        except Exception:
+            pass
+
+    # 8. Clear roster builder so it reinitializes with new prestige
+    sess["roster_builder"] = None
+    sess["quick_portal"] = None
+    sess["phase"] = "setup"
+
+    return {
+        "advanced": True,
+        "team_name": team_name,
+        "previous_record": {"wins": wins, "losses": losses},
+        "was_champion": is_champion,
+        "old_prestige": old_prestige,
+        "new_prestige": new_prestige,
+        "graduated": len(graduating),
+        "returning": len(returning),
+        "freshmen_added": gap,
+        "roster_size": len(new_players),
     }
