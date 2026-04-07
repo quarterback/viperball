@@ -5275,8 +5275,14 @@ def _get_my_team_session(session_id: str = ""):
     if not team_name and dynasty and hasattr(dynasty, "coach"):
         team_name = dynasty.coach.team_name
 
+    # Last resort: if only one session and we still have no team,
+    # pick the first team alphabetically so the user can at least try it
     if not team_name or team_name not in season.teams:
-        raise HTTPException(400, "No human team found in session")
+        if season.teams:
+            team_name = sorted(season.teams.keys())[0]
+            sess["portal_human_team"] = team_name
+        else:
+            raise HTTPException(400, "No human team found in session")
 
     return sess, session_id, team_name, season
 

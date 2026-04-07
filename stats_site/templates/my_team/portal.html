@@ -106,8 +106,10 @@
     <tr>
       <th>Player</th><th>Pos</th>
       <th class="num">OVR</th><th class="num">POT</th>
-      <th>Year</th><th>Origin</th><th>Reason</th>
+      <th>Year</th><th>Origin</th>
       <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
+      <th class="num">AWR</th><th class="num">HND</th><th class="num">KCK</th>
+      <th class="num">LAT</th><th class="num">TKL</th>
       <th>My Bid</th>
       <th>Action</th>
     </tr>
@@ -121,10 +123,14 @@
     <td class="num">{{ p.get("potential", "?") }}</td>
     <td style="font-size:11px;">{{ p.year }}</td>
     <td style="font-size:11px;color:var(--fg-dim);">{{ p.origin_team }}</td>
-    <td style="font-size:10px;color:var(--fg-dim);">{{ p.get("reason", "")|replace("_", " ")|title }}</td>
-    <td class="num">{{ p.get("speed", "?") }}</td>
-    <td class="num">{{ p.get("power", "?") }}</td>
-    <td class="num">{{ p.get("agility", "?") }}</td>
+    <td class="num {% if p.get('speed', 0) >= 80 %}stat-elite{% elif p.get('speed', 0) >= 65 %}stat-good{% elif p.get('speed', 0) < 45 %}stat-bad{% endif %}">{{ p.get("speed", "?") }}</td>
+    <td class="num {% if p.get('power', 0) >= 80 %}stat-elite{% elif p.get('power', 0) >= 65 %}stat-good{% endif %}">{{ p.get("power", "?") }}</td>
+    <td class="num {% if p.get('agility', 0) >= 80 %}stat-elite{% elif p.get('agility', 0) >= 65 %}stat-good{% endif %}">{{ p.get("agility", "?") }}</td>
+    <td class="num">{{ p.get("awareness", "?") }}</td>
+    <td class="num">{{ p.get("hands", "?") }}</td>
+    <td class="num">{{ p.get("kicking", "?") }}</td>
+    <td class="num">{{ p.get("lateral_skill", "?") }}</td>
+    <td class="num">{{ p.get("tackling", "?") }}</td>
     <td class="num">
       {% if p.my_bid is not none %}
         <span style="color:var(--green);">${{ "{:,.0f}".format(p.my_bid) }}</span>

@@ -7048,35 +7048,37 @@ async def my_team_portal_advance_post(request: Request):
     round_num = builder["portal_round"]
     round_results = []
 
-    # CPU teams and their prestige
+    # CPU teams and their prestige (sample for speed)
     from engine.transfer_portal import estimate_prestige_from_roster
     cpu_teams = [t for t in season.teams if t != team_name]
     prestige_map = {}
-    for t in cpu_teams[:50]:  # Sample to avoid slowness
+    for t in cpu_teams[:50]:
         prestige_map[t] = estimate_prestige_from_roster(season.teams[t].players)
 
     available_entries = [(i, e) for i, e in enumerate(portal.entries)
                          if not e.committed_to and not e.withdrawn]
 
-    aggression = 0.5 + (round_num / builder["portal_max_rounds"]) * 0.5
+    # Aggression ramps up each round — later rounds mean more urgency
+    aggression = 0.6 + (round_num / builder["portal_max_rounds"]) * 0.4
 
     for idx, entry in available_entries:
         card = entry.player_card
-        interest_chance = min(0.9, (card.overall / 100.0) * aggression)
+        # Most players get interest — only very low OVR players get skipped
+        interest_chance = min(0.95, 0.5 + (card.overall / 100.0) * aggression)
         if rng.random() > interest_chance:
             continue
 
-        # CPU competition
-        sample_size = min(3, len(cpu_teams))
-        if sample_size == 0:
+        # CPU competition: 2-5 teams interested per player
+        n_interested = min(rng.randint(2, 5), len(prestige_map))
+        if n_interested == 0:
             continue
-        interested = rng.sample(list(prestige_map.keys()), min(sample_size, len(prestige_map)))
+        interested = rng.sample(list(prestige_map.keys()), n_interested)
         best_cpu = None
         best_score = -1
         for t in interested:
             p = prestige_map.get(t, 50)
-            geo_bonus = rng.uniform(0, 20)
-            score = p * entry.prefers_prestige + geo_bonus * entry.prefers_geography
+            geo_bonus = rng.uniform(0, 25)
+            score = p * entry.prefers_prestige + geo_bonus * entry.prefers_geography + rng.uniform(0, 15)
             if score > best_score:
                 best_score = score
                 best_cpu = t
@@ -7086,22 +7088,26 @@ async def my_team_portal_advance_post(request: Request):
         human_score = 0
         if human_bid:
             p = builder["prestige"]
-            nil_factor = min(30, (human_bid["amount"] / max(1, nil.portal_pool)) * 40)
+            nil_factor = min(40, (human_bid["amount"] / max(1, nil.portal_pool)) * 50)
             geo = rng.uniform(5, 25)
             human_score = (p * entry.prefers_prestige
                           + nil_factor * entry.prefers_nil
                           + geo * entry.prefers_geography
-                          + rng.uniform(-5, 5))
+                          + rng.uniform(-3, 8))
 
         cpu_score = best_score if best_cpu else 0
-        commit_threshold = max(20, 60 - round_num * 10)
+
+        # Lower threshold = more signings per round
+        # Round 1: threshold 25, Round 5: threshold 5
+        commit_threshold = max(5, 30 - round_num * 5)
 
         winner = None
         if human_score > cpu_score and human_score > commit_threshold and human_bid:
             winner = team_name
-        elif cpu_score > human_score and cpu_score > commit_threshold and best_cpu:
+        elif cpu_score > commit_threshold and (not human_bid or cpu_score > human_score):
             winner = best_cpu
         elif round_num >= builder["portal_max_rounds"]:
+            # Last round: everyone decides
             if human_score > cpu_score and human_bid:
                 winner = team_name
             elif best_cpu:
@@ -7145,19 +7151,46 @@ async def my_team_portal_advance_post(request: Request):
 
 @router.post("/my-team/sim", response_class=HTMLResponse)
 async def my_team_simulate_post(request: Request):
-    """Finalize and simulate the full season."""
+    """Simulate the next week (or finish remaining weeks if 'all' param)."""
+    form = await request.form()
+    sim_all = form.get("sim_all", "") == "1"
+
     sess, sid, team_name, season, builder = _my_team_context(request)
     if not builder or not season:
         return RedirectResponse(url="/stats/my-team/finalize", status_code=303)
 
     # Set phase to regular so simulation can proceed
-    sess["phase"] = "regular"
+    if sess["phase"] in ("setup", "portal"):
+        sess["phase"] = "regular"
     if builder:
         builder["phase"] = "ready"
 
-    # Simulate entire season
-    season.simulate_season(generate_polls=True, use_fast_sim=True)
-    sess["phase"] = "complete"
+    try:
+        if sim_all:
+            # Simulate remaining weeks one at a time (safer than simulate_season)
+            for _ in range(50):  # safety cap
+                if season.is_regular_season_complete():
+                    break
+                season.simulate_week(use_fast_sim=True)
+        else:
+            # Simulate one week
+            if not season.is_regular_season_complete():
+                season.simulate_week(use_fast_sim=True)
+    except Exception:
+        pass
+
+    if season.is_regular_season_complete():
+        # Try bowls and playoffs
+        try:
+            bowl_count = sess["config"].get("bowl_count", 4)
+            playoff_size = sess["config"].get("playoff_size", 8)
+            if bowl_count > 0 and hasattr(season, "simulate_bowls"):
+                season.simulate_bowls(bowl_count=bowl_count, playoff_size=playoff_size)
+            if playoff_size > 0 and hasattr(season, "simulate_playoff"):
+                season.simulate_playoff(num_teams=playoff_size)
+        except Exception:
+            pass
+        sess["phase"] = "complete"
 
     return RedirectResponse(url="/stats/my-team/finalize", status_code=303)
 
@@ -7185,6 +7218,10 @@ def my_team_finalize(request: Request):
 
     roster_data = []
     record = {"wins": 0, "losses": 0}
+    current_week = 0
+    total_weeks = 0
+    is_season_started = False
+    recent_games = []
 
     if builder and season:
         from engine.player_card import player_to_card
@@ -7197,6 +7234,14 @@ def my_team_finalize(request: Request):
                 "overall": card.overall,
                 "potential": card.potential,
                 "year": card.year,
+                "speed": card.speed,
+                "power": card.power,
+                "agility": card.agility,
+                "awareness": card.awareness,
+                "hands": card.hands,
+                "kicking": card.kicking,
+                "lateral_skill": card.lateral_skill,
+                "tackling": card.tackling,
             })
         roster_data.sort(key=lambda x: -x["overall"])
 
@@ -7204,8 +7249,35 @@ def my_team_finalize(request: Request):
             rec = season.standings[team_name]
             record = {"wins": getattr(rec, "wins", 0), "losses": getattr(rec, "losses", 0)}
 
+        # Figure out current week progress
+        if hasattr(season, "schedule"):
+            completed = [g for g in season.schedule if g.completed]
+            total_weeks = max((g.week for g in season.schedule), default=0) if season.schedule else 0
+            current_week = max((g.week for g in completed), default=0) if completed else 0
+            is_season_started = len(completed) > 0
+
+            # Get recent games for human team
+            for g in completed:
+                is_home = g.home_team == team_name
+                is_away = g.away_team == team_name
+                if is_home or is_away:
+                    opp = g.away_team if is_home else g.home_team
+                    my_score = g.home_score if is_home else g.away_score
+                    opp_score = g.away_score if is_home else g.home_score
+                    won = my_score > opp_score
+                    recent_games.append({
+                        "week": g.week,
+                        "opponent": opp,
+                        "my_score": my_score,
+                        "opp_score": opp_score,
+                        "won": won,
+                        "home": is_home,
+                    })
+            recent_games.sort(key=lambda x: x["week"], reverse=True)
+
     phase = builder["phase"] if builder else "none"
     season_phase = sess["phase"] if sess else "setup"
+    is_complete = season_phase == "complete" or (season and season.is_regular_season_complete())
     is_champion = (hasattr(season, "champion") and season.champion == team_name) if season else False
     prestige = builder["prestige"] if builder else 0
 
@@ -7219,6 +7291,11 @@ def my_team_finalize(request: Request):
         season_phase=season_phase,
         record=record,
         is_champion=is_champion,
+        is_complete=is_complete,
+        is_season_started=is_season_started,
         prestige=prestige,
+        current_week=current_week,
+        total_weeks=total_weeks,
+        recent_games=recent_games[:10],
         session_id=sid or "",
     ))
