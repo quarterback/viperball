@@ -395,6 +395,9 @@ class Recruit:
     prefers_facilities: float = 0.15 # 0-1: how much facilities/campus/location matters
     prefers_playing_time: float = 0.1  # 0-1: how much starting opportunity matters
     prefers_program_success: float = 0.3  # 0-1: how much recent W/L success matters
+    prefers_academics: float = 0.0       # 0-1: how much school academic reputation matters
+                                          # Most kids: 0-0.05. High-GPA kids: up to 0.25.
+                                          # Small factor — just another dice roll, not a dealbreaker.
 
     @property
     def full_name(self) -> str:
@@ -542,6 +545,7 @@ class Recruit:
             "status": self.status,
             "crystal_ball": dict(self.crystal_ball),
             "timeline": list(self.timeline),
+            "prefers_academics": self.prefers_academics,
         }
 
 
@@ -900,6 +904,10 @@ def generate_single_recruit(
         prefers_facilities=fac,
         prefers_playing_time=pt,
         prefers_program_success=prog_success,
+        # Academic preference: small for most, slightly higher for high-GPA kids
+        # 3.5+ GPA → up to 0.20, 3.0 GPA → ~0.05, below 3.0 → ~0.0
+        # Never a huge factor — just tips the scales occasionally
+        prefers_academics=max(0.0, min(0.25, (gpa - 2.8) * 0.15 + rng.uniform(-0.03, 0.05))),
     )
 
 
@@ -2599,6 +2607,13 @@ class HSRecruitingPipeline:
                 noisy = true_val + random.randint(-noise, noise)
                 visible[attr_name] = max(10, min(99, noisy))
             entry["visible_attributes"] = visible
+
+            # Academic / mental attributes (always visible — these aren't scouted)
+            entry["gpa"] = p.recruit.gpa
+            entry["sat_score"] = p.recruit.sat_score
+            entry["field_intelligence"] = p.recruit.field_intelligence
+            entry["coachability"] = p.recruit.coachability
+            entry["academic_risk"] = p.recruit.academic_risk
 
             if p.breakout:
                 entry["flag"] = "BREAKOUT"

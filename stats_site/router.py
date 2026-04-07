@@ -6238,6 +6238,11 @@ def recruiting_index(request: Request):
                 "committed_to": r.committed_to or "",
                 "top_schools": list(r.top_schools[:3]),
                 "num_offers": len(r.offers),
+                "gpa": r.gpa,
+                "sat_score": r.sat_score,
+                "field_intelligence": r.field_intelligence,
+                "coachability": r.coachability,
+                "academic_risk": r.academic_risk,
             })
 
     # Find sessions with dynasty data for draft classes
@@ -6878,6 +6883,10 @@ def my_team_dashboard(request: Request):
                 "power": card.power,
                 "awareness": card.awareness,
                 "hands": card.hands,
+                "gpa": getattr(card, "gpa", rc.gpa if rc else 3.0),
+                "sat_score": getattr(card, "sat_score", rc.sat_score if rc else 1050),
+                "field_intelligence": getattr(card, "field_intelligence", rc.field_intelligence if rc else 50),
+                "coachability": getattr(card, "coachability", rc.coachability if rc else 50),
                 "career_games": career_games,
                 "career_yards": career_yards,
                 "career_tds": career_tds,

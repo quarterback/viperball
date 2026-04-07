@@ -518,6 +518,13 @@ class PlayerCard:
     career_awards: List[Dict] = field(default_factory=list)
     current_team: str = ""
 
+    # ── Academic / Mental ──
+    field_intelligence: int = 50     # 25-95: on-field game IQ
+    coachability: int = 50           # 25-95: responsiveness to coaching
+    gpa: float = 3.0                 # 1.5-4.0: academic GPA
+    sat_score: int = 1050            # 600-1600: VAT score
+    academic_risk: str = "clear"     # "clear" | "at_risk" | "ineligible"
+
     # ── Transfer tracking ──
     transfer_count: int = 0          # how many times this player has transferred
     loyalty: float = 0.5             # 0.0 = will transfer at any excuse, 1.0 = ride-or-die
@@ -645,6 +652,11 @@ class PlayerCard:
             "contract_salary": self.contract_salary,
             "pro_status": self.pro_status,
             "current_team": self.current_team,
+            "field_intelligence": self.field_intelligence,
+            "coachability": self.coachability,
+            "gpa": self.gpa,
+            "sat_score": self.sat_score,
+            "academic_risk": self.academic_risk,
             "career_totals": {
                 "games": self.career_games,
                 "yards": self.career_yards,
@@ -760,6 +772,11 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
         redshirt_used=getattr(player, "redshirt_used", False),
         season_games_played=getattr(player, "season_games_played", 0),
         current_team=team_name,
+        field_intelligence=getattr(player, "field_intelligence", 50),
+        coachability=getattr(player, "coachability", 50),
+        gpa=getattr(player, "gpa", 3.0),
+        sat_score=getattr(player, "sat_score", 1050),
+        academic_risk=getattr(player, "academic_risk", "clear"),
     )
 
 
