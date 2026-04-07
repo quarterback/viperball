@@ -6115,31 +6115,34 @@ def _get_or_create_pipeline(sess, sid):
     Works for both dynasty and season-only sessions so that the Recruiting
     Hub is always populated.
     """
-    import random as _rnd
-    from engine.recruiting import HSRecruitingPipeline
+    try:
+        import random as _rnd
+        from engine.recruiting import HSRecruitingPipeline
 
-    dynasty = sess.get("dynasty")
-    if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
-        return dynasty._hs_pipeline
+        dynasty = sess.get("dynasty")
+        if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
+            return dynasty._hs_pipeline
 
-    # Check for a session-level pipeline (season-only mode)
-    pipeline = sess.get("_hs_pipeline")
-    if pipeline:
+        # Check for a session-level pipeline (season-only mode)
+        pipeline = sess.get("_hs_pipeline")
+        if pipeline:
+            return pipeline
+
+        # Generate a fresh pipeline and attach it to whatever we have
+        # Scale class size to league: ~8 recruits per team
+        season = sess.get("season")
+        num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+        class_size = max(300, num_teams * 8)
+        seed = hash(sid) % 999999
+        pipeline = HSRecruitingPipeline()
+        pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
+        if dynasty:
+            dynasty._hs_pipeline = pipeline
+        else:
+            sess["_hs_pipeline"] = pipeline
         return pipeline
-
-    # Generate a fresh pipeline and attach it to whatever we have
-    # Scale class size to league: ~8 recruits per team
-    season = sess.get("season")
-    num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
-    class_size = max(300, num_teams * 8)
-    seed = hash(sid) % 999999
-    pipeline = HSRecruitingPipeline()
-    pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
-    if dynasty:
-        dynasty._hs_pipeline = pipeline
-    else:
-        sess["_hs_pipeline"] = pipeline
-    return pipeline
+    except Exception:
+        return None
 
 
 def _get_recruiting_pipeline():
