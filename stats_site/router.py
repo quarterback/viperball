@@ -7063,22 +7063,51 @@ async def my_team_portal_advance_post(request: Request):
 
     for idx, entry in available_entries:
         card = entry.player_card
-        # Most players get interest — only very low OVR players get skipped
-        interest_chance = min(0.95, 0.5 + (card.overall / 100.0) * aggression)
+        # Nearly all players attract interest each round
+        interest_chance = min(0.98, 0.7 + (card.overall / 100.0) * 0.3)
         if rng.random() > interest_chance:
             continue
 
-        # CPU competition: 2-5 teams interested per player
-        n_interested = min(rng.randint(2, 5), len(prestige_map))
+        # Tiered interest: elite players draw huge crowds, low-tier draw few
+        ovr = card.overall
+        if ovr >= 75:
+            n_interested = rng.randint(7, min(10, len(prestige_map)))
+        elif ovr >= 65:
+            n_interested = rng.randint(5, min(7, len(prestige_map)))
+        elif ovr >= 55:
+            n_interested = rng.randint(4, min(6, len(prestige_map)))
+        elif ovr >= 45:
+            n_interested = rng.randint(3, min(5, len(prestige_map)))
+        else:
+            n_interested = rng.randint(1, min(3, len(prestige_map)))
+
         if n_interested == 0:
             continue
         interested = rng.sample(list(prestige_map.keys()), n_interested)
+        # Get coaching quality for each team (if available)
+        def _team_coaching_score(t):
+            try:
+                staffs = session.get("coaching_staffs") or (season.coaching_staffs if hasattr(season, "coaching_staffs") else {})
+                staff = staffs.get(t, {})
+                hc = staff.get("head_coach")
+                if hc and hasattr(hc, "development"):
+                    return (hc.development + hc.recruiting) / 2.0
+                elif isinstance(hc, dict):
+                    return (hc.get("development", 50) + hc.get("recruiting", 50)) / 2.0
+            except Exception:
+                pass
+            return 50.0
+
         best_cpu = None
         best_score = -1
         for t in interested:
             p = prestige_map.get(t, 50)
-            geo_bonus = rng.uniform(0, 25)
-            score = p * entry.prefers_prestige + geo_bonus * entry.prefers_geography + rng.uniform(0, 15)
+            coaching = _team_coaching_score(t)
+            # Decision: prestige (35%) + coaching quality (25%) + NIL/culture (20%) + geography (20%)
+            score = (p * 0.35
+                    + coaching * 0.25
+                    + rng.uniform(8, 30)    # NIL / culture / scheme fit
+                    + rng.uniform(8, 25))   # geography / personal preference
             if score > best_score:
                 best_score = score
                 best_cpu = t
@@ -7088,18 +7117,20 @@ async def my_team_portal_advance_post(request: Request):
         human_score = 0
         if human_bid:
             p = builder["prestige"]
-            nil_factor = min(40, (human_bid["amount"] / max(1, nil.portal_pool)) * 50)
-            geo = rng.uniform(5, 25)
-            human_score = (p * entry.prefers_prestige
-                          + nil_factor * entry.prefers_nil
-                          + geo * entry.prefers_geography
+            coaching = _team_coaching_score(team_name)
+            nil_factor = min(25, (human_bid["amount"] / max(1, nil.portal_pool)) * 35)
+            # Same formula: prestige + coaching + NIL + geography
+            human_score = (p * 0.35
+                          + coaching * 0.25
+                          + nil_factor
+                          + rng.uniform(8, 25)
                           + rng.uniform(-3, 8))
 
         cpu_score = best_score if best_cpu else 0
 
-        # Lower threshold = more signings per round
-        # Round 1: threshold 25, Round 5: threshold 5
-        commit_threshold = max(5, 30 - round_num * 5)
+        # Low threshold = lots of signings per round (target 20-30)
+        # Round 1: threshold 15, Round 5: threshold 0 (everyone decides)
+        commit_threshold = max(0, 18 - round_num * 4)
 
         winner = None
         if human_score > cpu_score and human_score > commit_threshold and human_bid:
