@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Retention — {{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/my-team/">My Team</a><span class="sep">/</span>Retention
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Player Retention</h1>
+  <div class="subtitle">{{ team_name }} &middot; Lock down at-risk players before they enter the portal</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/my-team/">Dashboard</a>
+  <a href="/stats/my-team/retention" class="active">Retention</a>
+  <a href="/stats/my-team/portal">Portal</a>
+  <a href="/stats/my-team/finalize">Finalize &amp; Sim</a>
+</div>
+
+{# ── Budget Bar ── #}
+{% if nil %}
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div>
+    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Retention Budget</span><br>
+    <span style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.retention_remaining) }}</span>
+    <span style="font-size:11px;color:var(--fg-dim);"> / ${{ "{:,.0f}".format(nil.retention_pool) }}</span>
+  </div>
+  <div style="flex:1;min-width:200px;">
+    <div style="background:var(--border);height:8px;"><div style="background:var(--accent);height:100%;width:{{ ((nil.retention_pool - nil.retention_remaining) / nil.retention_pool * 100) if nil.retention_pool > 0 else 0 }}%"></div></div>
+  </div>
+  <div style="font-size:11px;color:var(--fg-dim);">{{ retained_count }} retained</div>
+</div>
+{% endif %}
+
+{# ── At-Risk Players ── #}
+{% if risks %}
+<table>
+  <thead>
+    <tr>
+      <th>Player</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th>
+      <th>Risk</th>
+      <th class="num">Suggested NIL</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in risks %}
+  <tr>
+    <td style="font-weight:bold;">{{ r.player_name }}</td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ r.position }}</span></td>
+    <td class="num {% if r.overall >= 85 %}stat-elite{% elif r.overall >= 70 %}stat-good{% endif %}">{{ r.overall }}</td>
+    <td class="num">{% for i in range(r.potential) %}&#9733;{% endfor %}{% for i in range(5 - r.potential) %}&#9734;{% endfor %}</td>
+    <td>
+      {% if r.risk_level == "high" %}
+        <span style="color:var(--red);font-weight:bold;">HIGH</span>
+      {% else %}
+        <span style="color:var(--yellow);">MEDIUM</span>
+      {% endif %}
+    </td>
+    <td class="num">${{ "{:,.0f}".format(r.suggested_amount) }}</td>
+    <td>
+      {% if r.retained %}
+        <span style="color:var(--green);font-weight:bold;">LOCKED</span>
+      {% else %}
+        <span style="color:var(--fg-dim);">At Risk</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if not r.retained %}
+      <form method="POST" action="/stats/my-team/retention/lock" style="display:inline;">
+        <input type="hidden" name="session_id" value="{{ session_id }}">
+        <input type="hidden" name="player_id" value="{{ r.player_id }}">
+        <input type="number" name="amount" value="{{ r.suggested_amount|int }}" min="0" step="1000"
+               style="width:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);padding:2px 4px;font-size:11px;">
+        <button type="submit" style="background:var(--green);color:#000;border:none;padding:3px 10px;cursor:pointer;font-size:11px;font-family:inherit;">Lock</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice">No players at risk. Your roster is secure.</div>
+{% endif %}
+
+<div style="margin-top:16px;">
+  <a href="/stats/my-team/portal" style="background:var(--accent);color:#000;padding:8px 20px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Continue to Portal &rarr;</a>
+</div>
+{% endblock %}

@@ -305,6 +305,43 @@ class OffseasonStartRequest(BaseModel):
     pool_size: int = 1500
 
 
+# ── My Team Roster Builder Request Models ──
+
+class MyTeamInitRequest(BaseModel):
+    """Initialize the roster builder for a human team."""
+    team_name: str
+    session_id: str = ""  # optional, will find active session if empty
+
+
+class MyTeamRetainRequest(BaseModel):
+    """Lock down an at-risk player with NIL retention money."""
+    player_id: str
+    amount: float
+
+
+class MyTeamPortalBidRequest(BaseModel):
+    """Place a bid on a portal player."""
+    entry_index: int
+    nil_amount: float
+
+
+class MyTeamPortalAdvanceRequest(BaseModel):
+    """Advance the portal clock to the next round."""
+    pass
+
+
+class MyTeamRecruitScoutRequest(BaseModel):
+    """Scout a HS recruit."""
+    recruit_id: str
+    level: str = "basic"  # "basic" or "full"
+
+
+class MyTeamRecruitOfferRequest(BaseModel):
+    """Offer a scholarship + NIL to a HS recruit."""
+    recruit_id: str
+    nil_amount: float = 0.0
+
+
 def _load_team(key: str):
     filepath = os.path.join(TEAMS_DIR, f"{key}.json")
     if not os.path.exists(filepath):
@@ -5201,3 +5238,749 @@ def download_referee_pool():
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=referees.zip"},
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# MY TEAM — ROSTER BUILDER  (Pre-season NIL + Portal + Recruiting)
+# ═══════════════════════════════════════════════════════════════════════
+
+def _get_my_team_session(session_id: str = ""):
+    """Find the session + human team for the roster builder.
+
+    If session_id is empty, uses the first session with a season.
+    Returns (session, session_id, team_name, season).
+    """
+    if session_id and session_id in sessions:
+        sess = sessions[session_id]
+    else:
+        # Find first session with a season
+        for sid, sess in sessions.items():
+            if sess.get("season") is not None:
+                session_id = sid
+                break
+        else:
+            raise HTTPException(400, "No active session found")
+
+    season = sess.get("season")
+    if not season:
+        raise HTTPException(400, "No season in this session")
+
+    # Determine human team
+    team_name = sess.get("portal_human_team", "")
+    if not team_name:
+        human_teams = sess.get("human_teams", [])
+        if human_teams:
+            team_name = human_teams[0]
+    dynasty = sess.get("dynasty")
+    if not team_name and dynasty and hasattr(dynasty, "coach"):
+        team_name = dynasty.coach.team_name
+
+    if not team_name or team_name not in season.teams:
+        raise HTTPException(400, "No human team found in session")
+
+    return sess, session_id, team_name, season
+
+
+def _ensure_roster_builder(sess, session_id: str, team_name: str, season):
+    """Lazily initialize the roster builder state on the session."""
+    if sess.get("roster_builder"):
+        return sess["roster_builder"]
+
+    import random as _rnd
+    from engine.transfer_portal import estimate_prestige_from_roster, generate_quick_portal
+    from engine.nil_system import generate_nil_budget, NILProgram, assess_retention_risks
+    from engine.player_card import player_to_card
+
+    team = season.teams[team_name]
+    roster_cards = [player_to_card(p, team_name) for p in team.players]
+    prestige = estimate_prestige_from_roster(team.players)
+    rng = _rnd.Random(hash(session_id) % 999999)
+
+    # Generate NIL budget
+    budget = generate_nil_budget(prestige=prestige, rng=rng)
+    nil_program = NILProgram(team_name=team_name, annual_budget=budget)
+    nil_program.auto_allocate()
+
+    # Assess retention risks
+    risks = assess_retention_risks(roster_cards, team_prestige=prestige, team_wins=5, rng=rng)
+
+    # Generate portal (larger pool for competitive bidding)
+    portal = generate_quick_portal(
+        team_names=list(season.teams.keys()),
+        year=2027,
+        size=80,
+        prestige=prestige,
+        rng=rng,
+    )
+    sess["quick_portal"] = portal
+    sess["portal_human_team"] = team_name
+
+    # Portal round state — timed trading engine
+    builder = {
+        "team_name": team_name,
+        "prestige": prestige,
+        "nil_program": nil_program,
+        "retention_risks": risks,
+        "retained_players": [],     # player_ids locked down
+        "portal": portal,
+        "portal_round": 0,          # current round (0 = not started)
+        "portal_max_rounds": 5,     # total rounds
+        "portal_bids": {},          # entry_index -> {"amount": float, "team": str}
+        "portal_results": [],       # results after each round
+        "phase": "dashboard",       # dashboard -> retention -> portal -> recruiting -> finalize
+        "roster_cards": roster_cards,
+        "scouting_points": 30,
+        "scholarship_offers": [],   # recruit_ids offered
+        "signed_recruits": [],      # recruit_ids signed
+        "max_offers": 15,
+    }
+
+    # Seed career backstories so player cards feel lived-in
+    for card in roster_cards:
+        _seed_player_backstory(card, team_name, current_year=2026, rng=rng)
+
+    sess["roster_builder"] = builder
+    return builder
+
+
+@app.get("/sessions/{session_id}/my-team")
+def my_team_dashboard(session_id: str = ""):
+    """Get the roster builder dashboard: roster, budget, position gaps."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+
+    nil = builder["nil_program"]
+    team = season.teams[team_name]
+
+    # Position breakdown
+    from engine.player_card import player_to_card
+    pos_counts = {}
+    roster_data = []
+    for p in team.players:
+        card = player_to_card(p, team_name)
+        pos_counts[card.position] = pos_counts.get(card.position, 0) + 1
+        roster_data.append({
+            "player_id": card.player_id,
+            "name": card.full_name,
+            "position": card.position,
+            "overall": card.overall,
+            "potential": card.potential,
+            "year": card.year,
+            "speed": card.speed,
+            "power": card.power,
+            "agility": card.agility,
+        })
+
+    roster_data.sort(key=lambda x: -x["overall"])
+
+    # Ideal roster template
+    ideal = {"Viper": 3, "Zeroback": 3, "Halfback": 4, "Wingback": 4,
+             "Slotback": 4, "Keeper": 3, "Offensive Line": 8, "Defensive Line": 7}
+    gaps = {}
+    for pos, need in ideal.items():
+        have = pos_counts.get(pos, 0)
+        if have < need:
+            gaps[pos] = need - have
+
+    return {
+        "session_id": session_id,
+        "team_name": team_name,
+        "prestige": builder["prestige"],
+        "phase": builder["phase"],
+        "roster": roster_data,
+        "roster_size": len(team.players),
+        "position_counts": pos_counts,
+        "position_gaps": gaps,
+        "nil_budget": {
+            "annual_budget": nil.annual_budget,
+            "recruiting_pool": nil.recruiting_pool,
+            "portal_pool": nil.portal_pool,
+            "retention_pool": nil.retention_pool,
+            "recruiting_remaining": nil.recruiting_remaining,
+            "portal_remaining": nil.portal_remaining,
+            "retention_remaining": nil.retention_remaining,
+        },
+        "retention_risks_count": len(builder["retention_risks"]),
+        "portal_size": len(builder["portal"].entries),
+        "portal_round": builder["portal_round"],
+        "portal_max_rounds": builder["portal_max_rounds"],
+        "transfer_cap": builder["portal"].transfer_cap,
+    }
+
+
+@app.get("/sessions/{session_id}/my-team/retention")
+def my_team_retention(session_id: str = ""):
+    """Get at-risk players and retention options."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+
+    nil = builder["nil_program"]
+    risks = []
+    for r in builder["retention_risks"]:
+        retained = r.player_id in builder["retained_players"]
+        risks.append({
+            **r.to_dict(),
+            "retained": retained,
+        })
+
+    return {
+        "risks": risks,
+        "retention_remaining": nil.retention_remaining,
+        "retention_pool": nil.retention_pool,
+        "retained_count": len(builder["retained_players"]),
+    }
+
+
+@app.post("/sessions/{session_id}/my-team/retention/lock")
+def my_team_retention_lock(session_id: str, req: MyTeamRetainRequest):
+    """Lock down an at-risk player with NIL retention money."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+    nil = builder["nil_program"]
+
+    if req.player_id in builder["retained_players"]:
+        raise HTTPException(400, "Player already retained")
+
+    deal = nil.make_deal("retention", req.player_id, req.player_id, req.amount)
+    if not deal:
+        raise HTTPException(400, "Not enough retention budget")
+
+    builder["retained_players"].append(req.player_id)
+
+    return {
+        "retained": True,
+        "player_id": req.player_id,
+        "amount": req.amount,
+        "retention_remaining": nil.retention_remaining,
+    }
+
+
+@app.get("/sessions/{session_id}/my-team/portal")
+def my_team_portal(session_id: str = ""):
+    """Get portal state: available players, current round, bids."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+    portal = builder["portal"]
+    nil = builder["nil_program"]
+
+    available = []
+    for i, e in enumerate(portal.entries):
+        if e.committed_to or e.withdrawn:
+            continue
+        d = _serialize_portal_entry(e)
+        d["global_index"] = i
+        # Show if human has a pending bid
+        bid = builder["portal_bids"].get(i)
+        d["my_bid"] = bid["amount"] if bid else None
+        available.append(d)
+
+    committed = []
+    for e in portal.entries:
+        if e.committed_to == team_name:
+            committed.append(_serialize_portal_entry(e))
+
+    return {
+        "available": available,
+        "committed": committed,
+        "round": builder["portal_round"],
+        "max_rounds": builder["portal_max_rounds"],
+        "transfer_cap": portal.transfer_cap,
+        "transfers_remaining": portal.transfers_remaining(team_name),
+        "portal_remaining": nil.portal_remaining,
+        "results": builder["portal_results"],
+    }
+
+
+@app.post("/sessions/{session_id}/my-team/portal/bid")
+def my_team_portal_bid(session_id: str, req: MyTeamPortalBidRequest):
+    """Place or update a bid on a portal player for the current round."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+    portal = builder["portal"]
+
+    if req.entry_index < 0 or req.entry_index >= len(portal.entries):
+        raise HTTPException(400, "Invalid entry index")
+
+    entry = portal.entries[req.entry_index]
+    if entry.committed_to or entry.withdrawn:
+        raise HTTPException(400, "Player no longer available")
+
+    if portal.transfers_remaining(team_name) <= 0:
+        raise HTTPException(400, "Transfer cap reached")
+
+    nil = builder["nil_program"]
+    if req.nil_amount > nil.portal_remaining:
+        raise HTTPException(400, f"Bid exceeds portal budget (${nil.portal_remaining:,.0f} remaining)")
+
+    builder["portal_bids"][req.entry_index] = {
+        "amount": req.nil_amount,
+        "team": team_name,
+    }
+
+    return {
+        "bid_placed": True,
+        "entry_index": req.entry_index,
+        "amount": req.nil_amount,
+        "portal_remaining": nil.portal_remaining,
+    }
+
+
+@app.post("/sessions/{session_id}/my-team/portal/advance")
+def my_team_portal_advance(session_id: str):
+    """Advance to the next portal round. CPU teams make bids, players decide."""
+    import random as _rnd
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = _ensure_roster_builder(sess, session_id, team_name, season)
+    portal = builder["portal"]
+    nil = builder["nil_program"]
+    rng = _rnd.Random(hash(session_id) + builder["portal_round"])
+
+    if builder["portal_round"] >= builder["portal_max_rounds"]:
+        raise HTTPException(400, "All portal rounds completed")
+
+    builder["portal_round"] += 1
+    round_num = builder["portal_round"]
+    round_results = []
+
+    # CPU teams make offers on available players
+    cpu_teams = [t for t in season.teams if t != team_name]
+    prestige_map = {}
+    for t in cpu_teams:
+        from engine.transfer_portal import estimate_prestige_from_roster
+        prestige_map[t] = estimate_prestige_from_roster(season.teams[t].players)
+
+    available_entries = [(i, e) for i, e in enumerate(portal.entries)
+                         if not e.committed_to and not e.withdrawn]
+
+    # Each round, top CPU teams compete for top available players
+    # Later rounds = more aggressive bidding (desperation)
+    aggression = 0.5 + (round_num / builder["portal_max_rounds"]) * 0.5
+    cpu_offers_this_round = {}
+
+    for idx, entry in available_entries:
+        card = entry.player_card
+        # Higher overall players attract more CPU interest
+        interest_chance = min(0.9, (card.overall / 100.0) * aggression)
+        if rng.random() > interest_chance:
+            continue
+
+        # Pick 1-3 CPU teams interested based on prestige match
+        interested = rng.sample(cpu_teams, min(3, len(cpu_teams)))
+        best_cpu = None
+        best_score = -1
+        for t in interested:
+            p = prestige_map.get(t, 50)
+            # CPU bid: prestige-weighted with some randomness
+            geo_bonus = rng.uniform(0, 20)
+            score = p * entry.prefers_prestige + geo_bonus * entry.prefers_geography
+            if score > best_score:
+                best_score = score
+                best_cpu = t
+
+        if best_cpu:
+            cpu_offers_this_round[idx] = {"team": best_cpu, "score": best_score}
+
+    # Now resolve: for each player with bids, compare human bid vs CPU offers
+    for idx, entry in available_entries:
+        human_bid = builder["portal_bids"].get(idx)
+        cpu_offer = cpu_offers_this_round.get(idx)
+
+        if not human_bid and not cpu_offer:
+            continue  # No interest this round
+
+        # Calculate human score
+        human_score = 0
+        if human_bid:
+            # Human score = prestige + NIL factor
+            p = builder["prestige"]
+            nil_factor = min(30, (human_bid["amount"] / max(1, nil.portal_pool)) * 40)
+            geo = rng.uniform(5, 25)
+            human_score = (p * entry.prefers_prestige
+                          + nil_factor * entry.prefers_nil
+                          + geo * entry.prefers_geography
+                          + rng.uniform(-5, 5))
+
+        cpu_score = cpu_offer["score"] if cpu_offer else 0
+
+        # Decision: higher score wins, but only if it meets a threshold
+        # Earlier rounds have higher thresholds (players are patient)
+        commit_threshold = max(20, 60 - round_num * 10)
+
+        winner = None
+        if human_score > cpu_score and human_score > commit_threshold and human_bid:
+            winner = team_name
+        elif cpu_score > human_score and cpu_score > commit_threshold and cpu_offer:
+            winner = cpu_offer["team"]
+        elif round_num >= builder["portal_max_rounds"]:
+            # Last round: players just pick the best offer
+            if human_score > cpu_score and human_bid:
+                winner = team_name
+            elif cpu_offer:
+                winner = cpu_offer["team"]
+
+        if winner:
+            entry.committed_to = winner
+            result = {
+                "player_name": entry.player_card.full_name,
+                "position": entry.player_card.position,
+                "overall": entry.player_card.overall,
+                "destination": winner,
+                "round": round_num,
+                "is_human": winner == team_name,
+            }
+
+            if winner == team_name and human_bid:
+                # Charge NIL budget
+                nil.make_deal("portal", entry.player_card.player_id,
+                             entry.player_card.full_name, human_bid["amount"])
+                # Add to roster
+                from engine.game_engine import Player, assign_archetype
+                card = entry.player_card
+                new_player = Player(
+                    number=max((p.number for p in season.teams[team_name].players), default=0) + 1,
+                    name=card.full_name, position=card.position,
+                    speed=card.speed, stamina=card.stamina, kicking=card.kicking,
+                    lateral_skill=card.lateral_skill, tackling=card.tackling,
+                    agility=card.agility, power=card.power, awareness=card.awareness,
+                    hands=card.hands, kick_power=card.kick_power, kick_accuracy=card.kick_accuracy,
+                    player_id=card.player_id, year=card.year,
+                    potential=card.potential, development=card.development,
+                )
+                new_player.archetype = assign_archetype(new_player)
+                season.teams[team_name].players.append(new_player)
+                result["nil_spent"] = human_bid["amount"]
+
+            round_results.append(result)
+
+    # Clear bids for next round (bids are per-round)
+    builder["portal_bids"] = {}
+    builder["portal_results"].append({
+        "round": round_num,
+        "signings": round_results,
+    })
+
+    return {
+        "round": round_num,
+        "max_rounds": builder["portal_max_rounds"],
+        "signings": round_results,
+        "remaining_available": sum(1 for e in portal.entries if not e.committed_to and not e.withdrawn),
+        "transfers_remaining": portal.transfers_remaining(team_name),
+        "portal_remaining": nil.portal_remaining,
+    }
+
+
+@app.post("/sessions/{session_id}/my-team/finalize")
+def my_team_finalize(session_id: str):
+    """Finalize roster and set session to ready for simulation."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = sess.get("roster_builder")
+    if not builder:
+        raise HTTPException(400, "Roster builder not initialized")
+
+    builder["phase"] = "ready"
+    sess["phase"] = "regular"
+
+    team = season.teams[team_name]
+    return {
+        "finalized": True,
+        "team_name": team_name,
+        "roster_size": len(team.players),
+        "phase": "regular",
+    }
+
+
+@app.post("/sessions/{session_id}/my-team/simulate")
+async def my_team_simulate(session_id: str):
+    """Simulate the entire season in one shot."""
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+
+    if sess["phase"] != "regular":
+        raise HTTPException(400, f"Cannot simulate in phase '{sess['phase']}'. Finalize roster first.")
+
+    def _do_sim():
+        season.simulate_season(generate_polls=True, use_fast_sim=True)
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(_sim_executor, _do_sim)
+
+    # Also simulate bowls and playoffs
+    bowl_count = sess["config"].get("bowl_count", 4)
+    playoff_size = sess["config"].get("playoff_size", 8)
+
+    if bowl_count > 0 and hasattr(season, "run_bowls"):
+        try:
+            await loop.run_in_executor(_sim_executor, lambda: season.run_bowls())
+        except Exception:
+            pass
+
+    if playoff_size > 0 and hasattr(season, "run_playoffs"):
+        try:
+            await loop.run_in_executor(_sim_executor, lambda: season.run_playoffs())
+        except Exception:
+            pass
+
+    sess["phase"] = "complete"
+
+    # Get human team results
+    record = {"wins": 0, "losses": 0}
+    if hasattr(season, "standings") and team_name in season.standings:
+        rec = season.standings[team_name]
+        record = {"wins": getattr(rec, "wins", 0), "losses": getattr(rec, "losses", 0)}
+
+    return {
+        "simulated": True,
+        "team_name": team_name,
+        "record": record,
+        "phase": "complete",
+    }
+
+
+def _seed_player_backstory(card, team_name: str, current_year: int, rng):
+    """Generate synthetic career history for a player based on their class year.
+
+    Gives sophomores 1 past season, juniors 2, seniors 3, etc. — so every
+    player card has stats and a team history that makes them feel real.
+    """
+    from engine.player_card import SeasonStats
+
+    year_to_past_seasons = {
+        "Freshman": 0, "Sophomore": 1, "Junior": 2, "Senior": 3, "Graduate": 4,
+    }
+    past_count = year_to_past_seasons.get(card.year, 0)
+    if past_count == 0 or card.career_seasons:
+        return  # Freshman or already has history
+
+    card.current_team = team_name
+
+    # Generate plausible past seasons
+    for i in range(past_count):
+        season_year = current_year - past_count + i
+        # Younger seasons had slightly lower stats
+        age_factor = 0.6 + (i / max(1, past_count)) * 0.4
+
+        games = rng.randint(8, 14)
+        ovr = card.overall
+
+        # Position-appropriate stats
+        is_skill = card.position in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback")
+        is_line = card.position in ("Offensive Line", "Defensive Line")
+        is_keeper = card.position == "Keeper"
+
+        touches = int(rng.randint(30, 120) * age_factor) if is_skill else rng.randint(0, 15)
+        yards = int(touches * rng.uniform(3.5, 7.0)) if touches > 0 else 0
+        tds = int(touches * rng.uniform(0.03, 0.10)) if is_skill else 0
+        fumbles = rng.randint(0, max(1, touches // 30)) if is_skill else 0
+
+        tackles = int(rng.randint(15, 60) * age_factor) if is_line or is_keeper else rng.randint(0, 10)
+        tfl = int(tackles * rng.uniform(0.05, 0.20)) if is_line else 0
+        sacks = rng.randint(0, max(1, tfl // 2)) if is_line else 0
+
+        kick_att = rng.randint(5, 30) if is_keeper or card.kicking > 65 else 0
+        kick_makes = int(kick_att * rng.uniform(0.5, 0.85)) if kick_att > 0 else 0
+
+        # Transfer history: ~15% chance they played elsewhere before
+        if i == 0 and past_count >= 2 and rng.random() < 0.15:
+            prev_team = rng.choice(["Previous School", "Junior College", "Transfer U"])
+            origin_team = prev_team
+            card.transfer_count = 1
+        else:
+            origin_team = team_name
+
+        season = SeasonStats(
+            season_year=season_year,
+            team=origin_team,
+            games_played=games,
+            touches=touches,
+            total_yards=yards,
+            rushing_yards=int(yards * 0.7) if is_skill else 0,
+            lateral_yards=int(yards * 0.3) if is_skill else 0,
+            touchdowns=tds,
+            fumbles=fumbles,
+            tackles=tackles,
+            tfl=tfl,
+            sacks=sacks,
+            kick_attempts=kick_att,
+            kick_makes=kick_makes,
+        )
+        card.career_seasons.append(season)
+
+    # Generate past awards for elite players
+    if ovr >= 80 and past_count >= 2:
+        if rng.random() < 0.4:
+            card.career_awards.append({
+                "year": current_year - 1,
+                "award": "All-Conference" if ovr < 88 else "All-American",
+                "team": team_name,
+            })
+    if ovr >= 85 and past_count >= 3:
+        if rng.random() < 0.3:
+            card.career_awards.append({
+                "year": current_year - 2,
+                "award": "All-Conference Honorable Mention",
+                "team": team_name,
+            })
+
+
+@app.post("/sessions/{session_id}/my-team/run-it-back")
+def my_team_run_it_back(session_id: str):
+    """Advance to the next season: age players, graduate seniors, update prestige, reset roster builder."""
+    import random as _rnd
+    sess, session_id, team_name, season = _get_my_team_session(session_id)
+    builder = sess.get("roster_builder")
+
+    if sess["phase"] != "complete":
+        raise HTTPException(400, "Season must be complete before running it back")
+
+    from engine.player_card import player_to_card, card_to_player, SeasonStats
+    from engine.development import apply_offseason_development, _next_year
+    from engine.transfer_portal import estimate_prestige_from_roster
+    from engine.nil_system import apply_season_end_regression
+
+    rng = _rnd.Random(hash(session_id) + 999)
+    team = season.teams[team_name]
+
+    # Get current season record
+    wins = 0
+    losses = 0
+    if hasattr(season, "standings") and team_name in season.standings:
+        rec = season.standings[team_name]
+        wins = getattr(rec, "wins", 0)
+        losses = getattr(rec, "losses", 0)
+
+    is_champion = hasattr(season, "champion") and season.champion == team_name
+
+    # 1. Convert players to cards for development
+    cards = []
+    for p in team.players:
+        card = player_to_card(p, team_name)
+
+        # Record this season's stats from the simulation
+        game_stats = getattr(p, "_season_stats", None)
+        if game_stats:
+            card.career_seasons.append(game_stats)
+        else:
+            # Generate approximate stats from the season
+            is_skill = card.position in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback")
+            games = getattr(p, "season_games_played", wins + losses)
+            if games == 0:
+                games = wins + losses
+            touches = rng.randint(20, 80) if is_skill else rng.randint(0, 10)
+            yards = int(touches * rng.uniform(3.5, 6.5))
+            card.career_seasons.append(SeasonStats(
+                season_year=2026,
+                team=team_name,
+                games_played=games,
+                touches=touches,
+                total_yards=yards,
+                touchdowns=int(touches * rng.uniform(0.03, 0.08)) if is_skill else 0,
+                tackles=rng.randint(10, 45) if card.position in ("Defensive Line", "Keeper") else rng.randint(0, 8),
+            ))
+
+        cards.append(card)
+
+    # 2. Apply development to each player (attribute growth + year advance)
+    graduating = []
+    returning = []
+    for card in cards:
+        if card.year in ("Senior", "Graduate"):
+            graduating.append(card)
+        else:
+            apply_offseason_development(card, rng=rng)
+            returning.append(card)
+
+    # 3. Update prestige
+    old_prestige = builder["prestige"] if builder else estimate_prestige_from_roster(team.players)
+    new_prestige = apply_season_end_regression(old_prestige)
+    if is_champion:
+        new_prestige = min(99, new_prestige + 5)
+    # Win/loss adjustment
+    if wins > losses:
+        new_prestige = min(99, new_prestige + min(5, (wins - losses)))
+    elif losses > wins:
+        new_prestige = max(1, new_prestige - min(5, (losses - wins)))
+
+    # 4. Rebuild the roster from returning players
+    new_players = []
+    for card in returning:
+        p = card_to_player(card)
+        p.year = card.year  # Development already advanced the year
+        new_players.append(p)
+
+    # 5. Fill gaps with generated freshmen to get back toward 36
+    from engine.game_engine import Player, assign_archetype
+    from engine.recruiting import generate_single_recruit
+    gap = max(0, 36 - len(new_players))
+    for i in range(gap):
+        recruit = generate_single_recruit(
+            recruit_id=f"FR-{rng.randint(10000, 99999)}",
+            rng=rng,
+        )
+        freshman = Player(
+            number=max((p.number for p in new_players), default=0) + 1 + i,
+            name=recruit.full_name,
+            position=recruit.position,
+            speed=recruit.true_speed, stamina=recruit.true_stamina,
+            kicking=recruit.true_kicking, lateral_skill=recruit.true_lateral_skill,
+            tackling=recruit.true_tackling, agility=recruit.true_agility,
+            power=recruit.true_power, awareness=recruit.true_awareness,
+            hands=recruit.true_hands, kick_power=recruit.true_kick_power,
+            kick_accuracy=recruit.true_kick_accuracy,
+            player_id=recruit.recruit_id,
+            year="Freshman",
+            potential=recruit.true_potential,
+            development=recruit.true_development,
+        )
+        freshman.archetype = assign_archetype(freshman)
+        new_players.append(freshman)
+
+    # 6. Replace the team roster
+    team.players = new_players
+
+    # 7. Reset season state for next year
+    # Clear schedule, standings, etc. but keep teams
+    if hasattr(season, "schedule"):
+        season.schedule = []
+    if hasattr(season, "standings"):
+        for t in season.standings:
+            rec = season.standings[t]
+            rec.wins = 0
+            rec.losses = 0
+            rec.ties = 0
+            rec.points_for = 0
+            rec.points_against = 0
+            rec.conf_wins = 0
+            rec.conf_losses = 0
+    if hasattr(season, "champion"):
+        season.champion = None
+    if hasattr(season, "playoff_bracket"):
+        season.playoff_bracket = []
+    if hasattr(season, "bowl_games"):
+        season.bowl_games = []
+    if hasattr(season, "polls"):
+        season.polls = {}
+
+    # Regenerate schedule
+    if hasattr(season, "generate_schedule"):
+        games_per_team = sess["config"].get("games_per_team", 12)
+        try:
+            season.generate_schedule(games_per_team=games_per_team)
+        except Exception:
+            pass
+
+    # 8. Clear roster builder so it reinitializes with new prestige
+    sess["roster_builder"] = None
+    sess["quick_portal"] = None
+    sess["phase"] = "setup"
+
+    return {
+        "advanced": True,
+        "team_name": team_name,
+        "previous_record": {"wins": wins, "losses": losses},
+        "was_champion": is_champion,
+        "old_prestige": old_prestige,
+        "new_prestige": new_prestige,
+        "graduated": len(graduating),
+        "returning": len(returning),
+        "freshmen_added": gap,
+        "roster_size": len(new_players),
+    }
