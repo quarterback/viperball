@@ -48,6 +48,7 @@ CLASSIFICATIONS = (
     "motivator",
     "players_coach",
     "disciplinarian",
+    "program_changer",
 )
 
 # ──────────────────────────────────────────────
@@ -120,6 +121,7 @@ CLASSIFICATION_LABELS = {
     "motivator":       "Motivator",
     "players_coach":   "Players' Coach",
     "disciplinarian":  "Disciplinarian",
+    "program_changer": "Program Changer",
 }
 
 CLASSIFICATION_DESCRIPTIONS = {
@@ -128,6 +130,7 @@ CLASSIFICATION_DESCRIPTIONS = {
     "motivator":       "Fires up the team when trailing at halftime; recovers momentum faster after big plays.",
     "players_coach":   "Boosts retention and builds chemistry that compounds over the season.",
     "disciplinarian":  "Reduces fumbles and muffs; compresses outcome variance for fewer disasters.",
+    "program_changer": "Transforms programs regardless of prestige. Maxes out player development; recruits treat low-prestige schools as elite. The coach IS the brand.",
 }
 
 
@@ -160,6 +163,14 @@ CLASSIFICATION_EFFECTS = {
         "muff_reduction":              (0.80, 0.90),
         "variance_compression":        (0.90, 0.95),
         "gap_discipline_bonus":        (0.02, 0.06),
+    },
+    "program_changer": {
+        "dev_boost_override":           (6.0, 8.0),     # near-max development regardless of rating
+        "recruiting_prestige_boost":    (25, 40),        # recruits see prestige as +25 to +40 higher
+        "retention_bonus":              (0.20, 0.35),    # strong retention (players want to stay)
+        "portal_magnetism":             (15, 30),        # portal players treat prestige as +15-30 higher
+        "nil_budget_multiplier":        (1.15, 1.30),    # boosted NIL through brand/connections
+        "development_ceiling_override": (0.90, 1.0),     # can develop anyone to near-full potential
     },
 }
 
@@ -239,6 +250,26 @@ SUB_ARCHETYPES = {
             "portal_suppression_bonus": 0.02,
         },
     },
+    "program_changer": {
+        "kingmaker": {
+            # Calipari-type: turns 2-3 star players into stars
+            "low_star_dev_multiplier": 1.40,    # 40% faster dev for 1-3 star potential
+            "ceiling_override_bonus": 0.10,     # +10% on top of classification ceiling
+            "bust_save_chance": 0.40,           # 40% chance to convert a bust into normal dev
+        },
+        "brand_builder": {
+            # Dawn Staley-type: the coach IS the brand, recruits come for THEM
+            "recruiting_prestige_bonus": 15,    # +15 prestige for recruiting decisions
+            "portal_prestige_bonus": 10,        # +10 for portal attractiveness
+            "nil_multiplier": 1.15,             # 15% extra NIL through brand deals
+        },
+        "program_architect": {
+            # Pitino-type: builds infrastructure, culture-first, slow burn to elite
+            "infrastructure_bonus": 10,         # virtual facility/infrastructure boost
+            "retention_multiplier": 1.25,       # 25% better retention
+            "prestige_gain_multiplier": 1.30,   # prestige rises 30% faster per win
+        },
+    },
 }
 
 SUB_ARCHETYPE_LABELS = {
@@ -257,6 +288,9 @@ SUB_ARCHETYPE_LABELS = {
     "mentor": "Mentor",
     "recruiter": "Recruiter",
     "stabilizer": "Stabilizer",
+    "kingmaker": "Kingmaker",
+    "brand_builder": "Brand Builder",
+    "program_architect": "Program Architect",
 }
 
 # ──────────────────────────────────────────────
@@ -889,10 +923,13 @@ _CLASSIFICATION_PRIMARY_ATTR = {
     "motivator":       "leadership",
     "players_coach":   "development",
     "disciplinarian":  "rotations",
+    "program_changer": "development",
 }
 
 # Weights for random classification selection (flat by default).
+# Program changers are very rare (~3%) — the Calipari/Staley/Pitino archetype
 _DEFAULT_CLASSIFICATION_WEIGHTS = {c: 1.0 for c in CLASSIFICATIONS}
+_DEFAULT_CLASSIFICATION_WEIGHTS["program_changer"] = 0.15  # ~3% of coaches
 
 
 def _clamp_attr(val: int) -> int:
@@ -934,6 +971,12 @@ def _generate_attributes(
     if primary and primary in attrs:
         bonus = rng.randint(5, 12)
         attrs[primary] = _clamp_attr(attrs[primary] + bonus)
+
+    # Program Changers get elite development AND recruiting — they transform programs
+    if classification == "program_changer":
+        attrs["development"] = _clamp_attr(max(attrs["development"], rng.randint(82, 95)))
+        attrs["recruiting"] = _clamp_attr(max(attrs["recruiting"], rng.randint(78, 92)))
+        attrs["leadership"] = _clamp_attr(max(attrs["leadership"], rng.randint(75, 90)))
 
     return attrs
 
@@ -1047,6 +1090,26 @@ _COACHING_BACKGROUNDS = [
     "Turnaround specialist known for rebuilding programs",
     "Defense-minded tactician",
     "Offensive innovator",
+]
+
+_PROGRAM_CHANGER_PERSONALITIES = [
+    "magnetic leader who recruits follow anywhere",
+    "relentless program builder with a vision",
+    "charismatic brand who IS the program",
+    "intense developer who turns nobodies into somebodies",
+    "culture-first architect with championship pedigree",
+    "fearless risk-taker who bets on overlooked talent",
+]
+
+_PROGRAM_CHANGER_BACKGROUNDS = [
+    "Built three different programs from nothing to contention",
+    "Turned a doormat into a championship program in four years",
+    "Famous for developing overlooked 2-star recruits into All-Americans",
+    "Left a blue blood to prove they could win anywhere",
+    "Known as the coach every player wants to play for",
+    "Transformed a mid-major into a national power through NIL and development",
+    "Multiple stops, multiple turnarounds — the ultimate program changer",
+    "Built a dynasty at their first stop, then did it again somewhere new",
 ]
 
 _PHILOSOPHIES = [
@@ -1166,12 +1229,18 @@ def generate_coach_card(
 
     # ── career record ─────────────────────────
     if seasons > 0:
-        avg_wins = rng.randint(5, 10)
+        if cls_ == "program_changer":
+            # Program Changers have strong career records — multiple stops,
+            # each building programs from nothing. Think Calipari trajectory.
+            avg_wins = rng.randint(8, 11)
+            champs = max(0, seasons // 3 - rng.randint(0, 1))
+        else:
+            avg_wins = rng.randint(5, 10)
+            champs = max(0, seasons // 4 - rng.randint(0, 2))
         total_wins = seasons * avg_wins + rng.randint(-3, 3)
         total_wins = max(0, total_wins)
         total_games = seasons * 12
         total_losses = max(0, total_games - total_wins)
-        champs = max(0, seasons // 4 - rng.randint(0, 2))
     else:
         total_wins = 0
         total_losses = 0
@@ -1242,8 +1311,8 @@ def generate_coach_card(
         year_signed=year,
         philosophy=rng.choice(_PHILOSOPHIES),
         coaching_style=rng.choice(_COACHING_STYLES),
-        personality=rng.choice(_PERSONALITIES),
-        background=rng.choice(_COACHING_BACKGROUNDS),
+        personality=rng.choice(_PROGRAM_CHANGER_PERSONALITIES) if cls_ == "program_changer" else rng.choice(_PERSONALITIES),
+        background=rng.choice(_PROGRAM_CHANGER_BACKGROUNDS) if cls_ == "program_changer" else rng.choice(_COACHING_BACKGROUNDS),
         sub_archetype=sub_arch,
         personality_sliders=sliders,
         hidden_traits=traits,
@@ -2069,12 +2138,23 @@ def compute_dev_boost(
 
     A 95-development coach gives max boost (8.0), same as max DraftyQueenz.
     A 25-development coach gives 0 boost.
+
+    Program Changers get a floor of 6.0 — they can develop anyone.
     """
     hc = coaching_staff.get("head_coach")
     if hc is None:
         return 0.0
     dev_rating = hc.development
-    return (dev_rating - ATTR_MIN) / (ATTR_MAX - ATTR_MIN) * 8.0
+    base_boost = (dev_rating - ATTR_MIN) / (ATTR_MAX - ATTR_MIN) * 8.0
+
+    # Program Changers have a dev_boost override floor (6.0-8.0)
+    if hc.classification == "program_changer":
+        effects = CLASSIFICATION_EFFECTS.get("program_changer", {})
+        override_range = effects.get("dev_boost_override", (6.0, 8.0))
+        override_floor = override_range[0]
+        base_boost = max(base_boost, override_floor)
+
+    return base_boost
 
 
 def compute_recruiting_bonus(
@@ -2085,11 +2165,43 @@ def compute_recruiting_bonus(
 
     Returns a 0-1 normalized score that can be used as a weight in
     recruit decision formulas.  HC recruiting attribute is primary.
+
+    Program Changers get a minimum of 0.85 — they attract talent everywhere.
     """
     hc = coaching_staff.get("head_coach")
     if hc is None:
         return 0.0
-    return hc.recruiting / ATTR_MAX
+    base = hc.recruiting / ATTR_MAX
+
+    if hc.classification == "program_changer":
+        base = max(base, 0.85)
+
+    return base
+
+
+def compute_program_changer_prestige_boost(
+    coaching_staff: Dict[str, CoachCard],
+) -> int:
+    """
+    Compute the virtual prestige boost from a Program Changer HC.
+
+    Recruits and portal players treat the program as if it has this much
+    more prestige.  A Calipari-type coach at a 30-prestige school makes
+    it feel like a 55-70 prestige program for recruiting purposes.
+
+    Returns 0 for non-Program Changer coaches.
+    """
+    hc = coaching_staff.get("head_coach")
+    if hc is None or hc.classification != "program_changer":
+        return 0
+
+    effects = CLASSIFICATION_EFFECTS.get("program_changer", {})
+    boost_range = effects.get("recruiting_prestige_boost", (25, 40))
+
+    # Scale by HC's recruiting attribute: better recruiters give bigger boost
+    scale = (hc.recruiting - ATTR_MIN) / (ATTR_MAX - ATTR_MIN)
+    boost = boost_range[0] + (boost_range[1] - boost_range[0]) * scale
+    return int(boost)
 
 
 def compute_hc_ambition(coach: CoachCard) -> int:
