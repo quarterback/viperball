@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Transfer Portal — {{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/my-team/">My Team</a><span class="sep">/</span>Portal
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Transfer Portal</h1>
+  <div class="subtitle">{{ team_name }} &middot; Round {{ portal_round }} / {{ portal_max_rounds }} &middot; {{ transfers_remaining }} transfer slots remaining</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/my-team/">Dashboard</a>
+  <a href="/stats/my-team/retention">Retention</a>
+  <a href="/stats/my-team/portal" class="active">Portal</a>
+  <a href="/stats/my-team/finalize">Finalize &amp; Sim</a>
+</div>
+
+{# ── Portal Status Bar ── #}
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+  <div>
+    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Round</span><br>
+    <span style="font-size:22px;font-weight:bold;color:{% if portal_round >= portal_max_rounds %}var(--red){% else %}var(--fg-bright){% endif %};">{{ portal_round }} / {{ portal_max_rounds }}</span>
+  </div>
+  <div>
+    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Transfer Slots</span><br>
+    <span style="font-size:22px;font-weight:bold;color:{% if transfers_remaining == 0 %}var(--red){% else %}var(--green){% endif %};">{{ transfers_remaining }} / {{ transfer_cap }}</span>
+  </div>
+  <div>
+    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Portal Budget</span><br>
+    <span style="font-size:22px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.portal_remaining) if nil else 0 }}</span>
+  </div>
+  <div>
+    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Available Players</span><br>
+    <span style="font-size:22px;font-weight:bold;color:var(--fg-bright);">{{ available|length }}</span>
+  </div>
+  <div style="margin-left:auto;">
+    {% if portal_round < portal_max_rounds %}
+    <form method="POST" action="/stats/my-team/portal/advance" style="display:inline;">
+      <input type="hidden" name="session_id" value="{{ session_id }}">
+      <button type="submit" style="background:var(--green);color:#000;border:none;padding:10px 24px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">
+        {% if portal_round == 0 %}Start Round 1{% else %}Advance to Round {{ portal_round + 1 }}{% endif %}
+      </button>
+    </form>
+    {% else %}
+    <span style="color:var(--fg-dim);font-size:12px;">Portal closed</span>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Round Results ── #}
+{% if portal_results %}
+<h2>Round Results</h2>
+<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px;">
+  {% for round in portal_results|reverse %}
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;">
+    <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Round {{ round.round }}</div>
+    {% if round.signings %}
+      {% for s in round.signings %}
+      <div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px;">
+        <span style="font-weight:bold;{% if s.is_human %}color:var(--green);{% else %}color:var(--fg);{% endif %}">{{ s.player_name }}</span>
+        <span class="tag tag-pos" style="font-size:9px;padding:1px 4px;">{{ s.position }}</span>
+        <span style="color:var(--fg-dim);">OVR {{ s.overall }}</span>
+        <span style="color:var(--fg-dim);">&rarr;</span>
+        <span style="{% if s.is_human %}color:var(--green);font-weight:bold;{% else %}color:var(--fg-dim);{% endif %}">{{ s.destination }}</span>
+        {% if s.nil_spent is defined and s.nil_spent %}<span style="color:var(--fg-dim);font-size:10px;">(NIL: ${{ "{:,.0f}".format(s.nil_spent) }})</span>{% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:11px;color:var(--fg-dim);">No signings this round</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── My Commitments ── #}
+{% if committed %}
+<h2>My Transfers ({{ committed|length }})</h2>
+<table>
+  <thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th>Year</th><th>Origin</th></tr></thead>
+  <tbody>
+  {% for p in committed %}
+  <tr>
+    <td style="color:var(--green);font-weight:bold;">{{ p.player_name }}</td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num {% if p.overall >= 80 %}stat-elite{% elif p.overall >= 65 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td style="font-size:11px;">{{ p.year }}</td>
+    <td style="font-size:11px;color:var(--fg-dim);">{{ p.origin_team }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Available Players ── #}
+{% if available and portal_round < portal_max_rounds %}
+<h2>Available Players ({{ available|length }})</h2>
+<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;">Place your bids, then click "Advance" to resolve the round. CPU teams will also bid &mdash; top players go fast!</div>
+<table>
+  <thead>
+    <tr>
+      <th>Player</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th>
+      <th>Year</th><th>Origin</th><th>Reason</th>
+      <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
+      <th>My Bid</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in available|sort(attribute='overall', reverse=true) %}
+  <tr>
+    <td style="font-weight:bold;">{{ p.player_name }}</td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num {% if p.overall >= 80 %}stat-elite{% elif p.overall >= 65 %}stat-good{% elif p.overall < 45 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ p.get("potential", "?") }}</td>
+    <td style="font-size:11px;">{{ p.year }}</td>
+    <td style="font-size:11px;color:var(--fg-dim);">{{ p.origin_team }}</td>
+    <td style="font-size:10px;color:var(--fg-dim);">{{ p.get("reason", "")|replace("_", " ")|title }}</td>
+    <td class="num">{{ p.get("speed", "?") }}</td>
+    <td class="num">{{ p.get("power", "?") }}</td>
+    <td class="num">{{ p.get("agility", "?") }}</td>
+    <td class="num">
+      {% if p.my_bid is not none %}
+        <span style="color:var(--green);">${{ "{:,.0f}".format(p.my_bid) }}</span>
+      {% else %}
+        <span style="color:var(--fg-dim);">&mdash;</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if transfers_remaining > 0 %}
+      <form method="POST" action="/stats/my-team/portal/bid" style="display:inline;">
+        <input type="hidden" name="session_id" value="{{ session_id }}">
+        <input type="hidden" name="entry_index" value="{{ p.global_index }}">
+        <input type="number" name="nil_amount" value="{{ p.my_bid|default(10000)|int }}" min="0" step="5000"
+               style="width:70px;background:var(--bg);color:var(--fg);border:1px solid var(--border);padding:2px 4px;font-size:11px;">
+        <button type="submit" style="background:var(--accent);color:#000;border:none;padding:3px 8px;cursor:pointer;font-size:10px;font-family:inherit;">Bid</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif portal_round >= portal_max_rounds %}
+<div class="notice">Portal is closed. All rounds completed.</div>
+{% endif %}
+
+<div style="margin-top:16px;">
+  <a href="/stats/my-team/finalize" style="background:var(--accent);color:#000;padding:8px 20px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Continue to Finalize &rarr;</a>
+</div>
+{% endblock %}

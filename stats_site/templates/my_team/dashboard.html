@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ team_name }} — My Team — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>My Team
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team_name }}</h1>
+  <div class="subtitle">Roster Builder &middot; Prestige {{ prestige }}</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/my-team/" class="active">Dashboard</a>
+  <a href="/stats/my-team/retention">Retention</a>
+  <a href="/stats/my-team/portal">Portal</a>
+  <a href="/stats/my-team/finalize">Finalize &amp; Sim</a>
+</div>
+
+{% if not has_session %}
+<div class="notice">No active session found. Start a season first, then come back to build your roster.</div>
+{% else %}
+
+{# ── Quick Stats ── #}
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="metric-card">
+    <div class="metric-label">Roster Size</div>
+    <div class="metric-value">{{ roster_size }} / 36</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Avg Overall</div>
+    <div class="metric-value {% if avg_overall >= 75 %}stat-good{% elif avg_overall < 55 %}stat-bad{% endif %}">{{ avg_overall }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Prestige</div>
+    <div class="metric-value {% if prestige >= 75 %}stat-elite{% elif prestige >= 50 %}stat-good{% elif prestige < 30 %}stat-bad{% endif %}">{{ prestige }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">NIL Budget</div>
+    <div class="metric-value">${{ "{:,.0f}".format(nil.annual_budget) if nil else 0 }}</div>
+  </div>
+</div>
+
+{# ── NIL Budget Breakdown ── #}
+{% if nil %}
+<h2>NIL Budget Allocation</h2>
+<div class="grid-3" style="margin-bottom:16px;">
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Retention Pool</div>
+    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.retention_pool) }}</div>
+    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.retention_remaining) }} remaining</div>
+    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--accent);height:100%;width:{{ ((nil.retention_pool - nil.retention_remaining) / nil.retention_pool * 100) if nil.retention_pool > 0 else 0 }}%"></div></div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Portal Pool</div>
+    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.portal_pool) }}</div>
+    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.portal_remaining) }} remaining</div>
+    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--green);height:100%;width:{{ ((nil.portal_pool - nil.portal_remaining) / nil.portal_pool * 100) if nil.portal_pool > 0 else 0 }}%"></div></div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Recruiting Pool</div>
+    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.recruiting_pool) }}</div>
+    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.recruiting_remaining) }} remaining</div>
+    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--yellow);height:100%;width:{{ ((nil.recruiting_pool - nil.recruiting_remaining) / nil.recruiting_pool * 100) if nil.recruiting_pool > 0 else 0 }}%"></div></div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Action Cards ── #}
+<h2>Offseason Actions</h2>
+<div class="grid-3" style="margin-bottom:24px;">
+  <a href="/stats/my-team/retention" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
+    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">1. Retention</div>
+    <div style="font-size:11px;color:var(--fg-dim);">{{ retention_count }} players at risk of leaving. Lock them down with NIL deals before they hit the portal.</div>
+    {% if retention_count > 0 %}<div style="margin-top:8px;font-size:11px;color:var(--red);">{{ retention_count }} at-risk players</div>{% endif %}
+  </a>
+  <a href="/stats/my-team/portal" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
+    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">2. Transfer Portal</div>
+    <div style="font-size:11px;color:var(--fg-dim);">{{ portal_max_rounds }} rounds of competitive bidding. Compete against {{ (pos_counts.values()|list|length) }} CPU programs for portal talent.</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--green);">Round {{ portal_round }}/{{ portal_max_rounds }} &middot; {{ transfer_cap }} transfer slots</div>
+  </a>
+  <a href="/stats/my-team/finalize" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
+    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">3. Finalize &amp; Simulate</div>
+    <div style="font-size:11px;color:var(--fg-dim);">Lock in your roster and simulate the full season in one click. See standings, stats, and awards.</div>
+  </a>
+</div>
+
+{# ── Position Gaps ── #}
+{% if position_gaps %}
+<h2>Position Needs</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+  {% for pos, need in position_gaps.items() %}
+  <div style="background:var(--bg-alt);border:1px solid var(--red);padding:6px 12px;">
+    <span style="font-size:11px;color:var(--red);font-weight:bold;">{{ pos }}</span>
+    <span style="font-size:10px;color:var(--fg-dim);margin-left:4px;">need {{ need }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Current Roster ── #}
+<h2>Current Roster ({{ roster_size }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th>
+      <th>Year</th>
+      <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
+      <th class="num">AWR</th><th class="num">HND</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in roster %}
+  <tr>
+    <td>{{ p.name }}</td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
+    <td style="font-size:11px;">{{ p.year }}</td>
+    <td class="num">{{ p.speed }}</td>
+    <td class="num">{{ p.power }}</td>
+    <td class="num">{{ p.agility }}</td>
+    <td class="num">{{ p.awareness }}</td>
+    <td class="num">{{ p.hands }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% endif %}
+{% endblock %}

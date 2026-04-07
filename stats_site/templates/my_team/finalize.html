@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Finalize &amp; Simulate — {{ team_name }} — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/my-team/">My Team</a><span class="sep">/</span>Finalize
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Finalize &amp; Simulate</h1>
+  <div class="subtitle">{{ team_name }} &middot; {{ roster_size }} players</div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/my-team/">Dashboard</a>
+  <a href="/stats/my-team/retention">Retention</a>
+  <a href="/stats/my-team/portal">Portal</a>
+  <a href="/stats/my-team/finalize" class="active">Finalize &amp; Sim</a>
+</div>
+
+{# ── Season Results (if complete) ── #}
+{% if season_phase == "complete" %}
+<div style="background:var(--bg-alt);border:2px solid var(--green);padding:24px;margin-bottom:16px;text-align:center;">
+  <div style="font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Season Complete</div>
+  <div style="font-size:48px;font-weight:bold;color:var(--fg-bright);">{{ record.wins }} - {{ record.losses }}</div>
+  <div style="margin-top:12px;display:flex;gap:12px;justify-content:center;">
+    <a href="/stats/college/" style="background:var(--accent);color:#000;padding:8px 20px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;">View Full Stats</a>
+  </div>
+</div>
+{% endif %}
+
+{# ── Simulation Controls ── #}
+{% if season_phase != "complete" %}
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:24px;margin-bottom:16px;text-align:center;">
+  <div style="font-size:14px;color:var(--fg-bright);margin-bottom:12px;">Your roster is set. Ready to see how the season plays out?</div>
+
+  <form method="POST" action="/stats/my-team/sim" style="display:inline;">
+    <input type="hidden" name="session_id" value="{{ session_id }}">
+    <button type="submit" style="background:var(--green);color:#000;border:none;padding:14px 40px;cursor:pointer;font-size:16px;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
+      Simulate Season
+    </button>
+  </form>
+
+  <div style="margin-top:8px;font-size:11px;color:var(--fg-dim);">Simulates the entire regular season, bowl games, and playoffs in one click.</div>
+</div>
+{% endif %}
+
+{# ── Final Roster ── #}
+<h2>Final Roster ({{ roster_size }})</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>Pos</th>
+      <th class="num">OVR</th><th class="num">POT</th>
+      <th>Year</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in roster %}
+  <tr>
+    <td>{{ p.name }}</td>
+    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
+    <td style="font-size:11px;">{{ p.year }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
