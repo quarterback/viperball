@@ -5275,8 +5275,14 @@ def _get_my_team_session(session_id: str = ""):
     if not team_name and dynasty and hasattr(dynasty, "coach"):
         team_name = dynasty.coach.team_name
 
+    # Last resort: if only one session and we still have no team,
+    # pick the first team alphabetically so the user can at least try it
     if not team_name or team_name not in season.teams:
-        raise HTTPException(400, "No human team found in session")
+        if season.teams:
+            team_name = sorted(season.teams.keys())[0]
+            sess["portal_human_team"] = team_name
+        else:
+            raise HTTPException(400, "No human team found in session")
 
     return sess, session_id, team_name, season
 
@@ -5552,27 +5558,56 @@ def my_team_portal_advance(session_id: str):
     available_entries = [(i, e) for i, e in enumerate(portal.entries)
                          if not e.committed_to and not e.withdrawn]
 
-    # Each round, top CPU teams compete for top available players
-    # Later rounds = more aggressive bidding (desperation)
-    aggression = 0.5 + (round_num / builder["portal_max_rounds"]) * 0.5
+    # Each round, CPU teams compete for available players
+    # Tiered interest: elite players draw 7-10 teams, low-tier 1-3
     cpu_offers_this_round = {}
 
     for idx, entry in available_entries:
         card = entry.player_card
-        # Higher overall players attract more CPU interest
-        interest_chance = min(0.9, (card.overall / 100.0) * aggression)
-        if rng.random() > interest_chance:
+        # Nearly all players attract interest
+        if rng.random() > 0.98:
             continue
 
-        # Pick 1-3 CPU teams interested based on prestige match
-        interested = rng.sample(cpu_teams, min(3, len(cpu_teams)))
+        ovr = card.overall
+        if ovr >= 75:
+            n_interested = rng.randint(7, min(10, len(cpu_teams)))
+        elif ovr >= 65:
+            n_interested = rng.randint(5, min(7, len(cpu_teams)))
+        elif ovr >= 55:
+            n_interested = rng.randint(4, min(6, len(cpu_teams)))
+        elif ovr >= 45:
+            n_interested = rng.randint(3, min(5, len(cpu_teams)))
+        else:
+            n_interested = rng.randint(1, min(3, len(cpu_teams)))
+
+        if n_interested == 0:
+            continue
+        interested = rng.sample(cpu_teams, n_interested)
+
+        # Get coaching quality for CPU teams
+        def _cpu_coaching(t):
+            try:
+                staffs = getattr(season, "coaching_staffs", {}) or {}
+                staff = staffs.get(t, {})
+                hc = staff.get("head_coach")
+                if hc and hasattr(hc, "development"):
+                    return (hc.development + hc.recruiting) / 2.0
+                elif isinstance(hc, dict):
+                    return (hc.get("development", 50) + hc.get("recruiting", 50)) / 2.0
+            except Exception:
+                pass
+            return 50.0
+
         best_cpu = None
         best_score = -1
         for t in interested:
             p = prestige_map.get(t, 50)
-            # CPU bid: prestige-weighted with some randomness
-            geo_bonus = rng.uniform(0, 20)
-            score = p * entry.prefers_prestige + geo_bonus * entry.prefers_geography
+            coaching = _cpu_coaching(t)
+            # Decision: prestige (35%) + coaching (25%) + NIL/culture (20%) + geo (20%)
+            score = (p * 0.35
+                    + coaching * 0.25
+                    + rng.uniform(8, 30)
+                    + rng.uniform(8, 25))
             if score > best_score:
                 best_score = score
                 best_cpu = t
@@ -5580,36 +5615,34 @@ def my_team_portal_advance(session_id: str):
         if best_cpu:
             cpu_offers_this_round[idx] = {"team": best_cpu, "score": best_score}
 
-    # Now resolve: for each player with bids, compare human bid vs CPU offers
+    # Resolve: for each player with bids, compare human bid vs CPU offers
     for idx, entry in available_entries:
         human_bid = builder["portal_bids"].get(idx)
         cpu_offer = cpu_offers_this_round.get(idx)
 
         if not human_bid and not cpu_offer:
-            continue  # No interest this round
+            continue
 
-        # Calculate human score
         human_score = 0
         if human_bid:
-            # Human score = prestige + NIL factor
             p = builder["prestige"]
-            nil_factor = min(30, (human_bid["amount"] / max(1, nil.portal_pool)) * 40)
-            geo = rng.uniform(5, 25)
-            human_score = (p * entry.prefers_prestige
-                          + nil_factor * entry.prefers_nil
-                          + geo * entry.prefers_geography
-                          + rng.uniform(-5, 5))
+            coaching = _cpu_coaching(team_name)
+            nil_factor = min(25, (human_bid["amount"] / max(1, nil.portal_pool)) * 35)
+            human_score = (p * 0.35
+                          + coaching * 0.25
+                          + nil_factor
+                          + rng.uniform(8, 25)
+                          + rng.uniform(-3, 8))
 
         cpu_score = cpu_offer["score"] if cpu_offer else 0
 
-        # Decision: higher score wins, but only if it meets a threshold
-        # Earlier rounds have higher thresholds (players are patient)
-        commit_threshold = max(20, 60 - round_num * 10)
+        # Low threshold = 20-30 signings per round
+        commit_threshold = max(0, 18 - round_num * 4)
 
         winner = None
         if human_score > cpu_score and human_score > commit_threshold and human_bid:
             winner = team_name
-        elif cpu_score > human_score and cpu_score > commit_threshold and cpu_offer:
+        elif cpu_score > commit_threshold and (not human_bid or cpu_score > human_score) and cpu_offer:
             winner = cpu_offer["team"]
         elif round_num >= builder["portal_max_rounds"]:
             # Last round: players just pick the best offer

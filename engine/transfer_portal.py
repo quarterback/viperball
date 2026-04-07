@@ -93,16 +93,32 @@ class PortalEntry:
 
     def get_summary(self) -> dict:
         """Public-facing summary for the portal browser."""
+        c = self.player_card
         return {
             "name": self.player_name,
+            "player_name": self.player_name,
+            "player_id": c.player_id,
             "position": self.position,
             "overall": self.overall,
-            "year": self.player_card.year,
+            "year": c.year,
             "origin_team": self.origin_team,
             "reason": self.reason,
-            "potential": self.player_card.potential,
+            "potential": c.potential,
+            "development": c.development,
             "offers_count": len(self.offers),
             "committed_to": self.committed_to,
+            # Full attributes for scouting
+            "speed": c.speed,
+            "stamina": c.stamina,
+            "agility": c.agility,
+            "power": c.power,
+            "awareness": c.awareness,
+            "hands": c.hands,
+            "kicking": c.kicking,
+            "kick_power": c.kick_power,
+            "kick_accuracy": c.kick_accuracy,
+            "lateral_skill": c.lateral_skill,
+            "tackling": c.tackling,
         }
 
     def to_dict(self) -> dict:

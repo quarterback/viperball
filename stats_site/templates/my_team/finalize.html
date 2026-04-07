@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Finalize &amp; Simulate — {{ team_name }} — Viperball Stats{% endblock %}
+{% block title %}{% if is_complete %}Season Results{% else %}Simulate{% endif %} — {{ team_name }} — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
 <div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/my-team/">My Team</a><span class="sep">/</span>Finalize
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/my-team/">My Team</a><span class="sep">/</span>{% if is_complete %}Results{% else %}Simulate{% endif %}
 </div></div>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1>{% if season_phase == "complete" %}Season Results{% else %}Finalize &amp; Simulate{% endif %}</h1>
+  <h1>{% if is_complete %}Season Results{% else %}Simulate Season{% endif %}</h1>
   <div class="subtitle">{{ team_name }} &middot; {{ roster_size }} players &middot; Prestige {{ prestige }}</div>
 </div>
 
@@ -20,66 +20,89 @@
   <a href="/stats/my-team/finalize" class="active">Finalize &amp; Sim</a>
 </div>
 
-{# ── Season Results (if complete) ── #}
-{% if season_phase == "complete" %}
-<div style="background:var(--bg-alt);border:2px solid {% if is_champion %}var(--yellow){% elif record.wins > record.losses %}var(--green){% else %}var(--border){% endif %};padding:24px;margin-bottom:16px;text-align:center;">
-
+{# ── Season Complete Banner ── #}
+{% if is_complete %}
+<div style="background:var(--bg-alt);border:2px solid {% if is_champion %}var(--yellow){% elif record.wins > record.losses %}var(--green){% elif record.wins < record.losses %}var(--red){% else %}var(--border){% endif %};padding:24px;margin-bottom:16px;text-align:center;">
   {% if is_champion %}
   <div style="font-size:14px;color:var(--yellow);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:bold;">National Champions</div>
   {% endif %}
-
-  <div style="font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Final Record</div>
+  <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Final Record</div>
   <div style="font-size:56px;font-weight:bold;color:var(--fg-bright);line-height:1;">{{ record.wins }} - {{ record.losses }}</div>
-
-  {% if record.wins > record.losses %}
-  <div style="font-size:12px;color:var(--green);margin-top:4px;">Winning Season</div>
-  {% elif record.wins < record.losses %}
-  <div style="font-size:12px;color:var(--red);margin-top:4px;">Losing Season</div>
-  {% else %}
-  <div style="font-size:12px;color:var(--fg-dim);margin-top:4px;">.500 Season</div>
-  {% endif %}
-
   <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-    <a href="/stats/college/" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:8px 20px;text-decoration:none;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">View Full Stats</a>
-
+    <a href="/stats/college/" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:8px 20px;text-decoration:none;font-size:12px;text-transform:uppercase;">View Full Stats</a>
     <form method="POST" action="/stats/my-team/run-it-back" style="display:inline;">
       <input type="hidden" name="session_id" value="{{ session_id }}">
-      <button type="submit" style="background:var(--green);color:#000;border:none;padding:8px 24px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">
-        Run It Back &rarr; Next Season
-      </button>
+      <button type="submit" style="background:var(--green);color:#000;border:none;padding:8px 24px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:bold;text-transform:uppercase;">Run It Back &rarr;</button>
     </form>
   </div>
-
-  <div style="margin-top:8px;font-size:10px;color:var(--fg-dim);">
-    Seniors graduate, players develop, prestige updates based on results. New portal and NIL budget for next year.
-  </div>
+  <div style="margin-top:6px;font-size:10px;color:var(--fg-dim);">Seniors graduate, players develop, new portal and NIL budget.</div>
 </div>
 {% endif %}
 
 {# ── Simulation Controls ── #}
-{% if season_phase != "complete" %}
-<div style="background:var(--bg-alt);border:1px solid var(--border);padding:24px;margin-bottom:16px;text-align:center;">
-  <div style="font-size:14px;color:var(--fg-bright);margin-bottom:12px;">Your roster is set. Ready to see how the season plays out?</div>
-
-  <form method="POST" action="/stats/my-team/sim" style="display:inline;">
-    <input type="hidden" name="session_id" value="{{ session_id }}">
-    <button type="submit" style="background:var(--green);color:#000;border:none;padding:14px 40px;cursor:pointer;font-size:16px;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
-      Simulate Season
-    </button>
-  </form>
-
-  <div style="margin-top:8px;font-size:11px;color:var(--fg-dim);">Simulates the entire regular season, bowl games, and playoffs in one click.</div>
+{% if not is_complete %}
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Week</div>
+      <div style="font-size:28px;font-weight:bold;color:var(--fg-bright);">{{ current_week }} / {{ total_weeks }}</div>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Record</div>
+      <div style="font-size:28px;font-weight:bold;color:{% if record.wins > record.losses %}var(--green){% elif record.wins < record.losses %}var(--red){% else %}var(--fg-bright){% endif %};">{{ record.wins }}-{{ record.losses }}</div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <div style="background:var(--border);height:8px;"><div style="background:var(--green);height:100%;width:{{ (current_week / total_weeks * 100) if total_weeks > 0 else 0 }}%"></div></div>
+      <div style="font-size:10px;color:var(--fg-dim);margin-top:2px;">Season progress</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <form method="POST" action="/stats/my-team/sim" style="display:inline;">
+        <input type="hidden" name="session_id" value="{{ session_id }}">
+        <button type="submit" style="background:var(--green);color:#000;border:none;padding:10px 20px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:bold;text-transform:uppercase;">
+          {% if not is_season_started %}Start Season{% else %}Sim Week {{ current_week + 1 }}{% endif %}
+        </button>
+      </form>
+      <form method="POST" action="/stats/my-team/sim" style="display:inline;">
+        <input type="hidden" name="session_id" value="{{ session_id }}">
+        <input type="hidden" name="sim_all" value="1">
+        <button type="submit" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:10px 16px;cursor:pointer;font-size:12px;font-family:inherit;text-transform:uppercase;">
+          Sim Rest
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endif %}
 
-{# ── Final Roster ── #}
-<h2>{% if season_phase == "complete" %}Season Roster{% else %}Final Roster{% endif %} ({{ roster_size }})</h2>
+{# ── Recent Game Results ── #}
+{% if recent_games %}
+<h2>Game Results</h2>
+<table>
+  <thead><tr><th class="num">Wk</th><th></th><th>Opponent</th><th class="num">Score</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for g in recent_games %}
+  <tr>
+    <td class="num">{{ g.week }}</td>
+    <td style="font-size:10px;color:var(--fg-dim);">{% if g.home %}vs{% else %}@{% endif %}</td>
+    <td>{{ g.opponent }}</td>
+    <td class="num">{{ g.my_score }} - {{ g.opp_score }}</td>
+    <td style="font-weight:bold;color:{% if g.won %}var(--green){% else %}var(--red){% endif %};">{% if g.won %}W{% else %}L{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Roster ── #}
+<h2>Roster ({{ roster_size }})</h2>
 <table>
   <thead>
     <tr>
       <th>Name</th><th>Pos</th>
-      <th class="num">OVR</th><th class="num">POT</th>
-      <th>Year</th>
+      <th class="num">OVR</th><th class="num">POT</th><th>Year</th>
+      <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
+      <th class="num">AWR</th><th class="num">HND</th><th class="num">KCK</th>
+      <th class="num">LAT</th><th class="num">TKL</th>
     </tr>
   </thead>
   <tbody>
@@ -89,7 +112,15 @@
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
     <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
-    <td style="font-size:11px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:9px;">(graduating)</span>{% endif %}</td>
+    <td style="font-size:11px;">{{ p.year }}{% if p.year in ("Senior", "Graduate") %} <span style="color:var(--fg-dim);font-size:9px;">(grad)</span>{% endif %}</td>
+    <td class="num {% if p.speed >= 85 %}stat-elite{% elif p.speed >= 70 %}stat-good{% elif p.speed < 50 %}stat-bad{% endif %}">{{ p.speed }}</td>
+    <td class="num {% if p.power >= 85 %}stat-elite{% elif p.power >= 70 %}stat-good{% elif p.power < 50 %}stat-bad{% endif %}">{{ p.power }}</td>
+    <td class="num {% if p.agility >= 85 %}stat-elite{% elif p.agility >= 70 %}stat-good{% elif p.agility < 50 %}stat-bad{% endif %}">{{ p.agility }}</td>
+    <td class="num {% if p.awareness >= 85 %}stat-elite{% elif p.awareness >= 70 %}stat-good{% elif p.awareness < 50 %}stat-bad{% endif %}">{{ p.awareness }}</td>
+    <td class="num {% if p.hands >= 85 %}stat-elite{% elif p.hands >= 70 %}stat-good{% elif p.hands < 50 %}stat-bad{% endif %}">{{ p.hands }}</td>
+    <td class="num {% if p.kicking >= 85 %}stat-elite{% elif p.kicking >= 70 %}stat-good{% elif p.kicking < 50 %}stat-bad{% endif %}">{{ p.kicking }}</td>
+    <td class="num {% if p.lateral_skill >= 85 %}stat-elite{% elif p.lateral_skill >= 70 %}stat-good{% elif p.lateral_skill < 50 %}stat-bad{% endif %}">{{ p.lateral_skill }}</td>
+    <td class="num {% if p.tackling >= 85 %}stat-elite{% elif p.tackling >= 70 %}stat-good{% elif p.tackling < 50 %}stat-bad{% endif %}">{{ p.tackling }}</td>
   </tr>
   {% endfor %}
   </tbody>
