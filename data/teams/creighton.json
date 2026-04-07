@@ -10,7 +10,10 @@
     "colors": [
       "Blue",
       "White"
-    ]
+    ],
+    "academic_tier": "high_academic",
+    "median_gpa": 3.5,
+    "median_vat": 1280
   },
   "identity": {
     "style": "aggressive",
@@ -95,7 +98,7 @@
       },
       {
         "number": 15,
-        "name": "Liliane Deschênes",
+        "name": "Liliane Desch\u00eanes",
         "position": "Viper/Back",
         "height": "5-8",
         "weight": 171,

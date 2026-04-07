@@ -10,7 +10,10 @@
     "colors": [
       "Orange",
       "Navy"
-    ]
+    ],
+    "academic_tier": "high_academic",
+    "median_gpa": 3.65,
+    "median_vat": 1370
   },
   "identity": {
     "style": "balanced",

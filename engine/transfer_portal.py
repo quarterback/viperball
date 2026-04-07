@@ -94,7 +94,7 @@ class PortalEntry:
     def get_summary(self) -> dict:
         """Public-facing summary for the portal browser."""
         c = self.player_card
-        return {
+        d = {
             "name": self.player_name,
             "player_name": self.player_name,
             "player_id": c.player_id,
@@ -120,6 +120,13 @@ class PortalEntry:
             "lateral_skill": c.lateral_skill,
             "tackling": c.tackling,
         }
+        # Academic/mental fields if available on the card
+        d["gpa"] = getattr(c, "gpa", None)
+        d["sat_score"] = getattr(c, "sat_score", None)
+        d["field_intelligence"] = getattr(c, "field_intelligence", None)
+        d["coachability"] = getattr(c, "coachability", None)
+        d["academic_risk"] = getattr(c, "academic_risk", "clear")
+        return d
 
     def to_dict(self) -> dict:
         return {
@@ -1060,6 +1067,12 @@ def generate_quick_portal(
             potential=potential,
             development=dev,
             current_team="",
+            # Academic/mental attributes for portal players
+            field_intelligence=max(25, min(95, int(rng.gauss(awareness + rng.randint(-10, 10), 10)))),
+            coachability=max(25, min(95, int(rng.gauss(60, 14)))),
+            gpa=round(max(1.5, min(4.0, rng.gauss(3.0, 0.45))), 2),
+            sat_score=(max(600, min(1600, int(rng.gauss(1050, 150)))) // 10) * 10,
+            academic_risk="clear",
         )
 
         # Origin school: always a school NOT in the game

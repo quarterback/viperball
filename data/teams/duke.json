@@ -10,7 +10,10 @@
     "colors": [
       "Royal Blue",
       "White"
-    ]
+    ],
+    "academic_tier": "high_academic",
+    "median_gpa": 3.75,
+    "median_vat": 1420
   },
   "identity": {
     "style": "aggressive",

@@ -10,7 +10,10 @@
     "colors": [
       "Cardinal",
       "Navy"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.36,
+    "median_vat": 1270
   },
   "identity": {
     "style": "balanced",

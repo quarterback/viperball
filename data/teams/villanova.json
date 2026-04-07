@@ -10,7 +10,10 @@
     "colors": [
       "Navy",
       "White"
-    ]
+    ],
+    "academic_tier": "high_academic",
+    "median_gpa": 3.55,
+    "median_vat": 1310
   },
   "identity": {
     "style": "balanced",
@@ -991,7 +994,7 @@
       },
       {
         "number": 90,
-        "name": "Maïa Thibodeau",
+        "name": "Ma\u00efa Thibodeau",
         "position": "Zeroback/Back",
         "height": "5-5",
         "weight": 166,
@@ -1125,12 +1128,12 @@
         "weight": 198,
         "year": "Freshman",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "none",
         "potential": 3,

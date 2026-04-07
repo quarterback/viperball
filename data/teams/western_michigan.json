@@ -10,7 +10,10 @@
     "colors": [
       "Brown",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 2.8,
+    "median_vat": 1120
   },
   "identity": {
     "style": "balanced",
@@ -21,8 +24,8 @@
   "recruiting_pipeline": {
     "midwest": 0.55,
     "mid_atlantic": 0.15,
-    "south": 0.10,
-    "northeast": 0.10,
+    "south": 0.1,
+    "northeast": 0.1,
     "west_coast": 0.05,
     "texas_southwest": 0.05
   },
@@ -127,7 +130,7 @@
       },
       {
         "number": 7,
-        "name": "Mara Lindström",
+        "name": "Mara Lindstr\u00f6m",
         "position": "Viper/Back",
         "height": "5-8",
         "weight": 178,
@@ -671,7 +674,7 @@
       },
       {
         "number": 44,
-        "name": "Natalie Bergström",
+        "name": "Natalie Bergstr\u00f6m",
         "position": "Halfback/Back",
         "height": "5-9",
         "weight": 175,
@@ -682,7 +685,7 @@
           "country": "Sweden",
           "region": "european"
         },
-        "high_school": "Östra Real Gymnasium",
+        "high_school": "\u00d6stra Real Gymnasium",
         "nationality": "European",
         "archetype": "reliable_flanker",
         "potential": 3,

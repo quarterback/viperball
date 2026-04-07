@@ -110,6 +110,7 @@
       <th class="num">OVR</th><th class="num">POT</th>
       <th>Year</th>
       <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
+      <th class="num">GPA</th><th class="num">VAT</th><th class="num">FIQ</th><th class="num">COACH</th>
       <th class="num">Career GP</th><th class="num">Career YDS</th><th class="num">Career TD</th>
       <th>Background</th>
     </tr>
@@ -131,6 +132,10 @@
     <td class="num">{{ p.speed }}</td>
     <td class="num">{{ p.power }}</td>
     <td class="num">{{ p.agility }}</td>
+    <td class="num {% if p.gpa >= 3.5 %}stat-good{% elif p.gpa < 2.5 %}stat-bad{% endif %}">{{ "%.2f"|format(p.gpa) }}</td>
+    <td class="num {% if p.sat_score >= 1300 %}stat-good{% elif p.sat_score < 900 %}stat-bad{% endif %}">{{ p.sat_score }}</td>
+    <td class="num {% if p.field_intelligence >= 80 %}stat-good{% elif p.field_intelligence < 40 %}stat-bad{% endif %}">{{ p.field_intelligence }}</td>
+    <td class="num {% if p.coachability >= 80 %}stat-good{% elif p.coachability < 40 %}stat-bad{% endif %}">{{ p.coachability }}</td>
     <td class="num">{{ p.career_games if p.career_games else "—" }}</td>
     <td class="num">{{ p.career_yards if p.career_yards else "—" }}</td>
     <td class="num">{{ p.career_tds if p.career_tds else "—" }}</td>

@@ -10,7 +10,10 @@
     "colors": [
       "Vermillion",
       "White"
-    ]
+    ],
+    "academic_tier": "above_average",
+    "median_gpa": 3.21,
+    "median_vat": 1150
   },
   "identity": {
     "style": "balanced",

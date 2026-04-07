@@ -10,7 +10,10 @@
     "colors": [
       "Columbia Blue",
       "White"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.85,
+    "median_vat": 1490
   },
   "identity": {
     "style": "balanced",

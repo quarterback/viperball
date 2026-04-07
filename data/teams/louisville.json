@@ -10,7 +10,10 @@
     "colors": [
       "Cardinal",
       "Black"
-    ]
+    ],
+    "academic_tier": "above_average",
+    "median_gpa": 3.1,
+    "median_vat": 1100
   },
   "identity": {
     "style": "balanced",

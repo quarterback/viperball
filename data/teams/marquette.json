@@ -10,7 +10,10 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "academic_tier": "flexible",
+    "median_gpa": 2.96,
+    "median_vat": 870
   },
   "program_archetype": "underdog",
   "identity": {
@@ -544,7 +547,7 @@
       },
       {
         "number": 52,
-        "name": "Monique Gagné",
+        "name": "Monique Gagn\u00e9",
         "position": "Offensive Line",
         "height": "6-0",
         "weight": 202,
@@ -800,7 +803,7 @@
       },
       {
         "number": 71,
-        "name": "Olivia Fernández",
+        "name": "Olivia Fern\u00e1ndez",
         "position": "Wingback",
         "height": "5-9",
         "weight": 188,

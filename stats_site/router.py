@@ -1087,6 +1087,23 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    # ── Academic profile (from team JSON) ──
+    academics = {"median_gpa": None, "median_vat": None, "academic_tier": None}
+    try:
+        import os, json as _json
+        _teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        _team_key = team_name.lower().replace(" ", "_").replace("-", "_")
+        _team_path = os.path.join(_teams_dir, f"{_team_key}.json")
+        if os.path.exists(_team_path):
+            with open(_team_path) as _f:
+                _td = _json.load(_f)
+            _ti = _td.get("team_info", {})
+            academics["median_gpa"] = _ti.get("median_gpa")
+            academics["median_vat"] = _ti.get("median_vat")
+            academics["academic_tier"] = _ti.get("academic_tier", "")
+    except Exception:
+        pass
+
     # ── Aggregate team season stats from completed games ──
     team_season_stats = None
     completed_games_with_stats = []
@@ -1612,6 +1629,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         benchmarks=benchmarks,
         banners=banners,
         season_history=season_history,
+        academics=academics,
     ))
 
 
@@ -6134,8 +6152,16 @@ def _get_or_create_pipeline(sess, sid):
         num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
         class_size = max(300, num_teams * 8)
         seed = hash(sid) % 999999
+        t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+        t_prestige = None
+        dynasty = sess.get("dynasty")
+        if dynasty and hasattr(dynasty, "team_prestige"):
+            t_prestige = dynasty.team_prestige
         pipeline = HSRecruitingPipeline()
-        pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
+        pipeline.generate_initial_pipeline(
+            base_seed=seed, size_per_class=class_size,
+            team_names=t_names, team_prestige=t_prestige,
+        )
         if dynasty:
             dynasty._hs_pipeline = pipeline
         else:
@@ -6212,6 +6238,11 @@ def recruiting_index(request: Request):
                 "committed_to": r.committed_to or "",
                 "top_schools": list(r.top_schools[:3]),
                 "num_offers": len(r.offers),
+                "gpa": r.gpa,
+                "sat_score": r.sat_score,
+                "field_intelligence": r.field_intelligence,
+                "coachability": r.coachability,
+                "academic_risk": r.academic_risk,
             })
 
     # Find sessions with dynasty data for draft classes
@@ -6852,6 +6883,10 @@ def my_team_dashboard(request: Request):
                 "power": card.power,
                 "awareness": card.awareness,
                 "hands": card.hands,
+                "gpa": getattr(card, "gpa", rc.gpa if rc else 3.0),
+                "sat_score": getattr(card, "sat_score", rc.sat_score if rc else 1050),
+                "field_intelligence": getattr(card, "field_intelligence", rc.field_intelligence if rc else 50),
+                "coachability": getattr(card, "coachability", rc.coachability if rc else 50),
                 "career_games": career_games,
                 "career_yards": career_yards,
                 "career_tds": career_tds,

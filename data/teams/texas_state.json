@@ -10,7 +10,10 @@
     "colors": [
       "Maroon",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.01,
+    "median_vat": 1060
   },
   "identity": {
     "style": "aggressive",
@@ -543,7 +546,7 @@
       },
       {
         "number": 40,
-        "name": "Violeta Díaz",
+        "name": "Violeta D\u00edaz",
         "position": "Back/Safety",
         "height": "5-10",
         "weight": 174,
@@ -991,7 +994,7 @@
       },
       {
         "number": 82,
-        "name": "Ursula Martínez",
+        "name": "Ursula Mart\u00ednez",
         "position": "Shiftback/Back",
         "height": "5-7",
         "weight": 170,

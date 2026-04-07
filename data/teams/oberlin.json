@@ -10,7 +10,10 @@
     "colors": [
       "Crimson",
       "Gold"
-    ]
+    ],
+    "academic_tier": "flexible",
+    "median_gpa": 2.83,
+    "median_vat": 1010
   },
   "identity": {
     "style": "innovative",
@@ -1031,12 +1034,12 @@
         "weight": 172,
         "year": "Sophomore",
         "hometown": {
-          "city": "Montréal",
+          "city": "Montr\u00e9al",
           "state": "QC",
           "country": "Canada",
           "region": "canadian_french"
         },
-        "high_school": "Collège Jean-de-Brébeuf",
+        "high_school": "Coll\u00e8ge Jean-de-Br\u00e9beuf",
         "nationality": "Canadian",
         "archetype": "reliable_flanker",
         "potential": 3,

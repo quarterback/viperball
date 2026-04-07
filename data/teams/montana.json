@@ -10,7 +10,10 @@
     "colors": [
       "Maroon",
       "Silver"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.07,
+    "median_vat": 1030
   },
   "identity": {
     "style": "balanced",
@@ -447,7 +450,7 @@
       },
       {
         "number": 40,
-        "name": "Thérèse Simard",
+        "name": "Th\u00e9r\u00e8se Simard",
         "position": "Lineman",
         "height": "6-1",
         "weight": 211,
@@ -607,7 +610,7 @@
       },
       {
         "number": 53,
-        "name": "Carmen Sánchez",
+        "name": "Carmen S\u00e1nchez",
         "position": "Lineman",
         "height": "5-11",
         "weight": 215,
@@ -1061,12 +1064,12 @@
         "weight": 181,
         "year": "Senior",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "distributor_zb",
         "potential": 3,
@@ -1087,7 +1090,7 @@
       },
       {
         "number": 90,
-        "name": "Beatrix Rodríguez",
+        "name": "Beatrix Rodr\u00edguez",
         "position": "Back/Safety",
         "height": "5-10",
         "weight": 169,

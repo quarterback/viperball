@@ -56,6 +56,8 @@
       <th>Hometown</th>
       <th>Status / Top Schools</th>
       <th class="num">Offers</th>
+      <th class="num">GPA</th>
+      <th class="num">VAT</th>
     </tr>
   </thead>
   <tbody>
@@ -80,6 +82,8 @@
       {% endif %}
     </td>
     <td class="num">{{ p.num_offers }}</td>
+    <td class="num {% if p.gpa >= 3.5 %}stat-good{% elif p.gpa < 2.5 %}stat-bad{% endif %}">{{ "%.2f"|format(p.gpa) if p.gpa else "—" }}</td>
+    <td class="num {% if p.sat_score >= 1300 %}stat-good{% elif p.sat_score < 900 %}stat-bad{% endif %}">{{ p.sat_score if p.sat_score else "—" }}</td>
   </tr>
   {% endfor %}
   </tbody>

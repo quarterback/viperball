@@ -2009,9 +2009,12 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
 
         num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
         _class_size = max(300, num_teams * 8)
+        _t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+        _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
             base_seed=_year, size_per_class=_class_size,
+            team_names=_t_names, team_prestige=_t_prestige,
         )
     except Exception:
         pass  # Non-critical — will be created on first offseason advance
@@ -2337,10 +2340,13 @@ def dynasty_advance(session_id: str):
     from engine.recruiting import HSRecruitingPipeline
     num_teams = len(season.teams) if hasattr(season, "teams") else 200
     pool_size = max(300, num_teams * 8)
+    _t_names = list(season.teams.keys()) if hasattr(season, "teams") else []
+    _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
     if dynasty._hs_pipeline is None:
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
             base_seed=year, size_per_class=pool_size,
+            team_names=_t_names, team_prestige=_t_prestige,
         )
         # First year: no graduates yet, fall back to fresh generation
         recruit_pool = generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
@@ -2437,9 +2443,12 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
 
             _num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
             _class_size = max(300, _num_teams * 8)
+            _t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+            _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
             dynasty._hs_pipeline = HSRecruitingPipeline()
             dynasty._hs_pipeline.generate_initial_pipeline(
                 base_seed=_year, size_per_class=_class_size,
+                team_names=_t_names, team_prestige=_t_prestige,
             )
         except Exception:
             pass

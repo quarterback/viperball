@@ -11,7 +11,10 @@
       "Green",
       "White",
       "Black"
-    ]
+    ],
+    "academic_tier": "above_average",
+    "median_gpa": 2.9,
+    "median_vat": 950
   },
   "identity": {
     "style": "aggressive",

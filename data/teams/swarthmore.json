@@ -10,7 +10,10 @@
     "colors": [
       "Garnet",
       "White"
-    ]
+    ],
+    "academic_tier": "flexible",
+    "median_gpa": 3.25,
+    "median_vat": 940
   },
   "identity": {
     "style": "balanced",

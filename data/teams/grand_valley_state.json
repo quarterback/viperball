@@ -12,7 +12,10 @@
       "Black",
       "White"
     ],
-    "school_name": "Grand Valley State"
+    "school_name": "Grand Valley State",
+    "academic_tier": "flexible",
+    "median_gpa": 2.8,
+    "median_vat": 890
   },
   "identity": {
     "style": "aggressive",

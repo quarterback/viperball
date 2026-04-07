@@ -110,6 +110,7 @@
       <th class="num">SPD</th><th class="num">PWR</th><th class="num">AGI</th>
       <th class="num">AWR</th><th class="num">HND</th><th class="num">KCK</th>
       <th class="num">LAT</th><th class="num">TKL</th>
+      <th class="num">GPA</th><th class="num">VAT</th>
       <th>My Bid</th>
       <th>Action</th>
     </tr>
@@ -131,6 +132,8 @@
     <td class="num">{{ p.get("kicking", "?") }}</td>
     <td class="num">{{ p.get("lateral_skill", "?") }}</td>
     <td class="num">{{ p.get("tackling", "?") }}</td>
+    <td class="num {% if p.get('gpa', 0) >= 3.5 %}stat-good{% elif p.get('gpa', 0) < 2.5 %}stat-bad{% endif %}">{{ "%.2f"|format(p.gpa) if p.gpa else "—" }}</td>
+    <td class="num {% if p.get('sat_score', 0) >= 1300 %}stat-good{% elif p.get('sat_score', 0) < 900 %}stat-bad{% endif %}">{{ p.sat_score if p.sat_score else "—" }}</td>
     <td class="num">
       {% if p.my_bid is not none %}
         <span style="color:var(--green);">${{ "{:,.0f}".format(p.my_bid) }}</span>

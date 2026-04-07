@@ -11,7 +11,10 @@
       "Brown",
       "Red",
       "White"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.8,
+    "median_vat": 1460
   },
   "identity": {
     "style": "conservative",

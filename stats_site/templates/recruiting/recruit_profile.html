@@ -57,6 +57,27 @@
 
       <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">City</span>
       <span style="color:var(--fg-bright);">{{ recruit.hometown if recruit.hometown else '—' }}</span>
+
+      {% if recruit.gpa %}
+      <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">GPA</span>
+      <span style="font-weight:bold;color:{% if recruit.gpa >= 3.5 %}var(--green){% elif recruit.gpa >= 2.5 %}var(--fg-bright){% elif recruit.gpa >= 2.0 %}var(--yellow){% else %}var(--red){% endif %};">{{ "%.2f"|format(recruit.gpa) }}</span>
+
+      <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">SAT</span>
+      <span style="font-weight:bold;color:{% if recruit.sat_score >= 1400 %}var(--green){% elif recruit.sat_score >= 1050 %}var(--fg-bright){% elif recruit.sat_score >= 850 %}var(--yellow){% else %}var(--red){% endif %};">{{ recruit.sat_score }}</span>
+      {% endif %}
+
+      {% if recruit.field_intelligence %}
+      <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">Field IQ</span>
+      <span style="font-weight:bold;color:{% if recruit.field_intelligence >= 80 %}var(--green){% elif recruit.field_intelligence >= 60 %}var(--fg-bright){% elif recruit.field_intelligence < 40 %}var(--red){% else %}var(--fg){% endif %};">{{ recruit.field_intelligence }}</span>
+
+      <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">Coachability</span>
+      <span style="font-weight:bold;color:{% if recruit.coachability >= 80 %}var(--green){% elif recruit.coachability >= 60 %}var(--fg-bright){% elif recruit.coachability < 40 %}var(--red){% else %}var(--fg){% endif %};">{{ recruit.coachability }}</span>
+      {% endif %}
+
+      {% if recruit.academic_risk and recruit.academic_risk != "clear" %}
+      <span style="color:var(--fg-dim);text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">Academics</span>
+      <span style="font-weight:bold;color:{% if recruit.academic_risk == 'ineligible' %}var(--red){% else %}var(--yellow){% endif %};">{{ recruit.academic_risk|upper }}</span>
+      {% endif %}
     </div>
   </div>
 

@@ -10,7 +10,10 @@
     "colors": [
       "Red",
       "White"
-    ]
+    ],
+    "academic_tier": "standard",
+    "median_gpa": 3.13,
+    "median_vat": 1120
   },
   "identity": {
     "style": "aggressive",
@@ -95,7 +98,7 @@
       },
       {
         "number": 5,
-        "name": "Veronique Rodríguez",
+        "name": "Veronique Rodr\u00edguez",
         "position": "Back/Safety",
         "height": "5-9",
         "weight": 187,
@@ -997,12 +1000,12 @@
         "weight": 190,
         "year": "Freshman",
         "hometown": {
-          "city": "Brasília",
+          "city": "Bras\u00edlia",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio Brasília",
+        "high_school": "Colegio Bras\u00edlia",
         "nationality": "Latin American",
         "archetype": "reliable_flanker",
         "potential": 3,

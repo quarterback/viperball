@@ -10,7 +10,10 @@
     "colors": [
       "Purple",
       "Gray"
-    ]
+    ],
+    "academic_tier": "flexible",
+    "median_gpa": 3.01,
+    "median_vat": 960
   },
   "identity": {
     "style": "balanced",
