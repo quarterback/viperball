@@ -12,7 +12,9 @@
       "White"
     ],
     "school": "Mississippi Valley State",
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 3.19,
+    "median_vat": 930
   },
   "identity": {
     "style": "conservative",

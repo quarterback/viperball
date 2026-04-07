@@ -11,7 +11,9 @@
       "Burnt Orange",
       "Navy"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.25,
+    "median_vat": 1160
   },
   "identity": {
     "style": "conservative",

@@ -11,7 +11,9 @@
       "Maroon",
       "Gray"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.93,
+    "median_vat": 970
   },
   "identity": {
     "style": "conservative",

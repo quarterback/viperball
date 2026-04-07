@@ -11,7 +11,9 @@
       "Cardinal",
       "White"
     ],
-    "academic_tier": "elite_academic"
+    "academic_tier": "elite_academic",
+    "median_gpa": 3.85,
+    "median_vat": 1480
   },
   "identity": {
     "style": "balanced",

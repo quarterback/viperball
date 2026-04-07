@@ -11,7 +11,9 @@
       "Blue",
       "Silver"
     ],
-    "academic_tier": "elite_academic"
+    "academic_tier": "elite_academic",
+    "median_gpa": 3.7,
+    "median_vat": 1350
   },
   "identity": {
     "style": "aggressive",

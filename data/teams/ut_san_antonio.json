@@ -12,7 +12,9 @@
       "Navy",
       "Silver"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.17,
+    "median_vat": 1240
   },
   "identity": {
     "style": "conservative",

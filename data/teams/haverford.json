@@ -11,7 +11,9 @@
       "Scarlet",
       "Black"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.54,
+    "median_vat": 940
   },
   "identity": {
     "style": "aggressive",

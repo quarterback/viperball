@@ -149,21 +149,58 @@ _ACADEMIC_TIER_OVERRIDES = {
 }
 
 
+def get_school_academics(
+    team_name: str,
+    team_data: Optional[Dict] = None,
+) -> Tuple[float, int]:
+    """Get a school's median GPA and median VAT score.
+
+    Reads from team JSON data (median_gpa, median_vat fields).
+    Falls back to defaults if not found.
+
+    Returns (median_gpa, median_vat).
+    """
+    if team_data and isinstance(team_data, dict):
+        ti = team_data.get("team_info", {})
+        gpa = ti.get("median_gpa", 3.0)
+        vat = ti.get("median_vat", 1050)
+        return (gpa, vat)
+
+    # Fallback for known overrides
+    if team_name in _ACADEMIC_TIER_OVERRIDES:
+        tier = _ACADEMIC_TIER_OVERRIDES[team_name]
+        t = ACADEMIC_TIERS[tier]
+        return (t["gpa_floor"] + 0.3, t["sat_floor"] + 100)
+
+    return (3.0, 1050)
+
+
 def get_academic_tier(
     team_name: str,
     prestige: int = 50,
     team_data: Optional[Dict] = None,
 ) -> str:
-    """Determine a team's academic tier.
+    """Determine a team's academic tier from their median GPA and VAT.
 
-    Checks team JSON data first (academic_tier field), then the override map,
-    then falls back to prestige-based assignment.
+    Computed from the actual median_gpa / median_vat stored on the team,
+    falling back to the override map and prestige-based assignment.
     """
-    # 1. Check team data (set in team JSON files)
+    # 1. Try to compute from actual school medians
     if team_data and isinstance(team_data, dict):
-        tier = team_data.get("team_info", {}).get("academic_tier")
-        if tier and tier in ACADEMIC_TIERS:
-            return tier
+        ti = team_data.get("team_info", {})
+        gpa = ti.get("median_gpa")
+        vat = ti.get("median_vat")
+        if gpa is not None and vat is not None:
+            if gpa >= 3.65 and vat >= 1350:
+                return "elite_academic"
+            elif gpa >= 3.40 and vat >= 1250:
+                return "high_academic"
+            elif gpa >= 3.15 and vat >= 1100:
+                return "above_average"
+            elif gpa >= 2.80 and vat >= 950:
+                return "standard"
+            else:
+                return "flexible"
 
     # 2. Check override map
     if team_name in _ACADEMIC_TIER_OVERRIDES:
@@ -172,9 +209,7 @@ def get_academic_tier(
     # 3. Prestige-based fallback
     if prestige >= 80:
         return "above_average"
-    elif prestige >= 55:
-        return "standard"
-    elif prestige >= 30:
+    elif prestige >= 40:
         return "standard"
     else:
         return "flexible"
@@ -185,46 +220,51 @@ def check_academic_eligibility(
     recruit_sat: int,
     team_name: str,
     team_prestige: int = 50,
+    team_data: Optional[Dict] = None,
     rng: Optional[random.Random] = None,
 ) -> bool:
     """Check if a recruit meets a school's academic requirements.
 
-    Returns True if the recruit can be admitted. The admissions_flex factor
-    introduces stochastic wiggle — a kid just below the floor might still
-    get in at a flexible school, but never at an elite academic institution.
+    Uses the school's median GPA/VAT to set the floor. A recruit needs to
+    be within striking distance of the median — the further below, the less
+    likely admissions will bend.
+
+    The floor is set at ~0.5 below median GPA and ~200 below median VAT.
+    Schools with lower medians inherently have lower floors.
     """
     if rng is None:
         rng = random.Random()
 
-    tier_name = get_academic_tier(team_name, team_prestige)
-    tier = ACADEMIC_TIERS[tier_name]
+    # Get school's actual medians
+    school_gpa, school_vat = get_school_academics(team_name, team_data)
 
-    gpa_ok = recruit_gpa >= tier["gpa_floor"]
-    sat_ok = recruit_sat >= tier["sat_floor"]
+    # Floor = median minus a buffer (athletes get some slack)
+    # Higher-median schools have higher floors naturally
+    gpa_floor = school_gpa - 0.50    # e.g., 3.5 median → 3.0 floor
+    sat_floor = school_vat - 200      # e.g., 1300 median → 1100 floor
+
+    # NCAA absolute minimum
+    gpa_floor = max(2.0, gpa_floor)
+    sat_floor = max(800, sat_floor)
+
+    gpa_ok = recruit_gpa >= gpa_floor
+    sat_ok = recruit_sat >= sat_floor
 
     if gpa_ok and sat_ok:
         return True
 
-    # Below the floor — check if admissions_flex saves them
-    # Higher flex = more likely to bend rules for athletes
-    flex = tier["admissions_flex"]
-
-    # How far below are they?
-    gpa_gap = max(0, tier["gpa_floor"] - recruit_gpa)
-    sat_gap = max(0, tier["sat_floor"] - recruit_sat)
-
-    # Normalize gaps (0 = at floor, 1 = way below)
-    gpa_severity = min(1.0, gpa_gap / 0.5)   # 0.5 GPA below floor = max severity
-    sat_severity = min(1.0, sat_gap / 200)    # 200 SAT below floor = max severity
-
-    # Combined severity
+    # Below the floor — how far?
+    gpa_gap = max(0, gpa_floor - recruit_gpa)
+    sat_gap = max(0, sat_floor - recruit_sat)
+    gpa_severity = min(1.0, gpa_gap / 0.5)
+    sat_severity = min(1.0, sat_gap / 200)
     severity = max(gpa_severity, sat_severity)
 
-    # Probability of admission = flex * (1 - severity)
-    # At elite_academic (flex=0.15): even small gaps = almost no chance
-    # At flexible (flex=0.90): moderate gaps still get through
-    admit_chance = flex * (1.0 - severity * 0.8)
+    # Flex is inverse of academic prestige — lower-median schools bend more
+    # Elite (median 3.7+): flex ~0.15, Flexible (median 2.7): flex ~0.85
+    flex = max(0.10, min(0.90, 1.0 - (school_gpa - 2.3) * 0.5))
 
+    admit_chance = flex * (1.0 - severity * 0.8)
     return rng.random() < admit_chance
 
 

@@ -11,7 +11,9 @@
       "Yale Blue",
       "White"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.88,
+    "median_vat": 1500
   },
   "identity": {
     "style": "conservative",

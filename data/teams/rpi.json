@@ -11,7 +11,9 @@
       "Cherry",
       "White"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.91,
+    "median_vat": 1090
   },
   "identity": {
     "style": "balanced",

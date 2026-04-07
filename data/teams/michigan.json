@@ -11,7 +11,9 @@
       "Maize",
       "Blue"
     ],
-    "academic_tier": "high_academic"
+    "academic_tier": "high_academic",
+    "median_gpa": 3.6,
+    "median_vat": 1360
   },
   "identity": {
     "style": "balanced",

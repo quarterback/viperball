@@ -11,7 +11,9 @@
       "Cardinal",
       "Blue"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.29,
+    "median_vat": 1170
   },
   "identity": {
     "style": "aggressive",

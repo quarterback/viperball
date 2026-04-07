@@ -11,7 +11,9 @@
       "Maroon",
       "Orange"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.2,
+    "median_vat": 1170
   },
   "identity": {
     "style": "balanced",

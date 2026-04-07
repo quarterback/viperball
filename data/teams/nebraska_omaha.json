@@ -11,7 +11,9 @@
       "Crimson",
       "Black"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.92,
+    "median_vat": 1000
   },
   "identity": {
     "style": "aggressive",

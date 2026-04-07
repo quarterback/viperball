@@ -12,7 +12,9 @@
       "White"
     ],
     "school_name": "Northwest Missouri State",
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.61,
+    "median_vat": 840
   },
   "identity": {
     "style": "aggressive",

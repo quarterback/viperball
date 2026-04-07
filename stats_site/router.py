@@ -1087,6 +1087,23 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     if dynasty and hasattr(dynasty, "team_prestige"):
         prestige = dynasty.team_prestige.get(team_name)
 
+    # ── Academic profile (from team JSON) ──
+    academics = {"median_gpa": None, "median_vat": None, "academic_tier": None}
+    try:
+        import os, json as _json
+        _teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
+        _team_key = team_name.lower().replace(" ", "_").replace("-", "_")
+        _team_path = os.path.join(_teams_dir, f"{_team_key}.json")
+        if os.path.exists(_team_path):
+            with open(_team_path) as _f:
+                _td = _json.load(_f)
+            _ti = _td.get("team_info", {})
+            academics["median_gpa"] = _ti.get("median_gpa")
+            academics["median_vat"] = _ti.get("median_vat")
+            academics["academic_tier"] = _ti.get("academic_tier", "")
+    except Exception:
+        pass
+
     # ── Aggregate team season stats from completed games ──
     team_season_stats = None
     completed_games_with_stats = []
@@ -1612,6 +1629,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         benchmarks=benchmarks,
         banners=banners,
         season_history=season_history,
+        academics=academics,
     ))
 
 

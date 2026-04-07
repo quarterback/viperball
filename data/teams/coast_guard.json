@@ -12,7 +12,9 @@
       "White",
       "Orange"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.97,
+    "median_vat": 1080
   },
   "identity": {
     "style": "balanced",

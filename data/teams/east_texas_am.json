@@ -12,7 +12,9 @@
       "Gold"
     ],
     "school_name": "East Texas A&M",
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.49,
+    "median_vat": 850
   },
   "identity": {
     "style": "balanced",

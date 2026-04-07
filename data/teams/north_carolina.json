@@ -11,7 +11,9 @@
       "Carolina Blue",
       "White"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.45,
+    "median_vat": 1250
   },
   "identity": {
     "style": "balanced",

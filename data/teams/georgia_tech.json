@@ -11,7 +11,9 @@
       "Old Gold",
       "White"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.55,
+    "median_vat": 1350
   },
   "identity": {
     "style": "balanced",

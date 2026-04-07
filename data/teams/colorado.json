@@ -12,7 +12,9 @@
       "Gold",
       "Black"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.94,
+    "median_vat": 1150
   },
   "identity": {
     "style": "conservative",

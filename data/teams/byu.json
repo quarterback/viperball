@@ -11,7 +11,9 @@
       "Royal Blue",
       "White"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.39,
+    "median_vat": 1180
   },
   "identity": {
     "style": "conservative",

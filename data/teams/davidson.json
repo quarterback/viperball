@@ -11,7 +11,9 @@
       "Red",
       "Black"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.05,
+    "median_vat": 1100
   },
   "identity": {
     "style": "balanced",

@@ -11,7 +11,9 @@
       "Crimson",
       "Blue"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.36,
+    "median_vat": 1130
   },
   "identity": {
     "style": "balanced",

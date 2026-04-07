@@ -11,7 +11,9 @@
       "Black",
       "Yellow"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.03,
+    "median_vat": 1080
   },
   "identity": {
     "style": "aggressive",

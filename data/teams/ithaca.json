@@ -11,7 +11,9 @@
       "Blue",
       "Gold"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.68,
+    "median_vat": 950
   },
   "identity": {
     "style": "aggressive",

@@ -11,7 +11,9 @@
       "Sky Blue"
     ],
     "school_name": "Tulane",
-    "academic_tier": "high_academic"
+    "academic_tier": "high_academic",
+    "median_gpa": 3.55,
+    "median_vat": 1320
   },
   "identity": {
     "style": "balanced",

@@ -11,7 +11,9 @@
       "Orange",
       "Purple"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.3,
+    "median_vat": 1190
   },
   "identity": {
     "style": "conservative",

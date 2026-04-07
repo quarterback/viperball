@@ -11,7 +11,9 @@
       "Maroon",
       "Gold"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 2.68,
+    "median_vat": 1020
   },
   "identity": {
     "style": "balanced",

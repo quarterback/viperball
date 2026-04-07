@@ -11,7 +11,9 @@
       "Maroon",
       "White"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.28,
+    "median_vat": 1040
   },
   "identity": {
     "style": "balanced",

@@ -35,6 +35,7 @@
     {% if team.city and team.state %}{{ team.city }}, {{ team.state }}{% endif %}
     {% if record %} &middot; <span class="record"><span class="w">{{ record.wins }}</span>-<span class="l">{{ record.losses }}</span>{% if record.ties %}-<span class="t">{{ record.ties }}</span>{% endif %}</span> ({{ record.conference }}){% endif %}
     {% if prestige %} &middot; Prestige: {{ prestige }}{% endif %}
+    {% if academics and academics.median_gpa %} &middot; GPA: {{ "%.2f"|format(academics.median_gpa) }} &middot; VAT: {{ academics.median_vat }}{% endif %}
   </div>
   {% if banners %}
   <div class="championship-banners">
@@ -436,6 +437,31 @@
   {% if coaching_staff[0].coaching_style %} &mdash; <em>{{ coaching_staff[0].coaching_style }}</em>{% endif %}
 </div>
 {% endif %}
+</div>
+{% endif %}
+
+{# ── Academic Profile ── #}
+{% if academics and academics.median_gpa %}
+<div>
+<h2>Academic Profile</h2>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Median GPA</div>
+    <div style="font-size:28px;font-weight:bold;color:{% if academics.median_gpa >= 3.5 %}var(--green){% elif academics.median_gpa >= 3.0 %}var(--fg-bright){% elif academics.median_gpa >= 2.5 %}var(--yellow){% else %}var(--red){% endif %};">{{ "%.2f"|format(academics.median_gpa) }}</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Median VAT</div>
+    <div style="font-size:28px;font-weight:bold;color:{% if academics.median_vat >= 1300 %}var(--green){% elif academics.median_vat >= 1050 %}var(--fg-bright){% elif academics.median_vat >= 900 %}var(--yellow){% else %}var(--red){% endif %};">{{ academics.median_vat }}</div>
+  </div>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
+    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Academic Tier</div>
+    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-top:6px;">{{ academics.academic_tier|replace('_', ' ')|title if academics.academic_tier else '—' }}</div>
+  </div>
+</div>
+<div style="font-size:10px;color:var(--fg-dim);">
+  Academic profile affects recruiting — higher-tier schools can't offer recruits below their academic floor.
+  VAT = Viperball Aptitude Test (equivalent to SAT).
+</div>
 </div>
 {% endif %}
 

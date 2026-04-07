@@ -11,7 +11,9 @@
       "Blue",
       "White"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.97,
+    "median_vat": 990
   },
   "identity": {
     "style": "conservative",

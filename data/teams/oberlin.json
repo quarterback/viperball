@@ -11,7 +11,9 @@
       "Crimson",
       "Gold"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.83,
+    "median_vat": 1010
   },
   "identity": {
     "style": "innovative",

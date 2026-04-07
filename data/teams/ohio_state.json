@@ -11,7 +11,9 @@
       "Scarlet",
       "Gray"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.4,
+    "median_vat": 1230
   },
   "identity": {
     "style": "balanced",

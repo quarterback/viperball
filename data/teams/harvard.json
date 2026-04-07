@@ -12,7 +12,9 @@
       "Black",
       "White"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 3.9,
+    "median_vat": 1510
   },
   "identity": {
     "style": "conservative",

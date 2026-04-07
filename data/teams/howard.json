@@ -12,7 +12,9 @@
       "White",
       "Red"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.87,
+    "median_vat": 1010
   },
   "identity": {
     "style": "conservative",

@@ -11,7 +11,9 @@
       "Green",
       "White"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 3.01,
+    "median_vat": 1050
   },
   "identity": {
     "style": "aggressive",

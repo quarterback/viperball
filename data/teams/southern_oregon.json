@@ -11,7 +11,9 @@
       "Red",
       "Black"
     ],
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.9,
+    "median_vat": 970
   },
   "identity": {
     "style": "aggressive",

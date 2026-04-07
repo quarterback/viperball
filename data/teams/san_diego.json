@@ -11,7 +11,9 @@
       "Navy",
       "Columbia Blue"
     ],
-    "academic_tier": "standard"
+    "academic_tier": "standard",
+    "median_gpa": 2.87,
+    "median_vat": 1060
   },
   "identity": {
     "style": "balanced",

@@ -11,7 +11,9 @@
       "Green",
       "Yellow"
     ],
-    "academic_tier": "above_average"
+    "academic_tier": "above_average",
+    "median_gpa": 3.3,
+    "median_vat": 1170
   },
   "identity": {
     "style": "balanced",

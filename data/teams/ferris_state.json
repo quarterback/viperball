@@ -12,7 +12,9 @@
       "Gold"
     ],
     "school_name": "Ferris State",
-    "academic_tier": "flexible"
+    "academic_tier": "flexible",
+    "median_gpa": 2.75,
+    "median_vat": 920
   },
   "identity": {
     "style": "aggressive",

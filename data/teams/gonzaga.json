@@ -12,7 +12,9 @@
       "Red",
       "White"
     ],
-    "academic_tier": "high_academic"
+    "academic_tier": "high_academic",
+    "median_gpa": 3.6,
+    "median_vat": 1300
   },
   "program_archetype": "regional_power",
   "identity": {
