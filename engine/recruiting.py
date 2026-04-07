@@ -1895,6 +1895,202 @@ def generate_hs_class(
     return prospects
 
 
+def seed_recruiting_interest(
+    prospects: List[HSProspect],
+    team_names: List[str],
+    team_prestige: Optional[Dict[str, int]] = None,
+    rng: Optional[random.Random] = None,
+) -> None:
+    """Populate interest, offers, timelines, and crystal ball predictions.
+
+    Called after generate_hs_class to make recruit profiles feel alive —
+    schools are already interested, some have offered, top recruits have
+    full shortlists. Interest and offers are seeded stochastically based
+    on star rating, with higher-prestige schools targeting higher-star kids.
+
+    The system is intentionally noisy — a 3-star kid might have a random
+    blue blood interested (saw something on film), and a 5-star might not
+    have interest from a mid-major (they know they can't win the battle).
+    """
+    if rng is None:
+        rng = random.Random()
+    if not team_names:
+        return
+
+    # Build prestige tiers if we have prestige data
+    if team_prestige is None:
+        # Assign synthetic prestige based on position in list
+        team_prestige = {}
+        for i, t in enumerate(sorted(team_names)):
+            # Spread from 20-90 across all teams
+            team_prestige[t] = max(15, min(90, int(20 + (i / max(1, len(team_names) - 1)) * 70)))
+
+    elite_teams = [t for t, p in team_prestige.items() if p >= 75]
+    strong_teams = [t for t, p in team_prestige.items() if 55 <= p < 75]
+    mid_teams = [t for t, p in team_prestige.items() if 35 <= p < 55]
+    low_teams = [t for t, p in team_prestige.items() if p < 35]
+
+    grade = prospects[0].grade if prospects else "12th"
+
+    # Grade-based development: 12th graders have most offers, 9th graders just interest
+    grade_offer_mult = {"12th": 1.0, "11th": 0.5, "10th": 0.2, "9th": 0.05}
+    offer_mult = grade_offer_mult.get(grade, 0.3)
+
+    for p in prospects:
+        r = p.recruit
+        stars = p.scouted_stars
+
+        # ── Determine how many schools are interested ──
+        # Tiered by star rating — mirrors real recruiting
+        if stars >= 5:
+            n_interested = rng.randint(15, min(30, len(team_names)))
+            n_offers = int(rng.randint(8, 20) * offer_mult)
+        elif stars >= 4:
+            n_interested = rng.randint(10, min(20, len(team_names)))
+            n_offers = int(rng.randint(5, 12) * offer_mult)
+        elif stars >= 3:
+            n_interested = rng.randint(5, min(12, len(team_names)))
+            n_offers = int(rng.randint(2, 7) * offer_mult)
+        elif stars >= 2:
+            n_interested = rng.randint(2, min(6, len(team_names)))
+            n_offers = int(rng.randint(0, 3) * offer_mult)
+        else:
+            n_interested = rng.randint(0, min(3, len(team_names)))
+            n_offers = int(rng.randint(0, 1) * offer_mult)
+
+        # ── Pick which schools are interested ──
+        # Higher-star recruits attract higher-prestige schools
+        # But there's always noise — a random mid-major might show up
+        interested_pool = []
+        if stars >= 4 and elite_teams:
+            interested_pool.extend(rng.sample(elite_teams, min(len(elite_teams), rng.randint(3, 8))))
+        if stars >= 3 and strong_teams:
+            interested_pool.extend(rng.sample(strong_teams, min(len(strong_teams), rng.randint(2, 6))))
+        if stars >= 2 and mid_teams:
+            interested_pool.extend(rng.sample(mid_teams, min(len(mid_teams), rng.randint(1, 4))))
+        if low_teams and rng.random() < 0.3:
+            interested_pool.extend(rng.sample(low_teams, min(len(low_teams), rng.randint(1, 2))))
+
+        # Add some noise — random schools that don't fit the tier
+        all_teams_list = list(team_names)
+        noise_count = rng.randint(0, 3)
+        for _ in range(noise_count):
+            t = rng.choice(all_teams_list)
+            if t not in interested_pool:
+                interested_pool.append(t)
+
+        # Trim to target count
+        rng.shuffle(interested_pool)
+        interested_schools = interested_pool[:n_interested]
+
+        # ── Set interest levels (hot / warm / cool) ──
+        for school in interested_schools:
+            prestige_diff = team_prestige.get(school, 50) - (stars * 15 + 10)
+            if prestige_diff > 10:
+                # School is much higher prestige than the kid's star tier
+                heat = rng.choice(["cool", "cool", "warm"])
+            elif prestige_diff > -10:
+                heat = rng.choice(["warm", "warm", "hot"])
+            else:
+                # Kid is a reach for this school — they're pursuing hard
+                heat = rng.choice(["hot", "hot", "warm"])
+
+            r.school_interest[school] = heat
+            r.interest[school] = {"hot": rng.randint(70, 95), "warm": rng.randint(40, 69),
+                                  "cool": rng.randint(10, 39)}[heat]
+
+        # ── Offers: subset of interested schools ──
+        # Higher interest = more likely to have already offered
+        offering_schools = []
+        for school in interested_schools[:n_offers]:
+            offering_schools.append(school)
+        r.offers = offering_schools
+
+        # ── Top schools shortlist (top 3-5 from interested) ──
+        if len(interested_schools) >= 3 and grade in ("12th", "11th"):
+            # Weight by prestige + interest
+            scored = [(s, team_prestige.get(s, 50) + r.interest.get(s, 50) + rng.uniform(-15, 15))
+                      for s in interested_schools]
+            scored.sort(key=lambda x: -x[1])
+            r.top_schools = [s for s, _ in scored[:min(5, len(scored))]]
+            if len(scored) >= 3:
+                r.finalist_schools = [s for s, _ in scored[:3]]
+
+        # ── Crystal Ball / StrikePrediction ──
+        if r.top_schools and grade in ("12th", "11th"):
+            total_score = 0
+            school_scores = {}
+            for school in r.top_schools:
+                score = (team_prestige.get(school, 50) * r.prefers_prestige
+                        + r.interest.get(school, 50) * 0.5
+                        + rng.uniform(5, 25))
+                school_scores[school] = score
+                total_score += score
+
+            if total_score > 0:
+                for school, score in school_scores.items():
+                    pct = (score / total_score) * 100
+                    # Add noise so predictions aren't perfect
+                    pct = max(1, min(95, pct + rng.uniform(-10, 10)))
+                    r.crystal_ball[school] = round(pct, 1)
+
+        # ── Decision traits ──
+        r.decision_speed = rng.choice(["early_decider", "normal", "normal", "normal", "late_decider"])
+        if r.decision_speed == "early_decider" and grade == "12th":
+            r.decision_date = rng.choice(["Early Signing Day", "Pre-Season Commitment", "Summer Commitment"])
+        elif grade == "12th":
+            r.decision_date = rng.choice([None, None, "National Signing Day", "Late Signing Day"])
+
+        # ── Recruiting timeline ──
+        timeline = []
+        if grade in ("12th", "11th"):
+            # Seed some past events
+            if interested_schools:
+                # First contact events
+                for school in interested_schools[:min(3, len(interested_schools))]:
+                    timeline.append({
+                        "event": f"Received interest from {school}",
+                        "phase": "early_contact",
+                        "week": rng.randint(1, 8),
+                    })
+
+            if offering_schools:
+                for school in offering_schools[:min(3, len(offering_schools))]:
+                    timeline.append({
+                        "event": f"Offered by {school}",
+                        "phase": "offers",
+                        "week": rng.randint(4, 16),
+                    })
+
+            if r.top_schools:
+                timeline.append({
+                    "event": f"Narrowed list to {len(r.top_schools)} schools",
+                    "phase": "narrowing",
+                    "week": rng.randint(12, 20),
+                })
+
+            # Official visits for top schools
+            for school in (r.top_schools or [])[:3]:
+                if rng.random() < 0.7:
+                    timeline.append({
+                        "event": f"Official visit to {school}",
+                        "phase": "visits",
+                        "week": rng.randint(16, 28),
+                    })
+
+        elif grade == "10th":
+            if offering_schools:
+                timeline.append({
+                    "event": f"First offer from {offering_schools[0]}",
+                    "phase": "early_contact",
+                    "week": rng.randint(1, 12),
+                })
+
+        # Sort timeline by week
+        timeline.sort(key=lambda e: e["week"])
+        r.timeline = timeline
+
+
 def _rank_hs_class(prospects: List[HSProspect]) -> None:
     """Assign national, position, and regional ranks based on scouted_stars.
 
@@ -1939,6 +2135,8 @@ class HSRecruitingPipeline:
         self,
         base_seed: int = 0,
         size_per_class: int = 1500,
+        team_names: Optional[List[str]] = None,
+        team_prestige: Optional[Dict[str, int]] = None,
     ) -> None:
         """Generate all four HS grade classes from scratch."""
         for i, grade in enumerate(_HS_GRADES):
@@ -1946,6 +2144,13 @@ class HSRecruitingPipeline:
             self.classes[grade] = generate_hs_class(
                 grade=grade, size=size_per_class, rng=rng,
             )
+            # Seed recruiting interest so profiles aren't empty
+            if team_names:
+                seed_rng = random.Random(base_seed + i * 1000 + 500)
+                seed_recruiting_interest(
+                    self.classes[grade], team_names,
+                    team_prestige=team_prestige, rng=seed_rng,
+                )
 
     def advance_year(
         self,

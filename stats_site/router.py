@@ -6134,8 +6134,16 @@ def _get_or_create_pipeline(sess, sid):
         num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
         class_size = max(300, num_teams * 8)
         seed = hash(sid) % 999999
+        t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+        t_prestige = None
+        dynasty = sess.get("dynasty")
+        if dynasty and hasattr(dynasty, "team_prestige"):
+            t_prestige = dynasty.team_prestige
         pipeline = HSRecruitingPipeline()
-        pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
+        pipeline.generate_initial_pipeline(
+            base_seed=seed, size_per_class=class_size,
+            team_names=t_names, team_prestige=t_prestige,
+        )
         if dynasty:
             dynasty._hs_pipeline = pipeline
         else:
