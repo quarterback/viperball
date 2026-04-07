@@ -42,17 +42,17 @@
   {% endfor %}
 </div>
 {% else %}
-<div class="notice">No recruiting pipeline active. Start a dynasty to generate the HS pipeline.</div>
+<div class="notice">No recruiting pipeline active. Start a season or dynasty to generate the HS pipeline.</div>
 {% endif %}
 
-{# ── Top 25 Overall ── #}
+{# ── Top 25 Senior Class ── #}
 {% if top_prospects %}
-<h2>National Top 25</h2>
+<h2>National Top 25 &mdash; Senior Class (12th Grade)</h2>
 <table>
   <thead>
     <tr>
       <th class="num">#</th><th>Name</th><th>Pos</th>
-      <th class="num">Stars</th><th>Grade</th>
+      <th class="num">Stars</th>
       <th>Hometown</th>
       <th>Status / Top Schools</th>
       <th class="num">Offers</th>
@@ -69,7 +69,6 @@
     <td class="num {% if p.scouted_stars >= 5 %}stat-elite{% elif p.scouted_stars >= 4 %}stat-good{% endif %}" style="white-space:nowrap;">
       {{ ("&#9733;" * p.scouted_stars)|safe }}{{ ("&#9734;" * (5 - p.scouted_stars))|safe }}
     </td>
-    <td>{{ p.grade }}</td>
     <td style="font-size:11px;">{{ p.hometown }}</td>
     <td style="font-size:11px;">
       {% if p.committed_to %}

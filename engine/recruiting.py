@@ -41,7 +41,7 @@ from engine.player_card import PlayerCard, _get_position_weights
 RECRUITING_NETWORK_NAME = "ViperScout"          # Like 247Sports / Rivals
 RECRUITING_NETWORK_TAGLINE = "The Source for Viperball Recruiting"
 CRYSTAL_BALL_NAME = "StrikePrediction"          # Like 247Sports Crystal Ball
-RECRUIT_RANKINGS_NAME = "ViperScout Top 300"    # Like Rivals250 / 247Sports Top247
+RECRUIT_RANKINGS_NAME = "ViperScout Top 1500"   # Like Rivals250 / 247Sports Top247
 
 
 # ──────────────────────────────────────────────

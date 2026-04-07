@@ -1970,9 +1970,11 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty._hs_league = create_hs_league(_year, rng=_rng)
         dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
+        num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+        _class_size = max(300, num_teams * 8)
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
-            base_seed=_year, size_per_class=1500,
+            base_seed=_year, size_per_class=_class_size,
         )
     except Exception:
         pass  # Non-critical — will be created on first offseason advance
@@ -2296,7 +2298,8 @@ def dynasty_advance(session_id: str):
 
     # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
     from engine.recruiting import HSRecruitingPipeline
-    pool_size = 1500
+    num_teams = len(season.teams) if hasattr(season, "teams") else 200
+    pool_size = max(300, num_teams * 8)
     if dynasty._hs_pipeline is None:
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
@@ -2395,9 +2398,11 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
             dynasty._hs_league = create_hs_league(_year, rng=_rng)
             dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
+            _num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+            _class_size = max(300, _num_teams * 8)
             dynasty._hs_pipeline = HSRecruitingPipeline()
             dynasty._hs_pipeline.generate_initial_pipeline(
-                base_seed=_year, size_per_class=1500,
+                base_seed=_year, size_per_class=_class_size,
             )
         except Exception:
             pass

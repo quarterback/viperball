@@ -6109,14 +6109,60 @@ def _aggregate_archive_team_stats(schedule: list, team_name: str) -> dict | None
 
 # ── RECRUITING ──────────────────────────────────────────────────────────
 
+def _get_or_create_pipeline(sess, sid):
+    """Lazily create an HS pipeline on a session if one doesn't exist.
+
+    Works for both dynasty and season-only sessions so that the Recruiting
+    Hub is always populated.
+    """
+    try:
+        import random as _rnd
+        from engine.recruiting import HSRecruitingPipeline
+
+        dynasty = sess.get("dynasty")
+        if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
+            return dynasty._hs_pipeline
+
+        # Check for a session-level pipeline (season-only mode)
+        pipeline = sess.get("_hs_pipeline")
+        if pipeline:
+            return pipeline
+
+        # Generate a fresh pipeline and attach it to whatever we have
+        # Scale class size to league: ~8 recruits per team
+        season = sess.get("season")
+        num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+        class_size = max(300, num_teams * 8)
+        seed = hash(sid) % 999999
+        pipeline = HSRecruitingPipeline()
+        pipeline.generate_initial_pipeline(base_seed=seed, size_per_class=class_size)
+        if dynasty:
+            dynasty._hs_pipeline = pipeline
+        else:
+            sess["_hs_pipeline"] = pipeline
+        return pipeline
+    except Exception:
+        return None
+
+
 def _get_recruiting_pipeline():
-    """Get the active HS recruiting pipeline, if any dynasty has one."""
+    """Get the active HS recruiting pipeline from any session.
+
+    Creates one lazily if a session exists but has no pipeline yet,
+    so that season-only mode also has recruiting data.
+    """
     try:
         from api.main import sessions
+        # Prefer dynasty sessions
         for sid, sess in sessions.items():
             dynasty = sess.get("dynasty")
             if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
                 return dynasty._hs_pipeline, dynasty, sid
+        # Fall back to any session (season-only mode) — create pipeline lazily
+        for sid, sess in sessions.items():
+            pipeline = _get_or_create_pipeline(sess, sid)
+            if pipeline:
+                return pipeline, sess.get("dynasty"), sid
         return None, None, None
     except Exception:
         return None, None, None
@@ -6144,23 +6190,28 @@ def recruiting_index(request: Request):
     top_prospects = []
     if pipeline:
         pipeline_summary = pipeline.pipeline_summary()
-        raw_top = pipeline.get_top_prospects(n=25)
+        raw_top = pipeline.get_top_prospects(n=25, grade="12th")
         for p in raw_top:
+            r = p.recruit
+            status = r.status if r.status != "uncommitted" else ""
+            committed = r.committed_to or ""
+            top_schools_str = ", ".join(r.top_schools[:3]) if r.top_schools else ""
+            status_display = committed if committed else top_schools_str
             top_prospects.append({
-                "recruit_id": p.recruit.recruit_id,
-                "name": p.recruit.full_name,
-                "position": p.recruit.position,
+                "recruit_id": r.recruit_id,
+                "name": r.full_name,
+                "position": r.position,
                 "scouted_stars": p.scouted_stars,
                 "grade": p.grade,
-                "hometown": p.recruit.hometown,
-                "high_school": p.recruit.high_school,
+                "hometown": r.hometown,
+                "high_school": r.high_school,
                 "position_rank": p.position_rank,
                 "regional_rank": p.regional_rank,
                 "is_alpha": p.is_alpha,
-                "status": p.recruit.status,
-                "committed_to": p.recruit.committed_to or "",
-                "top_schools": list(p.recruit.top_schools[:3]),
-                "num_offers": len(p.recruit.offers),
+                "status": r.status,
+                "committed_to": r.committed_to or "",
+                "top_schools": list(r.top_schools[:3]),
+                "num_offers": len(r.offers),
             })
 
     # Find sessions with dynasty data for draft classes
@@ -6436,34 +6487,31 @@ def _get_dynasty_recruiting_data():
 
 
 def _get_recruit_pool():
-    """Get the last recruit pool from any active dynasty session.
+    """Get the last recruit pool from any active session.
 
     Falls back to HS pipeline 12th graders if no signing pool exists yet.
+    Also works for season-only mode via lazily created pipelines.
     """
     try:
         from api.main import sessions
         for sid, sess in sessions.items():
             dynasty = sess.get("dynasty")
-            if not dynasty:
-                continue
             # Prefer the actual signing pool (set during run_offseason)
-            if hasattr(dynasty, "_last_recruit_pool") and dynasty._last_recruit_pool:
+            if dynasty and hasattr(dynasty, "_last_recruit_pool") and dynasty._last_recruit_pool:
                 return dynasty._last_recruit_pool, dynasty, sid
-            # Fall back to HS pipeline seniors
-            if hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
-                pipeline = dynasty._hs_pipeline
-                seniors = []
-                if hasattr(pipeline, "classes") and "12th" in pipeline.classes:
-                    seniors = [p.recruit for p in pipeline.classes["12th"]]
-                elif hasattr(pipeline, "get_class"):
-                    try:
-                        seniors = [p.recruit for p in pipeline.get_class("12th")]
-                    except Exception:
-                        pass
+
+        # Fall back to pipeline seniors (dynasty or session-level)
+        for sid, sess in sessions.items():
+            pipeline = _get_or_create_pipeline(sess, sid)
+            if pipeline and hasattr(pipeline, "classes") and "12th" in pipeline.classes:
+                seniors = [p.recruit for p in pipeline.classes["12th"]]
                 if seniors:
-                    return seniors, dynasty, sid
-            # Fall back to HS league graduating class
-            if hasattr(dynasty, "_hs_league") and dynasty._hs_league:
+                    return seniors, sess.get("dynasty"), sid
+
+        # Fall back to HS league graduating class
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            if dynasty and hasattr(dynasty, "_hs_league") and dynasty._hs_league:
                 try:
                     from engine.hs_league import graduating_class_to_recruits
                     recruits = graduating_class_to_recruits(dynasty._hs_league)
@@ -6529,17 +6577,15 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
                 break
 
     # If not found in signing pool, search all HS pipeline grades
+    # (dynasty pipelines AND session-level pipelines for season-only mode)
     if not recruit_obj:
         try:
             from api.main import sessions
             for _sid, sess in sessions.items():
                 if recruit_obj:
                     break
-                _dynasty = sess.get("dynasty")
-                if not _dynasty or not hasattr(_dynasty, "_hs_pipeline") or not _dynasty._hs_pipeline:
-                    continue
-                pipeline = _dynasty._hs_pipeline
-                if not hasattr(pipeline, "classes"):
+                pipeline = _get_or_create_pipeline(sess, _sid)
+                if not pipeline or not hasattr(pipeline, "classes"):
                     continue
                 for grade, prospects in pipeline.classes.items():
                     if recruit_obj:
@@ -6550,7 +6596,7 @@ def recruiting_recruit_profile(request: Request, recruit_id: str):
                             recruit_data = recruit_obj.to_dict()
                             recruit_data["full_name"] = recruit_obj.full_name
                             recruit_data["true_overall"] = recruit_obj.true_overall
-                            dynasty = _dynasty
+                            dynasty = sess.get("dynasty")
                             sid = _sid
                             # Build grade-level pool for rankings
                             grade_pool = [pp.recruit for pp in prospects]
